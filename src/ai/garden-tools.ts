@@ -207,6 +207,100 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'look',
+    description:
+      "What the person is looking at right now: the page, the open crux, which panes are open, the file in the Workshop, a snapshot view, a running turn, approvals waiting, and the garden's names. Call it before show so you change only what needs changing.",
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'list_templates',
+    description:
+      'The templates plant_crux accepts: id, name, one line, and whether it needs the desktop app. Installed Crux Tools appear here too.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'choose_collaborator',
+    description:
+      "Choose which collaborator works in a crux: a model id (from the garden's providers) or 'claude-code' for the Agent Provider. The crux's Collaboration uses it from the next turn.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        cruxId: { type: 'string' },
+        title: { type: 'string' },
+        model: { type: 'string' },
+      },
+      required: ['model'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'answer_approval',
+    description:
+      "Answer an approval a crux's collaborator is waiting on (a tool the Agent Provider may not run on its own, a publish). look lists them with ids. Approve only what the person would; when unsure, ask them.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'The approval id from look; the oldest waiting if omitted.',
+        },
+        approved: { type: 'boolean' },
+      },
+      required: ['approved'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'search_garden',
+    description:
+      'Search every crux in the garden for a string (or regex): file paths and matching lines, cited by crux. The garden is your context — read what it holds before deciding.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string' },
+        regex: { type: 'boolean' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'read_garden_file',
+    description: 'Read one text file from any crux in the garden (by crux id or title, and path).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        cruxId: { type: 'string' },
+        title: { type: 'string' },
+        path: { type: 'string' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'export_crux',
+    description:
+      "Export a crux as a .crux archive — files, conversation and every snapshot — to the person's downloads. The complete history, in one file.",
+    input_schema: {
+      type: 'object',
+      properties: { cruxId: { type: 'string' }, title: { type: 'string' } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'export_cruxspace',
+    description:
+      'Export a Cruxspace as a .cruxspace package — every member with its history, the brief, and the Keeper conversations that built it.',
+    input_schema: {
+      type: 'object',
+      properties: { cruxspaceId: { type: 'string' } },
+      required: ['cruxspaceId'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const GARDEN_TOOL_NAMES = new Set(GARDEN_TOOL_DEFINITIONS.map((t) => t.name));
@@ -289,6 +383,33 @@ export function validateGardenTool(
     case 'wear_mood':
       if (!str(input.id, 80)) return { valid: false, error: 'id is required' };
       return { valid: true };
+    case 'look':
+    case 'list_templates':
+      return { valid: true };
+    case 'choose_collaborator':
+      if (!str(input.cruxId, 80) && !str(input.title, 200))
+        return { valid: false, error: 'give a cruxId or a title' };
+      if (!str(input.model, 80)) return { valid: false, error: 'model is required' };
+      return { valid: true };
+    case 'answer_approval':
+      if (typeof input.approved !== 'boolean')
+        return { valid: false, error: 'approved must be true or false' };
+      return { valid: true };
+    case 'search_garden':
+      if (!str(input.query, 400)) return { valid: false, error: 'query is required (≤400 chars)' };
+      return { valid: true };
+    case 'read_garden_file':
+      if (!str(input.cruxId, 80) && !str(input.title, 200))
+        return { valid: false, error: 'give a cruxId or a title' };
+      if (!str(input.path, 400)) return { valid: false, error: 'path is required' };
+      return { valid: true };
+    case 'export_crux':
+      if (!str(input.cruxId, 80) && !str(input.title, 200))
+        return { valid: false, error: 'give a cruxId or a title' };
+      return { valid: true };
+    case 'export_cruxspace':
+      if (!str(input.cruxspaceId, 80)) return { valid: false, error: 'cruxspaceId is required' };
+      return { valid: true };
     default:
       return { valid: false, error: `Unknown tool: ${name}` };
   }
@@ -311,6 +432,24 @@ export async function runGardenTool(name: string, input: Record<string, unknown>
       void useGardenStore.getState().refresh();
     }
   }
+}
+
+/** A crux's workspace, loaded — its files and conversation in the store. */
+async function loadedWorkspace(id: string) {
+  const { openWorkspace } = await import('@/stores/workspaceRegistry');
+  const w = await openWorkspace(id);
+  await w.loaded;
+  return w;
+}
+
+/** Hand a file to the person the way the Export pane does. */
+function download(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 /** A crux by id, or by title (exact, then case-insensitive, then prefix). */
@@ -477,8 +616,9 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
         return `${visible ? 'Opened' : 'Closed'} the ${DEFAULT_PANE_LABELS[pane]} pane.`;
       }
       const crux = await resolveCrux(input);
-      const { activateWorkspace, openWorkspace } = await import('@/stores/workspaceRegistry');
-      const w = (await activateWorkspace(crux.id)) ?? (await openWorkspace(crux.id));
+      const { activateWorkspace } = await import('@/stores/workspaceRegistry');
+      await activateWorkspace(crux.id);
+      const w = await loadedWorkspace(crux.id);
       navigateTo(`/c/${crux.id}`);
       if (what === 'crux') return `Showing "${crux.title}" (${crux.id}).`;
       const path = (input.path as string).replace(/^\//, '');
@@ -490,8 +630,7 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
     }
     case 'read_crux': {
       const crux = await resolveCrux(input);
-      const { openWorkspace } = await import('@/stores/workspaceRegistry');
-      const w = await openWorkspace(crux.id);
+      const w = await loadedWorkspace(crux.id);
       const st = w.data.getState();
       const meta = (crux.meta ?? {}) as Record<string, unknown>;
       const settings = (meta.settings ?? {}) as Record<string, unknown>;
@@ -562,6 +701,155 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
       await applyMood(pkg);
       return `Now wearing "${pkg.name}".`;
     }
+    case 'look': {
+      const { useWorkspaceRegistry, getWorkspace } = await import('@/stores/workspaceRegistry');
+      const { useUIStore } = await import('@/stores/uiStore');
+      const { customNames } = await import('@/lib/pane-labels');
+      const path = location.pathname;
+      const page =
+        path === '/' || path === '/home'
+          ? 'the home garden'
+          : path.startsWith('/c/')
+            ? 'a crux'
+            : path.startsWith('/explore')
+              ? 'Explore'
+              : path.startsWith('/tending')
+                ? 'Tending'
+                : path;
+      const lines = [`page: ${page}`];
+      const names = customNames();
+      if (names?.title) lines.push(`garden title: ${names.title}`);
+      if (names && Object.keys(names.panes).length)
+        lines.push(
+          `pane names: ${Object.entries(names.panes)
+            .map(([k, v]) => `${k} → "${v}"`)
+            .join(', ')}`,
+        );
+      lines.push(`console: ${useUIStore.getState().consoleOpen ? 'open' : 'closed'}`);
+      const active = useWorkspaceRegistry.getState().mru[0];
+      const w = active ? getWorkspace(active) : null;
+      if (w && page === 'a crux') {
+        const st = w.data.getState();
+        const ui = w.ui.getState();
+        lines.push(`crux: "${st.crux?.title ?? active}" (${active})`);
+        lines.push(
+          `panes open: ${(Object.keys(ui.paneVisibility) as PaneType[])
+            .filter((k) => ui.paneVisibility[k])
+            .join(', ')}`,
+        );
+        const tab = ui.editor.tabs.find((t) => t.id === ui.editor.activeTabId);
+        if (tab) lines.push(`file in the Workshop: ${tab.path}`);
+        if (st.viewingSnapshotId)
+          lines.push(`viewing snapshot ${st.viewingSnapshotId} (read-only)`);
+        const { isJobActive } = await import('@/services/turn-jobs');
+        if (isJobActive(st.turnJob)) lines.push('a turn is running in its Collaboration');
+        lines.push(
+          `collaborator: ${String(st.crux?.meta?.settings?.model ?? 'the default model')}`,
+        );
+      }
+      const waiting: string[] = [];
+      for (const e of useWorkspaceRegistry.getState().entries) {
+        const ws = getWorkspace(e.id);
+        for (const a of ws?.ui.getState().pendingAgentApprovals ?? [])
+          waiting.push(
+            `${a.id} — ${a.agent} in "${ws?.data.getState().crux?.title ?? e.id}" asks to ${a.action}${a.tool ? ` ${a.tool}` : ''}${a.detail ? `: ${a.detail.slice(0, 120)}` : ''}`,
+          );
+      }
+      lines.push(
+        waiting.length ? `approvals waiting:\n${waiting.join('\n')}` : 'no approvals waiting',
+      );
+      return lines.join('\n');
+    }
+    case 'list_templates': {
+      const { templateCatalog } = await import('@/components/garden/NewCruxModal');
+      return templateCatalog()
+        .map((t) => `- ${t.id} — ${t.label}: ${t.description}${t.desktopOnly ? ' (desktop)' : ''}`)
+        .join('\n');
+    }
+    case 'choose_collaborator': {
+      const crux = await resolveCrux(input);
+      const { CLAUDE_CODE_MODEL, PROVIDERS } = await import('@/ai/providers');
+      const model = (input.model as string).trim();
+      const known =
+        model === CLAUDE_CODE_MODEL ||
+        Object.values(PROVIDERS).some((p) => p.models.some((m) => m.id === model));
+      if (!known)
+        return `Unknown model "${model}". Use 'claude-code' or one of: ${Object.values(PROVIDERS)
+          .flatMap((p) => p.models.map((m) => m.id))
+          .join(', ')}.`;
+      const w = await loadedWorkspace(crux.id);
+      w.data.getState().setModel(model);
+      await w.data.getState().saveMeta();
+      return `"${crux.title}" now works with ${model}.`;
+    }
+    case 'answer_approval': {
+      const { useWorkspaceRegistry, getWorkspace } = await import('@/stores/workspaceRegistry');
+      const wanted = typeof input.id === 'string' ? input.id : null;
+      for (const e of useWorkspaceRegistry.getState().entries) {
+        const ws = getWorkspace(e.id);
+        if (!ws) continue;
+        const list = ws.ui.getState().pendingAgentApprovals;
+        const a = wanted ? list.find((x) => x.id === wanted) : list[0];
+        if (!a) continue;
+        ws.ui.getState().resolveAgentApproval(a.id, input.approved as boolean);
+        return `${input.approved ? 'Approved' : 'Refused'} ${a.agent}'s ${a.action}${a.tool ? ` ${a.tool}` : ''} in "${ws.data.getState().crux?.title ?? e.id}".`;
+      }
+      return wanted ? `No approval ${wanted} is waiting.` : 'No approval is waiting.';
+    }
+    case 'search_garden': {
+      const { toolSearchFiles } = await import('@/ai/tools');
+      const cruxes = (await services.crux.listAll()).filter(
+        (c) => c.kind !== 'snapshot' && c.kind !== 'tool',
+      );
+      const out: string[] = [];
+      let budget = 12000;
+      for (const c of cruxes) {
+        const r = await toolSearchFiles(
+          { query: input.query, regex: input.regex === true },
+          c.id,
+          services.artifact,
+        );
+        if (/^No matches/i.test(r) || r.startsWith('Error')) continue;
+        const block = `## "${c.title}" (${c.id})\n${r}`;
+        out.push(block.slice(0, budget));
+        budget -= block.length;
+        if (budget <= 0) {
+          out.push('…more cruxes match; narrow the query.');
+          break;
+        }
+      }
+      return out.length
+        ? out.join('\n\n')
+        : `No matches for "${String(input.query)}" in the garden.`;
+    }
+    case 'read_garden_file': {
+      const crux = await resolveCrux(input);
+      const path = (input.path as string).replace(/^\//, '');
+      const artifacts = await services.artifact.findByResource('crux', crux.id);
+      const a = artifacts.find((x) => x.type === 'artifact' && pathOf(x) === path);
+      if (!a) return `No file "${path}" in "${crux.title}".`;
+      if (a.encoding === 'binary') return `"${path}" is binary (${a.mimeType ?? 'unknown type'}).`;
+      const text = await (await services.artifact.downloadBlob(a.id)).text();
+      return text.length > 20000 ? text.slice(0, 20000) + '\n…(truncated)' : text;
+    }
+    case 'export_crux': {
+      const crux = await resolveCrux(input);
+      const { exportCrux } = await import('@/services/crux-io');
+      const { useAppStore } = await import('@/stores/appStore');
+      const author = useAppStore.getState().author;
+      const result = await exportCrux({
+        cruxId: crux.id,
+        author: author ? { username: author.username, displayName: author.displayName } : null,
+      });
+      download(result.blob, result.filename);
+      return `Exported "${crux.title}" as ${result.filename} to the person's downloads.`;
+    }
+    case 'export_cruxspace': {
+      const { exportCruxspace } = await import('@/services/cruxspace-package');
+      const result = await exportCruxspace({ spaceId: input.cruxspaceId as string });
+      download(result.blob, result.filename);
+      return `Exported the Cruxspace as ${result.filename} to the person's downloads (${result.manifest.members?.length ?? 0} members${result.failed.length ? `; could not include: ${result.failed.join(', ')}` : ''}).`;
+    }
     case 'publish_crux': {
       const { openWorkspace } = await import('@/stores/workspaceRegistry');
       const { publicCruxUrl } = await import('@/lib/public-url');
@@ -615,5 +903,6 @@ export const GARDEN_TOOL_GUIDANCE =
   'To have the work done, run_turn in a crux with a clear message; it waits and reports the reply. ' +
   'Say what you planted and where, by title, so the person can open it. ' +
   'When asked to build or make something, first load_skill("build-something") and follow it: ask, plan, plant, build, finish. ' +
-  'You can operate the workspace in front of the person: show brings a crux, a pane, a file, the home garden, Settings or Explore into view (the console closes so they see it); read_crux tells you what a crux holds; snapshot_crux records a moment in its Growth; set_names and wear_mood shape the garden they described. ' +
+  'You can operate the workspace in front of the person: look tells you what they see; show brings a crux, a pane, a file, the home garden, Settings or Explore into view (the console closes so they see it); read_crux tells you what a crux holds; snapshot_crux records a moment in its Growth; set_names and wear_mood shape the garden they described; choose_collaborator picks the model or the Agent Provider for a crux; answer_approval answers what a member is waiting on; export_crux and export_cruxspace hand the person the complete history as one file. ' +
+  'The garden is your context: search_garden and read_garden_file before deciding, and cite the crux. list_templates names what plant_crux accepts. ' +
   'When asked to explain Crux Garden or show how it works, load_skill("tour") and do it by using it, one step at a time.';

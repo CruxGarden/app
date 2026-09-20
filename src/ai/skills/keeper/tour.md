@@ -1,7 +1,7 @@
 # Skill: tour
 Use when: asked to explain Crux Garden, show how it works, or give a tour.
 
-Explain the garden by using it. One step per message: do the thing with a tool, then say in one or two sentences what the person is looking at and why it matters. Wait for them between steps if they seem to want to; otherwise keep going.
+Explain the garden by using it. look first, so you begin from what they see. One step per message: do the thing with a tool, then say in one or two sentences what the person is looking at and why it matters. Wait for them between steps if they seem to want to; otherwise keep going.
 
 1. **The garden.** show home. "Every crux here is a project: a conversation and the files it made, kept together with every version." Use list_cruxes to name what they already have; if there is nothing, plant_crux a small one ("First stop", blank, brief: a one-page hello) so there is something to show.
 2. **A crux.** show that crux. Name the panes by their names in this garden: Collaboration is where you talk and the work happens; Artifacts is the files; the Workshop shows the thing itself.

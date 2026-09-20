@@ -114,6 +114,22 @@ export function getToolLabel(tc: ToolCall): string {
       return 'Looked over the Moods';
     case 'wear_mood':
       return `Wore the ${String(tc.input?.id ?? '')} Mood`;
+    case 'look':
+      return 'Looked at the screen';
+    case 'list_templates':
+      return 'Listed the templates';
+    case 'choose_collaborator':
+      return `Chose ${String(tc.input?.model ?? 'a collaborator')} for ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
+    case 'answer_approval':
+      return tc.input?.approved ? 'Approved a request' : 'Refused a request';
+    case 'search_garden':
+      return `Searched the garden for ${String(tc.input?.query ?? '')}`;
+    case 'read_garden_file':
+      return `Read ${String(tc.input?.path ?? 'a file')}`;
+    case 'export_crux':
+      return `Exported ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
+    case 'export_cruxspace':
+      return 'Exported a Cruxspace';
     case 'ToolSearch':
       return 'Looked up a tool';
     case 'ListMcpResourcesTool':

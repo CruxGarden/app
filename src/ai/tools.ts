@@ -992,7 +992,7 @@ async function toolDeleteFile(
 
 const MAX_SEARCH_MATCHES = 100;
 
-async function toolSearchFiles(
+export async function toolSearchFiles(
   input: Record<string, unknown>,
   cruxId: string,
   artifactService: ArtifactService,

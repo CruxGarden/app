@@ -21,9 +21,12 @@ test('the Keeper plants a crux from the console', async () => {
     await key.press('Enter');
     await expect(page.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
     await page.keyboard.press('Escape');
-    await page.keyboard.press('Escape');
     const console_ = page.locator('[data-modal-open]', { hasText: 'Console — The Keeper' });
-    if (!(await console_.isVisible().catch(() => false))) await page.keyboard.press('Escape');
+    // Escape opens the console once nothing else (Settings, a field) holds it.
+    for (let i = 0; i < 6 && !(await console_.isVisible().catch(() => false)); i++) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
+    }
     await expect(console_).toBeVisible({ timeout: 10_000 });
     const composer = console_.getByPlaceholder('Send a message...');
     await composer.fill('[garden:plant] Plant a notes crux for the field study.');

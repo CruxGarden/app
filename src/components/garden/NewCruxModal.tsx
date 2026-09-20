@@ -466,6 +466,22 @@ const TEMPLATES: Template[] = [
   })),
 ].sort((a, b) => a.order - b.order);
 
+/** The picker's entries as plain data — what plant_crux accepts (the Keeper's list_templates). */
+// eslint-disable-next-line react-refresh/only-export-components
+export function templateCatalog(): {
+  id: string;
+  label: string;
+  description: string;
+  desktopOnly: boolean;
+}[] {
+  return TEMPLATES.map((t) => ({
+    id: t.id,
+    label: t.label,
+    description: t.description,
+    desktopOnly: !!t.desktopOnly,
+  }));
+}
+
 // ── Component ────────────────────────────────────────────
 
 interface NewCruxModalProps {

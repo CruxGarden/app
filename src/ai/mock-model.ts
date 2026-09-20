@@ -1281,6 +1281,23 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('save_font', { format: 'otf', name: 'Moss Sans' });
           return textStream('Named the font Moss Sans, drew an A from SVG and saved the OTF.');
         }
+        if (lastUserText(prompt).includes('[garden:operate]')) {
+          // The Keeper reads the screen and the garden, chooses a collaborator, exports (keeper-operates.spec).
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = [
+            ['look', {}],
+            ['list_templates', {}],
+            ['search_garden', { query: 'Tour stop' }],
+            ['read_garden_file', { title: 'Tour stop', path: 'index.html' }],
+            ['choose_collaborator', { title: 'Tour stop', model: 'claude-sonnet-5' }],
+            ['export_crux', { title: 'Tour stop' }],
+          ];
+          const step = steps[rounds.length];
+          if (step) return toolCallStream(step[0], step[1]);
+          return textStream(
+            'I looked, searched the garden, read the page, chose Claude Sonnet 5 for Tour stop and exported it with its history.',
+          );
+        }
         if (lastUserText(prompt).includes('[garden:tour')) {
           // The Keeper gives the tour by operating the workspace (keeper-tour.spec).
           const rounds = toolResultsThisTurn(prompt);

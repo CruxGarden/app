@@ -17,6 +17,14 @@ describe("the Keeper's garden tools", () => {
       'set_names',
       'list_moods',
       'wear_mood',
+      'look',
+      'list_templates',
+      'choose_collaborator',
+      'answer_approval',
+      'search_garden',
+      'read_garden_file',
+      'export_crux',
+      'export_cruxspace',
     ]);
     expect(isGardenTool('plant_crux')).toBe(true);
     expect(isGardenTool('write_file')).toBe(false);
@@ -58,5 +66,17 @@ describe("the Keeper's garden tools", () => {
     expect(validateGardenTool('wear_mood', {}).valid).toBe(false);
     expect(validateGardenTool('wear_mood', { id: 'plasma' }).valid).toBe(true);
     expect(validateGardenTool('list_moods', {}).valid).toBe(true);
+    expect(validateGardenTool('look', {}).valid).toBe(true);
+    expect(validateGardenTool('choose_collaborator', { title: 'x' }).valid).toBe(false);
+    expect(
+      validateGardenTool('choose_collaborator', { title: 'x', model: 'claude-code' }).valid,
+    ).toBe(true);
+    expect(validateGardenTool('answer_approval', {}).valid).toBe(false);
+    expect(validateGardenTool('answer_approval', { approved: true }).valid).toBe(true);
+    expect(validateGardenTool('search_garden', {}).valid).toBe(false);
+    expect(validateGardenTool('read_garden_file', { title: 'x' }).valid).toBe(false);
+    expect(validateGardenTool('read_garden_file', { title: 'x', path: 'a.md' }).valid).toBe(true);
+    expect(validateGardenTool('export_crux', {}).valid).toBe(false);
+    expect(validateGardenTool('export_cruxspace', { cruxspaceId: 's' }).valid).toBe(true);
   });
 });
