@@ -29,20 +29,8 @@ const createIgnore = require('ignore');
  *   instead — a missing folder must never cascade into artifact deletion.
  */
 
-export const DEFAULT_IGNORES = [
-  'node_modules/',
-  'dist/',
-  '.astro/',
-  '.git/',
-  '.crux/', // app-internal per-folder state (MCP token, ADR 0013) — never ingested or published
-  '.DS_Store',
-  'Thumbs.db',
-  '*.swp',
-  '*.swx',
-  '.#*',
-  '*~',
-  '*.crux-write-*',
-];
+export { DEFAULT_IGNORES } from './folder-scan';
+import { DEFAULT_IGNORES } from './folder-scan';
 
 export interface WatchEvent {
   type: 'write' | 'delete' | 'mkdir' | 'rmdir';
@@ -164,7 +152,8 @@ class FolderWatch {
     }
 
     // Folder-deletion guard: never turn a missing folder into mass deletion
-    if (!fs.existsSync(this.folder)) return { folder: this.folder, folderMissing: true, events: [] };
+    if (!fs.existsSync(this.folder))
+      return { folder: this.folder, folderMissing: true, events: [] };
     return { folder: this.folder, events };
   }
 
