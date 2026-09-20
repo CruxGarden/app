@@ -139,6 +139,7 @@ function HtmlRenderer({
         apiBase,
         visitorId: author?.id ?? null,
         visitorName: author?.displayName ?? null,
+        visitorUsername: author?.username ?? null,
       };
     }
 

@@ -49,3 +49,14 @@ export async function checkUsername(username: string): Promise<{ available: bool
   });
   return res.data;
 }
+
+/** The directory, for inviting into a garden: @username prefix or a name (GARDEN-MEMBERS-PLAN). */
+export async function searchAuthors(
+  q: string,
+): Promise<{ id: string; username: string; displayName: string }[]> {
+  const res = await client.get<{ id: string; username: string; displayName: string }[]>(
+    '/authors/search',
+    { params: { q } },
+  );
+  return res.data;
+}

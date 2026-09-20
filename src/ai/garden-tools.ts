@@ -301,6 +301,53 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'list_gardens',
+    description:
+      'The gardens with people that the person owns or belongs to, and invitations waiting on them — read from the API. A garden is a shared crux (the Garden template) whose Store holds its members.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'find_people',
+    description:
+      'The directory: people on the API by @username or name, for inviting into a garden.',
+    input_schema: {
+      type: 'object',
+      properties: { q: { type: 'string' } },
+      required: ['q'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'invite_person',
+    description:
+      'Invite someone from the directory into a shared garden (a Garden crux the person owns or edits). They appear as invited until they accept on their Home.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        gardenCruxId: { type: 'string' },
+        username: { type: 'string' },
+        role: { type: 'string', enum: ['member', 'editor'] },
+      },
+      required: ['gardenCruxId', 'username'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'add_to_garden',
+    description:
+      "Put one of the person's shared cruxes on a garden's shelf so its members see it (the crux must be shared first).",
+    input_schema: {
+      type: 'object',
+      properties: {
+        gardenCruxId: { type: 'string' },
+        cruxId: { type: 'string' },
+        title: { type: 'string' },
+      },
+      required: ['gardenCruxId'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const GARDEN_TOOL_NAMES = new Set(GARDEN_TOOL_DEFINITIONS.map((t) => t.name));
@@ -409,6 +456,22 @@ export function validateGardenTool(
       return { valid: true };
     case 'export_cruxspace':
       if (!str(input.cruxspaceId, 80)) return { valid: false, error: 'cruxspaceId is required' };
+      return { valid: true };
+    case 'list_gardens':
+      return { valid: true };
+    case 'find_people':
+      if (!str(input.q, 60)) return { valid: false, error: 'q is required' };
+      return { valid: true };
+    case 'invite_person':
+      if (!str(input.gardenCruxId, 80)) return { valid: false, error: 'gardenCruxId is required' };
+      if (!str(input.username, 60)) return { valid: false, error: 'username is required' };
+      if (input.role !== undefined && input.role !== 'member' && input.role !== 'editor')
+        return { valid: false, error: 'role is member or editor' };
+      return { valid: true };
+    case 'add_to_garden':
+      if (!str(input.gardenCruxId, 80)) return { valid: false, error: 'gardenCruxId is required' };
+      if (!str(input.cruxId, 80) && !str(input.title, 200))
+        return { valid: false, error: 'give a cruxId or a title' };
       return { valid: true };
     default:
       return { valid: false, error: `Unknown tool: ${name}` };
@@ -865,6 +928,57 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
       download(result.blob, result.filename);
       return `Exported the Cruxspace as ${result.filename} to the person's downloads (${result.manifest.members?.length ?? 0} members${result.failed.length ? `; could not include: ${result.failed.join(', ')}` : ''}).`;
     }
+    case 'list_gardens': {
+      const { myGardens } = await import('@/api/gardens');
+      const list = await myGardens();
+      if (!list.length)
+        return 'No gardens yet. Plant one with the "garden" template, share it, and invite people.';
+      return list
+        .map(
+          (g) =>
+            `- "${g.title}" (${g.cruxId}) by @${g.authorUsername} — you are ${g.membership?.role ?? 'member'}${g.membership?.status === 'invited' ? ' (invited; not yet accepted)' : ''}`,
+        )
+        .join('\n');
+    }
+    case 'find_people': {
+      const { searchAuthors } = await import('@/api/authors');
+      const list = await searchAuthors(input.q as string);
+      return list.length
+        ? list
+            .map(
+              (a) =>
+                `- @${a.username}${a.displayName && a.displayName !== a.username ? ` — ${a.displayName}` : ''} (${a.id})`,
+            )
+            .join('\n')
+        : `Nobody matches "${String(input.q)}".`;
+    }
+    case 'invite_person': {
+      const { searchAuthors } = await import('@/api/authors');
+      const { inviteToGarden } = await import('@/api/gardens');
+      const wanted = String(input.username).replace(/^@/, '').toLowerCase();
+      const person = (await searchAuthors(wanted)).find((a) => a.username.toLowerCase() === wanted);
+      if (!person) return `Nobody is called @${wanted}. find_people shows who there is.`;
+      const m = await inviteToGarden(input.gardenCruxId as string, {
+        authorId: person.id,
+        username: person.username,
+        displayName: person.displayName,
+        role: (input.role as 'member' | 'editor') ?? 'member',
+      });
+      return `Invited @${m.username} as ${m.role}; ${m.status === 'active' ? 'they were already in' : 'they can accept on their Home'}.`;
+    }
+    case 'add_to_garden': {
+      const crux = await resolveCrux(input);
+      const meta = (crux.meta ?? {}) as Record<string, unknown>;
+      if (!meta.publishedAt) return `"${crux.title}" is not shared yet; publish_crux first.`;
+      const { publishBaseUrlFor } = await import('@/lib/public-url');
+      const { shareIntoGarden } = await import('@/api/gardens');
+      await shareIntoGarden(input.gardenCruxId as string, {
+        cruxId: crux.id,
+        title: crux.title ?? 'A crux',
+        url: publishBaseUrlFor(crux.id),
+      });
+      return `"${crux.title}" is on the garden's shelf.`;
+    }
     case 'publish_crux': {
       const { openWorkspace } = await import('@/stores/workspaceRegistry');
       const { publicCruxUrl } = await import('@/lib/public-url');
@@ -920,4 +1034,5 @@ export const GARDEN_TOOL_GUIDANCE =
   'When asked to build or make something, first load_skill("build-something") and follow it: ask, plan, plant, build, finish. ' +
   'You can operate the workspace in front of the person: look tells you what they see; show brings a crux, a pane, a file, the home garden, Settings or Explore into view (the console closes so they see it); read_crux tells you what a crux holds; snapshot_crux records a moment in its Growth; set_names and wear_mood shape the garden they described; choose_collaborator picks the model or the Agent Provider for a crux; answer_approval answers what a member is waiting on; export_crux and export_cruxspace hand the person the complete history as one file. ' +
   'The garden is your context: search_garden and read_garden_file before deciding, and cite the crux. list_templates names what plant_crux accepts. ' +
+  'People: list_gardens shows the shared gardens the person belongs to; a new one is plant_crux with template "garden", then publish_crux; find_people searches the directory and invite_person invites (they accept on their Home); add_to_garden puts a shared crux on a garden\'s shelf. ' +
   'When asked to explain Crux Garden or show how it works, load_skill("tour") and do it by using it, one step at a time.';

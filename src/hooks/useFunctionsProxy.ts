@@ -44,12 +44,26 @@ export function useFunctionsProxy(cruxId: string | null) {
       switch (type) {
         case 'crux:fn:call': {
           const r = await track(runner.callLocalFunction(cruxId!, String(name), body, visitorId));
-          answer('crux:fn:call:res', { status: r.status, body: r.body, logs: r.logs, ms: r.ms });
+          answer('crux:fn:call:res', {
+            status: r.status,
+            body: r.body,
+            logs: r.logs,
+            ms: r.ms,
+            value: { status: r.status, body: r.body },
+          });
           break;
         }
         case 'crux:fn:emit': {
           const r = await track(runner.emitLocal(cruxId!, String(name), data, visitorId));
-          answer('crux:fn:emit:res', { event: r.event, handlers: r.handlers, refused: r.refused });
+          answer('crux:fn:emit:res', {
+            event: r.event,
+            handlers: r.handlers,
+            refused: r.refused,
+            value: {
+              status: r.refused ? r.refused.status : 202,
+              body: r.refused ? { error: r.refused.message } : r,
+            },
+          });
           break;
         }
         case 'crux:fn:on':

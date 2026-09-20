@@ -132,6 +132,14 @@ export function getToolLabel(tc: ToolCall): string {
       return `Exported ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
     case 'export_cruxspace':
       return 'Exported a Cruxspace';
+    case 'list_gardens':
+      return 'Looked over the gardens';
+    case 'find_people':
+      return `Looked for ${String(tc.input?.q ?? 'people')}`;
+    case 'invite_person':
+      return `Invited @${String(tc.input?.username ?? '').replace(/^@/, '')}`;
+    case 'add_to_garden':
+      return `Put ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')} on a garden's shelf`;
     case 'ToolSearch':
       return 'Looked up a tool';
     case 'ListMcpResourcesTool':

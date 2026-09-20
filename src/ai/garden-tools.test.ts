@@ -25,6 +25,10 @@ describe("the Keeper's garden tools", () => {
       'read_garden_file',
       'export_crux',
       'export_cruxspace',
+      'list_gardens',
+      'find_people',
+      'invite_person',
+      'add_to_garden',
     ]);
     expect(isGardenTool('plant_crux')).toBe(true);
     expect(isGardenTool('write_file')).toBe(false);
@@ -78,5 +82,16 @@ describe("the Keeper's garden tools", () => {
     expect(validateGardenTool('read_garden_file', { title: 'x', path: 'a.md' }).valid).toBe(true);
     expect(validateGardenTool('export_crux', {}).valid).toBe(false);
     expect(validateGardenTool('export_cruxspace', { cruxspaceId: 's' }).valid).toBe(true);
+    expect(validateGardenTool('find_people', {}).valid).toBe(false);
+    expect(validateGardenTool('invite_person', { gardenCruxId: 'g' }).valid).toBe(false);
+    expect(
+      validateGardenTool('invite_person', { gardenCruxId: 'g', username: 'ada', role: 'boss' })
+        .valid,
+    ).toBe(false);
+    expect(validateGardenTool('invite_person', { gardenCruxId: 'g', username: '@ada' }).valid).toBe(
+      true,
+    );
+    expect(validateGardenTool('add_to_garden', { gardenCruxId: 'g' }).valid).toBe(false);
+    expect(validateGardenTool('add_to_garden', { gardenCruxId: 'g', title: 'x' }).valid).toBe(true);
   });
 });

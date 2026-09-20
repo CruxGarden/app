@@ -75,7 +75,39 @@ export function useStoreProxy(cruxId: string | null) {
         (f) => f.contentWindow === e.source && f.dataset.cruxId === cruxId,
       );
       if (!frame || new URL(frame.src, location.href).origin !== e.origin) return;
-      if (!e.data?.type?.startsWith('crux:store:')) return;
+      const t = String(e.data?.type ?? '');
+      if (t === 'crux:directory:search') {
+        // The directory, asked of the API as the signed-in person (GARDEN-MEMBERS-PLAN).
+        void import('@/api/authors').then(({ searchAuthors }) =>
+          searchAuthors(String(e.data.q ?? ''))
+            .then((list) =>
+              reply(e.source, e.origin, 'crux:directory:search:res', e.data.id, {
+                value: {
+                  status: 200,
+                  body: list.map((a) => ({
+                    authorId: a.id,
+                    username: a.username,
+                    displayName: a.displayName,
+                  })),
+                },
+              }),
+            )
+            .catch((err: Error) =>
+              reply(e.source, e.origin, 'crux:directory:search:res', e.data.id, {
+                value: { status: 502, body: { error: err.message } },
+              }),
+            ),
+        );
+        return;
+      }
+      if (t === 'crux:visitor') {
+        const a = useAppStore.getState().author;
+        reply(e.source, e.origin, 'crux:visitor:res', e.data.id, {
+          value: a ? { id: a.id, username: a.username, name: a.displayName } : null,
+        });
+        return;
+      }
+      if (!t.startsWith('crux:store:')) return;
       if (!isServicesReady()) return;
 
       const { store } = getServices();

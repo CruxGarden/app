@@ -23,6 +23,7 @@ import * as cruxesApi from '@/api/cruxes';
 import * as liveStore from '@/api/store';
 import CustomDomainSection from './CustomDomainSection';
 import GuestbookSection from './GuestbookSection';
+import GardenShelfSection from './GardenShelfSection';
 import FunctionsSection from './FunctionsSection';
 import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
 
@@ -483,6 +484,9 @@ export default function PublishPane() {
             </>
           )}
 
+          {isPublished && isAuthenticated && publicUrl && (
+            <GardenShelfSection cruxId={crux.id} title={crux.title ?? 'A crux'} url={publicUrl} />
+          )}
           {!isEmbeddedApp(crux) && <GuestbookSection cruxId={crux.id} artifacts={artifacts} />}
           {!isEmbeddedApp(crux) && (
             <FunctionsSection

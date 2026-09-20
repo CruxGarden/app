@@ -146,6 +146,16 @@ export const CLIENT_SOURCE = `// crux.js — this page's handle on its crux: cru
       list: function () { return ask('crux:store:list', {}).then(function (r) { return r.keys || []; }); }
     };
   }
+  var ready = framed ? ask('crux:visitor', {}).then(function (r) { window.crux.visitor = r.value || null; }, function () {}) : Promise.resolve();
+  window.crux.visitor = null;
+  window.crux.whenReady = function () { return ready; };
+  window.crux.directory = function (q) {
+    return ask('crux:directory:search', { q: q }).then(function (r) {
+      var v = r.value || {};
+      if (v.status >= 400) throw new Error((v.body && v.body.error) || 'The directory did not answer');
+      return v.body || [];
+    });
+  };
   window.crux.fn = function (name, body) {
     return ask('crux:fn:call', { name: name, body: body === undefined ? null : body }).then(function (r) {
       if (r.status >= 400) throw new Error((r.body && r.body.error) || ('Function ' + name + ' failed: ' + r.status));

@@ -114,7 +114,9 @@ export type CruxKind =
   | 'notes'
   | 'mood'
   /** A Crux Tool as a Template Crux: installed by cloning, hidden from the garden's list (ADR 0050) */
-  | 'tool';
+  | 'tool'
+  /** A garden with people in it: its Store holds the members and the shelf, its functions the rules (GARDEN-MEMBERS-PLAN) */
+  | 'garden';
 
 export interface CreateCruxDto {
   id?: string;

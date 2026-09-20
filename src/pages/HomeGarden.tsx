@@ -16,6 +16,7 @@ import NewCruxModal from '@/components/garden/NewCruxModal';
 import RecoverSection from '@/components/garden/RecoverSection';
 import TrashSection from '@/components/garden/TrashSection';
 import Cruxspaces from '@/components/garden/Cruxspaces';
+import Gardens from '@/components/garden/Gardens';
 import { TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
 import { openGardenPage } from '@/lib/public-url';
 import { IconButton, Modal, Button, PlasmaButton } from '@/components/ui';
@@ -215,6 +216,8 @@ export default function HomeGarden() {
 
       {/* Cruxes the account has and this machine does not (RESILIENCE-PLAN §2c) */}
       <RecoverSection />
+
+      <Gardens />
 
       <Cruxspaces />
 

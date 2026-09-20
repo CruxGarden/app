@@ -321,6 +321,17 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 46.5,
+    id: 'garden',
+    label: 'Garden',
+    description:
+      'A garden other people belong to — invite from the directory, share cruxes onto its shelf, leave notes; its Store and functions are the backend',
+    icon: <HomeIcon />,
+    thumb: <BlankThumb />,
+    kind: 'garden',
+    defaultTitle: 'Our garden',
+  },
+  {
     order: 47,
     id: 'order-desk',
     label: 'Order Desk',
