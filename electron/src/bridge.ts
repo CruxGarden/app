@@ -365,6 +365,47 @@ export interface ContainersBridge {
   onOutput(callback: (event: { cruxId: string; verb: string; line: string }) => void): () => void;
 }
 
+/**
+ * The Project runner: code that lives outside the Crux, run from it.
+ *
+ * A folder becomes runnable only by being chosen in the OS dialog, so a Crux
+ * that arrives from someone else cannot start anything until the person
+ * points at a folder themselves.
+ */
+export interface ProjectInfo {
+  folder: string;
+  name?: string;
+  scripts: string[];
+  packageManager: 'npm' | 'pnpm' | 'yarn' | 'bun' | 'unknown';
+  installed: boolean;
+  approved?: boolean;
+}
+export interface ProjectState {
+  status: 'idle' | 'starting' | 'running' | 'stopped' | 'crashed';
+  script?: string;
+  port?: number;
+  pid?: number;
+  log: string;
+  startedAt?: number;
+  exit?: number;
+}
+export interface ProjectRunnerBridge {
+  /** Open the folder picker. Choosing is the approval; returns what it found. */
+  choose(): Promise<ProjectInfo | null>;
+  /** What a folder offers, and whether it has been chosen before. */
+  read(opts: { folder: string }): Promise<ProjectInfo | null>;
+  state(opts: { cruxId: string }): Promise<ProjectState>;
+  start(opts: {
+    cruxId: string;
+    folder: string;
+    script: string;
+    args?: string[];
+    port?: number;
+    env?: Record<string, string>;
+  }): Promise<ProjectState>;
+  stop(opts: { cruxId: string }): Promise<boolean>;
+}
+
 export interface FfmpegBridge {
   available(): Promise<boolean>;
   transcode(opts: {
@@ -527,6 +568,7 @@ export interface ElectronBridge {
   ffmpeg: FfmpegBridge;
   native: NativeToolsBridge;
   containers: ContainersBridge;
+  projectRunner: ProjectRunnerBridge;
   media: MediaBridge;
   localai: LocalAiBridge;
   updates: UpdatesBridge;

@@ -278,6 +278,20 @@ const api: ElectronBridge = {
       return () => ipcRenderer.removeListener('native:progress', handler);
     },
   },
+  projectRunner: {
+    choose: () => ipcRenderer.invoke('project:choose'),
+    read: (opts: { folder: string }) => ipcRenderer.invoke('project:read', opts),
+    state: (opts: { cruxId: string }) => ipcRenderer.invoke('project:state', opts),
+    start: (opts: {
+      cruxId: string;
+      folder: string;
+      script: string;
+      args?: string[];
+      port?: number;
+      env?: Record<string, string>;
+    }) => ipcRenderer.invoke('project:start', opts),
+    stop: (opts: { cruxId: string }) => ipcRenderer.invoke('project:stop', opts),
+  },
   containers: {
     runner: (opts?: { refresh?: boolean }) =>
       ipcRenderer.invoke('containers:runner', opts) as Promise<{

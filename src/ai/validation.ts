@@ -74,6 +74,23 @@ export function validateToolInput(
       return typeof input.path === 'string' && input.path.trim()
         ? { valid: true }
         : { valid: false, error: 'path is required' };
+    case 'project_status':
+    case 'project_stop':
+      return { valid: true };
+    case 'project_logs':
+      return input.lines === undefined || (typeof input.lines === 'number' && input.lines > 0)
+        ? { valid: true }
+        : { valid: false, error: 'lines must be a positive number' };
+    case 'project_start': {
+      if (input.script !== undefined && typeof input.script !== 'string')
+        return { valid: false, error: 'script must be a name' };
+      if (
+        input.port !== undefined &&
+        (typeof input.port !== 'number' || input.port < 1024 || input.port > 65535)
+      )
+        return { valid: false, error: 'port must be between 1024 and 65535' };
+      return { valid: true };
+    }
     case 'compose_ps':
       return { valid: true };
     case 'compose_up':

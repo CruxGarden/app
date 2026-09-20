@@ -774,6 +774,65 @@ function setupIpc() {
   );
 
   // Containers: a Crux's own stack, through Docker Compose (see containers.ts).
+  /**
+   * The Project runner: code that lives outside the Crux, run from it.
+   *
+   * Choosing a folder is the approval — it is the only call that grants one,
+   * and it goes through the OS dialog, so nothing a Crux carries can point the
+   * app at a folder the person never picked.
+   */
+  ipcMain.handle('project:choose', async () => {
+    const { approveFolder, readProject } =
+      require('./project-runner') as typeof import('./project-runner');
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose the project to run',
+      properties: ['openDirectory'],
+      buttonLabel: 'Use This Folder',
+    });
+    const folder = result.canceled ? null : result.filePaths[0];
+    if (!folder) return null;
+    approveFolder(folder);
+    return readProject(folder);
+  });
+
+  ipcMain.handle('project:read', async (_e: any, opts: { folder: string }) => {
+    const { readProject, folderApproved } =
+      require('./project-runner') as typeof import('./project-runner');
+    const folder = String(opts?.folder ?? '');
+    if (!folder) return null;
+    const info = readProject(folder);
+    return info ? { ...info, approved: folderApproved(folder) } : null;
+  });
+
+  ipcMain.handle('project:state', async (_e: any, opts: { cruxId: string }) => {
+    const { projectState } = require('./project-runner') as typeof import('./project-runner');
+    return projectState(String(opts?.cruxId ?? ''));
+  });
+
+  ipcMain.handle(
+    'project:start',
+    async (
+      _e: any,
+      opts: {
+        cruxId: string;
+        folder: string;
+        script: string;
+        args?: string[];
+        port?: number;
+        env?: Record<string, string>;
+      },
+    ) => {
+      const { startProject } = require('./project-runner') as typeof import('./project-runner');
+      return startProject(opts);
+    },
+  );
+
+  ipcMain.handle('project:stop', async (_e: any, opts: { cruxId: string }) => {
+    const { stopProject } = require('./project-runner') as typeof import('./project-runner');
+    await stopProject(String(opts?.cruxId ?? ''));
+    return true;
+  });
+
   ipcMain.handle('containers:runner', async (_e: any, opts?: { refresh?: boolean }) => {
     const { composeRunner, clearComposeRunnerCache } =
       require('./containers') as typeof import('./containers');
@@ -1523,6 +1582,8 @@ app.on('before-quit', (event: any) => {
     await agentHost?.stopAll();
     await agentProvider?.stopAll();
     await devServers?.stopAll();
+    // A project the person started is a child of this app, and goes with it.
+    await (require('./project-runner') as typeof import('./project-runner')).stopAllProjects();
     await previewServer?.stopAll();
     await watcher?.closeAll();
     db?.close();

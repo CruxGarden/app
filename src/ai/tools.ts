@@ -473,6 +473,56 @@ export const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
+/**
+ * A Project Crux: the checkout this Crux runs. The folder and the script are
+ * in `project.json`; the person chooses the folder, and only they can.
+ */
+export const PROJECT_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'project_status',
+    description:
+      "Whether this Crux's project is running, which script and port, and how it ended if it stopped. " +
+      'USE WHEN: asked what is running, or before starting something that may already be up.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'project_start',
+    description:
+      "Run this Crux's project — the script named in project.json, or one you name. " +
+      'Starting again replaces the run that was there. The folder must already have been chosen by the person: ' +
+      'if it has not, say so and ask them to choose it rather than trying another path.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        script: {
+          type: 'string',
+          description: 'A script from its package.json. Omit for the one in project.json.',
+        },
+        port: { type: 'number', description: 'Offered as PORT. Omit to let the project decide.' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'project_stop',
+    description:
+      "Stop this Crux's project and the processes it started. ASK FIRST when someone may be using it.",
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'project_logs',
+    description:
+      'What the project has printed, newest last. USE WHEN: it crashed or will not start — read what it said before guessing.',
+    input_schema: {
+      type: 'object',
+      properties: { lines: { type: 'number', description: 'How many lines. Default 80.' } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
 /** The preview as an image or a video, from the shell's own capture window (step 5). */
 export const CAPTURE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -545,6 +595,7 @@ export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
 
 import { WORKSPACE_TOOL_DEFINITIONS, runWorkspaceTool } from './workspace-tools';
 import { isStackCrux } from '@/services/containers';
+import { isProjectCrux } from '@/services/project-runner';
 
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
@@ -555,12 +606,16 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   // The compose tools only appear for a Crux that actually carries a stack.
   const containers =
     can(Capability.Containers) && isStackCrux(cruxId) ? CONTAINER_TOOL_DEFINITIONS : [];
+  // The project tools belong to a Project Crux and nowhere else.
+  const project =
+    can(Capability.ProjectRunner) && isProjectCrux(cruxId) ? PROJECT_TOOL_DEFINITIONS : [];
   return [
     ...TOOL_DEFINITIONS,
     ...appToolDefinitions(cruxId),
     ...site,
     ...native,
     ...containers,
+    ...project,
     GUESTBOOK_TOOL_DEFINITION,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
@@ -828,6 +883,63 @@ export function createToolExecutor(
             result = answer.command
               ? `${answer.message}\nThe command: ${answer.command}`
               : answer.message;
+            break;
+          }
+          case 'project_status':
+          case 'project_logs': {
+            const { projectState } = await import('@/services/project-runner');
+            const run = await projectState(cruxId);
+            if (toolName === 'project_logs') {
+              const lines = (input as { lines?: number }).lines ?? 80;
+              result = run.log
+                ? run.log
+                    .split('\n')
+                    .slice(-Math.min(Math.max(lines, 1), 500))
+                    .join('\n')
+                : 'It has not printed anything.';
+              break;
+            }
+            result =
+              run.status === 'idle'
+                ? 'Nothing is running for this Crux.'
+                : `${run.status}${run.script ? ` — ${run.script}` : ''}${run.port ? ` on port ${run.port}` : ''}${
+                    run.exit !== undefined && run.status === 'crashed' ? ` (exit ${run.exit})` : ''
+                  }`;
+            break;
+          }
+          case 'project_start':
+          case 'project_stop': {
+            const runner = await import('@/services/project-runner');
+            if (toolName === 'project_stop') {
+              await runner.stopProject(cruxId);
+              result = 'Stopped.';
+              break;
+            }
+            // The folder and the usual script live in the Crux's own document.
+            const artifacts = await artifactService.findByResource('crux', cruxId);
+            const doc = artifacts.find(
+              (a) => a.type === 'artifact' && pathOf(a) === 'project.json',
+            );
+            const record = doc
+              ? (JSON.parse(await (await artifactService.downloadBlob(doc.id)).text()) as {
+                  folder?: string;
+                  script?: string;
+                  port?: number;
+                  args?: string[];
+                })
+              : {};
+            if (!record.folder)
+              throw new Error(
+                'No folder has been chosen for this Crux yet — ask the person to choose one in the Project bench.',
+              );
+            const args = input as { script?: string; port?: number };
+            const run = await runner.startProject(
+              cruxId,
+              record.folder,
+              args.script ?? record.script ?? 'dev',
+              { args: record.args ?? [], port: args.port ?? record.port ?? undefined },
+            );
+            result = `${run.status}${run.script ? ` — ${run.script}` : ''}${run.port ? ` on port ${run.port}` : ''}`;
             break;
           }
           case 'compose_ps': {

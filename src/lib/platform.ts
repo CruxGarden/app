@@ -76,6 +76,11 @@ export enum Capability {
    * the Stack bench asks at the moment it matters.
    */
   Containers = 'containers',
+  /**
+   * The shell can run a project that lives outside the Crux — a checkout you
+   * are working on — as a long-lived process it owns.
+   */
+  ProjectRunner = 'projectRunner',
   /** The v2 features — gardens with people (GARDEN-MEMBERS-PLAN) — shown; a v1 release never has it. */
   V2 = 'v2',
 }
@@ -124,6 +129,8 @@ export function can(capability: Capability): boolean {
       return !!api.native;
     case Capability.Containers:
       return !!api.containers;
+    case Capability.ProjectRunner:
+      return !!api.projectRunner;
   }
 }
 

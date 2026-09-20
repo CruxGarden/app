@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1 id="project-name">Project</h1>
+        <p id="about" class="about">Choose the folder you are working in.</p>
+      </header>
+
+      <section class="pick">
+        <button id="choose" type="button" class="primary">Choose folder…</button>
+        <span id="folder" class="folder"></span>
+      </section>
+
+      <section id="setup" class="setup" hidden>
+        <div class="row">
+          <label for="script">Script</label>
+          <select id="script"></select>
+        </div>
+        <div class="row">
+          <label for="port">Port</label>
+          <input id="port" type="number" min="1024" max="65535" placeholder="the project decides" />
+          <span class="hint">Offered as <code>PORT</code>. Some servers want a flag instead.</span>
+        </div>
+        <div class="row">
+          <label for="args">Arguments</label>
+          <input id="args" placeholder="--host 127.0.0.1" />
+        </div>
+        <div class="row">
+          <label for="env-file">Settings from</label>
+          <input id="env-file" placeholder="connections.env" />
+          <span class="hint">A file in this Crux — a Stack's connection block goes here.</span>
+        </div>
+        <p class="actions">
+          <button id="start" type="button" class="primary">Start</button>
+          <button id="stop" type="button">Stop</button>
+          <button id="open" type="button" hidden>Open</button>
+          <span id="status" class="status"></span>
+        </p>
+      </section>
+
+      <section>
+        <h2>What it said</h2>
+        <pre id="log" class="output">Nothing yet.</pre>
+      </section>
+
+      <footer>
+        <p>
+          The code stays in its own repository. This Crux records how it runs here — the folder, the
+          script, the port and the settings — so tomorrow is one press of Start.
+        </p>
+      </footer>
+    </main>
+    <script src="garden/bridge.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

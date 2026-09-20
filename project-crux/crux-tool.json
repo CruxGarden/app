@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "project-app",
+  "name": "Project",
+  "description": "Developer · run a checkout you are working on — pick the folder, pick the script, give it a port and the settings a Stack publishes",
+  "kind": "webapp",
+  "defaultTitle": "My project",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 45,
+  "bundled": true,
+  "app": "project",
+  "entryFile": "index.html",
+  "layout": "workshop",
+  "document": {
+    "path": "project.json",
+    "seed": {
+      "version": 1,
+      "app": "project",
+      "folder": "",
+      "script": "",
+      "args": [],
+      "port": null
+    }
+  },
+  "share": false,
+  "greeting": "Run the code you are working on. Choose the folder — a checkout, anywhere on this machine — and the page reads its package.json and lists its scripts. Pick one, give it a port if it wants one, press Start, and its output appears here. Settings can come from a Stack Crux beside it: point at that Crux's connections.env and the run gets DATABASE_URL and the rest, so the code talks to the services without anyone copying port numbers. The code stays in its own repository; this Crux is only how it runs here, which is why it is not shared. Ask me to start it, stop it, or read what it said; I have project_start, project_stop, project_status and project_logs.",
+  "context": "A Project Crux runs a checkout that lives outside this Crux. `project.json` records the choice: folder, script, args, port, and optionally an env file to read (a Stack Crux's `connections.env`). The shell runs the script with the bundled pnpm on Electron's own Node, so the machine needs neither Node nor a package manager on its PATH; `pnpm run` executes whatever package.json says, whichever manager installed it. PORT is offered as an environment variable — most servers read it, some want a flag instead, which is what args are for. A folder becomes runnable only by being chosen in the OS dialog: `project.json` naming a path is not enough, and a Crux from someone else starts nothing until the person picks a folder. That is why this tool is never shared. Tools: project_status for what is running, project_start and project_stop, project_logs for what it said. When a run crashes, read the log before guessing, and say what it actually printed.",
+  "toolInfo": {
+    "name": "pnpm",
+    "upstream": "https://pnpm.io",
+    "relationship": "Crux Garden runs your project's scripts with the pnpm it bundles (MIT), on Electron's own Node, so a machine needs neither Node nor a package manager on its PATH. `pnpm run` executes what your package.json says, whichever manager installed the dependencies. The page, the record of how the project runs here, and the rule that a folder becomes runnable only by being chosen in the OS dialog are Crux Garden's. Your code is untouched: it stays in its own repository and nothing is copied into the Crux.",
+    "detailsPath": "UPSTREAM.md"
+  }
+}
