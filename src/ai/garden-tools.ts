@@ -643,11 +643,26 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
             .catch(() => '')
         : '';
       const replies = st.messages.filter((m) => m.role === 'assistant').slice(-2);
+      // The crux's backend: its functions, and — once shared — what the API's
+      // clock says about the scheduled ones.
+      const { functionFiles, listPublishedFunctions } = await import('@/services/crux-functions');
+      let fns = functionFiles(st.artifacts);
+      if (fns.length && meta.publishedAt)
+        fns = await listPublishedFunctions(crux.id).catch(() => fns);
+      const fnLine = fns.length
+        ? `functions: ${fns
+            .map(
+              (f) =>
+                `${f.name} (${f.kind === 'event' ? `on ${f.event}` : 'http'}${f.schedule ? `; ${f.schedule}` : ''}${f.nextRun ? `; next ${f.nextRun}` : ''}${f.lastStatus ? `; last ${f.lastStatus}` : ''})`,
+            )
+            .join(', ')}`
+        : '';
       return [
         `"${crux.title}" (${crux.id})`,
         `kind: ${crux.kind ?? 'webapp'}; template: ${String(meta.template ?? 'blank')}`,
         `entry: ${String(settings.entryFile ?? 'index.html')}; shared: ${meta.publishedAt ? 'yes' : 'no'}`,
         `files (${files.length}): ${files.slice(0, 60).join(', ')}${files.length > 60 ? ', …' : ''}`,
+        fnLine,
         briefText ? `brief: ${brief(briefText)}` : '',
         replies.length
           ? `last replies:\n${replies.map((m) => `- ${brief(m.content).slice(0, 600)}`).join('\n')}`
