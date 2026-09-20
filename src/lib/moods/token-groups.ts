@@ -159,6 +159,21 @@ const TYPE_KEYS = new Set([
   'letterSpacingDisplay',
   'letterSpacingMono',
 ]);
+/** Names: the garden's title and the panes' words — text, not colour. */
+const NAME_KEYS = new Set([
+  'gardenTitle',
+  'paneLabelTasks',
+  'paneLabelCollaboration',
+  'paneLabelArtifacts',
+  'paneLabelWorkshop',
+  'paneLabelDetails',
+  'paneLabelHistory',
+  'paneLabelExport',
+  'paneLabelSync',
+  'paneLabelPublish',
+  'paneLabelStore',
+  'paneLabelMedia',
+]);
 const HEADER_KEYS = new Set([
   'paneHeaderHoverBrightness',
   'paneHeaderLabelFont',
@@ -283,6 +298,12 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     label: 'Typography',
     hint: 'Font stacks, the type scale (multiplies every size), weight, line height and tracking.',
     match: (k) => TYPE_KEYS.has(k) || FONT_ASSET_KEYS.has(k),
+  },
+  {
+    id: 'names',
+    label: 'Names',
+    hint: 'What this garden calls itself and its panes — "Case files" where a studio says "Artifacts". Leave `none` for the usual word.',
+    match: (k) => NAME_KEYS.has(k),
   },
   {
     id: 'header',
@@ -452,6 +473,7 @@ export function tokenKind(key: string): TokenKind {
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';
   if (/TextureSize$|TextureBlend$/.test(key)) return 'text';
   if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';
+  if (NAME_KEYS.has(key)) return 'text';
   if (TEXT_KEYS.test(key)) return 'text';
   if (/Shadow$|^elevation/.test(key)) return 'text';
   if (/Brightness$|^disabledOpacity$/.test(key)) return 'number';

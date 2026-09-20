@@ -477,6 +477,21 @@ export const GARDEN_DARK = {
   paneHeaderLabelSize: '11px',
   paneHeaderLabelWeight: '400',
   paneHeaderLabelCase: 'uppercase',
+  // Names (Daniel, 2026-09-20): the garden's title and what its panes are
+  // called, so a Mood or a garden can craft the metaphor ("Case files" where
+  // a studio says "Artifacts"). `none` = the usual word; read in lib/pane-labels.
+  gardenTitle: 'none',
+  paneLabelTasks: 'none',
+  paneLabelCollaboration: 'none',
+  paneLabelArtifacts: 'none',
+  paneLabelWorkshop: 'none',
+  paneLabelDetails: 'none',
+  paneLabelHistory: 'none',
+  paneLabelExport: 'none',
+  paneLabelSync: 'none',
+  paneLabelPublish: 'none',
+  paneLabelStore: 'none',
+  paneLabelMedia: 'none',
   paneHeaderLabelTracking: '0.05em',
   paneHeaderIconDisplay: 'inline-flex',
   paneHeaderCloseDisplay: 'inline-flex',

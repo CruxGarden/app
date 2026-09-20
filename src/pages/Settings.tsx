@@ -1,4 +1,5 @@
 import AccountSettings from '@/components/settings/AccountSettings';
+import NamesSettings from '@/components/settings/NamesSettings';
 import SyncSettings from '@/components/settings/SyncSettings';
 import UsageSettings from '@/components/settings/UsageSettings';
 import PlanSettings from '@/components/settings/PlanSettings';
@@ -24,6 +25,7 @@ export default function Settings() {
       }
     >
       <AccountSettings />
+      <NamesSettings />
       <AiSettings />
       <MemorySettings />
       <AgentsSettings />

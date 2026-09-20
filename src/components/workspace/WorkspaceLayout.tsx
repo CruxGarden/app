@@ -1,5 +1,6 @@
 import { useAppAppearance } from '@/hooks/useAppAppearance';
 import TaskBar from './TaskBar';
+import { usePaneLabels } from '@/hooks/usePaneLabels';
 import { WORKSPACE_ATTR } from '@/components/plasma/PlasmaStage';
 import { useSurfaceFormed } from '@/components/plasma/useSurfaceFormed';
 import { useNotebookProxy } from '@/hooks/useNotebookProxy';
@@ -143,6 +144,7 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
   const loaded = useCruxStore((s) => !!s.crux);
   const copy = useCruxStore((s) => copyIdentity(s.crux));
   const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
+  const labels = usePaneLabels();
   // Under Plasma the pane's contents mount once its surface has formed, so
   // Monaco, an app's iframe or a long conversation do not compete with the
   // material's arrival for the same frames.
@@ -158,13 +160,13 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
         <PaneEmpty
           icon={<Spinner size={16} />}
           title="Opening…"
-          description={`${PANE_LABELS[paneType]} appears as soon as the crux has loaded.`}
+          description={`${labels[paneType]} appears as soon as the crux has loaded.`}
           className="h-full"
         />
       ) : isTooNarrow ? (
         <PaneEmpty
           title="Widen the pane"
-          description={`${PANE_LABELS[paneType]} needs a little more room to show its contents.`}
+          description={`${labels[paneType]} needs a little more room to show its contents.`}
           className="h-full"
         />
       ) : (
@@ -176,19 +178,6 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
 
 // Title case here; the Mood decides the rendered case (--pane-header-label-case,
 // uppercase by default), so a theme can ask for "Collaboration" or "collaboration".
-const PANE_LABELS: Record<PaneType, string> = {
-  tasks: 'Tasks',
-  history: 'History',
-  collaboration: 'Collaboration',
-  artifacts: 'Artifacts',
-  workshop: 'Workshop',
-  details: 'Metadata',
-  sync: 'Sync',
-  publish: 'Share',
-  export: 'Export',
-  store: 'Store',
-  media: 'Find media',
-};
 
 function MobilePane({ pane }: { pane: PaneType }) {
   const PaneComponent = PANE_COMPONENTS[pane];
@@ -215,6 +204,7 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
 // ── Main layout ─────────────────────────────────────────
 
 export default function WorkspaceLayout() {
+  const labels = usePaneLabels();
   // The builder is open: the material calms its ripple while it is (PlasmaStage).
   useEffect(() => {
     document.documentElement.setAttribute(WORKSPACE_ATTR, '');
@@ -386,7 +376,7 @@ export default function WorkspaceLayout() {
       return (
         <MosaicWindow<PaneType>
           path={path}
-          title={PANE_LABELS[paneType]}
+          title={labels[paneType]}
           className={`pane-${paneType} motion-enter-pane`}
           renderToolbar={() => (
             <div
@@ -407,7 +397,7 @@ export default function WorkspaceLayout() {
                 <span className="pane-toolbar-icon" style={{ color: `var(${prefix}-header-icon)` }}>
                   {PANE_ICONS[paneType]}
                 </span>
-                <span className="pane-toolbar-label">{PANE_LABELS[paneType]}</span>
+                <span className="pane-toolbar-label">{labels[paneType]}</span>
               </div>
               <button
                 onClick={(e) => {
@@ -416,7 +406,7 @@ export default function WorkspaceLayout() {
                 }}
                 className="pane-toolbar-close p-1 hover:opacity-80 transition-opacity cursor-pointer"
                 style={{ color: `var(${prefix}-header-close)` }}
-                title={`Close ${PANE_LABELS[paneType]}`}
+                title={`Close ${labels[paneType]}`}
               >
                 <CloseIcon size={12} />
               </button>
@@ -427,7 +417,7 @@ export default function WorkspaceLayout() {
         </MosaicWindow>
       );
     },
-    [setPaneVisible],
+    [setPaneVisible, labels],
   );
 
   return (

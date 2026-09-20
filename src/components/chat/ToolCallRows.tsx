@@ -81,6 +81,14 @@ export function getToolLabel(tc: ToolCall): string {
       return `Searched the web for ${String(tc.input?.query ?? '')}`;
     case 'Task':
       return `Delegated: ${String(tc.input?.description ?? '')}`;
+    case 'ToolSearch':
+      return 'Looked up a tool';
+    case 'ListMcpResourcesTool':
+      return 'Listed resources';
+    case 'mcp__crux_garden__garden_search_tools':
+      return `Searched the garden's tools for ${String(tc.input?.query ?? '')}`;
+    case 'mcp__crux_garden__garden_call_tool':
+      return `Used ${String(tc.input?.name ?? 'a garden tool')}`;
     case 'TodoWrite':
       return 'Updated the plan';
     default:

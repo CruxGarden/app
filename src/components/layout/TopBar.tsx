@@ -5,6 +5,7 @@ import AlertsBell from '@/components/tending/AlertsBell';
 import TimerChip from '@/components/tending/TimerChip';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import CruxspaceCrumb from './CruxspaceCrumb';
+import { useGardenTitle, usePaneLabels } from '@/hooks/usePaneLabels';
 import { useAppStore } from '@/stores/appStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
@@ -28,6 +29,9 @@ export default function TopBar() {
     })),
   );
   const username = useAppStore((s) => s.author?.username);
+  // The garden's own title, if it has one; the pane names as the garden calls them.
+  const gardenTitle = useGardenTitle();
+  const paneLabels = usePaneLabels();
   const aiEnabled = useUIStore((s) => s.aiEnabled);
 
   // Split panes into enabled (in paneOrder) and disabled (in default order)
@@ -58,7 +62,7 @@ export default function TopBar() {
             className="shrink-0 text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
           >
             <span className="md:hidden">Garden</span>
-            <span className="hidden md:inline">{username}</span>
+            <span className="hidden md:inline">{gardenTitle || username}</span>
           </button>
         ) : (
           <button
@@ -117,7 +121,7 @@ export default function TopBar() {
                           '--pt-hover-border': `var(${prefix}-button-border-hover)`,
                         } as React.CSSProperties
                       }
-                      tooltip={{ label: config.label }}
+                      tooltip={{ label: paneLabels[paneType] }}
                     >
                       <Icon />
                     </IconButton>
@@ -153,7 +157,7 @@ export default function TopBar() {
                             '--pt-hover-border': `var(${prefix}-button-border-hover)`,
                           } as React.CSSProperties
                         }
-                        tooltip={{ label: config.label }}
+                        tooltip={{ label: paneLabels[paneType] }}
                       >
                         <Icon />
                       </IconButton>

@@ -47,19 +47,27 @@ function readVar(name: string): string {
 }
 
 /** A token value as a person typed it: quotes stripped, `none`/empty → nothing. */
-function asText(raw: string): string {
-  const v = raw.replace(/^['"]|['"]$/g, '').trim();
+export function asName(raw: string | null | undefined): string {
+  const v = (raw ?? '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .trim();
   return v && v !== 'none' ? v : '';
+}
+
+/** The pane's name from a token value, or its default. */
+export function paneLabelFrom(type: PaneType, raw: string | null | undefined): string {
+  return asName(raw) || DEFAULT_PANE_LABELS[type];
 }
 
 /** The pane's name in this garden, or its default. */
 export function paneLabel(type: PaneType): string {
-  return asText(readVar(PANE_LABEL_VARS[type])) || DEFAULT_PANE_LABELS[type];
+  return paneLabelFrom(type, readVar(PANE_LABEL_VARS[type]));
 }
 
 /** The garden's own title, if it has one ("" → show the username). */
 export function gardenTitle(): string {
-  return asText(readVar('--garden-title'));
+  return asName(readVar('--garden-title'));
 }
 
 /** Every pane's name, for places that need the whole map at once. */

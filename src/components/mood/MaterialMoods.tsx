@@ -26,7 +26,44 @@ import {
  * material has two plain switches. Everything deeper stays in the Mood
  * Builder, with the HyperMoods.
  */
-/** The two plain switches each material offers, as token overrides on the worn Mood. */
+/** Titles (Daniel, 2026-09-20: "change the title font, or allow changing it"): the display face and the pane-header face together. */
+const TITLES = {
+  key: 'titles',
+  label: 'Titles',
+  options: [
+    {
+      id: 'outfit',
+      label: 'Outfit',
+      tokens: { fontDisplay: "'Outfit', sans-serif", paneHeaderLabelFont: "'Outfit', sans-serif" },
+    },
+    {
+      id: 'serif',
+      label: 'Serif',
+      tokens: {
+        fontDisplay: "'Cormorant Garamond', Georgia, serif",
+        paneHeaderLabelFont: "'Cormorant Garamond', Georgia, serif",
+      },
+    },
+    {
+      id: 'mono',
+      label: 'Mono',
+      tokens: {
+        fontDisplay: "'JetBrains Mono', monospace",
+        paneHeaderLabelFont: "'JetBrains Mono', monospace",
+      },
+    },
+    {
+      id: 'system',
+      label: 'System',
+      tokens: {
+        fontDisplay: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+        paneHeaderLabelFont: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+      },
+    },
+  ],
+};
+
+/** The plain switches each material offers, as token overrides on the worn Mood. */
 const SWITCHES: Record<
   Material,
   {
@@ -36,6 +73,7 @@ const SWITCHES: Record<
   }[]
 > = {
   plasma: [
+    TITLES,
     {
       key: 'motion',
       label: 'Motion',
@@ -72,6 +110,7 @@ const SWITCHES: Record<
     },
   ],
   soft: [
+    TITLES,
     {
       key: 'frost',
       label: 'Frost',
