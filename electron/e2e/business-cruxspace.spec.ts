@@ -476,10 +476,12 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
           timeout: 120000,
         });
         await shot('11-walkthrough-brand');
+        // Under Plasma the snapshot view's surfaces keep re-forming and the banner
+        // never reads as "stable" (2026-09-20, MAKING-IT-POSSIBLE-STEPS): force the click.
         await page
           .getByRole('status', { name: 'Walkthrough' })
           .getByRole('button', { name: 'Back to now' })
-          .click();
+          .click({ force: true });
         await expect(page.getByRole('status', { name: 'Walkthrough' })).toHaveCount(0);
         await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0, {
           timeout: 60000,

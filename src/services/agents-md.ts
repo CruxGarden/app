@@ -16,6 +16,8 @@
  */
 
 import type { Artifact, Crux } from '@/api/types';
+import { customNames, DEFAULT_PANE_LABELS, type GardenNames } from '@/lib/pane-labels';
+import type { PaneType } from '@/stores/uiStore';
 import type { ContentModel, ContentCollection, FormField, BuilderAction } from '@/templates';
 import type { PersonaSettings } from './persona';
 import { isSiteCrux } from './site';
@@ -40,6 +42,8 @@ export interface AgentsMdInput {
   persona: Pick<PersonaSettings, 'name' | 'systemPrompt'>;
   /** Whether `check_site` (a real build) is available where this file is read. */
   canBuild?: boolean;
+  /** The garden's own words (Settings → Names): its title and renamed panes, so the collaborator speaks the metaphor. */
+  names?: GardenNames;
 }
 
 export interface AgentsMdSections {
@@ -89,7 +93,7 @@ export function renderAgentsMdSections(input: AgentsMdInput): AgentsMdSections {
           : renderPreview(site, canBuild),
     handsOff: renderHandsOff(site),
     recording: RECORDING,
-    voice: renderVoice(input.persona),
+    voice: renderVoice(input.persona, input.names),
     instructions:
       typeof settings.systemPrompt === 'string' && settings.systemPrompt.trim()
         ? '## Instructions for this crux\n' + settings.systemPrompt.trim()
@@ -257,9 +261,25 @@ const RECORDING = [
   'The app also snapshots automatically after a turn that changed files. Agents connected through Crux Garden (the built-in collaborator, or an MCP client once the crux is enabled as an agent host) have these as tools; edits made any other way are still recorded by the automatic history.',
 ].join('\n');
 
-function renderVoice(persona: Pick<PersonaSettings, 'name' | 'systemPrompt'>): string {
+function renderVoice(
+  persona: Pick<PersonaSettings, 'name' | 'systemPrompt'>,
+  names?: GardenNames,
+): string {
   const lines = ['## Voice', `The collaborator here is **${persona.name || 'The Keeper'}**.`];
   if (persona.systemPrompt?.trim()) lines.push('', persona.systemPrompt.trim());
+  if (names) {
+    const renamed = Object.entries(names.panes) as [PaneType, string][];
+    if (names.title) lines.push('', `This garden calls itself **${names.title}**.`);
+    if (renamed.length)
+      lines.push(
+        '',
+        'It has its own words for parts of the app; use them with the person: ' +
+          renamed
+            .map(([type, name]) => `${DEFAULT_PANE_LABELS[type]} is called "${name}"`)
+            .join(', ') +
+          '.',
+      );
+  }
   return lines.join('\n');
 }
 
@@ -450,6 +470,7 @@ export async function syncAgentsMd(
       artifacts: current,
       persona: d.persona(),
       canBuild: d.canBuild(),
+      names: customNames(),
     });
     let wrote = false;
     for (const [path, content] of [

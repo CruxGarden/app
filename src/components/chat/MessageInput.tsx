@@ -25,6 +25,8 @@ export default function MessageInput({
 }: MessageInputProps) {
   const ui = useWorkspaceUIStoreApi();
   const uploadFile = useCruxStore((s) => s.uploadFile);
+  const cruxId = useCruxStore((s) => s.crux?.id);
+  const refreshArtifacts = useCruxStore((s) => s.refreshArtifacts);
   const fileRef = useRef<HTMLInputElement>(null);
   const value = useWorkspaceUIStore((s) => s.composerDraft);
   const setValue = useWorkspaceUIStore((s) => s.setComposerDraft);
@@ -94,6 +96,40 @@ export default function MessageInput({
     }
   };
 
+  // A long paste becomes a file (MAKING-THE-AD-PARITY gap 8): a brief in the
+  // composer was a wall of raw markdown in the person's pill; as a file the
+  // collaborator reads it, Growth keeps it, and the message stays a sentence.
+  const PASTE_AS_FILE_CHARS = 1500;
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (!cruxId || text.length < PASTE_AS_FILE_CHARS || disabled) return;
+    e.preventDefault();
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+    const firstLine =
+      text
+        .split('\n')
+        .find((l) => l.trim())
+        ?.replace(/^#+\s*/, '') ?? '';
+    const slug =
+      firstLine
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 40) || 'pasted';
+    const path = `notes/${slug}-${stamp}.md`;
+    const { getServices } = await import('@/services');
+    await getServices().artifact.create({
+      resourceId: cruxId,
+      resourceType: 'crux',
+      content: text,
+      mimeType: 'text/markdown',
+      meta: { path },
+    });
+    await refreshArtifacts();
+    const note = `Read ${path} first (pasted, ${text.length.toLocaleString()} characters).`;
+    setValue(value ? `${value.trimEnd()}\n${note}` : note);
+  };
+
   const handleInput = () => {
     const el = textareaRef.current;
     if (!el) return;
@@ -155,6 +191,7 @@ export default function MessageInput({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
+          onPaste={(e) => void handlePaste(e)}
           placeholder="Send a message..."
           rows={1}
           disabled={disabled}

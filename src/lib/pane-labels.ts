@@ -70,6 +70,21 @@ export function gardenTitle(): string {
   return asName(readVar('--garden-title'));
 }
 
+/** The names this garden chose (title, and only the panes that differ from the usual word). */
+export interface GardenNames {
+  title: string;
+  panes: Partial<Record<PaneType, string>>;
+}
+export function customNames(): GardenNames | undefined {
+  const title = gardenTitle();
+  const panes: Partial<Record<PaneType, string>> = {};
+  for (const type of Object.keys(DEFAULT_PANE_LABELS) as PaneType[]) {
+    const name = paneLabel(type);
+    if (name !== DEFAULT_PANE_LABELS[type]) panes[type] = name;
+  }
+  return title || Object.keys(panes).length ? { title, panes } : undefined;
+}
+
 /** Every pane's name, for places that need the whole map at once. */
 export function paneLabels(): Record<PaneType, string> {
   const out = { ...DEFAULT_PANE_LABELS };
