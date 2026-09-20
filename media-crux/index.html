@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Media Tools</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="garden/bridge.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Media bench</h1>
+      <div id="tools" class="tools" aria-live="polite">Looking for the tools…</div>
+      <button id="look-again" class="ghost" type="button">Look again</button>
+    </header>
+
+    <main>
+      <section class="panel" id="files-panel">
+        <div class="panel-head">
+          <h2>Files</h2>
+          <span id="files-count" class="muted"></span>
+        </div>
+        <ul id="files" class="files"></ul>
+        <p id="files-empty" class="muted">
+          Nothing yet. Drop video, audio, pictures or documents onto this Crux and they land in
+          <code>video/</code>, <code>audio/</code>, <code>images/</code> or <code>documents/</code>.
+        </p>
+      </section>
+
+      <section class="panel" id="work-panel">
+        <div class="panel-head">
+          <h2 id="chosen-name">Pick a file</h2>
+          <span id="chosen-kind" class="muted"></span>
+        </div>
+
+        <dl id="about" class="about" hidden></dl>
+
+        <div class="recipes">
+          <label for="recipe">Recipe</label>
+          <select id="recipe" disabled></select>
+          <button id="run" type="button" disabled>Run</button>
+        </div>
+
+        <pre id="command" class="command" hidden></pre>
+
+        <div id="progress-wrap" class="progress" hidden>
+          <div id="progress-bar"></div>
+        </div>
+
+        <details id="custom-details" class="custom">
+          <summary>Run something else</summary>
+          <div class="custom-row">
+            <select id="custom-tool">
+              <option value="ffmpeg">ffmpeg</option>
+              <option value="magick">ImageMagick</option>
+              <option value="pandoc">Pandoc</option>
+              <option value="ffprobe">ffprobe</option>
+            </select>
+            <input
+              id="custom-args"
+              placeholder="arguments only — -y -i video/clip.mov -vf scale=640:-2 exports/small.mp4"
+              autocomplete="off"
+            />
+            <button id="custom-run" type="button">Run</button>
+          </div>
+          <p class="muted">
+            Paths are relative to this Crux and must stay inside it. No program name, no shell.
+          </p>
+        </details>
+
+        <pre id="output" class="output" aria-live="polite"></pre>
+      </section>
+    </main>
+
+    <footer class="muted">
+      FFmpeg and ImageMagick run as themselves, inside this Crux's folder. Outputs land in
+      <code>exports/</code> as Artifacts; every run is appended to <code>log.md</code>.
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

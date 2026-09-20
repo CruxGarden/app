@@ -662,15 +662,34 @@ function setupIpc() {
       return null;
     }
   };
-  // ── Native tools (MAKING-THE-AD-PARITY gap 13, step 1) ──────────────
-  // Run a bundled binary inside a crux's Project Folder. Only ffmpeg for now.
-  // The working directory is the folder; every path-like argument must stay
-  // inside it; only the `file` protocol is allowed; no shell is involved.
+  // ── Native tools (MAKING-THE-AD-PARITY gap 13) ──────────────────────
+  // Run a media binary inside a crux's Project Folder: ffmpeg, ffprobe or
+  // ImageMagick, each resolved per platform (media-binaries.ts). The working
+  // directory is the folder; every path-like argument must stay inside it;
+  // only the `file` protocol is allowed; no shell is involved.
+  ipcMain.handle('native:tools', async (_e: any, opts?: { refresh?: boolean }) => {
+    const { mediaTools, clearMediaToolCache } =
+      require('./media-binaries') as typeof import('./media-binaries');
+    if (opts?.refresh) clearMediaToolCache();
+    return mediaTools(app.isPackaged ? process.resourcesPath : null);
+  });
+
   ipcMain.handle(
     'native:run',
     async (e: any, opts: { cruxId: string; tool: string; args: unknown[]; timeoutMs?: number }) => {
-      if (opts.tool !== 'ffmpeg') throw new Error(`Unknown native tool: ${opts.tool}`);
-      if (!ffmpegPath || !fs.existsSync(ffmpegPath)) throw new Error('FFmpeg not available');
+      const { MEDIA_TOOLS, mediaToolPath } =
+        require('./media-binaries') as typeof import('./media-binaries');
+      const tool = opts.tool as (typeof MEDIA_TOOLS)[number];
+      if (!MEDIA_TOOLS.includes(tool)) throw new Error(`Unknown native tool: ${opts.tool}`);
+      const binary = await mediaToolPath(tool, app.isPackaged ? process.resourcesPath : null);
+      if (!binary)
+        throw new Error(
+          tool === 'magick'
+            ? 'ImageMagick is not on this machine. Install it (brew install imagemagick, apt install imagemagick, or imagemagick.org) and look again.'
+            : tool === 'pandoc'
+              ? 'Pandoc is not on this machine. Install it (brew install pandoc, apt install pandoc, or pandoc.org) and look again.'
+              : `${tool} is not available on this machine`,
+        );
       const crux = lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       const folder = path.resolve(crux.folder);
@@ -686,48 +705,97 @@ function setupIpc() {
             throw new Error(`Path outside the crux folder: ${a}`);
         }
       }
-      // ffmpeg does not create directories; its output is its last argument.
-      // A folder under the crux (exports/, x-frames/) is made for it.
+      // Neither ffmpeg nor ImageMagick creates directories, and for both the
+      // output is the last argument. A folder under the crux is made for it.
       const last = args.at(-1);
       if (last && !last.startsWith('-'))
         fs.mkdirSync(path.dirname(path.resolve(folder, last)), { recursive: true });
-      const full = ['-nostdin', '-hide_banner', '-protocol_whitelist', 'file,pipe', ...args];
+      // Each program takes its own preamble: ffprobe has no -nostdin, and
+      // ImageMagick reads a delegate config that can name other programs, so
+      // the limits keep one bad file from taking the machine with it.
+      const magickLimits = [
+        '-limit',
+        'memory',
+        '1GiB',
+        '-limit',
+        'map',
+        '2GiB',
+        '-limit',
+        'time',
+        '600',
+      ];
+      // ImageMagick 7 takes its sub-command first (`magick identify …`), so the
+      // limits go after it; a convert-style pipeline takes them at the front.
+      const magickCommands = new Set([
+        'identify',
+        'montage',
+        'mogrify',
+        'composite',
+        'convert',
+        'compare',
+        'stream',
+        'display',
+        'animate',
+        'import',
+      ]);
+      const full =
+        tool === 'magick'
+          ? magickCommands.has(args[0] ?? '')
+            ? [args[0]!, ...magickLimits, ...args.slice(1)]
+            : [...magickLimits, ...args]
+          : tool === 'pandoc'
+            ? args
+            : tool === 'ffprobe'
+              ? ['-hide_banner', '-protocol_whitelist', 'file,pipe', ...args]
+              : ['-nostdin', '-hide_banner', '-protocol_whitelist', 'file,pipe', ...args];
       const started = Date.now();
-      return new Promise<{ code: number; ms: number; stderrTail: string }>((resolve, reject) => {
-        const proc = execFile(ffmpegPath, full, {
-          cwd: folder,
-          maxBuffer: 50 * 1024 * 1024,
-          timeout: Math.min(opts.timeoutMs ?? 10 * 60_000, 30 * 60_000),
-        });
-        let stderr = '';
-        let duration = 0;
-        proc.stderr?.on('data', (chunk: string) => {
-          stderr += chunk;
-          if (stderr.length > 200_000) stderr = stderr.slice(-100_000);
-          const durMatch = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
-          if (durMatch && !duration)
-            duration =
-              parseInt(durMatch[1]!) * 3600 +
-              parseInt(durMatch[2]!) * 60 +
-              parseFloat(durMatch[3]!);
-          const timeMatch = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
-          if (timeMatch && duration > 0) {
-            const current =
-              parseInt(timeMatch[1]!) * 3600 +
-              parseInt(timeMatch[2]!) * 60 +
-              parseFloat(timeMatch[3]!);
-            e.sender.send('native:progress', {
-              cruxId: opts.cruxId,
-              tool: opts.tool,
-              progress: Math.min(current / duration, 1),
-            });
-          }
-        });
-        proc.on('close', (code: number) =>
-          resolve({ code: code ?? -1, ms: Date.now() - started, stderrTail: stderr.slice(-2000) }),
-        );
-        proc.on('error', reject);
-      });
+      return new Promise<{ code: number; ms: number; stderrTail: string; stdout: string }>(
+        (resolve, reject) => {
+          const proc = execFile(binary, full, {
+            cwd: folder,
+            maxBuffer: 50 * 1024 * 1024,
+            timeout: Math.min(opts.timeoutMs ?? 10 * 60_000, 30 * 60_000),
+          });
+          let stderr = '';
+          let duration = 0;
+          proc.stderr?.on('data', (chunk: string) => {
+            stderr += chunk;
+            if (stderr.length > 200_000) stderr = stderr.slice(-100_000);
+            const durMatch = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
+            if (durMatch && !duration)
+              duration =
+                parseInt(durMatch[1]!) * 3600 +
+                parseInt(durMatch[2]!) * 60 +
+                parseFloat(durMatch[3]!);
+            const timeMatch = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
+            if (timeMatch && duration > 0) {
+              const current =
+                parseInt(timeMatch[1]!) * 3600 +
+                parseInt(timeMatch[2]!) * 60 +
+                parseFloat(timeMatch[3]!);
+              e.sender.send('native:progress', {
+                cruxId: opts.cruxId,
+                tool: opts.tool,
+                progress: Math.min(current / duration, 1),
+              });
+            }
+          });
+          let stdout = '';
+          proc.stdout?.on('data', (chunk: string) => {
+            stdout += chunk;
+            if (stdout.length > 200_000) stdout = stdout.slice(-100_000);
+          });
+          proc.on('close', (code: number) =>
+            resolve({
+              code: code ?? -1,
+              ms: Date.now() - started,
+              stderrTail: stderr.slice(-2000),
+              stdout: stdout.slice(-100_000),
+            }),
+          );
+          proc.on('error', reject);
+        },
+      );
     },
   );
 

@@ -61,7 +61,15 @@ export function validateToolInput(
       return parsed.valid ? { valid: true } : { valid: false, error: parsed.error };
     }
     case 'run_ffmpeg':
+    case 'run_magick':
+    case 'run_pandoc':
       return validateRunFfmpeg(input);
+    case 'probe_media':
+      return typeof input.path === 'string' && input.path.trim()
+        ? { valid: true }
+        : { valid: false, error: 'path is required' };
+    case 'media_tools':
+      return { valid: true };
     case 'capture_preview':
     case 'render_video':
       return validateCapture(input);

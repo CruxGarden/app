@@ -216,6 +216,15 @@ export interface MediaBridge {
   ): Promise<{ ok: boolean; status: number; mimeType: string; bytes: Uint8Array }>;
 }
 /** Native tools (MAKING-THE-AD-PARITY gap 13): a bundled binary run inside a crux folder. */
+/** The media binaries a garden can run inside a crux folder. */
+export type MediaToolName = 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc';
+export interface MediaToolInfo {
+  tool: MediaToolName;
+  path: string | null;
+  source: 'bundled' | 'resources' | 'system' | 'missing';
+  version: string | null;
+}
+
 export interface NativeToolsBridge {
   /** Frames from a local preview page into <crux>/<subdir>/fNNNN.png (step 5). */
   record(opts: {
@@ -229,10 +238,12 @@ export interface NativeToolsBridge {
   }): Promise<{ frames: number; seconds: number; lastPoll?: string }>;
   run(opts: {
     cruxId: string;
-    tool: 'ffmpeg';
+    tool: MediaToolName;
     args: string[];
     timeoutMs?: number;
-  }): Promise<{ code: number; ms: number; stderrTail: string }>;
+  }): Promise<{ code: number; ms: number; stderrTail: string; stdout: string }>;
+  /** Which media binaries this machine has, and where each came from (platform-aware). */
+  tools(opts?: { refresh?: boolean }): Promise<MediaToolInfo[]>;
   onProgress(
     callback: (event: { cruxId: string; tool: string; progress: number; frames?: number }) => void,
   ): () => void;

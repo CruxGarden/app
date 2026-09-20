@@ -311,6 +311,75 @@ export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'run_magick',
+    description:
+      'Run ImageMagick inside this crux folder with the given arguments (no "magick" word, no shell). ' +
+      'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
+      'USE WHEN: converting or resizing a picture (["images/a.png","-resize","1200x","exports/a.jpg"]), ' +
+      'cropping, rotating, compositing, making a contact sheet (["montage","images/*.png","-tile","4x","-geometry","+4+4","exports/sheet.jpg"]), ' +
+      'a favicon or an icon set, adding text, or reading a picture with ["identify","-verbose","images/a.png"]. ' +
+      'The first argument may be an ImageMagick sub-command (identify, montage, mogrify, composite); otherwise it is a convert-style pipeline.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        args: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'ImageMagick arguments, one per item, exactly as on a command line.',
+        },
+        description: {
+          type: 'string',
+          description: 'What this run does, in a few words (shown to the person).',
+        },
+      },
+      required: ['args'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'run_pandoc',
+    description:
+      'Run Pandoc inside this crux folder with the given arguments (no "pandoc" word, no shell). ' +
+      'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
+      'USE WHEN: a document must become another format — Markdown to DOCX, DOCX to Markdown, Markdown to a standalone HTML page or EPUB, anything to plain text: ["notes/brief.md","-o","notes/brief.docx"]. ' +
+      'Add "--standalone" for a page or a book. A PDF needs a LaTeX engine on the machine; check with media_tools and say so rather than promising one.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        args: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Pandoc arguments, one per item, exactly as on a command line.',
+        },
+        description: {
+          type: 'string',
+          description: 'What this run does, in a few words (shown to the person).',
+        },
+      },
+      required: ['args'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'probe_media',
+    description:
+      "What a media file in this crux is: ffprobe's streams and format for audio and video, ImageMagick's dimensions and format for a picture. Read this before converting so the arguments fit the source.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The file, relative to the crux folder.' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'media_tools',
+    description:
+      'Which media binaries this machine has (ffmpeg, ffprobe, ImageMagick, Pandoc), where each came from and its version. Call it when a run fails with "not available", or before promising a conversion.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
 ];
 
 /** The preview as an image or a video, from the shell's own capture window (step 5). */
@@ -628,6 +697,47 @@ export function createToolExecutor(
             const args = (input.args as string[]).map(String);
             const run = await runFfmpeg(cruxId, args);
             result = describeRun(args, run);
+            break;
+          }
+          case 'run_pandoc': {
+            const args = (input.args as string[]).map(String);
+            const { runPandoc } = await import('@/services/native-tools');
+            const run = await runPandoc(cruxId, args);
+            result = describeRun(args, run);
+            if (run.code === 0 && run.stdout?.trim())
+              result += `\n${run.stdout.trim().slice(0, 4000)}`;
+            break;
+          }
+          case 'run_magick': {
+            const args = (input.args as string[]).map(String);
+            const { runMagick } = await import('@/services/native-tools');
+            const run = await runMagick(cruxId, args);
+            result = describeRun(args, run);
+            if (run.code === 0 && run.stdout?.trim())
+              result += `\n${run.stdout.trim().slice(0, 4000)}`;
+            break;
+          }
+          case 'probe_media': {
+            const { probeMedia } = await import('@/services/native-tools');
+            const path = String(input.path ?? '');
+            const info = await probeMedia(cruxId, path);
+            result = info
+              ? `${path}:\n${JSON.stringify(info, null, 1).slice(0, 6000)}`
+              : `Could not read ${path} — is it a media file, and does it exist?`;
+            break;
+          }
+          case 'media_tools': {
+            const { mediaTools } = await import('@/services/native-tools');
+            const tools = await mediaTools();
+            result = tools.length
+              ? tools
+                  .map((t) =>
+                    t.path
+                      ? `- ${t.tool}: ${t.source}${t.version ? ` — ${t.version}` : ''}`
+                      : `- ${t.tool}: not on this machine`,
+                  )
+                  .join('\n')
+              : 'Native tools are not available here (desktop only).';
             break;
           }
           case 'snapshot':

@@ -38,9 +38,17 @@ describe('native tools, step 1', () => {
 
   it('offers the native and capture tools only where the platform can run them', async () => {
     const { defaultToolDefinitions, NATIVE_TOOL_DEFINITIONS } = await import('@/ai/tools');
-    expect(NATIVE_TOOL_DEFINITIONS.map((t) => t.name)).toEqual(['run_ffmpeg']);
+    expect(NATIVE_TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
+      'run_ffmpeg',
+      'run_magick',
+      'run_pandoc',
+      'probe_media',
+      'media_tools',
+    ]);
     const names = defaultToolDefinitions().map((t) => t.name);
     expect(names).toContain('run_ffmpeg');
+    expect(names).toContain('run_pandoc');
+    expect(names).toContain('media_tools');
     expect(names).toContain('capture_preview');
     expect(names).toContain('render_video');
     expect(names).not.toContain('check_site');

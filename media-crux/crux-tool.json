@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "id": "media-app",
+  "name": "Media Tools",
+  "description": "Creative · convert, resize, trim and inspect media and documents with ffmpeg, ImageMagick and Pandoc — a bench with the real tools, and every output an Artifact",
+  "kind": "webapp",
+  "defaultTitle": "My media bench",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 43,
+  "bundled": true,
+  "app": "media",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "media",
+      "recipes": []
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "FFmpeg + ImageMagick",
+    "upstream": "https://ffmpeg.org",
+    "relationship": "A bench over the real FFmpeg (https://ffmpeg.org, LGPL-2.1-or-later as bundled) ImageMagick (https://imagemagick.org, the ImageMagick License) and Pandoc (https://pandoc.org, GPL-2.0-or-later). Both are run as their own programs, unmodified, inside this Crux's folder; the page, the recipes and the Garden integration are Crux Garden's. See UPSTREAM.md.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "greeting": "A media bench with the real tools. Put video, audio, pictures or documents in this Crux — drag them onto the Artifacts pane, or keep them under video/, audio/, images/ and documents/ — and the page lists them with what they are. Pick a file and a recipe (to MP4 for streaming, to GIF, poster frame, extract frames, even out the loudness, resize, square thumbnail, favicon, to Word, to a standalone page, to EPUB…) and it runs ffmpeg, ImageMagick or Pandoc right here; outputs land in exports/ as Artifacts, and every run is written into the log so the history says how each file was made. Ask me to run something the recipes do not cover — I have run_ffmpeg, run_magick, run_pandoc and probe_media — or to add a recipe of your own.",
+  "context": "A media bench over the actual FFmpeg and ImageMagick, run as programs inside this Crux's Project Folder through the app's audited native seam (working directory pinned to the folder, relative paths only, no shell, no protocols). Sources live anywhere in the folder; video/, audio/, images/ and documents/ are the habit. Outputs go to exports/ and become Artifacts. data/project.json keeps the person's own recipes: { id, name, tool: 'ffmpeg' | 'magick', accepts: extensions, args: strings where {in} is the source and {out} the output, out: an output name pattern }. The page reads the folder, shows what each file is, runs a recipe and appends to log.md. Documents live in documents/ and convert with Pandoc (run_pandoc). Tools: probe_media before converting so the arguments fit the source; run_ffmpeg, run_magick and run_pandoc for anything the recipes do not cover (arguments only, no program name, paths relative to the folder, always -y for ffmpeg when replacing); media_tools says which binaries this machine has. ImageMagick and Pandoc are often the system's and may be absent — check with media_tools and say so rather than promising a conversion. See README.md for the recipe format and UPSTREAM.md for licensing."
+}

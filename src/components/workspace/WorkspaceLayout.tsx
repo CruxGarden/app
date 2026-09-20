@@ -18,6 +18,7 @@ import { Spinner } from '@/components/ui';
 import { useWorkspaceUIStore as useUIStore, type PaneType } from '@/stores/uiStore';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
 import { useFunctionsProxy } from '@/hooks/useFunctionsProxy';
+import { useMediaProxy } from '@/hooks/useMediaProxy';
 import { useIsDesktopLayout } from '@/hooks/useMediaQuery';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
@@ -227,6 +228,7 @@ export default function WorkspaceLayout() {
   // Proxy crux:store:* postMessages from preview iframe to local SQLite
   useStoreProxy(crux?.id ?? null);
   useFunctionsProxy(crux?.id ?? null);
+  useMediaProxy(crux?.id ?? null);
   useNotebookProxy(crux?.id ?? null);
   useAppAppearance(crux?.id ?? null, crux?.kind === 'notes' || crux?.meta?.template === 'moqira');
 

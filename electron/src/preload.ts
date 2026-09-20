@@ -211,12 +211,27 @@ const api: ElectronBridge = {
       height?: number;
     }) =>
       ipcRenderer.invoke('preview:record', opts) as Promise<{ frames: number; seconds: number }>,
-    run: (opts: { cruxId: string; tool: 'ffmpeg'; args: string[]; timeoutMs?: number }) =>
+    run: (opts: {
+      cruxId: string;
+      tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc';
+      args: string[];
+      timeoutMs?: number;
+    }) =>
       ipcRenderer.invoke('native:run', opts) as Promise<{
         code: number;
         ms: number;
         stderrTail: string;
+        stdout: string;
       }>,
+    tools: (opts?: { refresh?: boolean }) =>
+      ipcRenderer.invoke('native:tools', opts) as Promise<
+        {
+          tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc';
+          path: string | null;
+          source: 'bundled' | 'resources' | 'system' | 'missing';
+          version: string | null;
+        }[]
+      >,
     onProgress: (callback: (event: { cruxId: string; tool: string; progress: number }) => void) => {
       const handler = (_e: unknown, event: { cruxId: string; tool: string; progress: number }) =>
         callback(event);
