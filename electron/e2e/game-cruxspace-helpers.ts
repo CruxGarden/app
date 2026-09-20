@@ -7,8 +7,22 @@ import { storedCrux } from './multi-crux-helpers';
 /** Shared steps of the Glow Garden journey (GAME-CRUXSPACE-PLAN.md §7). */
 
 export async function home(page: Page) {
-  if (/\/c\//.test(page.url())) await page.locator('header').getByRole('button').first().click();
-  await expect(page.getByRole('button', { name: 'Create Cruxspace', exact: true })).toBeVisible();
+  const create = page.getByRole('button', { name: 'Create Cruxspace', exact: true });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (/\/c\//.test(page.url())) await page.locator('header').getByRole('button').first().click();
+    if (await create.isVisible({ timeout: 10_000 }).catch(() => false)) return;
+    // Diagnostics for a navigation that did not happen (2026-09-20: seen once with seven open cruxes).
+    const buttons = await page
+      .locator('header')
+      .getByRole('button')
+      .evaluateAll((els) =>
+        els.slice(0, 4).map((e) => e.textContent?.trim() || e.getAttribute('aria-label')),
+      );
+    console.log(
+      `home(): still at ${page.url()} after attempt ${attempt + 1}; header buttons: ${JSON.stringify(buttons)}`,
+    );
+  }
+  await expect(create).toBeVisible();
 }
 
 export const frame = (page: Page): FrameLocator => page.frameLocator('iframe[data-crux-id]');

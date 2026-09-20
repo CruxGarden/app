@@ -10,18 +10,30 @@ import {
 } from '@/services/notebook-lifecycle';
 import { useEffect, useSyncExternalStore } from 'react';
 import { useCruxStoreApi } from '@/stores/cruxStore';
-import { trackWorkspacePromise } from '@/stores/workspaceSelection';
+import { trackWorkspacePromise, workspaceSelection } from '@/stores/workspaceSelection';
 import { notebookSession } from '@/services/notebook';
 import { isPreviewOrigin } from './useStoreProxy';
 
 export function useNotebookProxy(cruxId: string | null) {
   const workspace = useCruxStoreApi();
-  const blocker = useBlocker(() => notebookIsOpen(cruxId));
+  // Only the workspace the person is looking at holds the door on the way
+  // out. Every open crux keeps its app mounted, and a hidden frame's flush
+  // reply crawls (throttled), so with three embedded apps open "go home" took
+  // over thirty seconds (2026-09-20, the office-garden journey). Hidden
+  // workspaces save on their own dirty timer; a silent frame gets four
+  // seconds, then the person leaves and the app keeps its draft.
+  const active = useSyncExternalStore(
+    workspaceSelection.subscribe,
+    () => workspaceSelection.getState().active?.data === workspace,
+  );
+  const blocker = useBlocker(() => active && notebookIsOpen(cruxId));
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
-    void flushNotebook(cruxId)
-      .then(() => blocker.proceed())
-      .catch(() => blocker.reset());
+    const bounded = Promise.race([
+      flushNotebook(cruxId),
+      new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+    ]);
+    void bounded.then(() => blocker.proceed()).catch(() => blocker.reset());
   }, [blocker, cruxId]);
   // Whether the Crux is an embedded app is live: a Crux marked a Tool
   // template (its kind) stops being one, and the editor registered for its
