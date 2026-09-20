@@ -321,6 +321,17 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 47,
+    id: 'order-desk',
+    label: 'Order Desk',
+    description:
+      'An order queue with a real backend — the Store keeps the orders, the crux’s functions are the only way they change',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Order Desk',
+  },
+  {
     order: 49,
     id: 'onebigsky',
     label: 'One Big Sky',

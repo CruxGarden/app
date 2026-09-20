@@ -54,7 +54,8 @@ const WORKER_PRELUDE = `
     const module = { exports: {} };
     class FunctionReject extends Error { constructor(message, status) { super(message); this.status = status || 400; } }
     const ctx = Object.freeze({
-      visitor: m.visitorId ? { id: m.visitorId } : null,
+      visitor: m.visitorId ? { id: m.visitorId, isOwner: m.visitorId === m.ownerId } : null,
+      owner: { id: m.ownerId },
       event: m.event ?? null,
       now: () => new Date().toISOString(),
       log: (...a) => { logs.push(a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ')); },
@@ -64,7 +65,8 @@ const WORKER_PRELUDE = `
       store: Object.freeze({
         get: (key) => ask('store', { method: 'get', args: [key] }),
         set: (key, value, mode) => ask('store', { method: 'set', args: [key, value, mode] }),
-        list: () => ask('store', { method: 'list', args: [] }),
+        increment: (key, by, mode) => ask('store', { method: 'increment', args: [key, by, mode] }),
+        list: (prefix) => ask('store', { method: 'list', args: [prefix || ''] }),
         del: (key) => ask('store', { method: 'delete', args: [key] }),
       }),
     });
@@ -158,8 +160,18 @@ export async function runLocalHandler(
                 );
                 value = { key: args[0], mode: args[2] ?? 'public' };
                 break;
+              case 'increment':
+                value = await store.increment(
+                  cruxId,
+                  args[0] as string,
+                  Number(args[1]) || 1,
+                  visitorId,
+                );
+                break;
               case 'list':
-                value = await store.list(cruxId);
+                value = (await store.list(cruxId))
+                  .filter((e) => e.key.startsWith(String(args[0] ?? '')))
+                  .map((e) => ({ key: e.key, value: e.value, mode: e.mode }));
                 break;
               case 'delete':
                 await store.delete(cruxId, args[0] as string, visitorId);
@@ -196,6 +208,8 @@ export async function runLocalHandler(
         body: input.body ?? null,
         event: input.event ?? null,
         visitorId,
+        // In the workspace the one visitor is the author: the owner.
+        ownerId: visitorId,
       });
     });
   } finally {

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Desk</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- crux.js: this page's handle on its crux — crux.fn, crux.on, crux.store -->
+  <script src="crux.js"></script>
+</head>
+<body>
+  <header>
+    <h1 id="shop-name">Order Desk</h1>
+    <p id="tagline">Place an order; the desk keeps the queue.</p>
+  </header>
+
+  <main>
+    <section class="card" id="place">
+      <h2>New order</h2>
+      <form id="order-form">
+        <label>Your name <input name="name" required maxlength="60" autocomplete="name" /></label>
+        <label>Item <select name="item" id="item" required></select></label>
+        <label>Quantity <input name="qty" type="number" min="1" max="50" value="1" required /></label>
+        <label>Note <input name="note" maxlength="140" placeholder="anything the desk should know" /></label>
+        <button type="submit">Place order</button>
+        <output id="placed" aria-live="polite"></output>
+      </form>
+    </section>
+
+    <section class="card" id="queue">
+      <h2>The queue <span id="summary" class="muted"></span></h2>
+      <ol id="orders" aria-live="polite"></ol>
+      <p id="empty" class="muted">No orders yet.</p>
+    </section>
+  </main>
+
+  <footer class="muted">
+    The queue is this crux's Store; every change goes through its functions —
+    see <code>functions/</code> and README.md.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

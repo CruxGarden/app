@@ -269,6 +269,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition | Tool
     'astro-feed': () => import('./astro-feed'),
     'astro-media': () => import('./astro-media'),
     'astro-empty': () => import('./astro-empty'),
+    'order-desk': () => import('./order-desk'),
     [FIVE_WS_TEMPLATE_ID]: () => import('./5ws'),
   };
 

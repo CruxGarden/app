@@ -110,6 +110,7 @@ export const TEMPLATE_SKILLS: Readonly<Record<string, string>> = Object.freeze({
   'astro-homepage': 'homepage',
   'astro-empty': 'astro-basics',
   '5ws': '5ws',
+  'order-desk': 'order-desk',
 });
 
 /** Skill loaded for every Site Crux regardless of template. */
@@ -137,7 +138,7 @@ export function skillsForCrux(crux: Pick<Crux, 'meta'>, artifacts: ArtifactPathS
 export function renderSkillsIndex(): string {
   return [
     '## Skills',
-    "Know-how lives in skills, not here. Before that kind of work, call load_skill(name) unless it is already in this conversation (this crux's are in <workspace_context>).",
+    "Know-how lives in skills. Before that kind of work, call load_skill(name) unless it is already in this conversation.",
     ...Object.values(SKILLS).map((s) => `- **${s.name}** — ${s.summary}`),
   ].join('\n');
 }
