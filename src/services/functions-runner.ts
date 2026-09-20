@@ -60,6 +60,9 @@ const WORKER_PRELUDE = `
       now: () => new Date().toISOString(),
       log: (...a) => { logs.push(a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ')); },
       json: (value, status) => ({ __json: value, __status: status || 200 }),
+      text: (body, status, type) => ({ __text: String(body == null ? '' : body), __status: status || 200, __type: type || 'text/plain; charset=utf-8' }),
+      html: (body, status) => ({ __text: String(body == null ? '' : body), __status: status || 200, __type: 'text/html; charset=utf-8' }),
+      redirect: (url, status) => ({ __text: '', __status: status || 302, __headers: { Location: String(url) } }),
       reject: (message, status) => { throw new FunctionReject(message, status); },
       emit: (name, data) => ask('emit', { name, data }),
       store: Object.freeze({
@@ -71,9 +74,9 @@ const WORKER_PRELUDE = `
       }),
     });
     const req = Object.freeze({
-      method: 'POST', body: m.body ?? null,
-      json: async () => m.body ?? null, text: async () => (m.body == null ? '' : JSON.stringify(m.body)),
-      headers: {},
+      method: m.method || 'POST', body: m.body ?? null,
+      json: async () => m.body ?? null, text: async () => (m.body == null ? '' : typeof m.body === 'string' ? m.body : JSON.stringify(m.body)),
+      headers: {}, query: m.query || {}, path: m.rest || '', params: String(m.rest || '').split('/').filter(Boolean),
     });
     try {
       new Function('module', 'exports', m.code)(module, module.exports);
@@ -81,7 +84,7 @@ const WORKER_PRELUDE = `
       if (typeof fn !== 'function') throw new Error('functions/' + m.name + '.js has no default export function');
       const out = await fn(req, ctx);
       const status = out && typeof out === 'object' && '__status' in out ? out.__status : 200;
-      const body = out && typeof out === 'object' && '__json' in out ? out.__json : (out ?? null);
+      const body = out && typeof out === 'object' && '__text' in out ? out.__text : out && typeof out === 'object' && '__json' in out ? out.__json : (out ?? null);
       self.postMessage({ op: 'done', status, body, logs });
     } catch (err) {
       const status = err && err.status ? err.status : 500;

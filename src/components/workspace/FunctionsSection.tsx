@@ -3,13 +3,16 @@ import type { Artifact } from '@/api/types';
 import { useCruxStore } from '@/stores/cruxStore';
 import { Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useEffect } from 'react';
 import {
   functionFiles,
   writeEventHandler,
   writeStarterFunction,
   callFunction,
   emitEvent,
+  listPublishedFunctions,
   validateEventName,
+  type FunctionFile,
   type WhenThen,
   type CallResult,
 } from '@/services/crux-functions';
@@ -39,13 +42,31 @@ export default function FunctionsSection({
   changesToShare: boolean;
 }) {
   const refreshArtifacts = useCruxStore((s) => s.refreshArtifacts);
-  const files = useMemo(() => functionFiles(artifacts), [artifacts]);
+  const local = useMemo(() => functionFiles(artifacts), [artifacts]);
+  // Once shared, the API says which handlers run on a schedule and when next.
+  const [remote, setRemote] = useState<FunctionFile[]>([]);
+  useEffect(() => {
+    if (!published || local.length === 0) return;
+    let live = true;
+    listPublishedFunctions(cruxId)
+      .then((r) => live && setRemote(r))
+      .catch(() => live && setRemote([]));
+    return () => {
+      live = false;
+    };
+  }, [cruxId, published, local.length, changesToShare]);
+  const files = useMemo(
+    () => local.map((f) => ({ ...f, ...(remote.find((r) => r.name === f.name) ?? {}) })),
+    [local, remote],
+  );
+  const [when, setWhen] = useState<'event' | 'schedule'>('event');
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, CallResult>>({});
   const [building, setBuilding] = useState(false);
   const [event, setEvent] = useState('');
+  const [schedule, setSchedule] = useState('every 10m');
   const [then, setThen] = useState<WhenThen['then']>({
     kind: 'store',
     key: '',
@@ -78,34 +99,42 @@ export default function FunctionsSection({
       if (problem) throw new Error(problem);
       if (then.kind === 'store' && !then.key.trim()) throw new Error('Name the key to write.');
       if (then.kind === 'emit' && !then.event.trim()) throw new Error('Name the event to emit.');
-      const path = await writeEventHandler(cruxId, { event: event.trim(), then });
+      if (when === 'schedule' && !schedule.trim())
+        throw new Error('Say when: every 10m, or five cron fields.');
+      const path = await writeEventHandler(cruxId, {
+        event: event.trim(),
+        then,
+        ...(when === 'schedule' ? { schedule: schedule.trim() } : {}),
+      });
       await refreshArtifacts();
       setBuilding(false);
       setEvent('');
-      return `Wrote ${path}. It runs here on every emit, and at the address once shared.`;
+      return when === 'schedule'
+        ? `Wrote ${path}. It runs on the API's clock once shared; test_function or Run tries it here.`
+        : `Wrote ${path}. It runs here on every emit, and at the address once shared.`;
     });
 
   const run = (name: string) =>
     act(`run:${name}`, async () => {
-      const r = local
+      const r = isLocal
         ? await callLocalFunction(cruxId, name, {}, useAppStore.getState().author?.id ?? null)
         : await callFunction(cruxId, name, {});
       setResults((m) => ({ ...m, [name]: r }));
-      return `${name} answered ${r.status}${r.ms !== null ? ` in ${r.ms} ms` : ''}${local ? ' here' : ' at the address'}.`;
+      return `${name} answered ${r.status}${r.ms !== null ? ` in ${r.ms} ms` : ''}${isLocal ? ' here' : ' at the address'}.`;
     });
 
   const emit = (name: string) =>
     act(`emit:${name}`, async () => {
-      const r = local
+      const r = isLocal
         ? await emitLocal(cruxId, name, {}, useAppStore.getState().author?.id ?? null)
         : await emitEvent(cruxId, name, {});
       for (const [handler, res] of Object.entries(r.results))
         setResults((m) => ({ ...m, [handler]: res }));
-      return `${name} reached ${r.handlers} handler${r.handlers === 1 ? '' : 's'}${local ? ' here' : ' at the address'}.`;
+      return `${name} reached ${r.handlers} handler${r.handlers === 1 ? '' : 's'}${isLocal ? ' here' : ' at the address'}.`;
     });
 
-  const local = !published;
-  const canCall = local || authenticated;
+  const isLocal = !published;
+  const canCall = isLocal || authenticated;
   const thenKind = then.kind;
 
   return (
@@ -128,6 +157,7 @@ export default function FunctionsSection({
                     <span className="font-mono text-xs text-text truncate">{f.path}</span>
                     <span className="text-2xs text-text-muted">
                       {f.kind === 'event' ? `on "${f.event}"` : 'HTTP'}
+                      {f.schedule ? ` · ${f.schedule}` : ''}
                     </span>
                     <span className="flex-1" />
                     {canCall &&
@@ -151,6 +181,14 @@ export default function FunctionsSection({
                         </Button>
                       ))}
                   </div>
+                  {f.schedule && (
+                    <span className="text-2xs text-text-muted" data-testid={`schedule-${f.name}`}>
+                      {f.nextRun ? `next ${new Date(f.nextRun).toLocaleString()}` : 'on a schedule'}
+                      {f.lastRun
+                        ? ` · last ${new Date(f.lastRun).toLocaleTimeString()} → ${f.lastStatus ?? '?'}`
+                        : ''}
+                    </span>
+                  )}
                   {r && (
                     <pre
                       className="text-2xs font-mono whitespace-pre-wrap rounded-[var(--radius-sm)] bg-input border border-input-border p-2 max-h-32 overflow-auto"
@@ -168,7 +206,7 @@ export default function FunctionsSection({
         {files.length > 0 && !canCall && (
           <PaneHint align="left">Connect your account to run them from here.</PaneHint>
         )}
-        {files.length > 0 && local && (
+        {files.length > 0 && isLocal && (
           <PaneHint align="left">
             They run here, against this crux's local Store. Share the crux and they run at the
             address.
@@ -213,12 +251,37 @@ export default function FunctionsSection({
           >
             <label className="grid grid-cols-[4rem_1fr] items-center gap-2 text-xs">
               <span className="text-text-muted">When</span>
-              <Input
-                aria-label="Event"
-                placeholder="an event name — order, ping, or store:write"
-                value={event}
-                onChange={(e) => setEvent(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <select
+                  aria-label="Kind"
+                  value={when}
+                  onChange={(e) => setWhen(e.target.value as 'event' | 'schedule')}
+                  className="h-8 px-2 rounded-[var(--radius-sm)] bg-input border border-input-border text-text text-xs"
+                >
+                  <option value="event">an event</option>
+                  <option value="schedule">on a schedule</option>
+                </select>
+                {when === 'schedule' && (
+                  <Input
+                    aria-label="Schedule"
+                    placeholder="every 10m, or 0 9 * * *"
+                    value={schedule}
+                    onChange={(e) => setSchedule(e.target.value)}
+                    className="w-40"
+                  />
+                )}
+                <Input
+                  aria-label={when === 'schedule' ? 'Handler name' : 'Event'}
+                  placeholder={
+                    when === 'schedule'
+                      ? 'a name for it — digest, cleanup'
+                      : 'an event name — order, ping, or store:write'
+                  }
+                  value={event}
+                  onChange={(e) => setEvent(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
             </label>
             <label className="grid grid-cols-[4rem_1fr] items-center gap-2 text-xs">
               <span className="text-text-muted">Then</span>
@@ -294,8 +357,11 @@ export default function FunctionsSection({
                 Add handler
               </Button>
               <span className={cn('text-2xs text-text-muted')}>
-                Writes <code className="font-mono">functions/on-&lt;event&gt;.js</code>; edit it in
-                Artifacts any time.
+                Writes{' '}
+                <code className="font-mono">
+                  {when === 'schedule' ? 'functions/<name>.js' : 'functions/on-<event>.js'}
+                </code>
+                ; edit it in Artifacts any time.
               </span>
             </div>
           </form>

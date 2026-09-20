@@ -49,8 +49,28 @@ function parseField(raw: string, lo: number, hi: number, what: string): Set<numb
   return out;
 }
 
+/** `every 10m`, `every 2h`, `every 1d` → a cron expression (the API reads the same). */
+export function normalizeSchedule(expr: string): string {
+  const e = expr.trim();
+  const m = /^every\s+(\d+)\s*(m|min|minutes?|h|hours?|d|days?)$/i.exec(e);
+  if (!m) return e;
+  const n = Number(m[1]);
+  const unit = m[2]!.toLowerCase()[0];
+  if (n < 1) throw new Error('every: the count must be at least 1');
+  if (unit === 'm') {
+    if (n > 59) throw new Error('every: minutes go up to 59; use hours');
+    return `*/${n} * * * *`;
+  }
+  if (unit === 'h') {
+    if (n > 23) throw new Error('every: hours go up to 23; use days');
+    return `0 */${n} * * *`;
+  }
+  if (n > 28) throw new Error('every: days go up to 28');
+  return `0 0 */${n} * *`;
+}
+
 export function parseCron(expr: string): CronFields {
-  const parts = expr.trim().split(/\s+/);
+  const parts = normalizeSchedule(expr).split(/\s+/);
   if (parts.length !== 5)
     throw new Error('A cron expression has five fields: minute hour day month weekday');
   const [mi, h, d, mo, w] = parts as [string, string, string, string, string];

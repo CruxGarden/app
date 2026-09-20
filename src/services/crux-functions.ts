@@ -19,6 +19,11 @@ export interface FunctionFile {
   kind: 'http' | 'event';
   /** For an `on-<event>.js` handler: the event it answers. */
   event?: string;
+  /** From the API, once shared: the schedule the handler runs on, and when next. */
+  schedule?: string;
+  nextRun?: string | null;
+  lastRun?: string | null;
+  lastStatus?: string | null;
 }
 
 export function functionFiles(artifacts: Artifact[]): FunctionFile[] {
@@ -40,6 +45,8 @@ export interface WhenThen {
   event: string;
   /** A pattern wider than the name: `score*`, `store:*`, `*`. */
   match?: string;
+  /** Instead of an event: a schedule (`every 10m`, `0 9 * * *`); the file is `functions/<event>.js` and runs on the API's clock. */
+  schedule?: string;
   then:
     | { kind: 'store'; key: string; value: 'event' | string }
     | { kind: 'emit'; event: string }
@@ -51,9 +58,18 @@ const q = (s: string) => JSON.stringify(s);
 /** The handler file a row becomes — plain, readable, the person's to edit. */
 export function handlerSource(rule: WhenThen): string {
   const lines: string[] = [];
-  lines.push(`// functions/on-${rule.event}.js — runs when this crux emits "${rule.event}".`);
-  lines.push(`// Made from a When → Then row in the Share pane; edit freely.`);
-  if (rule.match && rule.match !== rule.event) lines.push(`export const match = ${q(rule.match)};`);
+  if (rule.schedule) {
+    lines.push(
+      `// functions/${rule.event}.js — runs on a schedule (${rule.schedule}) where this crux is shared.`,
+    );
+    lines.push(`// Made from a When → Then row in the Share pane; edit freely.`);
+    lines.push(`export const schedule = ${q(rule.schedule)};`);
+  } else {
+    lines.push(`// functions/on-${rule.event}.js — runs when this crux emits "${rule.event}".`);
+    lines.push(`// Made from a When → Then row in the Share pane; edit freely.`);
+    if (rule.match && rule.match !== rule.event)
+      lines.push(`export const match = ${q(rule.match)};`);
+  }
   lines.push('export default async function (req, ctx) {');
   switch (rule.then.kind) {
     case 'store':
@@ -186,12 +202,21 @@ export async function writeEventHandler(cruxId: string, rule: WhenThen): Promise
   if (problem) throw new Error(problem);
   const fileEvent = event.replace(/[:*]/g, '-').replace(/-+$/, '') || 'any';
   if (!NAME_RE.test(fileEvent)) throw new Error('That event cannot name a file.');
-  const path = `${FUNCTIONS_DIR}on-${fileEvent}.js`;
-  const source = handlerSource({
-    ...rule,
-    event: fileEvent,
-    match: rule.match ?? (event !== fileEvent ? event : undefined),
-  });
+  let path = `${FUNCTIONS_DIR}on-${fileEvent}.js`;
+  let source: string;
+  if (rule.schedule) {
+    const { cronError } = await import('./cron');
+    const bad = cronError(rule.schedule);
+    if (bad) throw new Error(bad);
+    path = `${FUNCTIONS_DIR}${fileEvent}.js`;
+    source = handlerSource({ ...rule, event: fileEvent, schedule: rule.schedule.trim() });
+  } else {
+    source = handlerSource({
+      ...rule,
+      event: fileEvent,
+      match: rule.match ?? (event !== fileEvent ? event : undefined),
+    });
+  }
   await getServices().artifact.create({
     resourceId: cruxId,
     resourceType: 'crux',

@@ -14,7 +14,7 @@ import { LOCAL_API, LOCAL_API_LOG, useLocalApi, signInLocally } from './local-ap
 test.skip(!LOCAL_API || !LOCAL_API_LOG, 'set CRUX_LOCAL_API and CRUX_LOCAL_API_LOG');
 
 test('a crux gets a backend: functions run and events reach their handlers', async () => {
-  test.setTimeout(240000);
+  test.setTimeout(420000);
   const { app, page } = await launchApp();
   try {
     await page.setViewportSize({ width: 1600, height: 1000 });
@@ -43,6 +43,15 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     await rule.getByRole('button', { name: 'Add handler' }).click();
     await expect(fns.getByTestId('function-on-ping')).toBeVisible();
     await expect(fns.getByTestId('function-on-ping')).toContainText('on "ping"');
+    // …and a scheduled one: "every 1m, write last-tick" — the API's clock runs it (F3).
+    await fns.getByRole('button', { name: 'When → Then…' }).click();
+    await rule.getByRole('combobox', { name: 'Kind' }).selectOption('schedule');
+    await rule.getByRole('textbox', { name: 'Schedule' }).fill('every 1m');
+    await rule.getByRole('textbox', { name: 'Handler name' }).fill('tick');
+    await rule.getByRole('combobox', { name: 'Then' }).selectOption('store');
+    await rule.getByRole('textbox', { name: 'Key' }).fill('last-tick');
+    await rule.getByRole('button', { name: 'Add handler' }).click();
+    await expect(fns.getByTestId('function-tick')).toBeVisible();
 
     // Share it (the first share asks about a backup).
     await page.getByRole('button', { name: 'Share', exact: true }).click();
@@ -56,16 +65,43 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     // The API, as any page would call it.
     const api = await request.newContext({ baseURL: LOCAL_API });
     const listed = await (await api.get(`/fn/${id}`)).json();
-    expect(listed.map((f: { name: string }) => f.name).sort()).toEqual(['hello', 'on-ping']);
+    expect(listed.map((f: { name: string }) => f.name).sort()).toEqual([
+      'hello',
+      'on-ping',
+      'tick',
+    ]);
+    expect(listed.find((f: { name: string }) => f.name === 'tick')).toMatchObject({
+      schedule: '*/1 * * * *',
+      nextRun: expect.any(String),
+    });
     const hello = await api.post(`/fn/${id}/hello`, { data: { n: 1 } });
     expect(hello.status()).toBe(200);
     expect(await hello.json()).toMatchObject({ ok: true, echo: { n: 1 } });
+    // The crux's own API: any method, from any origin, with the query and the rest of the path.
+    const got = await api.get(`/fn/${id}/hello/42?who=ada`, {
+      headers: { Origin: 'https://elsewhere.example' },
+    });
+    expect(got.status()).toBe(200);
+    expect(got.headers()['access-control-allow-origin']).toBe('https://elsewhere.example');
+    expect(await got.json()).toMatchObject({ ok: true, echo: null });
     const ping = await api.post(`/events/${id}/ping`, { data: { order: 42 } });
     expect(ping.status()).toBe(202);
     expect(await ping.json()).toMatchObject({ event: 'ping', handlers: 1 });
     const last = await api.get(`/store/${id}/last-ping`);
     expect(last.status()).toBe(200);
     expect(await last.json()).toMatchObject({ value: { order: 42 } });
+    // The clock: within two minutes the scheduled handler has written last-tick.
+    // (a missing key answers 200 with a null value, so poll the value)
+    await expect
+      .poll(async () => (await (await api.get(`/store/${id}/last-tick`)).json()).value, {
+        timeout: 150_000,
+        intervals: [5_000],
+      })
+      .toMatchObject({ schedule: '*/1 * * * *', name: 'tick' });
+    const ticked = (await (await api.get(`/fn/${id}`)).json()).find(
+      (f: { name: string }) => f.name === 'tick',
+    );
+    expect(ticked).toMatchObject({ lastStatus: '200', lastRun: expect.any(String) });
     await api.dispose();
 
     // And from the Share pane, signed in: Run and Emit show their answers.

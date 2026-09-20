@@ -661,6 +661,13 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         });
         set({ crux: mergedCrux });
         void playCue('published', get().crux?.id);
+        // The API declares the crux's schedules when its functions load; ask it now.
+        void import('@/services/crux-functions').then(
+          ({ functionFiles, listPublishedFunctions }) => {
+            if (functionFiles(get().artifacts || []).length)
+              return listPublishedFunctions(mergedCrux.id).catch(() => undefined);
+          },
+        );
         return true;
       } catch (err) {
         console.error('[publish] failed:', err);
