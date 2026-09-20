@@ -81,6 +81,21 @@ export function getToolLabel(tc: ToolCall): string {
       return `Searched the web for ${String(tc.input?.query ?? '')}`;
     case 'Task':
       return `Delegated: ${String(tc.input?.description ?? '')}`;
+    // The Keeper's garden tools (garden-tools.ts)
+    case 'list_cruxes':
+      return 'Looked over the garden';
+    case 'list_cruxspaces':
+      return 'Listed the Cruxspaces';
+    case 'create_cruxspace':
+      return `Gathered a Cruxspace: ${String(tc.input?.name ?? '')}`;
+    case 'plant_crux':
+      return `Planted ${String(tc.input?.title ?? 'a crux')}`;
+    case 'run_turn':
+      return `Ran a turn in a crux: ${String(tc.input?.message ?? '').slice(0, 60)}`;
+    case 'publish_crux':
+      return 'Published a crux';
+    case 'install_tool':
+      return `Installed ${String(tc.input?.slug ?? tc.input?.cruxId ?? 'a tool')}`;
     case 'ToolSearch':
       return 'Looked up a tool';
     case 'ListMcpResourcesTool':

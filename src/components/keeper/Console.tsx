@@ -15,7 +15,16 @@ import {
   createThemeToolExecutor,
 } from '@/ai/theme-tools';
 import type { NormalizedMessage } from '@/services/types';
-import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
+import { Reply, PersonPill, StatusLine } from '@/components/chat/Reply';
+import ComposerPill from '@/components/chat/ComposerPill';
+import {
+  GARDEN_TOOL_DEFINITIONS,
+  GARDEN_TOOL_GUIDANCE,
+  isGardenTool,
+  runGardenTool,
+} from '@/ai/garden-tools';
+import { SKILL_TOOL_DEFINITIONS, runSkillTool } from '@/ai/skills';
+import type { ToolCall } from '@/api/types';
 import ModelSelector from '@/components/chat/ModelSelector';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -239,6 +248,7 @@ export default function Console() {
   const [streaming, setStreaming] = useState(false);
   const [streamContent, setStreamContent] = useState('');
   const [toolActivity, setToolActivity] = useState('');
+  const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [error, setError] = useState('');
   const [model, setModel] = useState(
     () => resolveModel(getSetting(SettingsKey.KeeperModel)) || KEEPER_MODEL,
@@ -335,34 +345,62 @@ export default function Console() {
       // Console is a second caller of the Collaboration engine — same loop as
       // the workspace chat, with the Keeper's own prompt and only the theme
       // tools (the Keeper tends the garden, not a crux's files).
+      // The Keeper tends the garden: the theme tools, the garden tools (plant,
+      // gather, run a turn, install) and skills. Tool calls are kept on the
+      // reply so the console shows the work folded beneath it, as the
+      // Collaboration does.
+      const themeExecute = createThemeToolExecutor();
+      const execute = async (name: string, input: Record<string, unknown>) => {
+        if (isGardenTool(name)) return runGardenTool(name, input);
+        if (name === 'load_skill') return runSkillTool(input);
+        return themeExecute(name, input);
+      };
       let accumulated = '';
+      const calls: ToolCall[] = [];
       for await (const event of runConversation(
         apiKey,
         '',
         normalizedMsgs,
         model,
-        createThemeToolExecutor(),
+        execute,
         controller.signal,
         {
           systemPrompt:
-            (persona.systemPrompt || KEEPER_SYSTEM_PROMPT) + '\n\n' + THEME_TOOL_GUIDANCE,
-          tools: THEME_TOOL_DEFINITIONS,
+            (persona.systemPrompt || KEEPER_SYSTEM_PROMPT) +
+            '\n\n' +
+            GARDEN_TOOL_GUIDANCE +
+            '\n\n' +
+            THEME_TOOL_GUIDANCE,
+          tools: [...GARDEN_TOOL_DEFINITIONS, ...SKILL_TOOL_DEFINITIONS, ...THEME_TOOL_DEFINITIONS],
         },
       )) {
         if (event.type === 'text') {
           accumulated += event.content;
           setStreamContent(accumulated);
+        } else if (event.type === 'tool_start') {
+          calls.push({ id: event.id, name: event.name, input: event.input });
+          setToolCalls([...calls]);
+          setToolActivity(event.name);
+        } else if (event.type === 'tool_result') {
+          const tc = calls.find((c) => c.id === event.id);
+          if (tc) {
+            tc.result = event.result;
+            if (event.error) tc.error = true;
+          }
+          setToolCalls([...calls]);
+          setToolActivity('');
         } else if (event.type === 'error') {
           setError(event.message);
         }
       }
 
-      if (accumulated) {
+      if (accumulated || calls.length) {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
           content: accumulated,
           timestamp: new Date().toISOString(),
           model,
+          ...(calls.length ? { toolCalls: calls } : {}),
         };
         currentMessages = [...currentMessages, assistantMsg];
       }
@@ -381,6 +419,7 @@ export default function Console() {
       setStreaming(false);
       setStreamContent('');
       setToolActivity('');
+      setToolCalls([]);
       abortRef.current = null;
     }
   }, [input, streaming, displayMessages, activeId, model, persona, commitConversations]);
@@ -482,72 +521,41 @@ export default function Console() {
               </p>
             )}
 
-            {displayMessages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex gap-2 items-end',
-                  msg.role === 'user' ? 'justify-end' : 'justify-start',
-                )}
-              >
-                <div
-                  className={cn(
-                    'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
-                    msg.role === 'user'
-                      ? 'bg-accent-muted text-text'
-                      : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
-                  )}
-                >
-                  {msg.role === 'user' ? (
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                  ) : (
-                    <MarkdownRenderer content={msg.content} />
-                  )}
-
-                  {/* Metadata footer — timestamp + model */}
-                  <div className="mt-1.5 flex items-center gap-2 text-2xs font-mono text-text-muted/50">
-                    {msg.timestamp && <span>{formatTime(msg.timestamp)}</span>}
-                    {msg.role === 'assistant' && msg.model && (
-                      <span className="text-right flex-1">
-                        {getModelShortName(msg.model) || msg.model}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {msg.role === 'user' && <UserAvatar />}
-              </div>
-            ))}
-
-            {/* Streaming text */}
-            {streaming && streamContent && (
-              <div className="flex gap-2 items-end justify-start">
-                <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
-                  <MarkdownRenderer content={streamContent} />
-                  <span className="inline-block w-1.5 h-4 bg-accent/60 motion-attention ml-0.5 align-text-bottom" />
-                </div>
-              </div>
+            {displayMessages.map((msg, i) =>
+              msg.role === 'user' ? (
+                <PersonPill key={i} content={msg.content} avatar={<UserAvatar />} />
+              ) : (
+                <Reply
+                  key={i}
+                  avatar={<ConsoleAvatar bordered />}
+                  name={persona.name || 'The Keeper'}
+                  content={msg.content}
+                  toolCalls={msg.toolCalls}
+                  footer={[
+                    ...(msg.timestamp ? [formatTime(msg.timestamp)] : []),
+                    ...(msg.model ? [getModelShortName(msg.model) || msg.model] : []),
+                  ]}
+                />
+              ),
             )}
 
-            {/* Tool activity indicator */}
-            {streaming && toolActivity && (
-              <div className="flex gap-2 items-end justify-start">
-                <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-xs text-text-muted italic">
-                  {toolActivity}
-                </div>
-              </div>
+            {/* The reply as it streams, the work so far folded beneath it */}
+            {streaming && (streamContent || toolCalls.length > 0) && (
+              <Reply
+                avatar={<ConsoleAvatar bordered />}
+                name={persona.name || 'The Keeper'}
+                content={streamContent}
+                toolCalls={toolCalls}
+                streaming
+              />
             )}
 
-            {/* Loading dots */}
-            {streaming && !streamContent && !toolActivity && (
-              <div className="flex gap-2 items-end justify-start">
-                <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
-                  <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted motion-attention [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted motion-attention [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted motion-attention [animation-delay:300ms]" />
-                  </div>
-                </div>
-              </div>
+            {/* One quiet line while the Keeper works */}
+            {streaming && (
+              <StatusLine
+                text={toolActivity ? `Working… · ${toolActivity}` : 'Working…'}
+                testId="keeper-status"
+              />
             )}
 
             <div ref={bottomRef} />
@@ -560,56 +568,31 @@ export default function Console() {
             </div>
           )}
 
-          {/* Input + Model selector */}
-          <div className="border-t border-border p-3 space-y-3">
-            <ModelSelector value={model} onChange={changeModel} disabled={streaming} />
-            <div>
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Send a message..."
-                  rows={1}
-                  className={cn(
-                    'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
-                    'text-sm text-text placeholder:text-text-muted',
-                    'focus:outline-none focus:border-input-border-active',
-                    'font-body leading-relaxed max-h-[100px]',
-                  )}
-                  onInput={(e) => {
-                    const el = e.currentTarget;
-                    el.style.height = 'auto';
-                    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-                  }}
-                />
-                {streaming ? (
-                  <button
-                    onClick={stop}
-                    className={cn(
-                      'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-                      'bg-error-muted text-error border border-error/20',
-                      'hover:bg-error/20 transition-colors cursor-pointer',
-                    )}
-                  >
-                    Stop
-                  </button>
-                ) : (
-                  <button
-                    onClick={send}
-                    disabled={!input.trim()}
-                    className={cn(
-                      'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-                      'bg-accent-muted text-accent border border-accent/20',
-                      'hover:border-accent transition-colors cursor-pointer',
-                      'disabled:cursor-not-allowed',
-                    )}
-                  >
-                    Send
-                  </button>
-                )}
-              </div>
+          {/* The pill composer, the model chip beneath it */}
+          <div className="border-t border-border/60">
+            <ComposerPill
+              textareaRef={inputRef}
+              streaming={streaming}
+              canSend={!!input.trim()}
+              onSend={() => void send()}
+              onStop={stop}
+              hint={
+                streaming ? 'The Keeper is working' : 'Enter to send · Shift+Enter for new line'
+              }
+              testId="keeper-composer"
+              textarea={{
+                value: input,
+                onChange: (e) => setInput(e.target.value),
+                onKeyDown: handleKeyDown,
+                onInput: (e) => {
+                  const el = e.currentTarget;
+                  el.style.height = 'auto';
+                  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+                },
+              }}
+            />
+            <div className="px-3 pb-2">
+              <ModelSelector value={model} onChange={changeModel} disabled={streaming} />
             </div>
           </div>
         </div>

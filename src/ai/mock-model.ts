@@ -1281,6 +1281,17 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('save_font', { format: 'otf', name: 'Moss Sans' });
           return textStream('Named the font Moss Sans, drew an A from SVG and saved the OTF.');
         }
+        if (lastUserText(prompt).includes('[garden:plant]')) {
+          // The Keeper plants a crux with a brief (garden-tools, step 6).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('plant_crux', {
+              title: 'Field notes',
+              template: 'blank',
+              brief: 'Notes from the field study, one page per day.',
+            });
+          return textStream('Planted Field notes with its brief. Open it from your garden.');
+        }
         if (lastUserText(prompt).includes('[shader:tweak]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_shader', {});

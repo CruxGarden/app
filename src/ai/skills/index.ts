@@ -57,16 +57,44 @@ export const SKILLS: Readonly<Record<string, Skill>> = Object.freeze(
   ),
 );
 
+/**
+ * The Keeper's own skills (`keeper/*.md`): the garden-level conversation's
+ * ways of working — "build me something" — kept out of every crux's
+ * stable prefix, which lists only the crux skills.
+ */
+const keeperFiles = import.meta.glob('./keeper/*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+export const KEEPER_SKILLS: Readonly<Record<string, Skill>> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(keeperFiles)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([path, text]) => {
+        const skill = parseSkill(path, text);
+        return [skill.name, skill];
+      }),
+  ),
+);
+
 export function skillNames(): string[] {
   return Object.keys(SKILLS);
 }
+export function keeperSkillNames(): string[] {
+  return Object.keys(KEEPER_SKILLS);
+}
 
 export function hasSkill(name: unknown): name is string {
-  return typeof name === 'string' && Object.prototype.hasOwnProperty.call(SKILLS, name);
+  return (
+    typeof name === 'string' &&
+    (Object.prototype.hasOwnProperty.call(SKILLS, name) ||
+      Object.prototype.hasOwnProperty.call(KEEPER_SKILLS, name))
+  );
 }
 
 export function getSkill(name: string): Skill | null {
-  return hasSkill(name) ? SKILLS[name]! : null;
+  return hasSkill(name) ? (SKILLS[name] ?? KEEPER_SKILLS[name] ?? null) : null;
 }
 
 /**
