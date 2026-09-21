@@ -65,6 +65,12 @@ export function useRunnerProxy(cruxId: string | null) {
             answer(await track(stopWorkspace(cruxId!, names(e.data.names))));
             break;
           }
+          case 'crux:runner:log': {
+            const { workspaceLog } = await import('@/services/runner');
+            const tail = typeof e.data.tail === 'number' ? e.data.tail : 200;
+            answer(await track(workspaceLog(cruxId!, Math.min(Math.max(tail, 1), 2000))));
+            break;
+          }
           case 'crux:runner:read': {
             const path = String(e.data.path ?? '');
             const artifacts = await track(getServices().artifact.findByResource('crux', cruxId!));
