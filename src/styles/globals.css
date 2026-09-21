@@ -780,7 +780,7 @@ body {
   background-size: var(--bg-image-fit);
   background-position: var(--bg-image-position);
   background-repeat: no-repeat;
-  filter: blur(var(--bg-image-blur));
+  filter: blur(var(--bg-image-blur)) saturate(var(--life, 1)) brightness(var(--life-dim, 1));
   transform: scale(var(--bg-image-scale));
 }
 .mood-bg-dim {

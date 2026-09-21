@@ -7,6 +7,9 @@ import {
   SignalState,
   typingLevel,
   TYPING_DECAY_MS,
+  decayActivity,
+  ACTIVITY_HALF_LIFE_MS,
+  ACTIVITY_PER_EVENT,
 } from './signals';
 
 describe('reactive signals — pure parts', () => {
@@ -69,14 +72,17 @@ describe('reactive signals — pure parts', () => {
     const s = new SignalState();
     expect(s.settled).toBe(true);
     s.keystroke(1000);
-    expect(s.tick(1000)).toEqual({ typing: 1 });
+    // A keystroke moves typing and activity; typing is the one that spikes.
+    expect(s.tick(1000).typing).toBe(1);
     expect(s.settled).toBe(false);
     s.tick(1000 + TYPING_DECAY_MS / 3);
     expect(s.values.typing).toBeGreaterThan(0);
-    expect(s.tick(1000 + TYPING_DECAY_MS)).toEqual({ typing: 0 });
+    expect(s.tick(1000 + TYPING_DECAY_MS).typing).toBe(0);
+    // Activity outlives it by minutes, so settle the long way round.
+    s.tick(1000 + ACTIVITY_HALF_LIFE_MS * 8);
     expect(s.settled).toBe(true);
     // Nothing changed → no writes
-    expect(s.tick(5000)).toEqual({});
+    expect(s.tick(1000 + ACTIVITY_HALF_LIFE_MS * 9)).toEqual({});
   });
 
   it('SignalState: agent and audio approach their targets and report only what changed', () => {
@@ -95,5 +101,55 @@ describe('reactive signals — pure parts', () => {
     expect(s.settled).toBe(true);
     s.setAudio(0.25, false);
     expect(s.settled).toBe(false);
+  });
+
+  it('decayActivity: halves over the half life, quantised, and reaches zero', () => {
+    expect(decayActivity(0, 0)).toBe(0);
+    expect(decayActivity(1, 0)).toBe(1);
+    expect(decayActivity(1, ACTIVITY_HALF_LIFE_MS)).toBeCloseTo(0.5, 2);
+    expect(decayActivity(1, ACTIVITY_HALF_LIFE_MS * 2)).toBeCloseTo(0.25, 2);
+    // quantised to 1/64 steps so a minutes-long fade does not repaint per frame
+    expect(decayActivity(1, 1000) * 64).toBe(Math.round(decayActivity(1, 1000) * 64));
+    // and it ends, rather than trailing an invisible fraction for ever
+    expect(decayActivity(1, ACTIVITY_HALF_LIFE_MS * 8)).toBe(0);
+  });
+
+  it('SignalState: events stack activity, which then falls away on its own', () => {
+    const s = new SignalState();
+    s.tick(0);
+    expect(s.values.activity).toBe(0);
+    expect(s.settled).toBe(true);
+
+    s.happened(0);
+    s.tick(0);
+    expect(s.values.activity).toBeCloseTo(ACTIVITY_PER_EVENT, 1);
+    expect(s.settled).toBe(false);
+
+    // a second event at the same moment stacks on the first
+    s.happened(0);
+    s.tick(0);
+    expect(s.values.activity).toBeGreaterThan(ACTIVITY_PER_EVENT);
+
+    // a busy stretch saturates rather than overshooting
+    for (let t = 0; t < 40; t++) s.happened(t * 100);
+    s.tick(4000);
+    expect(s.values.activity).toBe(1);
+
+    // and a quiet stretch brings it back to rest
+    s.tick(4000 + ACTIVITY_HALF_LIFE_MS * 8);
+    expect(s.values.activity).toBe(0);
+    expect(s.settled).toBe(true);
+  });
+
+  it('SignalState: a keystroke counts as activity, not only as typing', () => {
+    const s = new SignalState();
+    s.keystroke(0);
+    s.tick(0);
+    expect(s.values.typing).toBe(1);
+    expect(s.values.activity).toBeGreaterThan(0);
+    // typing is gone long before activity is
+    s.tick(TYPING_DECAY_MS + 1);
+    expect(s.values.typing).toBe(0);
+    expect(s.values.activity).toBeGreaterThan(0);
   });
 });

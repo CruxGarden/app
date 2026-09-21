@@ -562,6 +562,9 @@ export const GARDEN_DARK = {
   reactAccentAudio: '0',
   reactBackgroundTyping: '0',
   reactPaneAgent: '0',
+  // How much colour drains from the background when nothing has happened for a
+  // while, so the garden warms up as you work. 0 = always at full colour.
+  reactBackgroundActivity: '0.4',
 
   // ── Editor (Monaco) ──────────────────────────────────
   editorFontSize: '13px',

@@ -63,6 +63,11 @@
   overflow: hidden;
   pointer-events: none;
   background: linear-gradient(40deg, var(--bloom-bg1), var(--bloom-bg2));
+  /* ── motion ── reactive: activity (--signal-activity) drains the colour when
+     the garden has been quiet, by up to reactBackgroundActivity — the whole
+     layer at once, so the blobs keep blending as they do (they already sit
+     in their own stacking context under .bloom-blobs' filter) */
+  filter: saturate(var(--life, 1)) brightness(var(--life-dim, 1));
 }
 
 .bloom-blobs {

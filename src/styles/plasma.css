@@ -428,3 +428,13 @@ html[data-surface-style='plasma']
   .plasma-button-swirl {
   opacity: 0.35;
 }
+
+/* ── The garden warming up (lib/moods/signals.ts) ─────────────────────────
+   --signal-activity rises with what you do and falls over minutes; --life
+   turns it into how much colour the material has, by up to the Mood's
+   reactBackgroundActivity. The ground canvas carries the panes as well as the
+   background, so the whole material warms together; the text above it is DOM
+   and is untouched. */
+canvas.plasma-ground {
+  filter: saturate(var(--life, 1)) brightness(var(--life-dim, 1));
+}

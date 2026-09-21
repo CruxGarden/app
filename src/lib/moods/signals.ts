@@ -1,15 +1,18 @@
 /**
- * Reactive theme signals (ADR 0014): three live numbers, 0..1, written as CSS
+ * Reactive theme signals (ADR 0014): four live numbers, 0..1, written as CSS
  * variables on <html> so a Mood can let the interface react to what is
  * happening —
  *
- *   --signal-audio   the Resonance level (what the Mood Bar's bars show)
- *   --signal-typing  1 on a keystroke in the composer or editor, decaying to 0
- *   --signal-agent   1 while a collaborator turn is streaming
+ *   --signal-audio    the Resonance level (what the Mood Bar's bars show)
+ *   --signal-typing   1 on a keystroke in the composer or editor, decaying to 0
+ *   --signal-agent    1 while a collaborator turn is streaming
+ *   --signal-activity how much has been going on lately — every event lifts it
+ *                     and it falls over minutes, far slower than the other
+ *                     three, so it reads as a mood rather than a blink
  *
  * CSS multiplies each by a binding token (reactAccentAudio, reactBackgroundTyping,
- * reactPaneAgent; default 0) — see motion.css and bloom.css — so a Mood that
- * says nothing does not move. Writes are rAF-throttled and smoothed, and the
+ * reactPaneAgent, reactBackgroundActivity; default 0) — see motion.css and
+ * bloom.css — so a Mood that says nothing does not move. Writes are rAF-throttled and smoothed, and the
  * loop stops when every signal is at rest. `startSignals()` is called once
  * from the app root; the pure parts (decay, smoothing, clamping) are tested.
  */
@@ -17,9 +20,15 @@ import { useAudioStore } from '@/stores/audioStore';
 import { useWorkspaceRegistry } from '@/stores/workspaceRegistry';
 
 export const TYPING_DECAY_MS = 1500;
+/** With nothing happening, activity halves every this many ms. */
+export const ACTIVITY_HALF_LIFE_MS = 45_000;
+/** What one event (a keystroke, a file arriving, a turn beginning) adds. */
+export const ACTIVITY_PER_EVENT = 0.22;
 /** Per-frame approach rate toward a target (1 = jump, 0 = never) at 60fps. */
 export const SMOOTHING = 0.25;
 const EPSILON = 0.004;
+/** Below this, activity is over: one quantisation step. */
+const ACTIVITY_FLOOR = 1 / 64;
 
 export function clamp01(n: number): number {
   return n <= 0 || Number.isNaN(n) ? 0 : n >= 1 ? 1 : n;
@@ -39,6 +48,24 @@ export function audioLevel(meter: number, playing: boolean): number {
   return clamp01(Math.sqrt(meter) * 1.6);
 }
 
+/**
+ * Activity `elapsedMs` after it last moved: an exponential fall with a half
+ * life, floored at 0 once it is too faint to be worth a repaint.
+ */
+export function decayActivity(
+  level: number,
+  elapsedMs: number,
+  halfLifeMs = ACTIVITY_HALF_LIFE_MS,
+): number {
+  if (!(level > 0) || halfLifeMs <= 0) return 0;
+  if (elapsedMs <= 0) return clamp01(level);
+  const next = level * Math.pow(2, -elapsedMs / halfLifeMs);
+  // Quantised: the fall lasts minutes, and a fresh value every frame would
+  // repaint a full-screen filter for all of them. 1/64 steps are invisible.
+  const stepped = Math.round(clamp01(next) * 64) / 64;
+  return stepped < ACTIVITY_FLOOR ? 0 : stepped;
+}
+
 /** One smoothing step from `current` toward `target`; snaps when within epsilon. */
 export function approach(current: number, target: number, rate = SMOOTHING): number {
   const next = current + (target - current) * rate;
@@ -49,6 +76,7 @@ export interface SignalValues {
   audio: number;
   typing: number;
   agent: number;
+  activity: number;
 }
 
 /** Is a keystroke in this element "writing" (composer textarea, Monaco's input, contenteditable)? */
@@ -77,10 +105,19 @@ export class SignalState {
   private lastKeyAt = -Infinity;
   private audioTarget = 0;
   private agentTarget = 0;
-  readonly values: SignalValues = { audio: 0, typing: 0, agent: 0 };
+  private activityAt = 0;
+  private activityFrom = 0;
+  readonly values: SignalValues = { audio: 0, typing: 0, agent: 0, activity: 0 };
 
   keystroke(now: number): void {
     this.lastKeyAt = now;
+    this.happened(now);
+  }
+
+  /** Something happened: a key was pressed, a file arrived, a turn began. */
+  happened(now: number, amount = ACTIVITY_PER_EVENT): void {
+    this.activityFrom = clamp01(decayActivity(this.activityFrom, now - this.activityAt) + amount);
+    this.activityAt = now;
   }
   setAudio(meter: number, playing: boolean): void {
     this.audioTarget = audioLevel(meter, playing);
@@ -98,12 +135,15 @@ export class SignalState {
     if (audio !== this.values.audio) changed.audio = this.values.audio = audio;
     const agent = approach(this.values.agent, this.agentTarget);
     if (agent !== this.values.agent) changed.agent = this.values.agent = agent;
+    const activity = decayActivity(this.activityFrom, now - this.activityAt);
+    if (activity !== this.values.activity) changed.activity = this.values.activity = activity;
     return changed;
   }
 
   get settled(): boolean {
     return (
       this.values.typing === 0 &&
+      this.values.activity === 0 &&
       this.values.audio === this.audioTarget &&
       this.values.agent === this.agentTarget
     );
@@ -114,6 +154,7 @@ const VARS: Record<keyof SignalValues, string> = {
   audio: '--signal-audio',
   typing: '--signal-typing',
   agent: '--signal-agent',
+  activity: '--signal-activity',
 };
 
 let stop: (() => void) | null = null;
@@ -155,12 +196,16 @@ export function startSignals(): () => void {
     state.setAudio(s.level, s.playing);
     wake();
   });
+  let wasWorking = false;
   const updateAgent = () => {
-    state.setAgent(
-      useWorkspaceRegistry
-        .getState()
-        .entries.some((e) => e.status === 'Working' || e.status === 'Checking'),
-    );
+    const working = useWorkspaceRegistry
+      .getState()
+      .entries.some((e) => e.status === 'Working' || e.status === 'Checking');
+    // A turn beginning is an event; a turn running is not, or activity would
+    // pin to 1 for as long as the collaborator worked.
+    if (working && !wasWorking) state.happened(performance.now());
+    wasWorking = working;
+    state.setAgent(working);
     wake();
   };
   const unCrux = useWorkspaceRegistry.subscribe(updateAgent);
