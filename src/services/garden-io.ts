@@ -1,3 +1,9 @@
+import {
+  archiveRuntimeMode,
+  referenceArchiveRuntimes,
+  hydrateArchiveRuntimes,
+  type RuntimeMode,
+} from './archive-runtimes';
 import JSZip from 'jszip';
 import { getSqliteClient } from './sqlite/client';
 import { hashContent } from './sqlite/helpers';
@@ -10,6 +16,7 @@ const SUPPORTED_MANIFEST_MAJOR = '2';
 // ── Types ───────────────────────────────────────────────
 
 export interface GardenExportOptions {
+  runtime?: RuntimeMode;
   author?: { username: string; displayName: string } | null;
   onProgress?: (status: string) => void;
 }
@@ -150,6 +157,14 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
     ),
   );
 
+  const templates = await db.all<{ template: string }>(
+    "SELECT DISTINCT json_extract(meta, '$.template') AS template FROM cruxes WHERE json_extract(meta, '$.template') IS NOT NULL",
+  );
+  await referenceArchiveRuntimes(
+    zip,
+    templates.map((row) => row.template),
+    options.runtime ?? archiveRuntimeMode(),
+  );
   onProgress?.('Compressing...');
   const blob = await zip.generateAsync({ type: 'blob' });
 
@@ -174,6 +189,7 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
 
   try {
     zip = await JSZip.loadAsync(raw);
+    await hydrateArchiveRuntimes(zip);
 
     // Validate manifest
     const manifestFile = zip.file('manifest.json');
@@ -412,7 +428,7 @@ export async function confirmAndImportGarden(options: ConfirmAndImportOptions): 
   );
   if (wantBackup) {
     try {
-      const backup = await exportGarden({ onProgress });
+      const backup = await exportGarden({ onProgress, runtime: 'included' });
       const url = URL.createObjectURL(backup.blob);
       const a = document.createElement('a');
       a.href = url;

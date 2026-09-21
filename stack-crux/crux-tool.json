@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "stack-app",
   "name": "Stack",
   "description": "Developer · run a set of services on your machine with Docker Compose — edit the stack, publish the Crux, and anyone who installs it gets the same setup",

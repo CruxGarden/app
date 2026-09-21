@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "eventcalendar-app",
   "name": "Calendar",
   "description": "Productivity \u00b7 events, schedules and planning on an EventCalendar organizer",
@@ -30,9 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".ics"
-      ],
+      "extensions": [".ics"],
       "folder": "inbox"
     }
   ],

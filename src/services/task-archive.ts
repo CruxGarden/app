@@ -1,3 +1,4 @@
+import { archiveRuntimeMode, referenceArchiveRuntimes } from './archive-runtimes';
 /** Version 2 preserves the complete private task graph, not just Main's first-parent history. */
 import JSZip from 'jszip';
 import type { ExportOptions, ExportResult, ImportOptions, ImportResult } from './crux-io';
@@ -149,6 +150,13 @@ async function packTaskCrux(options: ExportOptions): Promise<ExportResult> {
       snapshotCount: cruxes.length - 1,
       author: options.author ?? null,
     }),
+  );
+  await referenceArchiveRuntimes(
+    zip,
+    typeof portableMeta(owner.meta).template === 'string'
+      ? [portableMeta(owner.meta).template as string]
+      : [],
+    options.runtime ?? archiveRuntimeMode(),
   );
   return {
     blob: await zip.generateAsync({ type: 'blob' }),

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "maps-app",
   "name": "Map",
   "description": "Productivity · places, routes and areas on a MapLibre map with OpenFreeMap tiles; a public map page",

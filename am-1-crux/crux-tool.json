@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "am-1-app",
   "name": "AM-1",
   "description": "Music · a three-part Berlin-school arpeggio instrument, the AM-1 Arpeggio Machine",

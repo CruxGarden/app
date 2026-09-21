@@ -285,7 +285,16 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
       "Export a crux as a .crux archive — files, conversation and every snapshot — to the person's downloads. The complete history, in one file.",
     input_schema: {
       type: 'object',
-      properties: { cruxId: { type: 'string' }, title: { type: 'string' } },
+      properties: {
+        cruxId: { type: 'string' },
+        title: { type: 'string' },
+        runtime: {
+          type: 'string',
+          enum: ['reference', 'included'],
+          description:
+            'Reference unchanged tool files, or include them for a self-contained archive. Omit to use the saved export preference.',
+        },
+      },
       required: [],
       additionalProperties: false,
     },
@@ -296,7 +305,10 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
       'Export a Cruxspace as a .cruxspace package — every member with its history, the brief, and the Keeper conversations that built it.',
     input_schema: {
       type: 'object',
-      properties: { cruxspaceId: { type: 'string' } },
+      properties: {
+        cruxspaceId: { type: 'string' },
+        runtime: { type: 'string', enum: ['reference', 'included'] },
+      },
       required: ['cruxspaceId'],
       additionalProperties: false,
     },
@@ -360,6 +372,12 @@ export function validateGardenTool(
   name: string,
   input: Record<string, unknown>,
 ): { valid: boolean; error?: string } {
+  if (
+    (name === 'export_crux' || name === 'export_cruxspace') &&
+    input.runtime !== undefined &&
+    !['reference', 'included'].includes(String(input.runtime))
+  )
+    return { valid: false, error: 'runtime must be reference or included' };
   switch (name) {
     case 'list_cruxes':
     case 'list_cruxspaces':
@@ -925,6 +943,7 @@ async function runGardenToolInner(
       const author = useAppStore.getState().author;
       const result = await exportCrux({
         cruxId: crux.id,
+        runtime: input.runtime as 'reference' | 'included' | undefined,
         author: author ? { username: author.username, displayName: author.displayName } : null,
       });
       download(result.blob, result.filename);
@@ -932,7 +951,10 @@ async function runGardenToolInner(
     }
     case 'export_cruxspace': {
       const { exportCruxspace } = await import('@/services/cruxspace-package');
-      const result = await exportCruxspace({ spaceId: input.cruxspaceId as string });
+      const result = await exportCruxspace({
+        spaceId: input.cruxspaceId as string,
+        runtime: input.runtime as 'reference' | 'included' | undefined,
+      });
       download(result.blob, result.filename);
       return `Exported the Cruxspace as ${result.filename} to the person's downloads (${result.manifest.members?.length ?? 0} members${result.failed.length ? `; could not include: ${result.failed.join(', ')}` : ''}).`;
     }

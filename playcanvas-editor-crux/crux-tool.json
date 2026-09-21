@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "playcanvas-editor-app",
   "name": "PlayCanvas Editor",
   "description": "Creative · local 3D scenes and classic JavaScript",

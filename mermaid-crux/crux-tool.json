@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "mermaid-app",
   "name": "Mermaid Live Editor",
   "description": "Diagrams · flowcharts, timelines and sequence diagrams",
@@ -30,10 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".mmd",
-        ".mermaid"
-      ],
+      "extensions": [".mmd", ".mermaid"],
       "folder": "inbox"
     }
   ],

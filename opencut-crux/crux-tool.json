@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "opencut-app",
   "name": "OpenCut",
   "description": "Creative · edit video, audio and titles with OpenCut Classic",
@@ -30,13 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".mp4",
-        ".webm",
-        ".mov",
-        ".mkv",
-        ".m4v"
-      ],
+      "extensions": [".mp4", ".webm", ".mov", ".mkv", ".m4v"],
       "folder": "media"
     }
   ],

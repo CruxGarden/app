@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "beepbox-app",
   "name": "BeepBox",
   "description": "Music · sketch melodies, patterns and chiptune songs with BeepBox",

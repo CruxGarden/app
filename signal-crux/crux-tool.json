@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "signal-app",
   "name": "Song",
   "description": "Creative · a MIDI sequencer (Signal): piano roll, arrange view, tempo, built-in sounds; MIDI and WAV outputs",

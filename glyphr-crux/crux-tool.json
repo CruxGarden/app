@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "glyphr-app",
   "name": "Font",
   "description": "Creative · Glyphr Studio 2, a font editor: draw glyphs, set metrics, build OTF/TTF/WOFF2 as outputs",

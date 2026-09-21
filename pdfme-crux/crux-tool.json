@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "pdfme-app",
   "name": "Layout",
   "description": "Creative · posters, flyers, cards and menus laid out on a page with pdfme; PDF and PNG outputs",

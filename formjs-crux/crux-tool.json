@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "formjs-app",
   "name": "Form",
   "description": "Productivity · forms, questionnaires and sign-ups on form-js; answers land in the Crux Store",

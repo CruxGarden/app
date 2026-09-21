@@ -1,3 +1,4 @@
+import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
 import { useState, useCallback, useMemo } from 'react';
 import { isEmbeddedApp, isCardinal, samplerType } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -163,14 +164,14 @@ export default function ExportPane() {
           {isEmbeddedApp(crux) && (
             <PaneNote tone="muted" className="text-left whitespace-normal">
               {samplerType(crux) ? (
-                'Complete editable project: includes the app, all project data and media, private Collaboration, Tasks and Growth. Anyone with this archive can open them.'
+                'Complete editable project: includes all project data and media, private Collaboration, Tasks and Growth. Anyone with this archive can open them.'
               ) : isCardinal(crux) ? (
-                'Complete instrument: includes its app, patch, presets, private Collaboration, Tasks and Growth. Anyone with this file can open them. Retain the included licenses and source information.'
+                'Complete instrument: includes its app, patch, presets, private Collaboration, Tasks and Growth. Anyone with this file and the required tools can open them. Retain the included licenses and source information.'
               ) : (
                 <>
-                  Complete editable Crux: includes app code, all content (including private notes or
-                  designs), Collaboration, Tasks and Growth. Anyone with this file can open them. To
-                  share selected content as a website, use Share.
+                  Complete editable Crux: includes your app changes, all content (including private
+                  notes or designs), Collaboration, Tasks and Growth. Anyone with this file and the
+                  required tools can open them. To share selected content as a website, use Share.
                 </>
               )}
             </PaneNote>
@@ -208,6 +209,11 @@ export default function ExportPane() {
             </ul>
           </PaneSection>
 
+          <RuntimeExportChoice
+            template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
+            artifacts={artifacts}
+            disabled={exporting || exportingZip}
+          />
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap gap-1.5 [&>*]:flex-1 [&>*]:min-w-[132px]">
               <PaneAction

@@ -1,3 +1,4 @@
+import RuntimeExportChoice from './RuntimeExportChoice';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Modal } from '@/components/ui';
@@ -253,6 +254,11 @@ export default function Cruxspaces({
       )}
       {spaces.length > 0 ? (
         <>
+          {!targetId && (
+            <div className="mb-3">
+              <RuntimeExportChoice disabled={busy} />
+            </div>
+          )}
           <div className="flex gap-2 items-center mb-3">
             <select
               aria-label="Cruxspace"

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "glsl-app",
   "name": "Shader",
   "description": "Creative · live GLSL fragment shaders in glslEditor; rings of light to start, frames as outputs, a live page",

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "p5-app",
   "name": "Sketch",
   "description": "Creative · generative art and live visuals with p5.js; a flow field to start, frames as outputs, a live page",

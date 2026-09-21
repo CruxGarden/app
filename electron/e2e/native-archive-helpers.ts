@@ -10,6 +10,7 @@ export async function exportNativeCrux(
   /** How to reach the Export pane; embedded apps have the Workshop's "Export complete Crux" button. */
   open: () => Promise<void> = () =>
     page.getByRole('button', { name: 'Export complete Crux', exact: true }).click(),
+  runtime: 'reference' | 'included' = 'included',
 ) {
   if (app) {
     // Let Chromium stream large archives to disk instead of copying a Blob
@@ -28,6 +29,9 @@ export async function exportNativeCrux(
       session.defaultSession.on('will-download', listener);
     }, path);
     await open();
+    await page
+      .getByRole('radio', { name: runtime === 'included' ? /^Include tools/ : /^By reference/ })
+      .check();
     await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
     await expect
       .poll(
@@ -60,6 +64,9 @@ export async function exportNativeCrux(
     };
   });
   await open();
+  await page
+    .getByRole('radio', { name: runtime === 'included' ? /^Include tools/ : /^By reference/ })
+    .check();
   await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
   await expect
     .poll(

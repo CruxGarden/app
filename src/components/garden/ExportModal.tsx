@@ -1,3 +1,4 @@
+import RuntimeExportChoice from './RuntimeExportChoice';
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
@@ -103,6 +104,11 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          <RuntimeExportChoice
+            template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
+            artifacts={artifacts}
+            disabled={busy}
+          />
           <div className="flex flex-col gap-1.5">
             <Button
               onClick={handleExportCrux}

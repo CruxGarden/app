@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "link-app",
   "name": "Link",
   "description": "Developer · hook an existing project into Crux Garden — pick the folder, pick the script, and run it with the ports and settings a workspace publishes",

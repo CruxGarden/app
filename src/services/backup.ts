@@ -58,6 +58,7 @@ export async function backupCrux(
   onProgress?.('Exporting crux...');
   const result = await exportCrux({
     cruxId: crux.id,
+    runtime: 'included',
     messages,
     summary: s.summary,
     author: author ? { username: author.username, displayName: author.displayName } : null,

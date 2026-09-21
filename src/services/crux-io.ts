@@ -1,3 +1,9 @@
+import {
+  archiveRuntimeMode,
+  referenceArchiveRuntimes,
+  hydrateArchiveRuntimes,
+  type RuntimeMode,
+} from './archive-runtimes';
 import { exportTaskCrux, importTaskCrux, portableMeta } from './task-archive';
 import { assertMainWorkspace, listWorkingCopies } from './working-copies';
 import JSZip from 'jszip';
@@ -16,6 +22,7 @@ const SUPPORTED_MANIFEST_MAJOR = '1';
 // ── Types ───────────────────────────────────────────────
 
 export interface ExportOptions {
+  runtime?: RuntimeMode;
   cruxId: string;
   /** Current workspace message segment (overrides meta.messages if provided). */
   messages?: unknown[];
@@ -446,6 +453,11 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   );
 
   onProgress?.('Compressing...');
+  await referenceArchiveRuntimes(
+    zip,
+    typeof crux.meta?.template === 'string' ? [crux.meta.template] : [],
+    crux.kind === 'tool' ? 'included' : (options.runtime ?? archiveRuntimeMode()),
+  );
   const blob = await zip.generateAsync({ type: 'blob' });
 
   const now = new Date();
@@ -497,6 +509,7 @@ export async function exportArtifactsZip(
 export async function importCrux(options: ImportOptions): Promise<ImportResult> {
   const { data, mode = 'restore', onProgress } = options;
   const zip = await JSZip.loadAsync(await toArrayBuffer(data));
+  await hydrateArchiveRuntimes(zip);
   const { crux: cruxService, artifact: _artifact, dimension: dimService } = getServices();
   const db = getSqliteClient();
 
@@ -574,7 +587,7 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
   if (mode === 'replace' && cruxData.id) {
     try {
       await cruxService.findById(cruxData.id);
-      const backupResult = await exportCrux({ cruxId: cruxData.id });
+      const backupResult = await exportCrux({ cruxId: cruxData.id, runtime: 'included' });
       replaceBackup = backupResult.blob;
     } catch {
       // Can't back up — proceed without safety net
@@ -762,8 +775,16 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
         // History keeps its dates: a checkpoint taken last week was not taken at import time.
         const taken = exportedDim?.created;
         if (typeof taken === 'string' && Number.isFinite(Date.parse(taken))) {
-          await db.run('UPDATE dimensions SET created = ?, updated = ? WHERE id = ?', [taken, taken, dim.id]);
-          await db.run('UPDATE cruxes SET created = ?, updated = ? WHERE id = ?', [taken, taken, snapshotCrux.id]);
+          await db.run('UPDATE dimensions SET created = ?, updated = ? WHERE id = ?', [
+            taken,
+            taken,
+            dim.id,
+          ]);
+          await db.run('UPDATE cruxes SET created = ?, updated = ? WHERE id = ?', [
+            taken,
+            taken,
+            snapshotCrux.id,
+          ]);
         }
         restoredGrowthCount++;
       } catch (err) {

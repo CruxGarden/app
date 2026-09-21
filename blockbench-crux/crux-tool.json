@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "blockbench-app",
   "name": "Blockbench",
   "description": "Creative · low-poly 3D modeling, textures and animation",
@@ -30,9 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".bbmodel"
-      ],
+      "extensions": [".bbmodel"],
       "folder": "inbox"
     }
   ],

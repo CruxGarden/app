@@ -109,6 +109,10 @@ test.describe('data safety: export, import, wipe, restore', () => {
       await page.keyboard.press('ControlOrMeta+,');
       await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
       await page.locator('h2', { hasText: /^Garden$/ }).click();
+      await page
+        .getByRole('dialog', { name: 'Settings', exact: true })
+        .getByRole('radio', { name: /^Include tools/ })
+        .check();
       await page.getByRole('button', { name: 'Export garden' }).click();
       await expect(page.getByText('Export complete')).toBeVisible({ timeout: 60_000 });
       await expect.poll(blobs, { timeout: 30_000 }).toBe(2);

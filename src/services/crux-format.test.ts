@@ -171,7 +171,8 @@ describe('.crux format conformance (CRUX-FORMAT.md)', () => {
     await svc.crux.delete(ok.cruxId);
 
     await expect(importCrux({ data: await withVersion('2.0') })).rejects.toThrow(/tasks.json/i);
-    await expect(importCrux({ data: await withVersion('3.0') })).rejects.toThrow(/version/i);
+    await expect(importCrux({ data: await withVersion('3.0') })).rejects.toThrow(/tool-reference/i);
+    await expect(importCrux({ data: await withVersion('4.0') })).rejects.toThrow(/version/i);
     await expect(importCrux({ data: await withVersion(undefined) })).rejects.toThrow(/version/i);
   });
 

@@ -181,7 +181,7 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
       window.dispatchEvent(new Event(AUTO_BACKUP_CHANGED));
     },
     backupGarden: async () => {
-      const result = await gardenIo.exportGarden({});
+      const result = await gardenIo.exportGarden({ runtime: 'included' });
       await syncApi.pushGarden(result.blob);
       setSetting(SettingsKey.LastGardenBackupAt, new Date().toISOString());
       window.dispatchEvent(new Event(AUTO_BACKUP_CHANGED));

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "web-synth-app",
   "name": "web-synth",
   "description": "Music · modular synthesis, sequencing and sound design with web-synth",

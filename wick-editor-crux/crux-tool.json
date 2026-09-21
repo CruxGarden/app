@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "wick-editor-app",
   "name": "Wick Editor",
   "description": "Creative · animations and interactive scenes with Wick Editor",
@@ -30,9 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".wick"
-      ],
+      "extensions": [".wick"],
       "folder": "inbox"
     }
   ],

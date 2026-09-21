@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "recorder-app",
   "name": "Record",
   "description": "Creative · screen and camera recording with a camera bubble; recordings become outputs for OpenCut",

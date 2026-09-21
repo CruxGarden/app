@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "audiomass-app",
   "name": "AudioMass",
   "description": "Creative · waveform effects, recordings and multitrack audio",
@@ -30,15 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".wav",
-        ".mp3",
-        ".ogg",
-        ".flac",
-        ".m4a",
-        ".aiff",
-        ".aif"
-      ],
+      "extensions": [".wav", ".mp3", ".ogg", ".flac", ".m4a", ".aiff", ".aif"],
       "folder": "audio"
     }
   ],

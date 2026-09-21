@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "underrun-app",
   "name": "Underrun",
   "description": "Play a 13 KB WebGL shooter, then remix its sources",

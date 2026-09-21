@@ -1,3 +1,4 @@
+import { archiveRuntimeMode, hydrateArchiveRuntimes, type RuntimeMode } from './archive-runtimes';
 import JSZip from 'jszip';
 import type { KeeperConversation } from '@/stores/keeperStore';
 import { getServices } from './index';
@@ -56,29 +57,35 @@ export interface PackageManifest {
    * needs rather than importing into empty workspaces. Absent in packages
    * written before this was recorded — read it through `toolsNeeded`.
    */
-  tools?: { id: string; name: string }[];
+  tools?: { id: string; name: string; releaseVersion?: string }[];
 }
 
 /**
  * The Crux Tools a package needs. Older packages named none, but every member
  * already carries the template it was made from, which is the same answer.
  */
-export function toolsNeeded(manifest: PackageManifest): { id: string; name: string }[] {
+export function toolsNeeded(
+  manifest: PackageManifest,
+): { id: string; name: string; releaseVersion?: string }[] {
   if (manifest.tools?.length) return manifest.tools;
-  const out = new Map<string, { id: string; name: string }>();
+  const out = new Map<string, { id: string; name: string; releaseVersion?: string }>();
   for (const member of manifest.members) {
     const tool = member.template ? toolManifest(member.template) : null;
-    if (tool) out.set(tool.id, { id: tool.id, name: tool.name });
+    if (tool)
+      out.set(tool.id, { id: tool.id, name: tool.name, releaseVersion: tool.releaseVersion });
   }
   return [...out.values()];
 }
 
 /** Of those, the ones this Garden cannot open a member with yet. */
-export function missingTools(manifest: PackageManifest): { id: string; name: string }[] {
+export function missingTools(
+  manifest: PackageManifest,
+): { id: string; name: string; releaseVersion?: string }[] {
   return toolsNeeded(manifest).filter((tool) => !isToolAvailable(tool.id));
 }
 
 export interface ExportCruxspaceOptions {
+  runtime?: RuntimeMode;
   spaceId: string;
   onProgress?: (status: string) => void;
 }
@@ -113,7 +120,11 @@ export async function exportCruxspace(
     }
     const title = member.title || 'Untitled';
     onProgress?.(`Packing ${title}…`);
-    const archive = await exportCrux({ cruxId: id, onProgress });
+    const archive = await exportCrux({
+      cruxId: id,
+      onProgress,
+      runtime: options.runtime ?? archiveRuntimeMode(),
+    });
     failed.push(...archive.failed.map((f) => `${title}: ${f}`));
     const inner = await JSZip.loadAsync(await archive.blob.arrayBuffer());
     const referenced: string[] = [];
@@ -191,7 +202,7 @@ export async function exportCruxspace(
         members
           .map((m) => (m.template ? toolManifest(m.template) : null))
           .filter((t): t is NonNullable<typeof t> => !!t)
-          .map((t) => [t.id, { id: t.id, name: t.name }]),
+          .map((t) => [t.id, { id: t.id, name: t.name, releaseVersion: t.releaseVersion }]),
       ).values(),
     ],
   };
@@ -219,7 +230,7 @@ export interface ImportCruxspaceResult {
   failedArtifacts: string[];
   unavailable: string[];
   /** Crux Tools the package needs that this Garden does not have. */
-  missingTools: { id: string; name: string }[];
+  missingTools: { id: string; name: string; releaseVersion?: string }[];
 }
 
 export async function peekCruxspace(data: Blob | ArrayBuffer): Promise<{
@@ -227,7 +238,7 @@ export async function peekCruxspace(data: Blob | ArrayBuffer): Promise<{
   /** Member or Cruxspace identities already present in this Garden. */
   conflicts: string[];
   /** Crux Tools the package needs that this Garden does not have. */
-  missing: { id: string; name: string }[];
+  missing: { id: string; name: string; releaseVersion?: string }[];
 }> {
   const zip = await JSZip.loadAsync(data instanceof Blob ? await data.arrayBuffer() : data);
   const manifest = await readManifest(zip);
@@ -255,6 +266,17 @@ export async function importCruxspace(
     if (await getCruxspace(manifest.space.id).catch(() => null)) mode = 'clone';
   }
   if (mode === 'replace') throw new Error('A Cruxspace package is restored or imported as a copy.');
+
+  // Resolve every member's tool dependencies before creating the first Crux.
+  for (const member of manifest.members) {
+    if (!zip.file(`${member.archive}blobs.json`))
+      throw new Error(`The package is missing the file list for ${member.title}.`);
+    const entry = zip.file(`${member.archive}manifest.json`);
+    if (!entry) throw new Error(`Missing archive manifest for ${member.title}.`);
+    const requirements = new JSZip();
+    requirements.file('manifest.json', await entry.async('text'));
+    await hydrateArchiveRuntimes(requirements);
+  }
 
   const imported: ImportCruxspaceResult['members'] = [];
   const failedArtifacts: string[] = [];

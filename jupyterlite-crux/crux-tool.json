@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "jupyterlite-app",
   "name": "JupyterLite",
   "description": "Research · Python notebooks, datasets and scientific plots",
@@ -30,9 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".ipynb"
-      ],
+      "extensions": [".ipynb"],
       "folder": "inbox"
     }
   ],

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "bentopdf-app",
   "name": "BentoPDF",
   "description": "Productivity · merge, split, edit, sign and convert PDFs with BentoPDF",
@@ -33,9 +34,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".pdf"
-      ],
+      "extensions": [".pdf"],
       "folder": "documents"
     }
   ],

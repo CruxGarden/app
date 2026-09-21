@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "piskel-app",
   "name": "Piskel",
   "description": "Pixel art · sprites, layers and frame animation",
@@ -30,9 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".piskel"
-      ],
+      "extensions": [".piskel"],
       "folder": "inbox"
     }
   ],

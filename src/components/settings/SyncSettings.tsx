@@ -102,7 +102,7 @@ export default function SyncSettings() {
     setError('');
     setStatus('Exporting garden...');
     try {
-      const result = await exportGarden({ onProgress: setStatus });
+      const result = await exportGarden({ onProgress: setStatus, runtime: 'included' });
       setStatus('Uploading to cloud...');
       const meta = await syncApi.pushGarden(result.blob);
       setGardenStatus(meta);

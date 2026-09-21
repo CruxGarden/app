@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "kan-app",
   "name": "Kan",
   "description": "Productivity · plan work on kanban boards with Kan",

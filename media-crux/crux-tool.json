@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "media-app",
   "name": "Media Tools",
   "description": "Creative · convert, resize, trim and inspect media and documents with ffmpeg, ImageMagick, Pandoc and Typst — a bench with the real tools, and every output an Artifact",

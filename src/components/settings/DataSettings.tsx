@@ -1,3 +1,5 @@
+import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
+import { archiveRuntimeMode } from '@/services/archive-runtimes';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
@@ -35,11 +37,14 @@ export default function DataSettings() {
     if (chosen) setGardenRoot(chosen);
   }, []);
 
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(async (selfContained = false) => {
     setExporting(true);
     setError('');
     try {
-      const result = await exportGarden({ onProgress: setStatus });
+      const result = await exportGarden({
+        onProgress: setStatus,
+        runtime: selfContained ? 'included' : archiveRuntimeMode(),
+      });
 
       const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
@@ -51,13 +56,13 @@ export default function DataSettings() {
       URL.revokeObjectURL(url);
 
       setStatus('Export complete');
-      lastGardenExportAt = Date.now();
+      lastGardenExportAt = selfContained || archiveRuntimeMode() === 'included' ? Date.now() : 0;
       return true;
     } catch (err) {
       console.error('Garden export failed:', err);
       setError('Export failed');
-      return false;
       setStatus('');
+      return false;
     } finally {
       setExporting(false);
     }
@@ -105,7 +110,7 @@ export default function DataSettings() {
         ],
       });
       if (!choice) return;
-      if (choice === 'export' && !(await handleExport())) return;
+      if (choice === 'export' && !(await handleExport(true))) return;
     }
     setWiping(true);
     setError('');
@@ -163,11 +168,14 @@ export default function DataSettings() {
             Export or import your entire garden — all cruxes, files, conversations, and settings.
           </p>
 
+          <div className="mb-4">
+            <RuntimeExportChoice disabled={busy} />
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleExport}
+              onClick={() => void handleExport()}
               disabled={busy}
               loading={exporting}
             >

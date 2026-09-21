@@ -14,6 +14,8 @@ export type ToolLayout = 'workshop' | 'chat' | 'writing' | 'visual';
 
 export interface CruxToolManifest {
   version: 1;
+  /** Garden integration release, independent of the manifest schema and upstream version. */
+  releaseVersion?: string;
   /** The template id: `meta.template` on every Crux made from this tool. */
   id: string;
   /** The tool's name as the picker and provenance show it. */
@@ -136,6 +138,7 @@ export function parseManifest(raw: unknown): CruxToolManifest {
 
   return {
     version: 1,
+    releaseVersion: opt(id, o, 'releaseVersion'),
     id,
     name: req(id, o, 'name'),
     description: req(id, o, 'description'),

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "pptist-app",
   "name": "PPTist",
   "description": "Productivity · slides, themes and presenting with PPTist",
@@ -30,9 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".pptx"
-      ],
+      "extensions": [".pptx"],
       "folder": "inbox"
     }
   ],

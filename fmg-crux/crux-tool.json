@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "fmg-app",
   "name": "Fantasy Map",
   "description": "Creative · Azgaar’s Fantasy Map Generator: a whole world to shape, PNG/SVG renders as outputs",

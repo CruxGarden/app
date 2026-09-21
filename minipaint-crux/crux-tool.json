@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "minipaint-app",
   "name": "miniPaint",
   "description": "Creative · photo editing, paint, text and editable layers",
@@ -30,15 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".png",
-        ".jpeg",
-        ".jpg",
-        ".gif",
-        ".webp",
-        ".bmp",
-        ".psd"
-      ],
+      "extensions": [".png", ".jpeg", ".jpg", ".gif", ".webp", ".bmp", ".psd"],
       "folder": "images"
     }
   ],

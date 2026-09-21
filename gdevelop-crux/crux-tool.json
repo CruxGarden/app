@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "gdevelop-app",
   "name": "GDevelop",
   "description": "Creative · visual 2D and 3D game development",

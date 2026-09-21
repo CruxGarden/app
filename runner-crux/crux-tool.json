@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "runner-app",
   "name": "Runner",
   "description": "Developer · the workspace board — everything this Cruxspace can run, from the Stack or from source, with its ports and settings in one place",

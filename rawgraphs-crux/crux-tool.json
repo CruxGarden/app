@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "rawgraphs-app",
   "name": "RAWGraphs",
   "description": "Research · explore datasets and create publication figures",

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "openmosh-app",
   "name": "OpenMosh",
   "description": "Creative · the full image, video and slideshow editor",

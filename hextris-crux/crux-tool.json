@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "hextris-app",
   "name": "Hextris",
   "description": "Play the hexagonal block puzzle, then remix its sources",

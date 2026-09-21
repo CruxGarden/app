@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "svgedit-app",
   "name": "SVG-Edit",
   "description": "Creative · vector illustration, shapes and layers",
@@ -30,9 +31,7 @@
   },
   "routes": [
     {
-      "extensions": [
-        ".svg"
-      ],
+      "extensions": [".svg"],
       "folder": "images"
     }
   ],

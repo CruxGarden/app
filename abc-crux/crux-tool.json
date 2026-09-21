@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseVersion": "1.0.0",
   "id": "abc-app",
   "name": "Notation",
   "description": "Creative · sheet music in ABC notation with abcjs: rendered and played as you type, scores as outputs, a page people can play",
