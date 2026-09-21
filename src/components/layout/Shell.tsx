@@ -183,6 +183,7 @@ export default function Shell() {
           onClose={() => useUIStore.getState().setSettingsOpen(false)}
           size="screen"
           title="Settings"
+          announce
         >
           <Suspense fallback={null}>
             <Settings />

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { AnimatePresence, motion } from 'motion/react';
@@ -39,6 +39,14 @@ interface ModalProps {
   layer?: 'base' | 'top';
   /** Remove inner content padding (e.g. for edge-to-edge layouts) */
   flush?: boolean;
+  /**
+   * Announce the panel as a modal dialog, named by its title. Opt-in rather
+   * than the default: most modals in the app are already located by
+   * `getByRole('dialog')` on an element *inside* them, and making every Modal
+   * a dialog too resolves those locators to two elements. Setting it here is
+   * the right end state — see ROADMAP § the aria-modal pass.
+   */
+  announce?: boolean;
 }
 
 /**
@@ -57,7 +65,9 @@ export default function Modal({
   subtitle,
   layer = 'base',
   flush,
+  announce,
 }: ModalProps) {
+  const titleId = useId();
   useEffect(() => {
     if (!open) return;
     const token = Symbol('modal');
@@ -106,6 +116,9 @@ export default function Modal({
           <div className="absolute inset-0 modal-scrim" onClick={onClose} />
           <PlasmaOverlay surface={panelRef} />
           <motion.div
+            {...(announce
+              ? ({ role: 'dialog', 'aria-modal': true, 'aria-labelledby': titleId } as const)
+              : {})}
             data-motion-role="dialog"
             data-motion-choice={role.choice.enter}
             data-motion-exit={role.choice.exit}
@@ -132,6 +145,7 @@ export default function Modal({
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <h2
+                      id={titleId}
                       className="font-medium text-accent leading-tight"
                       style={{
                         fontFamily: 'var(--dialog-title-font)',
