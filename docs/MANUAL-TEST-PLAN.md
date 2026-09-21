@@ -22,39 +22,47 @@ thing a test suite can never give you.
 
 ## The question underneath all of it
 
-Daniel, 2026-09-21: *"how effortless does it feel to use, once you know it — does
-it make your job easier, more fun? Fun is a word that is important."*
+Daniel, 2026-09-21: *"how effortless does it feel to use, once you know it —
+does it make your job easier?"* And then, sharper: **not fun — addictive.**
 
 Everything below checks whether something **works**. None of it checks whether
-it is worth using. That second question is the one no suite can answer and the
-one the product actually lives on, so carry it through every section rather
-than saving it for the end.
+you want to come back to it. That second question is the one no suite can
+answer and the one the product lives on, so carry it through every section.
 
-**How to test a feeling without hand-waving.** Four probes that give real
-answers:
+**Addictive in the sense that matters here** is the craft-tool kind — the way
+people lose an evening to Ableton or Blender, and open them on a Saturday with
+nothing to make. Not the engineered kind: streaks, nudges, a feed that will not
+end. That sort would actively hurt a tool people do real work in, and it is
+also the thing that makes software feel cheap. The goal is *I want to be in
+here*, not *I feel bad when I am not*.
 
-1. **Test the second time, not the first.** Novelty and confusion both wear
-   off. Do a task, then do the same task again tomorrow. Effortless means the
-   second time took no thought — not that the first time was impressive.
-2. **Count the thinking, not the clicks.** Note every moment you had to think
-   about *the app* instead of *the work*: where is that, what is this called,
-   did that save. Those are the friction. Clicks are fine; hesitation is not.
-3. **Watch what you avoid.** If you find yourself not bothering to snapshot, or
-   going to Finder instead of the Artifacts pane, or leaving a Mood alone
-   because changing it is a faff — that avoidance is the finding. Write down
-   what you dodged and why.
-4. **Notice if you want to show someone.** That is what fun looks like from the
-   outside: wanting to demo it unprompted, or carrying on after the test is
-   done because you would rather keep going than stop.
+**Six probes that give real answers:**
 
-**Write down the moments, not the verdict.** "The third time I opened a Mood I
-knew exactly where the sound was" is worth more than "feels good". So is "I
-closed the pane and could not remember how to get it back".
+1. **Do you open it when you do not have to?** The single strongest signal, and
+   the only one you cannot fake. Note the days you went in with nothing to do.
+2. **Do you lose track of time?** Note when you next looked at the clock. An
+   hour that felt like twenty minutes is the thing.
+3. **Does it pull you to one more thing?** You finish what you came for — do
+   you stop, or do you start the next crux? Where exactly does that pull come
+   from, so it can be strengthened.
+4. **How cheap is coming back?** This is the mechanism for a tool like this: if
+   the conversation and the history mean you can resume a week later without
+   reloading it all into your head, returning is easy and you will. If you have
+   to reconstruct where you were, you will not.
+5. **Test the second time, not the first.** Novelty and confusion both wear off.
+   Effortless means the second time took no thought.
+6. **Watch what you avoid.** Not bothering to snapshot, going to Finder instead
+   of the Artifacts pane, leaving a Mood alone because changing it is a faff —
+   the avoidance is the finding. Write down what you dodged and why.
+
+**Write down the moments, not the verdict.** "I opened it on Sunday to move one
+card and stayed an hour" is worth more than "feels good". So is "I closed the
+pane and could not remember how to get it back".
 
 **Two honest cautions.** You cannot read your own app cold — you know where
-everything is, so "obvious" is not something you can judge alone. And fun is
-easiest to feel on a new empty garden; it is the twentieth crux and the
-crowded one that tells you the truth.
+everything is, so "obvious" is not yours to judge alone. And this is easiest to
+feel on a new empty garden; the twentieth crux and the crowded one tell the
+truth.
 
 ---
 
