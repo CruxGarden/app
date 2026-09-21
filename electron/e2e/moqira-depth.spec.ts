@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, setAutoCheck } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -114,7 +114,7 @@ test('Moqira tools create editable screens, preserve manual work, use native his
     await ready();
     id = (await instance.page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(instance.page, id)).projectFolder;
-    await instance.page.getByRole('switch', { name: 'Check automatically ✓', exact: true }).click();
+    await setAutoCheck(instance.page, false);
     // The Artifact is a real PNG generated in Chromium, then ingested normally.
     const image = await instance.page.evaluate(() => {
       const canvas = document.createElement('canvas');

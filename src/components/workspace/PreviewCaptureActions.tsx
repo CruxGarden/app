@@ -4,6 +4,8 @@ import { nativeToolsAvailable, onNativeProgress, renderVideo } from '@/services/
 import { getServices } from '@/services';
 import { useCruxStore } from '@/stores/cruxStore';
 import { confirmDialog } from '@/stores/dialogStore';
+import { useTurns } from '@/services/turns';
+import { isVisualCrux } from '@/services/verify';
 
 /**
  * The person's half of capture_preview and render_video (step 5), in the
@@ -21,6 +23,11 @@ export default function PreviewCaptureActions({
   page: string;
 }) {
   const refreshArtifacts = useCruxStore((s) => s.refreshArtifacts);
+  // Check it (ADR 0013 B4): build, open the page and look at it. It lived
+  // under the composer; it belongs where you look at the result.
+  const { checkNow } = useTurns();
+  const visual = useCruxStore((s) => isVisualCrux(s.artifacts));
+  const turning = useCruxStore((s) => s.isStreaming || s.turnSettling);
   const [busy, setBusy] = useState<'shot' | 'video' | null>(null);
   const [progress, setProgress] = useState<string>('');
   useEffect(
@@ -91,6 +98,18 @@ export default function PreviewCaptureActions({
     'shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
   return (
     <>
+      {visual && (
+        <button
+          type="button"
+          onClick={() => void checkNow().catch((err) => console.error('Check failed:', err))}
+          disabled={busy !== null || turning}
+          className={cls}
+          title="Build this Crux, open its page and look at the result"
+          data-testid="preview-check"
+        >
+          Check it
+        </button>
+      )}
       <button
         type="button"
         onClick={() => void shot()}

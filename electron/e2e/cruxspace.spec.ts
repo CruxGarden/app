@@ -2,7 +2,13 @@ import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, storedCrux, switchCrux } from './multi-crux-helpers';
+import {
+  enterGarden,
+  createCrux,
+  storedCrux,
+  switchCrux,
+  setAutoCheck,
+} from './multi-crux-helpers';
 
 async function home(page: Page) {
   if (/\/c\//.test(page.url())) await page.locator('header').getByRole('button').first().click();
@@ -111,7 +117,7 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
     await page.screenshot({ path: info.outputPath('cruxspace-website.png') });
     // The mock verifier has a separate landing-page repair script; this
     // journey checks discovery/copy and actual bytes, not that scenario.
-    await page.getByRole('switch', { name: 'Check automatically ✓', exact: true }).click();
+    await setAutoCheck(page, false);
     await page
       .getByPlaceholder('Send a message...')
       .fill(

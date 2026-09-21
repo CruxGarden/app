@@ -57,15 +57,13 @@ test('type audit', async () => {
     };
     await audit('builder');
     const cc = await page
-      .getByTestId('check-controls')
-      .getByRole('button')
-      .first()
+      .getByTestId('preview-check')
       .evaluate((el) => {
         const cs = getComputedStyle(el);
         return { size: cs.fontSize, fam: cs.fontFamily, cls: el.className, pad: cs.padding };
       })
       .catch(() => null);
-    console.log('check-controls:', JSON.stringify(cc));
+    console.log('preview-check:', JSON.stringify(cc));
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('heading', { name: 'Settings' }).waitFor();
     await page.locator('h2', { hasText: /^AI$/ }).click();

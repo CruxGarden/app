@@ -3,58 +3,11 @@ import { useMemo } from 'react';
 import { useChat } from '@/hooks/useChat';
 import { resolveModel } from '@/ai/providers';
 import { useCruxStore } from '@/stores/cruxStore';
-import { cn } from '@/lib/cn';
-import { Capability, can } from '@/lib/platform';
-import { isVisualCrux } from '@/services/verify';
-import { useTurns } from '@/services/turns';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import ModelSelector from './ModelSelector';
 import ModelInfoPanel from './ModelInfoPanel';
 import TurnJobCard from './TurnJobCard';
-
-/**
- * Verify before done (B4), the person's side: "Check it" runs the check now;
- * the switch decides whether a "done" claim runs it automatically. Only shown
- * where a check can happen — a visual crux on a platform that can screenshot.
- */
-function CheckControls({ busy }: { busy: boolean }) {
-  const { setVerifyOnDone } = useTurns();
-  const visual = useCruxStore((s) => isVisualCrux(s.artifacts));
-  const auto = useCruxStore((s) => s.crux?.meta?.settings?.verifyOnDone !== false);
-  const { check } = useChat();
-  if (!visual || !can(Capability.PreviewServer)) return null;
-  const btn =
-    'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)] border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
-  return (
-    <div className="flex items-center gap-1.5 shrink-0" data-testid="check-controls">
-      <button
-        type="button"
-        onClick={() => void setVerifyOnDone(!auto)}
-        role="switch"
-        aria-checked={auto}
-        title={auto ? 'Checks run when a turn says it is done' : 'Checks run only when you ask'}
-        className={cn(
-          btn,
-          auto
-            ? 'text-accent border-accent/40 hover:border-accent/70'
-            : 'text-text-muted border-border hover:text-text hover:border-accent/50',
-        )}
-      >
-        Check automatically{auto ? ' ✓' : ''}
-      </button>
-      <button
-        type="button"
-        onClick={check}
-        disabled={busy}
-        title="Build, screenshot and inspect the current state"
-        className={cn(btn, 'text-text-muted hover:text-text border-border hover:border-accent/50')}
-      >
-        Check it
-      </button>
-    </div>
-  );
-}
 
 export default function ChatPanel() {
   const { messages, isStreaming, streamingContent, isJobRunning, send, steer, stop } = useChat();
@@ -117,15 +70,13 @@ export default function ChatPanel() {
             isStreaming={isStreaming || isJobRunning}
             history={history}
           />
-          {/* Beneath the composer: the model chip and usage on the left, the
-              check controls on the right; wraps onto two lines when narrow. */}
+          {/* Beneath the composer: the model chip and its usage. */}
           <div className="px-3 pb-2 flex items-center gap-x-3 gap-y-1.5 flex-wrap">
             <div className="flex-1 min-w-[200px]">
               <ModelInfoPanel model={model}>
                 <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
               </ModelInfoPanel>
             </div>
-            <CheckControls busy={isStreaming || isJobRunning} />
           </div>
         </div>
       )}

@@ -81,3 +81,27 @@ export async function wearMaterial(page: Page, id: string) {
     .getByRole('button', { name: hueName.charAt(0).toUpperCase() + hueName.slice(1), exact: true })
     .click();
 }
+
+/**
+ * Turn the automatic check on or off for the crux in view. The switch lives
+ * with the Crux's other settings in the Metadata pane since 2026-09-20 — it
+ * used to sit under the composer, where two words could not say what it
+ * checked (Daniel: "useful feature but doesn't belong in the collaboration
+ * pane").
+ */
+export async function setAutoCheck(page: Page, on: boolean) {
+  const body = page.getByTestId('pane-body-details');
+  const wasOpen = await body.isVisible().catch(() => false);
+  if (!wasOpen) await page.getByRole('button', { name: 'Toggle metadata' }).click();
+  await expect(body).toBeVisible({ timeout: 30_000 });
+  const toggle = body.getByRole('switch', { name: 'Check when done' });
+  await expect(toggle).toBeVisible({ timeout: 30_000 });
+  if ((await toggle.getAttribute('aria-checked')) !== String(on)) await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', String(on));
+  // Leave the workspace as it was found: a journey that did not ask for this
+  // pane has its own layout, and an extra one moves everything else along.
+  if (!wasOpen) {
+    await page.getByRole('button', { name: 'Toggle metadata' }).click();
+    await expect(body).toBeHidden({ timeout: 30_000 });
+  }
+}

@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { setAutoCheck } from './multi-crux-helpers';
 
 /**
  * Verify before done (AI-COLLABORATION-V3 B4) with the scripted model
@@ -51,8 +52,8 @@ test.describe('verify before done (mock AI)', () => {
     );
     try {
       const input = await newBlankCrux(page);
-      // A Blank crux has no index.html yet: the check controls are not offered
-      await expect(page.getByTestId('check-controls')).toHaveCount(0);
+      // A Blank crux has no index.html yet: Check it is not offered
+      await expect(page.getByTestId('preview-check')).toHaveCount(0);
 
       await input.fill('Please make a landing page');
       await input.press('Enter');
@@ -99,10 +100,11 @@ test.describe('verify before done (mock AI)', () => {
       await expect(badges.filter({ hasText: 'Check found problems' })).toHaveCount(1);
       await page.screenshot({ path: 'e2e/.results/verify-4-growth.png' });
 
-      // The person's "Check it" on the unchanged page: passes, no follow-up turn
-      const controls = page.getByTestId('check-controls');
-      await expect(controls).toBeVisible();
-      await controls.getByRole('button', { name: 'Check it' }).click();
+      // The person's "Check it" on the unchanged page: passes, no follow-up
+      // turn. It sits in the Workshop's preview bar, beside Screenshot.
+      const checkIt = page.getByTestId('preview-check');
+      await expect(checkIt).toBeVisible({ timeout: 30_000 });
+      await checkIt.click();
       await expect(card).toHaveAttribute('data-check', 'passed', { timeout: 60_000 });
       await expect(card).toContainText('Checked ✓');
       await expect(card.getByTestId('check-shot')).toBeVisible();
@@ -114,13 +116,10 @@ test.describe('verify before done (mock AI)', () => {
       await card.getByRole('button', { name: 'Dismiss' }).click();
       await expect(card).toHaveCount(0);
 
-      // The switch for the automatic check is the person's, and flips
-      const auto = controls.getByRole('switch');
-      await expect(auto).toHaveAttribute('aria-checked', 'true');
-      await auto.click();
-      await expect(auto).toHaveAttribute('aria-checked', 'false');
-      await auto.click();
-      await expect(auto).toHaveAttribute('aria-checked', 'true');
+      // The switch for the automatic check is the person's, and flips. It
+      // lives with the Crux's other settings, not under the composer.
+      await setAutoCheck(page, false);
+      await setAutoCheck(page, true);
 
       // A one-line answer with no file changes is never checked
       await input.fill('Please just say hi');

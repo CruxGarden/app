@@ -3,6 +3,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import MetadataContent from './MetadataContent';
 import EntryFileSettings from './EntryFileSettings';
+import CheckSettings from './CheckSettings';
 import NotesSharingSettings from './NotesSharingSettings';
 import { PaneEmpty } from './pane-ui';
 
@@ -24,6 +25,7 @@ export default function MetadataPane() {
   return (
     <div className="flex flex-col h-full">
       <EntryFileSettings />
+      <CheckSettings />
       <NotesSharingSettings />
       <ToolInfoSettings />
       <MetadataContent
