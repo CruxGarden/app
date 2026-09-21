@@ -401,8 +401,11 @@ function SetupStep({ onBack }: { onBack: () => void }) {
     return '';
   };
 
-  // Debounced API availability check
+  // Debounced API availability check. The answer is about the name that was
+  // sent, so it is only worth showing while that is still the name in the
+  // field — otherwise a slow reply about "dan" marks "daniel" as taken.
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const typedRef = useRef('');
   const checkAvailability = (name: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!name || name.length < 3 || !isAuthenticated) return;
@@ -410,11 +413,8 @@ function SetupStep({ onBack }: { onBack: () => void }) {
       try {
         const { authors } = await import('@/api');
         const { available } = await authors.checkUsername(name.toLowerCase());
-        // Only set error if the username hasn't changed since the check started
-        if (useAppStore.getState().author?.username !== name) {
-          setUsernameError((prev) => prev || (available ? '' : 'Username is taken at crux.garden'));
-        }
-        if (!available) setUsernameError('Username is taken at crux.garden');
+        if (typedRef.current !== name) return;
+        setUsernameError(available ? '' : 'Username is taken at crux.garden');
       } catch {
         /* API unavailable — skip check */
       }
@@ -424,6 +424,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
   const handleUsernameChange = (value: string) => {
     setUsername(value);
     const formatError = validateFormat(value.trim());
+    typedRef.current = value.trim();
     setUsernameError(formatError);
     if (!formatError) checkAvailability(value.trim());
   };

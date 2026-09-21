@@ -33,6 +33,11 @@ export default function MessageList({
   const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
   const avatarUrl = useAvatarUrl(author);
 
+  // A smooth scroll per token queues an animation on top of the one still
+  // running, and a long reply arrives in hundreds of tokens: the pane fights
+  // itself and lags. A new message is an event worth animating; text arriving
+  // inside the reply already on screen is not.
+  const messageCount = messages.length;
   useEffect(() => {
     if (!hasScrolledRef.current) {
       // First render: jump to bottom instantly
@@ -41,7 +46,13 @@ export default function MessageList({
     } else {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, streamingContent, liveToolCalls]);
+  }, [messageCount]);
+
+  useEffect(() => {
+    if (!hasScrolledRef.current) return;
+    if (!streamingContent && liveToolCalls.length === 0) return;
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+  }, [streamingContent, liveToolCalls]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">

@@ -245,7 +245,7 @@ function ApiAddress() {
       }
     }
     setError('');
-    if (isAuthenticated) await useAuthStore.getState().logout();
+    if (isAuthenticated) await useAuthStore.getState().disconnectAccount();
     if (next) setSetting(SettingsKey.ApiUrl, next);
     else removeSetting(SettingsKey.ApiUrl);
     setValue(next ?? '');

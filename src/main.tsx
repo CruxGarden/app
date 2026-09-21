@@ -68,24 +68,28 @@ createRoot(document.getElementById('root')!, {
   </StrictMode>,
 );
 
-// Suppress Monaco's async disposal errors (domNode, setClassName).
-// These fire via setTimeout/rAF after the editor is disposed and can't be caught by React.
+// Suppress Monaco's async disposal errors (domNode, setClassName). These fire
+// via setTimeout/rAF after the editor is disposed and cannot be caught by
+// React. The test is for the disposal *shape*, not for Monaco: swallowing
+// everything a Monaco chunk throws, or every message containing the word
+// "disposed", hides real faults — including Monaco's own.
+const DISPOSAL_SHAPE =
+  /InstantiationService has been disposed|reading '?domNode'?|\.domNode\b|setClassName/;
 function isMonacoDisposalError(e: ErrorEvent | PromiseRejectionEvent): boolean {
   const err = 'reason' in e ? e.reason : e.error;
   const msg =
     (err instanceof Error ? err.message : String(err ?? '')) + ('message' in e ? e.message : '');
-  const filename = 'filename' in e ? e.filename : '';
-  const isMonacoFile = filename?.includes('monaco-editor') || filename?.includes('editor.api');
-  const isMonacoMsg =
-    msg.includes('domNode') || msg.includes('setClassName') || msg.includes('disposed');
-  return isMonacoFile || isMonacoMsg;
+  return DISPOSAL_SHAPE.test(msg);
 }
-window.addEventListener('error', (e) => {
-  if (isMonacoDisposalError(e)) e.preventDefault();
-});
-window.addEventListener('unhandledrejection', (e) => {
-  if (isMonacoDisposalError(e)) e.preventDefault();
-});
+function suppressDisposal(e: ErrorEvent | PromiseRejectionEvent): boolean {
+  if (!isMonacoDisposalError(e)) return false;
+  // Quiet, but not invisible: a run of these is worth seeing in the console.
+  console.debug('[monaco] disposal error suppressed:', 'reason' in e ? e.reason : e.error);
+  e.preventDefault();
+  return true;
+}
+window.addEventListener('error', suppressDisposal);
+window.addEventListener('unhandledrejection', suppressDisposal);
 
 // Preview system initialization:
 // - Cross-origin (VITE_PREVIEW_ORIGIN set): load hidden receiver iframe on preview.crux.garden

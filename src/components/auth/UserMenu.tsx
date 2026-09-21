@@ -14,7 +14,7 @@ import { SunIcon, MoonIcon, MonitorIcon } from '@/components/ui/icons';
 
 export default function UserMenu() {
   const navigate = useNavigate();
-  const logout = useAuthStore((s) => s.logout);
+  const disconnectAccount = useAuthStore((s) => s.disconnectAccount);
   const author = useAppStore((s) => s.author);
   const { mode, setMode } = useThemeStore(
     useShallow((s) => ({ mode: s.mode, setMode: s.setMode })),
@@ -37,7 +37,9 @@ export default function UserMenu() {
 
   const handleLogout = async () => {
     setOpen(false);
-    await logout();
+    // The account is the connection to crux.garden; the author is who you are
+    // in your own garden, and it is kept — signing out is not forgetting.
+    await disconnectAccount();
     navigate('/home', { replace: true });
   };
 

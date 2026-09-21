@@ -120,7 +120,6 @@ interface AuthState {
   login: (email: string, code: string) => Promise<Profile>;
 
   /** Logout and clear tokens */
-  logout: () => Promise<void>;
 
   /** Connect local device to a crux.garden account (stays local-first) */
   connectAccount: (email: string, code: string) => Promise<Profile>;
@@ -304,18 +303,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     return profile;
   },
 
-  logout: async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Ignore — clear local state regardless
-    }
-    clearTokens();
-
-    // Lazy import to avoid circular dependency at module load time
-    const { useAppStore } = await import('./appStore');
-
-    set({ account: null, isAuthenticated: false });
-    useAppStore.setState({ author: null });
-  },
 }));
