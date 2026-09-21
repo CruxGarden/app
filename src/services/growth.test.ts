@@ -605,7 +605,7 @@ describe('workspaceGrowthHost (over the store actions)', () => {
 });
 
 describe('restoreFilesCore (diff-based)', () => {
-  it('moves only the files that differ and leaves unchanged rows in place', async () => {
+  it('moves only the rows that differ, and writes every path the snapshot asserts', async () => {
     const { initServices, getServices } = await import('./index');
     await initServices('local');
     const { crux, artifact } = getServices();
@@ -638,7 +638,10 @@ describe('restoreFilesCore (diff-based)', () => {
     expect(byPath.get('same.txt')!.id).toBe(keep.id); // untouched
     expect(await artifact.readContent(byPath.get('changed.txt')!.id)).toBe('old');
     expect(await artifact.readContent(byPath.get('removed.txt')!.id)).toBe('gone later');
-    expect(projected).toEqual([['changed.txt', 'removed.txt']]); // only what differed reached the disk
+    // Rows move only where they differ, but every path the snapshot asserts is
+    // written: the rows are what the store believes, and disk may hold an edit
+    // from a moment ago that the store has not caught up with yet.
+    expect(projected).toEqual([['changed.txt', 'removed.txt', 'same.txt']]);
     expect(diff.added.map((f) => f.path)).toEqual(['removed.txt']);
     expect(diff.removed.map((f) => f.path)).toEqual(['added.txt']);
     expect(diff.modified.map((f) => f.path)).toEqual(['changed.txt']);

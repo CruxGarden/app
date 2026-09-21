@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { home } from './game-cruxspace-helpers';
 
 /**
  * Growth journey: edit → snapshot → edit → snapshot → view the first →
@@ -100,14 +101,10 @@ test.describe('snapshots & revert', () => {
 
       // Leave and come back: the reconstructed conversation/history must be
       // the reverted one, not the pre-revert branch.
-      await page
-        .getByRole('link', { name: /garden|home/i })
-        .first()
-        .click()
-        .catch(async () => {
-          await page.evaluate(() => window.history.back());
-        });
-      await page.getByText('My Crux', { exact: true }).first().click();
+      await home(page);
+      // By its accessible name: the header's workspace switcher also carries
+      // the crux title, and a bare text match clicks that instead of the card.
+      await page.getByRole('button', { name: 'Open My Crux' }).click();
       // Tabs are not restored on reopen — open the file from the tree.
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });

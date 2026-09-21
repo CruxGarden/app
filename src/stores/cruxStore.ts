@@ -32,7 +32,7 @@ import {
   type PublishFailure,
 } from '@/services/publish';
 import { projectFolderExists, projectAllArtifacts } from '@/services/project-folder';
-import { flushIngestion } from '@/services/ingestion';
+import { settleIngestion } from '@/services/ingestion';
 import { disposeChatSession } from '@/services/chat-session';
 import { reconcilePersistedJob, type TurnJob } from '@/services/turn-jobs';
 import { captureWorkspacePreview } from '@/services/preview-capture';
@@ -919,9 +919,12 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
     createSnapshot: (options = {}) => {
       const operation = snapshotTail.then(async () => {
-        // Desktop (ADR 0001): external edits may still be mid-ingest — a snapshot
-        // must never capture a half-observed state. Resolves immediately on web.
-        await flushIngestion();
+        // Desktop (ADR 0001): external edits may still be mid-ingest — a
+        // snapshot must never capture a half-observed state. Settling rather
+        // than draining, because the watcher holds a fresh save briefly before
+        // reporting it, and a snapshot that misses it records a past that
+        // never existed. Resolves immediately on web.
+        await settleIngestion();
 
         const { crux, messages, messageSegmentStart, growths, growthCount } = get();
         if (!crux) return;

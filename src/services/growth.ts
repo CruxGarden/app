@@ -739,9 +739,11 @@ export async function restoreFilesCore(
   deps: Pick<GrowthHostDeps, 'artifact' | 'projectAll' | 'projectPaths'> &
     Partial<Pick<GrowthHostDeps, 'flush'>>,
 ): Promise<SnapshotDiff> {
-  // An external edit still in the watcher's debounce must be recorded first:
-  // the diff below would otherwise call its file "already the snapshot's" and
-  // leave the edit on disk.
+  // An external edit still in the watcher's hands must be recorded first: the
+  // diff below would otherwise call its file "already the snapshot's" and
+  // leave the edit on disk. `flush` settles rather than merely draining,
+  // because a save from a second ago can still be inside the watcher's own
+  // stability window and invisible to a single drain.
   await deps.flush?.();
   const before = await deps.artifact.findByResource('crux', cruxId);
   if (deps.artifact.registerMany && deps.projectPaths) {
@@ -770,9 +772,14 @@ export async function restoreFilesCore(
         meta: { ...(a.meta ?? {}), path: pathKey(a) },
       })),
     );
+    // Every path the snapshot asserts is written to disk, not only the rows
+    // that changed. The rows are what the store believes; disk is what someone
+    // may have edited a moment ago, and a restore that trusts the store leaves
+    // that edit in place and then loses to it when the watcher catches up.
+    // Restoring is deliberate and rare, so it pays for certainty.
     await deps.projectPaths(
       cruxId,
-      added.map((a) => pathKey(a)),
+      target.filter((a) => a.fingerprint).map((a) => pathKey(a)),
     );
   } else {
     await Promise.allSettled(before.map((a) => deps.artifact.delete(a.id)));

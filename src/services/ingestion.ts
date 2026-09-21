@@ -131,12 +131,32 @@ export function flushIngestion(): Promise<void> {
  */
 export async function settleIngestion(folder?: string): Promise<void> {
   const api = bridge();
-  if (api?.flush) {
+  if (!api?.flush) {
+    await flushIngestion();
+    return;
+  }
+  // One drain is not enough. The OS watcher holds a save for its own
+  // stability window before it will admit to it, so a file written a moment
+  // ago is invisible to a flush and arrives just after — which is how a
+  // restore used to lose to an edit made a second earlier. So: drain, wait
+  // out that window, drain again, and stop once a drain comes back empty.
+  for (let round = 0; round < SETTLE_ROUNDS; round++) {
     const batches = await api.flush(folder).catch(() => [] as ChangeBatch[]);
     for (const batch of batches) enqueue(() => processBatch(batch));
+    await flushIngestion();
+    if (!batches.length && round > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_WAIT_MS));
   }
   await flushIngestion();
 }
+
+/**
+ * Long enough for the watcher to have let go of a save it was still holding
+ * (its stability window plus its poll interval, with room to spare), and
+ * short enough that settling stays imperceptible.
+ */
+const SETTLE_WAIT_MS = 320;
+const SETTLE_ROUNDS = 3;
 
 /** Reconcile a referenced file whose OS watcher notification may still be pending. */
 export async function reconcileProjectFile(folder: string, relPath: string): Promise<void> {
