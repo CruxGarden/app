@@ -84,9 +84,13 @@ test.describe('trash: recently deleted cruxes', () => {
       await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
         timeout: 30_000,
       });
+      // Ask the toggle, not the animation: polling the tree's visibility while
+      // the pane is opening reads false, clicks, and shuts it again.
+      const artifacts = page.getByRole('button', { name: 'Toggle artifacts' });
+      if ((await artifacts.getAttribute('aria-pressed')) !== 'true') await artifacts.click();
+      await expect(artifacts).toHaveAttribute('aria-pressed', 'true');
       const tree = page.getByRole('tree');
-      if (!(await tree.isVisible().catch(() => false)))
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await expect(tree).toBeVisible({ timeout: 30_000 });
       await tree.getByText('index.html').click();
       await expect(page.locator('.monaco-editor').first()).toContainText('Keep me', {
         timeout: 30_000,
