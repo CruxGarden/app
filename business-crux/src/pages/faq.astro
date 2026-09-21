@@ -1,0 +1,54 @@
+---
+// Components
+// - Layout
+import Layout from '../layouts/Layout.astro'
+// - UI
+import Hero from '../components/blocks/hero/PageHeader.astro'
+import FAQ from '../components/blocks/FAQ/FaqSticky.astro'
+import TextImage from '../components/blocks/basic/TextImage.astro'
+import CTA from '../components/blocks/CTA/BasicDark.astro'
+
+// Data
+import faqData from '../data/json-files/faqData.json'
+// - FAQ Categories
+const faqPricing = faqData.filter((faq) => faq.category === 'pricing')
+const faqIntegrations = faqData.filter((faq) => faq.category === 'integrations')
+
+// Content
+import faqImage1 from '../assets/faq/faq-01.png'
+// - SEO
+const SEO = {
+	title: 'Questions',
+	description:
+		'The questions people ask before they get in touch, answered straight.'
+}
+// - Page Header
+const header = {
+	title: 'Questions people <strong>actually</strong> ask.',
+	text: 'And straight answers to them. '
+}
+---
+
+<Layout title={SEO.title} description={SEO.description}>
+	<Hero title={header.title} text={header.text} />
+	<FAQ
+		title="Understanding Our Pricing Plans"
+		text="What the work costs, what changes the figure, and what is included."
+		data={faqPricing}
+	/>
+	<TextImage
+		title="What you get for the money"
+		text="Say what is included at each level and what is not. People are deciding whether to write to you; make that decision easy. "
+		image={faqImage1}
+		mobileImage={faqImage1}
+		imagePosition="left"
+		offsetImage
+		classes="bg-neutral-50 dark:bg-neutral-900 lg:!py-64"
+	/>
+	<FAQ
+		title="Integrations Made Easy"
+		text="Anything else worth explaining before someone gets in touch — how you work, what you need from them, what happens first."
+		data={faqIntegrations}
+	/>
+	<CTA />
+</Layout>

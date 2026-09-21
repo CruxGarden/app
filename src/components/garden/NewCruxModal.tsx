@@ -134,6 +134,41 @@ function BlogThumb() {
   );
 }
 
+function ResumeThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#eef1fb', ...T.pad(7) }}>
+      <div style={{ ...T.box('52%', 5, '#2c3350'), marginBottom: 3 }} />
+      <div style={{ ...T.box('30%', 3, '#8b93b5'), marginBottom: 6 }} />
+      {['88%', '70%', '80%'].map((w, i) => (
+        <div key={i} style={{ ...T.box(w, 2, '#c3c9de'), marginBottom: 3 }} />
+      ))}
+      <div style={{ ...T.box('34%', 3, '#2c3350'), margin: '6px 0 3px' }} />
+      {['82%', '64%'].map((w, i) => (
+        <div key={i} style={{ ...T.box(w, 2, '#c3c9de'), marginBottom: 3 }} />
+      ))}
+    </div>
+  );
+}
+
+function BusinessThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#f4f4f2', ...T.pad(6) }}>
+      <div style={{ ...T.flex(3), alignItems: 'center', marginBottom: 5 }}>
+        <div style={{ ...T.box(8, 8, '#2f6f62'), borderRadius: 2 }} />
+        <div style={T.line('18px', 2, '#b9b9b4')} />
+        <div style={{ marginLeft: 'auto', ...T.box(14, 5, '#2f6f62'), borderRadius: 2 }} />
+      </div>
+      <div style={{ ...T.box('70%', 5, '#3c3c38'), marginBottom: 3 }} />
+      <div style={{ ...T.box('48%', 3, '#b9b9b4'), marginBottom: 5 }} />
+      <div style={T.flex(3)}>
+        <div style={{ ...T.box('32%', 14, '#e2e2dd') }} />
+        <div style={{ ...T.box('32%', 14, '#e2e2dd') }} />
+        <div style={{ ...T.box('32%', 14, '#e2e2dd') }} />
+      </div>
+    </div>
+  );
+}
+
 function GalleryThumb() {
   return (
     <div style={{ ...T.wrap, background: '#0f0f0e', ...T.pad(6) }}>
@@ -448,6 +483,29 @@ const OWN_TEMPLATES: Template[] = [
   },
   {
     order: 56,
+    id: 'business-page',
+    label: 'Business Page',
+    description:
+      'A business site on Astro — what you do, pricing, questions, news and contact',
+    icon: <LayoutIcon />,
+    thumb: <BusinessThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Business',
+    desktopOnly: true,
+  },
+  {
+    order: 57,
+    id: 'resume',
+    label: 'Resume',
+    description: 'A one-page resume on Astro — one Markdown file, prints to PDF',
+    icon: <PencilIcon />,
+    thumb: <ResumeThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Resume',
+    desktopOnly: true,
+  },
+  {
+    order: 58,
     id: 'photo-gallery',
     label: 'Photo Gallery',
     description:
@@ -459,7 +517,7 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    order: 57,
+    order: 59,
     id: 'astro-feed',
     label: 'Astro Feed',
     description: 'A photo feed — profile, square grid, a page per picture',
@@ -470,7 +528,7 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    order: 58,
+    order: 60,
     id: 'astro-media',
     label: 'Astro Media',
     description: 'Share music and video — players, pages, ffmpeg conversion on import',
@@ -481,7 +539,7 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    order: 59,
+    order: 61,
     id: FIVE_WS_TEMPLATE_ID,
     label: FIVE_WS_NAME,
     description: FIVE_WS_TAGLINE,

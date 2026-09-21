@@ -30,6 +30,20 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A digital garden on the Veka theme (MIT) as an Astro Site Crux: the theme’s components and pages are upstream’s; the settings file, offline fonts, the link index, backlinks and the graph are Crux Garden’s.',
   },
+  resume: {
+    name: 'astro-resume',
+    upstream: 'https://github.com/EmaSuriano/astro-resume',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A one-page resume on Ema Suriano’s astro-resume (MIT) as an Astro Site Crux: the layout, print rules and theme toggle are upstream’s; the Markdown scaffold, and replacing the Playwright-driven PDF build with the browser’s own print, are Crux Garden’s.',
+  },
+  'business-page': {
+    name: 'Foxi',
+    upstream: 'https://github.com/oxygenna-themes/foxi-astro-theme',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A business site on the Foxi theme (MIT) by Oxygenna, as an Astro Site Crux: the design, blocks and layouts are upstream’s; the settings file, the content written as a business rather than a fictional product, and the removal of the analytics are Crux Garden’s. Oxygenna sell Foxi Pro, a larger version of this design — see UPSTREAM.md.',
+  },
   'photo-gallery': {
     name: 'astro-photo-folio',
     upstream: 'https://github.com/XD-QIN/astro-photo-folio',

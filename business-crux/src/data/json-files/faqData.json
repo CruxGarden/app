@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What does a project usually cost?",
+    "reply": "Say a range and what changes it. People filter themselves in or out on this question more than any other, and a straight answer saves you both a meeting."
+  },
+  {
+    "question": "How long does it take?",
+    "reply": "Give a typical timeline and what makes one longer. Replace this with the honest answer for your own work."
+  },
+  {
+    "question": "How do we start?",
+    "reply": "Describe the first step \u2014 a call, a form, an email \u2014 and what happens after it. Make it one obvious action."
+  },
+  {
+    "question": "What do you need from me?",
+    "reply": "List what you need before work can begin: content, access, a decision-maker. Setting this out early prevents the usual delays."
+  },
+  {
+    "question": "What happens when the work is done?",
+    "reply": "Handover, support, what is included afterwards and what is billed. Being clear here is what turns a client into a returning one."
+  }
+]
