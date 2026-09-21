@@ -6,6 +6,7 @@ import { exportCrux, importCrux, type ImportMode } from './crux-io';
 import { getCruxspace, insertCruxspace, type Cruxspace, type CruxspaceOrigin } from './cruxspaces';
 import { listCruxspaceAssets, type AssetOrigin, type CruxOutput } from './cruxspace-assets';
 import { pathOf } from '@/lib/artifact-path';
+import { toolManifest, isToolAvailable } from './crux-tools/registry';
 
 /**
  * The `.cruxspace` package (ADR 0036 amendment, GAME-CRUXSPACE-PLAN G8): one
@@ -50,6 +51,31 @@ export interface PackageManifest {
   unavailable: string[];
   /** The Keeper conversations that built or tended this Cruxspace (garden-level history). */
   keeper?: KeeperConversation[];
+  /**
+   * The Crux Tools its members were made with, so the package says what it
+   * needs rather than importing into empty workspaces. Absent in packages
+   * written before this was recorded — read it through `toolsNeeded`.
+   */
+  tools?: { id: string; name: string }[];
+}
+
+/**
+ * The Crux Tools a package needs. Older packages named none, but every member
+ * already carries the template it was made from, which is the same answer.
+ */
+export function toolsNeeded(manifest: PackageManifest): { id: string; name: string }[] {
+  if (manifest.tools?.length) return manifest.tools;
+  const out = new Map<string, { id: string; name: string }>();
+  for (const member of manifest.members) {
+    const tool = member.template ? toolManifest(member.template) : null;
+    if (tool) out.set(tool.id, { id: tool.id, name: tool.name });
+  }
+  return [...out.values()];
+}
+
+/** Of those, the ones this Garden cannot open a member with yet. */
+export function missingTools(manifest: PackageManifest): { id: string; name: string }[] {
+  return toolsNeeded(manifest).filter((tool) => !isToolAvailable(tool.id));
 }
 
 export interface ExportCruxspaceOptions {
@@ -160,6 +186,14 @@ export async function exportCruxspace(
     members,
     transfers: transfers.sort((a, b) => a.imported.localeCompare(b.imported)),
     unavailable,
+    tools: [
+      ...new Map(
+        members
+          .map((m) => (m.template ? toolManifest(m.template) : null))
+          .filter((t): t is NonNullable<typeof t> => !!t)
+          .map((t) => [t.id, { id: t.id, name: t.name }]),
+      ).values(),
+    ],
   };
   zip.file('cruxspace.json', JSON.stringify(manifest, null, 2));
   onProgress?.('Writing the package…');
@@ -184,12 +218,16 @@ export interface ImportCruxspaceResult {
   members: { id: string; sourceId: string; title: string }[];
   failedArtifacts: string[];
   unavailable: string[];
+  /** Crux Tools the package needs that this Garden does not have. */
+  missingTools: { id: string; name: string }[];
 }
 
 export async function peekCruxspace(data: Blob | ArrayBuffer): Promise<{
   manifest: PackageManifest;
   /** Member or Cruxspace identities already present in this Garden. */
   conflicts: string[];
+  /** Crux Tools the package needs that this Garden does not have. */
+  missing: { id: string; name: string }[];
 }> {
   const zip = await JSZip.loadAsync(data instanceof Blob ? await data.arrayBuffer() : data);
   const manifest = await readManifest(zip);
@@ -200,7 +238,7 @@ export async function peekCruxspace(data: Blob | ArrayBuffer): Promise<{
     if (existing) conflicts.push(member.id);
   }
   if (await getCruxspace(manifest.space.id).catch(() => null)) conflicts.push(manifest.space.id);
-  return { manifest, conflicts };
+  return { manifest, conflicts, missing: missingTools(manifest) };
 }
 
 export async function importCruxspace(
@@ -246,7 +284,13 @@ export async function importCruxspace(
     // The garden-level history comes back with it, retagged to the space it now is.
     if (manifest.keeper?.length)
       (await import('@/stores/keeperStore')).adoptKeeperConversations(manifest.keeper, space.id);
-    return { space, members: imported, failedArtifacts, unavailable: manifest.unavailable };
+    return {
+      space,
+      members: imported,
+      failedArtifacts,
+      unavailable: manifest.unavailable,
+      missingTools: missingTools(manifest),
+    };
   } catch (err) {
     for (const member of imported) await crux.delete(member.id).catch(() => undefined);
     throw err;

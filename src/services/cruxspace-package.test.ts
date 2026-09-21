@@ -1,9 +1,15 @@
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { getServices, initServices } from './index';
 import { createCruxspace, deleteCruxspace, getCruxspace, listCruxspaces } from './cruxspaces';
 import { saveCruxOutput, listCruxspaceAssets, copyCruxspaceAsset } from './cruxspace-assets';
-import { exportCruxspace, importCruxspace, peekCruxspace } from './cruxspace-package';
+import {
+  exportCruxspace,
+  importCruxspace,
+  peekCruxspace,
+  toolsNeeded,
+  missingTools,
+} from './cruxspace-package';
 import { useKeeperStore, keeperConversationsFor } from '@/stores/keeperStore';
 import { growthHostFor } from './growth';
 
@@ -170,4 +176,53 @@ it("carries the Keeper's conversation that built the Cruxspace, and brings it ba
     'Build me a release',
     'Planted Release.',
   ]);
+});
+
+/**
+ * A package that needs Kan and Piskel should say so, because its members
+ * import perfectly well and then open empty (the office-garden kink).
+ */
+const manifestWith = (templates: (string | null)[]) =>
+  ({
+    version: 1,
+    format: 'cruxspace/1.0',
+    exportedAt: new Date().toISOString(),
+    space: { id: 's', name: 'S', brief: '', created: '', updated: '' },
+    members: templates.map((template, index) => ({
+      id: `m${index}`,
+      title: `M${index}`,
+      slug: `m${index}`,
+      template,
+      archive: '',
+      checkpoints: [],
+      outputs: [],
+    })),
+    transfers: [],
+    unavailable: [],
+  }) as unknown as Parameters<typeof toolsNeeded>[0];
+
+it('names the Crux Tools its members were made with, once each', () => {
+  const needed = toolsNeeded(manifestWith(['kan-app', 'piskel-app', 'kan-app', null, 'blank']));
+  expect(needed.map((t) => t.id).sort()).toEqual(['kan-app', 'piskel-app']);
+  expect(needed.every((t) => t.name)).toBe(true);
+});
+
+it('prefers what the package recorded over what the members imply', () => {
+  const manifest = manifestWith(['piskel-app']);
+  manifest.tools = [{ id: 'kan-app', name: 'Kan' }];
+  expect(toolsNeeded(manifest).map((t) => t.id)).toEqual(['kan-app']);
+});
+
+it('counts a tool this Garden cannot open a member with as missing', async () => {
+  // Every tool is bundled in this build, so the one thing worth testing — the
+  // filter — is tested against a Garden that has none of them.
+  const registry = await import('./crux-tools/registry');
+  const available = vi.spyOn(registry, 'isToolAvailable').mockReturnValue(false);
+  try {
+    expect(missingTools(manifestWith(['kan-app'])).map((t) => t.id)).toEqual(['kan-app']);
+    // A template that is not a Crux Tool needs nothing installed.
+    expect(missingTools(manifestWith(['blank', null]))).toEqual([]);
+  } finally {
+    available.mockRestore();
+  }
 });

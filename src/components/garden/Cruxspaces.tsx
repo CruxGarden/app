@@ -187,6 +187,14 @@ export default function Cruxspaces({
           result.failedArtifacts.length
             ? ` ${result.failedArtifacts.length} file(s) could not be restored.`
             : ''
+        }${
+          // The members are here either way; without their tool they open empty,
+          // so the package says what it needs rather than letting you find out.
+          result.missingTools.length
+            ? ` Install ${result.missingTools
+                .map((tool) => tool.name)
+                .join(', ')} to open every member.`
+            : ''
         }`,
       );
     });
