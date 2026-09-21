@@ -1,0 +1,83 @@
+---
+import "@fontsource/poppins";
+import Download from "../components/Download.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
+import "../styles.css";
+
+type Props = {
+  frontmatter: {
+    title: string;
+    noIndex?: boolean;
+    description?: string;
+  };
+};
+
+const PDF_VIEW = process.env.PDF_VIEW;
+const FORCE_THEME = process.env.FORCE_THEME ?? "";
+
+const { title, noIndex, description } = Astro.props
+  .frontmatter as Props["frontmatter"];
+
+// Firstname Lastname -> ['F', 'L']
+const initials = title
+  .split(" ")
+  .map(([initial]) => initial!.toUpperCase())
+  .slice(0, 2);
+---
+
+<!doctype html>
+<html lang="en" class={FORCE_THEME}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description || title} />
+    {noIndex && <meta name="robots" content="noindex" />}
+    <title>{title}</title>
+    <script is:inline define:vars={{ FORCE_THEME }}>
+      if (!FORCE_THEME) {
+        const stored = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        const theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : prefersDark
+              ? "dark"
+              : "light";
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(theme);
+      }
+    </script>
+  </head>
+  <body class={!PDF_VIEW ? "bg-indigo-50 dark:bg-slate-900 sm:my-14" : ""}>
+    <div class="container mx-auto flex justify-center">
+      <article class:list={["minimalist relative", PDF_VIEW && "pdf-view"]}>
+        <div
+          class:list={[
+            "initials-mark absolute top-20 sm:top-14 rounded-sm bg-indigo-400 px-4 py-0.5",
+            PDF_VIEW ? "left-2" : "left-4 sm:left-8",
+          ]}
+        >
+          <div
+            class="flex h-fit select-none flex-col items-center text-sm font-bold"
+          >
+            {initials.map((initial) => <span>{initial}</span>)}
+          </div>
+        </div>
+        {
+          !PDF_VIEW && (
+            <div class="not-prose absolute right-4 top-4 flex items-center gap-3">
+              <ThemeToggle />
+              <Download />
+            </div>
+          )
+        }
+        <slot />
+      </article>
+    </div>
+    <style></style>
+  </body>
+</html>
