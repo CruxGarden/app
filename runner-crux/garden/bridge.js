@@ -7,6 +7,7 @@
 //   garden.start(names)           start these services and what they need
 //   garden.stop(names)            stop these
 //   garden.task(name)             run a task and report pass or fail
+//   garden.log(tail)              one log across the workspace, tagged by service
 //   garden.read(path) / write     the Runner's own files (workspace.json)
 // The app checks that every Crux named belongs to this Cruxspace; the page
 // cannot widen that. Opened outside Crux Garden it fails honestly.
@@ -62,6 +63,9 @@
     },
     stop: function (names) {
       return ask('crux:runner:stop', { names: names }, 5 * 60 * 1000);
+    },
+    log: function (tail) {
+      return askRetrying('crux:runner:log', { tail: tail || 200 }, 60000, 2);
     },
     read: function (path) {
       return askRetrying('crux:runner:read', { path: path }, 8000, 3);

@@ -8,7 +8,7 @@
 
 ## Your project
 
-Nothing. Your code stays in its own repository and nothing is copied into the Crux. The Crux holds one small file, `project.json`, recording which folder, which script, which port and where the settings came from.
+Nothing. Your code stays in its own repository and nothing is copied into the Crux. The Crux holds one small file, `link.json`, recording which folder, which script, which port and where the settings came from.
 
 ## What is Crux Garden's
 

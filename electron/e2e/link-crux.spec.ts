@@ -5,7 +5,7 @@ import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
 
 /**
- * A Project Crux runs a checkout that lives outside it.
+ * A Link Crux hooks an existing project into Crux Garden.
  *
  * The journey makes a small project in a temporary folder, approves it the way
  * the picker would, and runs a script from the bench. What matters:
@@ -23,7 +23,7 @@ function cruxFolder(dir: string): string {
   return join(garden, first);
 }
 
-test('a project crux runs a checkout, with the settings it is given', async () => {
+test('a link crux runs the project it points at, with the settings it is given', async () => {
   test.setTimeout(240_000);
   const { app, page, dir } = await launchApp();
   try {
@@ -48,7 +48,7 @@ test('a project crux runs a checkout, with the settings it is given', async () =
 
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
-    await page.getByRole('button', { name: /^Project/ }).click();
+    await page.getByRole('button', { name: /^Link/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
     const folder = cruxFolder(dir);
@@ -70,11 +70,11 @@ test('a project crux runs a checkout, with the settings it is given', async () =
     const settings = 'WHO=the-stack\nPORT=8321\n';
     writeFileSync(join(folder, 'connections.env'), settings);
     writeFileSync(
-      join(folder, 'project.json'),
+      join(folder, 'link.json'),
       JSON.stringify(
         {
           version: 1,
-          app: 'project',
+          app: 'link',
           folder: project,
           script: 'greet',
           args: [],
@@ -100,7 +100,7 @@ test('a project crux runs a checkout, with the settings it is given', async () =
 
     // The choice is kept, so it is one press next time.
     await expect
-      .poll(() => readFileSync(join(folder, 'project.json'), 'utf8'), {
+      .poll(() => readFileSync(join(folder, 'link.json'), 'utf8'), {
         timeout: 30_000,
         intervals: [1000],
       })
@@ -123,7 +123,7 @@ test('a folder nobody chose is refused, however a Crux asks', async () => {
 
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
-    await page.getByRole('button', { name: /^Project/ }).click();
+    await page.getByRole('button', { name: /^Link/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
     const folder = cruxFolder(dir);
@@ -131,8 +131,8 @@ test('a folder nobody chose is refused, however a Crux asks', async () => {
     // A Crux that names a path it was never given — the case this rule exists
     // for. No approvals file is written.
     writeFileSync(
-      join(folder, 'project.json'),
-      JSON.stringify({ version: 1, app: 'project', folder: project, script: 'go' }, null, 2),
+      join(folder, 'link.json'),
+      JSON.stringify({ version: 1, app: 'link', folder: project, script: 'go' }, null, 2),
     );
     await page.reload();
 

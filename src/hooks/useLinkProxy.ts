@@ -6,12 +6,12 @@ import { pathOf } from '@/lib/artifact-path';
 import { isPreviewOrigin } from './useStoreProxy';
 
 /**
- * The Project bench, from the preview: the page asks the app to open the
+ * The Link bench, from the preview: the page asks the app to open the
  * folder picker, read a checkout's scripts, and run one. The page never spawns
  * anything; the shell does, and only for a folder the person chose in the OS
  * dialog (`electron/src/project-runner.ts`).
  */
-export function useProjectProxy(cruxId: string | null) {
+export function useLinkProxy(cruxId: string | null) {
   const workspace = useCruxStoreApi();
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function useProjectProxy(cruxId: string | null) {
 
     async function handle(e: MessageEvent) {
       const type = e.data?.type as string | undefined;
-      if (!type?.startsWith('crux:project:')) return;
+      if (!type?.startsWith('crux:link:')) return;
       if (workspace.getState().closing || !isPreviewOrigin(e.origin)) return;
       const frame = frameFor(e);
       if (!frame || new URL(frame.src, location.href).origin !== e.origin) return;
@@ -39,16 +39,19 @@ export function useProjectProxy(cruxId: string | null) {
       try {
         const runner = await import('@/services/project-runner');
         switch (type) {
-          case 'crux:project:choose':
+          case 'crux:link:choose':
             answer(await track(runner.chooseProject()));
             break;
-          case 'crux:project:read':
+          case 'crux:link:read':
             answer(await track(runner.readProject(String(e.data.folder ?? ''))));
             break;
-          case 'crux:project:state':
+          case 'crux:link:scan':
+            answer(await track(runner.scanLinked(String(e.data.folder ?? ''))));
+            break;
+          case 'crux:link:state':
             answer(await track(runner.projectState(cruxId!)));
             break;
-          case 'crux:project:start':
+          case 'crux:link:start':
             answer(
               await track(
                 runner.startProject(
@@ -67,10 +70,10 @@ export function useProjectProxy(cruxId: string | null) {
               ),
             );
             break;
-          case 'crux:project:stop':
+          case 'crux:link:stop':
             answer(await track(runner.stopProject(cruxId!)));
             break;
-          case 'crux:project:read-file': {
+          case 'crux:link:read-file': {
             const path = String(e.data.path ?? '');
             const artifacts = await track(getServices().artifact.findByResource('crux', cruxId!));
             const file = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === path);
@@ -78,7 +81,7 @@ export function useProjectProxy(cruxId: string | null) {
             answer(await (await getServices().artifact.downloadBlob(file.id)).text());
             break;
           }
-          case 'crux:project:write': {
+          case 'crux:link:write': {
             const path = String(e.data.path ?? '');
             const text = String(e.data.text ?? '');
             if (!path || path.startsWith('/') || path.includes('..'))
@@ -108,24 +111,24 @@ export function useProjectProxy(cruxId: string | null) {
     return () => window.removeEventListener('message', handle);
   }, [cruxId, workspace]);
 
-  // A Crux with a project.json is a Project Crux, and gets the project tools.
+  // A Crux with a link.json is a Project Crux, and gets the project tools.
   useEffect(() => {
     if (!cruxId) return;
     let live = true;
     void (async () => {
-      const { markProjectCrux } = await import('@/services/project-runner');
+      const { markLinkCrux } = await import('@/services/project-runner');
       try {
         const artifacts = await getServices().artifact.findByResource('crux', cruxId);
-        const has = artifacts.some((a) => a.type === 'artifact' && pathOf(a) === 'project.json');
-        if (live) markProjectCrux(cruxId, has);
+        const has = artifacts.some((a) => a.type === 'artifact' && pathOf(a) === 'link.json');
+        if (live) markLinkCrux(cruxId, has);
       } catch {
         /* not a project crux, then */
       }
     })();
     return () => {
       live = false;
-      void import('@/services/project-runner').then(({ markProjectCrux }) =>
-        markProjectCrux(cruxId, false),
+      void import('@/services/project-runner').then(({ markLinkCrux }) =>
+        markLinkCrux(cruxId, false),
       );
     };
   }, [cruxId]);

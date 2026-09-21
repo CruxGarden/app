@@ -10,7 +10,7 @@ A **Stack Crux** runs the services around your code — the database, the cache,
 
 Pick a script, give it a port if it wants one, and press **Start**. Output appears as it arrives. **Open** takes you to it once it is listening.
 
-Your choices are kept in `project.json` in this Crux, so tomorrow is one press.
+Your choices are kept in `link.json` in this Crux, so tomorrow is one press.
 
 ## Wiring it to a Stack
 
@@ -24,4 +24,4 @@ Your code is never copied. The Crux records how it runs, nothing more, which is 
 
 ## Asking the collaborator
 
-It has `project_status`, `project_start`, `project_stop` and `project_logs`. Ask it to start the thing, or to read what crashed — it will read the log rather than guess. It cannot choose a folder for you: only you can, in the picker, which is what keeps a Crux from pointing the app at somewhere you never agreed to.
+It has `link_status`, `link_start`, `link_stop` and `link_logs`. Ask it to start the thing, or to read what crashed — it will read the log rather than guess. It cannot choose a folder for you: only you can, in the picker, which is what keeps a Crux from pointing the app at somewhere you never agreed to.

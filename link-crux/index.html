@@ -3,19 +3,37 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Project</title>
+    <title>Link</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main>
       <header>
-        <h1 id="project-name">Project</h1>
+        <h1 id="project-name">Link</h1>
         <p id="about" class="about">Choose the folder you are working in.</p>
       </header>
 
       <section class="pick">
         <button id="choose" type="button" class="primary">Choose folder…</button>
         <span id="folder" class="folder"></span>
+      </section>
+
+      <section id="kind-row" class="pick" hidden>
+        <label for="kind">This is</label>
+        <select id="kind">
+          <option value="node">a project to run</option>
+          <option value="folder">a folder to work with</option>
+        </select>
+        <span class="hint">
+          A folder is for what you do not want taken into the garden — footage, a dataset — and
+          nothing in it is ever copied.
+        </span>
+      </section>
+
+      <section id="holds" class="setup" hidden>
+        <h2>What it holds</h2>
+        <p id="holds-about" class="about">Reading…</p>
+        <pre id="holds-list" class="output"></pre>
       </section>
 
       <section id="setup" class="setup" hidden>
@@ -31,6 +49,19 @@
         <div class="row">
           <label for="args">Arguments</label>
           <input id="args" placeholder="--host 127.0.0.1" />
+        </div>
+        <div class="row">
+          <label for="provides">Provides</label>
+          <input id="provides" placeholder="api" />
+          <span class="hint">
+            The Stack service this checkout stands in for. Naming one means this Crux runs it
+            instead, and the rest of the workspace follows.
+          </span>
+        </div>
+        <div class="row">
+          <label for="needs">Needs</label>
+          <input id="needs" placeholder="postgres redis" />
+          <span class="hint">What must be up first, beyond what the Stack already knows.</span>
         </div>
         <div class="row">
           <label for="env-file">Settings from</label>

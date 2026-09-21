@@ -804,6 +804,23 @@ function setupIpc() {
     return info ? { ...info, approved: folderApproved(folder) } : null;
   });
 
+  /**
+   * What a linked folder holds, without taking any of it in.
+   *
+   * A Link of kind `folder` is for the things you do not want ingested — a
+   * directory of footage, a dataset — so this reports what is there and how
+   * much, and nothing is copied.
+   */
+  ipcMain.handle('project:scan', async (_e: any, opts: { folder: string }) => {
+    const { folderApproved } = require('./project-runner') as typeof import('./project-runner');
+    const { scanFolder } = require('./folder-scan') as typeof import('./folder-scan');
+    const folder = String(opts?.folder ?? '');
+    if (!folder) return null;
+    if (!folderApproved(folder))
+      throw new Error('Choose this folder in Crux Garden before reading it.');
+    return scanFolder(folder, { maxFiles: 5000 });
+  });
+
   ipcMain.handle('project:state', async (_e: any, opts: { cruxId: string }) => {
     const { projectState } = require('./project-runner') as typeof import('./project-runner');
     return projectState(String(opts?.cruxId ?? ''));
@@ -870,6 +887,25 @@ function setupIpc() {
     },
   );
 
+  /** This machine's own files for a Crux, which never travel with it. */
+  ipcMain.handle('containers:local', async (_e: any, opts: { cruxId: string; file: string }) => {
+    const { readLocal } = require('./containers') as typeof import('./containers');
+    const crux = lookupCrux(opts.cruxId);
+    if (!crux) throw new Error('This crux has no Project Folder');
+    return readLocal(path.resolve(crux.folder), String(opts.file ?? ''));
+  });
+
+  ipcMain.handle(
+    'containers:write-local',
+    async (_e: any, opts: { cruxId: string; file: string; text: string }) => {
+      const { writeLocal } = require('./containers') as typeof import('./containers');
+      const crux = lookupCrux(opts.cruxId);
+      if (!crux) throw new Error('This crux has no Project Folder');
+      writeLocal(path.resolve(crux.folder), String(opts.file ?? ''), String(opts.text ?? ''));
+      return true;
+    },
+  );
+
   ipcMain.handle(
     'containers:override',
     async (_e: any, opts: { cruxId: string; wishes: unknown }) => {
@@ -884,6 +920,12 @@ function setupIpc() {
       return writeOverride(path.resolve(crux.folder), wishes as never);
     },
   );
+
+  ipcMain.handle('containers:ports-in-use', async (_e: any, opts: { ports: number[] }) => {
+    const { portsInUse } = require('./containers') as typeof import('./containers');
+    const ports = Array.isArray(opts?.ports) ? opts.ports.map(Number).filter(Boolean) : [];
+    return portsInUse(ports);
+  });
 
   ipcMain.handle('containers:free-port', async (_e: any, opts?: { from?: number }) => {
     const { freePort } = require('./containers') as typeof import('./containers');

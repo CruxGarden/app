@@ -13,9 +13,9 @@ import { inspectCompose, type ComposeService } from '@/services/containers';
  * run, from where, and what each thing needs. It starts nothing.
  *
  * A row is a **service**, not a Crux. The Stack Crux contributes one per
- * Compose service; a Project Crux contributes the service it **provides**, and
+ * Compose service; a Link Crux contributes the service it **provides**, and
  * its mere presence means that service runs **from source** rather than as a
- * container. A Project Crux whose folder has never been chosen on this machine
+ * container. A Link Crux whose folder has never been chosen on this machine
  * cannot run, so the row falls back to the Stack and says why.
  */
 export type ServiceFrom = 'stack' | 'source';
@@ -24,7 +24,7 @@ export interface WorkspaceService {
   /** The name everything agrees on: the Compose service name. */
   name: string;
   from: ServiceFrom;
-  /** Why it is not running from source although a Project Crux offers it. */
+  /** Why it is not running from source although a Link Crux offers it. */
   fellBack?: string;
   about?: string;
   image?: string;
@@ -43,7 +43,7 @@ export interface WorkspaceService {
 export interface WorkspaceMember {
   cruxId: string;
   title: string;
-  kind: 'stack' | 'project' | 'runner' | 'other';
+  kind: 'stack' | 'link' | 'runner' | 'other';
   template: string | null;
 }
 
@@ -56,7 +56,7 @@ export interface Workspace {
   notes: string[];
 }
 
-/** What a Project Crux records about itself, as far as a workspace cares. */
+/** What a Link Crux records about itself, as far as a workspace cares. */
 export interface ProjectRecord {
   folder?: string;
   script?: string;
@@ -71,7 +71,7 @@ export interface ProjectRecord {
 
 const TEMPLATES: Record<string, WorkspaceMember['kind']> = {
   'stack-app': 'stack',
-  'project-app': 'project',
+  'link-app': 'link',
   'runner-app': 'runner',
 };
 
@@ -176,10 +176,10 @@ async function spaceFor(cruxId: string): Promise<Cruxspace | null> {
   return spaces.find((space) => space.cruxIds.includes(rootId)) ?? null;
 }
 
-/** What a Project Crux records, read from its own `project.json`. */
-async function projectRecord(cruxId: string): Promise<ProjectRecord> {
+/** What a Link Crux records, read from its own `link.json`. */
+async function linkRecord(cruxId: string): Promise<ProjectRecord> {
   const artifacts = await getServices().artifact.findByResource('crux', cruxId);
-  const doc = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === 'project.json');
+  const doc = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === 'link.json');
   if (!doc) return {};
   try {
     return JSON.parse(await (await getServices().artifact.downloadBlob(doc.id)).text());
@@ -231,8 +231,8 @@ export async function discoverWorkspace(cruxId: string): Promise<Workspace> {
   }
 
   const projects = [];
-  for (const member of members.filter((m) => m.kind === 'project')) {
-    const record = await projectRecord(member.cruxId);
+  for (const member of members.filter((m) => m.kind === 'link')) {
+    const record = await linkRecord(member.cruxId);
     const runnable = Boolean(record.folder);
     projects.push({
       cruxId: member.cruxId,

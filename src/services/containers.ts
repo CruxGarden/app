@@ -170,6 +170,31 @@ export async function freePort(from = 8000): Promise<number> {
   return api().freePort({ from });
 }
 
+/** This machine's own file for a Crux, which never travels with it. */
+export async function readLocalFile(cruxId: string, file: string): Promise<string> {
+  const found = typeof window !== 'undefined' ? window.electronAPI?.containers : undefined;
+  return found?.local ? found.local({ cruxId, file }) : '';
+}
+
+export async function writeLocalFile(cruxId: string, file: string, text: string): Promise<boolean> {
+  return api().writeLocal({ cruxId, file, text });
+}
+
+/**
+ * Which of these host ports something is already listening on.
+ *
+ * The scan that makes port assignment "based on what you're currently
+ * running": it answers before anything starts, rather than after a failure.
+ */
+export async function portsInUse(ports: number[]): Promise<number[]> {
+  if (!ports.length) return [];
+  const found = typeof window !== 'undefined' ? window.electronAPI?.containers : undefined;
+  return found?.portsInUse ? found.portsInUse({ ports }) : [];
+}
+
+export const LOCAL_ENV = '.crux/local.env';
+export const LOCAL_COMPOSE = '.crux/local.compose.yaml';
+
 /** Lines from a run in flight; pulling images takes minutes. */
 export function onComposeOutput(
   callback: (event: { cruxId: string; verb: string; line: string }) => void,

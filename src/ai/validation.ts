@@ -74,14 +74,14 @@ export function validateToolInput(
       return typeof input.path === 'string' && input.path.trim()
         ? { valid: true }
         : { valid: false, error: 'path is required' };
-    case 'project_status':
-    case 'project_stop':
+    case 'link_status':
+    case 'link_stop':
       return { valid: true };
-    case 'project_logs':
+    case 'link_logs':
       return input.lines === undefined || (typeof input.lines === 'number' && input.lines > 0)
         ? { valid: true }
         : { valid: false, error: 'lines must be a positive number' };
-    case 'project_start': {
+    case 'link_start': {
       if (input.script !== undefined && typeof input.script !== 'string')
         return { valid: false, error: 'script must be a name' };
       if (

@@ -92,7 +92,7 @@ test('the Runner reads a Cruxspace, and starts a service with what it needs', as
     await expect(board.locator('#services')).toContainText('store');
     await expect(board.locator('#services')).toContainText('The thing everything waits for.');
     await expect(board.locator('#about')).toContainText('3 services');
-    // Every row comes from the Stack until a Project Crux offers one.
+    // Every row comes from the Stack until a Link Crux offers one.
     await expect(board.locator('.service .from').first()).toContainText('from stack');
 
     test.skip(!hasRunner(), 'this machine has no Docker or Podman');

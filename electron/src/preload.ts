@@ -281,6 +281,7 @@ const api: ElectronBridge = {
   projectRunner: {
     choose: () => ipcRenderer.invoke('project:choose'),
     read: (opts: { folder: string }) => ipcRenderer.invoke('project:read', opts),
+    scan: (opts: { folder: string }) => ipcRenderer.invoke('project:scan', opts),
     state: (opts: { cruxId: string }) => ipcRenderer.invoke('project:state', opts),
     start: (opts: {
       cruxId: string;
@@ -343,6 +344,12 @@ const api: ElectronBridge = {
         written: boolean;
         snippet: string;
       }>,
+    local: (opts: { cruxId: string; file: string }) =>
+      ipcRenderer.invoke('containers:local', opts) as Promise<string>,
+    writeLocal: (opts: { cruxId: string; file: string; text: string }) =>
+      ipcRenderer.invoke('containers:write-local', opts) as Promise<boolean>,
+    portsInUse: (opts: { ports: number[] }) =>
+      ipcRenderer.invoke('containers:ports-in-use', opts) as Promise<number[]>,
     freePort: (opts?: { from?: number }) =>
       ipcRenderer.invoke('containers:free-port', opts) as Promise<number>,
     compose: (opts: {

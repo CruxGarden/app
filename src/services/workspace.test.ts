@@ -181,7 +181,7 @@ describe('what must run for a service to work', () => {
 describe('telling the Cruxes apart', () => {
   it('reads the kind from the template the Crux was made with', () => {
     expect(kindOf({ meta: { template: 'stack-app' } }).kind).toBe('stack');
-    expect(kindOf({ meta: { template: 'project-app' } }).kind).toBe('project');
+    expect(kindOf({ meta: { template: 'link-app' } }).kind).toBe('link');
     expect(kindOf({ meta: { template: 'runner-app' } }).kind).toBe('runner');
     expect(kindOf({ meta: { template: 'notes-app' } }).kind).toBe('other');
     expect(kindOf(null).kind).toBe('other');

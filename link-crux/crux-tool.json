@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "link-app",
+  "name": "Link",
+  "description": "Developer · hook an existing project into Crux Garden — pick the folder, pick the script, and run it with the ports and settings a workspace publishes",
+  "kind": "webapp",
+  "defaultTitle": "My link",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 45,
+  "bundled": true,
+  "app": "link",
+  "entryFile": "index.html",
+  "layout": "workshop",
+  "document": {
+    "path": "link.json",
+    "seed": {
+      "version": 1,
+      "app": "link",
+      "kind": "node",
+      "folder": "",
+      "script": "",
+      "args": [],
+      "port": null
+    }
+  },
+  "share": false,
+  "greeting": "Hook in a project you already have. Choose the folder — a checkout, anywhere on this machine — and the page reads its package.json and lists its scripts. Pick one, give it a port if it wants one, press Start, and its output appears here. Settings can come from a Stack Crux beside it: point at that Crux's connections.env and the run gets DATABASE_URL and the rest, so the code talks to the services without anyone copying port numbers. The code stays where it is and is never copied in: this Crux is a link to it, so that Crux Garden can run it, watch it and wire it to the rest of a workspace. Ask me to start it, stop it, or read what it said; I have link_start, link_stop, link_status and link_logs.",
+  "context": "A Link Crux hooks an existing project into Crux Garden: the code stays in its own repository and is never made a resident of the garden, and the Crux is the handle that lets the tooling act on it. `link.json` records the choice: folder, script, args, port, and optionally an env file to read (a Stack Crux's `connections.env`). The shell runs the script with the bundled pnpm on Electron's own Node, so the machine needs neither Node nor a package manager on its PATH; `pnpm run` executes whatever package.json says, whichever manager installed it. PORT is offered as an environment variable — most servers read it, some want a flag instead, which is what args are for. A folder becomes runnable only by being chosen in the OS dialog: `project.json` naming a path is not enough, and a Crux from someone else starts nothing until the person picks a folder. That is why this tool is never shared. Tools: link_status for what is running, link_start and link_stop, link_logs for what it said. When a run crashes, read the log before guessing, and say what it actually printed. `link.json` carries a `kind`; today the only one is `node` — a folder with a package.json, run by its scripts — and other kinds of external thing (a repository, a folder of assets, a database) are meant to arrive as kinds rather than as new tools.",
+  "toolInfo": {
+    "name": "pnpm",
+    "upstream": "https://pnpm.io",
+    "relationship": "Crux Garden runs your project's scripts with the pnpm it bundles (MIT), on Electron's own Node, so a machine needs neither Node nor a package manager on its PATH. `pnpm run` executes what your package.json says, whichever manager installed the dependencies. The page, the record of how the project runs here, and the rule that a folder becomes runnable only by being chosen in the OS dialog are Crux Garden's. Your code is untouched: it stays in its own repository and nothing is copied into the Crux.",
+    "detailsPath": "UPSTREAM.md"
+  }
+}

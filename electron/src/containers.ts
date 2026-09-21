@@ -274,7 +274,7 @@ function scanYaml(text: string): { services: ComposeService[]; lines: string[] }
  * so they can change the file rather than guess.
  */
 export function inspectCompose(folder: string, file?: string): ComposeReading {
-  const files = file ? [file] : composeFiles(folder);
+  const files = file ? [file] : composeFiles(folder, true);
   const blank = { services: [], profiles: [], variables: [] };
   if (!files.length)
     return { ...blank, files: [], refusals: ['There is no compose.yaml in this Crux.'] };
@@ -355,6 +355,55 @@ function refusalsIn(lines: string[]): string[] {
 }
 
 /**
+ * What this machine says, kept where it cannot travel.
+ *
+ * `compose.yaml` is the stack everyone shares and `.env` holds the defaults
+ * everyone should get; both are ordinary Artifacts, so both are published and
+ * exported with the Crux. Anything true only here — the ports this machine
+ * assigned, an address that points at a service running from source — belongs
+ * in `.crux/`, which is never ingested and therefore never travels.
+ *
+ *   `.crux/local.env`          values for `${NAME}`
+ *   `.crux/local.compose.yaml` structural overrides, merged last
+ */
+export const LOCAL_ENV = '.crux/local.env';
+export const LOCAL_COMPOSE = '.crux/local.compose.yaml';
+
+/** Read one of this machine's own files for a Crux. */
+export function readLocal(folder: string, file: string): string {
+  try {
+    return fs.readFileSync(path.join(folder, file), 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+/** Write one, making `.crux/` if this is the first. */
+export function writeLocal(folder: string, file: string, text: string): void {
+  if (file !== LOCAL_ENV && file !== LOCAL_COMPOSE) throw new Error(`Not a local file: ${file}`);
+  const at = path.join(folder, file);
+  fs.mkdirSync(path.dirname(at), { recursive: true });
+  fs.writeFileSync(at, text.endsWith('\n') ? text : `${text}\n`);
+}
+
+/**
+ * The `-f` and `--env-file` arguments for a run.
+ *
+ * Compose finds `compose.yaml` and its override by itself, but naming them
+ * explicitly is what lets the machine-local file be merged last. Likewise
+ * `--env-file` turns off the automatic `.env`, so it is named too — and only
+ * files that exist are named, because Compose fails on one that does not.
+ */
+export function fileArgs(folder: string): string[] {
+  const args: string[] = [];
+  const files = [...composeFiles(folder), LOCAL_COMPOSE];
+  for (const file of files) if (fs.existsSync(path.join(folder, file))) args.push('-f', file);
+  for (const file of ['.env', LOCAL_ENV])
+    if (fs.existsSync(path.join(folder, file))) args.push('--env-file', file);
+  return args;
+}
+
+/**
  * The files Compose will actually read, base first.
  *
  * Compose merges an override file over the base without being told to, which
@@ -362,7 +411,7 @@ function refusalsIn(lines: string[]): string[] {
  * own changes — and exactly why every one of them must be checked. A refusal
  * that only reads the base would let an override mount the disk.
  */
-export function composeFiles(folder: string): string[] {
+export function composeFiles(folder: string, includeLocal = false): string[] {
   const bases = ['compose.yaml', 'compose.yml', 'docker-compose.yaml', 'docker-compose.yml'];
   const overrides = [
     'compose.override.yaml',
@@ -375,6 +424,7 @@ export function composeFiles(folder: string): string[] {
   if (base) found.push(base);
   const override = overrides.find((name) => fs.existsSync(path.join(folder, name)));
   if (override) found.push(override);
+  if (includeLocal && fs.existsSync(path.join(folder, LOCAL_COMPOSE))) found.push(LOCAL_COMPOSE);
   return found;
 }
 
@@ -456,7 +506,7 @@ export async function composeConfig(
 ): Promise<ComposeResolution> {
   const runner = await composeRunner();
   if (!runner) return { services: [], error: 'No container runner on this machine.' };
-  const args = ['compose'];
+  const args = ['compose', ...fileArgs(folder)];
   for (const profile of profiles) {
     if (!/^[\w.-]{1,64}$/.test(profile)) throw new Error(`Not a profile name: ${profile}`);
     args.push('--profile', profile);
@@ -718,7 +768,7 @@ export async function runCompose(
   }
 
   return new Promise((resolve, reject) => {
-    const args = ['compose', '--project-name', projectName(opts.cruxId)];
+    const args = ['compose', ...fileArgs(opts.folder), '--project-name', projectName(opts.cruxId)];
     for (const profile of opts.profiles ?? []) args.push('--profile', profile);
     if (opts.verb === 'up') {
       args.push('up', '--detach', '--remove-orphans');

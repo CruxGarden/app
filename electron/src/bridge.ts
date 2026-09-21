@@ -347,6 +347,15 @@ export interface ContainersBridge {
       environment?: Record<string, string>;
     }[];
   }): Promise<{ written: boolean; snippet: string }>;
+  /**
+   * This machine's own files for a Crux — `.crux/local.env` and
+   * `.crux/local.compose.yaml`. Never ingested, so never exported or
+   * published: the ports assigned here do not arrive on a teammate's machine.
+   */
+  local(opts: { cruxId: string; file: string }): Promise<string>;
+  writeLocal(opts: { cruxId: string; file: string; text: string }): Promise<boolean>;
+  /** Which of these host ports something is already listening on. */
+  portsInUse(opts: { ports: number[] }): Promise<number[]>;
   /** A free host port, for offering a way out of a collision. */
   freePort(opts?: { from?: number }): Promise<number>;
   /** One compose verb, for this Crux only. */
@@ -398,6 +407,19 @@ export interface ProjectRunnerBridge {
   choose(): Promise<ProjectInfo | null>;
   /** What a folder offers, and whether it has been chosen before. */
   read(opts: { folder: string }): Promise<ProjectInfo | null>;
+  /**
+   * What a linked folder holds, without taking any of it in — for a Link of
+   * kind `folder`, where the point is to work with things too large or too
+   * numerous to ingest.
+   */
+  scan(opts: { folder: string }): Promise<{
+    files: string[];
+    bytes: number;
+    ignored: number;
+    ignoredBytes: number;
+    large: { path: string; bytes: number }[];
+    truncated: boolean;
+  } | null>;
   state(opts: { cruxId: string }): Promise<ProjectState>;
   start(opts: {
     cruxId: string;

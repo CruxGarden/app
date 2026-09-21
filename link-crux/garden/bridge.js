@@ -4,10 +4,11 @@
 // needs from the app goes over postMessage and the app answers as the person:
 //   garden.choose()                 the folder picker; choosing is the approval
 //   garden.readProject(folder)      its scripts, and whether it is installed
+//   garden.scan(folder)             what a linked folder holds, without taking it in
 //   garden.state()                  what is running for this Crux
 //   garden.start(options)           run a script
 //   garden.stop()                   stop it, and its children
-//   garden.read(path) / write       the Crux's own files (project.json)
+//   garden.read(path) / write       the Crux's own files (link.json)
 // A page opened outside Crux Garden gets an honest failure, not a hang.
 (function () {
   if (window.garden) return;
@@ -51,25 +52,29 @@
     inGarden: framed,
     choose: function () {
       // A dialog waits on a person, so it waits as long as one might.
-      return ask('crux:project:choose', {}, 10 * 60 * 1000);
+      return ask('crux:link:choose', {}, 10 * 60 * 1000);
     },
     readProject: function (folder) {
-      return askRetrying('crux:project:read', { folder: folder }, 10000, 3);
+      return askRetrying('crux:link:read', { folder: folder }, 10000, 3);
+    },
+    scan: function (folder) {
+      // A big folder takes a moment to count, and counts nothing twice.
+      return askRetrying('crux:link:scan', { folder: folder }, 60000, 2);
     },
     state: function () {
-      return askRetrying('crux:project:state', {}, 10000, 3);
+      return askRetrying('crux:link:state', {}, 10000, 3);
     },
     start: function (options) {
-      return ask('crux:project:start', options || {}, 60000);
+      return ask('crux:link:start', options || {}, 60000);
     },
     stop: function () {
-      return ask('crux:project:stop', {}, 60000);
+      return ask('crux:link:stop', {}, 60000);
     },
     read: function (path) {
-      return askRetrying('crux:project:read-file', { path: path }, 8000, 3);
+      return askRetrying('crux:link:read-file', { path: path }, 8000, 3);
     },
     write: function (path, text) {
-      return ask('crux:project:write', { path: path, text: text });
+      return ask('crux:link:write', { path: path, text: text });
     },
   };
 })();

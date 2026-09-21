@@ -1,11 +1,11 @@
 // The project bench: run the checkout you are working on. The folder is
-// chosen once and remembered in project.json; the scripts come from its
+// chosen once and remembered in link.json; the scripts come from its
 // package.json; the settings can come from a Stack Crux beside this one.
 (function () {
   var $ = function (id) {
     return document.getElementById(id);
   };
-  var state = { doc: null, info: null, run: null, busy: false, timer: null };
+  var state = { doc: null, info: null, run: null, busy: false, timer: null, scan: null };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -29,17 +29,28 @@
   // ── The Crux's own record of how this project runs ────────────────────
   function doc() {
     if (!state.doc)
-      state.doc = { version: 1, app: 'project', folder: '', script: '', args: [], port: null };
+      state.doc = {
+        version: 1,
+        app: 'link',
+        // What kind of external thing this points at. Today only a Node
+        // project; other kinds are meant to arrive here rather than as
+        // another tool.
+        kind: 'node',
+        folder: '',
+        script: '',
+        args: [],
+        port: null,
+      };
     return state.doc;
   }
 
   function saveDoc() {
-    return garden.write('project.json', JSON.stringify(doc(), null, 2) + '\n');
+    return garden.write('link.json', JSON.stringify(doc(), null, 2) + '\n');
   }
 
   function loadDoc() {
     return garden
-      .read('project.json')
+      .read('link.json')
       .then(function (text) {
         try {
           state.doc = JSON.parse(text || '{}');
@@ -53,10 +64,52 @@
   }
 
   // ── What the folder offers ────────────────────────────────────────────
+  // ── A folder, rather than a project to run ────────────────────────────
+  function renderHolds() {
+    var scan = state.scan;
+    $('holds').hidden = doc().kind !== 'folder' || !scan;
+    if (!scan) return;
+    var mb = function (n) {
+      return n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+    };
+    $('holds-about').textContent =
+      scan.files.length +
+      ' file' +
+      (scan.files.length === 1 ? '' : 's') +
+      ', ' +
+      mb(scan.bytes) +
+      (scan.ignored ? ' · ' + scan.ignored + ' left out by the ignore rules' : '') +
+      (scan.truncated ? ' · too many to count, this is a floor' : '') +
+      '. Nothing here is copied into the Crux.';
+    $('holds-list').textContent = scan.files.slice(0, 200).join('\n') || 'Nothing in it yet.';
+  }
+
+  function look() {
+    if (!doc().folder) return Promise.resolve();
+    return garden
+      .scan(doc().folder)
+      .then(function (scan) {
+        state.scan = scan;
+        renderHolds();
+      })
+      .catch(function (error) {
+        say(String((error && error.message) || error), 'crashed');
+      });
+  }
+
   function renderProject() {
     var info = state.info;
+    var folderKind = doc().kind === 'folder';
     $('folder').textContent = info ? info.folder : doc().folder || '';
-    $('setup').hidden = !info;
+    $('kind-row').hidden = !doc().folder;
+    $('kind').value = doc().kind || 'node';
+    // A folder is linked, not run: the script and port mean nothing for it.
+    $('setup').hidden = folderKind || !info;
+    if (folderKind) {
+      $('about').textContent = 'A folder, linked so the tooling can work with it.';
+      renderHolds();
+      return;
+    }
     if (!info) {
       $('about').textContent = doc().folder
         ? 'That folder is not available. Choose it again.'
@@ -87,6 +140,8 @@
     if (doc().port) $('port').value = doc().port;
     if (doc().args && doc().args.length) $('args').value = doc().args.join(' ');
     if (doc().envFile) $('env-file').value = doc().envFile;
+    if (doc().provides) $('provides').value = doc().provides;
+    if (doc().needs && doc().needs.length) $('needs').value = doc().needs.join(' ');
   }
 
   function choose() {
@@ -98,8 +153,11 @@
         if (!info) return say('');
         state.info = info;
         doc().folder = info.folder;
+        // A folder with no package.json is a folder, not a project to run.
+        if (!info.scripts || !info.scripts.length) doc().kind = doc().kind || 'folder';
         renderProject();
         say('');
+        if (doc().kind === 'folder') void look();
         return saveDoc();
       })
       .catch(function (error) {
@@ -146,6 +204,14 @@
     doc().args = args;
     doc().port = isFinite(port) ? port : null;
     doc().envFile = envFile || undefined;
+    // What this checkout stands in for, and what it waits on. The Runner
+    // reads these; nothing here needs them to run the script.
+    doc().provides = $('provides').value.trim() || undefined;
+    doc().needs = $('needs')
+      .value.split(/\s+/)
+      .filter(function (n) {
+        return n.length;
+      });
 
     busy(true);
     say('Starting…');
@@ -249,12 +315,20 @@
   }
 
   $('choose').addEventListener('click', choose);
+  $('kind').addEventListener('change', function () {
+    doc().kind = $('kind').value;
+    renderProject();
+    void saveDoc();
+    if (doc().kind === 'folder') void look();
+  });
   $('start').addEventListener('click', start);
   $('stop').addEventListener('click', stop);
 
   loadDoc()
     .then(function () {
-      return doc().folder ? garden.readProject(doc().folder) : null;
+      if (!doc().folder) return null;
+      if (doc().kind === 'folder') void look();
+      return garden.readProject(doc().folder);
     })
     .then(function (info) {
       state.info = info;

@@ -21,7 +21,7 @@
 
   function busy(is) {
     state.busy = is;
-    ['start-all', 'stop-all', 'refresh'].forEach(function (id) {
+    ['start-all', 'stop-all', 'refresh', 'show-log'].forEach(function (id) {
       if ($(id)) $(id).disabled = is;
     });
     document.querySelectorAll('[data-act]').forEach(function (b) {
@@ -144,12 +144,50 @@
       ? tasks.map(row).join('')
       : '<p class="empty">No tasks in this workspace.</p>';
 
+    var picker = $('log-service');
+    picker.innerHTML =
+      '<option value="">every service</option>' +
+      all
+        .map(function (s) {
+          return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>';
+        })
+        .join('');
+
     document.querySelectorAll('[data-act]').forEach(function (button) {
       button.addEventListener('click', function () {
         var name = button.getAttribute('data-name');
         act(button.getAttribute('data-act'), [name]);
       });
     });
+  }
+
+  // ── One log, in the order it happened ─────────────────────────────────
+  function showLog() {
+    if (state.busy) return;
+    var only = $('log-service').value;
+    busy(true);
+    $('log').textContent = 'Reading…';
+    garden
+      .log(300)
+      .then(function (lines) {
+        var wanted = (lines || []).filter(function (l) {
+          return !only || l.service === only;
+        });
+        $('log').textContent = wanted.length
+          ? wanted
+              .map(function (l) {
+                return l.service + ' | ' + l.text;
+              })
+              .join('\n')
+          : 'Nothing has been said yet.';
+        $('log').scrollTop = $('log').scrollHeight;
+      })
+      .catch(function (error) {
+        $('log').textContent = String((error && error.message) || error);
+      })
+      .then(function () {
+        busy(false);
+      });
   }
 
   // ── Doing things ──────────────────────────────────────────────────────
@@ -215,6 +253,7 @@
   $('stop-all').addEventListener('click', function () {
     act('stop', everything());
   });
+  $('show-log').addEventListener('click', showLog);
   $('refresh').addEventListener('click', function () {
     refresh().then(function () {
       say('Read the Cruxspace again.');
