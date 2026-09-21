@@ -231,7 +231,7 @@ Built 2026-09-20, never driven by hand.
 - Nine panes: the leftmost run off canvas (§ 4).
 - `SyncPane` reloads the whole window after a pull, dropping open workspaces.
 - `keeper-plants` and `data-safety` flake in a batch, pass alone.
-- Every modal except Settings lacks `role="dialog"` (screen readers only).
+- `trash` "delete forever survives restart" fails on its own (pre-existing; the Artifacts pane toggle races).
 - A GDevelop crux exports at ~194 MB (§ 15).
 - `/fn/*` is not routed on the publish subdomain in production.
 
