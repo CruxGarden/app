@@ -565,6 +565,9 @@ export const GARDEN_DARK = {
   // How much colour drains from the background when nothing has happened for a
   // while, so the garden warms up as you work. 0 = always at full colour.
   reactBackgroundActivity: '0.4',
+  // The last stage: how much rim a busy garden adds to the plasma material.
+  // 0.65 on top of plasmaRim 0.65 is the landing page's 1.3. 0 = still.
+  reactRimActivity: '0.65',
 
   // ── Editor (Monaco) ──────────────────────────────────
   editorFontSize: '13px',

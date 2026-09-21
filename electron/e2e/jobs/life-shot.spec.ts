@@ -56,9 +56,26 @@ test('the garden drains when quiet and warms up as you work', async () => {
     await page.screenshot({ path: join(OUT, 'life-quiet.png') });
 
     await pin(1);
-    await page.waitForTimeout(400);
+    // The rim is a WebGL prop, not a variable: it reaches the canvas through a
+    // React render, and the material eases toward the new value.
+    await page.waitForTimeout(1200);
     const busy = await saturation();
     await page.screenshot({ path: join(OUT, 'life-busy.png') });
+
+    // The last stage: the rim should have climbed toward the landing page's.
+    const rim = async () =>
+      page.evaluate(() => {
+        const cs = getComputedStyle(document.documentElement);
+        const base = Number(cs.getPropertyValue('--plasma-rim').trim());
+        const add = Number(cs.getPropertyValue('--react-rim-activity').trim());
+        return { base, add };
+      });
+    const { base, add } = await rim();
+    expect(add).toBeGreaterThan(0);
+    writeFileSync(
+      join(OUT, 'rim.txt'),
+      `plasma-rim=${base} react-rim-activity=${add} lit=${base + add}\n`,
+    );
 
     // Both have to actually move, or the stills are two of the same thing.
     expect(quiet.sat).toBeLessThan(busy.sat);

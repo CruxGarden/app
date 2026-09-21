@@ -5,6 +5,7 @@ import { usePlasmaTier } from './usePlasmaTier';
 import { PLASMA_TIERS } from './tiers';
 import { GROUND_CLASS } from './ground';
 import { usePlasmaOptics } from './usePlasmaOptics';
+import { useLitLevel } from '@/hooks/useActivity';
 
 /**
  * The Plasma theme's material: one WebGL canvas behind the whole app.
@@ -53,6 +54,11 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
   const tier = usePlasmaTier();
   const optics = usePlasmaOptics();
   const inWorkspace = useInWorkspace();
+  // The last stage of the garden warming up (lib/moods/signals.ts): below
+  // LIT_FROM only the colour comes back, and past it the iridescence climbs
+  // toward the landing page's rim. Quantised, so this is a few dozen renders
+  // across a fade, and the renderer takes them through configure().
+  const lit = useLitLevel();
   // The stylesheets, the ground and the overlays key off the same attribute.
   useEffect(() => {
     const html = document.documentElement;
@@ -77,7 +83,7 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
       tint={optics.tint}
       opacity={optics.opacity}
       frost={Math.min(optics.frost, t.frost ?? 1)}
-      rim={optics.rim}
+      rim={optics.rim + lit * optics.rimActivity}
       rimWidth={optics.rimWidth}
       rimColor={optics.rimColor}
       smoothness={optics.smoothness}

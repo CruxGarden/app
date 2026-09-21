@@ -959,6 +959,9 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       // Tigrana's rim: a hair of iridescence, no more (Daniel: "he's pulled
       // back even further with the iridescent border").
       plasmaRim: '0.35',
+      // The rim is pulled back from the teaser's 1.3; a busy garden climbs
+      // back to it (the last stage of --signal-activity). 0.35 + 0.95 = 1.3.
+      reactRimActivity: '0.95',
       plasmaRimWidth: '0.9',
       paneBodyPadding: '16px',
       // Flat translucent chrome — bar, menus, dialogs; only the garden's

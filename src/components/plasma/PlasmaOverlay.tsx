@@ -13,6 +13,7 @@ import { useFlatChrome } from './useFlatChrome';
 import { usePlasmaTier } from './usePlasmaTier';
 import { PLASMA_TIERS } from './tiers';
 import { usePlasmaOptics } from './usePlasmaOptics';
+import { useLitLevel } from '@/hooks/useActivity';
 
 /**
  * The material above the scrim.
@@ -101,6 +102,7 @@ export default function PlasmaOverlay({
     // Plasma off, or no ground yet: a panel pre-marked as forming must not wait.
     if (!on || !ground) first?.current?.removeAttribute(FORMING_ATTR);
   }, [on, ground, first]);
+  const lit = useLitLevel();
   if (!on || !ground) return null;
   const t = PLASMA_TIERS[tier];
   return (
@@ -112,7 +114,9 @@ export default function PlasmaOverlay({
       tint={optics.tint}
       opacity={optics.opacity}
       frost={Math.min(optics.frost, t.frost ?? 1)}
-      rim={optics.rim * (overrides?.rimScale ?? 1)}
+      // A dialog reads as one of the panes, so it warms with them: the same
+      // lit rim (lib/moods/signals.ts), still scaled by whatever this overlay asked for.
+      rim={(optics.rim + lit * optics.rimActivity) * (overrides?.rimScale ?? 1)}
       rimWidth={optics.rimWidth}
       rimColor={optics.rimColor}
       smoothness={optics.smoothness}

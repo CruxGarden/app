@@ -157,6 +157,20 @@ const VARS: Record<keyof SignalValues, string> = {
   activity: '--signal-activity',
 };
 
+/**
+ * Activity is also read outside CSS — the plasma material is WebGL, so its rim
+ * cannot be driven by a variable. Listeners get every quantised step.
+ */
+type ActivityListener = (level: number) => void;
+const activityListeners = new Set<ActivityListener>();
+let lastActivity = 0;
+
+export function onActivity(fn: ActivityListener): () => void {
+  activityListeners.add(fn);
+  fn(lastActivity);
+  return () => void activityListeners.delete(fn);
+}
+
 let stop: (() => void) | null = null;
 
 /**
@@ -173,6 +187,10 @@ export function startSignals(): () => void {
   const write = (changed: Partial<SignalValues>) => {
     for (const k of Object.keys(changed) as (keyof SignalValues)[]) {
       root.style.setProperty(VARS[k], changed[k]!.toFixed(3));
+    }
+    if (changed.activity !== undefined) {
+      lastActivity = changed.activity;
+      for (const fn of activityListeners) fn(lastActivity);
     }
   };
   const loop = () => {
@@ -218,6 +236,8 @@ export function startSignals(): () => void {
     unCrux();
     if (frame) cancelAnimationFrame(frame);
     for (const v of Object.values(VARS)) root.style.removeProperty(v);
+    lastActivity = 0;
+    for (const fn of activityListeners) fn(0);
     stop = null;
   };
   return stop;

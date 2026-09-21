@@ -56,6 +56,8 @@ function readOptics() {
     opacity: num('--plasma-opacity', 0, 1),
     frost: num('--plasma-frost', 0.35, 1),
     rim: num('--plasma-rim', 1),
+    // How much rim a busy garden adds on top (ADR 0014 reactions); 0 = still.
+    rimActivity: num('--react-rim-activity', 0),
     rimWidth: num('--plasma-rim-width', 1),
     smoothness: num('--plasma-smoothness', 1, 3),
     edgeLine: num('--plasma-edge-line', 1, 3),
