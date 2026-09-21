@@ -55,6 +55,27 @@ here*, not *I feel bad when I am not*.
    of the Artifacts pane, leaving a Mood alone because changing it is a faff —
    the avoidance is the finding. Write down what you dodged and why.
 
+**It has to feel alive** (Daniel, 2026-09-21: *"the whole app has to feel alive
+in the sense that everything responds to your input — hover states,
+animations"*). Aliveness is what makes the other five probes possible: a dead
+surface is never addictive. Go looking for the opposite —
+
+- **Anything that does not acknowledge you.** Hover, press, focus, drag. A
+  control that looks the same before and after you touch it reads as broken
+  even when it worked.
+- **Anything that goes quiet while it thinks.** Slow is forgivable; silent is
+  not. Installing, building, publishing, a long turn — each should say it is
+  happening, and say what.
+- **The half-second after a click.** Did something move, or did you wonder
+  whether it registered? That wondering is the whole problem.
+- **Where the app is alive and where it stops.** The Collaboration pane and the
+  Mood Bar are the most animated parts; note where you cross into somewhere
+  that feels static by comparison, because that seam is what people feel.
+
+Aliveness is the **default** to protect, not an accessibility risk to trim: the
+reduced-motion path exists for whoever needs it and should not set the ceiling
+for everyone else.
+
 **Write down the moments, not the verdict.** "I opened it on Sunday to move one
 card and stayed an hour" is worth more than "feels good". So is "I closed the
 pane and could not remember how to get it back".
