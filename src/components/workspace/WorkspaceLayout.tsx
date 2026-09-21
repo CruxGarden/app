@@ -21,6 +21,7 @@ import { useFunctionsProxy } from '@/hooks/useFunctionsProxy';
 import { useMediaProxy } from '@/hooks/useMediaProxy';
 import { useStackProxy } from '@/hooks/useStackProxy';
 import { useProjectProxy } from '@/hooks/useProjectProxy';
+import { useRunnerProxy } from '@/hooks/useRunnerProxy';
 import { useIsDesktopLayout } from '@/hooks/useMediaQuery';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
@@ -233,6 +234,7 @@ export default function WorkspaceLayout() {
   useMediaProxy(crux?.id ?? null);
   useStackProxy(crux?.id ?? null);
   useProjectProxy(crux?.id ?? null);
+  useRunnerProxy(crux?.id ?? null);
   useNotebookProxy(crux?.id ?? null);
   useAppAppearance(crux?.id ?? null, crux?.kind === 'notes' || crux?.meta?.template === 'moqira');
 

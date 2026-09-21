@@ -93,6 +93,14 @@ export function validateToolInput(
     }
     case 'compose_ps':
       return { valid: true };
+    case 'workspace_status':
+      return { valid: true };
+    case 'workspace_start':
+    case 'workspace_stop':
+      return input.names === undefined ||
+        (Array.isArray(input.names) && input.names.every((n) => typeof n === 'string'))
+        ? { valid: true }
+        : { valid: false, error: 'names must be a list of service names' };
     case 'compose_exec': {
       if (typeof input.service !== 'string' || !/^[\w.-]{1,64}$/.test(input.service))
         return { valid: false, error: 'service must be a service name' };

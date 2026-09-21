@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "runner-app",
+  "name": "Runner",
+  "description": "Developer · the workspace board — everything this Cruxspace can run, from the Stack or from source, with its ports and settings in one place",
+  "kind": "webapp",
+  "defaultTitle": "My workspace",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 46,
+  "bundled": true,
+  "app": "runner",
+  "entryFile": "index.html",
+  "layout": "workshop",
+  "document": {
+    "path": "workspace.json",
+    "seed": { "version": 1, "app": "runner", "setups": [] }
+  },
+  "share": true,
+  "toolInfo": {
+    "name": "Docker Compose",
+    "upstream": "https://docs.docker.com/compose/",
+    "relationship": "The Runner starts and stops what the Stack Cruxes and Project Cruxes beside it already know how to run; Compose and the projects' own package managers do the work, unmodified. The board, the discovery, the port assignment and the addresses it generates are Crux Garden's. See UPSTREAM.md.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "greeting": "The board for this workspace. It reads the Cruxspace and lists everything that can run: each service from the Stack Crux beside it, and each service a Project Crux runs from source. Press Start on one and it brings up what that service needs first. Ports and settings are managed here, in one place, so you never go looking for them — and if a Project Crux is here for a service, that service runs from source by default, with a toggle back to the Stack. It owns the configuration; the Cruxes own what is running, so anything started elsewhere shows up here too. Ask me to start the workspace, run a task, or say what is up; I have workspace_status, workspace_start and workspace_stop.",
+  "context": "The Runner Crux (ADR 0053) is the board for a Cruxspace used as a development workspace. It discovers what can run — Compose services from the Stack Crux, plus each service a Project Crux `provides` from source — and conducts starts and stops by calling the same functions a bench or the collaborator calls. It owns the **configuration** (ports, environment, secrets) and not the runtime: a Crux started on its own is legal, and a Runner that crashes leaves services running. A row is a service, not a Crux; a Project Crux present in the Cruxspace means that service runs from source by default, unless no folder has been chosen for it on this machine, in which case it falls back to the Stack and says so. Asking for a service starts its closure, computed from Compose's depends_on plus a Project's declared needs, and never stops something unrelated. Ports keep their declared numbers when free, take the next free one when not, and then stick. Addresses are generated per consumer — the service name inside Compose, 127.0.0.1 from the host, host.docker.internal from a container reaching a host process — and a URL the Runner did not generate is passed through and flagged rather than rewritten by guesswork. The Runner may only act on Cruxes in its own Cruxspace; that is checked by the app, not by this page."
+}

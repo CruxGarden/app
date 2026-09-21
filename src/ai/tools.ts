@@ -505,6 +505,55 @@ export const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
 ];
 
 /**
+ * A Runner Crux: the board for a Cruxspace used as a development workspace.
+ * It conducts the Stack and Project Cruxes beside it (ADR 0053).
+ */
+export const RUNNER_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'workspace_status',
+    description:
+      'Everything this workspace can run and what is running now: each service, whether it comes from the Stack or from source, its state and its port. ' +
+      'USE WHEN: asked what is up, before starting something, or to check a start worked.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'workspace_start',
+    description:
+      'Start services in this workspace, together with everything they need — the closure is computed, so asking for one service brings up its database and migrations first. ' +
+      'Omit names to start everything. Nothing unrelated is stopped. The first run downloads images and can take minutes.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        names: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Service names. Omit for the whole workspace.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'workspace_stop',
+    description:
+      'Stop these services. Only these — what they depend on is left running, because something else may be using it. ASK FIRST when someone may be working.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        names: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Service names. Omit for the whole workspace.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
+/**
  * A Project Crux: the checkout this Crux runs. The folder and the script are
  * in `project.json`; the person chooses the folder, and only they can.
  */
@@ -627,6 +676,7 @@ export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
 import { WORKSPACE_TOOL_DEFINITIONS, runWorkspaceTool } from './workspace-tools';
 import { isStackCrux } from '@/services/containers';
 import { isProjectCrux } from '@/services/project-runner';
+import { isRunnerCrux } from '@/services/runner';
 
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
@@ -640,6 +690,8 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   // The project tools belong to a Project Crux and nowhere else.
   const project =
     can(Capability.ProjectRunner) && isProjectCrux(cruxId) ? PROJECT_TOOL_DEFINITIONS : [];
+  // The workspace tools belong to a Runner Crux and nowhere else.
+  const runner = can(Capability.Containers) && isRunnerCrux(cruxId) ? RUNNER_TOOL_DEFINITIONS : [];
   return [
     ...TOOL_DEFINITIONS,
     ...appToolDefinitions(cruxId),
@@ -647,6 +699,7 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
     ...native,
     ...containers,
     ...project,
+    ...runner,
     GUESTBOOK_TOOL_DEFINITION,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
@@ -914,6 +967,45 @@ export function createToolExecutor(
             result = answer.command
               ? `${answer.message}\nThe command: ${answer.command}`
               : answer.message;
+            break;
+          }
+          case 'workspace_status': {
+            const { workspaceStatus } = await import('@/services/runner');
+            const { discoverWorkspace } = await import('@/services/workspace');
+            const [status, workspace] = await Promise.all([
+              workspaceStatus(cruxId),
+              discoverWorkspace(cruxId),
+            ]);
+            const running = new Map(status.services.map((row) => [row.name, row]));
+            result = workspace.services.length
+              ? workspace.services
+                  .map((service) => {
+                    const live = running.get(service.name);
+                    return `- ${service.name} (${service.from === 'source' ? 'from source' : 'from stack'}): ${
+                      live ? `${live.state}${live.port ? ` on ${live.port}` : ''}` : 'not running'
+                    }${service.fellBack ? ` — ${service.fellBack}` : ''}`;
+                  })
+                  .join('\n')
+              : 'Nothing in this Cruxspace can run yet.';
+            if (workspace.notes.length) result += `\n\n${workspace.notes.join('\n')}`;
+            break;
+          }
+          case 'workspace_start':
+          case 'workspace_stop': {
+            const { startWorkspace, stopWorkspace } = await import('@/services/runner');
+            const { discoverWorkspace } = await import('@/services/workspace');
+            const asked = (input as { names?: string[] }).names;
+            const names =
+              asked && asked.length
+                ? asked
+                : (await discoverWorkspace(cruxId)).services
+                    .filter((service) => !service.task)
+                    .map((service) => service.name);
+            const answer =
+              toolName === 'workspace_start'
+                ? await startWorkspace(cruxId, names)
+                : await stopWorkspace(cruxId, names);
+            result = answer.lines.join('\n') || 'Nothing to do.';
             break;
           }
           case 'project_status':
