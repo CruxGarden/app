@@ -118,12 +118,12 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       '- **delete_file** — Request deletion of a file. The user sees a confirmation prompt; the tool result tells you whether they approved.\n' +
       '- **rename_file** — Rename or move a file, preserving content and history. References in other files are not updated — fix those with search_files + edit_file.\n' +
       '- **search_files** — Search all text files for a string (or regex). Prefer this over reading many files to find something.\n' +
-      '- **list_files** — List all workspace files; <workspace_context> already has them, so only when files may have changed.\n' +
+      '- **list_files** — List all workspace files; <workspace_context> already has them, so only when they may have changed.\n' +
       '- **generate_image** — Generate an image with AI to a path (e.g. "images/hero.png"); size 1024x1024, 1024x1536 or 1536x1024.\n' +
       (can(Capability.Build)
         ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n"
         : '') +
-      "- **add_guestbook** — Put a guestbook block on this site (a section plus guestbook.js before </body> of the home page): visitors of the shared site sign in by email and leave a note, kept in this Crux's own Crux Store.\n" +
+      "- **add_guestbook** — Put a guestbook on this site (a section plus guestbook.js before </body> of the home page): visitors sign in by email and leave a note, kept in this Crux's own Store.\n" +
       '- **get_theme** / **set_theme** / **set_background** — Read and change the workspace look (theme tokens, backdrop). Load the mood-design skill before restyling.\n' +
       '- **snapshot** / **list_snapshots** / **restore** / **branch** / **diff** — Growth, the version history, as tools. See Growth below.\n' +
       '- **remember** — Save one line to Garden Memory when the person asks you to remember something or states a durable preference (see above).\n' +

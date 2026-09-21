@@ -1,5 +1,5 @@
 # Skill: order-desk
-Use when: the crux grew from the Order Desk template, or orders, queues or sign-ups need a backend.
+Use when: the crux grew from the Order Desk template, or orders or sign-ups need a backend.
 
 A small shop's order queue whose backend is the crux itself: the Store holds the orders, `functions/` are the only way they change. Read README.md in the crux first; it names every file.
 
