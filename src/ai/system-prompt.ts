@@ -138,7 +138,10 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
   );
 
   // ── Skills index (B6) ─────────────────────────────────
-  sections.push(renderSkillsIndex());
+  // Dispatched on the crux, the way the tool adapters are: what this crux
+  // already carries needs no advertising, and other templates' skills are
+  // listed by name rather than described.
+  sections.push(renderSkillsIndex(skillsForCrux(crux, artifacts)));
 
   // ── Process ───────────────────────────────────────────
   sections.push(

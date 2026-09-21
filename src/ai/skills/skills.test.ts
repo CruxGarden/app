@@ -86,14 +86,27 @@ describe('skills registry (B6)', () => {
     }
   });
 
-  it('the index names every skill once with its summary and the load_skill rule', () => {
+  it('the index describes the cross-cutting skills and names the rest once each', () => {
     const index = renderSkillsIndex();
     expect(index.startsWith('## Skills')).toBe(true);
     expect(index).toContain('call load_skill(name)');
-    for (const s of Object.values(SKILLS)) {
-      expect(index.match(new RegExp(`\\*\\*${s.name}\\*\\* — `, 'g'))).toHaveLength(1);
-      expect(index).toContain(s.summary);
+    // Any crux might want these, so they are worth a sentence in the prefix.
+    for (const name of ['crux-store', 'mood-design', 'parallel-work']) {
+      expect(index.match(new RegExp(`\\*\\*${name}\\*\\* — `, 'g')), name).toHaveLength(1);
+      expect(index).toContain(SKILLS[name]!.summary);
     }
+    // A template's skill stays reachable, but costs a word rather than a line:
+    // it is loaded automatically for its own cruxes and useless to the others.
+    expect(index).toContain('photo-gallery');
+    expect(index).not.toContain(SKILLS['photo-gallery']!.summary);
+    for (const s of Object.values(SKILLS)) expect(index).toContain(s.name);
+  });
+
+  it('drops what the crux already carries: a Blog crux is not offered the blog skill', () => {
+    const index = renderSkillsIndex([SKILLS['blog']!, SKILLS['astro-basics']!]);
+    expect(index).not.toContain('blog');
+    expect(index).not.toContain('astro-basics');
+    expect(index).toContain('mood-design');
   });
 
   it('TEMPLATE_SKILLS matches what each built-in template declares', async () => {
