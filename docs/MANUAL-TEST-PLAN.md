@@ -20,6 +20,44 @@ thing a test suite can never give you.
 
 ---
 
+## The question underneath all of it
+
+Daniel, 2026-09-21: *"how effortless does it feel to use, once you know it — does
+it make your job easier, more fun? Fun is a word that is important."*
+
+Everything below checks whether something **works**. None of it checks whether
+it is worth using. That second question is the one no suite can answer and the
+one the product actually lives on, so carry it through every section rather
+than saving it for the end.
+
+**How to test a feeling without hand-waving.** Four probes that give real
+answers:
+
+1. **Test the second time, not the first.** Novelty and confusion both wear
+   off. Do a task, then do the same task again tomorrow. Effortless means the
+   second time took no thought — not that the first time was impressive.
+2. **Count the thinking, not the clicks.** Note every moment you had to think
+   about *the app* instead of *the work*: where is that, what is this called,
+   did that save. Those are the friction. Clicks are fine; hesitation is not.
+3. **Watch what you avoid.** If you find yourself not bothering to snapshot, or
+   going to Finder instead of the Artifacts pane, or leaving a Mood alone
+   because changing it is a faff — that avoidance is the finding. Write down
+   what you dodged and why.
+4. **Notice if you want to show someone.** That is what fun looks like from the
+   outside: wanting to demo it unprompted, or carrying on after the test is
+   done because you would rather keep going than stop.
+
+**Write down the moments, not the verdict.** "The third time I opened a Mood I
+knew exactly where the sound was" is worth more than "feels good". So is "I
+closed the pane and could not remember how to get it back".
+
+**Two honest cautions.** You cannot read your own app cold — you know where
+everything is, so "obvious" is not something you can judge alone. And fun is
+easiest to feel on a new empty garden; it is the twentieth crux and the
+crowded one that tells you the truth.
+
+---
+
 ## 0. Before you start
 
 - [ ] `cd app && npm run verify` — green.
