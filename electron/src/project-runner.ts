@@ -19,7 +19,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, execFile, type ChildProcess } from 'child_process';
 
 const { app } = require('electron');
 const { pnpmEntry, pnpmEnv } = require('./pnpm');
@@ -174,7 +174,10 @@ export async function startProject(opts: StartProjectOptions): Promise<ProjectSt
   };
   const proc = spawn(process.execPath, args, {
     cwd: folder,
-    detached: true, // its own process group, so stopping takes the children too
+    // Its own process group, so stopping takes the children too. Windows has
+    // no groups and `detached` there opens a console window, so taskkill /T
+    // does that job instead (see stopProject).
+    detached: process.platform !== 'win32',
     env: pnpmEnv({
       ...(opts.port ? { PORT: String(opts.port) } : {}),
       ...(opts.env ?? {}),
@@ -211,6 +214,13 @@ export async function stopProject(cruxId: string): Promise<void> {
   const pid = found.proc.pid;
   running.delete(cruxId);
   if (!pid) return;
+  // `npm run dev` is a parent: the server is its child, so the whole tree has
+  // to go or the port stays held. Windows has no process groups, so the only
+  // way to reach the children is taskkill /T.
+  if (process.platform === 'win32') {
+    execFile('taskkill', ['/pid', String(pid), '/T', '/F'], () => {});
+    return;
+  }
   try {
     process.kill(-pid, 'SIGTERM');
   } catch {

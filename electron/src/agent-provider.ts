@@ -95,7 +95,8 @@ export function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string |
   const override = env.CRUX_CLAUDE_PATH;
   if (override && fs.existsSync(override)) return override;
   const home = os.homedir();
-  const exe = process.platform === 'win32' ? 'claude.exe' : 'claude';
+  const windows = process.platform === 'win32';
+  const exe = windows ? 'claude.exe' : 'claude';
   const candidates = [
     path.join(home, '.local', 'bin', exe),
     path.join(home, '.claude', 'local', exe),
@@ -108,6 +109,24 @@ export function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string |
   for (const dir of agentPath().split(path.delimiter)) {
     const c = path.join(dir, exe);
     if (dir && fs.existsSync(c)) return c;
+  }
+  // On Windows an npm install leaves `claude.cmd`, a batch shim the SDK cannot
+  // spawn as an executable. What it wants is the package's own entry point, so
+  // follow the shim to the module and hand over `cli.js`.
+  if (windows) {
+    for (const dir of agentPath().split(path.delimiter)) {
+      if (!dir) continue;
+      const shim = path.join(dir, 'claude.cmd');
+      if (!fs.existsSync(shim)) continue;
+      const entry = path.join(
+        dir,
+        'node_modules',
+        '@anthropic-ai',
+        'claude-code',
+        'cli.js',
+      );
+      if (fs.existsSync(entry)) return entry;
+    }
   }
   return null;
 }
@@ -140,11 +159,21 @@ export class AgentProvider {
       };
       return this.statusCache;
     }
+    // A `.js` entry point is a module, not an executable — run it through
+    // this app's own Node, the way pnpm is run (see pnpm.ts).
+    const asModule = bin.toLowerCase().endsWith('.js');
     const version = await new Promise<string | null>((resolve) => {
       const child = execFile(
-        bin,
-        ['--version'],
-        { env: { ...process.env, PATH: agentPath() }, timeout: 8000 },
+        asModule ? process.execPath : bin,
+        asModule ? [bin, '--version'] : ['--version'],
+        {
+          env: {
+            ...process.env,
+            PATH: agentPath(),
+            ...(asModule ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+          },
+          timeout: 8000,
+        },
         (err, stdout) => resolve(err ? null : String(stdout).trim() || null),
       );
       child.on('error', () => resolve(null));
