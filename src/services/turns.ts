@@ -555,6 +555,9 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       onText: (delta) => {
         if (stillHere()) useCruxStore.getState().appendStreamContent(delta);
       },
+      onToolCalls: (calls) => {
+        if (stillHere()) useCruxStore.getState().setStreamToolCalls(calls);
+      },
       onToolDone: () => void playCue('toolDone', useCruxStore.getState().crux?.id),
       onMutation: () => {
         // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)

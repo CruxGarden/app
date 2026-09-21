@@ -423,6 +423,12 @@ export interface TurnRunnerDeps {
   /** A tool changed files (the wiring refreshes the Artifacts tree). */
   onMutation?: () => void;
   onToolDone?: () => void;
+  /**
+   * The turn's tool calls as they happen, so the Collaboration pane can show
+   * the work folded under the reply while it is still being done, the way the
+   * console already does. The array is a copy: the runner keeps mutating its own.
+   */
+  onToolCalls?: (calls: ToolCall[]) => void;
   onUsage?: (inputTokens: number, outputTokens: number, cachedInputTokens: number) => void;
   /**
    * Take a Growth snapshot labelled for the step; resolves to the snapshot
@@ -517,6 +523,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
 
         case 'tool_start': {
           toolCalls.push({ name: event.name, id: event.id, input: event.input, result: undefined });
+          deps.onToolCalls?.(toolCalls.map((t) => ({ ...t })));
           if (event.name === SNAPSHOT_TOOL) {
             snapshotIdBeforeTool = deps.latestSnapshotId?.() ?? null;
           }
@@ -534,6 +541,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
             tc.result = event.result;
             if (event.error !== undefined) tc.error = event.error;
           }
+          deps.onToolCalls?.(toolCalls.map((t) => ({ ...t })));
           deps.onToolDone?.();
           if (didMutate(event.name, event.result)) {
             mutatedSinceSnapshot = true;

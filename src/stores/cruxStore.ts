@@ -3,7 +3,14 @@ import { assertCopyWritable } from '@/services/working-copies';
 import { create, useStore, type StoreApi } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, workspaceSelection, trackWorkspacePromise } from './workspaceSelection';
-import type { Crux, ChatMessage, Artifact, CruxSummary, Dimension } from '@/api/types';
+import type {
+  Crux,
+  ChatMessage,
+  Artifact,
+  CruxSummary,
+  Dimension,
+  ToolCall,
+} from '@/api/types';
 import type { UpdateCruxInput } from '@/services/types';
 import { getServices } from '@/services';
 import { guessMimeType } from '@/lib/mime';
@@ -60,6 +67,8 @@ export interface CruxState {
   /** Turn orchestration is still finishing checks, capture or queue handoff. */
   turnSettling: boolean;
   streamingContent: string;
+  /** The turn's tool calls as they happen, folded under the streaming reply. */
+  streamingToolCalls: ToolCall[];
 
   // Background Turn (B3): the latest job for this crux and messages queued behind it.
   // Mirrored into crux.meta.turnJob / turnQueue by persistTurnState.
@@ -104,6 +113,7 @@ export interface CruxState {
   persistTurnState: () => Promise<void>;
   appendStreamContent: (content: string) => void;
   clearStreamContent: () => void;
+  setStreamToolCalls: (calls: ToolCall[]) => void;
   /** Re-read the workspace's artifacts from the store (snapshot-view aware). */
   refreshArtifacts: () => Promise<void>;
   setArtifacts: (artifacts: Artifact[]) => void;
@@ -237,6 +247,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     isStreaming: false,
     turnSettling: false,
     streamingContent: '',
+    streamingToolCalls: [],
     turnJob: null,
     turnQueue: [],
     growths: [],
@@ -501,7 +512,11 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     clearStreamContent: () => {
-      set({ streamingContent: '' });
+      set({ streamingContent: '', streamingToolCalls: [] });
+    },
+
+    setStreamToolCalls: (calls: ToolCall[]) => {
+      set({ streamingToolCalls: calls });
     },
 
     refreshArtifacts: async () => {

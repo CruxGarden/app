@@ -84,6 +84,32 @@ describe('parsePlan', () => {
 });
 
 describe('runTurnJob', () => {
+  it('reports the tool calls as they happen, so the pane can fold them under the reply', async () => {
+    const h = harness();
+    const seen: { count: number; results: number }[] = [];
+    await runTurnJob(newTurnJob('c', 'two files'), {
+      ...h.deps,
+      onToolCalls: (calls) =>
+        seen.push({
+          count: calls.length,
+          results: calls.filter((c) => c.result !== undefined).length,
+        }),
+      run: () =>
+        events([
+          ...writeRound(0, 'one.txt'),
+          ...writeRound(1, 'two.txt'),
+          { type: 'done', textContent: 'Done.', hadMutation: true },
+        ]),
+    });
+    // Start and result for each call, growing: the pane sees the work arrive.
+    expect(seen).toEqual([
+      { count: 1, results: 0 },
+      { count: 1, results: 1 },
+      { count: 2, results: 1 },
+      { count: 2, results: 2 },
+    ]);
+  });
+
   it('parses the plan, snapshots per mutating round, advances steps, finishes done', async () => {
     const h = harness();
     const job = newTurnJob('crux-1', 'Please plan three steps');

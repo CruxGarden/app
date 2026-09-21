@@ -6,6 +6,8 @@ import MessageBubble from './MessageBubble';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import MarkdownRenderer from './MarkdownRenderer';
 import TurnStatus from './TurnStatus';
+import ToolCallRows from './ToolCallRows';
+import { useCruxStore } from '@/stores/cruxStore';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -23,6 +25,10 @@ export default function MessageList({
   const bottomRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
   const author = useAppStore((s) => s.author);
+  // The work as it happens, folded under the reply being written — the same
+  // one expandable line the finished reply keeps, and the same line the
+  // console has always shown while the Keeper works.
+  const liveToolCalls = useCruxStore((s) => s.streamingToolCalls);
 
   const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
   const avatarUrl = useAvatarUrl(author);
@@ -35,7 +41,7 @@ export default function MessageList({
     } else {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, streamingContent]);
+  }, [messages, streamingContent, liveToolCalls]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
@@ -63,14 +69,23 @@ export default function MessageList({
         </div>
       )}
 
-      {isStreaming && streamingContent && (
+      {isStreaming && (streamingContent || liveToolCalls.length > 0) && (
         <div className="flex gap-1.5 items-start" data-role="assistant" data-streaming="true">
           <div className="pt-0.5">
             <ConsoleAvatar />
           </div>
           <div className="min-w-0 flex-1 pl-2 border-l-2 border-chat-ai-bubble-border font-reading text-[0.95rem] leading-[1.6] text-chat-ai-bubble-text break-words motion-enter-bubble">
-            <MarkdownRenderer content={streamingContent} />
-            <span className="inline-block w-1.5 h-4 bg-accent/60 motion-attention ml-0.5 align-text-bottom" />
+            {streamingContent && (
+              <>
+                <MarkdownRenderer content={streamingContent} />
+                <span className="inline-block w-1.5 h-4 bg-accent/60 motion-attention ml-0.5 align-text-bottom" />
+              </>
+            )}
+            {liveToolCalls.length > 0 && (
+              <div className={streamingContent ? 'mt-2' : undefined}>
+                <ToolCallRows calls={liveToolCalls} />
+              </div>
+            )}
           </div>
         </div>
       )}
