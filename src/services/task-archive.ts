@@ -8,7 +8,13 @@ import { getLocalIdentity } from './sqlite/identity';
 import { getServices } from './index';
 import { createProjectFolder, projectAllArtifacts } from './project-folder';
 import { syncAgentsMd } from './agents-md';
-import { announceTasksChanged } from './working-copies';
+import { announceTasksChanged, serializeCopy } from './working-copies';
+import {
+  captureReplacedTaskGraph,
+  removeReplacedTaskGraph,
+  restoreReplacedTaskGraph,
+  type SavedTaskGraph,
+} from './task-import-replacement';
 
 type Row = Record<string, unknown> & { id: string };
 interface TaskArchive {
@@ -246,6 +252,15 @@ export async function importTaskCrux(zip: JSZip, options: ImportOptions): Promis
     throw new Error('Task archive integrity check failed.');
   const archive = JSON.parse(payload) as TaskArchive;
   validateArchive(archive);
+  return serializeCopy(`task-import:${archive.cruxId}`, () =>
+    importValidatedTaskCrux(zip, archive, options),
+  );
+}
+async function importValidatedTaskCrux(
+  zip: JSZip,
+  archive: TaskArchive,
+  options: ImportOptions,
+): Promise<ImportResult> {
   const db = getSqliteClient();
   const clone = options.mode === 'clone';
   const ids = new Map<string, string>();
@@ -284,10 +299,8 @@ export async function importTaskCrux(zip: JSZip, options: ImportOptions): Promis
     blobs.set(fp, bytes);
   }
   const existing = await db.get('SELECT id FROM cruxes WHERE id = ?', [ids.get(archive.cruxId)]);
-  if (existing) {
-    // Replacing an open graph is unsafe; clone remains available and lossless.
+  if (existing && options.mode !== 'replace')
     throw new Error('This Crux already exists. Import as a new Crux to keep both sets of tasks.');
-  }
   for (const [fp, bytes] of blobs) await db.blobWrite(fp, bytes);
   const identity = await getLocalIdentity();
   const inserted: { table: string; id: string }[] = [];
@@ -298,7 +311,21 @@ export async function importTaskCrux(zip: JSZip, options: ImportOptions): Promis
     ['dimensions', archive.dimensions],
     ['store', archive.store],
   ] as const;
+  let replaced: SavedTaskGraph | undefined;
+  if (existing) replaced = await captureReplacedTaskGraph(archive.cruxId);
+  // An archive may reuse its own graph identities, never another Crux's rows.
+  for (const [table, rows] of tables) {
+    const previous = new Set(replaced?.get(table)?.map((row) => row.id));
+    const current = new Set(
+      (await db.all<{ id: string }>(`SELECT id FROM ${table}`)).map((row) => row.id),
+    );
+    if (rows.some((row) => current.has(ids.get(row.id)!) && !previous.has(ids.get(row.id)!)))
+      throw new Error(
+        'This archive has identities belonging to other local work. Import as a new Crux instead.',
+      );
+  }
   try {
+    if (replaced) await removeReplacedTaskGraph(replaced);
     for (const [table, rows] of tables) {
       const columns = new Set(
         (await db.all<{ name: string }>(`PRAGMA table_info(${table})`)).map((c) => c.name),
@@ -371,6 +398,18 @@ export async function importTaskCrux(zip: JSZip, options: ImportOptions): Promis
   } catch (error) {
     for (const row of inserted.reverse())
       await db.run(`DELETE FROM ${row.table} WHERE id = ?`, [row.id]);
+    if (replaced) {
+      try {
+        await restoreReplacedTaskGraph(replaced);
+        announceTasksChanged();
+      } catch (rollbackError) {
+        throw new AggregateError(
+          [error, rollbackError],
+          'Task import failed and the previous state could not be fully restored. Original Project Folders are retained.',
+          { cause: rollbackError },
+        );
+      }
+    }
     throw error;
   }
 }
