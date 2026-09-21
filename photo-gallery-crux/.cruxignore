@@ -1,0 +1,4 @@
+# Files the app never versions (build machinery)
+node_modules/
+dist/
+.astro/

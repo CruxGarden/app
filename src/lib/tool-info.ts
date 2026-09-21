@@ -30,6 +30,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A digital garden on the Veka theme (MIT) as an Astro Site Crux: the theme’s components and pages are upstream’s; the settings file, offline fonts, the link index, backlinks and the graph are Crux Garden’s.',
   },
+  'photo-gallery': {
+    name: 'astro-photo-folio',
+    upstream: 'https://github.com/XD-QIN/astro-photo-folio',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A photography gallery on the astro-photo-folio theme (MIT) as an Astro Site Crux: the galleries, lightbox, calendar and their strict-CSP decisions are upstream’s; the settings file, the single journal in place of two blogs, and the relative-until-shared site URL are Crux Garden’s.',
+  },
   onebigsky: {
     ...native('One Big Sky', 'downcastsystems/onebigsky'),
     relationship: 'Built with One Big Sky. Garden packages the game and editable source as a Crux.',

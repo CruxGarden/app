@@ -264,6 +264,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition | Tool
     'astro-homepage': () => import('./astro-homepage'),
     'astro-blog': () => import('./astro-blog'),
     'digital-garden': () => import('./digital-garden'),
+    'photo-gallery': () => import('./photo-gallery'),
     'astro-recipes': () => import('./astro-recipes'),
     'astro-storefront': () => import('./astro-storefront'),
     'astro-feed': () => import('./astro-feed'),

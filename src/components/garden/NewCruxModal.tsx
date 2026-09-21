@@ -134,6 +134,26 @@ function BlogThumb() {
   );
 }
 
+function GalleryThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#0f0f0e', ...T.pad(6) }}>
+      <div style={T.col(3)}>
+        <div style={T.bar('34%', 3)} />
+        <div style={{ ...T.flex(2) }}>
+          <div style={{ ...T.box('46%', 14, '#3a4a52') }} />
+          <div style={{ ...T.box('28%', 14, '#4a4238') }} />
+          <div style={{ ...T.box('26%', 14, '#2f3f36') }} />
+        </div>
+        <div style={{ ...T.flex(2) }}>
+          <div style={{ ...T.box('30%', 12, '#443a44') }} />
+          <div style={{ ...T.box('42%', 12, '#38434f') }} />
+          <div style={{ ...T.box('28%', 12, '#4b4030') }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FeedThumb() {
   return (
     <div style={{ ...T.wrap, background: '#161616', ...T.pad(6) }}>
@@ -428,6 +448,18 @@ const OWN_TEMPLATES: Template[] = [
   },
   {
     order: 56,
+    id: 'photo-gallery',
+    label: 'Photo Gallery',
+    description:
+      'Photographs on Astro — digital and film galleries, a photo-a-month calendar, a lightbox and a journal',
+    icon: <LayoutIcon />,
+    thumb: <GalleryThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Photographs',
+    desktopOnly: true,
+  },
+  {
+    order: 57,
     id: 'astro-feed',
     label: 'Astro Feed',
     description: 'A photo feed — profile, square grid, a page per picture',
@@ -438,7 +470,7 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    order: 57,
+    order: 58,
     id: 'astro-media',
     label: 'Astro Media',
     description: 'Share music and video — players, pages, ffmpeg conversion on import',
@@ -449,7 +481,7 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    order: 58,
+    order: 59,
     id: FIVE_WS_TEMPLATE_ID,
     label: FIVE_WS_NAME,
     description: FIVE_WS_TAGLINE,
