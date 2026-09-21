@@ -378,7 +378,9 @@ export default function WorkspaceSwitcher() {
             >
               {closing ? (
                 <>
-                  <h2>Close {entries.find((e) => e.id === closing)?.title}?</h2>
+                  <h2 style={{ fontFamily: 'var(--dialog-title-font)' }}>
+                    Close {entries.find((e) => e.id === closing)?.title}?
+                  </h2>
                   <p className="text-xs my-3">
                     Running work will stop. Queued prompts and Growth remain available when you
                     reopen. Save or discard unsaved Artifact edits before closing.

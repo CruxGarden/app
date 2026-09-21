@@ -52,8 +52,7 @@ export default function UserMenu() {
         aria-haspopup="menu"
         className={cn(
           'w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center overflow-hidden',
-          !avatarUrl &&
-            'bg-profile-button text-profile-button-icon text-2xs font-display font-bold',
+          !avatarUrl && 'bg-profile-button text-profile-button-icon text-2xs font-body font-bold',
           'ring-1 ring-profile-button-border hover:ring-profile-button-hover transition-shadow cursor-pointer',
         )}
       >

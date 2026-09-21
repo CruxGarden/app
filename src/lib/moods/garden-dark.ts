@@ -473,7 +473,7 @@ export const GARDEN_DARK = {
   paneBodyPadding: '8px',
   workspacePadding: '4px',
   // Pane header anatomy
-  paneHeaderLabelFont: 'var(--font-mono)',
+  paneHeaderLabelFont: 'var(--font-display)',
   paneHeaderLabelSize: '11px',
   paneHeaderLabelWeight: '400',
   paneHeaderLabelCase: 'uppercase',
@@ -562,6 +562,8 @@ export const GARDEN_DARK = {
   reactAccentAudio: '0',
   reactBackgroundTyping: '0',
   reactPaneAgent: '0',
+  flowEnabled: 'off',
+  flowSensitivity: '0.5',
   // How much colour drains from the background when nothing has happened for a
   // while, so the garden warms up as you work. 0 = always at full colour.
   reactBackgroundActivity: '0.4',
@@ -602,7 +604,7 @@ export const GARDEN_DARK = {
   growthCardAspect: '16 / 10',
 
   // ── Typography ───────────────────────────────────────
-  fontDisplay: "'JetBrains Mono', monospace",
+  fontDisplay: "'Cormorant Garamond', Georgia, serif",
   fontBody: "'Outfit', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
   // The Collaboration's reading face: what the collaborator says is prose,

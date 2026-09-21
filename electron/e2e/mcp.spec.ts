@@ -59,7 +59,7 @@ async function enableAgentHost(page: Page, gardenRoot: string): Promise<McpConfi
   await expect(agents.getByTestId('agents-trust')).toContainText(/wait for your approval/);
   await expect(agents).toContainText('no servers running');
 
-  const toggle = agents.getByRole('switch').first();
+  const toggle = agents.getByTestId('agents-crux-list').getByRole('switch').first();
   await expect(toggle).toHaveAttribute('aria-checked', 'false'); // off by default
   await toggle.click();
   await expect(agents.getByTestId('agents-connect')).toBeVisible({ timeout: 30_000 });

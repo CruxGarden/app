@@ -56,6 +56,12 @@ const api: ElectronBridge = {
   },
 
   desktop: {
+    onCreativeActivity: (callback) => {
+      const handler = (_event: unknown, kind: 'writing' | 'interaction' | 'arranging') =>
+        callback(kind);
+      ipcRenderer.on('desktop:creative-activity', handler);
+      return () => ipcRenderer.removeListener('desktop:creative-activity', handler);
+    },
     onWorkspaceCommand: (callback) => {
       const handler = (_event: unknown, command: import('./bridge').WorkspaceCommand) =>
         callback(command);
@@ -404,7 +410,11 @@ const api: ElectronBridge = {
     onRequest: (cb: (request: AgentHostRequest) => void) => {
       const handler = (_e: unknown, request: unknown) => cb(request as AgentHostRequest);
       ipcRenderer.on('agent-host:request', handler);
-      return () => ipcRenderer.removeListener('agent-host:request', handler);
+      ipcRenderer.send('agent-host:ready', true);
+      return () => {
+        ipcRenderer.send('agent-host:ready', false);
+        ipcRenderer.removeListener('agent-host:request', handler);
+      };
     },
     respond: (response: AgentHostResponse) => ipcRenderer.send('agent-host:response', response),
   },

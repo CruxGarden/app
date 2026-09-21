@@ -31,6 +31,10 @@ export interface SqliteBridge {
 
 export type WorkspaceCommand = 'search' | 'next' | 'previous' | 'commit' | 'cancel';
 export interface DesktopBridge {
+  /** Creative input, including cross-origin Workshop apps. No content or coordinates. */
+  onCreativeActivity?(
+    callback: (kind: 'writing' | 'interaction' | 'arranging') => void,
+  ): () => void;
   onWorkspaceCommand?(callback: (command: WorkspaceCommand) => void): () => void;
   onCloseRequest?(callback: () => void): () => void;
   completeClose?(approved: boolean): void;

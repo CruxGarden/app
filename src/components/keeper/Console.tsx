@@ -73,7 +73,7 @@ function UserAvatar() {
       {avatarUrl ? (
         <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
       ) : (
-        <span className="text-2xs font-display font-bold text-accent">{initial}</span>
+        <span className="text-2xs font-body font-bold text-accent">{initial}</span>
       )}
     </div>
   );
@@ -278,9 +278,7 @@ export default function Console() {
               canSend={!!input.trim()}
               onSend={send}
               onStop={stop}
-              hint={
-                streaming ? 'The Keeper is working' : 'Enter to send · Shift+Enter for new line'
-              }
+              hint={streaming ? 'The Keeper is working' : undefined}
               testId="keeper-composer"
               textarea={{
                 value: input,

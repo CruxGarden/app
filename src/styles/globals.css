@@ -107,10 +107,8 @@
 /* ── Theme: Custom Properties ──────────────────────────── */
 
 @theme inline {
-  /* Titles use the native system stack (deliberately plain). Body stays
-     Outfit; code/editor surfaces keep JetBrains Mono via --font-mono.
-     The wordmark gets its own face so the brand can feel like a garden
-     without the UI feeling like a magazine. */
+  /* Fallback faces; Mood tokens replace them at runtime. The font utilities
+     below reference these variables so @theme inline cannot freeze a face. */
   --font-display: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-body: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -495,7 +493,7 @@
   --overlay-badge-text: #ffffff;
   --overlay-badge: rgba(0, 0, 0, 0.55);
   --editor-background: var(--bg);
-  --pane-header-label-font: var(--font-mono);
+  --pane-header-label-font: var(--font-display);
   --pane-header-label-size: 11px;
   --pane-header-label-weight: 400;
   --pane-header-label-case: uppercase;
@@ -742,6 +740,17 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Font utilities must follow runtime Mood values, not @theme inline defaults. */
+.font-display {
+  font-family: var(--font-display);
+}
+.font-body {
+  font-family: var(--font-body);
+}
+.font-wordmark {
+  font-family: var(--font-wordmark);
 }
 
 /* Display and code faces carry their own tracking */

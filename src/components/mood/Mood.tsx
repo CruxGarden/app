@@ -14,6 +14,7 @@ import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import SoundTab from './SoundTab';
 import MotionIntensityControl from './MotionIntensityControl';
+import FlowControl from './FlowControl';
 import SurfaceThemeControl from './SurfaceThemeControl';
 import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import MoodBrowser from './MoodBrowser';
@@ -310,7 +311,7 @@ function BackgroundTabContent({
   }[] = [
     { value: BgType.Bloom, label: 'Bloom', description: 'Animated gradient blobs' },
     { value: BgType.Drift, label: 'Drift', description: 'Floating particles', darkOnly: true },
-    { value: BgType.Flow, label: 'Flow', description: 'Organic wave patterns', darkOnly: true },
+    { value: BgType.Flow, label: 'Waves', description: 'Organic wave patterns', darkOnly: true },
     { value: BgType.Blank, label: 'Blank', description: 'Solid background color' },
   ];
 
@@ -617,7 +618,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer shrink-0',
+              'px-2.5 py-1 text-xs font-body font-medium rounded-[var(--radius-sm)] cursor-pointer shrink-0',
               tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
             )}
           >
@@ -754,7 +755,12 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             onBgGenerate={(p) => void handleBgGenerate(p)}
           />
         )}
-        {tab === 'moods' && <MoodBrowser />}
+        {tab === 'moods' && (
+          <>
+            <FlowControl />
+            <MoodBrowser />
+          </>
+        )}
         {tab === 'sound' && <SoundTab />}
         {tab === 'persona' && <PersonaTab />}
       </div>

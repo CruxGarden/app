@@ -39,6 +39,7 @@ import type {
  * default ignores, so the file is never ingested, versioned, or published.
  */
 
+export const GARDEN_HOST_ID = '@garden';
 export const MCP_PATH = '/mcp';
 export const MCP_CONFIG_DIR = '.crux';
 export const MCP_CONFIG_FILE = 'mcp.json';
@@ -133,6 +134,8 @@ interface CruxRow {
 }
 
 export interface AgentHostDeps {
+  /** Profile directory for the separately granted whole-garden host. */
+  gardenHostFolder?: string;
   /** Look a crux up by id: slug, title and Project Folder (null when unknown or folderless). */
   lookupCrux(cruxId: string): CruxRow | null;
   /** Validate a folder sits under a known garden root; returns the resolved path. */
@@ -186,6 +189,11 @@ export class AgentHost {
     return [...this.hosts.values()].map((h) => this.describe(h));
   }
 
+  async resumeGarden(): Promise<void> {
+    if (this.deps.gardenHostFolder && readConfig(this.deps.gardenHostFolder))
+      await this.resume(GARDEN_HOST_ID);
+  }
+
   /** Switch a crux's server on with a FRESH token (Settings toggle / Regenerate). */
   async enable(cruxId: string): Promise<AgentHostServer> {
     return this.start(cruxId, { freshToken: true });
@@ -232,9 +240,18 @@ export class AgentHost {
   }
 
   private async start(cruxId: string, opts: { freshToken: boolean }): Promise<AgentHostServer> {
-    const row = this.deps.lookupCrux(cruxId);
+    const garden = cruxId === GARDEN_HOST_ID;
+    const row =
+      garden && this.deps.gardenHostFolder
+        ? {
+            id: GARDEN_HOST_ID,
+            slug: 'garden',
+            title: 'Whole garden',
+            folder: this.deps.gardenHostFolder,
+          }
+        : this.deps.lookupCrux(cruxId);
     if (!row) throw new Error('This crux has no Project Folder to host');
-    const folder = this.deps.resolveKnownFolder(row.folder);
+    const folder = garden ? row.folder : this.deps.resolveKnownFolder(row.folder);
 
     const existing = this.hosts.get(cruxId);
     const previous = existing ? null : readConfig(folder);
@@ -283,7 +300,10 @@ export class AgentHost {
       } catch {}
     }
     host.sessions.clear();
-    await new Promise<void>((resolve) => host.http.close(() => resolve()));
+    await new Promise<void>((resolve) => {
+      host.http.close(() => resolve());
+      host.http.closeAllConnections();
+    });
   }
 
   private describe(host: RunningHost): AgentHostServer {
@@ -367,9 +387,11 @@ export class AgentHost {
       {
         capabilities: { tools: { listChanged: true }, resources: {} },
         instructions:
-          `You are working in the Crux Garden crux "${host.name}". Its Project Folder is ${host.folder}. ` +
-          'Read crux://agents-md first. Files you write appear in the app and in its Growth history; ' +
-          'deletes and publishing wait for the person to approve them in the app.',
+          host.cruxId === GARDEN_HOST_ID
+            ? 'You have a whole-garden connection to Crux Garden. Use list_garden_tools to discover operating actions. Use list_crux_tools and call_crux_tool for creative work in a named Crux. Actions remain visible; existing human approvals apply. Never approve your own requests.'
+            : `You are working in the Crux Garden crux "${host.name}". Its Project Folder is ${host.folder}. ` +
+              'Read crux://agents-md first. Files you write appear in the app and in its Growth history; ' +
+              'deletes and publishing wait for the person to approve them in the app.',
       },
     );
     const session: Session = { server, transport };
@@ -405,7 +427,7 @@ export class AgentHost {
     });
 
     server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-      resources: CRUX_RESOURCES,
+      resources: host.cruxId === GARDEN_HOST_ID ? [] : CRUX_RESOURCES,
     }));
 
     server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
@@ -447,7 +469,7 @@ export class AgentHost {
       if (!this.deps.sendToRenderer(full)) {
         this.pending.delete(id);
         if (pending.timer) clearTimeout(pending.timer);
-        reject(new Error('Crux Garden has no open window — open the app and try again'));
+        reject(new Error('Crux Garden is not ready — enter the garden and try again'));
       }
     });
   }

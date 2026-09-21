@@ -78,7 +78,7 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
           <div
             className={cn(
               avatarSize,
-              'rounded-[var(--radius)] flex items-center justify-center bg-accent-muted text-accent font-display font-bold',
+              'rounded-[var(--radius)] flex items-center justify-center bg-accent-muted text-accent font-body font-bold',
               compact ? 'text-sm' : 'text-lg',
             )}
           >

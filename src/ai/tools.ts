@@ -1,3 +1,4 @@
+import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from './garden-access';
 import { addGuestbook, describeAddGuestbook } from '@/services/guestbook';
 import {
   appToolDefinitions,
@@ -679,7 +680,7 @@ import { isLinkCrux } from '@/services/project-runner';
 import { isRunnerCrux } from '@/services/runner';
 
 /** The tool set to offer a workspace conversation on this platform. */
-export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
+export function defaultToolDefinitions(cruxId?: string, gardenAccess = true): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
   const native = can(Capability.NativeTools)
     ? [...NATIVE_TOOL_DEFINITIONS, ...CAPTURE_TOOL_DEFINITIONS]
@@ -693,6 +694,7 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   const runner = can(Capability.Containers) && isRunnerCrux(cruxId) ? RUNNER_TOOL_DEFINITIONS : [];
   return [
     ...TOOL_DEFINITIONS,
+    ...(gardenAccess ? GARDEN_ACCESS_TOOLS : []),
     ...appToolDefinitions(cruxId),
     ...site,
     ...native,
@@ -734,6 +736,8 @@ export function subagentToolDefinitions(): ToolDefinition[] {
 
 /** Options for a tool executor beyond the crux it is bound to. */
 export interface ToolExecutorOptions {
+  /** A narrow outside connection and scoped subagents cannot operate the garden. */
+  gardenAccess?: boolean;
   /** Stop queued hosted calls before they enter the executor. */
   signal?: AbortSignal;
   /**
@@ -805,6 +809,14 @@ export function createToolExecutor(
   ): Promise<string | ToolResultContent> {
     if (options.signal?.aborted)
       return formatToolError(toolName, 'The originating agent turn has stopped.');
+    if (isGardenAccessTool(toolName)) {
+      if (options.gardenAccess === false || options.scope || requestedBy.startsWith('subagent:'))
+        return formatToolError(
+          toolName,
+          'This connection is limited to its Crux. Use a garden connection for garden-wide actions.',
+        );
+      return runGardenAccess(toolName, input, requestedBy, cruxId);
+    }
     // Validate inputs before execution
     const appTool = appToolFor(cruxId, toolName);
     const validation = isAppToolName(toolName)

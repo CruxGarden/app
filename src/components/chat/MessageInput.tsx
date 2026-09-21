@@ -269,11 +269,11 @@ export default function MessageInput({
           </button>
         )}
       </div>
-      <p className="text-xxs text-chat-text-muted/70 mt-1.5 px-2">
-        {isStreaming
-          ? 'Enter to queue after this turn · Steer stops it and sends now'
-          : 'Enter to send · Shift+Enter for new line · ↑ for history'}
-      </p>
+      {isStreaming && (
+        <p className="text-xxs text-chat-text-muted/70 mt-1.5 px-2">
+          Enter to queue after this turn · Steer stops it and sends now
+        </p>
+      )}
     </div>
   );
 }

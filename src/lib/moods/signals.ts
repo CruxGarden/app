@@ -18,17 +18,20 @@
  */
 import { useAudioStore } from '@/stores/audioStore';
 import { useWorkspaceRegistry } from '@/stores/workspaceRegistry';
+import { onGardenEvent } from '@/services/garden-events';
+import { Capability, can } from '@/lib/platform';
+import {
+  FlowState,
+  onFlowActivity,
+  readFlowSettings,
+  type FlowActivity,
+  type FlowSettings,
+} from './flow';
 
 export const TYPING_DECAY_MS = 1500;
-/** With nothing happening, activity halves every this many ms. */
-export const ACTIVITY_HALF_LIFE_MS = 45_000;
-/** What one event (a keystroke, a file arriving, a turn beginning) adds. */
-export const ACTIVITY_PER_EVENT = 0.22;
 /** Per-frame approach rate toward a target (1 = jump, 0 = never) at 60fps. */
 export const SMOOTHING = 0.25;
 const EPSILON = 0.004;
-/** Below this, activity is over: one quantisation step. */
-const ACTIVITY_FLOOR = 1 / 64;
 
 export function clamp01(n: number): number {
   return n <= 0 || Number.isNaN(n) ? 0 : n >= 1 ? 1 : n;
@@ -46,24 +49,6 @@ export function typingLevel(sinceMs: number, decayMs = TYPING_DECAY_MS): number 
 export function audioLevel(meter: number, playing: boolean): number {
   if (!playing || !(meter > 0)) return 0;
   return clamp01(Math.sqrt(meter) * 1.6);
-}
-
-/**
- * Activity `elapsedMs` after it last moved: an exponential fall with a half
- * life, floored at 0 once it is too faint to be worth a repaint.
- */
-export function decayActivity(
-  level: number,
-  elapsedMs: number,
-  halfLifeMs = ACTIVITY_HALF_LIFE_MS,
-): number {
-  if (!(level > 0) || halfLifeMs <= 0) return 0;
-  if (elapsedMs <= 0) return clamp01(level);
-  const next = level * Math.pow(2, -elapsedMs / halfLifeMs);
-  // Quantised: the fall lasts minutes, and a fresh value every frame would
-  // repaint a full-screen filter for all of them. 1/64 steps are invisible.
-  const stepped = Math.round(clamp01(next) * 64) / 64;
-  return stepped < ACTIVITY_FLOOR ? 0 : stepped;
 }
 
 /** One smoothing step from `current` toward `target`; snaps when within epsilon. */
@@ -105,19 +90,20 @@ export class SignalState {
   private lastKeyAt = -Infinity;
   private audioTarget = 0;
   private agentTarget = 0;
-  private activityAt = 0;
-  private activityFrom = 0;
+  private flow = new FlowState();
   readonly values: SignalValues = { audio: 0, typing: 0, agent: 0, activity: 0 };
 
   keystroke(now: number): void {
     this.lastKeyAt = now;
-    this.happened(now);
+    this.happened(now, 'writing');
   }
 
   /** Something happened: a key was pressed, a file arrived, a turn began. */
-  happened(now: number, amount = ACTIVITY_PER_EVENT): void {
-    this.activityFrom = clamp01(decayActivity(this.activityFrom, now - this.activityAt) + amount);
-    this.activityAt = now;
+  happened(now: number, kind: FlowActivity = 'interaction'): void {
+    this.flow.happened(kind, now);
+  }
+  configureFlow(settings: FlowSettings, now: number): void {
+    this.flow.configure(settings, now);
   }
   setAudio(meter: number, playing: boolean): void {
     this.audioTarget = audioLevel(meter, playing);
@@ -135,7 +121,7 @@ export class SignalState {
     if (audio !== this.values.audio) changed.audio = this.values.audio = audio;
     const agent = approach(this.values.agent, this.agentTarget);
     if (agent !== this.values.agent) changed.agent = this.values.agent = agent;
-    const activity = decayActivity(this.activityFrom, now - this.activityAt);
+    const activity = this.flow.tick(now);
     if (activity !== this.values.activity) changed.activity = this.values.activity = activity;
     return changed;
   }
@@ -143,7 +129,7 @@ export class SignalState {
   get settled(): boolean {
     return (
       this.values.typing === 0 &&
-      this.values.activity === 0 &&
+      this.flow.settled &&
       this.values.audio === this.audioTarget &&
       this.values.agent === this.agentTarget
     );
@@ -174,8 +160,8 @@ export function onActivity(fn: ActivityListener): () => void {
 let stop: (() => void) | null = null;
 
 /**
- * Subscribe to the audio store, the crux store and keystrokes; write the
- * signals to <html>. Idempotent; returns the stop function.
+ * Follow creative actions, collaborator progress and the active Mood.
+ * Idempotent; every listener is released by the stop function.
  */
 export function startSignals(): () => void {
   if (stop) return stop;
@@ -202,9 +188,52 @@ export function startSignals(): () => void {
     if (!frame) frame = requestAnimationFrame(loop);
   };
 
+  const happened = (kind: FlowActivity) => {
+    state.happened(performance.now(), kind);
+    wake();
+  };
+  const configureFlow = () => {
+    const settings = readFlowSettings();
+    const off = root.dataset.motionIntensity === 'off';
+    state.configureFlow({ ...settings, enabled: settings.enabled && !off }, performance.now());
+    root.dataset.flow = settings.enabled && !off ? 'on' : 'off';
+    write(state.tick(performance.now()));
+    wake();
+  };
+  document.addEventListener('palette-change', configureFlow);
+  const motionObserver = new MutationObserver(configureFlow);
+  motionObserver.observe(root, { attributes: true, attributeFilter: ['data-motion-intensity'] });
+  configureFlow();
+
+  // A completed action counts; idle pointer motion, focus changes, background
+  // animation, timer ticks and token streaming do not keep the garden lit.
+  const onPointer = (e: PointerEvent) => {
+    if (e.isTrusted) happened('interaction');
+  };
+  const onDrag = (e: PointerEvent) => {
+    if (e.isTrusted && e.buttons) happened('arranging');
+  };
+  const onResize = () => happened('arranging');
+  const onExternalEdit = () => happened('artifact');
+  document.addEventListener('pointerup', onPointer, true);
+  document.addEventListener('pointermove', onDrag, true);
+  window.addEventListener('resize', onResize);
+  window.addEventListener('crux:external-change', onExternalEdit);
+  const unFlow = onFlowActivity(happened);
+  const unGarden = onGardenEvent((event) => {
+    if (event.name === 'toolDone') happened('tool');
+    else if (event.name === 'message') happened('collaboration');
+    else if (event.name === 'snapshot' || event.name === 'published') happened('artifact');
+  });
+  const unWindow = can(Capability.DesktopChrome)
+    ? window.electronAPI?.desktop?.onCreativeActivity?.(happened)
+    : undefined;
+
   const onKey = (e: KeyboardEvent) => {
-    if (!isWritingKey(e) || !isWritingTarget(e.target)) return;
-    state.keystroke(performance.now());
+    if (!e.isTrusted) return;
+    if (isWritingKey(e) && isWritingTarget(e.target)) state.keystroke(performance.now());
+    else if (!e.repeat && (e.key === 'Enter' || e.key === ' ' || e.metaKey || e.ctrlKey))
+      happened('interaction');
     wake();
   };
   document.addEventListener('keydown', onKey, true);
@@ -214,15 +243,22 @@ export function startSignals(): () => void {
     state.setAudio(s.level, s.playing);
     wake();
   });
-  let wasWorking = false;
+  let workingIds = new Set<string>();
+  let activeId = useWorkspaceRegistry.getState().activeId;
   const updateAgent = () => {
-    const working = useWorkspaceRegistry
-      .getState()
-      .entries.some((e) => e.status === 'Working' || e.status === 'Checking');
+    const registry = useWorkspaceRegistry.getState();
+    const next = new Set(
+      registry.entries
+        .filter((e) => e.status.startsWith('Working') || e.status.startsWith('Checking'))
+        .map((e) => e.id),
+    );
+    const working = next.size > 0;
     // A turn beginning is an event; a turn running is not, or activity would
     // pin to 1 for as long as the collaborator worked.
-    if (working && !wasWorking) state.happened(performance.now());
-    wasWorking = working;
+    if ([...next].some((id) => !workingIds.has(id))) happened('collaboration');
+    workingIds = next;
+    if (registry.activeId !== activeId) happened('interaction');
+    activeId = registry.activeId;
     state.setAgent(working);
     wake();
   };
@@ -232,6 +268,16 @@ export function startSignals(): () => void {
 
   stop = () => {
     document.removeEventListener('keydown', onKey, true);
+    document.removeEventListener('pointerup', onPointer, true);
+    document.removeEventListener('pointermove', onDrag, true);
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('crux:external-change', onExternalEdit);
+    document.removeEventListener('palette-change', configureFlow);
+    motionObserver.disconnect();
+    unFlow();
+    unGarden();
+    unWindow?.();
+    delete root.dataset.flow;
     unAudio();
     unCrux();
     if (frame) cancelAnimationFrame(frame);

@@ -1,3 +1,4 @@
+import { reportFlowActivity } from '@/lib/moods/flow';
 import type { ToolDefinition } from '@/ai/tools';
 
 export type AppToolDefinition = ToolDefinition & {
@@ -42,5 +43,7 @@ export async function executeAppTool(id: string, name: string, input: Record<str
   const controller = controllers.get(id);
   if (!controller || !controller.tools.some((tool) => tool.name === name))
     throw new Error('Open the app in this Crux’s Workshop before using its tools.');
-  return controller.execute(name, input);
+  const result = await controller.execute(name, input);
+  reportFlowActivity('tool');
+  return result;
 }

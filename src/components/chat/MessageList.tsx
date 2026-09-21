@@ -85,7 +85,7 @@ export default function MessageList({
           <div className="pt-0.5">
             <ConsoleAvatar />
           </div>
-          <div className="min-w-0 flex-1 pl-2 border-l-2 border-chat-ai-bubble-border font-reading text-[0.95rem] leading-[1.6] text-chat-ai-bubble-text break-words motion-enter-bubble">
+          <div className="min-w-0 flex-1 pl-2 border-l-2 border-chat-ai-bubble-border font-body text-[0.95rem] leading-[1.6] text-chat-ai-bubble-text break-words motion-enter-bubble">
             {streamingContent && (
               <>
                 <MarkdownRenderer content={streamingContent} />

@@ -1,3 +1,12 @@
+import { reportFlowActivity } from '@/lib/moods/flow';
+import {
+  GARDEN_HOST_ID,
+  GARDEN_ACCESS_TOOLS,
+  gardenOperatingTools,
+  isGardenAccessTool,
+  runGardenAccess,
+  runGardenOperation,
+} from '@/ai/garden-access';
 /**
  * Agent Host — renderer side (ADR 0013).
  *
@@ -83,7 +92,7 @@ export function agentToolDefinitions(cruxId?: string): ToolDefinition[] {
   // An external agent brings its own subagents; ours run only from the
   // Collaboration pane (B5), so `delegate` is not offered over MCP.
   return [
-    ...defaultToolDefinitions(cruxId).filter((t) => t.name !== 'delegate'),
+    ...defaultToolDefinitions(cruxId, false).filter((t) => t.name !== 'delegate'),
     ...HOST_TOOL_DEFINITIONS,
   ];
 }
@@ -142,6 +151,7 @@ function hostBridge() {
  * saveMeta.
  */
 async function persistAgentHostFlag(cruxId: string, on: boolean): Promise<void> {
+  if (cruxId === GARDEN_HOST_ID) return;
   const store = getWorkspace(cruxId)?.data.getState();
   if (store?.crux?.id === cruxId) {
     store.patchCruxMeta({ settings: { ...store.crux.meta?.settings, agentHost: on } });
@@ -224,6 +234,24 @@ export function startAgentHostListener(): () => void {
 }
 
 async function handleRequest(request: AgentHostRequest): Promise<unknown> {
+  if (request.cruxId === GARDEN_HOST_ID) {
+    if (request.kind === 'tools/list') return [...GARDEN_ACCESS_TOOLS, ...gardenOperatingTools()];
+    if (request.kind !== 'tools/call')
+      throw new Error('The garden host has no Crux resources. Use its operating tools.');
+    const { recordGardenAgentAction } = await import('@/stores/keeperStore');
+    recordGardenAgentAction(request.agent, request.name, 'Working…', request.id);
+    let result: ToolResultContent;
+    try {
+      result = isGardenAccessTool(request.name)
+        ? await runGardenAccess(request.name, request.input, request.agent)
+        : await runGardenOperation(request.name, request.input, request.agent);
+    } catch (error) {
+      result = `Error: ${errorMessage(error)}`;
+    }
+    if (!resultText(result).startsWith('Error')) reportFlowActivity('tool');
+    recordGardenAgentAction(request.agent, request.name, resultText(result), request.id);
+    return toMcpResult(result);
+  }
   switch (request.kind) {
     case 'tools/list':
       return agentToolDefinitions(request.cruxId);
@@ -281,6 +309,7 @@ function createWorkspaceHost(w: Workspace) {
     // publish approval) waited. Never record under the wrong crux.
     if (useCruxStore.getState().crux?.id !== request.cruxId) return toMcpResult(result);
 
+    if (!resultText(result).startsWith('Error')) reportFlowActivity('tool');
     await recordToolCall(request, result);
 
     if (didMutate(request.name, result)) {
@@ -326,7 +355,7 @@ function createWorkspaceHost(w: Workspace) {
         // person approves in the app, never in the agent's terminal.
         (path, artifactId) => useCruxStore.getState().requestDeleteApproval(artifactId, path),
         model,
-        { requestedBy: agentActor(agent) },
+        { requestedBy: agentActor(agent), gardenAccess: false },
       );
       executors.set(key, exec);
     }
@@ -532,4 +561,31 @@ function toMcpResult(result: string | ToolResultContent): McpToolResult {
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/** Garden authority explicitly opens the target; narrow hosts never use this entry point. */
+export async function listGardenCruxTools(cruxId: string): Promise<ToolDefinition[]> {
+  const { openWorkspace } = await import('@/stores/workspaceRegistry');
+  const w = await openWorkspace(cruxId);
+  await w.loaded;
+  if (w.phase !== 'ready') throw new Error('The Crux is not ready.');
+  return agentToolDefinitions(cruxId);
+}
+export async function executeGardenCruxTool(
+  cruxId: string,
+  agent: string,
+  name: string,
+  input: Record<string, unknown>,
+): Promise<McpToolResult> {
+  const tools = await listGardenCruxTools(cruxId);
+  if (!tools.some((t) => t.name === name))
+    return toMcpResult('Error: Unknown Crux tool. Call list_crux_tools first.');
+  return handleRequest({
+    id: crypto.randomUUID(),
+    kind: 'tools/call',
+    cruxId,
+    agent: agent.replace(/^agent:/, ''),
+    name,
+    input,
+  }) as Promise<McpToolResult>;
 }

@@ -26,7 +26,7 @@ import {
  * material has two plain switches. Everything deeper stays in the Mood
  * Builder, with the HyperMoods.
  */
-/** Titles (Daniel, 2026-09-20: "change the title font, or allow changing it"): the display face and the pane-header face together. */
+/** The Mood’s title face: pane and modal titles follow it through the same token. */
 const TITLES = {
   key: 'titles',
   label: 'Titles',
@@ -34,14 +34,21 @@ const TITLES = {
     {
       id: 'outfit',
       label: 'Outfit',
-      tokens: { fontDisplay: "'Outfit', sans-serif", paneHeaderLabelFont: "'Outfit', sans-serif" },
+      tokens: {
+        fontDisplay: "'Outfit', sans-serif",
+        paneHeaderLabelFont: 'var(--font-display)',
+        paneHeaderLabelSize: '13px',
+        dialogTitleFont: 'var(--font-display)',
+      },
     },
     {
       id: 'serif',
       label: 'Serif',
       tokens: {
         fontDisplay: "'Cormorant Garamond', Georgia, serif",
-        paneHeaderLabelFont: "'Cormorant Garamond', Georgia, serif",
+        paneHeaderLabelFont: 'var(--font-display)',
+        paneHeaderLabelSize: '18px',
+        dialogTitleFont: 'var(--font-display)',
       },
     },
     {
@@ -49,7 +56,9 @@ const TITLES = {
       label: 'Mono',
       tokens: {
         fontDisplay: "'JetBrains Mono', monospace",
-        paneHeaderLabelFont: "'JetBrains Mono', monospace",
+        paneHeaderLabelFont: 'var(--font-display)',
+        paneHeaderLabelSize: '13px',
+        dialogTitleFont: 'var(--font-display)',
       },
     },
     {
@@ -57,7 +66,9 @@ const TITLES = {
       label: 'System',
       tokens: {
         fontDisplay: "system-ui, -apple-system, 'Segoe UI', sans-serif",
-        paneHeaderLabelFont: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+        paneHeaderLabelFont: 'var(--font-display)',
+        paneHeaderLabelSize: '13px',
+        dialogTitleFont: 'var(--font-display)',
       },
     },
   ],

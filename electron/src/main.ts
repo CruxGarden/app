@@ -107,6 +107,7 @@ let watcher: any = null;
 let previewServer: any = null;
 let devServers: any = null;
 let agentHost: any = null;
+let agentHostReady = false;
 let agentProvider: any = null;
 // References for the CRUX_SELFTEST integration test (see selftest.ts)
 const selfTestHooks: { secrets?: any; projects?: any; toolchain?: any } = {};
@@ -243,6 +244,34 @@ function createWindow() {
     },
   });
 
+  agentHostReady = false;
+  mainWindow.webContents.on(
+    'did-start-navigation',
+    (details: Electron.Event<Electron.WebContentsDidStartNavigationEventParams>) => {
+      if (details.isMainFrame && !details.isSameDocument) agentHostReady = false;
+    },
+  );
+
+  // Creative input in a cross-origin Workshop frame never bubbles to the
+  // host document. Observe native input without intercepting it, retaining
+  // only the kind of activity, and cap IPC traffic during a drag.
+  const activityAt = new Map<string, number>();
+  const creativeActivity = (kind: 'writing' | 'interaction' | 'arranging') => {
+    const now = performance.now();
+    if (now - (activityAt.get(kind) ?? -Infinity) < 200) return;
+    activityAt.set(kind, now);
+    if (mainWindow && !mainWindow.isDestroyed())
+      mainWindow.webContents.send('desktop:creative-activity', kind);
+  };
+  mainWindow.on('move', () => creativeActivity('arranging'));
+  mainWindow.webContents.on(
+    'before-mouse-event',
+    (_event: unknown, mouse: Electron.MouseInputEvent) => {
+      if (mouse.type === 'mouseUp') creativeActivity('interaction');
+      else if (mouse.type === 'mouseMove' && mouse.modifiers?.some((m) => m.endsWith('buttondown')))
+        creativeActivity('arranging');
+    },
+  );
   setupLocalAiCors(mainWindow.webContents.session);
   // Screen capture for embedded apps (Record): the system picker where the OS has one (macOS 15+),
   // otherwise the primary screen with system audio.
@@ -270,6 +299,11 @@ function createWindow() {
   );
   let cyclingWorkspaces = false;
   mainWindow.webContents.on('before-input-event', (event: any, input: any) => {
+    if (input.type === 'keyDown') {
+      if (input.key?.length === 1 || ['Enter', 'Backspace', 'Delete'].includes(input.key)) {
+        creativeActivity(input.control || input.meta ? 'interaction' : 'writing');
+      }
+    }
     if (input.isComposing || input.modifiers?.includes('altgr')) return;
     const down = input.type === 'keyDown';
     const search =
@@ -1150,11 +1184,15 @@ function setupIpc() {
     },
   );
 
+  ipcMain.on('agent-host:ready', (event: Electron.IpcMainEvent, ready: boolean) => {
+    if (event.sender === mainWindow?.webContents) agentHostReady = ready === true;
+  });
   agentHost = new AgentHost({
+    gardenHostFolder: path.join(app.getPath('userData'), 'garden-agent-host'),
     lookupCrux,
     resolveKnownFolder: (folder: string) => projects.resolveKnownFolder(folder),
     sendToRenderer: (request: unknown) => {
-      if (!mainWindow || mainWindow.isDestroyed()) return false;
+      if (!agentHostReady || !mainWindow || mainWindow.isDestroyed()) return false;
       mainWindow.webContents.send('agent-host:request', request);
       return true;
     },
@@ -1170,6 +1208,9 @@ function setupIpc() {
     version: app.getVersion(),
     log: debugLog,
   });
+  agentHost
+    .resumeGarden()
+    .catch((err: Error) => debugLog(`Garden agent host resume failed: ${err.message}`));
   ipcMain.handle('agent-host:list', () => agentHost.list());
   ipcMain.handle('agent-host:enable', (_e: any, cruxId: string) => agentHost.enable(cruxId));
   ipcMain.handle('agent-host:disable', (_e: any, cruxId: string) => agentHost.disable(cruxId));

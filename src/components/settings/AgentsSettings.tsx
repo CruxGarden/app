@@ -1,3 +1,4 @@
+import { GARDEN_HOST_ID } from '@/ai/garden-access';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Panel, Button, Toggle } from '@/components/ui';
 import { Capability, can } from '@/lib/platform';
@@ -66,9 +67,10 @@ export default function AgentsSettings() {
 
       <div className="flex flex-col gap-3 text-xs">
         <p className="text-text-muted">
-          Bring your own agent. Each crux you switch on gets its own MCP server on this machine
-          (127.0.0.1 only) that Claude Code, Codex, Cursor or any MCP client can connect to — the
-          same tools the built-in collaborator has.
+          Bring your own agent. Choose whole garden access or switch on individual Cruxes. Each
+          connection gets its own MCP server on this machine (127.0.0.1 only) that Claude Code,
+          Codex, Cursor or any MCP client can connect to — the same tools the built-in collaborator
+          has.
         </p>
 
         {/* ADR 0008-style plain statement: what an outside agent can do and see */}
@@ -76,14 +78,48 @@ export default function AgentsSettings() {
           className="rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-2 text-xxs text-text-muted leading-relaxed"
           data-testid="agents-trust"
         >
-          <strong className="text-text">What a connected agent can do and see.</strong> It can read,
-          write, search and rename files in that crux&apos;s Project Folder, run the site check,
-          change the theme and soundscape, take and restore Growth snapshots, and read the persona,
-          preview URL and AGENTS.md. Deleting a file and publishing wait for your approval in the
-          app. Everything it does is recorded in the Collaboration under its name and in Growth. It
-          cannot reach other cruxes, your API keys, or your account. The token in{' '}
+          <strong className="text-text">What a per-Crux connection can do and see.</strong> It can
+          read, write, search and rename files in that crux&apos;s Project Folder, run the site
+          check, change the theme and soundscape, take and restore Growth snapshots, and read the
+          persona, preview URL and AGENTS.md. Deleting a file and publishing wait for your approval
+          in the app. Everything it does is recorded in the Collaboration under its name and in
+          Growth. It cannot reach other cruxes, your API keys, or your account. The token in{' '}
           <code>.crux/mcp.json</code> is the only key; it stays on this machine, is never published
           or versioned, and changes every time you switch a crux on.
+        </div>
+
+        <div
+          className="rounded-[var(--radius-sm)] border border-border px-3"
+          data-testid="agents-garden-access"
+        >
+          <p className="text-text-muted pt-3">
+            Whole garden access lets an agent create and open Cruxes, use their creative tools, run
+            collaborators, change Moods, search, snapshot and export. Publishing and file deletion
+            keep their in-app approvals. Garden actions appear in the Keeper’s conversation list
+            under the connected agent’s name. This connection has its own token, stored in your
+            desktop profile. Switch it off to revoke access.
+          </p>
+          <ul>
+            <CruxRow
+              crux={{ id: GARDEN_HOST_ID, title: 'Whole garden', slug: 'garden' }}
+              server={running.get(GARDEN_HOST_ID) ?? null}
+              busy={busy === GARDEN_HOST_ID}
+              expanded={open === GARDEN_HOST_ID}
+              onToggleExpanded={() => setOpen(open === GARDEN_HOST_ID ? null : GARDEN_HOST_ID)}
+              onSwitch={(on) =>
+                run(GARDEN_HOST_ID, async () => {
+                  if (on) {
+                    await agentHost.enable(GARDEN_HOST_ID);
+                    setOpen(GARDEN_HOST_ID);
+                  } else {
+                    await agentHost.disable(GARDEN_HOST_ID);
+                    setOpen(null);
+                  }
+                })
+              }
+              onRegenerate={() => run(GARDEN_HOST_ID, () => agentHost.regenerate(GARDEN_HOST_ID))}
+            />
+          </ul>
         </div>
 
         {error && (
@@ -134,7 +170,7 @@ function CruxRow({
   onSwitch,
   onRegenerate,
 }: {
-  crux: Crux;
+  crux: Pick<Crux, 'id' | 'title' | 'slug'>;
   server: AgentHostServer | null;
   busy: boolean;
   expanded: boolean;
@@ -198,7 +234,7 @@ function ConnectPanel({
     stdio: 'stdio',
   };
   const hints: Record<keyof typeof snippets, string> = {
-    claudeCode: 'Run in a terminal, then start claude in the Project Folder.',
+    claudeCode: 'Run in a terminal, then start Claude Code.',
     codex: 'Add to ~/.codex/config.toml.',
     cursor: 'Add to .cursor/mcp.json in the Project Folder (or ~/.cursor/mcp.json).',
     stdio: 'For clients that only speak stdio — a thin proxy to the same server.',

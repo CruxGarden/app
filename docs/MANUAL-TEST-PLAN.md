@@ -2,15 +2,11 @@
 
 For a hands-on pass over the desktop app. Written 2026-09-21.
 
-**Read this first.** 78 journey specs already drive the app end to end, so
-repeating what they cover is the least valuable thing you can do. Every section
-below is marked:
+**Read this first.** This is Daniel's full manual pass after the agreed v1 features are in place. Automated evidence helps locate regressions; it does not replace checking the design, wording and behavior yourself. Every section is marked:
 
-- **[auto]** — a journey covers it. Skim it; trust it unless something looks off.
-- **[MANUAL]** — no journey covers it, or only a human can judge it. **This is
-  where your time goes.**
-- **[LIVE]** — needs real credentials or a signed build. Cannot pass until the
-  console work is done.
+- **[auto]** — an automated journey covers part of this area; still check the experience manually.
+- **[MANUAL]** — human judgment or a path without automated coverage.
+- **[LIVE]** — needs real credentials or a signed build.
 
 Work top to bottom: each section assumes the state the previous one left.
 
@@ -22,8 +18,8 @@ thing a test suite can never give you.
 
 ## The question underneath all of it
 
-Daniel, 2026-09-21: *"how effortless does it feel to use, once you know it —
-does it make your job easier?"* And then, sharper: **not fun — addictive.**
+Daniel, 2026-09-21: _"how effortless does it feel to use, once you know it —
+does it make your job easier?"_ And then, sharper: **not fun — addictive.**
 
 Everything below checks whether something **works**. None of it checks whether
 you want to come back to it. That second question is the one no suite can
@@ -33,8 +29,8 @@ answer and the one the product lives on, so carry it through every section.
 people lose an evening to Ableton or Blender, and open them on a Saturday with
 nothing to make. Not the engineered kind: streaks, nudges, a feed that will not
 end. That sort would actively hurt a tool people do real work in, and it is
-also the thing that makes software feel cheap. The goal is *I want to be in
-here*, not *I feel bad when I am not*.
+also the thing that makes software feel cheap. The goal is _I want to be in
+here_, not _I feel bad when I am not_.
 
 **Six probes that give real answers:**
 
@@ -55,9 +51,9 @@ here*, not *I feel bad when I am not*.
    of the Artifacts pane, leaving a Mood alone because changing it is a faff —
    the avoidance is the finding. Write down what you dodged and why.
 
-**It has to feel alive** (Daniel, 2026-09-21: *"the whole app has to feel alive
+**It has to feel alive** (Daniel, 2026-09-21: _"the whole app has to feel alive
 in the sense that everything responds to your input — hover states,
-animations"*). Aliveness is what makes the other five probes possible: a dead
+animations"_). Aliveness is what makes the other five probes possible: a dead
 surface is never addictive. Go looking for the opposite —
 
 - **Anything that does not acknowledge you.** Hover, press, focus, drag. A
@@ -215,6 +211,8 @@ ones the Workshop's Clean view _is_ the live site.
 
 ## 12. Moods and appearance **[auto: `bundled-moods`, `mood-builder`, `plasma`, `names`]**
 
+- [ ] **Flow** (automated controls, persistence, collaborator activity and fade: `flow.spec.ts`): on by default only in Plasma, sensitivity 50%; off returns to the Mood's normal brightness and colour. On allows a dimmer resting material and gradually stronger colour/light/iridescence.
+- [ ] **[MANUAL]** At 50%, create for about a minute: write, arrange panes/windows, open Artifacts, make a Crux, and let collaborators use tools. The glow should feel organic and subtly alive, never flash per action. Pause: it should linger, then return toward baseline over a minute or two. Resume during that fade: it should build from the remaining glow. Check both sensitivity extremes and Motion off.
 - [ ] Switch Moods from the Mood Bar; the whole app changes.
 - [ ] Mood Builder: theme, background, sound, persona.
 - [ ] Soundscape plays; volume; per-Mood track.
@@ -224,6 +222,8 @@ ones the Workshop's Clean view _is_ the live site.
 - [ ] **[MANUAL]** Check light Moods as carefully as dark ones — most work
       happens in dark.
 
+- Typography: Plasma pane titles use Garamond at 18px; Soft uses Inter at 13px. Change **Titles** and check pane/modal headings together. Collaboration and console prose stay in the sans-serif body face. The idle keyboard helper line is gone.
+
 ## 13. Settings **[auto: `settings`, `billing` partial]**
 
 - [ ] Account, Names, AI, Memory, Agents, Plan, Usage, Data, Desktop, Sync,
@@ -231,6 +231,13 @@ ones the Workshop's Clean view _is_ the live site.
 - [ ] Sign out: **your local author stays** (name, avatar). Only the account
       connection goes.
 - [ ] Data → wipe the garden (in a throwaway garden, with "delete me").
+
+### Connected agents (MCP)
+
+- Settings → Agents: enable **Whole garden**, connect your preferred outside MCP client using its snippet, and ask it to create two Cruxes, work in each, bring one into view, make a Cruxspace and snapshot the work. Check the agent's named garden-action conversation in the Keeper and its tool calls in each Crux's Collaboration.
+- Ask a built-in collaborator to discover the garden tools and create a second Crux. These should be ordinary supported actions from either route.
+- Restart with the outside client configured, reconnect, regenerate its token, then switch access off. Old credentials must stop working. Try the narrower per-Crux connection: it must not gain whole-garden authority.
+- Publishing and file deletion retain the person's approval. Check this with a disposable Crux before using a real project.
 
 ## 14. Multiple workspaces **[auto: `multi-crux-*`]**
 

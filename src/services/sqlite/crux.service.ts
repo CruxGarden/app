@@ -1,4 +1,5 @@
 import type { ICruxService } from '../crux.service';
+import { reportFlowActivity } from '@/lib/moods/flow';
 import type { Crux, CreateCruxInput, UpdateCruxInput } from '../types';
 import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
@@ -147,6 +148,7 @@ export class SqliteCruxService implements ICruxService {
     };
     const { sql, params } = buildInsert('cruxes', { ...crux });
     await getSqliteClient().run(sql, params);
+    if (crux.kind !== 'snapshot' && crux.kind !== 'tool') reportFlowActivity('crux');
     return crux;
   }
 

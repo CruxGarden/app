@@ -19,6 +19,7 @@ const MOTION_ENTER = ['none', 'fade', 'slide-up', 'slide-down', 'scale', 'pop', 
 const MOTION_EXIT = ['none', 'fade', 'scale', 'slide-down'] as const;
 
 export const TOKEN_CHOICES: Record<string, readonly string[]> = {
+  flowEnabled: ['on', 'off'],
   // ── motion (motion.css) ──
   motionEnterPane: MOTION_ENTER,
   motionEnterDialog: MOTION_ENTER,
@@ -430,7 +431,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     id: 'reactions',
     label: 'Reactions',
     hint: 'How much the interface reacts to what is happening, 0 (not at all) to 1: the accent glows with the soundscape level, the background lifts while you type, the Collaboration pane glows while a collaborator turn runs.',
-    match: (k) => k.startsWith('react'),
+    match: (k) => k.startsWith('react') || k.startsWith('flow'),
   },
 ];
 
@@ -469,7 +470,7 @@ export function tokenKind(key: string): TokenKind {
   if (key === 'plasmaField') return 'text';
   if (/^plasma(Tint|Plate|Inner)$/.test(key)) return 'color';
   if (/^motionDuration/.test(key)) return 'length';
-  if (/^react/.test(key)) return 'number';
+  if (/^react|^flowSensitivity$/.test(key)) return 'number';
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';
   if (/TextureSize$|TextureBlend$/.test(key)) return 'text';
   if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';

@@ -1,3 +1,5 @@
+import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from '@/ai/garden-access';
+import { reportFlowActivity } from '@/lib/moods/flow';
 import { create } from 'zustand';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
@@ -198,6 +200,7 @@ export const useKeeperStore = create<KeeperState>((set, get) => {
       controller = new AbortController();
       const themeExecute = createThemeToolExecutor();
       const execute = async (name: string, input: Record<string, unknown>) => {
+        if (isGardenAccessTool(name)) return runGardenAccess(name, input, 'The Keeper');
         if (isGardenTool(name)) {
           const result = await runGardenTool(name, input);
           // A Cruxspace this conversation made is the one its package carries.
@@ -250,18 +253,21 @@ export const useKeeperStore = create<KeeperState>((set, get) => {
               THEME_TOOL_GUIDANCE,
             tools: [
               ...GARDEN_TOOL_DEFINITIONS,
+              ...GARDEN_ACCESS_TOOLS,
               ...SKILL_TOOL_DEFINITIONS,
               ...THEME_TOOL_DEFINITIONS,
             ],
           },
         )) {
           if (event.type === 'text') {
+            if (event.content.trim()) reportFlowActivity('collaboration');
             accumulated += event.content;
             set({ streamContent: accumulated, working: 'Replying…' });
           } else if (event.type === 'tool_start') {
             calls.push({ id: event.id, name: event.name, input: event.input });
             set({ toolCalls: [...calls], toolActivity: event.name, working: event.name });
           } else if (event.type === 'tool_result') {
+            reportFlowActivity('tool');
             const tc = calls.find((c) => c.id === event.id);
             if (tc) {
               tc.result = event.result;
@@ -309,4 +315,40 @@ export function adoptKeeperConversations(convos: KeeperConversation[], cruxspace
   const next = [...adopted, ...state.conversations].slice(0, MAX_KEEPER_CONVERSATIONS);
   saveConversations(next);
   useKeeperStore.setState({ conversations: next, activeId: next[0]?.id ?? state.activeId });
+}
+
+/** Outside garden actions are readable alongside the Keeper's conversations. */
+export function recordGardenAgentAction(
+  agent: string,
+  name: string,
+  result: string,
+  requestId: string,
+): void {
+  const state = useKeeperStore.getState();
+  const id = `outside-agent:${agent}`;
+  const prior = state.conversations.find((c) => c.id === id);
+  const message: ChatMessage = {
+    role: 'assistant',
+    content: '',
+    model: `agent:${agent}`,
+    agent,
+    timestamp: new Date().toISOString(),
+    toolCalls: [{ id: requestId, name, input: {}, result: result.slice(0, 4000) }],
+  };
+  const messages = [
+    ...(prior?.messages ?? []).filter((m) => m.toolCalls?.[0]?.id !== requestId),
+    message,
+  ].slice(-200);
+  const conversation: KeeperConversation = {
+    id,
+    title: `${agent} · garden actions`,
+    createdAt: prior?.createdAt ?? Date.now(),
+    messages,
+  };
+  const conversations = [conversation, ...state.conversations.filter((c) => c.id !== id)].slice(
+    0,
+    MAX_KEEPER_CONVERSATIONS,
+  );
+  saveConversations(conversations);
+  useKeeperStore.setState({ conversations });
 }

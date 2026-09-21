@@ -480,11 +480,15 @@ export function validateGardenTool(
 
 const brief = (s: string) => (s.length > 2000 ? s.slice(0, 2000) + '…' : s);
 
-export async function runGardenTool(name: string, input: Record<string, unknown>): Promise<string> {
+export async function runGardenTool(
+  name: string,
+  input: Record<string, unknown>,
+  requestedBy = 'The Keeper',
+): Promise<string> {
   const v = validateGardenTool(name, input);
   if (!v.valid) return `Error: ${v.error}`;
   try {
-    const result = await runGardenToolInner(name, input);
+    const result = await runGardenToolInner(name, input, requestedBy);
     // The Keeper's actions leave a trail in the console (journeys read it too).
     console.info('[garden-tool]', name, result.slice(0, 200).replace(/\n/g, ' '));
     return result;
@@ -536,7 +540,11 @@ async function resolveCrux(input: Record<string, unknown>) {
   throw new Error(`No crux ${id ? `with id ${id}` : `titled "${title}"`}. list_cruxes names them.`);
 }
 
-async function runGardenToolInner(name: string, input: Record<string, unknown>): Promise<string> {
+async function runGardenToolInner(
+  name: string,
+  input: Record<string, unknown>,
+  requestedBy: string,
+): Promise<string> {
   const services = getServices();
   switch (name) {
     case 'list_cruxes': {
@@ -740,7 +748,7 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
       const out = await runGrowthTool(
         'snapshot',
         { label: input.label },
-        { cruxId: crux.id, requestedBy: 'The Keeper' },
+        { cruxId: crux.id, requestedBy },
       );
       return `"${crux.title}": ${out}`;
     }

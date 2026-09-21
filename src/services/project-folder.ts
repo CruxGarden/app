@@ -16,6 +16,7 @@ import { isWorkspaceThumbnail } from '@/lib/artifact-path';
 import type { Artifact } from '@/api/types';
 import { findWorkingCopy } from './working-copies';
 import { expectProjectWrites } from './ingestion';
+import { reportFlowActivity } from '@/lib/moods/flow';
 
 function projectBridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
@@ -79,6 +80,7 @@ export async function writeThroughArtifact(
 ): Promise<void> {
   const relPath = artifactRelPath(artifact);
   await withFolder(cruxId, (api, folder) => api.writeFile(folder, relPath, content));
+  reportFlowActivity('artifact');
 }
 
 /** Remove an artifact's file from the crux's Project Folder. */
@@ -88,6 +90,7 @@ export async function deleteThroughArtifact(
 ): Promise<void> {
   const relPath = artifactRelPath(artifact);
   await withFolder(cruxId, (api, folder) => api.deleteFile(folder, relPath));
+  reportFlowActivity('artifact');
 }
 
 /** Rename/move an artifact's file inside the crux's Project Folder. */
@@ -98,6 +101,7 @@ export async function renameThroughArtifact(
 ): Promise<void> {
   if (fromRel === toRel) return;
   await withFolder(cruxId, (api, folder) => api.renameFile(folder, fromRel, toRel));
+  reportFlowActivity('artifact');
 }
 
 /** Reveal the crux's folder (or one file in it) in Finder. */
@@ -188,7 +192,10 @@ export async function rehomeProjectFolders(
  * folder exactly matches the store. Returns the folder path (null on web).
  */
 /** Project only these paths from the store onto the Project Folder (no-op on web). */
-export async function projectArtifactPaths(cruxId: string, paths: string[]): Promise<string | null> {
+export async function projectArtifactPaths(
+  cruxId: string,
+  paths: string[],
+): Promise<string | null> {
   const api = projectBridge();
   if (!api) return null;
   const folder = await folderForCrux(cruxId);
@@ -197,7 +204,12 @@ export async function projectArtifactPaths(cruxId: string, paths: string[]): Pro
   await api.ensureFolder(folder);
   const db = getSqliteClient();
   const wanted = new Set(paths);
-  const rows = await db.all<{ path: string | null; filename: string; fingerprint: string | null; meta: string }>(
+  const rows = await db.all<{
+    path: string | null;
+    filename: string;
+    fingerprint: string | null;
+    meta: string;
+  }>(
     "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
     [cruxId],
   );
@@ -206,7 +218,11 @@ export async function projectArtifactPaths(cruxId: string, paths: string[]): Pro
     const relPath = row.path || row.filename;
     if (!relPath || !row.fingerprint || !wanted.has(relPath)) continue;
     const mode = JSON.parse(row.meta || '{}').mode;
-    entries.push({ path: relPath, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined });
+    entries.push({
+      path: relPath,
+      fingerprint: row.fingerprint,
+      mode: typeof mode === 'number' ? mode : undefined,
+    });
   }
   expectProjectWrites(
     folder,
@@ -249,7 +265,11 @@ export async function projectAllArtifacts(cruxId: string): Promise<string | null
     if (isWorkspaceThumbnail(relPath)) continue; // app state, not a user file
     wanted.add(relPath);
     const mode = JSON.parse(row.meta || '{}').mode;
-    entries.push({ path: relPath, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined });
+    entries.push({
+      path: relPath,
+      fingerprint: row.fingerprint,
+      mode: typeof mode === 'number' ? mode : undefined,
+    });
   }
   // The watcher will see these writes; they are the store's own, not new edits.
   expectProjectWrites(

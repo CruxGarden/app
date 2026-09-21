@@ -1,21 +1,17 @@
 import { useEffect, useState } from 'react';
 import { onActivity } from '@/lib/moods/signals';
 
-/**
- * Where the activity signal stops being background and starts lighting things
- * up. Below this the garden only warms its colour (--life in motion.css); the
- * rim is the last stage, so a lit garden means a busy one, not a used one.
- */
-export const LIT_FROM = 0.6;
+/** Flow lights the rim across its whole range; the signal supplies the slow envelope. */
+export const LIT_FROM = 0;
 
 /** 0 below `LIT_FROM`, ramping to 1 at full activity. */
 export function litLevel(activity: number, from = LIT_FROM): number {
   if (from >= 1) return activity >= 1 ? 1 : 0;
   const t = (activity - from) / (1 - from);
-  return t <= 0 ? 0 : t >= 1 ? 1 : t;
+  return t <= 0 || !Number.isFinite(t) ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
 }
 
-/** The live activity signal, 0..1, quantised — at most a few dozen renders per fade. */
+/** The live activity signal, 0..1, quantised to keep material updates bounded. */
 export function useActivity(): number {
   const [level, setLevel] = useState(0);
   useEffect(() => onActivity(setLevel), []);

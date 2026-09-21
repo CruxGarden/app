@@ -39,6 +39,13 @@
   --signal-typing: 0;
   --signal-agent: 0;
   --signal-activity: 0;
+  --life: 1;
+  --life-dim: 1;
+}
+
+/* Flow is opt-in per Mood. Before the signal starts, and with Flow off,
+   the Mood keeps its normal appearance rather than being left dim. */
+html[data-flow='on'] {
   /* How alive the garden looks right now: 1 is the Mood exactly as designed,
      lower is drained of colour. reactBackgroundActivity says how far it drains
      when nothing has been happening; 0 (the default) never drains. */
@@ -51,7 +58,8 @@
 
 /* Motion off means the interface holds still, not that it stays dull for ever:
    hold the background at the Mood's full colour rather than at the drained end. */
-html[data-motion-intensity='off'] {
+html[data-motion-intensity='off'],
+html[data-flow='off'] {
   --life: 1;
   --life-dim: 1;
 }

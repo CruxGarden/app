@@ -108,7 +108,7 @@ export default function ApiKeySetup({
                   href={provider.keyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-display font-medium text-text hover:text-accent  underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent"
+                  className="text-sm font-body font-medium text-text hover:text-accent  underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent"
                 >
                   {provider.name}
                 </a>

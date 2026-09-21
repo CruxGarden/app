@@ -101,7 +101,7 @@ export default function WorkspaceLifecycle() {
         aria-label="Close Crux Garden"
         className="bg-surface-solid border border-border p-5 rounded text-text max-w-lg"
       >
-        <h2>Close Crux Garden?</h2>
+        <h2 style={{ fontFamily: 'var(--dialog-title-font)' }}>Close Crux Garden?</h2>
         <p className="text-sm my-2">
           These workspaces have unsaved edits or ongoing work. Running turns will stop; queued
           prompts will wait when you reopen.

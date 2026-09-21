@@ -1,3 +1,4 @@
+import { reportFlowActivity } from '@/lib/moods/flow';
 import type { ChatMessage, ToolCall, TurnCheckSummary, TurnJobSummary } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
 import type { TurnMeter } from './agent-metrics';
@@ -498,6 +499,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
       deps.metrics?.observe(event);
       switch (event.type) {
         case 'text': {
+          if (event.content.trim()) reportFlowActivity('collaboration');
           content += event.content;
           deps.onText?.(event.content);
           if (!planParsed && !hasOpenPlanFence(content)) {

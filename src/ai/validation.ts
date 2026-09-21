@@ -1,3 +1,4 @@
+import { validateGardenAccess } from './garden-access';
 import { validateWorkspaceTool } from './workspace-tools';
 import { hasSkill, skillNames } from './skills';
 import { MEMORY_NOTE_MAX, MEMORY_SECTIONS, normalizeSection } from '@/services/memory';
@@ -19,6 +20,9 @@ export function validateToolInput(
   input: Record<string, unknown>,
 ): ValidationResult {
   switch (toolName) {
+    case 'list_garden_tools':
+    case 'call_garden_tool':
+      return validateGardenAccess(toolName, input);
     case 'list_cruxspace_assets':
     case 'use_cruxspace_asset':
       return validateCruxspaceTool(toolName, input);

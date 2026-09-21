@@ -98,6 +98,16 @@ export function getMockLanguageModel(): LanguageModel {
           });
         };
 
+        if (lastUserText(prompt).includes('[garden:plant]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (rounds.length === 0) return toolCallStream('list_garden_tools', {});
+          if (rounds.length === 1)
+            return toolCallStream('call_garden_tool', {
+              name: 'plant_crux',
+              input: { title: 'Built-in companion', template: 'blank' },
+            });
+          return textStream('Done — planted a companion Crux from this Collaboration.');
+        }
         if (lastUserText(prompt).includes('[cruxspace:cover]')) {
           const last = prompt.at(-1);
           const used = (name: string) =>

@@ -126,8 +126,7 @@ function UserAvatar({
     <div
       className={cn(
         'w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center ring-1 ring-border',
-        !avatarUrl &&
-          'bg-chat-user-bubble text-chat-user-bubble-text text-2xs font-display font-bold',
+        !avatarUrl && 'bg-chat-user-bubble text-chat-user-bubble-text text-2xs font-body font-bold',
       )}
     >
       {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initial}
@@ -185,7 +184,7 @@ export default function MessageBubble({
     );
   }
 
-  // The collaborator's reply reads like a page: no bubble, the Mood's reading
+  // The collaborator's reply reads like a page: no bubble, the Mood's body
   // face, the work it did folded beneath it, the record of the turn in a
   // quiet footer line.
   return (
@@ -196,7 +195,7 @@ export default function MessageBubble({
       {/* The reply's border is a rule beside it (transparent unless the Mood colours it). */}
       <div className="min-w-0 flex-1 pl-2 border-l-2 border-chat-ai-bubble-border text-chat-ai-bubble-text">
         {personaName && <div className="text-2xs font-mono text-accent mb-1">{personaName}</div>}
-        <div className="font-reading text-[0.95rem] leading-[1.6] break-words">
+        <div className="font-body text-[0.95rem] leading-[1.6] break-words">
           <MarkdownRenderer content={message.content} />
         </div>
 

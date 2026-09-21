@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { litLevel, LIT_FROM } from './useActivity';
 
-describe('the lit ramp — the last stage of the garden warming up', () => {
-  it('stays dark through the range where only the colour comes back', () => {
+describe('Flow — a gentle iridescent response throughout its range', () => {
+  it('starts quietly, with a smooth easing curve', () => {
     expect(litLevel(0)).toBe(0);
     expect(litLevel(LIT_FROM / 2)).toBe(0);
     expect(litLevel(LIT_FROM)).toBe(0);
+    expect(litLevel(0.1)).toBeGreaterThan(0);
+    expect(litLevel(0.1)).toBeLessThan(0.1);
   });
 
-  it('climbs only above the threshold, reaching full at full activity', () => {
+  it('reaches full iridescence at full activity', () => {
     expect(litLevel(LIT_FROM + (1 - LIT_FROM) / 2)).toBeCloseTo(0.5, 5);
     expect(litLevel(1)).toBe(1);
     // A signal cannot exceed 1, but the ramp must not either if one ever did.
