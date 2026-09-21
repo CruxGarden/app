@@ -195,12 +195,9 @@ export default function CruxspaceStory({
   const when = (iso: string) => (iso ? new Date(iso).toLocaleString() : '');
 
   return createPortal(
-    <Modal open onClose={onClose} size="full" flush>
+    <Modal open onClose={onClose} size="full" flush aria-label="Cruxspace history">
       <section
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Cruxspace history"
         tabIndex={-1}
         className="flex flex-col h-full min-h-0 outline-none"
         data-testid="cruxspace-story"

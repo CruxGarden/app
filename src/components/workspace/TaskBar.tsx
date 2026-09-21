@@ -337,8 +337,6 @@ export default function TaskBar() {
         subtitle="Work independently, then review and merge into Main."
       >
         <form
-          role="dialog"
-          aria-label="New task"
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
@@ -419,7 +417,7 @@ export default function TaskBar() {
         className="max-h-[90vh] overflow-auto"
       >
         {review && (
-          <div role="dialog" aria-label="Review changes for Main" className="space-y-4 text-sm">
+          <div className="space-y-4 text-sm">
             <p>Compare the combined result with Main. Other tasks remain separate.</p>
             {review.conflicts.map((c) => (
               <div key={c.path} className="border border-border rounded p-3 space-y-2">

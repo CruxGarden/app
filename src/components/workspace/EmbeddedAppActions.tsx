@@ -110,7 +110,7 @@ export default function EmbeddedAppActions() {
         }}
         title="Customize app in a Task"
       >
-        <div role="dialog" aria-label="Customize app" className="space-y-3">
+        <div className="space-y-3">
           <p className="text-sm text-text-muted">
             Keep using Main while you change the app in a separate Task. Review and merge when
             ready. The Task starts with a copy of your current content; changes to the same files

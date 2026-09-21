@@ -148,12 +148,9 @@ export default function GrowthExplorer({
   };
 
   return createPortal(
-    <Modal open onClose={onClose} size="full" flush>
+    <Modal open onClose={onClose} size="full" flush aria-label="Whole Crux Growth">
       <section
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Whole Crux Growth"
         tabIndex={-1}
         className="flex flex-col h-full min-h-0 outline-none"
         data-testid="growth-explorer"

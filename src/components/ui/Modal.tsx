@@ -39,14 +39,10 @@ interface ModalProps {
   layer?: 'base' | 'top';
   /** Remove inner content padding (e.g. for edge-to-edge layouts) */
   flush?: boolean;
-  /**
-   * Announce the panel as a modal dialog, named by its title. Opt-in rather
-   * than the default: most modals in the app are already located by
-   * `getByRole('dialog')` on an element *inside* them, and making every Modal
-   * a dialog too resolves those locators to two elements. Setting it here is
-   * the right end state — see ROADMAP § the aria-modal pass.
-   */
-  announce?: boolean;
+  /** Names the dialog when it has no visible title. */
+  'aria-label'?: string;
+  /** `alertdialog` for something the person must answer before going on. */
+  role?: 'dialog' | 'alertdialog';
 }
 
 /**
@@ -65,7 +61,8 @@ export default function Modal({
   subtitle,
   layer = 'base',
   flush,
-  announce,
+  'aria-label': ariaLabel,
+  role: dialogRole = 'dialog',
 }: ModalProps) {
   const titleId = useId();
   useEffect(() => {
@@ -116,9 +113,17 @@ export default function Modal({
           <div className="absolute inset-0 modal-scrim" onClick={onClose} />
           <PlasmaOverlay surface={panelRef} />
           <motion.div
-            {...(announce
-              ? ({ role: 'dialog', 'aria-modal': true, 'aria-labelledby': titleId } as const)
-              : {})}
+            // The base owns this: a modal is a dialog, it traps the reader
+            // the way the scrim traps the pointer, and it is named by its own
+            // heading. Panels inside a Modal must not declare the role again —
+            // a dialog inside a dialog names neither.
+            role={dialogRole}
+            aria-modal="true"
+            {...(title
+              ? { 'aria-labelledby': titleId }
+              : ariaLabel
+                ? { 'aria-label': ariaLabel }
+                : {})}
             data-motion-role="dialog"
             data-motion-choice={role.choice.enter}
             data-motion-exit={role.choice.exit}
