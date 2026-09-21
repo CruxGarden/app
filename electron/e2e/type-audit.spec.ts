@@ -30,8 +30,8 @@ test('type audit', async () => {
           const cs = getComputedStyle(el);
           const fam = cs.fontFamily.includes('Mono')
             ? 'mono'
-            : cs.fontFamily.includes('Outfit')
-              ? 'outfit'
+            : cs.fontFamily.includes('Inter')
+              ? 'inter'
               : cs.fontFamily.includes('Cormorant')
                 ? 'serif'
                 : 'sys';

@@ -26,54 +26,6 @@ import {
  * material has two plain switches. Everything deeper stays in the Mood
  * Builder, with the HyperMoods.
  */
-/** The Mood’s title face: pane and modal titles follow it through the same token. */
-const TITLES = {
-  key: 'titles',
-  label: 'Titles',
-  options: [
-    {
-      id: 'outfit',
-      label: 'Outfit',
-      tokens: {
-        fontDisplay: "'Outfit', sans-serif",
-        paneHeaderLabelFont: 'var(--font-display)',
-        paneHeaderLabelSize: '13px',
-        dialogTitleFont: 'var(--font-display)',
-      },
-    },
-    {
-      id: 'serif',
-      label: 'Serif',
-      tokens: {
-        fontDisplay: "'Cormorant Garamond', Georgia, serif",
-        paneHeaderLabelFont: 'var(--font-display)',
-        paneHeaderLabelSize: '18px',
-        dialogTitleFont: 'var(--font-display)',
-      },
-    },
-    {
-      id: 'mono',
-      label: 'Mono',
-      tokens: {
-        fontDisplay: "'JetBrains Mono', monospace",
-        paneHeaderLabelFont: 'var(--font-display)',
-        paneHeaderLabelSize: '13px',
-        dialogTitleFont: 'var(--font-display)',
-      },
-    },
-    {
-      id: 'system',
-      label: 'System',
-      tokens: {
-        fontDisplay: "system-ui, -apple-system, 'Segoe UI', sans-serif",
-        paneHeaderLabelFont: 'var(--font-display)',
-        paneHeaderLabelSize: '13px',
-        dialogTitleFont: 'var(--font-display)',
-      },
-    },
-  ],
-};
-
 /** The plain switches each material offers, as token overrides on the worn Mood. */
 const SWITCHES: Record<
   Material,
@@ -84,7 +36,6 @@ const SWITCHES: Record<
   }[]
 > = {
   plasma: [
-    TITLES,
     {
       key: 'motion',
       label: 'Motion',
@@ -121,7 +72,6 @@ const SWITCHES: Record<
     },
   ],
   soft: [
-    TITLES,
     {
       key: 'frost',
       label: 'Frost',

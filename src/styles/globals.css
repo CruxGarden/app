@@ -53,15 +53,6 @@
     U+A720-A7FF;
 }
 
-/* Press Start 2P by CodeMan38, SIL OFL 1.1; license ships in /fonts. */
-@font-face {
-  font-family: 'Press Start 2P';
-  src: url('/fonts/PressStart2P-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
@@ -86,14 +77,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Outfit';
-  src: url('/fonts/Outfit-Regular.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* Wordmark only — a garden serif, not an app font. Variable file; use it at
    500-600 and display sizes: its hairline strokes drop out small on dark. */
 @font-face {
@@ -109,12 +92,13 @@
 @theme inline {
   /* Fallback faces; Mood tokens replace them at runtime. The font utilities
      below reference these variables so @theme inline cannot freeze a face. */
-  --font-display: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-body: 'Outfit', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --font-wordmark: 'Cormorant Garamond', Georgia, serif;
   /* The Collaboration's reading face (Mood token fontReading) */
-  --font-reading: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --font-reading: 'Inter', sans-serif;
 
   /* ── Dimensions driven by Mood tokens ──────────────────
      Tailwind's spacing unit and default transition follow the Mood, so

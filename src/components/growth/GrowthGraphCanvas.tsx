@@ -97,7 +97,7 @@ export default function GrowthGraphCanvas({
           if (n.kind !== 'copy') ctx.fill();
           ctx.stroke();
           const fontSize = Math.min(18, 11 / scale);
-          ctx.font = `${fontSize}px "Outfit", sans-serif`;
+          ctx.font = `${fontSize}px "Inter", sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           ctx.fillStyle = '#e1eee5';

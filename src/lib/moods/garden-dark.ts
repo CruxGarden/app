@@ -432,7 +432,7 @@ export const GARDEN_DARK = {
   plasmaAmbientDrops: 'off',
   // The form-in: whether a new surface grows from nothing, how fast (1 is a
   // quarter second, 2 an eighth), and whether a removed one shrinks away.
-  plasmaFormIn: 'on',
+  plasmaFormIn: 'off',
   plasmaFormSpeed: '1',
   plasmaFormOut: 'on',
   // The pointer, three ways (Daniel, 2026-09-19: "two settings, turning the
@@ -604,14 +604,11 @@ export const GARDEN_DARK = {
   growthCardAspect: '16 / 10',
 
   // ── Typography ───────────────────────────────────────
-  fontDisplay: "'Cormorant Garamond', Georgia, serif",
-  fontBody: "'Outfit', sans-serif",
+  fontDisplay: "'Inter', sans-serif",
+  fontBody: "'Inter', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
-  // The Collaboration's reading face: what the collaborator says is prose,
-  // set in a serif like a page, while the person's own words, the tool rows
-  // and the controls keep the UI faces (Daniel, 2026-09-20: "our
-  // collaboration should be this nice looking").
-  fontReading: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
+  // Collaboration prose shares the interface face.
+  fontReading: "'Inter', sans-serif",
 } as const;
 
 /** Generate derived pane tokens that all reference the base pane color via var() */

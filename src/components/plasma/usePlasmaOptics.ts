@@ -73,7 +73,7 @@ function readOptics() {
     stretch: num('--plasma-stretch', 1, 3),
     viscosity: num('--plasma-viscosity', 0.5, 1),
     ambientDrops: cs.getPropertyValue('--plasma-ambient-drops').trim() === 'on',
-    formIn: cs.getPropertyValue('--plasma-form-in').trim() !== 'off',
+    formIn: cs.getPropertyValue('--plasma-form-in').trim() === 'on',
     formSpeed: num('--plasma-form-speed', 1, 10) || 1,
     formOut: cs.getPropertyValue('--plasma-form-out').trim() !== 'off',
     pointerDrop: cs.getPropertyValue('--plasma-pointer-drop').trim() === 'on',

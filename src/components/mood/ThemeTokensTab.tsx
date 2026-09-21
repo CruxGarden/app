@@ -1,3 +1,4 @@
+import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK, getVar } from '@/lib/moods';
@@ -254,7 +255,16 @@ function TokenRow({
 export default function ThemeTokensTab() {
   const section: MoodSection = resolvedSection();
   const preset = activePreset(section);
-  const groups = useMemo(() => groupTokens(), []);
+  const groups = useMemo(
+    () =>
+      groupTokens()
+        .map(({ group, keys }) => ({
+          group,
+          keys: keys.filter((key) => !(key in APP_TYPOGRAPHY)),
+        }))
+        .filter(({ keys }) => keys.length > 0),
+    [],
+  );
   const [groupId, setGroupId] = useState(groups[0]!.group.id);
   const [query, setQuery] = useState('');
   const [overrides, setOverrides] = useState<ThemeOverrides>(() => getThemeOverrides(section));

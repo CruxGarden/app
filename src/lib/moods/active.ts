@@ -107,7 +107,14 @@ export function onThemePreviewChange(fn: () => void): () => void {
 
 /** Preset + saved overrides + preview layer, ready for applyMoodPalette. */
 export function composeMoodPalette(section: MoodSection = resolvedSection()): Partial<MoodPalette> {
-  return { ...(activePreset(section)?.overrides ?? {}), ...getThemeOverrides(section), ...preview };
+  return {
+    ...(activePreset(section)?.overrides ?? {}),
+    // Older saved Moods also open panels immediately; an explicit Builder
+    // override can still opt into the material's entrance animation.
+    plasmaFormIn: 'off',
+    ...getThemeOverrides(section),
+    ...preview,
+  };
 }
 
 /** Apply the active Mood for a mode to the document (no-op without a DOM). */

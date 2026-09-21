@@ -43,7 +43,7 @@
 
 .teaser-line {
   margin: 0;
-  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
   font-size: clamp(0.9rem, 2vw, 1.15rem);
   letter-spacing: 0.34em;
   text-indent: 0.34em; /* letter-spacing pads the right edge; this recentres it */
@@ -70,7 +70,7 @@
 
 .teaser-email,
 .teaser-submit {
-  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
   font-size: 0.95rem;
   border: 0;
   border-radius: 0;
@@ -142,7 +142,7 @@
 /* Shown in the form's place after Mailchimp sends them back. */
 .teaser-sent {
   margin: clamp(1.25rem, 3vw, 1.75rem) 0 0;
-  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
   font-size: 0.95rem;
   line-height: 1.5;
   color: #f7a8d8;

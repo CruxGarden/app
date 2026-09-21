@@ -1,5 +1,5 @@
 .interpretations-prototype {
-  font-family: Outfit, sans-serif;
+  font-family: Inter, sans-serif;
   min-height: 100vh;
   font-size: 14px;
   color: #fff;
@@ -145,7 +145,7 @@
 }
 .iw-title h1 {
   font:
-    400 118px/0.87 Outfit,
+    400 118px/0.87 Inter,
     sans-serif;
   letter-spacing: -7px;
   margin: 26px 0;
@@ -181,7 +181,7 @@
   display: block;
   color: #acb69c;
   font:
-    10px Outfit,
+    10px Inter,
     sans-serif;
   margin-top: 6px;
 }
@@ -391,7 +391,7 @@
 }
 .is-header > a > span {
   font:
-    32px Outfit,
+    32px Inter,
     sans-serif;
 }
 .is-header nav {
@@ -519,7 +519,7 @@
   display: block;
   margin-top: 11px;
   font:
-    600 56px/1 Outfit,
+    600 56px/1 Inter,
     sans-serif;
   letter-spacing: -3px;
 }
@@ -552,7 +552,7 @@
 }
 .is-cover-notes > span {
   font:
-    16px/1.1 Outfit,
+    16px/1.1 Inter,
     sans-serif;
   letter-spacing: 1px;
 }
@@ -910,7 +910,7 @@
 }
 .in-document h1 {
   font:
-    500 48px/1.07 Outfit,
+    500 48px/1.07 Inter,
     sans-serif;
   letter-spacing: -2px;
   margin: 25px 0 18px;
@@ -1026,7 +1026,7 @@
 }
 .in-graph text {
   font:
-    8px Outfit,
+    8px Inter,
     sans-serif;
   fill: #899b7d;
 }

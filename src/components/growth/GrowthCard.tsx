@@ -204,7 +204,7 @@ function useThumbnail(growth: Dimension): string | null {
 function Placeholder({ index }: { index: number }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-      <span className="font-wordmark text-3xl leading-none text-growth-card-label/60 select-none">
+      <span className="font-display text-3xl leading-none text-growth-card-label/60 select-none">
         {index + 1}
       </span>
     </div>

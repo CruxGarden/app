@@ -38,7 +38,7 @@ function Placeholder({ crux }: { crux: Crux }) {
   const initial = label.trim().charAt(0).toUpperCase() || '?';
   return (
     <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-      <span className="font-wordmark text-5xl leading-none text-accent/70 select-none">
+      <span className="font-display text-5xl leading-none text-accent/70 select-none">
         {initial}
       </span>
     </div>
