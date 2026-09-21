@@ -7,7 +7,8 @@ import {
   activateWorkspace,
   closeWorkspace,
   leaveWorkspaceView,
-  type Workspace,
+  getWorkspace,
+  useWorkspaceRegistry,
 } from '@/stores/workspaceRegistry';
 import { WorkspaceContext } from '@/stores/workspaceSelection';
 import { WorkspaceLayout } from '@/components/workspace';
@@ -21,7 +22,8 @@ export default function CruxBuilder() {
   const [search] = useSearchParams();
   const taskId = search.get('task');
   const id = taskId ?? cruxId;
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const entry = useWorkspaceRegistry((s) => s.entries.find((e) => e.id === id));
+  const workspace = entry && id ? getWorkspace(id) : undefined;
   const [retry, setRetry] = useState(0);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -35,23 +37,20 @@ export default function CruxBuilder() {
           throw new Error('This task does not belong to this Crux.');
       }
       return activateWorkspace(id);
-    })()
-      .then((w) => {
-        if (!cancelled) setWorkspace(w);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError((e as Error).message);
-      });
+    })().catch((e: unknown) => {
+      if (!cancelled) setError((e as Error).message);
+    });
     return () => {
       cancelled = true;
       leaveWorkspaceView();
     };
   }, [id, cruxId, taskId, retry]);
-  if (error)
+  const openError = error ?? workspace?.error;
+  if (openError)
     return (
       <div role="alert" className="p-8">
         <h1>Could not open this Crux</h1>
-        <p>{error}</p>
+        <p>{openError}</p>
         <button
           onClick={async () => {
             if (!id) return;
@@ -68,7 +67,7 @@ export default function CruxBuilder() {
         <Link to="/home">Back to your garden</Link>
       </div>
     );
-  if (!workspace || workspace.id !== id)
+  if (!workspace || workspace.phase !== 'ready')
     return (
       <div role="status" className="p-8">
         Opening Crux…
@@ -76,7 +75,7 @@ export default function CruxBuilder() {
     );
   return (
     <WorkspaceContext.Provider value={workspace}>
-      <Builder key={id} />
+      <Builder key={workspace.lifetimeId} />
     </WorkspaceContext.Provider>
   );
 }

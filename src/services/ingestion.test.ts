@@ -91,6 +91,19 @@ describe('Ingestion (external edits → history)', () => {
     return artifact.findByResource('crux', cruxId);
   }
 
+  it('ignores late events from a folder that no longer belongs to the Crux', async () => {
+    const { crux, folder } = await makeCrux('Replaced');
+    bridge.externalWrite(folder, 'study.txt', 'Before replacement');
+    bridge.emit({ folder, events: [{ type: 'write', relPath: 'study.txt' }] });
+    await flushIngestion();
+    const before = (await artifactsOf(crux.id))[0]!;
+    await getServices().crux.update(crux.id, { meta: { projectFolder: '/garden/replaced-2' } });
+    bridge.externalWrite(folder, 'study.txt', 'Late old-folder write');
+    bridge.emit({ folder, events: [{ type: 'write', relPath: 'study.txt' }] });
+    await flushIngestion();
+    expect((await artifactsOf(crux.id))[0]!.fingerprint).toBe(before.fingerprint);
+  });
+
   it('reads a new fingerprinted native asset before its watcher event without writing disk', async () => {
     const { crux, folder } = await makeCrux('Network');
     const content = JSON.stringify({ nodes: ['a', 'b'] });
@@ -296,7 +309,11 @@ describe('Ingestion (external edits → history)', () => {
   it('reads a declared write when the main process saw a later modification after it', async () => {
     const { crux, folder } = await makeCrux('Task copy');
     const { artifact } = getServices();
-    await artifact.create({ resourceId: crux.id, content: '<h1>Start</h1>', meta: { path: 'index.html' } });
+    await artifact.create({
+      resourceId: crux.id,
+      content: '<h1>Start</h1>',
+      meta: { path: 'index.html' },
+    });
     const own = await hashContent('<h1>Start</h1>');
     // The echo of the app's own write: nothing to read.
     expectProjectWrites(folder, [{ relPath: 'index.html', fingerprint: own }]);

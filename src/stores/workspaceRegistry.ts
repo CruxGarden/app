@@ -34,6 +34,8 @@ export interface Workspace extends WorkspaceStores {
 }
 export interface WorkspaceSummary {
   id: string;
+  phase?: Workspace['phase'];
+  lifetimeId?: string;
   title: string;
   status: string;
   dirty: boolean;
@@ -118,6 +120,8 @@ function summarize(w: Workspace) {
   const tending = workspaceTending(w);
   const next = {
     id: w.id,
+    phase: w.phase,
+    lifetimeId: w.lifetimeId,
     tending,
     title: s.crux?.title || 'Untitled',
     status: `${s.publishPhase ? 'Publishing' : tendingLabel(tending)}${s.turnQueue.length ? ` · ${s.turnQueue.length} queued` : ''}`,

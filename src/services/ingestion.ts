@@ -27,8 +27,21 @@ function bridge(): ProjectBridge | null {
 const folderToCrux = new Map<string, string>();
 
 async function cruxIdForFolder(folder: string): Promise<string | null> {
-  if (folderToCrux.has(folder)) return folderToCrux.get(folder)!;
   const db = getSqliteClient();
+  const cached = folderToCrux.get(folder);
+  if (cached) {
+    // Import can replace a Crux under the same id in a new Project Folder.
+    // A delayed event from its old folder must never rewrite the replacement.
+    const current = await db.get<{ meta: string | null }>('SELECT meta FROM cruxes WHERE id = ?', [
+      cached,
+    ]);
+    try {
+      if (JSON.parse(current?.meta || '{}').projectFolder === folder) return cached;
+    } catch {
+      /* Invalid or removed metadata cannot authorize a folder. */
+    }
+    folderToCrux.delete(folder);
+  }
   const copy = await db.get<{ id: string }>(
     "SELECT id FROM working_copies WHERE project_folder = ? AND phase IN ('preparing', 'ready')",
     [folder],

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
-import { importCrux } from '@/services/crux-io';
+import { pullCrux, useSyncPull, IDLE_PULL } from '@/services/sync-pull';
 import { backupCrux, backupOf } from '@/services/backup';
 import { cruxesChangedSince } from '@/services/drift';
 import { isAutoBackupOn, autoBackupPause, AUTO_BACKUP_CHANGED } from '@/services/auto-backup';
@@ -65,7 +65,8 @@ export default function SyncPane() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [pushing, setPushing] = useState(false);
-  const [pulling, setPulling] = useState(false);
+  const pull = useSyncPull((s) => (crux ? s[crux.id] : undefined) ?? IDLE_PULL);
+  const pulling = pull.busy;
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [lastSynced, setLastSynced] = useState<{ at: string; size: number } | null>(null);
@@ -113,6 +114,7 @@ export default function SyncPane() {
 
   const handlePush = useCallback(async () => {
     if (!crux) return;
+    useSyncPull.setState({ [crux.id]: IDLE_PULL });
     setPushing(true);
     setError('');
     try {
@@ -151,31 +153,9 @@ export default function SyncPane() {
       }))
     )
       return;
-    setPulling(true);
     setError('');
-    setProgress('Downloading from cloud...');
-    try {
-      const blob = await syncApi.pullCrux(crux.id);
-      setProgress('Importing crux...');
-      await importCrux({
-        data: blob,
-        mode: 'replace',
-        onProgress: (_done, _total) => setProgress('Importing...'),
-      });
-      setProgress('Pull complete — reloading...');
-      // Keep pulling=true so the UI stays in loading state until reload
-      setTimeout(() => window.location.reload(), 800);
-    } catch (err: unknown) {
-      console.error('Crux pull failed:', err);
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 404) {
-        setError('No cloud version found for this crux');
-      } else {
-        setError('Pull failed');
-      }
-      setProgress('');
-      setPulling(false);
-    }
+    setProgress('');
+    await pullCrux(crux.id);
   }, [crux, growthCount]);
 
   const busy = pushing || pulling;
@@ -279,6 +259,8 @@ export default function SyncPane() {
             </PaneHint>
           </PaneSection>
 
+          {pull.message && <PaneNote>{pull.message}</PaneNote>}
+          {pull.error && <PaneNote tone="error">{pull.error}</PaneNote>}
           {progress && (
             <PaneNote tone={progress.includes('failed') ? 'error' : 'muted'}>{progress}</PaneNote>
           )}
