@@ -352,7 +352,7 @@ export interface ContainersBridge {
   /** One compose verb, for this Crux only. */
   compose(opts: {
     cruxId: string;
-    verb: 'up' | 'down' | 'ps' | 'logs' | 'pull' | 'config' | 'stop' | 'start';
+    verb: 'up' | 'down' | 'ps' | 'logs' | 'pull' | 'config' | 'stop' | 'start' | 'run' | 'exec';
     service?: string;
     tail?: number;
     timeoutMs?: number;
@@ -360,6 +360,10 @@ export interface ContainersBridge {
     profiles?: string[];
     /** Values for `${NAME}` in the file; the Crux's secrets travel this way. */
     env?: Record<string, string>;
+    /** The command for `run` or `exec`, as a list — never a command line. */
+    command?: string[];
+    /** Wait until what was started is healthy before answering. */
+    wait?: boolean;
   }): Promise<{ code: number; output: string }>;
   /** Lines from a compose run in flight — pulling images is slow. */
   onOutput(callback: (event: { cruxId: string; verb: string; line: string }) => void): () => void;

@@ -206,6 +206,26 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
       timeout: 120_000,
     });
 
+    // A command in a service — migrations, a seed, a suite. Here a fresh
+    // container, because the service is not running.
+    await useStack(`services:
+  # Does a job and stops.
+  worker:
+    image: alpine:3
+    restart: "no"
+    command: ["sleep", "5"]
+`);
+    await bench.locator('#command-details summary').click();
+    await bench.locator('#command-service').selectOption('worker');
+    await bench.locator('#command-line').fill('echo ran-inside-the-service');
+    await bench.locator('#command-fresh').check();
+    await bench.getByRole('button', { name: 'Run', exact: true }).click();
+    await expect(bench.locator('#output')).toContainText('ran-inside-the-service', {
+      timeout: 180_000,
+    });
+    // The exit code is the point of a task, so it is reported.
+    await expect(bench.locator('#output')).toContainText('exit 0');
+
     // With a runner on the machine, it really runs.
     test.skip(!hasRunner(), 'this machine has no Docker or Podman');
     await useStack(`services:

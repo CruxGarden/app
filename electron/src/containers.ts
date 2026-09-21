@@ -33,6 +33,12 @@ export const COMPOSE_VERBS = [
   'config',
   'stop',
   'start',
+  // A command in a service: `run` starts a fresh container and removes it,
+  // `exec` uses the one already running. Both take an argument list, never a
+  // command line, and neither reaches a shell — the danger a stack poses is
+  // what its file asks for, and that is checked before anything starts.
+  'run',
+  'exec',
 ] as const;
 export type ComposeVerb = (typeof COMPOSE_VERBS)[number];
 
@@ -661,6 +667,17 @@ export interface ComposeRunOptions {
   /** Compose profiles to include, for the optional parts of a stack. */
   profiles?: string[];
   /**
+   * The command for `run` or `exec`, as a list. Empty runs the service's own
+   * command, which is what a one-shot job usually wants.
+   */
+  command?: string[];
+  /**
+   * Wait until everything started is healthy before answering (`up --wait`).
+   * What a task needs: the suite should meet a database that is ready, not one
+   * that has merely been created.
+   */
+  wait?: boolean;
+  /**
    * Settings handed to Compose as environment, for `${NAME}` the file reads.
    * The Crux's secrets arrive this way so a password never has to be written
    * into a file that gets published.
@@ -684,12 +701,17 @@ export async function runCompose(
   if (!COMPOSE_VERBS.includes(opts.verb)) throw new Error(`Not allowed: ${opts.verb}`);
   if (opts.service && !/^[\w.-]{1,64}$/.test(opts.service))
     throw new Error(`Not a service name: ${opts.service}`);
+  if ((opts.verb === 'run' || opts.verb === 'exec') && !opts.service)
+    throw new Error(`${opts.verb} needs a service to run in.`);
+  for (const part of opts.command ?? [])
+    if (typeof part !== 'string' || part.includes('\0')) throw new Error('Bad command.');
   for (const profile of opts.profiles ?? [])
     if (!/^[\w.-]{1,64}$/.test(profile)) throw new Error(`Not a profile name: ${profile}`);
   for (const name of Object.keys(opts.env ?? {}))
     if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name)) throw new Error(`Not a setting name: ${name}`);
 
-  if (opts.verb === 'up' || opts.verb === 'start') {
+  // `run` builds a container from the same file, so it is checked like a start.
+  if (opts.verb === 'up' || opts.verb === 'start' || opts.verb === 'run') {
     const reading = inspectCompose(opts.folder);
     if (reading.refusals.length)
       throw new Error(`This stack was not started.\n- ${reading.refusals.join('\n- ')}`);
@@ -698,13 +720,23 @@ export async function runCompose(
   return new Promise((resolve, reject) => {
     const args = ['compose', '--project-name', projectName(opts.cruxId)];
     for (const profile of opts.profiles ?? []) args.push('--profile', profile);
-    if (opts.verb === 'up') args.push('up', '--detach', '--remove-orphans');
+    if (opts.verb === 'up') {
+      args.push('up', '--detach', '--remove-orphans');
+      // Compose waits for healthchecks itself, which is more reliable than
+      // polling `ps` from out here.
+      if (opts.wait) args.push('--wait');
+      // `-T` because there is no terminal here: without it Compose tries to
+      // allocate one and the command fails or hangs.
+    } else if (opts.verb === 'run') args.push('run', '--rm', '-T');
+    else if (opts.verb === 'exec') args.push('exec', '-T');
     else if (opts.verb === 'down') args.push('down', '--remove-orphans');
     else if (opts.verb === 'logs')
       args.push('logs', '--no-color', '--tail', String(Math.min(opts.tail ?? 200, 2000)));
     else if (opts.verb === 'ps') args.push('ps', '--format', 'json');
     else args.push(opts.verb);
     if (opts.service && opts.verb !== 'down') args.push(opts.service);
+    // Everything after the service name is the command, passed as arguments.
+    if (opts.verb === 'run' || opts.verb === 'exec') args.push(...(opts.command ?? []));
 
     const proc = spawn(runner.program, args, {
       cwd: opts.folder,

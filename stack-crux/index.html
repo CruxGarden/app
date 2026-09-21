@@ -52,6 +52,22 @@
         <pre id="output" class="output">
 Press Start. The first run downloads the images, which takes a while.</pre
         >
+        <details id="command-details">
+          <summary>Run a command in a service</summary>
+          <div class="logs-controls">
+            <select id="command-service"></select>
+            <input id="command-line" placeholder="npm run migrate" />
+            <label class="profile"
+              ><input type="checkbox" id="command-fresh" /> a fresh container</label
+            >
+            <button id="run-command" type="button">Run</button>
+          </div>
+          <p class="hint">
+            Arguments only — there is no shell here, so pipes and redirects do not work. A fresh
+            container is for a job whose service is not running.
+          </p>
+        </details>
+
         <details id="logs-details">
           <summary>Logs</summary>
           <div class="logs-controls">

@@ -7,7 +7,19 @@
  * name to the Crux, allows only compose verbs, and reads the file for anything
  * dangerous before it starts. See `electron/src/containers.ts`.
  */
-export type ComposeVerb = 'up' | 'down' | 'ps' | 'logs' | 'pull' | 'config' | 'stop' | 'start';
+export type ComposeVerb =
+  | 'up'
+  | 'down'
+  | 'ps'
+  | 'logs'
+  | 'pull'
+  | 'config'
+  | 'stop'
+  | 'start'
+  /** A command in a service: a fresh container, removed after. */
+  | 'run'
+  /** A command in the container already running. */
+  | 'exec';
 
 export interface ComposeService {
   name: string;
@@ -86,7 +98,16 @@ export async function inspectCompose(cruxId: string, file?: string): Promise<Com
 export async function compose(
   cruxId: string,
   verb: ComposeVerb,
-  opts: { service?: string; tail?: number; timeoutMs?: number; profiles?: string[] } = {},
+  opts: {
+    service?: string;
+    tail?: number;
+    timeoutMs?: number;
+    profiles?: string[];
+    /** The command for `run` or `exec`, as a list — never a command line. */
+    command?: string[];
+    /** Wait until what was started is healthy: what a task needs. */
+    wait?: boolean;
+  } = {},
 ): Promise<{ code: number; output: string }> {
   const { localSecrets } = await import('./crux-functions');
   return api().compose({ cruxId, verb, env: localSecrets(cruxId), ...opts });

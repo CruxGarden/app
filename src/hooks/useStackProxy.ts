@@ -86,6 +86,8 @@ export function useStackProxy(cruxId: string | null) {
                 containers.compose(cruxId!, verb, {
                   service: e.data.service ? String(e.data.service) : undefined,
                   tail: typeof e.data.tail === 'number' ? e.data.tail : undefined,
+                  command: Array.isArray(e.data.command) ? e.data.command.map(String) : undefined,
+                  wait: e.data.wait === true,
                 }),
               ),
             );

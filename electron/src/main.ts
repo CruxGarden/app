@@ -903,6 +903,10 @@ function setupIpc() {
         profiles?: string[];
         /** Values for `${NAME}` in the file; the Crux's secrets travel this way. */
         env?: Record<string, string>;
+        /** The command for `run` or `exec`, as a list. */
+        command?: string[];
+        /** Wait until what was started is healthy. */
+        wait?: boolean;
       },
     ) => {
       const { runCompose, COMPOSE_VERBS } =

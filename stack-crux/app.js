@@ -57,7 +57,7 @@
 
   function busy(is) {
     state.busy = is;
-    ['up', 'stop', 'down', 'pull', 'refresh', 'logs'].forEach(function (id) {
+    ['up', 'stop', 'down', 'pull', 'refresh', 'logs', 'run-command'].forEach(function (id) {
       if ($(id)) $(id).disabled = is;
     });
     document.querySelectorAll('[data-service-action]').forEach(function (b) {
@@ -190,6 +190,12 @@
       });
     });
 
+    var commandPick = $('command-service');
+    commandPick.innerHTML = services
+      .map(function (s) {
+        return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>';
+      })
+      .join('');
     var select = $('log-service');
     select.innerHTML =
       '<option value="">every service</option>' +
@@ -607,6 +613,35 @@
       });
   }
 
+  // A command in a service: migrations, a seed, a psql shell, a suite.
+  function runCommand() {
+    if (state.busy) return;
+    var service = $('command-service').value;
+    var parts = $('command-line')
+      .value.split(/\s+/)
+      .filter(function (p) {
+        return p.length;
+      });
+    if (!service || !parts.length) return say('Pick a service and give it a command.', 'warn');
+    busy(true);
+    state.lines = [];
+    say('Running ' + parts.join(' ') + ' in ' + service + '…');
+    garden
+      .compose($('command-fresh').checked ? 'run' : 'exec', { service: service, command: parts })
+      .then(function (answer) {
+        var out = ((answer && answer.output) || '').trim();
+        $('output').textContent =
+          'exit ' + ((answer && answer.code) ?? '?') + (out ? '\n\n' + out : ' (no output)');
+        $('output').className = 'output' + (answer && answer.code === 0 ? ' ok' : ' warn');
+      })
+      .catch(function (error) {
+        say(String((error && error.message) || error), 'warn');
+      })
+      .then(function () {
+        busy(false);
+      });
+  }
+
   function showLogs(service) {
     if (state.busy) return;
     busy(true);
@@ -703,6 +738,7 @@
     refresh(true);
   });
   $('add-override').addEventListener('click', addOverride);
+  $('run-command').addEventListener('click', runCommand);
   recallProfiles();
   $('logs').addEventListener('click', function () {
     showLogs($('log-service').value);

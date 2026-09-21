@@ -93,6 +93,17 @@ export function validateToolInput(
     }
     case 'compose_ps':
       return { valid: true };
+    case 'compose_exec': {
+      if (typeof input.service !== 'string' || !/^[\w.-]{1,64}$/.test(input.service))
+        return { valid: false, error: 'service must be a service name' };
+      if (
+        !Array.isArray(input.command) ||
+        !input.command.length ||
+        !input.command.every((part) => typeof part === 'string' && part.length)
+      )
+        return { valid: false, error: 'command must be a non-empty list of strings' };
+      return { valid: true };
+    }
     case 'compose_up':
     case 'compose_down':
     case 'compose_logs': {

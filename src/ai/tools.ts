@@ -430,11 +430,16 @@ export const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'compose_up',
     description:
       "Start this Crux's stack (or one service of it) in the background. The first run downloads images and can take minutes. " +
+      'Pass wait: true to come back only once everything it started is healthy — what to do before running a test suite against it. ' +
       'The file is checked first: a stack that asks for privileged mode, the host network, the Docker socket or a mount outside the Crux is refused, and the reason is returned — fix compose.yaml rather than working around it.',
     input_schema: {
       type: 'object',
       properties: {
         service: { type: 'string', description: 'One service by name. Omit to start them all.' },
+        wait: {
+          type: 'boolean',
+          description: 'Come back only once what was started is healthy.',
+        },
       },
       required: [],
       additionalProperties: false,
@@ -454,6 +459,32 @@ export const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
         },
       },
       required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'compose_exec',
+    description:
+      "Run a command in one of this Crux's services: migrations, a seed, a psql shell, a test suite. " +
+      'Give the command as a list of arguments — there is no shell, so pipes and redirects do not work. ' +
+      'By default it uses the container already running; pass fresh: true for a new one that is removed after, which is what a one-shot job wants when the service is not up. ' +
+      'The answer is the exit code and the output, so a suite that fails says so.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service: { type: 'string', description: 'The service to run it in.' },
+        command: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'The command and its arguments, e.g. ["npm", "run", "migrate"].',
+        },
+        fresh: {
+          type: 'boolean',
+          description:
+            'A new container rather than the running one. Use when the service is not up.',
+        },
+      },
+      required: ['service', 'command'],
       additionalProperties: false,
     },
   },
@@ -955,11 +986,27 @@ export function createToolExecutor(
               : 'Nothing from this stack is running.';
             break;
           }
+          case 'compose_exec': {
+            const { compose } = await import('@/services/containers');
+            const args = input as { service: string; command: string[]; fresh?: boolean };
+            const run = await compose(cruxId, args.fresh ? 'run' : 'exec', {
+              service: args.service,
+              command: args.command,
+            });
+            const tail = run.output.trim().split('\n').slice(-60).join('\n');
+            result = `exit ${run.code}${tail ? `\n${tail}` : ' (no output)'}`;
+            break;
+          }
           case 'compose_up':
           case 'compose_down':
           case 'compose_logs': {
             const { compose } = await import('@/services/containers');
-            const args = input as { service?: string; tail?: number; keep?: boolean };
+            const args = input as {
+              service?: string;
+              tail?: number;
+              keep?: boolean;
+              wait?: boolean;
+            };
             const verb =
               toolName === 'compose_up'
                 ? 'up'
@@ -971,6 +1018,7 @@ export function createToolExecutor(
             const run = await compose(cruxId, verb, {
               service: args.service,
               tail: args.tail,
+              wait: args.wait,
             });
             const tail = run.output.trim().split('\n').slice(-40).join('\n');
             result =
