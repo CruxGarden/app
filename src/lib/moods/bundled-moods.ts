@@ -1,4 +1,4 @@
-import { synthForMood } from '@/audio/synth-patch';
+import { synthForMood, synthPresetsForMood } from '@/audio/synth-patch';
 /**
  * Bundled Moods — complete looks that ship with the app (ADR 0043): each one
  * a render from Daniel's backgrounds folder, a theme drawn from that render's
@@ -1128,6 +1128,7 @@ function build(spec: Spec): MoodPackage {
       // carries it under `bundled` so export never embeds an app-internal path.
       track: null,
       synth: synthForMood(spec.id, spec.name),
+      synthPresets: synthPresetsForMood(spec.id, spec.name),
       volume: spec.volume ?? 0.6,
       enabled: true,
       cues: { ...DEFAULT_CUES, ...(spec.cues ?? {}) },

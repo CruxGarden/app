@@ -45,7 +45,8 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
     await page.getByRole('button', { name: 'Sound', exact: true }).click();
     const synth = page.getByRole('region', { name: 'Crux Synth', exact: true });
     await expect(synth).toBeVisible();
-    await expect(synth.getByRole('group')).toHaveCount(4);
+    expect(await synth.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    await expect(synth.getByRole('group', { name: /^Track [1-4]$/ })).toHaveCount(4);
     const pause = synth.getByRole('button', { name: 'Pause synth', exact: true });
     if (await pause.isVisible()) await pause.click();
     await synth.getByRole('button', { name: 'Play synth', exact: true }).click();
@@ -54,10 +55,16 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
       .toBeGreaterThan(0.005);
     const result = await call('set_synth', { preset: 'meadow', volume: 0.4 });
     expected = result.patch;
+    expected.mode = 'dorian';
+    expected.tempo = 66;
+    expected.space = 0.72;
     expected.tracks[0].tone = 0.8;
     expected.tracks[1].voice = 'pad';
     expected.tracks[3].muted = true;
-    await call('set_synth', { patch: expected });
+    await call('set_synth', { patch: expected, savePreset: 'Agent atmosphere' });
+    await expect(synth.getByRole('combobox', { name: 'Synth harmony' })).toHaveValue('dorian');
+    await expect(synth.getByRole('slider', { name: 'Synth tempo' })).toHaveValue('66');
+    await expect(synth.getByRole('slider', { name: 'Synth space' })).toHaveValue('0.72');
     await expect(synth.getByRole('slider', { name: 'Track 1 tone', exact: true })).toHaveValue(
       '0.8',
     );
@@ -71,6 +78,21 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
     await synth.getByRole('slider', { name: 'Track 3 level', exact: true }).fill('0.22');
     expected.tracks[2].level = 0.22;
     expect((await call('get_synth')).patch).toEqual(expected);
+    await synth.locator('summary').click();
+    await expect(
+      synth.getByRole('button', { name: 'Load sound Agent atmosphere', exact: true }),
+    ).toBeVisible();
+    await synth.getByRole('textbox', { name: 'Synth preset name' }).fill('Human atmosphere');
+    await synth.getByRole('button', { name: 'Save sound preset', exact: true }).click();
+    expect((await call('get_synth')).moodPresets).toContainEqual({
+      ...expected,
+      name: 'Human atmosphere',
+    });
+    await call('set_synth', { removePreset: 'Agent atmosphere' });
+    await expect(
+      synth.getByRole('button', { name: 'Load sound Agent atmosphere', exact: true }),
+    ).toHaveCount(0);
+    await synth.locator('summary').click();
     // Bus mute must silence already-sounding notes, not only prevent new ones.
     for (let i = 1; i <= 3; i++)
       await synth.getByRole('button', { name: `Mute track ${i}`, exact: true }).click();
@@ -105,6 +127,14 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
     await second.page.getByRole('button', { name: 'Enter', exact: true }).click();
     await expect.poll(async () => (await audio(second.page)).synth).toEqual(expected!);
     expect((await audio(second.page)).playing).toBe(false);
+    await second.page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await second.page.getByRole('button', { name: 'Sound', exact: true }).click();
+    const sound = second.page.getByRole('region', { name: 'Crux Synth', exact: true });
+    await sound.locator('summary').click();
+    await expect(
+      sound.getByRole('button', { name: 'Load sound Human atmosphere', exact: true }),
+    ).toBeVisible();
+    await second.page.keyboard.press('Escape');
     await second.page.getByRole('button', { name: 'Play soundscape', exact: true }).click();
     await expect.poll(async () => (await audio(second.page)).level).toBeGreaterThan(0.005);
     await second.page.getByRole('button', { name: 'Pause soundscape', exact: true }).click();

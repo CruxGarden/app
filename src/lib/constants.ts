@@ -59,6 +59,7 @@ export enum SettingsKey {
   // Sound — the Mood's track (see audio/track.ts)
   /** The track the Mood plays (JSON: fingerprint or url, name, type) */
   SynthPatch = 'cruxgarden:synthPatch',
+  SynthPresetBanks = 'cruxgarden:synthPresetBanks',
   SoundTrack = 'cruxgarden:soundTrack',
   /** Sound switched on for this Mood ('' = off) */
   SoundEnabled = 'cruxgarden:soundEnabled',

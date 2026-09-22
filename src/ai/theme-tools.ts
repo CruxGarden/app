@@ -56,7 +56,16 @@ export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
         patch: {
           type: 'object',
           description:
-            'Full patch: {version:1,name,root:36..72,tracks:[{voice:pad|bass|bell|air,level:0..1,tone:0..1,movement:0..1,muted:boolean} ×4]}. Root is MIDI; tone is brightness; movement controls evolution speed.',
+            'Full patch: {version:1,name,root:36..72,tracks:[{voice:pad|bass|bell|air,level:0..1,tone:0..1,movement:0..1,muted:boolean} ×4]}. Also mode:major|minor|dorian, tempo:30..100, space:0..1 (older patches get defaults). Root is MIDI; tone is brightness; movement controls note density.',
+        },
+        savePreset: {
+          type: 'string',
+          description:
+            'Save the resulting sound under this name in the current Mood (same name replaces it). Travels with saved/exported/shared Moods.',
+        },
+        removePreset: {
+          type: 'string',
+          description: 'Remove the named preset from the current Mood when requested.',
         },
         volume: { type: 'number', minimum: 0, maximum: 1 },
         enabled: { type: 'boolean' },
@@ -467,15 +476,23 @@ export const THEME_TOOL_GUIDANCE =
 
 async function toolSynth(name: string, input: Record<string, unknown>): Promise<string> {
   const { useAudioStore } = await import('@/stores/audioStore');
-  const { SYNTH_PRESETS, parseSynthPatch, synthPreset } = await import('@/audio/synth-patch');
+  const { SYNTH_PRESETS, parseSynthPatch, parseSynthPresets, synthPreset } =
+    await import('@/audio/synth-patch');
   const store = useAudioStore.getState();
   store.init();
+  const moodPresets = useAudioStore.getState().synthPresets;
+  const presets = {
+    ...SYNTH_PRESETS,
+    ...Object.fromEntries(moodPresets.map((p, i) => [`mood:${i}`, p])),
+  };
   if (name === 'set_synth') {
     const patch =
       input.patch !== undefined
         ? parseSynthPatch(input.patch)
         : typeof input.preset === 'string'
-          ? synthPreset(input.preset)
+          ? presets[input.preset]
+            ? parseSynthPatch(presets[input.preset])
+            : synthPreset(input.preset)
           : undefined;
     if (
       input.volume !== undefined &&
@@ -488,9 +505,26 @@ async function toolSynth(name: string, input: Record<string, unknown>): Promise<
     for (const key of ['enabled', 'playing'])
       if (input[key] !== undefined && typeof input[key] !== 'boolean')
         throw new Error(`${key} must be boolean`);
+    let updatedPresets = moodPresets;
+    if (input.removePreset !== undefined) {
+      if (typeof input.removePreset !== 'string') throw new Error('removePreset must be a name');
+      updatedPresets = updatedPresets.filter((p) => p.name !== input.removePreset);
+    }
+    if (input.savePreset !== undefined) {
+      if (typeof input.savePreset !== 'string') throw new Error('savePreset must be a name');
+      const saved = parseSynthPatch({
+        ...(patch ?? useAudioStore.getState().synth),
+        name: input.savePreset,
+      });
+      updatedPresets = parseSynthPresets([
+        ...updatedPresets.filter((p) => p.name !== saved.name),
+        saved,
+      ]);
+    }
     if (input.playing === true && !useAudioStore.getState().optIn)
       return 'Press Play synth in Mood → Sound once to enable sound before an agent can play it.';
     if (patch) await store.setSynth(patch);
+    if (updatedPresets !== moodPresets) store.setSynthPresets(updatedPresets);
     if (typeof input.volume === 'number') store.setVolume(input.volume);
     if (typeof input.enabled === 'boolean') store.setEnabled(input.enabled);
     if (input.playing === true) await store.play();
@@ -502,6 +536,10 @@ async function toolSynth(name: string, input: Record<string, unknown>): Promise<
     volume: state.volume,
     enabled: state.enabled,
     playing: state.playing,
-    presets: SYNTH_PRESETS,
+    presets: {
+      ...SYNTH_PRESETS,
+      ...Object.fromEntries(state.synthPresets.map((p, i) => [`mood:${i}`, p])),
+    },
+    moodPresets: state.synthPresets,
   });
 }

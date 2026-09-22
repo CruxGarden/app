@@ -1,14 +1,13 @@
 /**
- * Sound state the UI reads: the Mood's track, whether it plays, volume, level.
- * The player (an <audio> element through WebAudio) is loaded lazily on first
- * play so it never lands in the boot bundle. Persists what the user chose.
+ * Shared sound controls: the app's Synth or the public site's file soundtrack.
+ * Audio graphs load lazily; patches and per-Mood preset banks persist locally.
  */
 import { create } from 'zustand';
 import * as persist from '@/services/sound';
 import type { SoundTrack } from '@/services/sound';
 import { cuesPlayedCount, type CueKind } from '@/services/cues';
 import { isPublicSite } from '@/lib/site';
-import { parseSynthPatch, type SynthPatch } from '@/audio/synth-patch';
+import { parseSynthPatch, parseSynthPresets, type SynthPatch } from '@/audio/synth-patch';
 import { isSilent } from '@/lib/platform';
 
 type Player = import('@/audio/track').TrackPlayer | import('@/audio/synth').SynthPlayer;
@@ -18,9 +17,7 @@ const NOOP_PLAYER = {
   onChange: () => () => {},
   load: async () => {},
   play: async () => {},
-  pause: () => {
-    ++playRevision;
-  },
+  pause: () => {},
   setVolume: () => {},
   duck: () => {},
   context: () => null,
@@ -70,6 +67,10 @@ export interface AudioState {
   /** The Mood's track; null when the Mood has no sound */
   track: SoundTrack | null;
   synth: SynthPatch;
+  synthPresets: SynthPatch[];
+  setSynthPresets: (presets: SynthPatch[]) => void;
+  saveSynthPreset: (name: string) => void;
+  removeSynthPreset: (name: string) => void;
   setSynth: (patch: SynthPatch) => Promise<void>;
   /** Sound switched on for this Mood */
   enabled: boolean;
@@ -101,6 +102,7 @@ let playRevision = 0;
 export const useAudioStore = create<AudioState>((set, get) => ({
   track: null,
   synth: persist.getSynth(),
+  synthPresets: persist.getSynthPresets(),
   enabled: true,
   playing: false,
   volume: 0.7,
@@ -115,6 +117,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     set({
       track: persist.getTrack(),
       synth: persist.getSynth(),
+      synthPresets: persist.getSynthPresets(),
       enabled: persist.getEnabled(),
       volume: persist.getVolume(),
       optIn: persist.getOptIn(),
@@ -179,6 +182,19 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       if (url && 'load' in player) await player.load(url);
     }
   },
+
+  setSynthPresets: (raw) => {
+    const presets = parseSynthPresets(raw);
+    persist.setSynthPresets(presets);
+    set({ synthPresets: presets });
+  },
+  saveSynthPreset: (name) => {
+    const preset = parseSynthPatch({ ...get().synth, name });
+    const presets = get().synthPresets.filter((p) => p.name !== preset.name);
+    get().setSynthPresets([...presets, preset]);
+  },
+  removeSynthPreset: (name) =>
+    get().setSynthPresets(get().synthPresets.filter((p) => p.name !== name)),
 
   setSynth: async (raw) => {
     const synth = parseSynthPatch(raw);

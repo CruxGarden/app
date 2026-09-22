@@ -1,24 +1,46 @@
 import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAudioStore } from '@/stores/audioStore';
-import { SYNTH_PRESETS, SYNTH_VOICES, synthPreset, type SynthVoice } from '@/audio/synth-patch';
+import {
+  SYNTH_PRESETS,
+  SYNTH_VOICES,
+  SYNTH_MODES,
+  synthPreset,
+  type SynthVoice,
+  type SynthMode,
+} from '@/audio/synth-patch';
 import { Toggle } from '@/components/ui';
 
 export default function SynthControls() {
-  const { synth, setSynth, playing, toggle, volume, setVolume, enabled, setEnabled } =
-    useAudioStore(
-      useShallow((s) => ({
-        synth: s.synth,
-        setSynth: s.setSynth,
-        playing: s.playing,
-        toggle: s.toggle,
-        volume: s.volume,
-        setVolume: s.setVolume,
-        enabled: s.enabled,
-        setEnabled: s.setEnabled,
-      })),
-    );
+  const {
+    synth,
+    setSynth,
+    synthPresets,
+    saveSynthPreset,
+    removeSynthPreset,
+    playing,
+    toggle,
+    volume,
+    setVolume,
+    enabled,
+    setEnabled,
+  } = useAudioStore(
+    useShallow((s) => ({
+      synth: s.synth,
+      setSynth: s.setSynth,
+      synthPresets: s.synthPresets,
+      saveSynthPreset: s.saveSynthPreset,
+      removeSynthPreset: s.removeSynthPreset,
+      playing: s.playing,
+      toggle: s.toggle,
+      volume: s.volume,
+      setVolume: s.setVolume,
+      enabled: s.enabled,
+      setEnabled: s.setEnabled,
+    })),
+  );
   const [error, setError] = useState('');
+  const [presetName, setPresetName] = useState('');
   const change = (index: number, values: Partial<(typeof synth.tracks)[number]>) => {
     void setSynth({
       ...synth,
@@ -26,7 +48,7 @@ export default function SynthControls() {
     });
   };
   return (
-    <section aria-label="Crux Synth" className="flex flex-col gap-4">
+    <section aria-label="Crux Synth" className="flex min-w-0 w-full flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="font-display text-lg text-heading">Crux Synth</h3>
@@ -50,7 +72,7 @@ export default function SynthControls() {
         >
           {playing ? 'Pause synth' : 'Play synth'}
         </button>
-        <label className="flex-1 text-xs text-text">
+        <label className="min-w-0 flex-1 text-xs text-text">
           Master volume
           <input
             aria-label="Synth master volume"
@@ -66,21 +88,30 @@ export default function SynthControls() {
       </div>
       {error && (
         <p role="alert" className="text-xs text-error">
-          Could not start sound: {error}
+          {error}
         </p>
       )}
       <div className="grid grid-cols-2 gap-3 text-xs text-text">
-        <label>
+        <label className="min-w-0">
           Starting sound
           <select
             aria-label="Synth preset"
-            className="w-full rounded bg-panel border border-border p-2"
+            className="min-w-0 max-w-full w-full rounded bg-panel border border-border p-2"
             value=""
             onChange={(e) => {
-              if (e.target.value) void setSynth(synthPreset(e.target.value));
+              if (e.target.value.startsWith('mood:'))
+                void setSynth(synthPresets[Number(e.target.value.slice(5))]!);
+              else if (e.target.value) void setSynth(synthPreset(e.target.value));
             }}
           >
             <option value="">{synth.name}</option>
+            <optgroup label="This Mood">
+              {synthPresets.map((p, i) => (
+                <option key={p.name} value={`mood:${i}`}>
+                  {p.name}
+                </option>
+              ))}
+            </optgroup>
             {Object.entries(SYNTH_PRESETS).map(([id, p]) => (
               <option key={id} value={id}>
                 {p.name}
@@ -88,11 +119,11 @@ export default function SynthControls() {
             ))}
           </select>
         </label>
-        <label>
+        <label className="min-w-0">
           Root note
           <select
             aria-label="Synth root note"
-            className="w-full rounded bg-panel border border-border p-2"
+            className="min-w-0 max-w-full w-full rounded bg-panel border border-border p-2"
             value={synth.root}
             onChange={(e) => void setSynth({ ...synth, root: Number(e.target.value) })}
           >
@@ -105,12 +136,110 @@ export default function SynthControls() {
           </select>
         </label>
       </div>
+      <div className="grid grid-cols-3 gap-3 text-xs text-text">
+        <label className="min-w-0">
+          Harmony
+          <select
+            aria-label="Synth harmony"
+            className="min-w-0 max-w-full w-full rounded bg-panel border border-border p-2"
+            value={synth.mode}
+            onChange={(e) => void setSynth({ ...synth, mode: e.target.value as SynthMode })}
+          >
+            {SYNTH_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {mode === 'major' ? 'Luminous' : mode === 'minor' ? 'Reflective' : 'Floating'}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="min-w-0">
+          Pace · {synth.tempo}
+          <input
+            aria-label="Synth tempo"
+            type="range"
+            min="30"
+            max="100"
+            step="1"
+            value={synth.tempo}
+            onChange={(e) => void setSynth({ ...synth, tempo: Number(e.target.value) })}
+            className="w-full accent-accent"
+          />
+        </label>
+        <label className="min-w-0">
+          Space · {Math.round(synth.space * 100)}%
+          <input
+            aria-label="Synth space"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={synth.space}
+            onChange={(e) => void setSynth({ ...synth, space: Number(e.target.value) })}
+            className="w-full accent-accent"
+          />
+        </label>
+      </div>
+      <details className="text-xs text-text rounded border border-border p-3">
+        <summary className="cursor-pointer">Presets in this Mood ({synthPresets.length})</summary>
+        <div className="flex gap-2 mt-3">
+          <input
+            aria-label="Synth preset name"
+            placeholder="Name this sound"
+            maxLength={80}
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            className="min-w-0 flex-1 rounded border border-border bg-panel p-2"
+          />
+          <button
+            type="button"
+            disabled={!presetName.trim()}
+            className="cursor-pointer disabled:opacity-40"
+            onClick={() => {
+              try {
+                saveSynthPreset(presetName);
+                setPresetName('');
+                setError('');
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+              }
+            }}
+          >
+            Save sound preset
+          </button>
+        </div>
+        <ul className="mt-3 flex flex-col gap-2">
+          {synthPresets.map((p) => (
+            <li key={p.name} className="flex justify-between gap-2">
+              <button
+                type="button"
+                className="text-left cursor-pointer hover:text-accent"
+                aria-label={`Load sound ${p.name}`}
+                onClick={() => void setSynth(p)}
+              >
+                {p.name}
+              </button>
+              <button
+                type="button"
+                className="text-text-muted cursor-pointer"
+                aria-label={`Delete sound ${p.name}`}
+                onClick={() => removeSynthPreset(p.name)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-text-muted">
+          Presets stay with this Mood. Save the Mood in the Builder, then export or share it to
+          bring your sounds with it. Reusing a name replaces that preset.
+        </p>
+      </details>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {synth.tracks.map((t, i) => (
           <fieldset
             key={i}
             aria-label={`Track ${i + 1}`}
-            className="rounded border border-border bg-panel p-3 flex flex-col gap-3"
+            className="min-w-0 rounded border border-border bg-panel p-3 flex flex-col gap-3"
           >
             <legend className="font-display text-sm text-heading px-1">Track {i + 1}</legend>
             <div className="flex items-center justify-between gap-2">

@@ -1,4 +1,10 @@
-import { parseSynthPatch, synthForMood, type SynthPatch } from '@/audio/synth-patch';
+import {
+  parseSynthPatch,
+  parseSynthPresets,
+  synthForMood,
+  synthPresetsForMood,
+  type SynthPatch,
+} from '@/audio/synth-patch';
 /**
  * Mood Packages — the installable, shareable bundle: theme + background +
  * sound + persona + meta. Stored in settings (JSON) with every binary
@@ -75,6 +81,7 @@ export interface MoodPackage {
 
 export interface MoodSound {
   synth?: SynthPatch;
+  synthPresets?: SynthPatch[];
   track: SoundTrack | null;
   volume: number;
   enabled: boolean;
@@ -128,8 +135,10 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
   // `resonance` block (synthesized mixes) — its volume and cues still apply.
   const snd = (p.sound ?? p.resonance ?? {}) as Record<string, unknown>;
   let synth: SynthPatch | undefined;
+  let synthPresets: SynthPatch[] | undefined;
   try {
     if (snd.synth) synth = parseSynthPatch(snd.synth);
+    if (snd.synthPresets !== undefined) synthPresets = parseSynthPresets(snd.synthPresets);
   } catch {
     return null;
   }
@@ -163,6 +172,7 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
     sound: {
       track: validateTrack(snd.track),
       ...(synth ? { synth } : {}),
+      ...(synthPresets ? { synthPresets } : {}),
       volume: typeof snd.volume === 'number' ? Math.min(1, Math.max(0, snd.volume)) : 0.7,
       enabled: snd.enabled !== false,
       cues,
@@ -254,6 +264,7 @@ export function captureCurrentMood(input: {
     sound: {
       track: sound.getTrack(),
       synth: sound.getSynth(),
+      synthPresets: sound.getSynthPresets(),
       volume: sound.getVolume(),
       enabled: sound.getEnabled(),
       cues: getCues(),
@@ -362,6 +373,9 @@ export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}
   useAudioStore.setState({ volume: pkg.sound.volume, enabled: pkg.sound.enabled });
   s.setVolume(pkg.sound.volume);
   await s.setTrack(track);
+  s.setSynthPresets(
+    sound.getSynthPresets(pkg.id, pkg.sound.synthPresets ?? synthPresetsForMood(pkg.id, pkg.name)),
+  );
   await s.setSynth(pkg.sound.synth ?? synthForMood(pkg.id, pkg.name));
   if (!pkg.sound.enabled) s.pause();
   // A wear, as opposed to a restore at startup: cues and journeys listen. The

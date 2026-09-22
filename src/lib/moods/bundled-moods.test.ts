@@ -19,6 +19,8 @@ describe('bundled Moods (the backgrounds set, the soft suite and the Plasma fami
       expect(ok!.sound.volume).toBeLessThanOrEqual(1);
       expect(ok!.sound.enabled).toBe(true);
       expect(ok!.sound.cues).toEqual(m.sound.cues);
+      expect(ok!.sound.synthPresets).toHaveLength(3);
+      expect(ok!.sound.synthPresets?.[0]).toEqual(ok!.sound.synth);
       expect(m.persona?.name, `${m.id} has a voice`).toBeTruthy();
       expect(m.persona?.greeting, `${m.id} greets`).toBeTruthy();
     }
