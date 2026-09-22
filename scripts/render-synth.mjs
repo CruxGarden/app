@@ -1,10 +1,15 @@
 /** Reproducible, silent OfflineAudioContext renders of the production instrument. */
 import { build } from 'esbuild';
 import { chromium } from '../electron/node_modules/playwright/index.mjs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 const out = resolve(process.argv[2] || '/private/tmp/crux-synth-listening');
 await mkdir(out, { recursive: true });
+// Optional ordinary Synth patch: uses exactly the app's public control values.
+const customPatch = process.argv[3]
+  ? JSON.parse(await readFile(resolve(process.argv[3]), 'utf8'))
+  : null;
+const customSeconds = Number(process.argv[4] || 96);
 const bundle = await build({
   stdin: {
     contents: `export {renderSynth} from './src/audio/synth'; export {synthPreset} from './src/audio/synth-patch';`,
@@ -21,12 +26,14 @@ const page = await browser.newPage();
 await page.addScriptTag({ content: bundle.outputFiles[0].text });
 const results = [];
 try {
-  for (const id of ['glow', 'meadow', 'dusk', 'prism', 'stress', 'silent']) {
+  for (const id of customPatch
+    ? ['custom']
+    : ['glow', 'meadow', 'dusk', 'prism', 'stress', 'silent']) {
     const start = Date.now();
     const result = await page.evaluate(
-      async ({ id }) => {
+      async ({ id, customPatch, customSeconds }) => {
         const { renderSynth, synthPreset } = window.CruxSynthRender;
-        const patch = synthPreset(id === 'stress' || id === 'silent' ? 'prism' : id);
+        const patch = customPatch ?? synthPreset(id === 'stress' || id === 'silent' ? 'prism' : id);
         if (id === 'stress') {
           patch.space = 1;
           patch.tempo = 100;
@@ -38,7 +45,7 @@ try {
           });
         }
         if (id === 'silent') patch.tracks.forEach((t) => (t.muted = true));
-        const seconds = id === 'silent' ? 10 : 64;
+        const seconds = customPatch ? customSeconds : id === 'silent' ? 10 : 64;
         const buffer = await renderSynth(patch, seconds, 42);
         const left = buffer.getChannelData(0),
           right = buffer.getChannelData(1);
@@ -108,7 +115,7 @@ try {
           binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
         return { stats, wav: btoa(binary) };
       },
-      { id },
+      { id, customPatch, customSeconds },
     );
     await writeFile(resolve(out, `${id}.wav`), Buffer.from(result.wav, 'base64'));
     results.push({ ...result.stats, renderMs: Date.now() - start });
