@@ -170,7 +170,9 @@ export default function CruxspaceStory({
           `Every member of ${walking.spaceName} goes back to its last checkpoint before “${walking.title}”, files on disk included. Each gets a “Before revert” checkpoint first, so Growth can bring the current state back.`,
           ...going.map((m) => `• ${m.title} → ${m.label}`),
           ...(staying.length
-            ? [`Left as they are (they did not exist yet): ${staying.map((m) => m.title).join(', ')}.`]
+            ? [
+                `Left as they are (they did not exist yet): ${staying.map((m) => m.title).join(', ')}.`,
+              ]
             : []),
         ].join('\n'),
         confirmLabel: 'Revert every member',
@@ -281,7 +283,11 @@ export default function CruxspaceStory({
           </div>
         )}
         {notice && (
-          <p role="status" aria-label="Revert result" className="px-4 py-2 text-sm border-b border-border">
+          <p
+            role="status"
+            aria-label="Revert result"
+            className="px-4 py-2 text-sm border-b border-border"
+          >
             {notice}
           </p>
         )}
@@ -291,7 +297,7 @@ export default function CruxspaceStory({
             className="w-[26rem] shrink-0 border-r border-border overflow-y-auto p-4 space-y-5 text-sm"
           >
             <section aria-label="About this Cruxspace">
-              <h3 className="text-xs uppercase tracking-widest font-mono text-text-muted mb-1">
+              <h3 className="text-xs uppercase tracking-widest font-display text-text-muted mb-1">
                 What this Cruxspace is for
               </h3>
               <p className="whitespace-pre-wrap">
@@ -299,7 +305,7 @@ export default function CruxspaceStory({
               </p>
             </section>
             <section aria-label="Members">
-              <h3 className="text-xs uppercase tracking-widest font-mono text-text-muted mb-1">
+              <h3 className="text-xs uppercase tracking-widest font-display text-text-muted mb-1">
                 Members and their part
               </h3>
               <ul className="space-y-1">
@@ -331,7 +337,7 @@ export default function CruxspaceStory({
             </section>
             <section aria-label="Milestones">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <h3 className="text-xs uppercase tracking-widest font-mono text-text-muted">
+                <h3 className="text-xs uppercase tracking-widest font-display text-text-muted">
                   Milestones, in order
                 </h3>
                 {!walking && history && history.milestones.length > 0 && (
@@ -357,7 +363,9 @@ export default function CruxspaceStory({
               />
               <ol className="space-y-1" aria-label="Milestone list">
                 {milestones.map((m) => {
-                  const index = (everything ? history!.checkpoints : history!.milestones).indexOf(m);
+                  const index = (everything ? history!.checkpoints : history!.milestones).indexOf(
+                    m,
+                  );
                   const current = walking?.milestoneId === m.id;
                   return (
                     <li

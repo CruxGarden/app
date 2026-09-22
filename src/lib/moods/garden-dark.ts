@@ -604,7 +604,7 @@ export const GARDEN_DARK = {
   growthCardAspect: '16 / 10',
 
   // ── Typography ───────────────────────────────────────
-  fontDisplay: "'Inter', sans-serif",
+  fontDisplay: "'Outfit', sans-serif",
   fontBody: "'Inter', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
   // Collaboration prose shares the interface face.

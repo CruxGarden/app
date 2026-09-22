@@ -92,7 +92,7 @@ export default function TaskDetails() {
 
   return (
     <section className="task-details flex flex-col gap-3 text-sm" data-testid="task-details">
-      <h3 className="text-xs font-mono uppercase tracking-wider text-text-muted">
+      <h3 className="text-xs font-display uppercase tracking-wider text-text-muted">
         {isTask ? 'This task' : 'Main'}
       </h3>
       <label className="flex flex-col gap-1">

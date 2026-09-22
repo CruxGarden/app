@@ -747,7 +747,7 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
 
   return (
     <section>
-      <h2 className="text-xs font-mono uppercase tracking-wider text-text-muted mb-3">
+      <h2 className="text-xs font-display uppercase tracking-wider text-text-muted mb-3">
         {collection.name} · {items.length}
       </h2>
       {sorted.length === 0 ? (
@@ -910,7 +910,7 @@ function ShelfSection({ path }: { path: string }) {
   const openFile = useUIStore((s) => s.openFile);
   return (
     <section data-testid="shelf-section">
-      <h2 className="text-xs font-mono uppercase tracking-wider text-text-muted mb-1">
+      <h2 className="text-xs font-display uppercase tracking-wider text-text-muted mb-1">
         Shelf{shelf ? ` · ${shelf.entries.length}` : ''}
       </h2>
       {shelf && (

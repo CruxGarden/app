@@ -255,7 +255,7 @@ export default function SyncSettings() {
           </div>
 
           {/* Garden backup */}
-          <h3 className="text-2xs font-mono text-caption mb-2 uppercase tracking-wider">
+          <h3 className="text-2xs font-display text-caption mb-2 uppercase tracking-wider">
             Garden Backup
           </h3>
 
@@ -311,7 +311,7 @@ export default function SyncSettings() {
 
           {/* Synced cruxes */}
           <div className="border-t border-border my-4" />
-          <h3 className="text-2xs font-mono text-caption mb-2 uppercase tracking-wider">
+          <h3 className="text-2xs font-display text-caption mb-2 uppercase tracking-wider">
             Synced Cruxes
           </h3>
 

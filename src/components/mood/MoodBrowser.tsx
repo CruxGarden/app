@@ -382,7 +382,9 @@ export default function MoodBrowser() {
       {/* HyperMoods: the rooms with their own render, track, cues and effects. */}
       <section className="flex flex-col gap-2" data-testid="bundled-moods">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-xxs font-mono uppercase tracking-wider text-caption">HyperMoods</h3>
+          <h3 className="text-xxs font-display uppercase tracking-wider text-caption">
+            HyperMoods
+          </h3>
           <span className="text-2xs text-text-muted">
             {HYPER_MOODS.length} rooms — a render, a sound and a voice, made as one. Click one to
             wear it.
@@ -424,7 +426,7 @@ export default function MoodBrowser() {
       </details>
 
       <section className="flex flex-col gap-2">
-        <h3 className="text-xxs font-mono uppercase tracking-wider text-caption mt-3">Yours</h3>
+        <h3 className="text-xxs font-display uppercase tracking-wider text-caption mt-3">Yours</h3>
       </section>
 
       {moods.length === 0 ? (
