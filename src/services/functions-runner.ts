@@ -1,3 +1,7 @@
+import { getSqliteClient } from './sqlite/client';
+import { SettingsKey } from '@/lib/constants';
+import { compileToCjs } from './function-compiler';
+export { compileToCjs } from './function-compiler';
 import type { Artifact } from '@/api/types';
 import { getServices } from '@/services';
 import { pathOf } from '@/lib/artifact-path';
@@ -25,15 +29,6 @@ function findArtifactByPath(artifacts: Artifact[], path: string): Artifact | nul
  */
 const WALL_MS = 5000;
 const MAX_DEPTH = 4;
-
-/** ESM → CommonJS, exactly as the API's runner does it. */
-export function compileToCjs(code: string): string {
-  return code
-    .replace(/export\s+default\s+async\s+function/g, 'module.exports.default = async function')
-    .replace(/export\s+default\s+function/g, 'module.exports.default = function')
-    .replace(/export\s+default\s+/g, 'module.exports.default = ')
-    .replace(/export\s+(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/g, '$1 $2 = module.exports.$2 =');
-}
 
 /** `score*` matches `score:saved`; `*` matches anything; otherwise exact. */
 export function matches(pattern: string, name: string): boolean {
@@ -92,7 +87,7 @@ const WORKER_PRELUDE = `
     const req = Object.freeze({
       method: m.method || 'POST', body: m.body ?? null,
       json: async () => m.body ?? null, text: async () => (m.body == null ? '' : typeof m.body === 'string' ? m.body : JSON.stringify(m.body)),
-      headers: {}, query: m.query || {}, path: m.rest || '', params: String(m.rest || '').split('/').filter(Boolean),
+      headers: m.headers || {}, query: m.query || {}, path: m.rest || '', params: String(m.rest || '').split('/').filter(Boolean),
     });
     try {
       new Function('module', 'exports', m.code)(module, module.exports);
@@ -111,6 +106,10 @@ const WORKER_PRELUDE = `
 
 export interface LocalRunInput {
   body?: unknown;
+  method?: string;
+  rest?: string;
+  query?: Record<string, string | string[]>;
+  headers?: Record<string, string>;
   event?: { name: string; data: unknown; at: string } | null;
   visitorId?: string | null;
   depth?: number;
@@ -125,6 +124,19 @@ async function loadSource(cruxId: string, path: string): Promise<string | null> 
   return blob.text();
 }
 
+/** Legacy folder ownership used a separate id from the person's author record. */
+export async function functionOwnerId(cruxId: string): Promise<string> {
+  const owner = (await getServices().crux.findById(cruxId)).authorId;
+  const rows = await getSqliteClient().all<{ key: string; value: string }>(
+    'SELECT key, value FROM settings WHERE key IN (?, ?)',
+    [SettingsKey.LocalAuthorIdLegacy, SettingsKey.LocalAuthorId],
+  );
+  const ids = new Map(rows.map((row) => [row.key, row.value]));
+  return owner === ids.get(SettingsKey.LocalAuthorIdLegacy)
+    ? ids.get(SettingsKey.LocalAuthorId) || owner
+    : owner;
+}
+
 /** Run one handler file locally. */
 export async function runLocalHandler(
   cruxId: string,
@@ -134,6 +146,7 @@ export async function runLocalHandler(
 ): Promise<CallResult> {
   const started = Date.now();
   const { store } = getServices();
+  const ownerId = await functionOwnerId(cruxId);
   const egress = /ctx\.fetch/.test(code) ? await egressHosts(cruxId) : [];
   const secrets = /ctx\.secrets/.test(code) ? localSecrets(cruxId) : {};
   const url = URL.createObjectURL(new Blob([WORKER_PRELUDE], { type: 'text/javascript' }));
@@ -273,11 +286,18 @@ export async function runLocalHandler(
         op: 'run',
         name,
         code: compileToCjs(code),
-        body: input.body ?? null,
+        body: input.body ?? input.event?.data ?? null,
+        method: input.method ?? (input.event ? 'EVENT' : 'POST'),
+        rest: input.rest ?? '',
+        query: input.query ?? {},
+        headers: Object.fromEntries(
+          Object.entries(input.headers ?? {}).filter(
+            ([name]) => !['cookie', 'authorization'].includes(name.toLowerCase()),
+          ),
+        ),
         event: input.event ?? null,
         visitorId,
-        // In the workspace the one visitor is the author: the owner.
-        ownerId: visitorId,
+        ownerId,
         cruxId,
         secrets,
       });

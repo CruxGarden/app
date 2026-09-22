@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -34,6 +35,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>Scores</ti
 const HOOK = `// functions/on-store.js — scores only go up.
 export const match = 'store:*';
 export default async function (req, ctx) {
+  if (req.method !== 'EVENT' || JSON.stringify(await req.json()) !== JSON.stringify(ctx.event.data)) ctx.reject('wrong event request', 422);
   const { key, value, before } = ctx.event.data;
   if (key === 'score' && before != null && value < before) ctx.reject('scores only go up', 422);
   return { checked: key };
@@ -45,7 +47,7 @@ test('a page calls its functions, hears events and is refused by a Store hook, a
   const { app, page, dir } = await launchApp();
   try {
     await enterGarden(page);
-    await createCrux(page, 'Scores');
+    const cruxId = await createCrux(page, 'Scores');
     const folder = cruxFolder(dir);
 
     // The page and the hook, written into the folder as any editor or agent would.
@@ -66,10 +68,35 @@ test('a page calls its functions, hears events and is refused by a Store hook, a
     await expect.poll(() => existsSync(join(folder, 'crux.js'))).toBe(true);
     await expect(fns).toContainText('They run here');
 
+    // The same exported helpers and local bindings work here and on the API.
+    const hello = `export const value = 3;
+export function double(n) { return n * 2; }
+export default async function hello(req, ctx) {
+  ctx.log('hello from', ctx.visitor?.id);
+  return ctx.json({ ok: true, echo: await req.json(), helper: double(value), literal: 'export default function', method: req.method, owner: ctx.owner.id });
+}`;
+    writeFileSync(join(folder, 'functions', 'hello.js'), hello);
+    await expect
+      .poll(async () => {
+        const row = (await page.evaluate(
+          async (id) =>
+            window.electronAPI!.sqlite.get(
+              "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'functions/hello.js'",
+              [id],
+            ),
+          cruxId,
+        )) as { fingerprint: string };
+        return row?.fingerprint;
+      })
+      .toBe(createHash('sha256').update(hello).digest('hex'));
+
     // Run from the Share pane: the local runner answers.
     await fns.getByTestId('function-hello').getByRole('button', { name: 'Run' }).click();
     await expect(fns.getByTestId('function-result-hello')).toContainText('"ok": true');
     await expect(fns.getByTestId('function-result-hello')).toContainText('hello from');
+    await expect(fns.getByTestId('function-result-hello')).toContainText('"helper": 6');
+    await expect(fns.getByTestId('function-result-hello')).toContainText('"method": "POST"');
+    await expect(fns.getByTestId('function-result-hello')).toContainText('export default function');
 
     // The preview: crux.fn from the page.
     const frame = page.frameLocator('iframe[data-crux-id]');

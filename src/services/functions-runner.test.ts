@@ -12,11 +12,6 @@ describe('functions-runner', () => {
     const cjs = compileToCjs(handlerSource({ event: 'ping', then: { kind: 'log' } }));
     expect(cjs).toContain('module.exports.default = async function');
     expect(cjs).not.toMatch(/^export /m);
-    expect(
-      compileToCjs(`export const match = 'store:*';\nexport default function (req, ctx) {}`),
-    ).toBe(
-      `const match = module.exports.match = 'store:*';\nmodule.exports.default = function (req, ctx) {}`,
-    );
     const exports: Record<string, unknown> = {};
     new Function(
       'module',

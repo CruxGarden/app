@@ -1,3 +1,4 @@
+import cases from '../../src/services/function-compiler-cases.json';
 import { test, expect, request } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -30,6 +31,7 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     await page.locator('.monaco-editor textarea').first().focus();
     await page.keyboard.type('<h1>Orders</h1>');
     await page.keyboard.press('ControlOrMeta+s');
+    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
 
     // Share pane → Functions: a starter, then a rule "when ping, write last-ping".
     await page.getByRole('button', { name: 'Toggle share' }).click();
@@ -82,6 +84,20 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     await secrets.getByRole('button', { name: 'Set' }).click();
     await expect(secrets).toContainText('TOKEN');
 
+    // Publish the exact compiler corpus exercised by both unit runners.
+    for (const [i, sample] of cases.entries()) {
+      writeFileSync(join(folder, 'functions', `contract${i}.js`), sample.code);
+      await expect(fns.getByTestId(`function-contract${i}`)).toBeVisible({ timeout: 30_000 });
+    }
+    writeFileSync(
+      join(folder, 'functions', 'request.js'),
+      `export default async function (req, ctx) {
+      return { method: req.method, path: req.path, params: req.params, query: req.query,
+        headers: req.headers, body: await req.json(), owner: !!ctx.visitor?.isOwner };
+    }`,
+    );
+    await expect(fns.getByTestId('function-request')).toBeVisible({ timeout: 30_000 });
+
     // Share it (the first share asks about a backup).
     await page.getByRole('button', { name: 'Share', exact: true }).click();
     const backupAsk = page
@@ -95,11 +111,35 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     const api = await request.newContext({ baseURL: LOCAL_API });
     const listed = await (await api.get(`/fn/${id}`)).json();
     expect(listed.map((f: { name: string }) => f.name).sort()).toEqual([
+      ...cases.map((_, i) => `contract${i}`),
       'hello',
       'on-ping',
       'remote',
+      'request',
       'tick',
     ]);
+    for (const [i, sample] of cases.entries()) {
+      const response = await api.post(`/fn/${id}/contract${i}`, { data: sample.body ?? {} });
+      expect(response.status(), sample.name).toBe(200);
+      expect(await response.json(), sample.name).toEqual(sample.expected);
+    }
+    const requestResult = await api.put(`/fn/${id}/request/42/items?who=ada&tag=a&tag=b`, {
+      data: { qty: 2 },
+      headers: { 'X-Example': 'garden', Cookie: 'private=hidden' },
+    });
+    expect(requestResult.status()).toBe(200);
+    const requestBody = await requestResult.json();
+    expect(requestBody).toMatchObject({
+      method: 'PUT',
+      path: '42/items',
+      params: ['42', 'items'],
+      query: { who: 'ada', tag: ['a', 'b'] },
+      headers: { 'x-example': 'garden' },
+      body: { qty: 2 },
+      owner: false,
+    });
+    expect(requestBody.headers).not.toHaveProperty('cookie');
+    expect(requestBody.headers).not.toHaveProperty('authorization');
     // The secret reaches the address right after the share (the app pushes what
     // was set here); the handler reads it and calls out through ctx.fetch.
     await expect
@@ -143,6 +183,12 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     await api.dispose();
 
     // And from the Share pane, signed in: Run and Emit show their answers.
+    // Keep Share wide enough for its controls after the scheduled wait.
+    const otherPanes = page.locator(
+      '.mosaic-window button[title^="Close "]:not([title="Close Share"])',
+    );
+    while (await otherPanes.count()) await otherPanes.first().click();
+    await expect(fns).toBeVisible();
     await fns.getByTestId('function-hello').getByRole('button', { name: 'Run' }).click();
     await expect(fns.getByTestId('function-result-hello')).toContainText('"ok": true');
     await fns.getByTestId('function-on-ping').getByRole('button', { name: 'Emit' }).click();
