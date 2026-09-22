@@ -1,6 +1,7 @@
+import { buildMosaicTree } from '@/lib/mosaic-layout';
 import type { MosaicNode } from 'react-mosaic-component';
 import type { StoreApi } from 'zustand';
-import { DEFAULT_PANE_ORDER, type PaneType, type UIState } from '@/stores/uiStore';
+import { DEFAULT_PANE_ORDER, getMosaicLeaves, type PaneType, type UIState } from '@/stores/uiStore';
 import { getSetting, setSetting, flushSettings } from './settings';
 import { SettingsKey } from '@/lib/constants';
 import { flushNotebook } from './notebook-lifecycle';
@@ -84,12 +85,24 @@ export async function applyWorkspaceLayout(ui: StoreApi<UIState>, name: string) 
   const entry = listWorkspaceLayouts().find((l) => l.name === name);
   if (!entry) throw new Error('That workspace layout no longer exists.');
   const layout = parseWorkspaceLayout(entry.layout);
+  await replaceWorkspaceLayout(ui, () => layout);
+}
+/** Redistribute the open panels only; saved arrangements remain unchanged. */
+export async function arrangeWorkspacePanels(ui: StoreApi<UIState>) {
+  await replaceWorkspaceLayout(ui, () =>
+    buildMosaicTree(getMosaicLeaves(ui.getState().mosaicLayout)),
+  );
+}
+async function replaceWorkspaceLayout(
+  ui: StoreApi<UIState>,
+  resolve: () => MosaicNode<PaneType> | null,
+) {
   const revision = (applying.get(ui) ?? 0) + 1;
   applying.set(ui, revision);
   const cruxId = ui.getState().activeCruxId;
   // Save embedded editors before any panel can unmount. A failed save leaves the layout intact.
   await flushNotebook(cruxId);
   if (applying.get(ui) !== revision || ui.getState().activeCruxId !== cruxId) return;
-  ui.getState().setMosaicLayout(layout, { persistImmediately: true });
+  ui.getState().setMosaicLayout(resolve(), { persistImmediately: true });
   await flushSettings();
 }

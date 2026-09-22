@@ -54,6 +54,29 @@ test('saved layouts are shared by UI and outside agents, reusable across Cruxes 
     await expect(composer).toHaveValue('An unsent idea that must survive');
     await call({ action: 'apply', name: 'Original' });
     expect((await call({ action: 'list' })).current).toEqual(original);
+    // Existing manually cramped arrangements have an explicit repair in both interfaces.
+    const cramped = {
+      direction: 'row',
+      first: 'collaboration',
+      second: 'workshop',
+      splitPercentage: 5,
+    };
+    await call({ action: 'save', name: 'Cramped', layout: cramped });
+    await call({ action: 'apply', name: 'Cramped' });
+    const arranged = (await call({ action: 'arrange' })).current;
+    expect(arranged).toEqual({ ...cramped, splitPercentage: 50 });
+    await call({ action: 'apply', name: 'Cramped' });
+    await page.keyboard.press('ControlOrMeta+,');
+    await settings.getByRole('button', { name: 'Arrange open panels', exact: true }).click();
+    await expect.poll(async () => (await call({ action: 'list' })).current).toEqual(arranged);
+    expect((await call({ action: 'list' })).layouts).toContainEqual({
+      name: 'Cramped',
+      layout: cramped,
+    });
+    await page.keyboard.press('Escape');
+    await expect(composer).toHaveValue('An unsent idea that must survive');
+    await call({ action: 'delete', name: 'Cramped' });
+    await call({ action: 'apply', name: 'Original' });
     await page.keyboard.press('ControlOrMeta+,');
     await settings.getByRole('button', { name: 'Delete workspace layout Original' }).click();
     expect((await call({ action: 'list' })).layouts.map((x: { name: string }) => x.name)).toEqual([

@@ -9,6 +9,7 @@ import {
   saveWorkspaceLayout,
   listWorkspaceLayouts,
   applyWorkspaceLayout,
+  arrangeWorkspacePanels,
 } from './workspace-layouts';
 
 beforeEach(async () => {
@@ -48,6 +49,23 @@ describe('custom workspace arrangements', () => {
     expect(ui.getState().composerDraft).toBe('Unsent idea');
     expect(ui.getState().editor).toBe(editor);
     expect(ui.getState().paneVisibility.artifacts).toBe(false);
+  });
+  it('redistributes existing cramped panels without replacing saved layouts or drafts', async () => {
+    const ui = createUIStore();
+    const cramped = {
+      direction: 'row' as const,
+      first: 'collaboration' as const,
+      second: 'workshop' as const,
+      splitPercentage: 5,
+    };
+    ui.getState().setMosaicLayout(cramped);
+    ui.getState().setComposerDraft('Keep this');
+    saveWorkspaceLayout('Deliberate', cramped);
+    await arrangeWorkspacePanels(ui);
+    expect(ui.getState().mosaicLayout).toEqual({ ...cramped, splitPercentage: 50 });
+    expect(createUIStore().getState().mosaicLayout).toEqual(ui.getState().mosaicLayout);
+    expect(ui.getState().composerDraft).toBe('Keep this');
+    expect(listWorkspaceLayouts()).toEqual([{ name: 'Deliberate', layout: cramped }]);
   });
   it('refuses to hide an embedded editor whose save failed', async () => {
     const ui = createUIStore();

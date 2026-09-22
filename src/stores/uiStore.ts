@@ -1,3 +1,4 @@
+import { buildMosaicTree, addPaneToMosaic } from '@/lib/mosaic-layout';
 import { deferNotebookAction } from '@/services/notebook-lifecycle';
 import { leaveSurface } from '@/components/plasma/leave';
 import { create, useStore } from 'zustand';
@@ -267,30 +268,6 @@ export function getMosaicLeaves(node: MosaicNode<PaneType> | null): PaneType[] {
   if (node === null) return [];
   if (typeof node === 'string') return [node];
   return [...getMosaicLeaves(node.first), ...getMosaicLeaves(node.second)];
-}
-
-/** Build a balanced mosaic tree from a list of visible panes */
-function buildMosaicTree(panes: PaneType[]): MosaicNode<PaneType> | null {
-  if (panes.length === 0) return null;
-  if (panes.length === 1) return panes[0]!;
-  const mid = Math.ceil(panes.length / 2);
-  return {
-    direction: 'row',
-    first: buildMosaicTree(panes.slice(0, mid))!,
-    second: buildMosaicTree(panes.slice(mid))!,
-    splitPercentage: (mid / panes.length) * 100,
-  };
-}
-
-/** Add a pane to an existing mosaic tree */
-function addPaneToMosaic(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<PaneType> {
-  if (tree === null) return pane;
-  return {
-    direction: 'row',
-    first: tree,
-    second: pane,
-    splitPercentage: 75,
-  };
 }
 
 /** Remove a pane from a mosaic tree */

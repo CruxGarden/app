@@ -244,17 +244,26 @@ test.describe('home garden, crux picker, panes, console', () => {
       for (const { type } of PANES)
         await expect(page.getByTestId(`pane-body-${type}`)).toBeVisible({ timeout: 30_000 });
 
-      // Nine panes in a 900px window: each is under its minimum width.
-      await page.setViewportSize({ width: 900, height: 700 });
+      // Even in a narrow native window every tile and close control remains on screen.
+      await second.app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0]!.setSize(900, 700),
+      );
+      for (const { type, label } of PANES) {
+        await expect(page.getByTestId(`pane-body-${type}`)).toBeVisible();
+        const close = page.getByTitle(`Close ${label}`);
+        await expect(close).toBeInViewport({ ratio: 1 });
+        // A real pointer hit test detects overlapping panes as well as clipped headers.
+        await close.click({ trial: true });
+      }
       const widen = page.getByText('Widen the pane');
       await expect(widen.first()).toBeVisible();
-      expect(await widen.count()).toBeGreaterThanOrEqual(PANES.length - 1);
+      // Some tiles need more room for their content; headers remain usable.
       await page.screenshot({ path: 'e2e/.results/garden-panes-4-narrow.png' });
 
       // Closing the others gives Collaboration its room back.
       for (const { type, label } of PANES) {
         if (type === 'collaboration') continue;
-        await page.getByRole('button', { name: `Toggle ${label.toLowerCase()}` }).click();
+        await page.getByTitle(`Close ${label}`).click();
         await expect(page.getByTestId(`pane-body-${type}`)).toHaveCount(0);
       }
       await expect(widen).toHaveCount(0);

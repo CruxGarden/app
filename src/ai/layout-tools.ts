@@ -5,17 +5,18 @@ import {
   listWorkspaceLayouts,
   saveWorkspaceLayout,
   applyWorkspaceLayout,
+  arrangeWorkspacePanels,
   deleteWorkspaceLayout,
 } from '@/services/workspace-layouts';
 
 export const WORKSPACE_LAYOUT_TOOL: ToolDefinition = {
   name: 'workspace_layouts',
   description:
-    'List, save, apply or delete named panel arrangements, using the same controls as Settings → Workspace layouts. Applying keeps the current Crux, files, drafts and running collaborators. Read before changing. Only save, apply or delete when asked.',
+    'List, save, apply or delete named panel arrangements, or arrange the currently open panels, using the same controls as Settings → Workspace layouts. Applying keeps the current Crux, files, drafts and running collaborators. Read before changing. Arranging redistributes open panels without changing saved arrangements. Only change layouts when asked.',
   input_schema: {
     type: 'object',
     properties: {
-      action: { type: 'string', enum: ['list', 'save', 'apply', 'delete'] },
+      action: { type: 'string', enum: ['list', 'save', 'apply', 'delete', 'arrange'] },
       name: {
         type: 'string',
         description: 'Arrangement name, 1–80 characters. Saving the same name replaces it.',
@@ -34,10 +35,13 @@ export async function runWorkspaceLayouts(
   cruxId?: string,
 ): Promise<string> {
   const action = input.action;
-  if (!['list', 'save', 'apply', 'delete'].includes(String(action)))
-    throw new Error('Choose list, save, apply or delete.');
+  if (!['list', 'save', 'apply', 'delete', 'arrange'].includes(String(action)))
+    throw new Error('Choose list, save, apply, delete or arrange.');
   const ui = cruxId ? getWorkspace(cruxId)?.ui : workspaceSelection.getState().active?.ui;
-  if (action !== 'list') {
+  if (action === 'arrange') {
+    if (!ui?.getState().activeCruxId) throw new Error('Open a Crux before arranging panels.');
+    await arrangeWorkspacePanels(ui);
+  } else if (action !== 'list') {
     if (typeof input.name !== 'string' || !input.name.trim() || input.name.trim().length > 80)
       throw new Error('Give a workspace layout name (1–80 characters).');
     const name = input.name.trim();

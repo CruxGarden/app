@@ -6,6 +6,7 @@ import {
   onWorkspaceLayoutsChange,
   saveWorkspaceLayout,
   applyWorkspaceLayout,
+  arrangeWorkspacePanels,
   deleteWorkspaceLayout,
 } from '@/services/workspace-layouts';
 
@@ -26,6 +27,20 @@ export default function WorkspaceLayoutsSettings() {
         Save an arrangement of panels and reuse it in the Crux you’re working on. Your files, drafts
         and collaborators stay where they are.
       </p>
+      <Button
+        size="sm"
+        className="mb-3"
+        disabled={!cruxId || busy}
+        onClick={() => {
+          setBusy(true);
+          setError('');
+          void arrangeWorkspacePanels(ui)
+            .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+            .finally(() => setBusy(false));
+        }}
+      >
+        Arrange open panels
+      </Button>
       <div className="flex gap-2">
         <Input
           aria-label="Workspace layout name"
