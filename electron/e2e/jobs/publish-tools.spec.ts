@@ -31,6 +31,7 @@ interface Manifest {
   id: string;
   name: string;
   defaultTitle: string;
+  entryFile: string;
   bundled?: boolean;
 }
 function tools(): { manifest: Manifest; folder: string }[] {
@@ -90,6 +91,10 @@ async function publishOne(page: Page, manifest: Manifest) {
     await expect(page.locator('.mosaic-window.pane-details')).toHaveCount(0, { timeout: 10000 });
   }
   await page.getByRole('button', { name: 'Toggle share' }).click();
+  const otherPanes = page.locator(
+    '.mosaic-window button[title^="Close "]:not([title="Close Share"])',
+  );
+  while (await otherPanes.count()) await otherPanes.first().click();
   // Explore lists what is discoverable; a tool is published to be found.
   const discoverable = page.getByRole('switch', { name: /Discoverable/ });
   if ((await discoverable.getAttribute('aria-checked')) !== 'true') await discoverable.click();
@@ -105,9 +110,8 @@ async function publishOne(page: Page, manifest: Manifest) {
 
 test('publish the Crux Tools as Template Cruxes', async () => {
   const wanted = WANTED === 'all' ? null : new Set(WANTED!.split(',').map((s) => s.trim()));
-  const list = tools().filter(
-    ({ manifest, folder }) =>
-      (wanted ? wanted.has(manifest.id) : !manifest.bundled) && existsSync(join(folder, 'runtime')),
+  const list = tools().filter(({ manifest }) =>
+    wanted ? wanted.has(manifest.id) : !manifest.bundled,
   );
   test.setTimeout(900000 * Math.max(1, list.length));
   const { app, page } = await launchApp();
@@ -158,6 +162,31 @@ test('publish the Crux Tools as Template Cruxes', async () => {
       `done: ${published.length} published, ${failed.length} failed${failed.length ? ` (${failed.join(', ')})` : ''}`,
     );
     expect(failed, `tools that did not publish: ${failed.join(', ')}`).toEqual([]);
+    const catalogResponse = await fetch(`${LOCAL_API}/explore?kind=tool&type=cruxes&perPage=100`);
+    expect(catalogResponse.ok).toBe(true);
+    const catalog = (await catalogResponse.json()) as {
+      author_username: string;
+      slug: string;
+      meta?: { template?: string };
+    }[];
+    for (const { manifest } of list) {
+      const item = catalog.find((c) => c.meta?.template === manifest.id);
+      expect(item, `${manifest.id} is discoverable`).toBeTruthy();
+      const base = `${LOCAL_API}/authors/${encodeURIComponent(item!.author_username)}/cruxes/${encodeURIComponent(item!.slug)}`;
+      const response = await fetch(`${base}/artifacts`);
+      expect(response.ok, `${manifest.id} artifact list`).toBe(true);
+      const artifacts = (await response.json()) as {
+        id: string;
+        filename: string;
+        meta?: { path?: string };
+      }[];
+      const entry = artifacts.find((a) => (a.meta?.path || a.filename) === manifest.entryFile);
+      expect(entry, `${manifest.id} includes ${manifest.entryFile}`).toBeTruthy();
+      const download = await fetch(`${base}/artifacts/${entry!.id}/download`);
+      expect(download.ok, `${manifest.id} entry downloads`).toBe(true);
+      expect((await download.arrayBuffer()).byteLength).toBeGreaterThan(0);
+      console.log(`verified ${manifest.id}: ${artifacts.length} files, entry downloads`);
+    }
   } finally {
     await app.close();
   }

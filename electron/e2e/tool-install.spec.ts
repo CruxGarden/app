@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { LOCAL_API, useLocalApi } from './local-api-helpers';
 
 /**
@@ -17,7 +19,7 @@ test.skip(!TOOL || !LOCAL_API, 'set CRUX_INSTALL_TOOL and CRUX_LOCAL_API');
 
 test('a tool not in the build installs from Explore and then creates', async () => {
   test.setTimeout(180000);
-  const { app, page } = await launchApp();
+  const { app, page, dir } = await launchApp();
   try {
     await page.setViewportSize({ width: 1400, height: 900 });
     await enterGarden(page);
@@ -26,6 +28,18 @@ test('a tool not in the build installs from Explore and then creates', async () 
 
     // Not installed: the picker says so and offers Explore.
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
+    for (const template of [
+      'notes',
+      'astro-homepage',
+      'astro-blog',
+      'business-page',
+      'resume',
+      'photo-gallery',
+    ]) {
+      const bundled = page.locator(`[data-template-id="${template}"]`);
+      await expect(bundled).toBeVisible();
+      await expect(bundled).not.toContainText('not installed');
+    }
     const row = page.locator(`[data-template-id="${TOOL}"]`);
     await expect(row).toContainText('not installed');
     await row.click();
@@ -45,8 +59,34 @@ test('a tool not in the build installs from Explore and then creates', async () 
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
     await expect(page.locator('iframe[data-crux-id]')).toBeVisible({ timeout: 60000 });
-    await page.screenshot({ path: 'e2e/.results/tool-installed-created.png' });
+    if (TOOL === 'p5-app') {
+      const frame = page.frameLocator('iframe[data-crux-id]');
+      await expect(frame.locator('#stage canvas')).toBeVisible();
+      await frame.locator('#sketch-name').fill('Installed from local Explore');
+      await frame.locator('#sketch-name').press('Enter');
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const folder = (await storedCrux(page, id)).projectFolder;
+      await expect
+        .poll(
+          () => JSON.parse(readFileSync(join(folder, 'data/project.json'), 'utf8')).project?.name,
+        )
+        .toBe('Installed from local Explore');
+      await page.screenshot({ path: 'e2e/.results/tool-installed-created.png' });
+      await app.close();
+      const restarted = await launchApp({ dir });
+      try {
+        await restarted.page.getByRole('button', { name: /enter/i }).click();
+        await expect(
+          restarted.page.frameLocator('iframe[data-crux-id]').locator('#sketch-name'),
+        ).toHaveValue('Installed from local Explore', { timeout: 60_000 });
+        await expect(
+          restarted.page.frameLocator('iframe[data-crux-id]').locator('#stage canvas'),
+        ).toBeVisible();
+      } finally {
+        await restarted.app.close();
+      }
+    } else await page.screenshot({ path: 'e2e/.results/tool-installed-created.png' });
   } finally {
-    await app.close();
+    await app.close().catch(() => {});
   }
 });

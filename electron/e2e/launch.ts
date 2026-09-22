@@ -71,9 +71,13 @@ export async function launchApp(
   app.close = async () => {
     await app
       .evaluate(({ ipcMain, BrowserWindow }) => {
-        const window = BrowserWindow.getAllWindows().find((w) =>
-          w.webContents.getURL().startsWith('crux-app://'),
-        );
+        const window = BrowserWindow.getAllWindows().find((w) => {
+          const url = w.webContents.getURL();
+          return (
+            url.startsWith('crux-app://') ||
+            (!!process.env.CRUX_DEV_SERVER && url.startsWith(process.env.CRUX_DEV_SERVER))
+          );
+        });
         if (window) ipcMain.emit('workspace:close-guard', { sender: window.webContents }, false);
         // A native editor's late save/dirty update can remount the renderer's
         // close subscription between this evaluation and app.quit(). Teardown
@@ -83,6 +87,15 @@ export async function launchApp(
       .catch(() => {});
     await close();
   };
-  await page.waitForLoadState('domcontentloaded');
+  try {
+    // Vite loads the unbundled module graph on a cold start. Packaged/dist
+    // journeys keep the normal deadline; dev-server jobs need extra time.
+    await page.waitForLoadState('domcontentloaded', {
+      timeout: env.CRUX_DEV_SERVER ? 90_000 : 30_000,
+    });
+  } catch (err) {
+    await app.close().catch(() => {});
+    throw err;
+  }
   return { app, page, dir };
 }

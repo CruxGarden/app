@@ -57,6 +57,10 @@ export async function applyTemplateToCrux(
           };
         }),
     );
+    // Registration shares Blob Store content, but the desktop preview reads
+    // real files. Finish creating the project before opening its workspace.
+    const { projectAllArtifacts } = await import('./project-folder');
+    await projectAllArtifacts(crux.id);
     // The seeded document is among the cloned files already.
     def = templateFromManifest({ ...manifest, document: undefined }, []);
   }
