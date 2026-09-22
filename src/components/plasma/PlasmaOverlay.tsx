@@ -14,6 +14,7 @@ import { usePlasmaTier } from './usePlasmaTier';
 import { PLASMA_TIERS } from './tiers';
 import { usePlasmaOptics } from './usePlasmaOptics';
 import { useLitLevel } from '@/hooks/useActivity';
+import { can, Capability } from '@/lib/platform';
 
 /**
  * The material above the scrim.
@@ -92,6 +93,7 @@ export default function PlasmaOverlay({
   const on = usePlasmaOn() && (always || !flat);
   const tier = usePlasmaTier();
   const optics = usePlasmaOptics();
+  const stillPanels = can(Capability.DesktopChrome);
   const [ground, setGround] = useState<HTMLCanvasElement | null>(plasmaGround);
   useEffect(() => {
     if (!on) return;
@@ -133,9 +135,9 @@ export default function PlasmaOverlay({
       canvas={false}
       quality={Math.min(t.quality ?? 1.25, 1.25)}
       pointerDrop={false}
-      pointerPull={optics.pointerPull}
+      pointerPull={!stillPanels && optics.pointerPull}
       ambientDrops={false}
-      flow={Math.min(optics.flow, t.flow ?? 3)}
+      flow={stillPanels ? 0 : Math.min(optics.flow, t.flow ?? 3)}
       stretch={0}
       viscosity={optics.viscosity}
       grain={0}

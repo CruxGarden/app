@@ -6,6 +6,7 @@ import { PLASMA_TIERS } from './tiers';
 import { GROUND_CLASS } from './ground';
 import { usePlasmaOptics } from './usePlasmaOptics';
 import { useLitLevel } from '@/hooks/useActivity';
+import { can, Capability } from '@/lib/platform';
 
 /**
  * The Plasma theme's material: one WebGL canvas behind the whole app.
@@ -53,6 +54,7 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
   const on = usePlasmaOn();
   const tier = usePlasmaTier();
   const optics = usePlasmaOptics();
+  const stillPanels = can(Capability.DesktopChrome);
   const inWorkspace = useInWorkspace();
   // The last stage of the garden warming up (lib/moods/signals.ts): below
   // LIT_FROM only the colour comes back, and past it the iridescence climbs
@@ -95,12 +97,13 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
       // The pointer: the bead that follows it (the tier may still say no on a
       // weak GPU), and the light the edges throw toward it.
       pointerDrop={optics.pointerDrop && t.pointerDrop !== false}
-      // The liquid: the Mood's, within what the tier can afford.
-      flow={Math.min(optics.flow, flowCap)}
-      stretch={Math.min(optics.stretch, stretchCap)}
+      // Desktop panels stay still; Flow changes their light, not their shape.
+      // Website material retains the Mood's motion within the tier budget.
+      flow={stillPanels ? 0 : Math.min(optics.flow, flowCap)}
+      stretch={stillPanels ? 0 : Math.min(optics.stretch, stretchCap)}
       viscosity={optics.viscosity}
       ambientDrops={optics.ambientDrops && t.ambientDrops !== false}
-      pointerPull={optics.pointerPull}
+      pointerPull={!stillPanels && optics.pointerPull}
       highlight={optics.pointerLight ? 1 : 0}
       elevation={optics.elevation}
       shimmer={optics.shimmer}
