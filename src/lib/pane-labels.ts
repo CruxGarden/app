@@ -24,6 +24,8 @@ export const DEFAULT_PANE_LABELS: Record<PaneType, string> = {
   publish: 'Share',
   store: 'Store',
   media: 'Find media',
+  mood: 'Mood',
+  synth: 'Crux Synth',
 };
 
 /** The CSS variable each pane's name is read from (literal, so coverage can see it). */
@@ -39,6 +41,8 @@ const PANE_LABEL_VARS: Record<PaneType, string> = {
   publish: '--pane-label-publish',
   store: '--pane-label-store',
   media: '--pane-label-media',
+  mood: '--pane-label-mood',
+  synth: '--pane-label-synth',
 };
 
 function readVar(name: string): string {

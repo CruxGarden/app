@@ -155,6 +155,8 @@ const ALL_PANES = [
   'paneSync',
   'panePublish',
   'paneStore',
+  'paneSynth',
+  'paneMood',
 ];
 
 /** The same body/frame/header for every pane (uniform looks). */
@@ -4732,6 +4734,8 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
         'paneSync',
         'panePublish',
         'paneStore',
+        'paneSynth',
+        'paneMood',
       ]),
       // ── motion ── snaps: nothing eases in, the button sinks, the caret blinks
       motionDurationFast: '0ms',

@@ -48,7 +48,7 @@ export default function SynthControls() {
     });
   };
   return (
-    <section aria-label="Crux Synth" className="flex min-w-0 w-full flex-col gap-4">
+    <section aria-label="Crux Synth" className="@container flex min-w-0 w-full flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="font-display text-lg text-heading">Crux Synth</h3>
@@ -136,7 +136,7 @@ export default function SynthControls() {
           </select>
         </label>
       </div>
-      <div className="grid grid-cols-3 gap-3 text-xs text-text">
+      <div className="grid grid-cols-1 @[480px]:grid-cols-3 gap-3 text-xs text-text">
         <label className="min-w-0">
           Harmony
           <select
@@ -234,7 +234,7 @@ export default function SynthControls() {
           bring your sounds with it. Reusing a name replaces that preset.
         </p>
       </details>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 @[520px]:grid-cols-2 gap-3">
         {synth.tracks.map((t, i) => (
           <fieldset
             key={i}

@@ -1289,6 +1289,56 @@ html.palette-transition *::after {
   border-radius: var(--pane-tasks-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-tasks-pulse);
 }
+.mosaic.crux-mosaic-theme .mosaic-window.pane-mood {
+  --panel: var(--pane-mood-body);
+  --pane-header-close-hover: var(--pane-mood-header-close-hover);
+  --border: var(--pane-mood-border);
+  --radius: var(--pane-mood-radius);
+  --text: var(--pane-mood-text);
+  --text-muted: var(--pane-mood-text-muted);
+  --surface: var(--pane-mood-surface);
+  --accent: var(--pane-mood-accent);
+  --accent-muted: var(--pane-mood-accent-muted);
+  --surface-solid: var(--pane-mood-surface-solid);
+  --radius-sm: var(--pane-mood-radius-sm);
+  --caption: var(--pane-mood-caption);
+  --heading: var(--pane-mood-heading);
+  --pane-header-radius: var(--pane-mood-header-radius);
+  --pane-header-height: var(--pane-mood-header-height);
+  --pane-border-width: var(--pane-mood-border-width);
+  --pane-header-label-case: var(--pane-mood-header-label-case);
+  --pane-header-justify: var(--pane-mood-header-justify);
+  --pane-texture: var(--pane-mood-texture);
+  --pane-texture-size: var(--pane-mood-texture-size);
+  --pane-texture-blend: var(--pane-mood-texture-blend);
+  border-radius: var(--pane-mood-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-mood-pulse);
+}
+.mosaic.crux-mosaic-theme .mosaic-window.pane-synth {
+  --panel: var(--pane-synth-body);
+  --pane-header-close-hover: var(--pane-synth-header-close-hover);
+  --border: var(--pane-synth-border);
+  --radius: var(--pane-synth-radius);
+  --text: var(--pane-synth-text);
+  --text-muted: var(--pane-synth-text-muted);
+  --surface: var(--pane-synth-surface);
+  --accent: var(--pane-synth-accent);
+  --accent-muted: var(--pane-synth-accent-muted);
+  --surface-solid: var(--pane-synth-surface-solid);
+  --radius-sm: var(--pane-synth-radius-sm);
+  --caption: var(--pane-synth-caption);
+  --heading: var(--pane-synth-heading);
+  --pane-header-radius: var(--pane-synth-header-radius);
+  --pane-header-height: var(--pane-synth-header-height);
+  --pane-border-width: var(--pane-synth-border-width);
+  --pane-header-label-case: var(--pane-synth-header-label-case);
+  --pane-header-justify: var(--pane-synth-header-justify);
+  --pane-texture: var(--pane-synth-texture);
+  --pane-texture-size: var(--pane-synth-texture-size);
+  --pane-texture-blend: var(--pane-synth-texture-blend);
+  border-radius: var(--pane-synth-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-synth-pulse);
+}
 
 /* Clip overflow on body (not window) so drop target overlays remain visible */
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {

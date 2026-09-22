@@ -11,6 +11,8 @@ import {
   StackIcon,
   StoreIcon,
   SearchIcon,
+  MoodIcon,
+  SlidersIcon,
   UploadIcon,
   ActivityIcon,
 } from '@/components/ui/icons';
@@ -56,6 +58,8 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
     label: 'Store',
     icon: <StoreIcon size={16} />,
   },
+  mood: { label: 'Mood', icon: <MoodIcon size={16} /> },
+  synth: { label: 'Crux Synth', icon: <SlidersIcon size={16} /> },
   media: {
     label: 'Find media',
     icon: <SearchIcon size={16} />,

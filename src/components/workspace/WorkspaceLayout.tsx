@@ -34,6 +34,9 @@ const PublishPane = lazy(() => import('./PublishPane'));
 const ExportPane = lazy(() => import('./ExportPane'));
 const StorePane = lazy(() => import('./StorePane'));
 const MediaPane = lazy(() => import('./MediaPane'));
+const MoodPane = lazy(() => import('./MoodPane'));
+const SynthPane = lazy(() => import('./SynthPane'));
+import { PANE_VAR_PREFIX } from './paneConfig';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import {
@@ -47,6 +50,8 @@ import {
   RepeatIcon,
   StoreIcon,
   SearchIcon,
+  MoodIcon,
+  SlidersIcon,
   TagIcon,
 } from '@/components/ui/icons';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -102,6 +107,8 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   export: ExportPane,
   store: StorePane,
   media: MediaPane,
+  mood: MoodPane,
+  synth: SynthPane,
 };
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
@@ -123,6 +130,8 @@ const PANE_MIN_WIDTH: Record<PaneType, number> = {
   publish: 270,
   store: 280,
   media: 300,
+  mood: 420,
+  synth: 300,
 };
 
 const MemoizedPaneContent = memo(function MemoizedPaneContent({
@@ -204,6 +213,8 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
   export: <ExportIcon size={14} strokeWidth={2} />,
   store: <StoreIcon size={14} strokeWidth={2} />,
   media: <SearchIcon size={14} strokeWidth={2} />,
+  mood: <MoodIcon size={14} strokeWidth={2} />,
+  synth: <SlidersIcon size={14} strokeWidth={2} />,
 };
 
 // ── Main layout ─────────────────────────────────────────
@@ -369,19 +380,7 @@ export default function WorkspaceLayout() {
   const renderTile = useCallback(
     (paneType: PaneType, path: MosaicBranch[]) => {
       // Pane header tokens — read directly from CSS vars set by the mood palette
-      const prefix = {
-        tasks: '--pane-tasks',
-        collaboration: '--pane-collaboration',
-        artifacts: '--pane-artifacts',
-        workshop: '--pane-workshop',
-        details: '--pane-details',
-        history: '--pane-history',
-        export: '--pane-export',
-        sync: '--pane-sync',
-        publish: '--pane-publish',
-        store: '--pane-store',
-        media: '--pane-media',
-      }[paneType];
+      const prefix = PANE_VAR_PREFIX[paneType];
 
       return (
         <MosaicWindow<PaneType>

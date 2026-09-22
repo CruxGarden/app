@@ -282,6 +282,8 @@ export const GARDEN_DARK = {
   panePublish: '#c87ca8',
   paneStore: '#c0a070',
   paneTasks: '#8fbf6a',
+  paneSynth: 'var(--accent)',
+  paneMood: 'var(--accent)',
 
   // ── Pane derived (all reference their base) ──────────
   ...paneTokens('paneCollaboration'),
@@ -294,6 +296,8 @@ export const GARDEN_DARK = {
   ...paneTokens('panePublish'),
   ...paneTokens('paneStore'),
   ...paneTokens('paneTasks'),
+  ...paneTokens('paneSynth'),
+  ...paneTokens('paneMood'),
 
   // ── Markdown ─────────────────────────────────────────
   markdownText: 'var(--text)',
@@ -492,6 +496,8 @@ export const GARDEN_DARK = {
   paneLabelPublish: 'none',
   paneLabelStore: 'none',
   paneLabelMedia: 'none',
+  paneLabelSynth: 'none',
+  paneLabelMood: 'none',
   paneHeaderLabelTracking: '0.05em',
   paneHeaderIconDisplay: 'inline-flex',
   paneHeaderCloseDisplay: 'inline-flex',

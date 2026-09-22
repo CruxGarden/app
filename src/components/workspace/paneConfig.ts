@@ -11,6 +11,8 @@ import {
   ShareIcon,
   StoreIcon,
   SearchIcon,
+  MoodIcon,
+  SlidersIcon,
 } from '@/components/ui/icons';
 
 /** CSS variable prefixes for each pane (used for pane-specific theming) */
@@ -26,6 +28,8 @@ export const PANE_VAR_PREFIX: Record<PaneType, string> = {
   publish: '--pane-publish',
   store: '--pane-store',
   media: '--pane-media',
+  mood: '--pane-mood',
+  synth: '--pane-synth',
 };
 
 /** Button config for pane toggle buttons in the TopBar */
@@ -41,4 +45,6 @@ export const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] =
   { type: 'publish', icon: ShareIcon, label: 'Share' },
   { type: 'store', icon: StoreIcon, label: 'Store' },
   { type: 'media', icon: SearchIcon, label: 'Find media' },
+  { type: 'mood', icon: MoodIcon, label: 'Mood' },
+  { type: 'synth', icon: SlidersIcon, label: 'Crux Synth' },
 ];
