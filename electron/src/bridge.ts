@@ -588,9 +588,41 @@ export interface FigmaDesktopBridge {
   restore(): Promise<{ arranged: boolean; accessibility: boolean }>;
 }
 
+// ── isolated WWW browser panel ──────────────────────────────────────────────
+export type BrowserPanelAction =
+  | 'state'
+  | 'navigate'
+  | 'back'
+  | 'forward'
+  | 'reload'
+  | 'stop'
+  | 'close';
+export interface BrowserPanelState {
+  id: string;
+  url: string;
+  title: string;
+  loading: boolean;
+  back: boolean;
+  forward: boolean;
+  error: string | null;
+}
+export interface BrowserPanelBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+export interface BrowserPanelBridge {
+  onFocusAddress(callback: (id: string) => void): () => void;
+  action(id: string, action: BrowserPanelAction, url?: string): Promise<BrowserPanelState>;
+  bounds(id: string, bounds: BrowserPanelBounds | null): Promise<void>;
+  onChange(callback: (state: BrowserPanelState) => void): () => void;
+}
+
 // ── the whole bridge ────────────────────────────────────────────────────────
 
 export interface ElectronBridge {
+  browser?: BrowserPanelBridge;
   figmaDesktop?: FigmaDesktopBridge;
   blenderDesktop?: FigmaDesktopBridge;
   sqlite: SqliteBridge;

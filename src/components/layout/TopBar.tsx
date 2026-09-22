@@ -44,23 +44,23 @@ export default function TopBar() {
   return (
     <header
       className={cn(
-        'flex items-center justify-between px-3 border-b border-toolbar-border bg-toolbar',
+        'flex flex-wrap items-center justify-between gap-y-1 px-3 border-b border-toolbar-border bg-toolbar',
         desktopChrome && 'pl-24', // left padding for macOS traffic lights
       )}
       style={{
-        height: 'var(--toolbar-height)',
+        minHeight: 'var(--toolbar-height)',
         ...(desktopChrome ? ({ WebkitAppRegion: 'drag' } as React.CSSProperties) : {}),
       }}
     >
       {/* Left: branding + breadcrumb */}
       <div
-        className="flex flex-1 items-center gap-1.5 min-w-0"
+        className="flex flex-1 basis-72 items-center gap-1.5 min-w-0"
         style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
       >
         {username ? (
           <button
             onClick={() => navigate('/home')}
-            className="shrink-0 text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
+            className="shrink-0 max-w-36 truncate text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
           >
             <span className="md:hidden">Garden</span>
             <span className="hidden md:inline">{gardenTitle || username}</span>
@@ -78,7 +78,7 @@ export default function TopBar() {
         </span>
         <CruxspaceCrumb />
         <WorkspaceSwitcher />
-        <div className="hidden md:block">
+        <div className="hidden xl:block">
           <TendingLink />
         </div>
         <TimerChip />
@@ -170,7 +170,7 @@ export default function TopBar() {
             <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
           </>
         )}
-        <div className="hidden md:block">
+        <div className="hidden xl:block">
           <MoodBar className="mr-1" />
         </div>
         <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />

@@ -44,7 +44,8 @@ export type PaneType =
   | 'store'
   | 'media'
   | 'mood'
-  | 'synth';
+  | 'synth'
+  | 'browser';
 
 /** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
 export const PANE_COLORS: Record<PaneType, string> = {
@@ -61,6 +62,7 @@ export const PANE_COLORS: Record<PaneType, string> = {
   media: 'var(--pane-media)',
   mood: 'var(--pane-mood)',
   synth: 'var(--pane-synth)',
+  browser: 'var(--pane-browser)',
 };
 
 export type EditorViewMode = 'source' | 'preview' | 'form';
@@ -227,6 +229,7 @@ export const DEFAULT_PANE_ORDER: PaneType[] = [
   'media',
   'mood',
   'synth',
+  'browser',
 ];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   // Tasks is a pane like any other (Daniel, 2026-09-19): on by default.
@@ -243,6 +246,7 @@ const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   media: false,
   mood: false,
   synth: false,
+  browser: false,
 };
 
 // ── Mosaic layout helpers ────────────────────────────────

@@ -1,4 +1,5 @@
 import type { AgentRuntimeDeps } from './agent-runtime';
+import { registerBrowserPanel } from './www-browser';
 const {
   app,
   BrowserWindow,
@@ -400,6 +401,7 @@ function createWindow() {
 // ── SQLite IPC handlers ──────────────────────────────────────
 
 function setupIpc() {
+  registerBrowserPanel(() => mainWindow);
   db = new SqliteNative(getDbPath(), getBlobDir());
 
   ipcMain.handle('sqlite:run', (_e: any, sql: string, params?: unknown[]) => {

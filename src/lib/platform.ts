@@ -46,6 +46,7 @@ declare global {
 }
 
 export enum Capability {
+  WebBrowser = 'webBrowser',
   FigmaWindowArrangement = 'figmaWindowArrangement',
   BlenderWindowArrangement = 'blenderWindowArrangement',
   /** Real Project Folder per crux on the local filesystem (ADR 0001). */
@@ -100,6 +101,8 @@ export function can(capability: Capability): boolean {
   const api = bridge();
   if (!api) return false;
   switch (capability) {
+    case Capability.WebBrowser:
+      return !!api.browser;
     case Capability.BlenderWindowArrangement:
       return !!api.blenderDesktop;
     case Capability.FigmaWindowArrangement:

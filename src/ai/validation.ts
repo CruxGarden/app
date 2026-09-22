@@ -36,6 +36,7 @@ export function validateToolInput(
     case 'list_files':
     case 'check_site':
     case 'add_guestbook':
+    case 'browser':
     case 'workspace_layouts':
     case 'get_synth':
     case 'set_synth':

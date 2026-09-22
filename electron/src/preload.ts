@@ -22,6 +22,21 @@ import type {
  * `window.electronAPI` to know it's running in Electron.
  */
 const api: ElectronBridge = {
+  browser: {
+    onFocusAddress: (callback) => {
+      const handler = (_event: unknown, id: string) => callback(id);
+      ipcRenderer.on('browser:focus-address', handler);
+      return () => ipcRenderer.removeListener('browser:focus-address', handler);
+    },
+    action: (id, action, url) => ipcRenderer.invoke('browser:action', id, action, url),
+    bounds: (id, bounds) => ipcRenderer.invoke('browser:bounds', id, bounds),
+    onChange: (callback) => {
+      const handler = (_event: unknown, state: import('./bridge').BrowserPanelState) =>
+        callback(state);
+      ipcRenderer.on('browser:state', handler);
+      return () => ipcRenderer.removeListener('browser:state', handler);
+    },
+  },
   ...(process.platform === 'darwin'
     ? {
         blenderDesktop: {

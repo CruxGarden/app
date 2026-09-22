@@ -156,6 +156,7 @@ const ALL_PANES = [
   'panePublish',
   'paneStore',
   'paneSynth',
+  'paneBrowser',
   'paneMood',
 ];
 
@@ -4735,6 +4736,7 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
         'panePublish',
         'paneStore',
         'paneSynth',
+        'paneBrowser',
         'paneMood',
       ]),
       // ── motion ── snaps: nothing eases in, the button sinks, the caret blinks

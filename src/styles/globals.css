@@ -1339,6 +1339,31 @@ html.palette-transition *::after {
   border-radius: var(--pane-synth-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-synth-pulse);
 }
+.mosaic.crux-mosaic-theme .mosaic-window.pane-browser {
+  --panel: var(--pane-browser-body);
+  --pane-header-close-hover: var(--pane-browser-header-close-hover);
+  --border: var(--pane-browser-border);
+  --radius: var(--pane-browser-radius);
+  --text: var(--pane-browser-text);
+  --text-muted: var(--pane-browser-text-muted);
+  --surface: var(--pane-browser-surface);
+  --accent: var(--pane-browser-accent);
+  --accent-muted: var(--pane-browser-accent-muted);
+  --surface-solid: var(--pane-browser-surface-solid);
+  --radius-sm: var(--pane-browser-radius-sm);
+  --caption: var(--pane-browser-caption);
+  --heading: var(--pane-browser-heading);
+  --pane-header-radius: var(--pane-browser-header-radius);
+  --pane-header-height: var(--pane-browser-header-height);
+  --pane-border-width: var(--pane-browser-border-width);
+  --pane-header-label-case: var(--pane-browser-header-label-case);
+  --pane-header-justify: var(--pane-browser-header-justify);
+  --pane-texture: var(--pane-browser-texture);
+  --pane-texture-size: var(--pane-browser-texture-size);
+  --pane-texture-blend: var(--pane-browser-texture-blend);
+  border-radius: var(--pane-browser-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-browser-pulse);
+}
 
 /* Clip overflow on body (not window) so drop target overlays remain visible */
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {

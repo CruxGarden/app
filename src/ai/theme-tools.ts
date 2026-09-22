@@ -1,3 +1,4 @@
+import { BROWSER_TOOL, runBrowserTool } from './browser-tools';
 import { WORKSPACE_LAYOUT_TOOL, runWorkspaceLayouts } from './layout-tools';
 import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
 /**
@@ -31,6 +32,7 @@ import type { ToolResultContent } from '@/services/types';
 
 export const THEME_TOOL_NAMES = [
   'workspace_layouts',
+  'browser',
   'get_synth',
   'set_synth',
   'set_theme',
@@ -42,6 +44,7 @@ export const THEME_TOOL_NAMES = [
 
 export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
   WORKSPACE_LAYOUT_TOOL,
+  BROWSER_TOOL,
   {
     name: 'get_synth',
     description:
@@ -393,6 +396,8 @@ export async function runThemeTool(
 ): Promise<string | ToolResultContent> {
   try {
     switch (name) {
+      case 'browser':
+        return await runBrowserTool(input, ctx.cruxId);
       case 'workspace_layouts':
         return await runWorkspaceLayouts(input, ctx.cruxId);
       case 'get_synth':

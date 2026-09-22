@@ -36,6 +36,7 @@ const StorePane = lazy(() => import('./StorePane'));
 const MediaPane = lazy(() => import('./MediaPane'));
 const MoodPane = lazy(() => import('./MoodPane'));
 const SynthPane = lazy(() => import('./SynthPane'));
+const BrowserPane = lazy(() => import('./BrowserPane'));
 import { PANE_VAR_PREFIX } from './paneConfig';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
@@ -52,6 +53,7 @@ import {
   SearchIcon,
   MoodIcon,
   SlidersIcon,
+  GlobeIcon,
   TagIcon,
 } from '@/components/ui/icons';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -109,6 +111,7 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   media: MediaPane,
   mood: MoodPane,
   synth: SynthPane,
+  browser: BrowserPane,
 };
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
@@ -132,6 +135,7 @@ const PANE_MIN_WIDTH: Record<PaneType, number> = {
   media: 300,
   mood: 420,
   synth: 300,
+  browser: 200,
 };
 
 const MemoizedPaneContent = memo(function MemoizedPaneContent({
@@ -215,6 +219,7 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
   media: <SearchIcon size={14} strokeWidth={2} />,
   mood: <MoodIcon size={14} strokeWidth={2} />,
   synth: <SlidersIcon size={14} strokeWidth={2} />,
+  browser: <GlobeIcon size={14} strokeWidth={2} />,
 };
 
 // ── Main layout ─────────────────────────────────────────
