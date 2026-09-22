@@ -15,6 +15,7 @@ import ThemeTokensTab from './ThemeTokensTab';
 import SoundTab from './SoundTab';
 import MotionIntensityControl from './MotionIntensityControl';
 import FlowControl from './FlowControl';
+import AppearanceControls from './AppearanceControls';
 import SurfaceThemeControl from './SurfaceThemeControl';
 import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import MoodBrowser from './MoodBrowser';
@@ -649,6 +650,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
         {tab === 'theme' && (
           <div className="flex flex-col gap-6">
+            <AppearanceControls />
             {userPresets.length > 0 && (
               <div className="mb-4">
                 <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
@@ -723,7 +725,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             })}
             {compact ? (
               <p className="text-xxs text-text-muted">
-                Every token — colours, type, shape, motion — is in the Mood Builder.
+                More appearance options are in the Mood Builder.
               </p>
             ) : (
               <>

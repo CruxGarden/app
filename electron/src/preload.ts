@@ -129,6 +129,8 @@ const api: ElectronBridge = {
       ipcRenderer.invoke('project:reveal', folder, relPath) as Promise<void>,
     listFiles: (folder: string) =>
       ipcRenderer.invoke('project:list-files', folder) as Promise<string[]>,
+    reconcile: (folder: string, indexed: { path: string; fingerprint: string | null }[]) =>
+      ipcRenderer.invoke('project:reconcile', folder, indexed) as Promise<ChangeBatch>,
     watch: (folder: string) => ipcRenderer.invoke('project:watch', folder) as Promise<void>,
     unwatch: (folder: string) => ipcRenderer.invoke('project:unwatch', folder) as Promise<void>,
     flush: (folder?: string) =>

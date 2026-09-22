@@ -607,6 +607,11 @@ function setupIpc() {
   // during the handler could arrive after it), and the renderer records them itself.
   ipcMain.handle('project:flush', (_e: any, folder?: string) => watcher?.flush(folder) ?? []);
   ipcMain.handle('project:list-files', (_e: any, folder: string) => projects.listFiles(folder));
+  ipcMain.handle(
+    'project:reconcile',
+    (_e: any, folder: string, indexed: { path: string; fingerprint: string | null }[]) =>
+      projects.reconcile(folder, indexed),
+  );
   ipcMain.handle('project:capture', (_e: any, folder: string) => projects.capture(folder));
   ipcMain.handle('project:set-mode', (_e: any, folder: string, relPath: string, mode: number) =>
     projects.setMode(folder, relPath, mode),

@@ -36,6 +36,10 @@ export function validateToolInput(
     case 'list_files':
     case 'check_site':
     case 'add_guestbook':
+    case 'get_synth':
+    case 'set_synth':
+    case 'list_cue_presets':
+    case 'set_cue':
     case 'set_theme':
     case 'get_theme':
     case 'set_background':

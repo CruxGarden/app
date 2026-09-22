@@ -33,11 +33,17 @@ export async function getBackendSetting(): Promise<Backend> {
 }
 
 export function initServices(backend?: Backend): Promise<Services> {
-  if (services) return Promise.resolve(services);
   if (initPromise) return initPromise;
-  initPromise = doInitServices(backend).finally(() => {
-    initPromise = null;
-  });
+  if (services) return Promise.resolve(services);
+  initPromise = doInitServices(backend)
+    .catch((error) => {
+      services = null;
+      currentBackend = null;
+      throw error;
+    })
+    .finally(() => {
+      initPromise = null;
+    });
   return initPromise;
 }
 
@@ -85,8 +91,9 @@ async function doInitServices(backend?: Backend): Promise<Services> {
   // path never calls (it calls initServices() directly), so entering through
   // the front door left the watcher firing at a renderer with no listener
   // and Finder edits never appeared in the Artifacts pane. No-op on web.
-  const { initIngestion } = await import('./ingestion');
+  const { initIngestion, recoverProjectFolders } = await import('./ingestion');
   initIngestion();
+  await recoverProjectFolders();
 
   return services;
 }

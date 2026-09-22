@@ -133,7 +133,7 @@ test.describe('bundled moods', () => {
         .toBe('plasma');
       const bar = page.getByRole('region', { name: 'Mood Bar' });
       await expect(bar).toContainText('No track');
-      await expect.poll(async () => (await audio()).trackName).toBeNull();
+      await expect.poll(async () => (await audio()).trackName).toBe('Crux Synth');
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
@@ -155,7 +155,7 @@ test.describe('bundled moods', () => {
         .toBe('glass');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
       await expect(page.getByTestId('mood-background-image')).toBeVisible();
-      await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
+      await expect.poll(async () => (await audio()).trackName).toBe('Crux Synth');
 
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
@@ -165,8 +165,8 @@ test.describe('bundled moods', () => {
       await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('2px');
       await expect.poll(() => cssVar('--motion-frames')).toBe('4');
-      // Raster Bars is quiet: no track, sound still on
-      await expect.poll(async () => (await audio()).trackName).toBeNull();
+      // Raster Bars carries an ambient synth preset, with sound available
+      await expect.poll(async () => (await audio()).trackName).toBe('Crux Synth');
       expect((await audio()).enabled).toBe(true);
       await built.getByTestId('bundled-night-city').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--accent')).toBe('#ff7bb0');
@@ -187,7 +187,7 @@ test.describe('bundled moods', () => {
         .getByTestId('bundled-digital-fractal-garden')
         .getByRole('button', { name: 'Apply' })
         .click();
-      await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
+      await expect.poll(async () => (await audio()).trackName).toBe('Crux Synth');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
       await page.keyboard.press('Escape');
       // A new crux greets with Iris's voice; the fallback face sits on a theme gradient

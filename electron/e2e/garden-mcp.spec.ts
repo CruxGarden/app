@@ -136,7 +136,9 @@ test('an outside MCP client operates across the garden; built-in collaborators s
     const again = await launchApp({ dir });
     try {
       await again.page.getByRole('button', { name: /enter/i }).click();
-      await expect(again.page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible();
+      await expect(
+        again.page.getByRole('button', { name: 'Switch Crux workspace', exact: true }),
+      ).toBeVisible();
       const restored = JSON.parse(readFileSync(configPath, 'utf8'));
       expect(restored.token === config.token).toBe(true);
       client = await connect(restored);

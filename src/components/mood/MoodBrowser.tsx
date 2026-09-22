@@ -88,7 +88,7 @@ function MoodCard({
 }) {
   const meta = [
     pkg.theme.section,
-    pkg.bundled?.track?.name ?? pkg.sound.track?.name ?? 'no sound',
+    pkg.sound.synth?.name ?? 'Crux Synth',
     pkg.persona ? pkg.persona.name : pkg.author ? `by ${pkg.author}` : null,
   ]
     .filter(Boolean)

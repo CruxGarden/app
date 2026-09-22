@@ -368,4 +368,49 @@ export class ProjectFolders {
     walk(base);
     return out.sort();
   }
+
+  /** Recover edits made while no watcher was running. Never projects index data onto disk. */
+  reconcile(
+    folder: string,
+    indexed: { path: string; fingerprint: string | null }[],
+  ): import('./watcher').WatchBatch {
+    const base = this.assertKnownFolder(folder);
+    if (!fs.existsSync(base)) return { folder, folderMissing: true, events: [] };
+    const { DEFAULT_IGNORES } = require('./folder-scan');
+    const ig = require('ignore')().add(DEFAULT_IGNORES);
+    try {
+      this.assertNoSymlinks(base, '.cruxignore');
+      ig.add(fs.readFileSync(path.join(base, '.cruxignore'), 'utf8'));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    const previous = new Map(indexed.map((entry) => [entry.path, entry.fingerprint]));
+    const files = this.listFiles(base);
+    const present = new Set(files);
+    const events: import('./watcher').WatchEvent[] = [];
+    for (const relPath of files) {
+      const fingerprint = require('crypto')
+        .createHash('sha256')
+        .update(this.readFile(base, relPath))
+        .digest('hex');
+      if (previous.get(relPath) !== fingerprint)
+        events.push({ type: 'write', relPath, own: false });
+    }
+    for (const entry of indexed) {
+      const relPath = entry.path;
+      // An ignore-rule change is not a file deletion. Neither is a symlink,
+      // unreadable path or incomplete scan: only an actual ENOENT permits removal.
+      if (present.has(relPath) || ig.ignores(relPath) || ig.ignores(relPath + '/')) continue;
+      const target = this.resolveInside(base, relPath);
+      this.assertNoSymlinks(base, relPath);
+      try {
+        fs.lstatSync(target);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        events.push({ type: 'delete', relPath });
+      }
+    }
+    if (!fs.existsSync(base)) return { folder, folderMissing: true, events: [] };
+    return { folder, events };
+  }
 }

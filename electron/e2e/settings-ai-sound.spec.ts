@@ -1,6 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 
@@ -25,26 +24,6 @@ async function plantGarden(page: Page) {
   await page.getByText('Plant a new garden').click();
   await page.getByRole('button', { name: 'Welcome' }).click();
   await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 30_000 });
-}
-
-/** A valid 16-bit mono PCM WAV: 44-byte header + `samples` samples of silence. */
-function writeSilentWav(path: string, samples = 1000, rate = 8000) {
-  const data = samples * 2;
-  const buf = Buffer.alloc(44 + data);
-  buf.write('RIFF', 0);
-  buf.writeUInt32LE(36 + data, 4);
-  buf.write('WAVE', 8);
-  buf.write('fmt ', 12);
-  buf.writeUInt32LE(16, 16); // fmt chunk size
-  buf.writeUInt16LE(1, 20); // PCM
-  buf.writeUInt16LE(1, 22); // mono
-  buf.writeUInt32LE(rate, 24);
-  buf.writeUInt32LE(rate * 2, 28); // byte rate
-  buf.writeUInt16LE(2, 32); // block align
-  buf.writeUInt16LE(16, 34); // bits per sample
-  buf.write('data', 36);
-  buf.writeUInt32LE(data, 40);
-  writeFileSync(path, buf);
 }
 
 /**
@@ -162,91 +141,30 @@ test.describe('settings AI, mood sound & persona', () => {
     }
   });
 
-  test('Mood → Sound: on/off, volume, remove, re-pick and add a track', async () => {
+  test('Mood → Sound: synth on/off and master volume', async () => {
     const { app, page } = await launchApp({ sound: true });
     const state = () =>
       page.evaluate(() =>
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
       );
-    const scratch = mkdtempSync(join(tmpdir(), 'crux-e2e-wav-'));
-    const wav = join(scratch, 'e2e-loop.wav');
-    writeSilentWav(wav);
     try {
       await plantGarden(page);
-      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
-        timeout: 30_000,
-      });
-      // A fresh garden wears The Keeper: its track is the Mood's
-      await expect
-        .poll(async () => (await state()).trackName, { timeout: 30_000 })
-        .toBe('Echoes From Beyond');
-
-      // ── Cmd+M opens the Mood modal; Sound is one of its tabs ────────────
       await page.keyboard.press('ControlOrMeta+m');
-      await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
       await page.getByRole('button', { name: 'Sound', exact: true }).click();
-      const sound = page.getByTestId('sound-tab');
-      await expect(sound).toBeVisible();
-      await expect(sound.getByTestId('sound-track-name')).toHaveText('Echoes From Beyond');
-      await expect(sound.getByText('loops · in your garden')).toBeVisible();
-
-      // ── Sound off pauses; on again keeps the track ───────────────────────
-      const onSwitch = sound.getByRole('switch', { name: 'Sound on' });
-      await expect(onSwitch).toHaveAttribute('aria-checked', 'true');
-      await onSwitch.click();
-      const offSwitch = sound.getByRole('switch', { name: 'Sound off' });
-      await expect(offSwitch).toHaveAttribute('aria-checked', 'false');
+      const synth = page.getByRole('region', { name: 'Crux Synth', exact: true });
+      await expect(synth).toBeVisible();
+      expect((await state()).playing).toBe(false);
+      await synth.getByRole('button', { name: 'Play synth' }).click();
+      await expect.poll(async () => (await state()).playing).toBe(true);
+      await synth.getByRole('switch', { name: 'Sound on' }).click();
       await expect.poll(async () => (await state()).enabled).toBe(false);
       expect((await state()).playing).toBe(false);
-      await expect(sound.getByRole('button', { name: 'Play track' })).toBeDisabled();
-      await offSwitch.click();
-      await expect(onSwitch).toHaveAttribute('aria-checked', 'true');
-      await expect.poll(async () => (await state()).enabled).toBe(true);
-      expect((await state()).trackName).toBe('Echoes From Beyond');
-
-      // ── Volume slider drives the store and the readout ───────────────────
-      const volume = sound.getByRole('slider', { name: 'Track volume' });
-      await volume.fill('0.3');
+      await expect(synth.getByRole('button', { name: 'Play synth' })).toBeDisabled();
+      await synth.getByRole('switch', { name: 'Sound off' }).click();
+      await synth.getByRole('slider', { name: 'Synth master volume' }).fill('0.3');
       await expect.poll(async () => (await state()).volume).toBe(0.3);
-      await expect(sound.getByText('30', { exact: true })).toBeVisible();
-      await page.screenshot({ path: 'e2e/.results/settings-ai-2-sound.png' });
-
-      // ── Remove the track: nothing plays, the file stays in the garden ────
-      const echoes = sound.locator('li', { hasText: 'Echoes From Beyond' });
-      await expect(echoes.getByText('playing as the track')).toBeVisible();
-      await sound.getByRole('button', { name: 'Remove', exact: true }).click();
-      await expect(sound.getByTestId('sound-track-name')).toHaveText('No track');
-      await expect.poll(async () => (await state()).trackName).toBeNull();
-      await expect(sound.getByRole('button', { name: 'Play track' })).toBeDisabled();
-      await expect(echoes).toBeVisible();
-
-      // ── Pick it again from "Audio in your garden" ────────────────────────
-      await echoes.getByRole('button', { name: 'Use as track' }).click();
-      await expect(sound.getByTestId('sound-track-name')).toHaveText('Echoes From Beyond');
-      await expect.poll(async () => (await state()).trackName).toBe('Echoes From Beyond');
-      await expect(echoes.getByText('playing as the track')).toBeVisible();
-
-      // ── Add audio: a file chooser; the new file lands in the list and plays
-      const [chooser] = await Promise.all([
-        page.waitForEvent('filechooser'),
-        sound.getByRole('button', { name: 'Add audio' }).click(),
-      ]);
-      await chooser.setFiles(wav);
-      const added = sound.locator('li', { hasText: 'e2e-loop.wav' });
-      await expect(added).toBeVisible({ timeout: 15_000 });
-      await expect(added.getByText('playing as the track')).toBeVisible();
-      await expect(sound.getByTestId('sound-track-name')).toHaveText('e2e-loop');
-      await expect.poll(async () => (await state()).trackName).toBe('e2e-loop');
-      await expect(echoes.getByRole('button', { name: 'Use as track' })).toBeVisible();
-      await page.screenshot({ path: 'e2e/.results/settings-ai-3-sound-added.png' });
-
-      // ── Drop the added file: it leaves the garden and the track resets ──
-      await added.getByRole('button', { name: 'Remove e2e-loop.wav' }).click();
-      await expect(added).toHaveCount(0);
-      await expect.poll(async () => (await state()).trackName).toBeNull();
-      await expect(echoes).toBeVisible();
+      expect((await state()).trackName).toBe('Crux Synth');
       await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Mood' })).toHaveCount(0);
     } finally {
       await app.close();
     }
@@ -262,15 +180,15 @@ test.describe('settings AI, mood sound & persona', () => {
       await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
       await page.getByRole('button', { name: 'Persona', exact: true }).click();
       const name = page.getByPlaceholder('Persona name');
-      await expect(name).toHaveValue('The Keeper');
+      await expect(name).toHaveValue('Vel');
       await name.fill('Fern');
       const greetingInput = page.getByPlaceholder('A greeting shown when the console opens');
       await greetingInput.fill(greeting);
 
-      // The Keeper ships with a face; a chosen image replaces it
+      // A chosen image replaces the current Mood avatar or its generated fallback
       const avatarButton = page.getByRole('button', { name: 'Choose an avatar' });
       const avatarImg = avatarButton.locator('img');
-      const before = await avatarImg.getAttribute('src');
+      const before = (await avatarImg.count()) ? await avatarImg.getAttribute('src') : null;
       const [chooser] = await Promise.all([page.waitForEvent('filechooser'), avatarButton.click()]);
       await chooser.setFiles(join(__dirname, 'fixtures', 'backdrop.png'));
       await expect.poll(() => avatarImg.getAttribute('src'), { timeout: 15_000 }).not.toBe(before);
@@ -288,7 +206,7 @@ test.describe('settings AI, mood sound & persona', () => {
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       const bubbleText = page.getByText(greeting, { exact: true });
       await expect(bubbleText).toBeVisible({ timeout: 30_000 });
-      const row = bubbleText.locator('xpath=ancestor::div[contains(@class, "items-end")][1]');
+      const row = page.locator('[data-role="assistant"]').filter({ has: bubbleText });
       await expect(row.getByText('Fern', { exact: true })).toBeVisible();
       await expect(row.getByText('The Keeper')).toHaveCount(0);
       await expect(row.getByTestId('persona-avatar').locator('img')).toHaveAttribute(

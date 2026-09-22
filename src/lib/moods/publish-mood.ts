@@ -53,7 +53,7 @@ export function moodSummary(pkg: MoodPackage): MoodSummary {
   return {
     section: pkg.theme.section,
     swatch,
-    track: pkg.sound.track?.name ?? pkg.bundled?.track?.name,
+    track: pkg.sound.synth?.name ?? pkg.sound.track?.name ?? pkg.bundled?.track?.name,
     author: pkg.author,
     cover: coverFileName(pkg),
   };

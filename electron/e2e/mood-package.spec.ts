@@ -39,7 +39,7 @@ test.describe('mood packages', () => {
       await gap.press('Enter');
       await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
       await page.getByRole('button', { name: 'Sound', exact: true }).click();
-      await page.getByRole('slider', { name: 'Track volume' }).fill('0.25');
+      await page.getByRole('slider', { name: 'Synth master volume' }).fill('0.25');
       await expect.poll(async () => (await audio()).volume).toBe(0.25);
 
       // Save it as a Mood
@@ -57,7 +57,7 @@ test.describe('mood packages', () => {
       await page.getByRole('button', { name: 'Reset all' }).click();
       await expect.poll(() => cssVar('--pane-gap')).toBe('4px');
       await page.getByRole('button', { name: 'Sound', exact: true }).click();
-      await page.getByRole('slider', { name: 'Track volume' }).fill('0.9');
+      await page.getByRole('slider', { name: 'Synth master volume' }).fill('0.9');
       await expect.poll(async () => (await audio()).volume).toBe(0.9);
 
       // Apply the saved Mood: both come back
@@ -69,7 +69,7 @@ test.describe('mood packages', () => {
       await expect(page.getByRole('status')).toContainText('Now wearing "Night Shift"');
       await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
       await expect.poll(async () => (await audio()).volume).toBe(0.25);
-      expect((await audio()).trackName).toBe('Echoes From Beyond'); // the Keeper's track rode along
+      expect((await audio()).trackName).toBe('Crux Synth'); // the Keeper's track rode along
 
       // The theme became a preset under Yours as well
       await page.getByRole('button', { name: 'Theme', exact: true }).click();

@@ -33,11 +33,17 @@ export async function launchApp(
   // because the plasma renderer sizes its canvas by min(devicePixelRatio,
   // quality) and at a scale factor of 1 every quality tier draws exactly the
   // same number of pixels — the sweep measures nothing.
-  const args = [...(opts.args ?? []), '.'];
+  const executablePath = process.env.CRUX_PACKAGED_APP;
+  const args = [...(opts.args ?? []), ...(executablePath ? [] : ['.'])];
   if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox');
   // A journey that records passes CRUX_FAKE_MEDIA=1: the main process adds Chromium's fake camera
   // and microphone switches itself (see src/main.ts).
-  const app = await electron.launch({ args, cwd: join(__dirname, '..'), env });
+  const app = await electron.launch({
+    args,
+    cwd: join(__dirname, '..'),
+    env,
+    ...(executablePath ? { executablePath } : {}),
+  });
   // Keep what the main process prints: when no window ever appears, this is
   // the only evidence of why (a native module built for the wrong ABI, a
   // missing shared library, a thrown error before createWindow).

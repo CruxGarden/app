@@ -1,3 +1,4 @@
+import { isPublicSite } from '@/lib/site';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { applyMood, type MoodPackage } from '@/lib/moods/packages';
 import MoodBar from '@/components/mood/MoodBar';
@@ -76,6 +77,7 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
   const { useAudioStore } = await import('@/stores/audioStore');
   const sound = await import('@/services/sound');
   useAudioStore.getState().init();
+  if (!isPublicSite() && !sound.getOptIn()) return;
   const st = useAudioStore.getState();
   const shipped = pkg?.bundled?.track;
   if (shipped) {

@@ -179,7 +179,7 @@ test.describe('growth actions (History pane)', () => {
       await page.keyboard.press('ControlOrMeta+,');
       const agents = page.getByTestId('agents-settings');
       await expect(agents.getByRole('heading', { name: 'Agents' })).toBeVisible();
-      await agents.getByRole('switch').first().click();
+      await agents.getByRole('switch', { name: 'Agent access for My Crux', exact: true }).click();
       await expect(agents.getByTestId('agents-connect')).toBeVisible({ timeout: 30_000 });
       const configPath = () => join(folder(), '.crux', 'mcp.json');
       await expect.poll(() => existsSync(configPath())).toBe(true);

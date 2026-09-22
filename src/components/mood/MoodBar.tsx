@@ -96,7 +96,8 @@ export default function MoodBar({
       setVolume: s.setVolume,
     })),
   );
-  const canPlay = !!track && enabled;
+  const canPlay = (!publicSite || !!track) && enabled;
+  const soundName = publicSite ? (track?.name ?? 'No track') : 'Crux Synth';
   const [collapsed, setCollapsed] = useState(() => getDockState()?.collapsed ?? false);
   const [aiPreview, setAiPreview] = useState(() => Object.keys(getThemePreview()).length);
   useEffect(
@@ -155,10 +156,10 @@ export default function MoodBar({
       {!collapsed && (
         <span
           className="min-w-0 max-w-[9rem] text-left px-1 block text-xxs font-body truncate leading-tight"
-          title={track ? track.name : 'This Mood has no track'}
+          title={soundName}
           data-testid="mood-bar-track"
         >
-          {track ? track.name : enabled ? 'No track' : 'Sound off'}
+          {enabled ? soundName : 'Sound off'}
         </span>
       )}
 
@@ -167,7 +168,7 @@ export default function MoodBar({
         onClick={() => void toggle()}
         disabled={!canPlay}
         aria-label={playing ? 'Pause soundscape' : 'Play soundscape'}
-        title={!track ? 'This Mood has no track — add one under Mood → Sound' : undefined}
+        title={publicSite && !track ? 'This Mood has no track' : undefined}
         className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-button text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright motion-press react-accent disabled:opacity-40 disabled:cursor-default"
       >
         {PlayIcon}

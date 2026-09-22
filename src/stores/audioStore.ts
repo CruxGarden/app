@@ -7,34 +7,42 @@ import { create } from 'zustand';
 import * as persist from '@/services/sound';
 import type { SoundTrack } from '@/services/sound';
 import { cuesPlayedCount, type CueKind } from '@/services/cues';
+import { isPublicSite } from '@/lib/site';
+import { parseSynthPatch, type SynthPatch } from '@/audio/synth-patch';
 import { isSilent } from '@/lib/platform';
 
-type PlayerModule = typeof import('@/audio/track');
-let playerPromise: Promise<PlayerModule['trackPlayer']> | null = null;
+type Player = import('@/audio/track').TrackPlayer | import('@/audio/synth').SynthPlayer;
+let playerPromise: Promise<Player> | null = null;
 /** Outside a browser (unit tests) the store still works; the player is a no-op. */
 const NOOP_PLAYER = {
   onChange: () => () => {},
   load: async () => {},
   play: async () => {},
-  pause: () => {},
+  pause: () => {
+    ++playRevision;
+  },
   setVolume: () => {},
   duck: () => {},
   context: () => null,
   playing: false,
-} as unknown as PlayerModule['trackPlayer'];
+} as unknown as Player;
 
 async function getPlayer() {
   if (typeof window === 'undefined' || typeof Audio === 'undefined') return NOOP_PLAYER;
   if (!playerPromise) {
-    playerPromise = import('@/audio/track').then((m) => {
-      m.trackPlayer.onChange((snap) => {
+    playerPromise = (
+      isPublicSite()
+        ? import('@/audio/track').then((m) => m.trackPlayer)
+        : import('@/audio/synth').then((m) => m.synthPlayer)
+    ).then((player) => {
+      player.onChange((snap) => {
         useAudioStore.setState({
           level: snap.level,
           contextState: snap.contextState,
           ducked: snap.ducked,
         });
       });
-      return m.trackPlayer;
+      return player;
     });
   }
   return playerPromise;
@@ -61,6 +69,8 @@ async function resolveTrackUrl(track: SoundTrack | null): Promise<string | null>
 export interface AudioState {
   /** The Mood's track; null when the Mood has no sound */
   track: SoundTrack | null;
+  synth: SynthPatch;
+  setSynth: (patch: SynthPatch) => Promise<void>;
   /** Sound switched on for this Mood */
   enabled: boolean;
   playing: boolean;
@@ -86,9 +96,11 @@ export interface AudioState {
 }
 
 let initialised = false;
+let playRevision = 0;
 
 export const useAudioStore = create<AudioState>((set, get) => ({
   track: null,
+  synth: persist.getSynth(),
   enabled: true,
   playing: false,
   volume: 0.7,
@@ -102,6 +114,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     initialised = true;
     set({
       track: persist.getTrack(),
+      synth: persist.getSynth(),
       enabled: persist.getEnabled(),
       volume: persist.getVolume(),
       optIn: persist.getOptIn(),
@@ -112,19 +125,26 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   play: async () => {
     const { track, volume, enabled } = get();
-    if (!track || !enabled || isSilent()) return;
-    const url = await resolveTrackUrl(track);
-    if (!url) return;
+    if (!enabled || isSilent()) return;
+    const revision = ++playRevision;
     const p = await getPlayer();
     p.setVolume(volume);
-    await p.load(url);
+    if ('configure' in p) p.configure(get().synth);
+    else {
+      const url = await resolveTrackUrl(track);
+      if (!url) return;
+      await p.load(url);
+    }
+    if (revision !== playRevision) return;
     await p.play();
+    if (revision !== playRevision) return;
     persist.setOptIn(true);
     persist.setWasPlaying(true);
     set({ playing: true, optIn: true });
   },
 
   pause: () => {
+    ++playRevision;
     void getPlayer().then((p) => p.pause());
     persist.setWasPlaying(false);
     set({ playing: false });
@@ -148,14 +168,24 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   setTrack: async (track) => {
     persist.setTrack(track);
     set({ track });
+    if (!isPublicSite()) return;
     if (!track) {
       if (get().playing) get().pause();
       return;
     }
     if (get().playing) {
       const url = await resolveTrackUrl(track);
-      if (url) await (await getPlayer()).load(url);
+      const player = await getPlayer();
+      if (url && 'load' in player) await player.load(url);
     }
+  },
+
+  setSynth: async (raw) => {
+    const synth = parseSynthPatch(raw);
+    persist.setSynth(synth);
+    set({ synth });
+    const player = await getPlayer();
+    if ('configure' in player) player.configure(synth);
   },
 
   duck: async (on) => (await getPlayer()).duck(on),
@@ -174,7 +204,8 @@ if (typeof window !== 'undefined') {
       const s = useAudioStore.getState();
       return {
         playing: s.playing,
-        trackName: s.track?.name ?? null,
+        trackName: isPublicSite() ? (s.track?.name ?? null) : 'Crux Synth',
+        synth: s.synth,
         enabled: s.enabled,
         volume: s.volume,
         contextState: s.contextState,

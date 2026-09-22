@@ -17,6 +17,7 @@ test('large workspace opens while the soundtrack and its level meter keep playin
     });
     await page.setViewportSize({ width: 1600, height: 1000 });
     await enterGarden(page);
+    await page.getByRole('button', { name: 'Play soundscape', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pause soundscape', exact: true })).toBeVisible();
 
     // Many paths, just two tiny blobs: exercise the real archive/import/render

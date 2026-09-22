@@ -1,3 +1,4 @@
+import { parseSynthPatch, synthForMood, type SynthPatch } from '@/audio/synth-patch';
 /**
  * Persistence for the Mood's sound: the track, volume, on/off, the opt-in
  * that lets sound resume on launch, and the Mood Bar's collapsed state.
@@ -102,4 +103,17 @@ export function getDockState(): DockState | null {
 }
 export function setDockState(s: DockState): void {
   setSetting(SettingsKey.MoodDockState, JSON.stringify(s));
+}
+
+export function getSynth(): SynthPatch {
+  try {
+    const raw = getSetting(SettingsKey.SynthPatch);
+    if (raw) return parseSynthPatch(JSON.parse(raw));
+  } catch {
+    /* older or invalid setting */
+  }
+  return synthForMood(String(getSetting(SettingsKey.WornMoodId) || 'plasma'), 'Crux Synth');
+}
+export function setSynth(patch: SynthPatch): void {
+  setSetting(SettingsKey.SynthPatch, JSON.stringify(parseSynthPatch(patch)));
 }

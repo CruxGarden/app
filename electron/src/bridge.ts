@@ -134,6 +134,11 @@ export interface ProjectBridge {
   renameFile(folder: string, fromRel: string, toRel: string): Promise<void>;
   reveal(folder: string, relPath?: string): Promise<void>;
   listFiles(folder: string): Promise<string[]>;
+  /** Startup recovery: compare disk with the index without transferring unchanged content. */
+  reconcile?(
+    folder: string,
+    indexed: { path: string; fingerprint: string | null }[],
+  ): Promise<ChangeBatch>;
   watch(folder: string): Promise<void>;
   unwatch(folder: string): Promise<void>;
   /** What the watcher still holds in its debounce, taken now (one folder or all); the caller records it. */

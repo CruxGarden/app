@@ -190,7 +190,7 @@ function announceFolderMissing(folder: string, cruxId: string | null): void {
 
 // ── Batch processing ────────────────────────────────────────────────────────
 
-async function processBatch(batch: ChangeBatch): Promise<void> {
+async function processBatch(batch: ChangeBatch, strict = false): Promise<void> {
   const api = bridge();
   if (!api) return;
 
@@ -274,7 +274,8 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       let bytes: Uint8Array;
       try {
         bytes = await api.readFile(batch.folder, event.relPath);
-      } catch {
+      } catch (error) {
+        if (strict) throw error;
         continue; // deleted again before we read it — the delete event follows
       }
 
@@ -304,6 +305,7 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       }
       changed = true;
     } catch (err) {
+      if (strict) throw err;
       console.error(`[ingestion] failed to ingest ${event.relPath}:`, err);
     }
   }
@@ -319,6 +321,45 @@ export function initIngestion(): void {
   const api = bridge();
   if (!api?.onChanged) return;
   unsubscribe = api.onChanged((batch) => enqueue(() => processBatch(batch)));
+}
+
+/** Reconcile offline/crash-time edits before consumers read the persisted index. */
+export async function recoverProjectFolders(): Promise<void> {
+  const api = bridge();
+  if (!api?.reconcile) return;
+  const db = getSqliteClient();
+  const folders = new Map<string, string>();
+  const cruxes = await db.all<{ id: string; meta: string | null }>(
+    "SELECT id, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL",
+  );
+  for (const crux of cruxes) {
+    const meta = JSON.parse(crux.meta || '{}');
+    if (typeof meta.projectFolder === 'string') folders.set(crux.id, meta.projectFolder);
+  }
+  const copies = await db.all<{ id: string; project_folder: string | null }>(
+    "SELECT id, project_folder FROM working_copies WHERE phase = 'ready'",
+  );
+  for (const copy of copies) {
+    if (copy.project_folder) folders.set(copy.id, copy.project_folder);
+  }
+  for (const [id, folder] of folders) {
+    // Keep scan + ingestion in the same queue as watcher batches. All consumers
+    // await service initialization, and Growth also waits for this queue.
+    let failure: unknown;
+    enqueue(async () => {
+      try {
+        const indexed = await db.all<{ path: string; fingerprint: string | null }>(
+          "SELECT COALESCE(path, filename) AS path, fingerprint FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+          [id],
+        );
+        await processBatch(await api.reconcile!(folder, indexed), true);
+      } catch (error) {
+        failure = error;
+      }
+    });
+    await flushIngestion();
+    if (failure) throw new Error(`Could not recover Project Folder ${folder}`, { cause: failure });
+  }
 }
 
 /** Stop listening (tests / teardown). */

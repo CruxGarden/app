@@ -29,6 +29,8 @@ import type { ToolDefinition } from './tools';
 import type { ToolResultContent } from '@/services/types';
 
 export const THEME_TOOL_NAMES = [
+  'get_synth',
+  'set_synth',
   'set_theme',
   'get_theme',
   'set_background',
@@ -37,6 +39,33 @@ export const THEME_TOOL_NAMES = [
 ] as const;
 
 export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'get_synth',
+    description:
+      'Read Crux Synth, its four tracks and available presets. These are the same controls in Mood → Sound. Read before making sounds.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'set_synth',
+    description:
+      'Make or adjust evolving ambient sound with the same controls as Mood → Sound. Supply a preset and/or full patch (exactly four tracks); changes persist and remain editable. Never generate code or bypass these controls. Playback starts only after the person has opted into sound. Only change sound when asked.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        preset: { type: 'string', description: 'Preset id from get_synth.' },
+        patch: {
+          type: 'object',
+          description:
+            'Full patch: {version:1,name,root:36..72,tracks:[{voice:pad|bass|bell|air,level:0..1,tone:0..1,movement:0..1,muted:boolean} ×4]}. Root is MIDI; tone is brightness; movement controls evolution speed.',
+        },
+        volume: { type: 'number', minimum: 0, maximum: 1 },
+        enabled: { type: 'boolean' },
+        playing: { type: 'boolean' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
   {
     name: 'list_cue_presets',
     description:
@@ -352,6 +381,9 @@ export async function runThemeTool(
 ): Promise<string | ToolResultContent> {
   try {
     switch (name) {
+      case 'get_synth':
+      case 'set_synth':
+        return await toolSynth(name, input);
       case 'get_theme':
         return await toolGetTheme(input);
       case 'set_theme':
@@ -419,6 +451,7 @@ export function createThemeToolExecutor(ctx: ThemeToolContext = {}) {
 /** Prompt guidance shared by the workspace chat and the Keeper. */
 export const THEME_TOOL_GUIDANCE =
   '### Theme\n' +
+  'Crux Synth makes evolving ambient sound through four tracks. Use get_synth then set_synth to make sounds with the provided voice, level, brightness, movement, mute and root-note controls. Never substitute generated audio code; these controls must remain editable in Mood → Sound and travel with a saved Mood. ' +
   'You can restyle every part of the workspace with set_theme (get_theme lists the 25 token groups and every token name; get_theme {group} shows current values). ' +
   'Beyond colors there are tokens for shape and state: per-component radii (buttonRadius, inputRadius, cardRadius, chipRadius, tooltipRadius, dropdownRadius, bubbleRadius, meterRadius, paneRadius, paneHeaderRadius), ' +
   'shadows (elevationPanel/Card/CardHover/Modal/Dropdown/Tooltip, moodBarShadow), focus (focusRing, focusRingWidth, focusRingOffset), hover/active/disabled (hoverBrightness, activeBrightness, disabledOpacity, paneHeaderHoverBrightness, cardHoverLift, every *Hover / *Active token), ' +
@@ -431,3 +464,44 @@ export const THEME_TOOL_GUIDANCE =
   'Never persist a change the user did not ask for. ' +
   "Edits to an existing mix (layer, updateMix) rewrite the user's mix and are saved, so only make them when asked. " +
   'set_background changes what sits behind the panes: generate an image from a prompt, use a workspace image, or pick bloom/drift/flow/blank — when the user asks for a backdrop, or when a theme you are building wants one.\n\n';
+
+async function toolSynth(name: string, input: Record<string, unknown>): Promise<string> {
+  const { useAudioStore } = await import('@/stores/audioStore');
+  const { SYNTH_PRESETS, parseSynthPatch, synthPreset } = await import('@/audio/synth-patch');
+  const store = useAudioStore.getState();
+  store.init();
+  if (name === 'set_synth') {
+    const patch =
+      input.patch !== undefined
+        ? parseSynthPatch(input.patch)
+        : typeof input.preset === 'string'
+          ? synthPreset(input.preset)
+          : undefined;
+    if (
+      input.volume !== undefined &&
+      (typeof input.volume !== 'number' ||
+        !Number.isFinite(input.volume) ||
+        input.volume < 0 ||
+        input.volume > 1)
+    )
+      throw new Error('volume must be 0..1');
+    for (const key of ['enabled', 'playing'])
+      if (input[key] !== undefined && typeof input[key] !== 'boolean')
+        throw new Error(`${key} must be boolean`);
+    if (input.playing === true && !useAudioStore.getState().optIn)
+      return 'Press Play synth in Mood → Sound once to enable sound before an agent can play it.';
+    if (patch) await store.setSynth(patch);
+    if (typeof input.volume === 'number') store.setVolume(input.volume);
+    if (typeof input.enabled === 'boolean') store.setEnabled(input.enabled);
+    if (input.playing === true) await store.play();
+    else if (input.playing === false) store.pause();
+  }
+  const state = useAudioStore.getState();
+  return JSON.stringify({
+    patch: state.synth,
+    volume: state.volume,
+    enabled: state.enabled,
+    playing: state.playing,
+    presets: SYNTH_PRESETS,
+  });
+}

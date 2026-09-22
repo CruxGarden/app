@@ -1,3 +1,4 @@
+import { parseSynthPatch, synthForMood, type SynthPatch } from '@/audio/synth-patch';
 /**
  * Mood Packages — the installable, shareable bundle: theme + background +
  * sound + persona + meta. Stored in settings (JSON) with every binary
@@ -73,6 +74,7 @@ export interface MoodPackage {
 }
 
 export interface MoodSound {
+  synth?: SynthPatch;
   track: SoundTrack | null;
   volume: number;
   enabled: boolean;
@@ -125,6 +127,12 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
   // `sound` is the shape since 2026-09-07; packages saved before carried a
   // `resonance` block (synthesized mixes) — its volume and cues still apply.
   const snd = (p.sound ?? p.resonance ?? {}) as Record<string, unknown>;
+  let synth: SynthPatch | undefined;
+  try {
+    if (snd.synth) synth = parseSynthPatch(snd.synth);
+  } catch {
+    return null;
+  }
   const cues = { ...DEFAULT_CUES };
   for (const k of Object.keys(cues) as (keyof SoundCues)[]) {
     const v = (snd.cues as Record<string, unknown> | undefined)?.[k];
@@ -154,6 +162,7 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
       : undefined,
     sound: {
       track: validateTrack(snd.track),
+      ...(synth ? { synth } : {}),
       volume: typeof snd.volume === 'number' ? Math.min(1, Math.max(0, snd.volume)) : 0.7,
       enabled: snd.enabled !== false,
       cues,
@@ -244,6 +253,7 @@ export function captureCurrentMood(input: {
     assets: getAssets(),
     sound: {
       track: sound.getTrack(),
+      synth: sound.getSynth(),
       volume: sound.getVolume(),
       enabled: sound.getEnabled(),
       cues: getCues(),
@@ -352,6 +362,8 @@ export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}
   useAudioStore.setState({ volume: pkg.sound.volume, enabled: pkg.sound.enabled });
   s.setVolume(pkg.sound.volume);
   await s.setTrack(track);
+  await s.setSynth(pkg.sound.synth ?? synthForMood(pkg.id, pkg.name));
+  if (!pkg.sound.enabled) s.pause();
   // A wear, as opposed to a restore at startup: cues and journeys listen. The
   // intro that used to play here (a wash and the name) is gone — Daniel,
   // 2026-09-19: "it feels corny".
