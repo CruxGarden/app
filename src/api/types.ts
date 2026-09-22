@@ -298,6 +298,8 @@ export interface CruxEmbed {
 export interface CreateDimensionDto {
   targetId: string;
   type: DimensionType;
+  kind?: string;
+  meta?: Record<string, unknown>;
   weight?: number;
   note?: string;
 }

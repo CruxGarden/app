@@ -172,6 +172,22 @@ export interface paths {
     patch: operations['AccountController_update'];
     trace?: never;
   };
+  '/authors/search': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['AuthorController_search'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/authors/check-username': {
     parameters: {
       query?: never;
@@ -1219,6 +1235,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/store/gardens/mine': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['StoreController_gardensMine'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/store/{cruxId}/{key}': {
     parameters: {
       query?: never;
@@ -1322,6 +1354,118 @@ export interface paths {
      * @description Body is a document from export. Keys are upserted over what is there; `?mode=replace` empties the store first. Per-visitor values whose visitor is not an account are skipped and counted.
      */
     post: operations['StoreController_importAll'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/fn/{cruxId}/secrets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['FunctionsController_listSecrets'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/fn/{cruxId}/secrets/{name}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['FunctionsController_putSecret'];
+    post?: never;
+    delete: operations['FunctionsController_deleteSecret'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/fn/{cruxId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['FunctionsController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/fn/{cruxId}/{name}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['FunctionsController_call_get'];
+    put: operations['FunctionsController_call_put'];
+    post: operations['FunctionsController_call_post'];
+    delete: operations['FunctionsController_call_delete'];
+    options: operations['FunctionsController_call_options'];
+    head: operations['FunctionsController_call_head'];
+    patch: operations['FunctionsController_call_patch'];
+    trace?: never;
+  };
+  '/fn/{cruxId}/{name}/{rest}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['FunctionsController_callRest_get'];
+    put: operations['FunctionsController_callRest_put'];
+    post: operations['FunctionsController_callRest_post'];
+    delete: operations['FunctionsController_callRest_delete'];
+    options: operations['FunctionsController_callRest_options'];
+    head: operations['FunctionsController_callRest_head'];
+    patch: operations['FunctionsController_callRest_patch'];
+    trace?: never;
+  };
+  '/events/{cruxId}/{name}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['FunctionsController_emit'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/events/{cruxId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['FunctionsController_stream'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1501,7 +1645,7 @@ export interface components {
        * @example webapp
        * @enum {string}
        */
-      kind?: 'webapp' | 'page' | 'document' | 'image' | 'notes' | 'mood';
+      kind?: 'webapp' | 'page' | 'document' | 'image' | 'notes' | 'mood' | 'tool' | 'garden';
       /**
        * @description Status of the crux
        * @default living
@@ -1590,7 +1734,7 @@ export interface components {
        * @example webapp
        * @enum {string|null}
        */
-      kind?: 'webapp' | 'page' | 'document' | 'image' | 'notes' | 'mood' | null;
+      kind?: 'webapp' | 'page' | 'document' | 'image' | 'notes' | 'mood' | 'tool' | 'garden' | null;
       /**
        * @description Updated status of the crux
        * @example frozen
@@ -1645,6 +1789,15 @@ export interface components {
        * @enum {string}
        */
       type: 'gate' | 'garden' | 'growth' | 'graft';
+      /**
+       * @description Relationship role within its dimension type
+       * @example membership
+       */
+      kind?: string;
+      /** @description Relationship metadata; updates shallow-merge top-level keys */
+      meta?: {
+        [key: string]: unknown;
+      };
       /**
        * @description Weight of the relationship (integer)
        * @example 1
@@ -1766,6 +1919,15 @@ export interface components {
        * @enum {string}
        */
       type?: 'gate' | 'garden' | 'growth' | 'graft';
+      /**
+       * @description Relationship role within its dimension type
+       * @example membership
+       */
+      kind?: string;
+      /** @description Relationship metadata; updates shallow-merge top-level keys */
+      meta?: {
+        [key: string]: unknown;
+      };
       /**
        * @description Weight of the relationship (integer)
        * @example 1
@@ -2478,6 +2640,25 @@ export interface operations {
       };
       /** @description Email already exists */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthorController_search: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -5701,6 +5882,23 @@ export interface operations {
       };
     };
   };
+  StoreController_gardensMine: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   StoreController_get: {
     parameters: {
       query?: never;
@@ -6071,6 +6269,403 @@ export interface operations {
       };
       /** @description Crux not found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_listSecrets: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_putSecret: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_deleteSecret: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_call_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_call_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_call_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_call_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_call_options: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_call_head: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_call_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_callRest_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_callRest_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_callRest_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_callRest_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_callRest_options: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_callRest_head: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_callRest_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_emit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FunctionsController_stream: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cruxId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };

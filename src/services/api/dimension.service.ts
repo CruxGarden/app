@@ -21,6 +21,8 @@ export class ApiDimensionService implements IDimensionService {
     return cruxes.createDimension(input.sourceId, {
       targetId: input.targetId,
       type: input.type,
+      kind: input.kind,
+      meta: input.meta,
       weight: input.weight,
       note: input.note,
     });
