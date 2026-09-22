@@ -1,7 +1,8 @@
 import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
 import { isEmbeddedApp } from '@/services/embedded-app';
-import { useState, useRef, useCallback } from 'react';
+import { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react';
+const Undertakings = lazy(() => import('./Undertakings'));
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { createCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -485,8 +486,7 @@ const OWN_TEMPLATES: Template[] = [
     order: 56,
     id: 'business-page',
     label: 'Business Page',
-    description:
-      'A business site on Astro — what you do, pricing, questions, news and contact',
+    description: 'A business site on Astro — what you do, pricing, questions, news and contact',
     icon: <LayoutIcon />,
     thumb: <BusinessThumb />,
     kind: 'webapp',
@@ -573,12 +573,14 @@ const TEMPLATES: Template[] = [
 /** The picker's entries as plain data — what plant_crux accepts (the Keeper's list_templates). */
 // eslint-disable-next-line react-refresh/only-export-components
 export function templateCatalog(): {
+  kind: CruxKind;
   id: string;
   label: string;
   description: string;
   desktopOnly: boolean;
 }[] {
   return TEMPLATES.map((t) => ({
+    kind: t.kind,
     id: t.id,
     label: t.label,
     description: t.description,
@@ -589,11 +591,16 @@ export function templateCatalog(): {
 // ── Component ────────────────────────────────────────────
 
 interface NewCruxModalProps {
+  initialView?: 'crux' | 'undertakings';
   open: boolean;
   onClose: () => void;
 }
 
-export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
+export default function NewCruxModal({ open, onClose, initialView = 'crux' }: NewCruxModalProps) {
+  const [view, setView] = useState(initialView);
+  useEffect(() => {
+    if (open) setView(initialView);
+  }, [open, initialView]);
   const [cruxStore] = useState(() => createCruxStore());
   const navigate = useMoodNavigate();
   const createCrux = cruxStore.getState().createCrux;
@@ -803,11 +810,39 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
     'focus:outline-none focus:border-input-border-active transition-colors',
   );
 
+  if (view === 'undertakings')
+    return (
+      <Modal open={open} onClose={handleClose} size="screen" title="Add Crux">
+        <button
+          disabled={creating}
+          className="text-sm text-accent mb-4 cursor-pointer"
+          onClick={() => setView('crux')}
+        >
+          Just a Crux
+        </button>
+        <Suspense fallback={<p role="status">Loading starting points…</p>}>
+          <Undertakings
+            onBusy={setCreating}
+            onStarted={() => {
+              reset();
+              onClose();
+            }}
+          />
+        </Suspense>
+      </Modal>
+    );
   return (
     <Modal open={open} onClose={handleClose} size="screen" title="Add Crux">
       <div className="flex flex-col h-full gap-5">
         <div className="shrink-0 space-y-2">
           <h2 className="text-lg font-medium">What would you like to grow?</h2>
+          <button
+            disabled={creating || importing}
+            className="text-sm text-accent cursor-pointer"
+            onClick={() => setView('undertakings')}
+          >
+            Undertakings — start with a Cruxspace
+          </button>
           <p className="text-sm text-text-muted">
             Start with an idea or choose a starting point. You can change everything as you go.
           </p>

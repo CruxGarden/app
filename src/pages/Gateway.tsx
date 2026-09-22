@@ -218,11 +218,13 @@ export default function Gateway() {
           </div>
         </Draggable>
         {/* The banner keeps the exact centre of the window; the player hangs below it */}
-        <div className="absolute inset-x-0 top-full mt-5 flex justify-center">
-          <Draggable id="player" label="Player" handle riseDelayMs={55} anchorId="banner">
-            <MoodBar gateway />
-          </Draggable>
-        </div>
+        {!can(Capability.DesktopChrome) && (
+          <div className="absolute inset-x-0 top-full mt-5 flex justify-center">
+            <Draggable id="player" label="Player" handle riseDelayMs={55} anchorId="banner">
+              <MoodBar gateway />
+            </Draggable>
+          </div>
+        )}
       </div>
     </div>
   );

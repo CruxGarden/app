@@ -7,18 +7,20 @@
   `@fontsource-variable` fonts. No CDN, no hosted service.
 
 Chosen over [AstroWind](https://github.com/onwidget/astrowind), the other strong
-candidate (MIT, Astro 7.3, actively maintained): AstroWind is a *showcase* —
+candidate (MIT, Astro 7.3, actively maintained): AstroWind is a _showcase_ —
 four alternate home pages and six landing-page variants — so most of the work
 would have been deleting it. Foxi is already one coherent site.
 
 ## What is upstream, unchanged
 
-`src/components/**` (the blocks, the UI primitives), `src/layouts/**`,
+`src/components/**` (the blocks, the UI primitives),
 `src/styles/**`, `src/icons/**`, `src/assets/**`, `src/content.config.ts`,
 `tailwind.config.mjs`, `postcss.config.mjs`, `tsconfig.json`, `public/**`.
 The design, the responsive behaviour and the component structure are Foxi's.
 
 ## What Crux Garden changed
+
+- **FAQ categories restored** (2026-09-21): the rewritten questions carry pricing/working-together categories and the FAQ page filters those same values. This fixes Astro typechecking at publish and keeps each question visible in its section.
 
 - **Settings in `src/config.json`** (`src/config/config.ts` reads it) so the
   Builder's settings form, any editor and the collaborator can name the
@@ -49,6 +51,7 @@ The design, the responsive behaviour and the component structure are Foxi's.
 - **Terms render from Markdown.** `src/pages/terms.astro` held 170 lines of
   invented terms of service; it now renders `src/data/markdown-files/terms.md`,
   which is a scaffold of headings that says plainly it is not legal advice.
+- **The layout honors the animation setting** (2026-09-21): removed the unconditional `scroll-animation` class from the root element. The existing conditional body class now controls it, so disabling animations leaves all sections visible.
 - **Scroll animations default to off** (`config.json`). `.scroll-animation .col`
   starts at `opacity: 0` and an IntersectionObserver reveals it, so anything not
   scrolled past stays invisible — a blank page in the Workshop's pane. Upstream

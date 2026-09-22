@@ -12,15 +12,14 @@ import CTA from '../components/blocks/CTA/BasicDark.astro'
 import faqData from '../data/json-files/faqData.json'
 // - FAQ Categories
 const faqPricing = faqData.filter((faq) => faq.category === 'pricing')
-const faqIntegrations = faqData.filter((faq) => faq.category === 'integrations')
+const faqWorkingTogether = faqData.filter((faq) => faq.category === 'working-together')
 
 // Content
 import faqImage1 from '../assets/faq/faq-01.png'
 // - SEO
 const SEO = {
 	title: 'Questions',
-	description:
-		'The questions people ask before they get in touch, answered straight.'
+	description: 'The questions people ask before they get in touch, answered straight.'
 }
 // - Page Header
 const header = {
@@ -46,9 +45,9 @@ const header = {
 		classes="bg-neutral-50 dark:bg-neutral-900 lg:!py-64"
 	/>
 	<FAQ
-		title="Integrations Made Easy"
+		title="Working Together"
 		text="Anything else worth explaining before someone gets in touch — how you work, what you need from them, what happens first."
-		data={faqIntegrations}
+		data={faqWorkingTogether}
 	/>
 	<CTA />
 </Layout>

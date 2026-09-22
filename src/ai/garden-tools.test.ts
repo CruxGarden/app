@@ -44,6 +44,37 @@ describe("the Keeper's garden tools", () => {
     expect(validateGardenTool('publish_crux', { cruxId: 'x' }).valid).toBe(true);
   });
 
+  it('accepts template creation and rejects conflicting manual members or briefs', () => {
+    expect(
+      validateGardenTool('create_cruxspace', {
+        name: 'My game',
+        templateId: 'small-game',
+        exampleMode: 'start',
+      }).valid,
+    ).toBe(true);
+    expect(
+      validateGardenTool('create_cruxspace', {
+        name: 'My game',
+        templateId: 'small-game',
+        exampleMode: 'replace',
+      }).valid,
+    ).toBe(false);
+    expect(
+      validateGardenTool('create_cruxspace', {
+        name: 'My game',
+        templateId: 'small-game',
+        cruxIds: ['existing'],
+      }).valid,
+    ).toBe(false);
+    expect(
+      validateGardenTool('create_cruxspace', {
+        name: 'My game',
+        templateId: 'small-game',
+        brief: 'conflicting',
+      }).valid,
+    ).toBe(false);
+  });
+
   it('validates the operating tools: what to show, which pane, names within bounds', () => {
     expect(validateGardenTool('show', { what: 'home' }).valid).toBe(true);
     expect(validateGardenTool('show', { what: 'crux' }).valid).toBe(false);

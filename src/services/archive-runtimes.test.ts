@@ -9,6 +9,8 @@ import { exportCruxspace, importCruxspace } from './cruxspace-package';
 import { createTask } from './tasks';
 import { closeCruxWorkspaces, allWorkspaces, closeWorkspace } from '@/stores/workspaceRegistry';
 import { recordInstalledTool } from './crux-tools/installed';
+import { packTool, TOOL_PACKAGE_PATH } from './crux-tools/package';
+import { toolManifest } from './crux-tools/registry';
 import { growthHostFor } from './growth';
 import { archiveRuntimeMode, rememberRuntimeMode } from './archive-runtimes';
 
@@ -229,6 +231,39 @@ describe('exact tool references in private archives', () => {
     fixture.available = false;
     const imported = await importCrux({ data: result.blob, mode: 'clone' });
     expect((await contents(imported.cruxId))['runtime/editor.js']).toBe(fixture.code);
+  });
+
+  it('restores referenced runtime bytes from one installed package while offline', async () => {
+    const { c, runtime } = await project();
+    const manifest = toolManifest('p5-app')!;
+    const holder = await getServices().crux.create({
+      title: 'Installed Sketch',
+      kind: 'tool',
+      meta: { template: manifest.id },
+    });
+    const blob = await packTool(manifest, [
+      { path: manifest.entryFile, blob: new Blob(['<html>Editor</html>']), mimeType: 'text/html' },
+      { path: 'runtime/editor.js', blob: new Blob([fixture.code]), mimeType: 'text/javascript' },
+    ]);
+    await getServices().artifact.upload({
+      resourceId: holder.id,
+      blob,
+      meta: { path: TOOL_PACKAGE_PATH },
+    });
+    recordInstalledTool({
+      id: manifest.id,
+      cruxId: holder.id,
+      installedAt: new Date().toISOString(),
+    });
+    fixture.available = false;
+    const result = await exportCrux({ cruxId: c.id, runtime: 'reference' });
+    const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+    expect(zip.file('artifacts/' + runtime.fingerprint)).toBeNull();
+    await getServices().crux.delete(c.id);
+    await getSqliteClient().blobDelete(runtime.fingerprint!);
+    const imported = await importCrux({ data: result.blob, mode: 'clone' });
+    expect((await contents(imported.cruxId))['runtime/editor.js']).toBe(fixture.code);
+    expect(await getServices().artifact.findByResource('crux', holder.id)).toHaveLength(1);
   });
 
   it('refuses a garden backup with unavailable references before wiping local data', async () => {

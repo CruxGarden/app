@@ -623,7 +623,6 @@ export default function Explore({
                       import('@/services/blobs'),
                     ]);
                     await installToolFromPublished(crux, {
-                      apiArtifacts: publicApi.getArtifacts,
                       apiDownload: publicApi.downloadArtifact,
                       putBlob,
                       onProgress: report,

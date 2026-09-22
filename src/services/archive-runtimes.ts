@@ -4,7 +4,7 @@ import { getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { getSetting, setSetting } from './settings';
 import { toolManifest } from './crux-tools/registry';
-import { installedTool } from './crux-tools/installed';
+import { installedTool, installedToolPackage } from './crux-tools/installed';
 
 export type RuntimeMode = 'reference' | 'included';
 const PREFERENCE = 'cruxgarden:export-runtime-mode';
@@ -64,7 +64,26 @@ async function runtimeTool(id: string, wantedPaths?: Set<string>): Promise<Runti
   const files: RuntimeFile[] = [];
   const installed = installedTool(id);
   if (installed) {
-    const artifacts = await getServices().artifact.findByResource('crux', installed.cruxId);
+    const packageVersion = await installedToolPackage(installed);
+    if (packageVersion) {
+      for (const file of packageVersion.files) {
+        if (
+          (wantedPaths && !wantedPaths.has(file.path)) ||
+          !isToolFile(file.path, manifest.contentRoot, manifest.document?.path)
+        )
+          continue;
+        const bytes = await file.read();
+        files.push({
+          path: file.path,
+          fingerprint: await hashContent(bytes),
+          size: bytes.length,
+          read: file.read,
+        });
+      }
+    }
+    const artifacts = packageVersion
+      ? []
+      : await getServices().artifact.findByResource('crux', installed.cruxId);
     for (const artifact of artifacts) {
       const path = (artifact.meta?.path as string) || artifact.filename;
       if (

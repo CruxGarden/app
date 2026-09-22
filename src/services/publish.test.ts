@@ -10,6 +10,8 @@ import {
   type PublishPhase,
 } from './publish';
 import type { Crux, Artifact } from '@/api/types';
+import { toolManifest } from './crux-tools/registry';
+import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
 
 it('publishes the selected image without exposing private Cruxspace origin records', async () => {
   const { deps, state } = makeDeps({ exists: true });
@@ -152,6 +154,65 @@ function makeDeps(opts: {
 }
 
 describe('publishPipeline', () => {
+  it.each([
+    ['maps-app', false],
+    ['formjs-app', false],
+    ['p5-app', false],
+    ['maps-app', true],
+  ])(
+    'publishes the complete %s tool package without a visitor-edition build',
+    async (template, isSite) => {
+      const { deps, state } = makeDeps({ isSite });
+      const paths = [
+        toolManifest(template)!.entryFile,
+        'src/editor.ts',
+        'LICENSE',
+        'UPSTREAM.md',
+        'data/project.json',
+      ];
+      await publishPipeline(
+        makeCrux({ kind: 'tool', meta: { template } }),
+        paths.map((path) => makeArtifact(path, path)),
+        { deps },
+      );
+      expect(state.built).toBe(false);
+      expect(state.publishedFiles?.map((file) => file.path)).toEqual([TOOL_PACKAGE_PATH]);
+      const packageVersion = await openToolPackage(state.publishedFiles![0]!.blob, template);
+      expect(packageVersion.files.map((file) => file.path).sort()).toEqual([...paths].sort());
+      const source = packageVersion.files.find((file) => file.path === 'src/editor.ts')!;
+      expect(new TextDecoder().decode(await source.read())).toBe('content-of-art-src/editor.ts');
+    },
+  );
+  it('republishes an installed archive without nesting or changing its version bytes', async () => {
+    const { deps, state } = makeDeps({ exists: true });
+    const manifest = toolManifest('p5-app')!;
+    const blob = await packTool(manifest, [
+      { path: manifest.entryFile, blob: new Blob(['<html>Editor</html>']), mimeType: 'text/html' },
+    ]);
+    deps.local.downloadBlob = async () => blob;
+    await publishPipeline(
+      makeCrux({ kind: 'tool', meta: { template: manifest.id } }),
+      [makeArtifact(TOOL_PACKAGE_PATH, 'package-fingerprint')],
+      { deps },
+    );
+    expect(state.publishedFiles).toHaveLength(1);
+    expect(state.publishedFiles![0]!.blob).toBe(blob);
+  });
+
+  it.each(['maps-app', 'formjs-app'])(
+    'still builds the public edition of an ordinary %s project',
+    async (template) => {
+      const { deps, state } = makeDeps({});
+      await publishPipeline(
+        makeCrux({ kind: 'webapp', meta: { template } }),
+        [makeArtifact('data/project.json', 'data')],
+        { deps },
+      );
+      expect(state.built).toBe(true);
+      expect(state.publishedFiles?.map((file) => file.path)).toEqual(['index.html']);
+    },
+  );
+
   it('creates the crux on the API when it does not exist yet', async () => {
     const { deps, state } = makeDeps({ exists: false });
     await publishPipeline(makeCrux(), [makeArtifact('index.html', 'fp1')], { deps });

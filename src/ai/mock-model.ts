@@ -1475,6 +1475,23 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Named the form Open day RSVP and added the coming and notes fields.');
         }
+        if (lastUserText(prompt).includes('[undertaking:next-step]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const failure = rounds
+            .map((name) => toolResultText(prompt, name))
+            .find((value) => value?.startsWith('Error'));
+          if (failure) return textStream(failure);
+          if (!rounds.length) return toolCallStream('inspect_notebook', {});
+          const inspected = JSON.parse(toolResultText(prompt, 'inspect_notebook') || '{}');
+          const note = inspected.activeNote;
+          if (rounds.length === 1) return toolCallStream('read_open_note', { note });
+          if (rounds.length === 2)
+            return toolCallStream('append_note_text', {
+              note,
+              text: 'Next session: inspect the first change, then choose what to improve.',
+            });
+          return textStream('Added the next step to your undertaking notebook.');
+        }
         if (lastUserText(prompt).includes('[productivity:note')) {
           const rounds = toolResultsThisTurn(prompt);
           const failure = rounds

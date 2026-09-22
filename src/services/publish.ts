@@ -6,6 +6,8 @@ import {
   samplerType,
 } from './embedded-app';
 import { portableMeta } from './task-archive';
+import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
+import { toolManifest } from './crux-tools/registry';
 import { assertCopyWritable } from './working-copies';
 /**
  * Publish module — the whole publish/unpublish pipeline behind one interface.
@@ -275,7 +277,7 @@ export async function publishPipeline(
       );
   }
 
-  if (isMoqira(crux)) {
+  if (crux.kind !== 'tool' && isMoqira(crux)) {
     const readJson = async (path: string) => {
       const artifact = artifacts.find((a) => pathOf(a) === path);
       if (!artifact) throw new Error('Moqira publication files are missing.');
@@ -318,12 +320,15 @@ export async function publishPipeline(
   let filesToPublish: PublishFile[];
   // Moqira and Notes publish their own public edition builds (ADR 0029, 0028) without an Astro config.
   // form-js Cruxes publish the viewer edition their own script renders (formjs-crux/scripts/edition.mjs).
+  // Tool templates distribute their complete editor/runtime package, even when
+  // projects made with the tool have a separate public-edition build.
   const builds =
-    deps.site.isSiteCrux(artifacts) ||
-    isMoqira(crux) ||
-    crux.kind === 'notes' ||
-    nativeAppType(crux) === 'formjs' ||
-    nativeAppType(crux) === 'maps';
+    crux.kind !== 'tool' &&
+    (deps.site.isSiteCrux(artifacts) ||
+      isMoqira(crux) ||
+      crux.kind === 'notes' ||
+      nativeAppType(crux) === 'formjs' ||
+      nativeAppType(crux) === 'maps');
   // A sketch or shader Crux publishes its page as it is: no build, the files are the site.
   const publishesAsIs =
     ['p5', 'glsl', 'abc', 'jscad', 'timeline'].includes(nativeAppType(crux) ?? '') ||
@@ -385,6 +390,31 @@ export async function publishPipeline(
     } catch {
       /* no cover this time */
     }
+  }
+
+  // Tools are one portable version entity; their internal files are not API Artifacts.
+  if (crux.kind === 'tool') {
+    const manifest = toolManifest(crux.meta?.template as string);
+    if (!manifest) throw new Error('Choose a known Crux Tool before publishing its package.');
+    const existing = filesToPublish.find((file) => file.path === TOOL_PACKAGE_PATH);
+    let blob: Blob;
+    if (existing) {
+      if (filesToPublish.length !== 1)
+        throw new Error('An installed tool package cannot be mixed with loose files.');
+      await openToolPackage(existing.blob, manifest.id);
+      blob = existing.blob;
+    } else {
+      blob = await packTool(manifest, filesToPublish);
+    }
+    filesToPublish = [
+      {
+        path: TOOL_PACKAGE_PATH,
+        blob,
+        mimeType: 'application/zip',
+        type: 'artifact',
+        kind: 'tool-package',
+      },
+    ];
   }
 
   // 3. Publish — all files in one multipart request

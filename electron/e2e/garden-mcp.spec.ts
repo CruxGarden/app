@@ -55,6 +55,31 @@ test('an outside MCP client operates across the garden; built-in collaborators s
       cruxIds: [a, b],
     });
     expect(await call('list_cruxspaces')).toContain('Outside study');
+    expect(await call('list_templates')).toContain('small-game');
+    const undertaking = await call('create_cruxspace', {
+      name: 'Outside pocket game',
+      templateId: 'small-game',
+      exampleMode: 'start',
+    });
+    const undertakingId = /id: (\S+)/.exec(undertaking)![1];
+    expect(undertaking).not.toContain('worked example:');
+    const imported = await page.evaluate(async (id) => {
+      const row = (await window.electronAPI!.sqlite.get(
+        'SELECT value FROM settings WHERE key = ?',
+        ['cruxgarden:cruxspace:' + id],
+      )) as { value: string };
+      return JSON.parse(row.value);
+    }, undertakingId);
+    expect(imported.cruxIds).toHaveLength(2);
+    expect(imported.origin).toBeTruthy();
+    expect(
+      await call('call_crux_tool', {
+        cruxId: imported.cruxIds[1],
+        name: 'read_file',
+        input: { path: 'game.json' },
+      }),
+    ).toContain('Firefly Catch');
+
     const defs = JSON.parse(await call('list_crux_tools', { cruxId: a }));
     expect(defs.some((t: { name: string }) => t.name === 'write_file')).toBe(true);
     await call('call_crux_tool', {

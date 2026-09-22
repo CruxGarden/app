@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import JSZip from 'jszip';
+import { createHash } from 'node:crypto';
 import { launchApp } from '../launch';
 import { enterGarden } from '../multi-crux-helpers';
 import { LOCAL_API, LOCAL_API_LOG, useLocalApi, signInLocally } from '../local-api-helpers';
@@ -8,7 +10,7 @@ import { LOCAL_API, LOCAL_API_LOG, useLocalApi, signInLocally } from '../local-a
 /**
  * The publishing job of CRUX-TOOLS-DISTRIBUTION-PLAN §4: every Crux Tool
  * that is not in the starter set becomes a published Template Crux —
- * `kind: 'tool'`, `meta.template` its id, its built runtime as Artifacts —
+ * `kind: 'tool'`, `meta.template` its id, one complete version archive —
  * in the garden the app is pointed at. Run against a dev server that sees
  * every tool (the default when serving) with the runtimes built
  * (`CRUX_BUNDLE_TOOLS=all npm run prebuild`), and the API on this machine:
@@ -68,7 +70,10 @@ async function publishOne(page: Page, manifest: Manifest) {
   // Explore's Tools. The tool's own editor hooks were registered when the
   // Crux opened as an app, so it is closed and reopened as the package it
   // now is before sharing.
-  await page.getByRole('button', { name: 'Toggle metadata' }).click();
+  const metadata = page.getByTestId('pane-body-details');
+  const toggleMetadata = page.getByRole('button', { name: 'Toggle metadata' });
+  if ((await toggleMetadata.getAttribute('aria-pressed')) !== 'true') await toggleMetadata.click();
+  await expect(metadata).toBeVisible();
   const kindBadge = page.getByRole('button', {
     name: /^(auto|Web App|Page|Document|Image|Tool template)$/i,
   });
@@ -78,9 +83,8 @@ async function publishOne(page: Page, manifest: Manifest) {
   await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
   await page.getByRole('button', { name: 'Close current workspace' }).click();
   await page.getByRole('button', { name: 'Save and close' }).click();
-  await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible({
-    timeout: 60000,
-  });
+  await expect(page.locator(`[data-workspace-id="${id}"]`)).toBeHidden({ timeout: 60000 });
+  await home(page);
   await page.evaluate((id) => {
     window.history.pushState({}, '', `/c/${id}`);
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -102,9 +106,33 @@ async function publishOne(page: Page, manifest: Manifest) {
   const backupAsk = page
     .getByRole('dialog')
     .filter({ hasText: 'A published site is not a backup' });
-  if (await backupAsk.isVisible({ timeout: 3000 }).catch(() => false))
+  if (
+    await backupAsk
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false)
+  )
     await backupAsk.getByRole('button', { name: 'Share without a backup' }).click();
-  await expect(page.getByText('Up to date')).toBeVisible({ timeout: 600000 });
+  // File ingestion can immediately mark a successful publication as having
+  // changes. Shared is the publication result; the catalog checks below verify
+  // that its entry actually reached the API and can be downloaded.
+  await expect
+    .poll(
+      async () => {
+        const failure = page.getByTestId('pane-body-publish').getByRole('alert');
+        if (await failure.isVisible()) throw new Error(await failure.innerText());
+        return page.getByText('Shared', { exact: true }).isVisible();
+      },
+      { timeout: 600000 },
+    )
+    .toBe(true);
+  // Closing a workspace selects the previous open Crux, not necessarily Home.
+  // Release each published workspace so later tools do not inherit its editor.
+  await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
+  await page.getByRole('button', { name: 'Close current workspace' }).click();
+  await page.getByRole('button', { name: 'Save and close' }).click();
+  await expect(page.locator(`[data-workspace-id="${id}"]`)).toBeHidden({ timeout: 60000 });
+  await home(page);
   return id;
 }
 
@@ -143,7 +171,7 @@ test('publish the Crux Tools as Template Cruxes', async () => {
         console.log(`published ${manifest.id} as ${id}`);
       } catch (error) {
         failed.push(manifest.id);
-        console.log(`FAILED ${manifest.id}: ${(error as Error).message.split('\n')[0]}`);
+        console.log(`FAILED ${manifest.id}: ${(error as Error).stack}`);
         await page
           .screenshot({ path: `e2e/.results/publish-failed-${manifest.id}.png` })
           .catch(() => undefined);
@@ -167,7 +195,10 @@ test('publish the Crux Tools as Template Cruxes', async () => {
     const catalog = (await catalogResponse.json()) as {
       author_username: string;
       slug: string;
-      meta?: { template?: string };
+      meta?: {
+        template?: string;
+        toolPackage?: { artifactId: string; fingerprint: string; fileCount: number };
+      };
     }[];
     for (const { manifest } of list) {
       const item = catalog.find((c) => c.meta?.template === manifest.id);
@@ -180,12 +211,31 @@ test('publish the Crux Tools as Template Cruxes', async () => {
         filename: string;
         meta?: { path?: string };
       }[];
-      const entry = artifacts.find((a) => (a.meta?.path || a.filename) === manifest.entryFile);
-      expect(entry, `${manifest.id} includes ${manifest.entryFile}`).toBeTruthy();
-      const download = await fetch(`${base}/artifacts/${entry!.id}/download`);
-      expect(download.ok, `${manifest.id} entry downloads`).toBe(true);
-      expect((await download.arrayBuffer()).byteLength).toBeGreaterThan(0);
-      console.log(`verified ${manifest.id}: ${artifacts.length} files, entry downloads`);
+      expect(artifacts, `${manifest.id} stores one archive Artifact`).toHaveLength(1);
+      expect(artifacts[0].meta?.path).toBe('_crux/tool-package.zip');
+      const version = item!.meta!.toolPackage!;
+      expect(version.artifactId).toBe(artifacts[0].id);
+      const download = await fetch(`${base}/artifacts/${version.artifactId}/download`);
+      expect(download.ok).toBe(true);
+      const bytes = Buffer.from(await download.arrayBuffer());
+      expect(createHash('sha256').update(bytes).digest('hex')).toBe(version.fingerprint);
+      const zip = await JSZip.loadAsync(bytes);
+      const header = JSON.parse(await zip.file('tool-package.json')!.async('text'));
+      expect(header.tool.id).toBe(manifest.id);
+      expect(header.files).toHaveLength(version.fileCount);
+      expect(zip.file('files/UPSTREAM.md')).not.toBeNull();
+      expect(zip.file('files/' + manifest.entryFile)).not.toBeNull();
+      for (const file of header.files as { path: string }[]) {
+        if (!file.path.endsWith('.css')) continue;
+        const css = (await zip.file('files/' + file.path)!.async('text')).trim();
+        expect(
+          css.startsWith('export default ') && css.includes('transform-only'),
+          `${manifest.id} styles are intact`,
+        ).toBe(false);
+      }
+      console.log(
+        `verified ${manifest.id}: one archive/Artifact/download, ${version.fileCount} internal files`,
+      );
     }
   } finally {
     await app.close();

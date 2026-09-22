@@ -1,4 +1,4 @@
-import { installedTool } from './crux-tools/installed';
+import { installedTool, installedToolPackage } from './crux-tools/installed';
 import { toolManifest } from './crux-tools/registry';
 import type { Crux, CruxKind, ChatMessage } from '@/api/types';
 import { getServices } from './index';
@@ -35,28 +35,50 @@ export async function applyTemplateToCrux(
   let def = await loadTemplate(templateId);
   const services = getServices();
   // A tool installed into this garden rather than built in: its files are
-  // the Template Crux's Artifacts, cloned here by fingerprint — no bytes
-  // move — and its meta comes from the manifest as for a bundled tool.
+  // unpacked from its local immutable package into normal working Artifacts.
+  // Legacy installations still share their existing file fingerprints.
   const installed = !def ? installedTool(templateId) : null;
   const manifest = installed ? toolManifest(templateId) : null;
   if (installed && manifest) {
-    const source = await services.artifact.findByResource('crux', installed.cruxId);
-    await services.artifact.registerMany(
-      source
-        .filter((a) => a.fingerprint)
-        .map((a) => {
-          const path = a.meta?.path || a.filename;
-          return {
-            resourceId: crux.id,
-            path,
-            fingerprint: a.fingerprint!,
-            size: a.size,
-            mimeType: a.mimeType,
-            encoding: a.encoding,
-            meta: { path },
-          };
-        }),
-    );
+    const packageVersion = await installedToolPackage(installed);
+    if (packageVersion) {
+      const { putBlob } = await import('./blobs');
+      const registrations = [];
+      for (const file of packageVersion.files) {
+        const bytes = await file.read();
+        const fingerprint = await putBlob(bytes);
+        registrations.push({
+          resourceId: crux.id,
+          path: file.path,
+          fingerprint,
+          size: bytes.length,
+          mimeType: file.mimeType,
+          encoding: /^(text\/|application\/(javascript|json|xml))/.test(file.mimeType)
+            ? 'utf-8'
+            : 'binary',
+          meta: { path: file.path },
+        });
+      }
+      await services.artifact.registerMany(registrations);
+    } else {
+      const source = await services.artifact.findByResource('crux', installed.cruxId);
+      await services.artifact.registerMany(
+        source
+          .filter((a) => a.fingerprint)
+          .map((a) => {
+            const path = a.meta?.path || a.filename;
+            return {
+              resourceId: crux.id,
+              path,
+              fingerprint: a.fingerprint!,
+              size: a.size,
+              mimeType: a.mimeType,
+              encoding: a.encoding,
+              meta: { path },
+            };
+          }),
+      );
+    }
     // Registration shares Blob Store content, but the desktop preview reads
     // real files. Finish creating the project before opening its workspace.
     const { projectAllArtifacts } = await import('./project-folder');

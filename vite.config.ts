@@ -4,9 +4,10 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import cruxTools from './vite-plugin-crux-tools';
+import cruxAssets from './vite-plugin-crux-assets';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), cruxTools(__dirname)],
+  plugins: [cruxAssets(), react(), tailwindcss(), cruxTools(__dirname)],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

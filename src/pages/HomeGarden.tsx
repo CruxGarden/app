@@ -49,6 +49,7 @@ export default function HomeGarden() {
 
   const thumbnails = useGardenStore((s) => s.thumbnails);
   const [showNewCrux, setShowNewCrux] = useState(false);
+  const [newCruxView, setNewCruxView] = useState<'crux' | 'undertakings'>('crux');
   const [dropping, setDropping] = useState(false);
   const [dropNotice, setDropNotice] = useState('');
   const handleDropFiles = useCallback(
@@ -237,11 +238,28 @@ export default function HomeGarden() {
           <div className="w-12 h-12 rounded-full bg-accent-muted text-accent flex items-center justify-center mb-4">
             <PlusCircleIcon size={20} />
           </div>
-          <p className="font-display text-base text-text mb-1">Your garden is empty</p>
+          <p className="font-display text-base text-text mb-1">What do you want to make?</p>
           <p className="text-sm text-text-muted max-w-[34ch] mb-5">
-            Start from a template or a blank page and talk to the AI to grow it.
+            Choose an undertaking with a worked example, or start with a single Crux. Work on your
+            own or with a collaborator.
           </p>
-          <PlasmaButton onClick={() => setShowNewCrux(true)}>Plant your first crux</PlasmaButton>
+          <PlasmaButton
+            onClick={() => {
+              setNewCruxView('undertakings');
+              setShowNewCrux(true);
+            }}
+          >
+            Explore undertakings
+          </PlasmaButton>
+          <button
+            className="mt-3 text-sm text-accent cursor-pointer"
+            onClick={() => {
+              setNewCruxView('crux');
+              setShowNewCrux(true);
+            }}
+          >
+            Just a Crux
+          </button>
         </div>
       ) : (
         <GardenGrid
@@ -294,7 +312,14 @@ export default function HomeGarden() {
       </Modal>
 
       {/* New crux modal */}
-      <NewCruxModal open={showNewCrux} onClose={() => setShowNewCrux(false)} />
+      <NewCruxModal
+        open={showNewCrux}
+        initialView={newCruxView}
+        onClose={() => {
+          setShowNewCrux(false);
+          setNewCruxView('crux');
+        }}
+      />
     </div>
   );
 }

@@ -45,13 +45,23 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           description: 'What the undertaking is for; every member reads it.',
         },
+        templateId: {
+          type: 'string',
+          description:
+            'Optional undertaking id from list_templates; imports its starter and worked example.',
+        },
+        exampleMode: {
+          type: 'string',
+          enum: ['beside', 'start'],
+          description: 'Example beside the starter (default), or use the example as the start.',
+        },
         cruxIds: {
           type: 'array',
           items: { type: 'string' },
           description: 'Existing member crux ids (optional).',
         },
       },
-      required: ['name', 'brief'],
+      required: ['name'],
       additionalProperties: false,
     },
   },
@@ -384,7 +394,18 @@ export function validateGardenTool(
       return { valid: true };
     case 'create_cruxspace':
       if (!str(input.name, 120)) return { valid: false, error: 'name is required (≤120 chars)' };
-      if (!str(input.brief)) return { valid: false, error: 'brief is required (≤8000 chars)' };
+      if (input.templateId !== undefined) {
+        if (!str(input.templateId, 80))
+          return { valid: false, error: 'templateId must be an undertaking id' };
+        if (input.cruxIds !== undefined || input.brief !== undefined)
+          return { valid: false, error: 'A template supplies its own brief and members.' };
+        if (
+          input.exampleMode !== undefined &&
+          !['beside', 'start'].includes(String(input.exampleMode))
+        )
+          return { valid: false, error: 'exampleMode must be beside or start' };
+      } else if (!str(input.brief))
+        return { valid: false, error: 'brief is required (≤8000 chars)' };
       if (input.cruxIds !== undefined && !Array.isArray(input.cruxIds))
         return { valid: false, error: 'cruxIds must be an array of ids' };
       return { valid: true };
@@ -588,6 +609,15 @@ async function runGardenToolInner(
       );
     }
     case 'create_cruxspace': {
+      if (input.templateId) {
+        const { startCruxspaceTemplate } = await import('@/services/cruxspace-templates');
+        const result = await startCruxspaceTemplate({
+          templateId: input.templateId as string,
+          name: input.name as string,
+          exampleMode: input.exampleMode as 'beside' | 'start' | undefined,
+        });
+        return `Cruxspace "${result.space.name}" created.\nid: ${result.space.id}\nmembers: ${result.space.cruxIds.join(', ')}${result.exampleSpaceId ? `\nworked example: ${result.exampleSpaceId}` : ''}`;
+      }
       const space = await createCruxspace({
         name: input.name as string,
         brief: input.brief as string,
@@ -605,7 +635,9 @@ async function runGardenToolInner(
       const store = createCruxStore();
       let crux = await store.getState().createCrux(input.title as string);
       if (template !== 'blank') {
-        const kind = (manifest?.kind ?? 'webapp') as Parameters<typeof applyTemplateToCrux>[2];
+        const { templateCatalog } = await import('@/components/garden/NewCruxModal');
+        const kind =
+          manifest?.kind ?? templateCatalog().find((t) => t.id === template)?.kind ?? 'webapp';
         crux = (await applyTemplateToCrux(crux, template, kind)).crux;
       }
       const text = (input.brief as string | undefined)?.trim();
@@ -866,9 +898,16 @@ async function runGardenToolInner(
     }
     case 'list_templates': {
       const { templateCatalog } = await import('@/components/garden/NewCruxModal');
-      return templateCatalog()
-        .map((t) => `- ${t.id} — ${t.label}: ${t.description}${t.desktopOnly ? ' (desktop)' : ''}`)
-        .join('\n');
+      const { cruxspaceTemplates } = await import('@/services/cruxspace-templates');
+      return (
+        templateCatalog()
+          .map(
+            (t) => `- ${t.id} — ${t.label}: ${t.description}${t.desktopOnly ? ' (desktop)' : ''}`,
+          )
+          .join('\n') +
+        '\nUndertakings (create_cruxspace with templateId):\n' +
+        cruxspaceTemplates.map((t) => `- ${t.id} — ${t.name}: ${t.description}`).join('\n')
+      );
     }
     case 'choose_collaborator': {
       const crux = await resolveCrux(input);
@@ -1035,7 +1074,6 @@ async function runGardenToolInner(
       const { putBlob } = await import('@/services/blobs');
       const crux = await publicApi.getCruxBySlug(input.username as string, input.slug as string);
       const t = await installed.installToolFromPublished(crux as never, {
-        apiArtifacts: publicApi.getArtifacts as never,
         apiDownload: publicApi.downloadArtifact as never,
         putBlob,
       });

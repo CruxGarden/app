@@ -1,0 +1,62 @@
+[
+  {
+    "id": "home-page",
+    "name": "Make a home page",
+    "description": "Introduce yourself and give your work a home.",
+    "members": ["Planning notebook", "Home page"],
+    "firstTask": "Open Home page → Edit content → Site settings. Replace the name and tagline with your own.",
+    "collaboratorTask": "Help me make this home page my own. Ask what I make and who it is for, then update the name and tagline together.",
+    "finishLine": "A personal home page you can publish and send to someone.",
+    "example": "Moss & Morning — a maker’s home page"
+  },
+  {
+    "id": "small-game",
+    "name": "Make a small game",
+    "description": "Remix a playable pocket game, one change at a time.",
+    "members": ["Game notebook", "Pocket game"],
+    "firstTask": "Open Pocket game → Artifacts → game.json. Change the title, save, then play in Workshop → Clean.",
+    "collaboratorTask": "Read game.json and help me change the title and target score. Keep it playable and test a full round with me.",
+    "finishLine": "A playable browser game with your own title and rules.",
+    "example": "Firefly Catch — collect a little light"
+  },
+  {
+    "id": "short-book",
+    "name": "Write a short book",
+    "description": "Turn an outline and two sample chapters into a book.",
+    "members": ["Book planning", "Manuscript"],
+    "firstTask": "Open Manuscript → Use app. Open The first page and replace its opening paragraph with your own.",
+    "collaboratorTask": "Read the outline and the first chapter. Ask about my voice, then help revise one paragraph without rewriting the rest.",
+    "finishLine": "A public reading edition and a downloadable EPUB.",
+    "example": "Small Hours — a two-chapter field notebook"
+  },
+  {
+    "id": "small-business",
+    "name": "Launch a small business",
+    "description": "Shape an offer, plan a launch and put up a site.",
+    "members": ["Launch notebook", "Business site"],
+    "firstTask": "Open Business site → Edit content → Site settings. Change the business name and description to describe your offer.",
+    "collaboratorTask": "Read the launch notebook. Help me describe one concrete offer for one audience, then update the business site with me.",
+    "finishLine": "A business home page with an offer and a way to get in touch.",
+    "example": "Bloom & Ink — an imaginary illustration studio"
+  },
+  {
+    "id": "research-question",
+    "name": "Explore a question",
+    "description": "Keep observations, inspect a small dataset and share findings.",
+    "members": ["Research notebook", "Findings"],
+    "firstTask": "Open Findings → Artifacts → observations.csv. Change one height value, save, and inspect the updated chart in Workshop → Clean.",
+    "collaboratorTask": "Read the question and observations.csv. Help me interpret the pattern, distinguish observation from causation, and revise the findings together.",
+    "finishLine": "A findings page with the data, a chart and clear limitations.",
+    "example": "Seed trial — a small synthetic dataset"
+  },
+  {
+    "id": "family-history",
+    "name": "Tell a family history",
+    "description": "Collect memories and turn them into a small reading collection.",
+    "members": ["Memory notebook", "Family journal"],
+    "firstTask": "Open Family journal → Edit content. Open the sample post and replace its title and opening paragraph with a memory you want to share.",
+    "collaboratorTask": "Read the memory notebook and ask me about one place or object. Help shape my answers into a short story, keeping uncertain details marked.",
+    "finishLine": "A public journal containing only the memories you choose to share.",
+    "example": "The blue kitchen — an invented family story"
+  }
+]
