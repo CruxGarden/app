@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -94,7 +95,7 @@ test.describe('verify before done (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/verify-3-checked.png' });
 
       // Growth: the failed state and the fixed state each carry their verdict
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       const badges = page.getByTestId('growth-checked');
       await expect(badges.filter({ hasText: 'Checked ✓' })).toHaveCount(1, { timeout: 30_000 });
       await expect(badges.filter({ hasText: 'Check found problems' })).toHaveCount(1);

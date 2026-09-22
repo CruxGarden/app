@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -72,8 +73,8 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
     });
 
     await test.step('the scripted collaborator names the world and renders a PNG', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Name this world [map:world]');
       await box.press('Enter');
@@ -89,7 +90,7 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
       const png = outputs(folder).find((o) => o.label === 'Moss Isles')!;
       expect(png.mimeType).toBe('image/png');
       expect(readFileSync(join(folder, png.path)).subarray(1, 4).toString()).toBe('PNG');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'fmg-agent.png') });
     });
   } finally {

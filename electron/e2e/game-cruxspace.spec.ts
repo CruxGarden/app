@@ -1,3 +1,4 @@
+import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import {
   readFileSync,
@@ -363,7 +364,7 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
     });
 
     await test.step('11. Publish through the Share pane; the published files boot the game', async () => {
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -420,7 +421,7 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
         await browser.close();
         server.close();
       }
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await snapshot(page, 'Published');
     });
 
@@ -428,11 +429,11 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await open(page, 'Glow Garden game');
       await openWorkshop(page);
       await nativeReady(page);
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) === 'true') await collab.click();
+
+      if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const pane = page.getByTestId('pane-body-history');
-      if (!(await pane.isVisible()))
-        await page.getByRole('button', { name: 'Toggle history' }).click();
+      if (!(await pane.isVisible())) await togglePanel(page, 'Toggle history');
       await expect(pane).toBeVisible();
       await pane.getByRole('button', { name: 'Whole Crux · branches & merges' }).click();
       const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
@@ -461,7 +462,7 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await shot('12-viewing-first-playable');
       await pane.getByRole('button', { name: 'Back to current' }).click();
       await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0);
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
     });
 
     await test.step('12b. The Cruxspace story: about, members, milestones, graph, and a walkthrough that lands in the game', async () => {
@@ -662,11 +663,11 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await open(page, 'Glow Garden game');
       await openWorkshop(page);
       await nativeReady(page);
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) === 'true') await collab.click();
+
+      if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const pane = page.getByTestId('pane-body-history');
-      if (!(await pane.isVisible()))
-        await page.getByRole('button', { name: 'Toggle history' }).click();
+      if (!(await pane.isVisible())) await togglePanel(page, 'Toggle history');
       await pane.getByRole('button', { name: 'Whole Crux · branches & merges' }).click();
       const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
       await expect(

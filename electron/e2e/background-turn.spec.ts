@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -80,7 +81,7 @@ test.describe('background turns (mock AI)', () => {
       }
 
       // One snapshot per step, labelled — and no end-of-turn double-up
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await expect(page.getByText('Step 1: Lay the foundation', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
@@ -138,7 +139,7 @@ test.describe('background turns (mock AI)', () => {
         .poll(() => onDisk(gardenRoot, 'step-1.txt'), { timeout: 30_000 })
         .toBe('step 1\n');
       await expect(card).toHaveCount(0);
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await expect(page.getByText('Before revert', { exact: true })).toBeVisible({
         timeout: 30_000,
       });

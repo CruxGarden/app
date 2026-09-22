@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -49,7 +50,7 @@ test.describe('snapshots & revert', () => {
       await expect.poll(fileOnDisk).toBe('version one');
 
       // Snapshot "v1"
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       const snapshotWithLabel = async (label: string) => {
         await page
           .getByRole('button', { name: /snapshot/i })
@@ -114,7 +115,7 @@ test.describe('snapshots & revert', () => {
       await expect(reopened).toContainText('version one');
       await expect(reopened).not.toContainText('version two');
       if (!(await page.getByText('Before revert', { exact: true }).isVisible())) {
-        await page.getByRole('button', { name: 'Toggle history' }).click();
+        await togglePanel(page, 'Toggle history');
       }
       await expect(page.getByText('v1', { exact: true })).toBeVisible();
       await expect(page.getByText('v2', { exact: true })).toBeVisible();

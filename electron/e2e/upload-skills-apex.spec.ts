@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
   existsSync,
@@ -51,8 +52,7 @@ async function plantBlankCrux(page: Page) {
 /** Open a pane if it is closed; never toggle an open one shut. */
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
@@ -278,7 +278,7 @@ test.describe('upload, skills, apex domain', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Connect + publish through the Share pane (first share asks about a backup)
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -295,8 +295,8 @@ test.describe('upload, skills, apex domain', () => {
       const domains = page.getByTestId('custom-domains');
       await expect(domains.getByTestId('domains-gardener')).toContainText('Gardener');
       api.state.billing.planId = 'gardener';
-      await page.getByRole('button', { name: 'Toggle share' }).click();
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
+      await togglePanel(page, 'Toggle share');
       await expect(page.getByTestId('crux-usage')).toBeVisible({ timeout: 30_000 });
 
       // ── Connect a bare (apex) domain ──

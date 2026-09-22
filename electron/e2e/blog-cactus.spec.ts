@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { existsSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -117,8 +118,8 @@ test('Blog (Cactus): Builder post, live route, collaborator post, share, restart
     });
 
     await test.step('the scripted collaborator drafts a post with write_file', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Write a post about moss [blog:post]');
       await box.press('Enter');
@@ -145,11 +146,11 @@ test('Blog (Cactus): Builder post, live route, collaborator post, share, restart
       } finally {
         await close();
       }
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
     });
 
     await test.step('Share builds the blog and publishes it with search and a feed', async () => {
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
@@ -178,7 +179,7 @@ test('Blog (Cactus): Builder post, live route, collaborator post, share, restart
       ).toString('utf8');
       expect(home).not.toMatch(/fonts\.googleapis|cdn\.jsdelivr/);
       await page.screenshot({ path: join(evidence, 'blog-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
   } finally {
     await first.app.close();
@@ -196,7 +197,7 @@ test('Blog (Cactus): Builder post, live route, collaborator post, share, restart
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('Compost').first()).toBeVisible();
       await exportNativeCrux(page, archive, second.app, async () => {
-        await page.getByRole('button', { name: 'Toggle export' }).click();
+        await togglePanel(page, 'Toggle export');
         await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
       });
     });

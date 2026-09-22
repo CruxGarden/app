@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -32,7 +33,7 @@ test.describe('usage + custom domains (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Connect + publish through the Share pane
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -68,8 +69,8 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(domains.getByRole('button', { name: 'Connect a domain' })).toHaveCount(0);
       // Upgrade (the mock account's plan) and reopen the pane: the form is back
       api.state.billing.planId = 'gardener';
-      await page.getByRole('button', { name: 'Toggle share' }).click();
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
+      await togglePanel(page, 'Toggle share');
       await expect(page.getByTestId('crux-usage')).toBeVisible({ timeout: 30_000 });
       // Custom domain: add → records → verify ×3 → live
       await domains.getByRole('button', { name: 'Connect a domain' }).click();

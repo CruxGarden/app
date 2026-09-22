@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -53,7 +54,8 @@ test('native multitrack tools arrange and mix clips while preserving manual chan
   const run = async (action: string, waveform = false) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const done = 'Audio ' + (waveform ? 'depth ' : 'arrangement ') + action + ' complete.';
     const count = async () =>
       (await storedCrux(page, id)).messages.filter(

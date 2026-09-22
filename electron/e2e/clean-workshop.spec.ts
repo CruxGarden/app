@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
@@ -95,7 +96,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await expect(frame().getByRole('heading', { name: 'Updated reading list' })).toBeVisible();
     writeFileSync(join(folder, 'reading.html'), reading);
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
-    await page.getByRole('button', { name: 'Toggle metadata' }).click();
+    await togglePanel(page, 'Toggle metadata');
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
     await page.screenshot({ path: '/private/tmp/clean-workshop/03-clean.png' });
 
@@ -103,7 +104,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await expect(page.locator('.monaco-editor').first()).toContainText('Your reading list');
     await workshop().getByRole('button', { name: 'Clean', exact: true }).click();
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
     await page.getByRole('tree').getByText('notes.md', { exact: true }).click();
     await expect(workshop()).toHaveAttribute('data-view', 'advanced');
     await expect(page.locator('.monaco-editor').first()).toContainText('Keep this draft.');
@@ -118,7 +119,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await page.locator('.monaco-editor').first().click();
     await page.keyboard.press('ControlOrMeta+s');
     await workshop().getByRole('button', { name: 'Clean', exact: true }).click();
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
 
     // A saved choice disappearing never silently opens another page.
     unlinkSync(join(folder, 'reading.html'));

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -30,8 +31,7 @@ async function armBlobCapture(page: Page) {
 /** Open a pane if it is closed; never toggle an open one shut. */
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
@@ -78,7 +78,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await page.getByRole('button', { name: 'Toggle history' }).click();
+        await togglePanel(page, 'Toggle history');
       await page
         .getByRole('button', { name: /snapshot/i })
         .first()
@@ -97,7 +97,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await page.getByRole('button', { name: 'Toggle export' }).click();
+        await togglePanel(page, 'Toggle export');
       await page.getByRole('button', { name: 'Export Crux' }).click();
       const blobs = () =>
         page.evaluate(() => (window as unknown as { __blobs: Blob[] }).__blobs.length);
@@ -129,7 +129,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
         page.getByRole('button', { name: 'Import .crux file' }).click(),
       ]);
       await chooser.setFiles(cruxFile);
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
+      await expect(page.getByRole('button', { name: 'Add panel' })).toBeVisible({
         timeout: 60_000,
       });
       await ensurePane(page, 'artifacts', 'Toggle artifacts');
@@ -200,7 +200,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await page.getByRole('button', { name: 'Toggle history' }).click();
+        await togglePanel(page, 'Toggle history');
       await expect(page.getByText('v1', { exact: true })).toBeVisible({ timeout: 30_000 });
     } finally {
       await app.close();

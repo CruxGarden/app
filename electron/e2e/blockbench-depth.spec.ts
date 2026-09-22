@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -39,8 +40,8 @@ test('model depth: native prop creation, manual texture and name, scoped geometr
     await save();
   };
   const toggleChat = async () => {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
   };
   let expectedMedia: Record<string, unknown> = {};
   const check = () => {

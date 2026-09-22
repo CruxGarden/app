@@ -1,3 +1,4 @@
+import { togglePanel } from '../panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,7 +21,7 @@ test('the agent in the pane can reach the garden tools', async () => {
     await createCrux(page, 'Probe');
     const body = page.getByTestId('pane-body-collaboration');
     if (!(await body.isVisible().catch(() => false)))
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+      await togglePanel(page, 'Toggle collaboration');
     await body.getByTestId('model-selector').click();
     await page
       .getByTestId('model-group-claude-code')

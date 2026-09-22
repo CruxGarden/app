@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -92,8 +93,7 @@ test('One Big Sky: offline game, keyboard match, focus pause and preserved sourc
       )
       .toBe(fingerprint);
     const history = page.getByTestId('pane-body-history');
-    if (!(await history.isVisible()))
-      await page.getByRole('button', { name: 'Toggle history', exact: true }).click();
+    if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
     await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Our sky arena');
     await history.getByRole('button', { name: 'Save', exact: true }).click();

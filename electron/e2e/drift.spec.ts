@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -32,8 +33,8 @@ test.describe('drift between this machine and the account (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Share without a backup
-      const toggleShare = page.getByRole('button', { name: 'Toggle share' });
-      await toggleShare.click();
+
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -49,8 +50,8 @@ test.describe('drift between this machine and the account (mocked API)', () => {
 
       // Scenario 5: another machine published v9 of this crux
       (api.state.cruxes[id]!.meta as Record<string, unknown>).publishedVersion = 9;
-      await toggleShare.click();
-      await toggleShare.click(); // remount → the pane asks the API again
+      await togglePanel(page, 'Toggle share');
+      await togglePanel(page, 'Toggle share'); // remount → the pane asks the API again
       await expect(page.getByTestId('publish-drift')).toContainText('Published elsewhere as v9', {
         timeout: 15_000,
       });
@@ -59,8 +60,8 @@ test.describe('drift between this machine and the account (mocked API)', () => {
       delete api.state.cruxes[id];
       delete api.state.published[id];
       if (api.state.crux?.id === id) api.state.crux = null; // the mock's "latest crux" shortcut too
-      await toggleShare.click();
-      await toggleShare.click();
+      await togglePanel(page, 'Toggle share');
+      await togglePanel(page, 'Toggle share');
       await expect(page.getByTestId('publish-drift')).toContainText('No longer published', {
         timeout: 15_000,
       });
@@ -81,7 +82,7 @@ test.describe('drift between this machine and the account (mocked API)', () => {
         ...api.state.sync.cruxes[id]!,
         updatedAt: new Date(Date.now() + 60_000).toISOString(),
       };
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
+      await togglePanel(page, 'Toggle sync');
       await expect(page.getByTestId('sync-drift')).toContainText('pushed from another machine', {
         timeout: 15_000,
       });

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, request, type APIRequestContext } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
@@ -69,7 +70,7 @@ test('a garden with people: plant, share, invite from the directory, accept, sha
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
     const gardenId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
-    await page.getByRole('button', { name: 'Toggle share' }).click();
+    await togglePanel(page, 'Toggle share');
     await page.getByRole('button', { name: 'Share', exact: true }).click();
     const backupAsk = page
       .getByRole('dialog')

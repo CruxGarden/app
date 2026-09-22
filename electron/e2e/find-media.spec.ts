@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -38,7 +39,7 @@ test('Find media: an image, a sound and a video from the catalogues land in the 
     const folder = (await storedCrux(page, id)).projectFolder as string;
 
     await test.step('open Find media and bring an image in', async () => {
-      await page.getByRole('button', { name: 'Toggle find media', exact: true }).click();
+      await togglePanel(page, 'Toggle find media');
       const pane = page.getByTestId('pane-body-media');
       await expect(pane).toBeVisible();
       await pane.getByLabel('Search media').fill('seedlings');

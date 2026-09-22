@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
@@ -200,7 +201,7 @@ test.describe('Agent Host (MCP server per crux)', () => {
       await expect(page.getByText(/hello-from-mcp\.md/).first()).toBeVisible();
 
       // In the Artifacts tree (the writing layout keeps it one toggle away)
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await togglePanel(page, 'Toggle artifacts');
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
       for (const dirName of ['content', 'posts']) {

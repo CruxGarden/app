@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
@@ -95,7 +96,7 @@ test('Order Desk: orders are numbered, moved by the owner, summarised, and never
     expect(still).toBe('new');
 
     // The Share pane knows the backend and runs a handler by hand.
-    await page.getByRole('button', { name: 'Toggle share' }).click();
+    await togglePanel(page, 'Toggle share');
     const fns = page.getByTestId('functions-section');
     await expect(fns.getByTestId('functions-list').locator('li')).toHaveCount(7);
     await fns.getByTestId('function-orders').getByRole('button', { name: 'Run' }).click();

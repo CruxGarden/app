@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -17,8 +18,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await enterGarden(page);
     await createCrux(page, 'Codex Garden');
     const chat = page.getByTestId('pane-body-collaboration');
-    if (!(await chat.isVisible()))
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if (!(await chat.isVisible())) await togglePanel(page, 'Toggle collaboration');
     await chat.getByTestId('model-selector').click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     const composer = page.getByPlaceholder('Send a message...');
@@ -68,7 +68,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await chat.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(approvals).toHaveCount(0);
     await expect(chat.getByText(/Saved codex-note.md using Garden tools/)).toHaveCount(3);
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle history');
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
       0,

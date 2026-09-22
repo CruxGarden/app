@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page, type ElectronApplication } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,12 +21,11 @@ type Row = {
 type Graph = { cruxId: string; cruxes: Row[]; copies: Row[]; artifacts: Row[] };
 const meta = (row: Row) => (typeof row.meta === 'string' ? JSON.parse(row.meta) : row.meta);
 async function pane(page: Page, name: string, toggle: string) {
-  if (!(await page.getByTestId(`pane-body-${name}`).isVisible()))
-    await page.getByRole('button', { name: toggle, exact: true }).click();
+  if (!(await page.getByTestId(`pane-body-${name}`).isVisible())) await togglePanel(page, toggle);
 }
 async function preview(page: Page) {
-  const collaboration = page.getByRole('button', { name: 'Toggle collaboration' });
-  if (await page.getByTestId('pane-body-collaboration').isVisible()) await collaboration.click();
+  if (await page.getByTestId('pane-body-collaboration').isVisible())
+    await togglePanel(page, 'Toggle collaboration');
   await pane(page, 'artifacts', 'Toggle artifacts');
   await page.getByRole('tree').getByText('index.html', { exact: true }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
@@ -70,7 +70,7 @@ async function exportArchive(page: Page, name: string) {
   writeFileSync(join(output, name), bytes);
   const zip = await JSZip.loadAsync(bytes);
   const graph: Graph = JSON.parse(await zip.file('tasks.json')!.async('text'));
-  await page.getByRole('button', { name: 'Toggle export', exact: true }).click();
+  await togglePanel(page, 'Toggle export');
   return { zip, graph, bytes };
 }
 async function close(app: ElectronApplication) {
@@ -220,7 +220,7 @@ test('Glasshouse grows through two reviews, publishes combined Main, and carries
     expect(backupGraph.copies.filter((c) => c.phase === 'merged').map((c) => c.title)).toEqual(
       expect.arrayContaining(['Checkout', 'Accessibility']),
     );
-    await page.getByRole('button', { name: 'Toggle share', exact: true }).click();
+    await togglePanel(page, 'Toggle share');
     const finished = await exportArchive(page, 'glasshouse-grown.crux');
     expect(await fileText(start.zip, start.graph, start.graph.cruxId, 'checkout.js')).toContain(
       'Checkout is growing',

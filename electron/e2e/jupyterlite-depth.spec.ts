@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -77,8 +78,8 @@ test('notebook depth: agent analysis, native error recovery, manual notes, Undo,
     ).not.toBeVisible();
   }
   async function manualNote(text: string) {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
     const markdown = frame().locator('.jp-MarkdownCell').first();
     await markdown.dblclick();
     const editor = markdown.locator('.cm-content');

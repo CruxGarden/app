@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test } from '@playwright/test';
 import { launchApp } from './launch';
 import { createCrux, enterGarden } from './multi-crux-helpers';
@@ -70,8 +71,7 @@ test('plasma modal shot', async () => {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
     const artifacts = page.getByTestId('pane-body-artifacts');
-    if (!(await artifacts.isVisible()))
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    if (!(await artifacts.isVisible())) await togglePanel(page, 'Toggle artifacts');
     await artifacts.waitFor();
     await page.waitForTimeout(800);
     await artifacts.click({ button: 'right', position: { x: 120, y: 120 } });

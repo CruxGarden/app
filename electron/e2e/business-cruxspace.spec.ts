@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { readFileSync, mkdirSync, existsSync, renameSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -328,7 +329,7 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
     });
 
     await test.step('9. Publish through the Share pane; the published files carry the mark', async () => {
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -378,7 +379,7 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
         server.closeAllConnections();
         await new Promise<void>((r) => server.close(() => r()));
       }
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await snapshot(page, 'Published');
     });
 

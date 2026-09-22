@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -31,7 +32,7 @@ test.describe('preset screenshots', () => {
       );
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await page
         .getByRole('button', { name: /snapshot/i })
         .first()
@@ -48,7 +49,7 @@ test.describe('preset screenshots', () => {
       await page.waitForTimeout(400);
       await shot('1-mood');
       await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       const input = page.getByPlaceholder('Send a message...');
       await input.fill('Do you like our owl?');
       await page.waitForTimeout(800);

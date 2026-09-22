@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from '../panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -71,8 +72,9 @@ async function publishOne(page: Page, manifest: Manifest) {
   // Crux opened as an app, so it is closed and reopened as the package it
   // now is before sharing.
   const metadata = page.getByTestId('pane-body-details');
-  const toggleMetadata = page.getByRole('button', { name: 'Toggle metadata' });
-  if ((await toggleMetadata.getAttribute('aria-pressed')) !== 'true') await toggleMetadata.click();
+
+  if ((await panelPressed(page, 'Toggle metadata')) !== 'true')
+    await togglePanel(page, 'Toggle metadata');
   await expect(metadata).toBeVisible();
   const kindBadge = page.getByRole('button', {
     name: /^(auto|Web App|Page|Document|Image|Tool template)$/i,
@@ -94,7 +96,7 @@ async function publishOne(page: Page, manifest: Manifest) {
     await page.getByTitle('Close Metadata').click();
     await expect(page.locator('.mosaic-window.pane-details')).toHaveCount(0, { timeout: 10000 });
   }
-  await page.getByRole('button', { name: 'Toggle share' }).click();
+  await togglePanel(page, 'Toggle share');
   const otherPanes = page.locator(
     '.mosaic-window button[title^="Close "]:not([title="Close Share"])',
   );

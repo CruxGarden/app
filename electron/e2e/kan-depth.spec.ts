@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -44,7 +45,8 @@ test('Kan scoped tools preserve manual content, originals and native history thr
   const run = async (action: string) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const done = 'Kan depth ' + action + ' complete.';
     const count = async () =>
       (await storedCrux(page, id)).messages.filter(

@@ -23,7 +23,7 @@ export function PaneEmpty({ icon, title, description, children, className }: Pan
   return (
     <div
       className={cn(
-        'flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center text-center gap-2 p-5',
+        'flex-1 min-h-0 overflow-y-auto flex flex-col items-center [justify-content:safe_center] text-center gap-2 p-5',
         className,
       )}
     >

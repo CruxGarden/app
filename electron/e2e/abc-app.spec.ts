@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -76,8 +77,8 @@ test('Notation: the jig renders and saves, a person edits and saves an SVG, the 
     });
 
     await test.step('the scripted collaborator names it, writes a waltz and saves a PNG', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Write me a waltz [score:tune]');
       await box.press('Enter');
@@ -94,7 +95,7 @@ test('Notation: the jig renders and saves, a person edits and saves an SVG, the 
       const png = outputs(folder).find((o) => o.label === 'Moss Waltz')!;
       expect(png.mimeType).toBe('image/png');
       expect(readFileSync(join(folder, png.path)).subarray(1, 4).toString()).toBe('PNG');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'abc-agent.png') });
     });
 
@@ -129,7 +130,7 @@ test('Notation: the jig renders and saves, a person edits and saves an SVG, the 
         ]),
       );
       await page.screenshot({ path: join(evidence, 'abc-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +14,7 @@ import { launchApp } from './launch';
 /** The Plasma Mood opens only Collaboration and Workshop; the tree lives in Artifacts. */
 async function showArtifacts(page: import('@playwright/test').Page) {
   if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
 }
 
 test.describe('collaboration (mock AI)', () => {
@@ -59,7 +60,7 @@ test.describe('collaboration (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/chat-1-turn.png' });
 
       // Auto-snapshot (default: every AI turn that mutated files)
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await expect(page.getByText('#1', { exact: true })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText('hello.txt', { exact: true })).toHaveCount(2); // tree + snapshot card
       await page.screenshot({ path: 'e2e/.results/chat-2-snapshot.png' });
@@ -93,7 +94,7 @@ test.describe('collaboration (mock AI)', () => {
 
       // Hide the pane while the model is "thinking" — the turn belonged to the
       // pane component and used to be aborted right here.
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+      await togglePanel(page, 'Toggle collaboration');
       await expect(input).toHaveCount(0);
 
       await expect.poll(() => onDisk('hello.txt'), { timeout: 30_000 }).toBe(true);
@@ -101,7 +102,7 @@ test.describe('collaboration (mock AI)', () => {
       await expect(page.getByRole('tree').getByText('hello.txt', { exact: true })).toBeVisible();
 
       // Bring the pane back: the completed turn is there
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+      await togglePanel(page, 'Toggle collaboration');
       await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible({
         timeout: 30_000,
       });

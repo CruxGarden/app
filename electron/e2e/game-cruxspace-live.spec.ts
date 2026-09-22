@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -42,8 +43,8 @@ test.skip(!KEY, 'Set CRUX_E2E_AI_KEY to run the journey with a real collaborator
 
 /** Send one ask and wait for the turn to end; nudge past the tool-round cap a few times. */
 async function ask(page: Page, message: string, continues = 3): Promise<string> {
-  const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-  if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+  if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+    await togglePanel(page, 'Toggle collaboration');
   const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
   const box = page.getByPlaceholder('Send a message...');
   let text = message;

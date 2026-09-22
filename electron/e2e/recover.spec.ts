@@ -1,3 +1,4 @@
+import { togglePanel, expectPanelBarReady } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -32,7 +33,7 @@ test.describe('recover (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Share, backing up first
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -87,16 +88,13 @@ test.describe('recover (mocked API)', () => {
       await expect(page.getByTestId('recover-section')).toHaveCount(0, { timeout: 30_000 });
       await page.getByRole('button', { name: 'Open My Crux' }).click();
       const tree = page.getByRole('tree');
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
-        timeout: 30_000,
-      });
-      if (!(await tree.isVisible().catch(() => false)))
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await expectPanelBarReady(page);
+      if (!(await tree.isVisible().catch(() => false))) await togglePanel(page, 'Toggle artifacts');
       await expect(tree.getByText('index.html')).toBeVisible({ timeout: 30_000 });
       // the archive was taken after the publish: the Share pane knows it is live
       const sharePane = page.getByTestId('pane-body-publish');
       if (!(await sharePane.isVisible().catch(() => false)))
-        await page.getByRole('button', { name: 'Toggle share' }).click();
+        await togglePanel(page, 'Toggle share');
       await expect(sharePane.getByText('Shared', { exact: true })).toBeVisible({ timeout: 15_000 });
       expect(api.log.some((l) => l.startsWith('GET /sync/crux/'))).toBe(true);
     } finally {
@@ -187,7 +185,7 @@ test.describe('recover (mocked API)', () => {
       // the recovered crux: same id, both files, the public conversation
       await page.getByRole('button', { name: 'Open From elsewhere' }).click();
       await expect(page.getByText('Here is your page.')).toBeVisible({ timeout: 30_000 });
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await togglePanel(page, 'Toggle artifacts');
       const tree = page.getByRole('tree');
       await expect(tree.getByText('index.html')).toBeVisible({ timeout: 30_000 });
       await expect(tree.getByText('style.css')).toBeVisible();

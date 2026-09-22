@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -63,12 +64,8 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
     );
     await save();
     expect(doc().project.slides).toHaveLength(2);
-    if (
-      (await page
-        .getByRole('button', { name: 'Toggle collaboration' })
-        .getAttribute('aria-pressed')) === 'true'
-    )
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const firstSlide = frame().locator('.thumbnail-item').first();
     await expect(async () => {
       await firstSlide.locator('.label').click();
@@ -102,12 +99,8 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
       originalHeadline.replace('Friday', 'Saturday'),
     );
     await check();
-    if (
-      (await page
-        .getByRole('button', { name: 'Toggle collaboration' })
-        .getAttribute('aria-pressed')) === 'true'
-    )
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
     // Use the actual editor history buttons, not a Garden-only undo command.
     await frame().locator('.canvas-tool .handler-item').nth(0).click();
     await expect.poll(() => JSON.stringify(doc().project.slides)).toContain('Friday');
@@ -139,12 +132,8 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
     ).projectFolder;
     await ready();
     await check();
-    if (
-      (await page
-        .getByRole('button', { name: 'Toggle collaboration' })
-        .getAttribute('aria-pressed')) === 'true'
-    )
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
     await frame().locator('.thumbnail-item').first().locator('.label').click();
     await expect(frame().locator('.thumbnail-item').first()).toHaveClass(/active/);
     const importedBody = frame()

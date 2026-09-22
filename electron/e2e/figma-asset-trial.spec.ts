@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -91,8 +92,9 @@ test('reuse the real Figma trial export in an Astro Cruxspace', async () => {
       method: 'file-import',
     });
     await page.keyboard.press('Escape');
-    const toggle = page.getByRole('button', { name: 'Toggle workshop' });
-    if (!(await page.getByTestId('workshop-view').isVisible())) await toggle.click();
+
+    if (!(await page.getByTestId('workshop-view').isVisible()))
+      await togglePanel(page, 'Toggle workshop');
     await page.getByRole('button', { name: 'Clean', exact: true }).click();
     const preview = page.locator('iframe[src^="http://127.0.0.1"]');
     await expect(preview).toBeVisible({ timeout: 240000 });

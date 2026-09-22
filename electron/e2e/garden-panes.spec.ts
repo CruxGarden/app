@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, switchCrux } from './multi-crux-helpers';
@@ -31,8 +32,7 @@ const PANES: { type: string; label: string }[] = [
 /** Open a pane if it is closed; never toggle an open one shut. */
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
@@ -216,8 +216,8 @@ test.describe('home garden, crux picker, panes, console', () => {
         await expect(toggle).toHaveAttribute('aria-pressed', 'true');
         await page.getByTitle(`Close ${label}`).click();
         await expect(body).toHaveCount(0);
-        await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-        await toggle.click();
+        await expect(toggle).toHaveCount(0);
+        await togglePanel(page, `Toggle ${label.toLowerCase()}`);
         await expect(body).toBeVisible({ timeout: 30_000 });
         await expect(toggle).toHaveAttribute('aria-pressed', 'true');
         await page.getByTitle(`Close ${label}`).click();
@@ -257,6 +257,21 @@ test.describe('home garden, crux picker, panes, console', () => {
       }
       const widen = page.getByText('Widen the pane');
       await expect(widen.first()).toBeVisible();
+      // A short tile must allow reading its empty state from the start, not clip its title above the scroll area.
+      await expect
+        .poll(async () =>
+          page.locator('[data-testid^="pane-body-"]').evaluateAll((bodies) =>
+            bodies.every((body) => {
+              const title = [...body.querySelectorAll('p')].find(
+                (p) => p.textContent === 'Widen the pane',
+              );
+              return (
+                !title || title.getBoundingClientRect().top >= body.getBoundingClientRect().top - 1
+              );
+            }),
+          ),
+        )
+        .toBe(true);
       // Some tiles need more room for their content; headers remain usable.
       await page.screenshot({ path: 'e2e/.results/garden-panes-4-narrow.png' });
 

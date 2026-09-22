@@ -1,3 +1,4 @@
+import { togglePanel } from '../panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from '../launch';
 import { enterGarden } from '../multi-crux-helpers';
@@ -18,15 +19,24 @@ test('home from a Notes crux', async () => {
     await page.getByRole('button', { name: /^Notes/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     const frame = page.frameLocator('iframe[data-crux-id]');
-    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved', { timeout: 120_000 });
+    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved', {
+      timeout: 120_000,
+    });
     console.log('url on crux:', page.url());
     // As the journey does: type a line in the app, then a labelled snapshot from History.
     const editor = frame.locator('.cm-content, [contenteditable="true"]').first();
     await editor.click();
     await page.keyboard.type(' A line from the probe.');
-    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved', { timeout: 60_000 });
-    if (!(await page.getByTestId('pane-body-history').isVisible().catch(() => false)))
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved', {
+      timeout: 60_000,
+    });
+    if (
+      !(await page
+        .getByTestId('pane-body-history')
+        .isVisible()
+        .catch(() => false))
+    )
+      await togglePanel(page, 'Toggle history');
     const history = page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Brief');
@@ -38,16 +48,29 @@ test('home from a Notes crux', async () => {
     await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Notes/ }).click();
-    await page.getByPlaceholder('My Crux').fill('Second').catch(() => {});
+    await page
+      .getByPlaceholder('My Crux')
+      .fill('Second')
+      .catch(() => {});
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved', { timeout: 120_000 });
+    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved', {
+      timeout: 120_000,
+    });
     console.log('second open:', page.url());
     await page.locator('header').getByRole('button').first().click();
     await page.waitForTimeout(3000);
     console.log('url after home click:', page.url());
-    console.log('console tail:\n' + lines.filter((l) => /flush|block|navig|notebook|error/i.test(l)).slice(-12).join('\n'));
+    console.log(
+      'console tail:\n' +
+        lines
+          .filter((l) => /flush|block|navig|notebook|error/i.test(l))
+          .slice(-12)
+          .join('\n'),
+    );
     await page.screenshot({ path: 'e2e/.results/home-probe.png' });
-    await expect(page.getByRole('button', { name: 'Create Cruxspace', exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('button', { name: 'Create Cruxspace', exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
   } finally {
     await app.close();
   }

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -34,7 +35,7 @@ test.describe('publish (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Share pane → Share → not connected → inline connect form
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -69,7 +70,7 @@ test.describe('publish (mocked API)', () => {
       await page.screenshot({ path: 'e2e/.results/publish-1-published.png' });
 
       // Store pane → Live: the published crux's store, as visitors left it
-      await page.getByRole('button', { name: 'Toggle store' }).click();
+      await togglePanel(page, 'Toggle store');
       await page.getByTestId('store-source-live').click();
       const liveStore = page.getByTestId('store-live');
       await expect(page.getByTestId('store-export')).toBeEnabled();
@@ -82,7 +83,7 @@ test.describe('publish (mocked API)', () => {
       await expect(liveStore).not.toContainText('leaderboard:2026-09-06');
       expect(api.log.some((l) => l.startsWith('DELETE /store/'))).toBe(true);
       await page.getByTestId('store-source-local').click();
-      await page.getByRole('button', { name: 'Toggle store' }).click();
+      await togglePanel(page, 'Toggle store');
 
       // Edit → unpublished changes → Update (update path)
       await monaco.click();

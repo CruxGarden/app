@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,10 +36,10 @@ test('Settings and Explore panels share services and agent controls, fit their p
     const composer = page.locator('[data-testid="pane-body-collaboration"] textarea').first();
     await composer.fill('Keep my unfinished thought');
     for (const name of ['tasks', 'collaboration', 'workshop']) {
-      const toggle = page.getByRole('button', { name: `Toggle ${name}`, exact: true });
-      if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+      if ((await panelPressed(page, `Toggle ${name}`)) === 'true')
+        await togglePanel(page, `Toggle ${name}`);
     }
-    await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
+    await togglePanel(page, 'Toggle settings');
     const settings = page.getByTestId('pane-body-settings');
     const title = settings.getByRole('textbox', { name: 'Garden title', exact: true });
     await title.fill('Night research');

@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
@@ -11,10 +12,10 @@ test('Mood and Synth live beside a Crux, reuse controls and restore through save
     const route = page.url();
     // Leave room for the instrument and one sectioned Mood panel.
     for (const label of ['tasks', 'collaboration', 'workshop']) {
-      const button = page.getByRole('button', { name: `Toggle ${label}`, exact: true });
-      if ((await button.getAttribute('aria-pressed')) === 'true') await button.click();
+      if ((await panelPressed(page, `Toggle ${label}`)) === 'true')
+        await togglePanel(page, `Toggle ${label}`);
     }
-    await page.getByRole('button', { name: 'Toggle crux synth', exact: true }).click();
+    await togglePanel(page, 'Toggle crux synth');
     const synth = page.getByTestId('pane-body-synth');
     await expect(synth.getByRole('region', { name: 'Crux Synth' })).toBeVisible();
     await synth.getByRole('button', { name: 'Play synth' }).click();
@@ -27,10 +28,10 @@ test('Mood and Synth live beside a Crux, reuse controls and restore through save
     await expect.poll(async () => (await state()).level).toBeGreaterThan(0.005);
     await page.getByRole('button', { name: 'Close Crux Synth', exact: true }).click();
     expect((await state()).playing).toBe(true);
-    await page.getByRole('button', { name: 'Toggle crux synth', exact: true }).click();
+    await togglePanel(page, 'Toggle crux synth');
     await expect(synth.getByRole('button', { name: 'Pause synth' })).toBeVisible();
     await synth.getByRole('button', { name: 'Pause synth' }).click();
-    await page.getByRole('button', { name: 'Toggle mood', exact: true }).click();
+    await togglePanel(page, 'Toggle mood');
     const mood = page.getByTestId('pane-body-mood');
     // The existing splitter gives a newly opened panel a quarter: widen it for its controls.
     const splitter = await page.locator('.mosaic-split').first().boundingBox();

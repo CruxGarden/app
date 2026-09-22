@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
@@ -15,7 +16,7 @@ test('type audit', async () => {
     await nameInput.fill('index.html');
     await nameInput.press('Enter');
     await page.locator('.monaco-editor').first().waitFor({ timeout: 30_000 });
-    await page.getByRole('button', { name: 'Toggle share' }).click();
+    await togglePanel(page, 'Toggle share');
     await page.getByTestId('pane-body-publish').waitFor();
     const audit = async (label: string) => {
       const rows = await page.evaluate(() => {

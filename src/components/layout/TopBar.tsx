@@ -1,9 +1,10 @@
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
-import { useUIStore, useWorkspaceUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
+import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
 import TendingLink from '@/components/tending/TendingLink';
 import AlertsBell from '@/components/tending/AlertsBell';
 import TimerChip from '@/components/tending/TimerChip';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import PanelPicker from './PanelPicker';
 import CruxspaceCrumb from './CruxspaceCrumb';
 import { useGardenTitle, usePaneLabels } from '@/hooks/usePaneLabels';
 import { useAppStore } from '@/stores/appStore';
@@ -35,9 +36,8 @@ export default function TopBar() {
   const paneLabels = usePaneLabels();
   const aiEnabled = useUIStore((s) => s.aiEnabled);
 
-  // Split panes into enabled (in paneOrder) and disabled (in default order)
+  // The bar mirrors the visible workspace; closed panels live in the picker.
   const enabledPanes = paneOrder.filter((p) => paneVisibility[p]);
-  const disabledPanes = DEFAULT_PANE_ORDER.filter((p) => !paneVisibility[p]);
 
   const desktopChrome = can(Capability.DesktopChrome);
 
@@ -53,7 +53,8 @@ export default function TopBar() {
       }}
     >
       {/* Left: branding + breadcrumb */}
-      <div
+      <nav
+        aria-label="Workspace breadcrumbs"
         className="flex flex-1 basis-72 items-center gap-1.5 min-w-0"
         style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
       >
@@ -83,11 +84,11 @@ export default function TopBar() {
         </div>
         <TimerChip />
         <AlertsBell />
-      </div>
+      </nav>
 
       {/* Right: pane toggles + console + user menu */}
       <div
-        className="flex shrink-0 items-center gap-1"
+        className="flex flex-wrap min-w-0 items-center gap-1"
         style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
       >
         {activeCruxId && (
@@ -95,11 +96,11 @@ export default function TopBar() {
             {/* The builder's lane header — the pane toggles — sits in the same
                 flat pill as the sound chip (Daniel, 2026-09-20). */}
             <div
-              className="hidden md:flex items-center h-7 px-1 bg-mood-bar border border-mood-bar-border rounded-[var(--mood-bar-radius)] shadow-mood-bar"
+              className="hidden md:flex flex-wrap items-center min-h-7 px-1 bg-mood-bar border border-mood-bar-border rounded-[var(--mood-bar-radius)] shadow-mood-bar"
               data-testid="builder-lane"
             >
               {/* Enabled panes — in paneOrder */}
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1" aria-label="Open panels">
                 {enabledPanes.map((paneType) => {
                   const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
                   const Icon = config.icon;
@@ -109,7 +110,14 @@ export default function TopBar() {
                       key={paneType}
                       label={`Toggle ${config.label.toLowerCase()}`}
                       size="sm"
-                      onClick={() => togglePane(paneType)}
+                      onClick={(e) => {
+                        // Keep keyboard focus in the bar after this button disappears.
+                        e.currentTarget
+                          .closest('header')
+                          ?.querySelector<HTMLButtonElement>('[aria-label="Add panel"]')
+                          ?.focus();
+                        togglePane(paneType);
+                      }}
                       active
                       className="pane-toggle"
                       style={
@@ -130,42 +138,7 @@ export default function TopBar() {
                 })}
               </div>
 
-              {/* Divider between enabled and disabled */}
-              {disabledPanes.length > 0 && enabledPanes.length > 0 && (
-                <div className="w-px h-5 bg-toolbar-divider mx-1.5" />
-              )}
-
-              {/* Disabled panes — fixed default order, not draggable */}
-              {disabledPanes.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {disabledPanes.map((paneType) => {
-                    const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
-                    const Icon = config.icon;
-                    const prefix = PANE_VAR_PREFIX[paneType];
-                    return (
-                      <IconButton
-                        key={paneType}
-                        label={`Toggle ${config.label.toLowerCase()}`}
-                        size="sm"
-                        onClick={() => togglePane(paneType)}
-                        active={false}
-                        className="pane-toggle"
-                        style={
-                          {
-                            color: `var(${prefix}-button-icon)`,
-                            '--pt-hover': `var(${prefix}-button-hover)`,
-                            '--pt-hover-icon': `var(${prefix}-button-icon-hover)`,
-                            '--pt-hover-border': `var(${prefix}-button-border-hover)`,
-                          } as React.CSSProperties
-                        }
-                        tooltip={{ label: paneLabels[paneType] }}
-                      >
-                        <Icon />
-                      </IconButton>
-                    );
-                  })}
-                </div>
-              )}
+              <PanelPicker key={activeCruxId} />
             </div>
             <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
           </>

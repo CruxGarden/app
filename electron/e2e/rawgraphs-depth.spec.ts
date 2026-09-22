@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -20,8 +21,8 @@ test('chart authoring: data, two chart families, manual layout preservation, fou
   const rows = () =>
     JSON.parse(readFileSync(join(folder, 'data', state().rawData.__cruxBinary.path), 'utf8'));
   const collaborator = async (page: typeof instance.page, message: string, closing: string) => {
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const box = page.getByPlaceholder('Send a message...');
     await box.fill(message);
     await box.press('Enter');
@@ -47,8 +48,8 @@ test('chart authoring: data, two chart families, manual layout preservation, fou
     await ready();
   };
   const manualWidth = async (value: string) => {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
     const width = frame().getByLabel('Width (px)', { exact: true });
     await width.fill(value);
     await width.press('Tab');

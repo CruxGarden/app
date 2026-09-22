@@ -1,3 +1,4 @@
+import { togglePanel, expectPanelBarReady } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -62,14 +63,14 @@ test.describe('growth tools (mock AI)', () => {
       // and the safety snapshot (the tools ran through the open workspace's
       // store), and the restore rebuilt the conversation without duplicating
       // it — each user message appears exactly once.
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await expect(page.getByText('Checkpoint', { exact: true })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
       await expect(page.getByText('Please write hello', { exact: true })).toHaveCount(1);
       await expect(page.getByText('Please rewind', { exact: true })).toHaveCount(1);
       await expect(page.getByText('Done — rewound to the checkpoint.')).toHaveCount(1);
       await expect(page.getByText('Done — I wrote that file for you.')).toHaveCount(1);
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
 
       // Re-open the crux: history and files are read back from the store —
       // the checkpoint and the safety snapshot are both in the timeline, and
@@ -89,11 +90,9 @@ test.describe('growth tools (mock AI)', () => {
         .click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 30_000 });
       // Artifacts is not an open-by-default pane
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
-        timeout: 30_000,
-      });
+      await expectPanelBarReady(page);
       if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+        await togglePanel(page, 'Toggle artifacts');
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
       await tree.getByText('hello.txt', { exact: true }).click();
@@ -103,7 +102,7 @@ test.describe('growth tools (mock AI)', () => {
       await expect(monaco).not.toContainText('BROKEN');
 
       if (!(await page.getByText('Checkpoint', { exact: true }).isVisible())) {
-        await page.getByRole('button', { name: 'Toggle history' }).click();
+        await togglePanel(page, 'Toggle history');
       }
       await expect(page.getByText('Checkpoint', { exact: true })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText('Before revert', { exact: true })).toBeVisible();

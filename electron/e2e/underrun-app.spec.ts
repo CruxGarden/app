@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -84,9 +85,7 @@ test('Underrun: plays from source, remixes on reload, imports into a clean Garde
       await expect(frameOf(page).locator('#a')).toContainText('GARDEN REMIX', { timeout: 60000 });
       await page.screenshot({ path: join(evidence, 'underrun-remix.png') });
       // A source-run game has no Workshop bar; the Export pane opens from the top bar.
-      await exportNativeCrux(page, archive, first.app, () =>
-        page.getByRole('button', { name: 'Toggle export' }).click(),
-      );
+      await exportNativeCrux(page, archive, first.app, () => togglePanel(page, 'Toggle export'));
     });
     expect(errors).toEqual([]);
   } finally {
@@ -104,7 +103,7 @@ test('Underrun: plays from source, remixes on reload, imports into a clean Garde
       await importNativeCrux(page, archive);
       // A source-run game carries no Workshop layout in its archive; open the pane.
       if (!(await page.locator('iframe[data-crux-id]').count()))
-        await page.getByRole('button', { name: 'Toggle workshop' }).click();
+        await togglePanel(page, 'Toggle workshop');
       await expect(frameOf(page).locator('#a')).toContainText('GARDEN REMIX', { timeout: 60000 });
       await startAndPlay(page);
       await page.screenshot({ path: join(evidence, 'underrun-imported.png') });

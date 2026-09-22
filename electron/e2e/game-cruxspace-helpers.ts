@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { expect, type Page, type FrameLocator, type ElectronApplication } from '@playwright/test';
 import type { DownloadItem, Event } from 'electron';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -62,14 +63,14 @@ export async function open(page: Page, title: string) {
 
 /** A Task workspace opens with Collaboration only; the embedded app needs the Workshop. */
 export async function openWorkshop(page: Page) {
-  const toggle = page.getByRole('button', { name: 'Toggle workshop' });
-  if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+  if ((await panelPressed(page, 'Toggle workshop')) !== 'true')
+    await togglePanel(page, 'Toggle workshop');
   await expect(page.locator('iframe[data-crux-id]')).toBeVisible({ timeout: 60000 });
 }
 
 async function collaboration(page: Page, on: boolean) {
-  const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-  if (((await toggle.getAttribute('aria-pressed')) === 'true') !== on) await toggle.click();
+  if (((await panelPressed(page, 'Toggle collaboration')) === 'true') !== on)
+    await togglePanel(page, 'Toggle collaboration');
 }
 
 /** Send one scripted collaborator turn and wait for its closing sentence. */
@@ -87,7 +88,7 @@ export async function snapshot(page: Page, label: string) {
   const pane = page.getByTestId('pane-body-history');
   // A workspace that just switched (after a merge) can re-render its layout under the first click.
   for (let attempt = 0; attempt < 3 && !(await pane.isVisible()); attempt++) {
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle history');
     await pane.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   }
   await expect(pane).toBeVisible();
@@ -99,7 +100,7 @@ export async function snapshot(page: Page, label: string) {
   await pane.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(pane.getByText(label, { exact: true })).toBeVisible();
   await expect(pane.getByRole('button', { name: 'Take snapshot', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Toggle history' }).click();
+  await togglePanel(page, 'Toggle history');
 }
 
 /** Output descriptors a member advertises (exports/*.asset.json). */

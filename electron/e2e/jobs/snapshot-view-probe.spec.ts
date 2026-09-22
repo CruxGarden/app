@@ -1,3 +1,4 @@
+import { togglePanel } from '../panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, addArtifact } from '../multi-crux-helpers';
@@ -14,8 +15,13 @@ test('snapshot view under Plasma', async () => {
     await page.locator('.monaco-editor textarea').first().focus();
     await page.keyboard.type('<h1>one</h1>');
     await page.keyboard.press('ControlOrMeta+s');
-    if (!(await page.getByTestId('pane-body-history').isVisible().catch(() => false)))
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+    if (
+      !(await page
+        .getByTestId('pane-body-history')
+        .isVisible()
+        .catch(() => false))
+    )
+      await togglePanel(page, 'Toggle history');
     const history = page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('One');

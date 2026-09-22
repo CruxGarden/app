@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -103,7 +104,7 @@ test.describe('subagents (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/subagents-2-merged.png' });
 
       // Growth: the base, the three branches, and the merge
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await expect(page.getByText('Before parallel work', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
@@ -147,7 +148,7 @@ test.describe('subagents (mock AI)', () => {
       expect(onDisk(gardenRoot, 'gamma.md')).toBeNull();
       expect(onDisk(gardenRoot, 'notes.md')).toBeNull();
       // The branches stay in Growth, restorable
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await expect(page.getByText('Sub: Alpha', { exact: true })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText('Merged 3 subagents', { exact: true })).toHaveCount(0);
     } finally {

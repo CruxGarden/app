@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { writeFileSync, unlinkSync, readFileSync } from 'node:fs';
@@ -66,7 +67,7 @@ test('after a process crash, offline file changes enter the index and the next G
       })
       .toEqual({ note: expected['note.txt'], added: expected['new.txt'], removed: null });
     expect(readFileSync(join(folder, 'note.txt'), 'utf8')).toBe('Edited while closed');
-    await second.page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(second.page, 'Toggle history');
     const history = second.page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Recovered disk state');

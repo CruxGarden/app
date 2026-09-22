@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import cases from '../../src/services/function-compiler-cases.json';
 import { test, expect, request } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
@@ -31,10 +32,10 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     await page.locator('.monaco-editor textarea').first().focus();
     await page.keyboard.type('<h1>Orders</h1>');
     await page.keyboard.press('ControlOrMeta+s');
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
 
     // Share pane → Functions: a starter, then a rule "when ping, write last-ping".
-    await page.getByRole('button', { name: 'Toggle share' }).click();
+    await togglePanel(page, 'Toggle share');
     const fns = page.getByTestId('functions-section');
     await expect(fns).toBeVisible();
     await fns.getByRole('button', { name: 'Add a starter function' }).click();

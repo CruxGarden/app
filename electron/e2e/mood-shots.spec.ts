@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -61,10 +62,7 @@ test.describe('bundled mood screenshots', () => {
       });
       await page.getByText('Hello, world').first().click();
       await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 30_000 });
-      await page
-        .getByRole('button', { name: 'Toggle metadata' })
-        .click()
-        .catch(() => {});
+      await togglePanel(page, 'Toggle metadata').catch(() => {});
 
       for (const id of IDS) {
         const before = { accent: await cssVar('--accent') };
@@ -76,8 +74,8 @@ test.describe('bundled mood screenshots', () => {
         await page.keyboard.press('Escape');
         await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
         if (id === 'graphite') {
-          await page.getByRole('button', { name: 'Toggle metadata' }).click();
-          await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+          await togglePanel(page, 'Toggle metadata');
+          await togglePanel(page, 'Toggle artifacts');
           await expect(page.locator('.pane-artifacts').getByRole('tree')).toBeVisible();
         }
         await page.mouse.move(0, 0);

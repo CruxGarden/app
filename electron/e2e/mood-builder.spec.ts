@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -82,7 +83,7 @@ test.describe('mood builder', () => {
       );
       // the Default Mood's radius (Plasma: 16px since the Tigrana pass)
       await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '16px');
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await expect(
         page.locator('.mosaic-window.pane-publish').getByText('Nothing to share yet'),
       ).toHaveCSS('color', 'rgb(255, 0, 0)');

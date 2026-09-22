@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,8 +20,7 @@ test('author a Penpot study with the Garden collaborator', async () => {
     await page.goto(new URL(`/c/${cruxId}`, page.url()).toString());
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
     const chat = page.getByTestId('pane-body-collaboration');
-    if (!(await chat.isVisible()))
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if (!(await chat.isVisible())) await togglePanel(page, 'Toggle collaboration');
     await expect(chat.getByRole('button', { name: 'Claude Code', exact: true })).toBeVisible();
     const composer = page.getByPlaceholder('Send a message...');
     await composer.fill(prompt);

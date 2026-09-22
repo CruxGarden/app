@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -87,8 +88,8 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     });
 
     await test.step('the scripted collaborator names it, models a coaster and saves a 3MF', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Model me a coaster [model:coaster]');
       await box.press('Enter');
@@ -107,7 +108,7 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
       const threemf = outputs(folder).find((o) => o.label === 'Moss Coaster')!;
       expect(threemf.mimeType).toBe('model/3mf');
       expect(readFileSync(join(folder, threemf.path)).subarray(0, 2).toString()).toBe('PK');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'jscad-agent.png') });
     });
 
@@ -143,7 +144,7 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
         ]),
       );
       await page.screenshot({ path: join(evidence, 'jscad-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {

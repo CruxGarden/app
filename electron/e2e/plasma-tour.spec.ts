@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { launchApp } from './launch';
@@ -143,7 +144,7 @@ test('plasma across every page', async () => {
     await shot('16-collaboration-turn', 1500);
 
     for (const label of ['artifacts', 'history', 'metadata']) {
-      await click(page, `Toggle ${label}`);
+      await togglePanel(page, `Toggle ${label}`);
       await page.waitForTimeout(400);
     }
     await shot('17-builder-all-panes', 2000);

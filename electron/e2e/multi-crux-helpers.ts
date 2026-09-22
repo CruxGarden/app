@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { expect, type Page } from '@playwright/test';
 export async function enterGarden(page: Page) {
   await page.getByRole('button', { name: /enter/i }).click();
@@ -32,8 +33,9 @@ export async function storedCrux(page: Page, id: string) {
 }
 export async function addArtifact(page: Page, path: string) {
   const newFile = page.getByRole('button', { name: 'New file', exact: true });
-  const toggle = page.getByRole('button', { name: 'Toggle artifacts' });
-  if (!(await page.getByTestId('pane-body-artifacts').isVisible())) await toggle.click();
+
+  if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
+    await togglePanel(page, 'Toggle artifacts');
   await newFile.click();
   const input = page.getByRole('tree').getByRole('textbox');
   await input.fill(path);
@@ -92,7 +94,7 @@ export async function wearMaterial(page: Page, id: string) {
 export async function setAutoCheck(page: Page, on: boolean) {
   const body = page.getByTestId('pane-body-details');
   const wasOpen = await body.isVisible().catch(() => false);
-  if (!wasOpen) await page.getByRole('button', { name: 'Toggle metadata' }).click();
+  if (!wasOpen) await togglePanel(page, 'Toggle metadata');
   await expect(body).toBeVisible({ timeout: 30_000 });
   const toggle = body.getByRole('switch', { name: 'Check when done' });
   await expect(toggle).toBeVisible({ timeout: 30_000 });
@@ -101,7 +103,7 @@ export async function setAutoCheck(page: Page, on: boolean) {
   // Leave the workspace as it was found: a journey that did not ask for this
   // pane has its own layout, and an extra one moves everything else along.
   if (!wasOpen) {
-    await page.getByRole('button', { name: 'Toggle metadata' }).click();
+    await togglePanel(page, 'Toggle metadata');
     await expect(body).toBeHidden({ timeout: 30_000 });
   }
 }

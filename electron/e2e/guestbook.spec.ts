@@ -1,3 +1,4 @@
+import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -49,7 +50,7 @@ test('Guestbook: added from the Share pane, signed in the preview, added by the 
     await expect(frameOf(page).getByRole('heading', { name: 'Garden diary' })).toBeVisible();
 
     await test.step('Share pane: Add a guestbook writes the script and the block into index.html', async () => {
-      await page.getByRole('button', { name: 'Toggle share', exact: true }).click();
+      await togglePanel(page, 'Toggle share');
       const share = page.getByTestId('pane-body-publish');
       await share.getByRole('button', { name: 'Add a guestbook', exact: true }).click();
       await expect(share.getByRole('status')).toHaveText('Added to index.html.');
@@ -91,12 +92,12 @@ test('Guestbook: added from the Share pane, signed in the preview, added by the 
     });
 
     await test.step('the Store pane lists the book; the Share pane knows the block is there', async () => {
-      await page.getByRole('button', { name: 'Toggle store', exact: true }).click();
+      await togglePanel(page, 'Toggle store');
       await expect(
         page.getByTestId('pane-body-store').getByText('guestbook', { exact: true }),
       ).toBeVisible();
       await page.screenshot({ path: join(evidence, 'guestbook-store.png') });
-      await page.getByRole('button', { name: 'Toggle store', exact: true }).click();
+      await togglePanel(page, 'Toggle store');
     });
 
     await test.step('the scripted collaborator adds a guestbook to another site', async () => {
@@ -104,8 +105,9 @@ test('Guestbook: added from the Share pane, signed in the preview, added by the 
       const secondFolder = (await storedCrux(page, second)).projectFolder as string;
       writeFileSync(join(secondFolder, 'index.html'), PAGE.replace(/Garden diary/g, 'Seed notes'));
       await expect(frameOf(page).getByRole('heading', { name: 'Seed notes' })).toBeVisible();
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Let visitors say hello [site:guestbook]');
       await box.press('Enter');
@@ -120,14 +122,13 @@ test('Guestbook: added from the Share pane, signed in the preview, added by the 
         .poll(() => readFileSync(join(secondFolder, 'index.html'), 'utf8'))
         .toContain('data-guestbook');
       await page.screenshot({ path: join(evidence, 'guestbook-agent.png') });
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await switchCrux(page, 'Garden diary');
     });
 
     await test.step('the shared site carries the block; a visitor signs in by email and signs it through the API', async () => {
       const share = page.getByTestId('pane-body-publish');
-      if (!(await share.isVisible()))
-        await page.getByRole('button', { name: 'Toggle share', exact: true }).click();
+      if (!(await share.isVisible())) await togglePanel(page, 'Toggle share');
       await share.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();

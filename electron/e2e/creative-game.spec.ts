@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -289,8 +290,9 @@ test('Figma artwork and Blender collectible join Piskel and AudioMass in a porta
       hash(join(input, 'sprout.png')),
     );
     const preview = page.locator('iframe[src^="http://127.0.0.1"]');
-    const workshop = page.getByRole('button', { name: 'Toggle workshop' });
-    if ((await workshop.getAttribute('aria-pressed')) !== 'true') await workshop.click();
+
+    if ((await panelPressed(page, 'Toggle workshop')) !== 'true')
+      await togglePanel(page, 'Toggle workshop');
     await expect(preview).toBeVisible({ timeout: 240000 });
     const url = new URL('/play', (await preview.getAttribute('src'))!).toString();
     const browser = await chromium.launch();

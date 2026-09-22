@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium, type Page } from '@playwright/test';
 import { existsSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -160,8 +161,8 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
     });
 
     await test.step('the scripted collaborator plants a seedling with write_file', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Add a note about moss [garden:note]');
       await box.press('Enter');
@@ -189,11 +190,11 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       } finally {
         await close();
       }
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
     });
 
     await test.step('Share builds the garden and publishes it with the graph data and search', async () => {
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
@@ -227,7 +228,7 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       ).toString('utf8');
       expect(home).not.toMatch(/fonts\.googleapis|cdn\.jsdelivr/);
       await page.screenshot({ path: join(evidence, 'garden-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
   } finally {
     await first.app.close();
@@ -246,7 +247,7 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       await expect(page.getByText('Compost').first()).toBeVisible();
       await page.screenshot({ path: join(evidence, 'garden-reopened.png') });
       await exportNativeCrux(page, archive, second.app, async () => {
-        await page.getByRole('button', { name: 'Toggle export' }).click();
+        await togglePanel(page, 'Toggle export');
         await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
       });
     });

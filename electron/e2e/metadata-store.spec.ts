@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -45,8 +46,7 @@ async function lastBlob(page: Page): Promise<Buffer> {
 /** Open a pane if it is closed; never toggle an open one shut. */
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
@@ -80,7 +80,7 @@ test.describe('metadata and store panes', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.getByRole('button', { name: 'Toggle metadata' })).toBeVisible({
+      await expect(page.getByRole('button', { name: 'Add panel' })).toBeVisible({
         timeout: 30_000,
       });
 
@@ -135,7 +135,7 @@ test.describe('metadata and store panes', () => {
       // and the reopened pane agrees (wait for the workspace's panes to mount
       // before asking about one, or the toggle would shut an open pane)
       await card.click();
-      await expect(page.getByRole('button', { name: 'Toggle metadata' })).toBeVisible({
+      await expect(page.getByRole('button', { name: 'Add panel' })).toBeVisible({
         timeout: 30_000,
       });
       await expect(page.locator('[data-testid^="pane-body-"]').first()).toBeVisible({

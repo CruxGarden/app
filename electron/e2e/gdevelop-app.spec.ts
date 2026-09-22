@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium, type Page, type FrameLocator } from '@playwright/test';
 import { unzipSync, zipSync } from 'fflate';
 import { createServer } from 'node:http';
@@ -84,8 +85,9 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const original = JSON.stringify(game());
     const previous = (await storedCrux(page, id)).messages.length;
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const chat = page.getByPlaceholder('Send a message...');
     await chat.fill('Inspect my game and discover its native event parameters [gdevelop:inspect]');
     await chat.press('Enter');

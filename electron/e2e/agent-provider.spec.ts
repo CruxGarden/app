@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,8 +19,7 @@ import { enterGarden, createCrux } from './multi-crux-helpers';
  */
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 

@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -57,7 +58,8 @@ test('audio waveform tools preserve manual work, native history and portable PCM
   const run = async (action: string) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const previous = (await storedCrux(page, id)).messages.filter(
       (m: any) => m.role === 'assistant' && m.content === 'Audio depth ' + action + ' complete.',
     ).length;

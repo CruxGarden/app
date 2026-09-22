@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -178,7 +179,7 @@ test('live Figma access through the Garden Claude Code provider', async () => {
         JSON.stringify({ sha256: hash, copies, recordedAfterRestart: true }, null, 2),
       );
       if (!(await page.getByTestId('pane-body-artifacts').isVisible())) {
-        await page.getByRole('button', { name: 'Toggle artifacts', exact: true }).click();
+        await togglePanel(page, 'Toggle artifacts');
       }
       await page.getByRole('tree').getByText('figma-output.png', { exact: true }).click();
       await expect(page.getByRole('img', { name: 'figma-output.png', exact: true })).toBeVisible();

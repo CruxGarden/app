@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
@@ -42,7 +43,7 @@ test('a folder of frames becomes a video from the Artifacts pane', async () => {
     expect(readdirSync(join(folder, 'frames')).length).toBeGreaterThanOrEqual(30);
 
     // Artifacts: the watcher brings the frames in; select one; Convert → Folder to video.
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
     const tree = page.getByRole('tree');
     await expect(tree.getByText('frames', { exact: true })).toBeVisible({ timeout: 30_000 });
     await tree.getByText('frames', { exact: true }).click();

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,10 +21,11 @@ async function newTask(page: Page, title: string) {
   return { id, folder: row.project_folder };
 }
 async function showPreview(page: Page, title: string) {
-  const collaboration = page.getByRole('button', { name: 'Toggle collaboration' });
-  if (await page.getByTestId('pane-body-collaboration').isVisible()) await collaboration.click();
-  const toggle = page.getByRole('button', { name: 'Toggle artifacts' });
-  if (!(await page.getByTestId('pane-body-artifacts').isVisible())) await toggle.click();
+  if (await page.getByTestId('pane-body-collaboration').isVisible())
+    await togglePanel(page, 'Toggle collaboration');
+
+  if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
+    await togglePanel(page, 'Toggle artifacts');
   await page.getByRole('tree').getByText('index.html', { exact: true }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   await expect(page.frameLocator('iframe[data-crux-id]').getByRole('heading')).toHaveText(title);

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -140,7 +141,7 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
     await expect(revised.getByRole('button', { name: /Posterize/ }).first()).toBeVisible();
     const panel = revised.getByRole('button', { name: 'Toggle panel', exact: true });
     if (await panel.isVisible()) {
-      await panel.click();
+      await togglePanel(revised, 'Toggle panel');
       await expect(panel).toHaveAttribute('aria-expanded', 'true');
     }
     await revised
@@ -150,7 +151,7 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
       .click();
     const closePanel = revised.getByRole('button', { name: 'Close panel', exact: true });
     if (await closePanel.isVisible()) {
-      await panel.click();
+      await togglePanel(revised, 'Toggle panel');
       await expect(panel).toHaveAttribute('aria-expanded', 'false');
     }
     await revised.getByLabel('Output name').fill('Revised cover');

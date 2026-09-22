@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import {
   readFileSync,
@@ -213,7 +214,7 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     await openNote('Imported/Novel', 'Outline');
     await expect(frame().locator('.tiptap').first()).toContainText('First chapter');
     await page.screenshot({ path: join(evidence, 'customized-notebook.png') });
-    await page.getByRole('button', { name: 'Toggle history', exact: true }).click();
+    await togglePanel(page, 'Toggle history');
     await expect(
       page.getByTestId('growth-app-changes').filter({ hasText: 'Content changed' }).first(),
     ).toBeVisible();
@@ -224,7 +225,7 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     );
     await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.getByRole('button', { name: 'Back', exact: true }).click();
-    await page.getByRole('button', { name: 'Toggle history', exact: true }).click();
+    await togglePanel(page, 'Toggle history');
     await page
       .getByTestId('workshop-view')
       .getByRole('button', { name: 'Share selected content', exact: true })
@@ -235,7 +236,7 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
         { exact: true },
       ),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Toggle share', exact: true }).click();
+    await togglePanel(page, 'Toggle share');
     const archivePath = join(evidence, 'novel-workshop.crux');
     await exportNativeCrux(page, archivePath, instance.app, async () => {
       // The Export pane opens from the Workshop; a click that lands while another pane is
@@ -252,7 +253,7 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     });
     await expect(page.getByText(/Complete editable Crux: includes app code/)).toBeVisible();
     await page.screenshot({ path: join(evidence, 'export-explanation.png') });
-    await page.getByRole('button', { name: 'Toggle export', exact: true }).click();
+    await togglePanel(page, 'Toggle export');
     const installed = await page.evaluate(
       async (folder) => window.electronAPI!.toolchain.install(folder),
       folder,

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -82,7 +83,7 @@ test.describe('acceptance journey (local half)', () => {
       }
 
       // ── Snapshot with a label ─────────────────────────────────────────
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await page
         .getByRole('button', { name: /snapshot/i })
         .first()

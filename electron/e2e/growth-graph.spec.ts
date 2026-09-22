@@ -1,3 +1,4 @@
+import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -7,7 +8,7 @@ import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 
 async function history(page: Page) {
   const pane = page.getByTestId('pane-body-history');
-  if (!(await pane.isVisible())) await page.getByRole('button', { name: 'Toggle history' }).click();
+  if (!(await pane.isVisible())) await togglePanel(page, 'Toggle history');
   await expect(pane).toBeVisible();
   return pane;
 }
@@ -48,8 +49,9 @@ async function checkpoint(
       return row?.fingerprint;
     })
     .toBe(fingerprint);
-  const collaboration = page.getByRole('button', { name: 'Toggle collaboration' });
-  if ((await collaboration.getAttribute('aria-pressed')) === 'true') await collaboration.click();
+
+  if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+    await togglePanel(page, 'Toggle collaboration');
   const pane = await history(page);
   await pane.getByRole('button', { name: 'Take snapshot', exact: true }).click();
   await pane.getByPlaceholder('Label (optional)').fill(label);

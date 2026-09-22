@@ -1,3 +1,4 @@
+import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -5,8 +6,7 @@ import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
 
 async function pane(page: Page, name: string, toggle: string) {
-  if (!(await page.getByTestId(`pane-body-${name}`).isVisible()))
-    await page.getByRole('button', { name: toggle, exact: true }).click();
+  if (!(await page.getByTestId(`pane-body-${name}`).isVisible())) await togglePanel(page, toggle);
 }
 test('Glasshouse is created without a key, exports all Tasks, and imports as an independent demo', async () => {
   test.setTimeout(180000);
@@ -80,8 +80,9 @@ test('Glasshouse is created without a key, exports all Tasks, and imports as an 
     const taskbar = page.getByTestId('task-bar');
     await expect(taskbar.getByRole('link', { name: /^Brand foundation/ })).toBeVisible();
     await taskbar.getByRole('link', { name: /^Checkout/ }).click();
-    const collaboration = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await collaboration.getAttribute('aria-pressed')) === 'true') await collaboration.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
     await pane(page, 'artifacts', 'Toggle artifacts');
     await page.getByRole('tree').getByText('index.html', { exact: true }).click();
     await page.getByRole('button', { name: 'Preview', exact: true }).click();

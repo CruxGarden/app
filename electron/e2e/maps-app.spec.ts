@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -84,8 +85,8 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
     });
 
     await test.step('the scripted collaborator names the map, adds two places, fits the view and saves the picture', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Plan the seed swap walk [map:places]');
       await box.press('Enter');
@@ -107,7 +108,7 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
       expect(outs.map((o) => o.label)).toEqual(['Seed swap walk']);
       expect(outs[0]!.mimeType).toBe('image/png');
       expect(readFileSync(join(folder, outs[0]!.path)).subarray(1, 4).toString()).toBe('PNG');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'maps-agent.png') });
     });
 
@@ -160,7 +161,7 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
       );
       await expect(served.locator('.maplibregl-canvas')).toBeVisible({ timeout: 60000 });
       await page.screenshot({ path: join(evidence, 'maps-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {

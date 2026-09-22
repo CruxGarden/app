@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
@@ -35,7 +36,7 @@ test.describe('wild theme', () => {
       );
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle history');
       await page
         .getByRole('button', { name: /snapshot/i })
         .first()
@@ -65,13 +66,13 @@ test.describe('wild theme', () => {
       // Wear it
       await page.getByRole('button', { name: 'Done' }).click();
       await expect(page.getByRole('tree')).toBeVisible({ timeout: 30_000 });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.waitForTimeout(800);
       await shot('2-workspace');
-      await page.getByRole('button', { name: 'Toggle share' }).click();
-      await page.getByRole('button', { name: 'Toggle history' }).click();
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
-      await page.getByRole('button', { name: 'Toggle store' }).click();
+      await togglePanel(page, 'Toggle share');
+      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle sync');
+      await togglePanel(page, 'Toggle store');
       await page.waitForTimeout(800);
       await shot('3-workspace-more');
 

@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -87,8 +88,8 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
     });
 
     await test.step('the scripted collaborator names the song, writes a waltz and renders a WAV', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Write me a waltz [song:tune]');
       await box.press('Enter');
@@ -107,7 +108,7 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
       expect(wav.mimeType).toBe('audio/wav');
       expect(readFileSync(join(folder, wav.path)).subarray(0, 4).toString()).toBe('RIFF');
       expect(wav.size).toBeGreaterThan(100000);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'signal-agent.png') });
     });
     expect(errors).toEqual([]);

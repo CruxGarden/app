@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -106,8 +107,8 @@ test('Calendar: real selection, drag and form edits, agent tools, restart and cl
     });
 
     await test.step('the scripted collaborator adds an event and names the calendar', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Add the launch review and name this [calendar:edit]');
       await box.press('Enter');
@@ -125,7 +126,7 @@ test('Calendar: real selection, drag and form edits, agent tools, restart and cl
         allDay: false,
       });
       await expect(events(page).filter({ hasText: 'Garden launch review' })).toHaveCount(1);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'calendar-agent.png') });
     });
     expect(errors).toEqual([]);

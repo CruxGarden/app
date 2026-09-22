@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -88,8 +89,8 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
     });
 
     await test.step('the scripted collaborator names the timeline and adds two events', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Add the summer [timeline:story]');
       await box.press('Enter');
@@ -108,7 +109,7 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
         )!.media.url,
       ).toContain('http');
       await expect(frameOf(page).locator('.tl-timemarker')).toHaveCount(7);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'timeline-agent.png') });
     });
 
@@ -144,7 +145,7 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
         ]),
       );
       await page.screenshot({ path: join(evidence, 'timeline-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {

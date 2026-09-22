@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -46,7 +47,7 @@ test.describe('starter cruxes', () => {
       await page.getByRole('button', { name: /Astro Feed/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Edit content', exact: true }).click();
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await togglePanel(page, 'Toggle artifacts');
       await expect(page.getByRole('button', { name: /new post/i })).toBeVisible({
         timeout: 30_000,
       });
@@ -84,7 +85,7 @@ test.describe('starter cruxes', () => {
       await page.getByRole('button', { name: /Astro Media/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Edit content', exact: true }).click();
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await togglePanel(page, 'Toggle artifacts');
       // WorkspaceLayout mounts exactly one layout (mosaic or mobile), so the Builder is in the
       // DOM once; anchor the names because the starter's sample item ("Your first track goes
       // here… Add media") also contains the words.
@@ -134,7 +135,7 @@ test.describe('starter cruxes', () => {
       await page.getByRole('button', { name: /^5Ws/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Edit content', exact: true }).click();
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await togglePanel(page, 'Toggle artifacts');
 
       // The Builder: the two game actions, the Rounds collection, and the Shelf itself
       await expect(page.getByRole('button', { name: /Add to shelf$/ })).toBeVisible({

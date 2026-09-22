@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
@@ -28,7 +29,7 @@ test('a long paste becomes a note the collaborator can read', async () => {
         timeout: 15_000,
       },
     );
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
     const tree = page.getByRole('tree');
     await expect(tree.getByText('notes', { exact: true })).toBeVisible({ timeout: 30_000 });
     await tree.getByText('notes', { exact: true }).click();

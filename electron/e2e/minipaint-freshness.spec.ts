@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -33,8 +34,9 @@ test('miniPaint refuses stale or missing state, preserves native drafts and perm
   const collaborate = async (scenario: string, count: number, error?: string) => {
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const before = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const box = page.getByPlaceholder('Send a message...');
     await box.fill('Continue the picture [minipaint:fresh-' + scenario + ']');
     await box.press('Enter');

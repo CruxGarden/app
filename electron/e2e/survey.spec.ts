@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -33,7 +34,7 @@ test.describe('ui survey', () => {
       await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });
     };
     const togglePane = async (p: Page, name: RegExp) => {
-      await p.getByRole('button', { name }).click();
+      await togglePanel(p, name.source.replace(/^\^|\$$/g, ''));
     };
 
     try {

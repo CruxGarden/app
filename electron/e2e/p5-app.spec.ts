@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -104,8 +105,8 @@ test('Sketch: the flow field draws, a person seeds and saves a frame, an edit re
     });
 
     await test.step('the scripted collaborator names the sketch, sets the seed and saves a frame', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Make it windier [sketch:frame]');
       await box.press('Enter');
@@ -120,7 +121,7 @@ test('Sketch: the flow field draws, a person seeds and saves a frame, an edit re
       await expect(frameOf(page).locator('#sketch-seed')).toHaveValue('7');
       const outs = outputs(folder);
       expect(outs.map((o) => o.label).sort()).toEqual(['First frame', 'Seven winds']);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'p5-agent.png') });
     });
 
@@ -154,7 +155,7 @@ test('Sketch: the flow field draws, a person seeds and saves a frame, an edit re
         ]),
       );
       await page.screenshot({ path: join(evidence, 'p5-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {

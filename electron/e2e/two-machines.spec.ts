@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -32,7 +33,7 @@ test.describe('two machines, two accounts (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Share and back up (the archive is this machine's push)
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -53,7 +54,7 @@ test.describe('two machines, two accounts (mocked API)', () => {
       await monaco.click();
       await page.keyboard.type('<p>two</p>');
       await page.keyboard.press('ControlOrMeta+s');
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
+      await togglePanel(page, 'Toggle sync');
       await page.getByRole('button', { name: 'Pull from cloud' }).click();
       const pullAsk = page
         .getByRole('dialog')
@@ -65,13 +66,13 @@ test.describe('two machines, two accounts (mocked API)', () => {
 
       // Scenario 8: the plan's storage standing, when it matters
       api.state.storageUsedBytes = Math.round(1073741824 * 0.9);
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
+      await togglePanel(page, 'Toggle sync');
+      await togglePanel(page, 'Toggle sync');
       await expect(page.getByTestId('sync-budget')).toContainText('90%', { timeout: 15_000 });
       api.state.storageUsedBytes = 0;
       // five panes leave the Workshop too narrow to edit in: close Share and Sync
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle sync');
+      await togglePanel(page, 'Toggle share');
       await expect(monaco).toBeVisible({ timeout: 15_000 });
 
       // Scenario 6 (garden): push the garden, change a crux, Pull garden → named refusal

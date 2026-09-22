@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { createHash, randomUUID } from 'node:crypto';
 import { writeFileSync, mkdirSync, renameSync, rmSync } from 'node:fs';
@@ -56,7 +57,7 @@ test('large workspace opens while the soundtrack and its level meter keep playin
     await importNativeCrux(page, archive);
     // Make initial rendering span multiple meter frames, even on a fast machine.
     await debug.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-    await page.getByRole('button', { name: 'Toggle workshop', exact: true }).click();
+    await togglePanel(page, 'Toggle workshop');
     await expect(page.getByTestId('workshop-view')).toBeVisible({ timeout: 15000 });
     await expect(
       page

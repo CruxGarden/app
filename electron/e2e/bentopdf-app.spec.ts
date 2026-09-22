@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -110,8 +111,8 @@ test('BentoPDF: real rotate and merge, kept papers and results, agent tools, res
     });
 
     await test.step('the scripted collaborator names the project and rotates the sample', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Name the project and rotate the sample [bentopdf:edit]');
       await box.press('Enter');
@@ -131,7 +132,7 @@ test('BentoPDF: real rotate and merge, kept papers and results, agent tools, res
       });
       expect(bytesOf(entries()[2]).subarray(0, 5).toString('latin1')).toBe('%PDF-');
       expect(await documentsOf(page)).toHaveLength(3);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'bentopdf-agent.png') });
     });
     expect(errors).toEqual([]);

@@ -1,3 +1,4 @@
+import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -43,8 +44,7 @@ async function editCode(page: Page, content: string) {
 }
 async function openRootFile(page: Page, path: string) {
   const pane = page.getByTestId('pane-body-artifacts');
-  if (!(await pane.isVisible()))
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+  if (!(await pane.isVisible())) await togglePanel(page, 'Toggle artifacts');
   await pane.getByRole('tree').getByText(path, { exact: true }).click();
 }
 for (const entry of catalog.filter((t) => !selected || selected.includes(t.id))) {
@@ -102,9 +102,9 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
         .toContain(manual);
 
       // The built-in collaboration loop uses native note tools on the same human-edited note.
-      const collaboration = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collaboration.getAttribute('aria-pressed')) !== 'true')
-        await collaboration.click();
+
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       await page
         .getByPlaceholder('Send a message...')
         .fill(`[undertaking:next-step] ${entry.collaboratorTask}`);
@@ -156,8 +156,9 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
             }
           })
           .toBe('My firefly game');
-        const preview = page.getByRole('button', { name: 'Toggle workshop', exact: true });
-        if ((await preview.getAttribute('aria-pressed')) !== 'true') await preview.click();
+
+        if ((await panelPressed(page, 'Toggle workshop')) !== 'true')
+          await togglePanel(page, 'Toggle workshop');
         await page.getByRole('button', { name: 'Clean', exact: true }).click();
         const game = page.frameLocator('iframe[data-crux-id]').last();
         await expect(game.getByRole('heading', { name: 'My firefly game' })).toBeVisible({
@@ -169,8 +170,9 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
       } else if (entry.id === 'research-question') {
         await openRootFile(page, 'observations.csv');
         await editCode(page, 'seedling,light_hours,height_cm\nA,2,4\nB,4,6\nC,6,8\nD,8,10\n');
-        const preview = page.getByRole('button', { name: 'Toggle workshop', exact: true });
-        if ((await preview.getAttribute('aria-pressed')) !== 'true') await preview.click();
+
+        if ((await panelPressed(page, 'Toggle workshop')) !== 'true')
+          await togglePanel(page, 'Toggle workshop');
         await page.getByRole('button', { name: 'Clean', exact: true }).click();
         const findings = page.frameLocator('iframe[data-crux-id]').last();
         await expect(findings.getByRole('status')).toContainText('Mean height: 7.00 cm', {

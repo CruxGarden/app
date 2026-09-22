@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,8 +18,9 @@ async function showHtml(page: Page, id: string, name: string) {
     </script>`,
   );
   const tree = page.getByRole('tree');
-  const toggle = page.getByRole('button', { name: 'Toggle artifacts' });
-  if ((await toggle.getAttribute('aria-pressed')) === 'false') await toggle.click();
+
+  if ((await panelPressed(page, 'Toggle artifacts')) === 'false')
+    await togglePanel(page, 'Toggle artifacts');
   await tree.getByText('index.html', { exact: true }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   await expect(page.frameLocator('iframe[data-crux-id]').getByRole('heading')).toHaveText(name);

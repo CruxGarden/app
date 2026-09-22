@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -28,7 +29,7 @@ test('the collaborator shows its work and tests a function in its crux', async (
       join(folder, 'functions', 'hello.js'),
       'export default async function (req, ctx) { const b = await req.json(); ctx.log("seen", b); return ctx.json({ ok: true, echo: b }); }\n',
     );
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
     await expect(page.getByRole('tree').getByText('index.html', { exact: true })).toBeVisible({
       timeout: 30_000,
     });

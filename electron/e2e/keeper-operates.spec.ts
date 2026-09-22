@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -27,7 +28,7 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     const garden = join(dir, 'garden');
     const folder = join(garden, readdirSync(garden)[0]!);
     writeFileSync(join(folder, 'index.html'), '<h1>Tour stop</h1>\n<p>Every gate locked.</p>\n');
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
     await expect(page.getByRole('tree').getByText('index.html', { exact: true })).toBeVisible({
       timeout: 30_000,
     });

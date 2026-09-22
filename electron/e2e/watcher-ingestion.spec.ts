@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,7 +36,7 @@ test('an external edit immediately after an app write enters history instead of 
         return row?.fingerprint;
       })
       .toBe(fingerprint);
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle history');
     const history = page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('External edit preserved');

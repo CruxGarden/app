@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { createHash } from 'node:crypto';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
@@ -54,13 +55,13 @@ test('a page calls its functions, hears events and is refused by a Store hook, a
     mkdirSync(join(folder, 'functions'), { recursive: true });
     writeFileSync(join(folder, 'functions', 'on-store.js'), HOOK);
     writeFileSync(join(folder, 'index.html'), PAGE);
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
     await expect(page.getByRole('tree').getByText('index.html', { exact: true })).toBeVisible({
       timeout: 30_000,
     });
 
     // Share pane → Functions: the starter, which brings crux.js with it.
-    await page.getByRole('button', { name: 'Toggle share' }).click();
+    await togglePanel(page, 'Toggle share');
     const fns = page.getByTestId('functions-section');
     await expect(fns.getByTestId('function-on-store')).toBeVisible({ timeout: 30_000 });
     await fns.getByRole('button', { name: 'Add a starter function' }).click();

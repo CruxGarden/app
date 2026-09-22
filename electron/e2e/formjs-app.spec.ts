@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -90,8 +91,8 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
     });
 
     await test.step('the scripted collaborator names the form and adds two fields', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Make this an RSVP [form:build]');
       await box.press('Enter');
@@ -104,7 +105,7 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
       expect(doc().project.name).toBe('Open day RSVP');
       expect(fields().map((f) => f.key)).toEqual(expect.arrayContaining(['coming', 'notes']));
       await expect(frameOf(page).getByText('Will you come?')).toBeVisible();
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'formjs-agent.png') });
     });
 
@@ -192,7 +193,7 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
         notes: 'Bringing seeds',
       });
       await page.screenshot({ path: join(evidence, 'formjs-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {

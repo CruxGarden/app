@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -110,8 +111,9 @@ test('Hextris: real play, saved game and high scores, agent reset, remix, restar
         });
       await expect.poll(() => gameOf(page).then((g) => g.gameState)).toBe(-1);
       await ready(page);
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Clear my progress [hextris:reset]');
       await box.press('Enter');
@@ -123,7 +125,7 @@ test('Hextris: real play, saved game and high scores, agent reset, remix, restar
       await ready(page);
       expect(doc().project.saveState).toBe('{}');
       expect(doc().project.highscores).toBe('[]');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       // Play again so a saved game exists for the restart and the archive.
       await frameOf(page)
         .locator('body')

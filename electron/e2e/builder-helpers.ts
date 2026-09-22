@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { expect, type Page } from '@playwright/test';
 
 /**
@@ -16,7 +17,7 @@ export async function openBuilder(page: Page) {
     if (!toggled && !(await workshop.isVisible().catch(() => false))) {
       await page.waitForTimeout(1500);
       if (await workshop.isVisible().catch(() => false)) continue;
-      await page.getByRole('button', { name: 'Toggle workshop' }).click();
+      await togglePanel(page, 'Toggle workshop');
       toggled = true;
     }
     await page.waitForTimeout(300);

@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -33,10 +34,10 @@ test('WWW browses unframeable sites with isolated privileges, UI/MCP controls, m
     await enterGarden(page);
     const id = await createCrux(page, 'Web research');
     for (const label of ['tasks', 'collaboration', 'workshop']) {
-      const button = page.getByRole('button', { name: `Toggle ${label}`, exact: true });
-      if ((await button.getAttribute('aria-pressed')) === 'true') await button.click();
+      if ((await panelPressed(page, `Toggle ${label}`)) === 'true')
+        await togglePanel(page, `Toggle ${label}`);
     }
-    await page.getByRole('button', { name: 'Toggle www', exact: true }).click();
+    await togglePanel(page, 'Toggle www');
     const address = page.getByRole('textbox', { name: 'Browser address' });
     await address.fill(`${base}/one`);
     await address.press('Enter');
@@ -106,6 +107,11 @@ test('WWW browses unframeable sites with isolated privileges, UI/MCP controls, m
       wc.sendInputEvent({ type: 'keyDown', keyCode: 'L', modifiers: ['meta'] });
     }, guestId);
     await expect(address).toBeFocused();
+    await page.getByRole('button', { name: 'Add panel', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'Find a panel' })).toBeFocused();
+    await expect.poll(visible).toBe(false);
+    await page.keyboard.press('Escape');
+    await expect.poll(visible).toBe(true);
     await page.getByRole('button', { name: 'Account menu', exact: true }).click();
     await expect.poll(visible).toBe(false);
     await page.getByRole('button', { name: 'Account menu', exact: true }).click();
@@ -181,10 +187,10 @@ test('WWW browses unframeable sites with isolated privileges, UI/MCP controls, m
     await expect
       .poll(async () => app.evaluate(({ webContents }, id) => !!webContents.fromId(id), guestId))
       .toBe(false);
-    await page.getByRole('button', { name: 'Toggle www', exact: true }).click();
+    await togglePanel(page, 'Toggle www');
     await expect(address).toHaveValue(`${base}/agent`);
     await createCrux(page, 'Other web research');
-    await page.getByRole('button', { name: 'Toggle www', exact: true }).click();
+    await togglePanel(page, 'Toggle www');
     await address.fill(`${base}/other`);
     await address.press('Enter');
     await expect

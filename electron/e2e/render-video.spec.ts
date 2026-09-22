@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -43,7 +44,7 @@ test('a timeline page becomes a video and a screenshot from the preview bar', as
         .isVisible()
         .catch(() => false))
     )
-      await page.getByRole('button', { name: 'Toggle workshop' }).click();
+      await togglePanel(page, 'Toggle workshop');
     await page.getByRole('tree').getByText('index.html', { exact: true }).click();
     // The preview bar lives on the Clean view of the Workshop.
     await page

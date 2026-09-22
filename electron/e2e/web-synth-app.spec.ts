@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -108,8 +109,8 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
     });
 
     await test.step('the scripted collaborator sets the tempo and adds a MIDI editor', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Set the tempo and add a MIDI editor [synth:edit]');
       await box.press('Enter');
@@ -121,7 +122,7 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
       await expect(tabs(page).filter({ hasText: 'Agent melody' })).toHaveCount(1);
       await ready(page);
       await expect.poll(() => hasModule('midi_editor')).toBe(true);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'web-synth-agent.png') });
     });
     expect(errors).toEqual([]);

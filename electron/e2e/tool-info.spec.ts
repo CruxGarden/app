@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -6,8 +7,8 @@ import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 async function openInfo(page: Page) {
-  const toggle = page.getByRole('button', { name: 'Toggle metadata', exact: true });
-  if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+  if ((await panelPressed(page, 'Toggle metadata')) !== 'true')
+    await togglePanel(page, 'Toggle metadata');
   const info = page.getByRole('region', { name: 'About this tool', exact: true });
   await expect(info).toBeVisible();
   await info.getByRole('button', { name: 'Version, adaptations and licenses' }).click();

@@ -1,3 +1,4 @@
+import { togglePanel } from '../panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import type { ElectronApplication, DownloadItem } from 'playwright';
 import { readFileSync, existsSync, mkdirSync, cpSync, readdirSync, writeFileSync } from 'node:fs';
@@ -27,8 +28,7 @@ function cruxFolder(dir: string): string {
 
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 

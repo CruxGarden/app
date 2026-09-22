@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -39,8 +40,8 @@ test('the glass switch: system follows the Mood, off is solid, on is glass; ligh
       join(folder, 'index.html'),
       '<!doctype html><html><body style="font:20px sans-serif;padding:40px;background:#fff"><h1>Glass look</h1><p>A page behind the glass.</p></body></html>',
     );
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle artifacts');
+    await togglePanel(page, 'Toggle history');
     await page.waitForTimeout(1200);
     expect(await bodyFilter()).toContain('blur');
     await page.screenshot({ path: join(evidence, 'default-crux.png') });

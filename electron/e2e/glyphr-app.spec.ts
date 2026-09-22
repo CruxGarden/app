@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -64,8 +65,8 @@ test('Font: Glyphr Studio opens and saves, a person renames it, the collaborator
     });
 
     await test.step('the scripted collaborator names it, draws an A and saves an OTF', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Start the font [font:letter]');
       await box.press('Enter');
@@ -82,7 +83,7 @@ test('Font: Glyphr Studio opens and saves, a person renames it, the collaborator
       const [otf] = outputs(folder);
       expect(otf!.mimeType).toBe('font/otf');
       expect(readFileSync(join(folder, otf!.path)).subarray(0, 4).toString()).toBe('OTTO');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'glyphr-agent.png') });
     });
 

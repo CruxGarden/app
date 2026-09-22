@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
@@ -17,7 +18,7 @@ test('pulling one Crux preserves another open workspace and its unsent draft', a
     await page.keyboard.type('Cloud copy');
     await expect(page.locator('.monaco-editor')).toContainText('Cloud copy');
     await page.keyboard.press('ControlOrMeta+s');
-    await page.getByRole('button', { name: 'Toggle sync' }).click();
+    await togglePanel(page, 'Toggle sync');
     await page.getByPlaceholder('email@example.com').fill('tester@example.com');
     await page.getByRole('button', { name: 'Send Code' }).click();
     await page.getByPlaceholder('Enter code').fill('123456');
@@ -78,7 +79,7 @@ test('cloud pull replaces a complete Task graph and reopens independent Main and
     await addArtifact(page, 'study.txt');
     const showArtifacts = async () => {
       if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+        await togglePanel(page, 'Toggle artifacts');
     };
     const edit = async (text: string) => {
       await showArtifacts();
@@ -97,7 +98,7 @@ test('cloud pull replaces a complete Task graph and reopens independent Main and
     const taskId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     await edit('Task cloud copy');
     await page.getByTestId('task-bar').getByRole('link', { name: 'Main', exact: true }).click();
-    await page.getByRole('button', { name: 'Toggle sync' }).click();
+    await togglePanel(page, 'Toggle sync');
     await page.getByPlaceholder('email@example.com').fill('tester@example.com');
     await page.getByRole('button', { name: 'Send Code' }).click();
     await page.getByPlaceholder('Enter code').fill('123456');

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -28,8 +29,7 @@ test('real Codex discovers Garden tools and saves an Artifact from Collaboration
     await enterGarden(page);
     persistedCruxId = await createCrux(page, 'Codex readiness check');
     const chat = page.getByTestId('pane-body-collaboration');
-    if (!(await chat.isVisible()))
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if (!(await chat.isVisible())) await togglePanel(page, 'Toggle collaboration');
     await chat.getByTestId('model-selector').click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     const composer = page.getByPlaceholder('Send a message...');
@@ -80,7 +80,7 @@ test('real Codex discovers Garden tools and saves an Artifact from Collaboration
         'Garden Codex connection verified.\nHuman edit: keep this line.\nAgent continued the human edit.',
       );
 
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle history');
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
       0,

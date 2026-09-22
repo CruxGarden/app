@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -80,8 +81,8 @@ test('PPTist: real slide and picture edits, saved deck with media Artifacts, age
     });
 
     await test.step('the scripted collaborator titles the deck and adds an agenda slide', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Title the deck and add an agenda [pptist:edit]');
       await box.press('Enter');
@@ -93,7 +94,7 @@ test('PPTist: real slide and picture edits, saved deck with media Artifacts, age
       expect(doc().project.slides.length).toBe(slideCount + 2);
       expect(JSON.stringify(doc().project.slides)).toContain('Agent agenda'); // inserted after the current slide
       await expect(thumbnails(page)).toHaveCount(slideCount + 2);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'pptist-agent.png') });
     });
     expect(errors).toEqual([]);

@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { copyFileSync, readFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -24,8 +25,9 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
   ) => {
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const previous = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const box = page.getByPlaceholder('Send a message...');
     await box.fill(message);
     await box.press('Enter');
@@ -71,8 +73,8 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
     await ready();
   };
   const hideChat = async () => {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
   };
   const history = async (action: 'Undo' | 'Redo') => {
     await frame().getByText('Edit', { exact: true }).first().click();

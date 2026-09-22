@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -99,7 +100,9 @@ test('Photo Gallery: the galleries render, a dropped file joins them, the settin
             if (await failed.isVisible().catch(() => false)) {
               const log = await page.evaluate((f) => window.electronAPI!.devserver.log(f), folder);
               if (retried) throw new Error(`preview failed twice; log: ${log}`);
-              console.log(`[photo-gallery] preview failed once; retrying. log: ${log.slice(-1500)}`);
+              console.log(
+                `[photo-gallery] preview failed once; retrying. log: ${log.slice(-1500)}`,
+              );
               retried = true;
               await page.getByRole('button', { name: 'Retry preview' }).click();
             }
@@ -151,7 +154,7 @@ test('Photo Gallery: the galleries render, a dropped file joins them, the settin
     });
 
     await test.step('the settings name the gallery', async () => {
-      await page.getByRole('button', { name: 'Toggle metadata' }).click();
+      await togglePanel(page, 'Toggle metadata');
       const settings = page.getByTestId('pane-body-details');
       await expect(settings).toBeVisible();
       await page.screenshot({ path: join(evidence, 'gallery-settings.png') });

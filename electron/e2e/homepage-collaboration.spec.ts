@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium, type Page } from '@playwright/test';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -78,8 +79,9 @@ test('Astro collaboration preserves manual edits, recovers changed passages and 
         { once: true },
       );
     });
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     await page
       .getByPlaceholder('Send a message...')
       .fill('Continue our home page [home:collaborate-' + scenario + ']');
@@ -195,7 +197,7 @@ test('Astro collaboration preserves manual edits, recovers changed passages and 
     await identify();
     expect(content()).toBe(manualAfter);
     await exportNativeCrux(instance.page, archive, instance.app, async () => {
-      await instance.page.getByRole('button', { name: 'Toggle export' }).click();
+      await togglePanel(instance.page, 'Toggle export');
       await instance.page.getByRole('button', { name: 'Export Crux', exact: true }).click();
     });
     await instance.app.close();

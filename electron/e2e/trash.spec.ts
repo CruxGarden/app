@@ -1,3 +1,4 @@
+import { togglePanel, panelPressed, expectPanelBarReady } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -81,13 +82,12 @@ test.describe('trash: recently deleted cruxes', () => {
       await expect(trash).toHaveCount(0, { timeout: 15_000 });
       await expect(page.getByRole('button', { name: 'Open My Crux' })).toHaveCount(2);
       await page.getByRole('button', { name: 'Open My Crux' }).last().click(); // oldest = restored
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
-        timeout: 30_000,
-      });
+      await expectPanelBarReady(page);
       // Ask the toggle, not the animation: polling the tree's visibility while
       // the pane is opening reads false, clicks, and shuts it again.
       const artifacts = page.getByRole('button', { name: 'Toggle artifacts' });
-      if ((await artifacts.getAttribute('aria-pressed')) !== 'true') await artifacts.click();
+      if ((await panelPressed(page, 'Toggle artifacts')) !== 'true')
+        await togglePanel(page, 'Toggle artifacts');
       await expect(artifacts).toHaveAttribute('aria-pressed', 'true');
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
