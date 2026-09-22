@@ -1364,6 +1364,56 @@ html.palette-transition *::after {
   border-radius: var(--pane-browser-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-browser-pulse);
 }
+.mosaic.crux-mosaic-theme .mosaic-window.pane-settings {
+  --panel: var(--pane-settings-body);
+  --pane-header-close-hover: var(--pane-settings-header-close-hover);
+  --border: var(--pane-settings-border);
+  --radius: var(--pane-settings-radius);
+  --text: var(--pane-settings-text);
+  --text-muted: var(--pane-settings-text-muted);
+  --surface: var(--pane-settings-surface);
+  --accent: var(--pane-settings-accent);
+  --accent-muted: var(--pane-settings-accent-muted);
+  --surface-solid: var(--pane-settings-surface-solid);
+  --radius-sm: var(--pane-settings-radius-sm);
+  --caption: var(--pane-settings-caption);
+  --heading: var(--pane-settings-heading);
+  --pane-header-radius: var(--pane-settings-header-radius);
+  --pane-header-height: var(--pane-settings-header-height);
+  --pane-border-width: var(--pane-settings-border-width);
+  --pane-header-label-case: var(--pane-settings-header-label-case);
+  --pane-header-justify: var(--pane-settings-header-justify);
+  --pane-texture: var(--pane-settings-texture);
+  --pane-texture-size: var(--pane-settings-texture-size);
+  --pane-texture-blend: var(--pane-settings-texture-blend);
+  border-radius: var(--pane-settings-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-settings-pulse);
+}
+.mosaic.crux-mosaic-theme .mosaic-window.pane-explore {
+  --panel: var(--pane-explore-body);
+  --pane-header-close-hover: var(--pane-explore-header-close-hover);
+  --border: var(--pane-explore-border);
+  --radius: var(--pane-explore-radius);
+  --text: var(--pane-explore-text);
+  --text-muted: var(--pane-explore-text-muted);
+  --surface: var(--pane-explore-surface);
+  --accent: var(--pane-explore-accent);
+  --accent-muted: var(--pane-explore-accent-muted);
+  --surface-solid: var(--pane-explore-surface-solid);
+  --radius-sm: var(--pane-explore-radius-sm);
+  --caption: var(--pane-explore-caption);
+  --heading: var(--pane-explore-heading);
+  --pane-header-radius: var(--pane-explore-header-radius);
+  --pane-header-height: var(--pane-explore-header-height);
+  --pane-border-width: var(--pane-explore-border-width);
+  --pane-header-label-case: var(--pane-explore-header-label-case);
+  --pane-header-justify: var(--pane-explore-header-justify);
+  --pane-texture: var(--pane-explore-texture);
+  --pane-texture-size: var(--pane-explore-texture-size);
+  --pane-texture-blend: var(--pane-explore-texture-blend);
+  border-radius: var(--pane-explore-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-explore-pulse);
+}
 
 /* Clip overflow on body (not window) so drop target overlays remain visible */
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {

@@ -43,6 +43,8 @@ describe('custom workspace arrangements', () => {
     saveWorkspaceLayout('Writing', layout);
     await applyWorkspaceLayout(ui, 'Writing');
     expect(ui.getState().mosaicLayout).toEqual(layout);
+    // Immediate recreation must read the applied proportions before any resize debounce fires.
+    expect(createUIStore().getState().mosaicLayout).toEqual(layout);
     expect(ui.getState().composerDraft).toBe('Unsent idea');
     expect(ui.getState().editor).toBe(editor);
     expect(ui.getState().paneVisibility.artifacts).toBe(false);

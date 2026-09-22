@@ -27,6 +27,8 @@ export const DEFAULT_PANE_LABELS: Record<PaneType, string> = {
   mood: 'Mood',
   synth: 'Crux Synth',
   browser: 'WWW',
+  settings: 'Settings',
+  explore: 'Explore',
 };
 
 /** The CSS variable each pane's name is read from (literal, so coverage can see it). */
@@ -45,6 +47,8 @@ const PANE_LABEL_VARS: Record<PaneType, string> = {
   mood: '--pane-label-mood',
   synth: '--pane-label-synth',
   browser: '--pane-label-browser',
+  settings: '--pane-label-settings',
+  explore: '--pane-label-explore',
 };
 
 function readVar(name: string): string {

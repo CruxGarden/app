@@ -62,6 +62,8 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
   mood: { label: 'Mood', icon: <MoodIcon size={16} /> },
   synth: { label: 'Crux Synth', icon: <SlidersIcon size={16} /> },
   browser: { label: 'WWW', icon: <GlobeIcon size={16} /> },
+  settings: { label: 'Settings', icon: <SlidersIcon size={16} /> },
+  explore: { label: 'Explore', icon: <SearchIcon size={16} /> },
   media: {
     label: 'Find media',
     icon: <SearchIcon size={16} />,

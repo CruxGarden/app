@@ -73,7 +73,7 @@ export default function UsageSettings() {
       {error && <p className="text-xs text-text-muted">{error}</p>}
       {usage && (
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 @min-[560px]/settings:grid-cols-2">
             <Meter
               label="Storage"
               value={formatBytes(usage.storageBytes)}

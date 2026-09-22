@@ -82,6 +82,8 @@ const PANES: { id: string; label: string }[] = [
   { id: 'Mood', label: 'Mood' },
   { id: 'Synth', label: 'Crux Synth' },
   { id: 'Browser', label: 'WWW' },
+  { id: 'Settings', label: 'Settings' },
+  { id: 'Explore', label: 'Explore' },
 ];
 
 const LAYOUT_KEYS = new Set([
@@ -179,6 +181,8 @@ const NAME_KEYS = new Set([
   'paneLabelMedia',
   'paneLabelSynth',
   'paneLabelBrowser',
+  'paneLabelSettings',
+  'paneLabelExplore',
   'paneLabelMood',
 ]);
 const HEADER_KEYS = new Set([

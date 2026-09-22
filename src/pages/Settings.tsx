@@ -13,7 +13,7 @@ import MemorySettings from '@/components/settings/MemorySettings';
 export default function Settings() {
   return (
     <div
-      className="overflow-y-auto flex-1 flex flex-col gap-4"
+      className="@container/settings min-w-0 overflow-y-auto flex-1 flex flex-col gap-4 pr-3"
       style={
         {
           // Settings surfaces read their own token family (settings*)

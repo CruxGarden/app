@@ -55,7 +55,7 @@ export default function NamesSettings() {
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
       </label>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+      <div className="grid grid-cols-1 @min-[600px]/settings:grid-cols-2 gap-x-6 gap-y-2">
         {PANES.map((type) => (
           <label key={type} className="flex items-center gap-2">
             <span className="w-28 shrink-0 text-xs font-mono text-text-muted">

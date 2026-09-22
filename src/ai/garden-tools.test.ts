@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
 import { GARDEN_TOOL_DEFINITIONS, isGardenTool, validateGardenTool } from './garden-tools';
 
 describe("the Keeper's garden tools", () => {
+  it('advertises every registered panel to agents, including supporting surfaces', () => {
+    const schema = GARDEN_TOOL_DEFINITIONS.find((tool) => tool.name === 'show')!.input_schema;
+    const panes = (schema.properties!.pane as { enum: string[] }).enum;
+    expect(panes).toEqual(Object.keys(DEFAULT_PANE_LABELS));
+    for (const pane of panes)
+      expect(validateGardenTool('show', { what: 'pane', pane }).valid).toBe(true);
+  });
   it('names the operations the person has in the hub, the picker, the Collaboration and Explore', () => {
     expect(GARDEN_TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
       'list_cruxes',

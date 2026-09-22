@@ -37,6 +37,8 @@ const MediaPane = lazy(() => import('./MediaPane'));
 const MoodPane = lazy(() => import('./MoodPane'));
 const SynthPane = lazy(() => import('./SynthPane'));
 const BrowserPane = lazy(() => import('./BrowserPane'));
+const SettingsPane = lazy(() => import('./SettingsPane'));
+const ExplorePane = lazy(() => import('./ExplorePane'));
 import { PANE_VAR_PREFIX } from './paneConfig';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
@@ -112,6 +114,8 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   mood: MoodPane,
   synth: SynthPane,
   browser: BrowserPane,
+  settings: SettingsPane,
+  explore: ExplorePane,
 };
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
@@ -136,6 +140,8 @@ const PANE_MIN_WIDTH: Record<PaneType, number> = {
   mood: 420,
   synth: 300,
   browser: 200,
+  settings: 420,
+  explore: 420,
 };
 
 const MemoizedPaneContent = memo(function MemoizedPaneContent({
@@ -220,6 +226,8 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
   mood: <MoodIcon size={14} strokeWidth={2} />,
   synth: <SlidersIcon size={14} strokeWidth={2} />,
   browser: <GlobeIcon size={14} strokeWidth={2} />,
+  settings: <SlidersIcon size={14} strokeWidth={2} />,
+  explore: <SearchIcon size={14} strokeWidth={2} />,
 };
 
 // ── Main layout ─────────────────────────────────────────

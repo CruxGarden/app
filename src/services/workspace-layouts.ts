@@ -1,7 +1,7 @@
 import type { MosaicNode } from 'react-mosaic-component';
 import type { StoreApi } from 'zustand';
 import { DEFAULT_PANE_ORDER, type PaneType, type UIState } from '@/stores/uiStore';
-import { getSetting, setSetting } from './settings';
+import { getSetting, setSetting, flushSettings } from './settings';
 import { SettingsKey } from '@/lib/constants';
 import { flushNotebook } from './notebook-lifecycle';
 
@@ -90,5 +90,6 @@ export async function applyWorkspaceLayout(ui: StoreApi<UIState>, name: string) 
   // Save embedded editors before any panel can unmount. A failed save leaves the layout intact.
   await flushNotebook(cruxId);
   if (applying.get(ui) !== revision || ui.getState().activeCruxId !== cruxId) return;
-  ui.getState().setMosaicLayout(layout);
+  ui.getState().setMosaicLayout(layout, { persistImmediately: true });
+  await flushSettings();
 }

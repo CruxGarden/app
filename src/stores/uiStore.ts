@@ -45,7 +45,9 @@ export type PaneType =
   | 'media'
   | 'mood'
   | 'synth'
-  | 'browser';
+  | 'browser'
+  | 'settings'
+  | 'explore';
 
 /** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
 export const PANE_COLORS: Record<PaneType, string> = {
@@ -63,6 +65,8 @@ export const PANE_COLORS: Record<PaneType, string> = {
   mood: 'var(--pane-mood)',
   synth: 'var(--pane-synth)',
   browser: 'var(--pane-browser)',
+  settings: 'var(--pane-settings)',
+  explore: 'var(--pane-explore)',
 };
 
 export type EditorViewMode = 'source' | 'preview' | 'form';
@@ -175,7 +179,10 @@ export interface UIState {
   togglePane: (pane: PaneType) => void;
   setPaneVisible: (pane: PaneType, visible: boolean) => void;
   reorderPanes: (newOrder: PaneType[]) => void;
-  setMosaicLayout: (layout: MosaicNode<PaneType> | null) => void;
+  setMosaicLayout: (
+    layout: MosaicNode<PaneType> | null,
+    options?: { persistImmediately?: boolean },
+  ) => void;
 
   // ── Editor tab actions ──
   openFile: (id: string, path: string, options?: { preserveWorkshopView?: boolean }) => void;
@@ -230,6 +237,8 @@ export const DEFAULT_PANE_ORDER: PaneType[] = [
   'mood',
   'synth',
   'browser',
+  'settings',
+  'explore',
 ];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   // Tasks is a pane like any other (Daniel, 2026-09-19): on by default.
@@ -247,6 +256,8 @@ const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   mood: false,
   synth: false,
   browser: false,
+  settings: false,
+  explore: false,
 };
 
 // ── Mosaic layout helpers ────────────────────────────────
@@ -824,7 +835,7 @@ export function createUIStore(cruxId?: string) {
       saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
     },
 
-    setMosaicLayout: (newLayout) => {
+    setMosaicLayout: (newLayout, options) => {
       const prev = get();
       // Fast path: if leaves haven't changed (resize only), just update the tree
       const prevLeaves = getMosaicLeaves(prev.mosaicLayout);
@@ -845,8 +856,17 @@ export function createUIStore(cruxId?: string) {
         set({ mosaicLayout: newLayout });
       }
 
-      // Debounce persistence to avoid writes on every resize frame
-      debouncedSaveLayout(get);
+      // Drag frames are debounced; applying a named arrangement is an explicit save.
+      if (options?.persistImmediately) {
+        if (_saveTimer) clearTimeout(_saveTimer);
+        _saveTimer = null;
+        const s = get();
+        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, {
+          paneOrder: s.paneOrder,
+          paneVisibility: s.paneVisibility,
+          mosaicLayout: s.mosaicLayout,
+        });
+      } else debouncedSaveLayout(get);
     },
 
     // ── Editor tab actions ──

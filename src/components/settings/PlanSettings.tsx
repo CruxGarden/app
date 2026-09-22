@@ -218,7 +218,7 @@ export default function PlanSettings() {
               </button>
             ))}
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 @min-[560px]/settings:grid-cols-3">
             {catalog.plans.map(({ plan, prices }) => {
               const price = prices.find((p) => p.interval === interval) ?? prices[0];
               const current = plan.id === me.plan.id;

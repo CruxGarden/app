@@ -32,6 +32,8 @@ export const PANE_VAR_PREFIX: Record<PaneType, string> = {
   mood: '--pane-mood',
   synth: '--pane-synth',
   browser: '--pane-browser',
+  settings: '--pane-settings',
+  explore: '--pane-explore',
 };
 
 /** Button config for pane toggle buttons in the TopBar */
@@ -50,4 +52,6 @@ export const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] =
   { type: 'mood', icon: MoodIcon, label: 'Mood' },
   { type: 'synth', icon: SlidersIcon, label: 'Crux Synth' },
   { type: 'browser', icon: GlobeIcon, label: 'WWW' },
+  { type: 'settings', icon: SlidersIcon, label: 'Settings' },
+  { type: 'explore', icon: SearchIcon, label: 'Explore' },
 ];
