@@ -111,6 +111,7 @@ export enum SettingsKey {
 
   // Layout
   GlobalLayout = 'cruxgarden:layout:global',
+  WorkspaceLayouts = 'cruxgarden:workspaceLayouts',
 
   // Keeper console
   KeeperModel = 'cruxgarden:keeper-model',

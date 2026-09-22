@@ -45,6 +45,7 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
     await page.getByRole('button', { name: 'Sound', exact: true }).click();
     const synth = page.getByRole('region', { name: 'Crux Synth', exact: true });
     await expect(synth).toBeVisible();
+
     expect(await synth.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     await expect(synth.getByRole('group', { name: /^Track [1-4]$/ })).toHaveCount(4);
     const pause = synth.getByRole('button', { name: 'Pause synth', exact: true });
@@ -103,6 +104,17 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
       .toBeGreaterThan(0.005);
     await pause.click();
     await expect.poll(async () => (await audio(page)).playing).toBe(false);
+
+    // Leave room for the scroll thumb: content fitting its own box is insufficient.
+    expect(
+      await synth.evaluate((el) => {
+        const scroller = el.closest('.overflow-y-auto')!;
+        const right = scroller.getBoundingClientRect().right;
+        return [...el.querySelectorAll('input,select,button')].every(
+          (control) => control.getBoundingClientRect().right <= right - 8,
+        );
+      }),
+    ).toBe(true);
     await page.screenshot({ path: 'e2e/.results/crux-synth-controls.png' });
     await page.getByRole('button', { name: 'Open Mood Builder' }).click();
     await page.getByRole('button', { name: 'Moods', exact: true }).click();

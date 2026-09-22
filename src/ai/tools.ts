@@ -1165,6 +1165,7 @@ export function createToolExecutor(
           case 'diff':
             result = await runGrowthTool(toolName, input, { cruxId, requestedBy });
             break;
+          case 'workspace_layouts':
           case 'get_synth':
           case 'set_synth':
           case 'list_cue_presets':

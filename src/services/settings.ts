@@ -48,6 +48,7 @@ const SYNC_KEYS: Set<string> = new Set([
   SettingsKey.SoundTrack,
   SettingsKey.SynthPatch,
   SettingsKey.SynthPresetBanks,
+  SettingsKey.WorkspaceLayouts,
   SettingsKey.SoundEnabled,
   SettingsKey.ResonanceVolume,
   SettingsKey.ResonanceOptIn,

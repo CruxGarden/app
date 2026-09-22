@@ -1,3 +1,4 @@
+import { WORKSPACE_LAYOUT_TOOL, runWorkspaceLayouts } from './layout-tools';
 import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
 /**
  * Theme tools — the AI can restyle the workspace.
@@ -29,6 +30,7 @@ import type { ToolDefinition } from './tools';
 import type { ToolResultContent } from '@/services/types';
 
 export const THEME_TOOL_NAMES = [
+  'workspace_layouts',
   'get_synth',
   'set_synth',
   'set_theme',
@@ -39,6 +41,7 @@ export const THEME_TOOL_NAMES = [
 ] as const;
 
 export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
+  WORKSPACE_LAYOUT_TOOL,
   {
     name: 'get_synth',
     description:
@@ -390,6 +393,8 @@ export async function runThemeTool(
 ): Promise<string | ToolResultContent> {
   try {
     switch (name) {
+      case 'workspace_layouts':
+        return await runWorkspaceLayouts(input, ctx.cruxId);
       case 'get_synth':
       case 'set_synth':
         return await toolSynth(name, input);

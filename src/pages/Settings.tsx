@@ -1,3 +1,4 @@
+import WorkspaceLayoutsSettings from '@/components/settings/WorkspaceLayoutsSettings';
 import AccountSettings from '@/components/settings/AccountSettings';
 import NamesSettings from '@/components/settings/NamesSettings';
 import SyncSettings from '@/components/settings/SyncSettings';
@@ -26,6 +27,7 @@ export default function Settings() {
     >
       <AccountSettings />
       <NamesSettings />
+      <WorkspaceLayoutsSettings />
       <AiSettings />
       <MemorySettings />
       <AgentsSettings />
