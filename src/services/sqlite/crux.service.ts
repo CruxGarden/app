@@ -6,6 +6,7 @@ import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
 import { fromRow, buildInsert, buildUpdate, generateSlug } from './helpers';
 import { createProjectFolder } from '../project-folder';
+import { assertSnapshotUnshared, planCruxDeletion } from './crux-deletion';
 import {
   findWorkingCopy,
   assertNoOpenTasks,
@@ -183,34 +184,22 @@ export class SqliteCruxService implements ICruxService {
     await assertNoOpenTasks(cruxId);
     if (await isTaskHistoryReference(cruxId))
       throw new Error('This snapshot is used by a task or merge.');
-    const copies = await db.all<{ id: string }>('SELECT id FROM working_copies WHERE crux_id = ?', [
-      cruxId,
-    ]);
-    for (const copy of copies) {
+    await assertSnapshotUnshared(cruxId);
+    const ids = await planCruxDeletion(cruxId);
+    // Delete only the planned ownership set, never arbitrary relationship
+    // targets. Chunk parameters for the Web and native SQLite backends.
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200);
+      const placeholders = chunk.map(() => '?').join(',');
+      await db.run(`DELETE FROM artifacts WHERE resource_id IN (${placeholders})`, chunk);
+      await db.run(`DELETE FROM store WHERE crux_id IN (${placeholders})`, chunk);
       await db.run(
-        'DELETE FROM artifacts WHERE resource_id = ? OR resource_id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
-        [copy.id, copy.id],
+        `DELETE FROM dimensions WHERE source_id IN (${placeholders}) OR target_id IN (${placeholders})`,
+        [...chunk, ...chunk],
       );
-      await db.run(
-        'DELETE FROM cruxes WHERE id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
-        [copy.id],
-      );
-      await db.run('DELETE FROM dimensions WHERE source_id = ?', [copy.id]);
-      await db.run('DELETE FROM store WHERE crux_id = ?', [copy.id]);
+      await db.run(`DELETE FROM cruxes WHERE id IN (${placeholders})`, chunk);
     }
     await db.run('DELETE FROM working_copies WHERE crux_id = ?', [cruxId]);
     await db.run('DELETE FROM task_merges WHERE crux_id = ?', [cruxId]);
-    // The Main lane's own Growth snapshots go with it, as the Task lanes' did above;
-    // otherwise their rows and Artifacts linger and block restoring the same identities.
-    await db.run(
-      'DELETE FROM artifacts WHERE resource_id = ? OR resource_id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
-      [cruxId, cruxId],
-    );
-    await db.run(
-      "DELETE FROM cruxes WHERE kind = 'snapshot' AND id IN (SELECT target_id FROM dimensions WHERE source_id = ?)",
-      [cruxId],
-    );
-    await db.run('DELETE FROM dimensions WHERE source_id = ? OR target_id = ?', [cruxId, cruxId]);
-    await db.run('DELETE FROM cruxes WHERE id = ?', [cruxId]);
   }
 }

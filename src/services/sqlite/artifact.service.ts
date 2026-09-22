@@ -9,6 +9,7 @@ import type {
 } from '../types';
 import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
+import { assertSnapshotUnshared } from './crux-deletion';
 import { getLocalIdentity } from './identity';
 import { toArtifact, guessMimeType, hashContent, buildInsert } from './helpers';
 import {
@@ -251,8 +252,22 @@ export class SqliteArtifactService implements IArtifactService {
     const identity = await getLocalIdentity();
     const now = new Date().toISOString();
     const columns = [
-      'id', 'type', 'kind', 'path', 'meta', 'resource_id', 'resource_type', 'author_id', 'home_id',
-      'encoding', 'mime_type', 'filename', 'size', 'fingerprint', 'created', 'updated',
+      'id',
+      'type',
+      'kind',
+      'path',
+      'meta',
+      'resource_id',
+      'resource_type',
+      'author_id',
+      'home_id',
+      'encoding',
+      'mime_type',
+      'filename',
+      'size',
+      'fingerprint',
+      'created',
+      'updated',
     ];
     const CHUNK = 400; // 16 columns × 400 rows stays well under SQLite's variable limit
     for (let start = 0; start < inputs.length; start += CHUNK) {
@@ -260,10 +275,22 @@ export class SqliteArtifactService implements IArtifactService {
       const params: unknown[] = [];
       for (const input of chunk)
         params.push(
-          crypto.randomUUID(), 'artifact', 'file', input.path,
-          JSON.stringify(input.meta || { path: input.path }), input.resourceId, 'crux',
-          identity.authorId, identity.homeId, input.encoding, input.mimeType,
-          input.path.split('/').pop() || 'unnamed', input.size, input.fingerprint, now, now,
+          crypto.randomUUID(),
+          'artifact',
+          'file',
+          input.path,
+          JSON.stringify(input.meta || { path: input.path }),
+          input.resourceId,
+          'crux',
+          identity.authorId,
+          identity.homeId,
+          input.encoding,
+          input.mimeType,
+          input.path.split('/').pop() || 'unnamed',
+          input.size,
+          input.fingerprint,
+          now,
+          now,
         );
       const row = `(${columns.map(() => '?').join(', ')})`;
       await db.run(
@@ -327,6 +354,7 @@ export class SqliteArtifactService implements IArtifactService {
     }>('SELECT fingerprint, type, resource_id, path, filename FROM artifacts WHERE id = ?', [id]);
     if (row && (await isTaskHistoryReference(row.resource_id)))
       throw new Error('This snapshot is used by a task or merge.');
+    if (row) await assertSnapshotUnshared(row.resource_id);
     if (row && row.type === 'artifact' && opts?.writeThrough !== false) {
       await assertCopyWritable(row.resource_id);
       await deleteThroughArtifact(row.resource_id, {
@@ -391,8 +419,22 @@ export class SqliteArtifactService implements IArtifactService {
     // Chunked multi-row inserts: a snapshot of a native app with thousands of
     // files used to cost one round-trip per row (7,800 inserts ≈ 25 s).
     const columns = [
-      'id', 'type', 'kind', 'path', 'meta', 'resource_id', 'resource_type', 'author_id', 'home_id',
-      'encoding', 'mime_type', 'filename', 'size', 'fingerprint', 'created', 'updated',
+      'id',
+      'type',
+      'kind',
+      'path',
+      'meta',
+      'resource_id',
+      'resource_type',
+      'author_id',
+      'home_id',
+      'encoding',
+      'mime_type',
+      'filename',
+      'size',
+      'fingerprint',
+      'created',
+      'updated',
     ];
     const CHUNK = 400;
     for (let start = 0; start < rows.length; start += CHUNK) {
@@ -400,10 +442,22 @@ export class SqliteArtifactService implements IArtifactService {
       const params: unknown[] = [];
       for (const row of chunk)
         params.push(
-          crypto.randomUUID(), 'artifact', (row.kind as string) || 'file', row.path,
+          crypto.randomUUID(),
+          'artifact',
+          (row.kind as string) || 'file',
+          row.path,
           typeof row.meta === 'string' ? row.meta : JSON.stringify(row.meta ?? null),
-          snapshotId, 'crux', identity.authorId, identity.homeId, row.encoding, row.mime_type,
-          row.filename, row.size, row.fingerprint, now, now,
+          snapshotId,
+          'crux',
+          identity.authorId,
+          identity.homeId,
+          row.encoding,
+          row.mime_type,
+          row.filename,
+          row.size,
+          row.fingerprint,
+          now,
+          now,
         );
       const placeholder = `(${columns.map(() => '?').join(', ')})`;
       await db.run(
