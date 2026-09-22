@@ -219,6 +219,10 @@ it('rejects an external disk edit before the watcher has delivered it, then relo
       call({ op: 'write', path: 'Unindexed.md', content: '', expected: null }),
     ).rejects.toThrow('changed elsewhere');
   } finally {
+    // Snapshot cues lazy-load audio while the desktop window stub is present.
+    // Drain those imports before Vitest tears down the module graph; otherwise
+    // a late cue can observe an unloaded audioStore after this test finishes.
+    await vi.dynamicImportSettled();
     vi.unstubAllGlobals();
   }
 });

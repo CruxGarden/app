@@ -38,7 +38,10 @@ export function __resetSecretsBackendForTests(): void {
 }
 
 export async function getSecret(key: string): Promise<string | null> {
-  const api = await backend();
+  // Native get checks the local entry before touching safeStorage. Probing
+  // availability first can open a blocking macOS Keychain prompt even when
+  // this installation has never saved a key.
+  const api = electronSecrets();
   const local = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
 
   if (!api) return local;
@@ -47,12 +50,12 @@ export async function getSecret(key: string): Promise<string | null> {
   if (stored) return stored;
 
   // One-time migration: lift a pre-safeStorage localStorage value
-  if (local) {
+  if (local && (await backend())) {
     await api.set(key, local);
     localStorage.removeItem(key);
     return local;
   }
-  return null;
+  return local;
 }
 
 export async function setSecret(key: string, value: string): Promise<void> {
@@ -67,7 +70,8 @@ export async function setSecret(key: string, value: string): Promise<void> {
 }
 
 export async function deleteSecret(key: string): Promise<void> {
-  const api = await backend();
+  // Removing ciphertext from disk does not need encryption or decryption.
+  const api = electronSecrets();
   if (api) await api.delete(key);
   if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
 }

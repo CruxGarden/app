@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getSecret, setSecret, deleteSecret, __resetSecretsBackendForTests } from './secrets';
 
 /** In-memory fake of the Electron safeStorage IPC bridge. */
@@ -43,6 +43,56 @@ describe('secrets service', () => {
   });
 
   describe('desktop (safeStorage bridge available)', () => {
+    it('reads a missing key without probing Keychain availability', async () => {
+      const fake = fakeElectronSecrets();
+      const available = vi.fn(async () => false);
+      const get = vi.fn(fake.api.get);
+      installWindow({ ...fake.api, available, get });
+
+      expect(await getSecret('missing')).toBeNull();
+      expect(get).toHaveBeenCalledWith('missing');
+      expect(available).not.toHaveBeenCalled();
+    });
+
+    it('prefers the native value without an extra availability probe', async () => {
+      const fake = fakeElectronSecrets();
+      fake.store.set('key', 'encrypted-value');
+      localStorage.setItem('key', 'stale-value');
+      const available = vi.fn(async () => false);
+      installWindow({ ...fake.api, available });
+
+      expect(await getSecret('key')).toBe('encrypted-value');
+      expect(available).not.toHaveBeenCalled();
+    });
+
+    it('deletes native and legacy values without requiring Keychain access', async () => {
+      const fake = fakeElectronSecrets();
+      fake.store.set('key', 'encrypted-value');
+      localStorage.setItem('key', 'legacy-value');
+      const available = vi.fn(async () => false);
+      installWindow({ ...fake.api, available });
+
+      await deleteSecret('key');
+      expect(fake.store.has('key')).toBe(false);
+      expect(localStorage.getItem('key')).toBeNull();
+      expect(available).not.toHaveBeenCalled();
+    });
+
+    it('preserves a legacy value if encrypted migration fails', async () => {
+      const fake = fakeElectronSecrets();
+      installWindow({
+        ...fake.api,
+        set: async () => {
+          throw new Error('Keychain locked');
+        },
+      });
+      localStorage.setItem('key', 'legacy-value');
+
+      await expect(getSecret('key')).rejects.toThrow('Keychain locked');
+      expect(localStorage.getItem('key')).toBe('legacy-value');
+      expect(fake.store.has('key')).toBe(false);
+    });
+
     it('stores via safeStorage, never localStorage', async () => {
       const fake = fakeElectronSecrets();
       installWindow(fake.api);
