@@ -43,7 +43,7 @@ test('wordmark, titles, content and code keep their fonts across Moods', async (
     });
     await createCrux(page, 'Type study');
     const pane = page.locator('.pane-toolbar-label').filter({ hasText: 'Collaboration' });
-    await expect(pane).toHaveCSS('font-family', /Outfit/);
+    await expect(pane).toHaveCSS('font-family', /Inter/);
     await expect(pane).toHaveCSS('font-size', '13px');
     await expect(page.getByPlaceholder('Send a message...')).toHaveCSS('font-family', /Inter/);
     await expect(page.locator('.font-mono').filter({ visible: true }).first()).toHaveCSS(
@@ -52,20 +52,18 @@ test('wordmark, titles, content and code keep their fonts across Moods', async (
     );
     await page.getByRole('button', { name: 'Mood', exact: true }).click();
     const title = page.getByRole('heading', { name: 'Mood', exact: true });
-    await expect(title).toHaveCSS('font-family', /Outfit/);
+    await expect(title).toHaveCSS('font-family', /Inter/);
     await expect(page.locator('html')).toHaveCSS('--plasma-form-in', 'off');
     await expect(page.getByTestId('material-switch-titles')).toHaveCount(0);
     for (const mood of ['plasma-fjord', 'fjord']) {
       await wearMaterial(page, mood);
-      await expect(pane).toHaveCSS('font-family', /Outfit/);
-      await expect(title).toHaveCSS('font-family', /Outfit/);
+      await expect(pane).toHaveCSS('font-family', /Inter/);
+      await expect(title).toHaveCSS('font-family', /Inter/);
       await expect(page.locator('body')).toHaveCSS('font-family', /Inter/);
     }
     await page.evaluate(() => document.fonts.ready);
     const loaded = await page.evaluate(() => [...document.fonts].map((font) => font.family));
-    expect(new Set(loaded)).toEqual(
-      new Set(['Outfit', 'Inter', 'JetBrains Mono', 'Cormorant Garamond']),
-    );
+    expect(new Set(loaded)).toEqual(new Set(['Inter', 'JetBrains Mono', 'Cormorant Garamond']));
     await expect(page.locator('html')).toHaveAttribute('data-observed-forming', '0');
     await page.screenshot({ path: 'e2e/.results/mood-title-font.png' });
   } finally {

@@ -40,7 +40,6 @@ export async function setAppearanceChoice(id: string, value: unknown) {
 }
 const fontCache = new Map<string, Promise<ArrayBuffer>>();
 const bundled = [
-  ['Outfit', '/fonts/Outfit-Regular.woff2'],
   ['Inter', '/fonts/Inter-Latin.woff2'],
   ['JetBrains Mono', '/fonts/JetBrainsMono-Regular.woff2'],
   ['Cormorant Garamond', '/fonts/CormorantGaramond-Latin.woff2'],

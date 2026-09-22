@@ -110,7 +110,7 @@ describe('bundled Moods (the backgrounds set, the soft suite and the Plasma fami
       );
     expect(pick('radius').size).toBeGreaterThanOrEqual(5);
     expect(pick('paneGap').size).toBeGreaterThanOrEqual(4);
-    expect([...pick('fontDisplay')]).toEqual(["'Outfit', sans-serif"]);
+    expect([...pick('fontDisplay')]).toEqual(["'Inter', sans-serif"]);
     expect(pick('motionEnterDialog').size).toBeGreaterThanOrEqual(4);
     expect(pick('motionAmbient').size).toBeGreaterThanOrEqual(3);
     expect(pick('paneHeaderShape').size).toBeGreaterThanOrEqual(3);

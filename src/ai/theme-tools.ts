@@ -331,7 +331,7 @@ function toolSetTheme(input: Record<string, unknown>): string {
     if (!(k in GARDEN_DARK)) unknown.push(k);
     else if (!reset && k in APP_TYPOGRAPHY && v !== (APP_TYPOGRAPHY as Record<string, string>)[k])
       invalid.push(
-        `${k} is fixed by the app typography: Outfit for headings, Inter for content, JetBrains Mono for code, Garamond for the wordmark`,
+        `${k} is fixed by the app typography: Inter for headings and content, JetBrains Mono for code, Garamond for the wordmark`,
       );
     else if (typeof v === 'string' && v.trim()) {
       const choices = tokenChoices(k);
