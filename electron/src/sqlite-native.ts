@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
+const { randomUUID } = require('crypto');
 
 // Use the same schema as the web app's WASM SQLite
 function loadSchema(): string {
@@ -124,7 +125,20 @@ export class SqliteNative {
   }
 
   blobWrite(fingerprint: string, data: Uint8Array): void {
-    fs.writeFileSync(this.blobPath(fingerprint), Buffer.from(data));
+    const destination = this.blobPath(fingerprint);
+    const staging = path.join(this.blobDir, `.${fingerprint}.${randomUUID()}.tmp`);
+    try {
+      // Never truncate a committed blob: snapshots and other Cruxes may share
+      // it. Flush a complete sibling file before the atomic rename commits it.
+      fs.writeFileSync(staging, Buffer.from(data), { flag: 'wx', mode: 0o600, flush: true });
+      fs.renameSync(staging, destination);
+    } finally {
+      try {
+        fs.rmSync(staging, { force: true });
+      } catch {
+        // An unreferenced temporary file is safer than masking a write failure.
+      }
+    }
   }
 
   blobRead(fingerprint: string): Uint8Array {
