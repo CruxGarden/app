@@ -304,6 +304,8 @@ export default function MoodBrowser() {
       if (!pkg) return say('That file is not a Mood.');
       installMood(pkg);
       say(`Imported "${pkg.name}". Apply it when you like.`);
+    } catch {
+      say('Could not import this Mood. The file may be damaged or incomplete. Try another copy.');
     } finally {
       setBusy(null);
     }

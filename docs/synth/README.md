@@ -36,3 +36,11 @@ The exact editable [patch](liminal-patch.json) and [measurements](liminal-measur
 Daniel listened to this candidate and said “yeah, I like it.” He asked about live mangling: the existing controls reshape the playing instrument; destructive distortion, pitch warping, stutters and feedback are not implemented. This is acceptance of the example’s direction, not full sound-library or release acceptance.
 
 The 2026-09-22 WWW checkpoint rebuilt the ad-hoc macOS arm64 package with this improved instrument. Packaged Synth actual-audio/UI/MCP/Mood/restart passes (15.3 s), in the same four-test group as supporting panels, saved layouts and WWW (45.1 s). This supersedes the older-package limitation above; it does not imply notarization or release acceptance.
+
+## Shared Mood acceptance — 2026-09-22
+
+The packaged UI exported a Mood containing the custom sound preset “Between rooms” (Dusk, pace 43, Space 91%). A separate clean profile imported and applied the actual downloaded `.cruxmood` file, restored the same patch and named preset after restart, and produced live analyser output after explicit Play. Import itself did not start playback. No network publishing or personal garden was involved.
+
+A deliberately damaged ZIP reproduced a silent import failure against the preceding package: no visible status appeared. Mood import now catches the failure and shows a recoverable error. The packaged regression verifies that the current patch is unchanged, Import is enabled again, and replacing the file with a valid package allows successful retry/application. This is invalid-ZIP and preset-sharing coverage, not exhaustive archive/resource-limit acceptance.
+
+App `npm run verify`: 1,403 tests/236 files, bundled-tool gates and production build pass; Electron verify passes. A fresh ad-hoc macOS arm64 package passes three checks together in 39.0 s: existing live Synth/UI/outside-agent/Mood/restart (16.3 s), clean-profile sharing/restart/audio (16.9 s), damaged import/retry (5.2 s). Reproduce with `CRUX_PACKAGED_APP='<app executable>' CRUX_E2E_KEEP=1 npm run test:e2e -- e2e/synth-mood-sharing.spec.ts e2e/crux-synth.spec.ts` from `electron/`. Logs and traces: `/private/tmp/crux-hardening-20260922/synth-share-{before,verify,electron,package,packaged}*`. No synthesis graph change; the listening examples above remain current.
