@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import JSZip from 'jszip';
 import { initServices, type Services } from './index';
 import { exportCrux, importCrux } from './crux-io';
 import { hashContent } from './sqlite/helpers';
+import { getSqliteClient } from './sqlite/client';
 
 /**
  * .crux format CONFORMANCE tests — verifies the archive against the promises
@@ -185,6 +186,77 @@ describe('.crux format conformance (CRUX-FORMAT.md)', () => {
   });
 
   // ── Graceful fallbacks ────────────────────────────────────────────────────
+
+  it.each(['clone', 'replace'] as const)(
+    'rejects corrupt content before %s can poison shared blobs',
+    async (mode) => {
+      const crux = await makeWorkspace();
+      const files = await svc.artifact.findByResource('crux', crux.id);
+      const file = files.find((item) => item.meta?.path === 'index.html')!;
+      const zip = await zipOf((await exportCrux({ cruxId: crux.id })).blob);
+      zip.file(`artifacts/${file.fingerprint}`, 'Damaged bytes under a valid fingerprint');
+
+      const error = await importCrux({ data: await repack(zip), mode }).then(
+        () => null,
+        (err: unknown) => err,
+      );
+      expect
+        .soft(new TextDecoder().decode(await getSqliteClient().blobRead(file.fingerprint!)))
+        .toBe('<h1>Hello</h1>');
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toMatch(/integrity/i);
+      expect((await svc.crux.findById(crux.id)).title).toBe('Format Crux');
+    },
+  );
+
+  it('rejects a missing referenced blob before replacing existing work', async () => {
+    const crux = await makeWorkspace();
+    const file = (await svc.artifact.findByResource('crux', crux.id))[0]!;
+    const zip = await zipOf((await exportCrux({ cruxId: crux.id })).blob);
+    zip.remove(`artifacts/${file.fingerprint}`);
+    await expect
+      .soft(importCrux({ data: await repack(zip), mode: 'replace' }))
+      .rejects.toThrow(/missing.*blob/i);
+    expect((await svc.artifact.findByResource('crux', crux.id)).map((item) => item.id)).toContain(
+      file.id,
+    );
+  });
+
+  it('fails a replacement before deleting work when blob persistence fails', async () => {
+    const crux = await makeWorkspace();
+    const file = (await svc.artifact.findByResource('crux', crux.id))[0]!;
+    const archive = await exportCrux({ cruxId: crux.id });
+    const write = vi
+      .spyOn(getSqliteClient(), 'blobWrite')
+      .mockRejectedValueOnce(new Error('Disk full'));
+    try {
+      await expect
+        .soft(importCrux({ data: archive.blob, mode: 'replace' }))
+        .rejects.toThrow('Disk full');
+      expect((await svc.artifact.findByResource('crux', crux.id)).map((item) => item.id)).toContain(
+        file.id,
+      );
+    } finally {
+      write.mockRestore();
+    }
+  });
+
+  it('refuses replacement when the original cannot be completely backed up', async () => {
+    const crux = await makeWorkspace();
+    const file = (await svc.artifact.findByResource('crux', crux.id))[0]!;
+    const archive = await exportCrux({ cruxId: crux.id });
+    const read = vi
+      .spyOn(getSqliteClient(), 'blobRead')
+      .mockRejectedValueOnce(new Error('Disk read failed'));
+    try {
+      await expect(importCrux({ data: archive.blob, mode: 'replace' })).rejects.toThrow(/backup/i);
+      expect((await svc.artifact.findByResource('crux', crux.id)).map((item) => item.id)).toContain(
+        file.id,
+      );
+    } finally {
+      read.mockRestore();
+    }
+  });
 
   it('missing dimensions.json: snapshots still restore with sequential growth dimensions', async () => {
     const crux = await makeWorkspace();

@@ -573,7 +573,9 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
   const allFingerprints = new Set<string>();
   for (const v of versionManifests) {
     for (const info of Object.values(v.artifacts || {}) as { fingerprint: string }[]) {
-      if (info.fingerprint) allFingerprints.add(info.fingerprint);
+      if (!info || typeof info.fingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(info.fingerprint))
+        throw new Error('Invalid Artifact fingerprint in .crux archive.');
+      allFingerprints.add(info.fingerprint);
     }
   }
 
@@ -582,15 +584,33 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
   let done = 0;
   onProgress?.(done, total);
 
+  // Validate each blob before it can enter the shared content-addressed store.
+  // Persist before replacing metadata: a missing/corrupt blob or disk failure
+  // must leave the existing Crux intact. Earlier verified blobs are harmless
+  // if a later entry fails; keep memory bounded to one expanded file at a time.
+  for (const fp of allFingerprints) {
+    const name = `artifacts/${fp}`;
+    const entry = zip.file(name);
+    if (!entry) throw new Error(`Missing Artifact blob in .crux archive: ${fp}`);
+    if (entry.unsafeOriginalName && entry.unsafeOriginalName !== name)
+      throw new Error('Invalid Artifact blob path in .crux archive.');
+    const bytes = await entry.async('uint8array');
+    if ((await hashContent(bytes)) !== fp)
+      throw new Error('Artifact blob integrity check failed in .crux archive.');
+    await db.blobWrite(fp, bytes);
+    done++;
+    onProgress?.(done, total);
+  }
+
   // ── Safety backup for replace mode ─────────────────
   let replaceBackup: Blob | null = null;
   if (mode === 'replace' && cruxData.id) {
-    try {
-      await cruxService.findById(cruxData.id);
+    const existing = await db.get('SELECT id FROM cruxes WHERE id = ?', [cruxData.id]);
+    if (existing) {
       const backupResult = await exportCrux({ cruxId: cruxData.id, runtime: 'included' });
+      if (backupResult.failed.length)
+        throw new Error('Cannot replace this Crux: its safety backup is incomplete.');
       replaceBackup = backupResult.blob;
-    } catch {
-      // Can't back up — proceed without safety net
     }
   }
 
@@ -642,21 +662,6 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
       };
       const { sql, params } = buildInsert('artifacts', record);
       return { id: record.id, sql, params };
-    }
-
-    // ── Write all artifact blobs to OPFS first ───────
-    for (const fp of allFingerprints) {
-      try {
-        const entry = zip.file(`artifacts/${fp}`);
-        if (entry) {
-          const ab = await entry.async('arraybuffer');
-          await db.blobWrite(fp, new Uint8Array(ab));
-        }
-      } catch (err) {
-        console.warn(`Failed to write blob: ${fp}`, err);
-      }
-      done++;
-      onProgress?.(done, total);
     }
 
     // ── Create workspace crux ────────────────────────
