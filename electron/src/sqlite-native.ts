@@ -1,3 +1,4 @@
+import type { NativeStorage } from './native-storage';
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
@@ -28,7 +29,7 @@ function loadSchema(): string {
  * Runs in Electron's main process. Matches the ISqliteClient interface
  * from the web app so the renderer can swap seamlessly.
  */
-export class SqliteNative {
+export class SqliteNative implements NativeStorage {
   private db: any;
   private blobDir: string;
 

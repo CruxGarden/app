@@ -1,3 +1,4 @@
+import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
 const {
@@ -103,7 +104,7 @@ ipcMain.on('workspace:close-response', (event: any, approved: boolean) => {
     app.quit();
   }
 });
-let db: any = null;
+let db: NativeStorage;
 let watcher: any = null;
 let previewServer: any = null;
 let devServers: any = null;
@@ -400,7 +401,7 @@ function createWindow() {
 
 // ── SQLite IPC handlers ──────────────────────────────────────
 
-function setupIpc() {
+async function setupIpc() {
   registerBrowserPanel(() => mainWindow);
   db = new SqliteNative(getDbPath(), getBlobDir());
 
@@ -547,7 +548,9 @@ function setupIpc() {
   // Watch every registered Project Folder from the start — external edits
   // count whether or not the crux is open in the app.
   try {
-    const rows = db.all("SELECT meta FROM cruxes WHERE type = 'workspace'") || [];
+    const rows = await db.all<{ meta: string | null }>(
+      "SELECT meta FROM cruxes WHERE type = 'workspace'",
+    );
     let watched = 0;
     for (const row of rows) {
       try {
@@ -560,8 +563,9 @@ function setupIpc() {
         /* bad meta row — skip */
       }
     }
-    for (const copy of db.all("SELECT project_folder FROM working_copies WHERE phase = 'ready'") ||
-      []) {
+    for (const copy of await db.all<{ project_folder: string | null }>(
+      "SELECT project_folder FROM working_copies WHERE phase = 'ready'",
+    )) {
       if (copy.project_folder) watcher.watch(copy.project_folder);
     }
     debugLog(`Watcher bootstrap: watching ${watched} project folder(s)`);
@@ -682,27 +686,7 @@ function setupIpc() {
   // ── Agent Host (ADR 0013): one MCP server per switched-on crux ──────
   // Servers live here; every tool call is forwarded to the renderer, which
   // runs the same executor the built-in collaborator uses.
-  const lookupCrux = (cruxId: string) => {
-    const row = db.get('SELECT slug, title, meta FROM cruxes WHERE id = ? AND deleted IS NULL', [
-      cruxId,
-    ]);
-    if (!row) {
-      const copy = db.get(
-        "SELECT w.project_folder, w.title FROM working_copies w JOIN cruxes c ON c.id = w.crux_id WHERE w.id = ? AND w.phase = 'ready' AND w.role = 'task' AND c.deleted IS NULL",
-        [cruxId],
-      );
-      return copy?.project_folder
-        ? { slug: `task-${cruxId}`, title: copy.title, folder: copy.project_folder }
-        : null;
-    }
-    try {
-      const meta = JSON.parse(row.meta || '{}');
-      if (typeof meta.projectFolder !== 'string') return null;
-      return { slug: row.slug, title: row.title || '', folder: meta.projectFolder };
-    } catch {
-      return null;
-    }
-  };
+  const lookupCrux = (cruxId: string) => lookupProjectCrux(db, cruxId);
   // ── Native tools (MAKING-THE-AD-PARITY gap 13) ──────────────────────
   // Run a media binary inside a crux's Project Folder: ffmpeg, ffprobe or
   // ImageMagick, each resolved per platform (media-binaries.ts). The working
@@ -735,7 +719,7 @@ function setupIpc() {
     ) => {
       const { mediaToolPath } = require('./media-binaries') as typeof import('./media-binaries');
       const { printHtmlToPdf } = require('./print-pdf') as typeof import('./print-pdf');
-      const crux = lookupCrux(opts.cruxId);
+      const crux = await lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       const folder = path.resolve(crux.folder);
       const source = String(opts.path ?? '');
@@ -900,7 +884,7 @@ function setupIpc() {
 
   ipcMain.handle('containers:inspect', async (_e: any, opts: { cruxId: string; file?: string }) => {
     const { inspectCompose } = require('./containers') as typeof import('./containers');
-    const crux = lookupCrux(opts.cruxId);
+    const crux = await lookupCrux(opts.cruxId);
     if (!crux) throw new Error('This crux has no Project Folder');
     return inspectCompose(path.resolve(crux.folder), opts.file);
   });
@@ -910,7 +894,7 @@ function setupIpc() {
     async (_e: any, opts: { cruxId: string; profiles?: string[] }) => {
       const { composeConfig, portsInUse, readOverride } =
         require('./containers') as typeof import('./containers');
-      const crux = lookupCrux(opts.cruxId);
+      const crux = await lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       const folder = path.resolve(crux.folder);
       const resolution = await composeConfig(folder, opts.profiles ?? []);
@@ -931,7 +915,7 @@ function setupIpc() {
   /** This machine's own files for a Crux, which never travel with it. */
   ipcMain.handle('containers:local', async (_e: any, opts: { cruxId: string; file: string }) => {
     const { readLocal } = require('./containers') as typeof import('./containers');
-    const crux = lookupCrux(opts.cruxId);
+    const crux = await lookupCrux(opts.cruxId);
     if (!crux) throw new Error('This crux has no Project Folder');
     return readLocal(path.resolve(crux.folder), String(opts.file ?? ''));
   });
@@ -940,7 +924,7 @@ function setupIpc() {
     'containers:write-local',
     async (_e: any, opts: { cruxId: string; file: string; text: string }) => {
       const { writeLocal } = require('./containers') as typeof import('./containers');
-      const crux = lookupCrux(opts.cruxId);
+      const crux = await lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       writeLocal(path.resolve(crux.folder), String(opts.file ?? ''), String(opts.text ?? ''));
       return true;
@@ -951,7 +935,7 @@ function setupIpc() {
     'containers:override',
     async (_e: any, opts: { cruxId: string; wishes: unknown }) => {
       const { writeOverride } = require('./containers') as typeof import('./containers');
-      const crux = lookupCrux(opts.cruxId);
+      const crux = await lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       const wishes = Array.isArray(opts.wishes)
         ? (opts.wishes as { service?: unknown }[]).filter(
@@ -996,7 +980,7 @@ function setupIpc() {
         require('./containers') as typeof import('./containers');
       const verb = opts?.verb as (typeof COMPOSE_VERBS)[number];
       if (!COMPOSE_VERBS.includes(verb)) throw new Error(`Not allowed: ${opts?.verb}`);
-      const crux = lookupCrux(opts.cruxId);
+      const crux = await lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       return runCompose({ ...opts, verb, folder: path.resolve(crux.folder) }, (line) => {
         if (!e.sender.isDestroyed())
@@ -1037,7 +1021,7 @@ function setupIpc() {
                 ? 'Typst is not on this machine. Install it (brew install typst, or typst.app) and look again.'
                 : `${tool} is not available on this machine`,
         );
-      const crux = lookupCrux(opts.cruxId);
+      const crux = await lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       const folder = path.resolve(crux.folder);
       const args = (opts.args ?? []).map((a) => String(a));
@@ -1161,7 +1145,7 @@ function setupIpc() {
         height?: number;
       },
     ) => {
-      const crux = lookupCrux(opts.cruxId);
+      const crux = await lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
       const folder = path.resolve(crux.folder);
       const sub = (opts.subdir ?? 'frames').replace(/\\/g, '/');
@@ -1258,14 +1242,16 @@ function setupIpc() {
   ipcMain.handle('agent:status', (_e: any, force: boolean, provider?: string) =>
     agentProvider.status(force, provider),
   );
-  ipcMain.handle('agent:start', (_e: any, opts: any) => {
+  ipcMain.handle('agent:start', async (_e: any, opts: any) => {
     // The folder must be one of ours: the SDK gets the resolved path, nothing else.
     const cwd = projects.resolveKnownFolder(opts?.cwd);
-    const owner = lookupCrux(opts?.cruxId);
+    const owner = await lookupCrux(opts?.cruxId);
     if (!owner || projects.resolveKnownFolder(owner.folder) !== cwd)
       throw new Error('The agent directory does not match its open Working Copy.');
     if (
-      db.get("SELECT id FROM task_merges WHERE crux_id = ? AND phase = 'applying'", [opts.cruxId])
+      await db.get("SELECT id FROM task_merges WHERE crux_id = ? AND phase = 'applying'", [
+        opts.cruxId,
+      ])
     )
       throw new Error('Recover the pending merge before starting an agent in Main.');
     return agentProvider.start({ ...opts, cwd });
@@ -1278,7 +1264,9 @@ function setupIpc() {
   // Cruxes switched on in an earlier run come back with their token intact,
   // so a client configured last week still connects.
   try {
-    const rows = db.all("SELECT id, meta FROM cruxes WHERE type = 'workspace'") || [];
+    const rows = await db.all<{ id: string; meta: string | null }>(
+      "SELECT id, meta FROM cruxes WHERE type = 'workspace'",
+    );
     for (const row of rows) {
       try {
         const meta = JSON.parse(row.meta || '{}');
@@ -1622,9 +1610,10 @@ protocol.registerSchemesAsPrivileged([
 
 // ── App lifecycle ────────────────────────────────────────────
 
-app.whenReady().then(() => {
+const startup: Promise<void> = app.whenReady().then(async () => {
   registerAppProtocol();
-  setupIpc();
+  await setupIpc();
+  if (quitting) return;
 
   // Integration self-test: CRUX_SELFTEST=1 npx electron .  (see selftest.ts)
   if (process.env.CRUX_SELFTEST) {
@@ -1648,6 +1637,10 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
     else if (mainWindow && !mainWindow.isVisible()) showMainWindow();
   });
+});
+void startup.catch((error: unknown) => {
+  debugLog(`Could not start the desktop host: ${String(error)}`);
+  app.quit();
 });
 
 // On macOS the app stays alive with no windows (dock icon reopens one), so the
@@ -1673,6 +1666,9 @@ app.on('before-quit', (event: any) => {
   event.preventDefault();
   if (teardown) return;
   teardown = (async () => {
+    // Startup may be awaiting the API. Drain it before collecting resources
+    // so a late bootstrap cannot create a watcher or server after teardown.
+    await startup.catch(() => {});
     await agentHost?.stopAll();
     await agentProvider?.stopAll();
     await devServers?.stopAll();
@@ -1680,7 +1676,7 @@ app.on('before-quit', (event: any) => {
     await (require('./project-runner') as typeof import('./project-runner')).stopAllProjects();
     await previewServer?.stopAll();
     await watcher?.closeAll();
-    db?.close();
+    await db?.close();
     teardownDone = true;
     app.quit();
   })().catch((error: unknown) => {

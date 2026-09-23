@@ -137,7 +137,7 @@ export interface AgentHostDeps {
   /** Profile directory for the separately granted whole-garden host. */
   gardenHostFolder?: string;
   /** Look a crux up by id: slug, title and Project Folder (null when unknown or folderless). */
-  lookupCrux(cruxId: string): CruxRow | null;
+  lookupCrux(cruxId: string): CruxRow | null | Promise<CruxRow | null>;
   /** Validate a folder sits under a known garden root; returns the resolved path. */
   resolveKnownFolder(folder: string): string;
   /** Forward a request to the renderer; false when there is no window to ask. */
@@ -180,10 +180,22 @@ const LIST_TIMEOUT_MS = 30_000;
 export class AgentHost {
   private hosts = new Map<string, RunningHost>(); // cruxId -> host
   private pending = new Map<string, Pending>();
+  private lifecycle: Promise<void> = Promise.resolve();
+  private closing: Promise<void> | null = null;
 
   constructor(private deps: AgentHostDeps) {}
 
   // ── Lifecycle ─────────────────────────────────────────────────────────
+
+  private changeHost<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.closing) return Promise.reject(new Error('Crux Garden is shutting down'));
+    const result = this.lifecycle.then(operation);
+    this.lifecycle = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
 
   list(): AgentHostServer[] {
     return [...this.hosts.values()].map((h) => this.describe(h));
@@ -196,15 +208,19 @@ export class AgentHost {
 
   /** Switch a crux's server on with a FRESH token (Settings toggle / Regenerate). */
   async enable(cruxId: string): Promise<AgentHostServer> {
-    return this.start(cruxId, { freshToken: true });
+    return this.changeHost(() => this.start(cruxId, { freshToken: true }));
   }
 
   /** Start a crux that was enabled in an earlier run — keeps its token so saved client configs still work. */
   async resume(cruxId: string): Promise<AgentHostServer> {
-    return this.start(cruxId, { freshToken: false });
+    return this.changeHost(() => this.start(cruxId, { freshToken: false }));
   }
 
   async disable(cruxId: string): Promise<void> {
+    return this.changeHost(() => this.disableHost(cruxId));
+  }
+
+  private async disableHost(cruxId: string): Promise<void> {
     const host = this.hosts.get(cruxId);
     if (!host) return;
     this.hosts.delete(cruxId);
@@ -219,14 +235,20 @@ export class AgentHost {
     this.deps.onChanged(this.list());
   }
 
-  async stopAll(): Promise<void> {
-    const all = [...this.hosts.values()];
-    this.hosts.clear();
-    await Promise.all(all.map((h) => this.closeHost(h)));
-    for (const [id, p] of this.pending) {
-      this.pending.delete(id);
-      p.reject(new Error('Crux Garden is shutting down'));
-    }
+  stopAll(): Promise<void> {
+    // Stop admission now, then drain accepted starts/disables before closing.
+    // A delayed API lookup must never resurrect a host after shutdown.
+    this.closing ??= this.lifecycle.then(async () => {
+      const all = [...this.hosts.values()];
+      this.hosts.clear();
+      await Promise.all(all.map((h) => this.closeHost(h)));
+      for (const [id, p] of this.pending) {
+        this.pending.delete(id);
+        if (p.timer) clearTimeout(p.timer);
+        p.reject(new Error('Crux Garden is shutting down'));
+      }
+    });
+    return this.closing;
   }
 
   /** The renderer answered a forwarded request. */
@@ -249,7 +271,7 @@ export class AgentHost {
             title: 'Whole garden',
             folder: this.deps.gardenHostFolder,
           }
-        : this.deps.lookupCrux(cruxId);
+        : await this.deps.lookupCrux(cruxId);
     if (!row) throw new Error('This crux has no Project Folder to host');
     const folder = garden ? row.folder : this.deps.resolveKnownFolder(row.folder);
 
