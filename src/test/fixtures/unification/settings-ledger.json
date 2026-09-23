@@ -1,0 +1,594 @@
+{
+  "version": 1,
+  "purpose": "P0 preservation ledger, not runtime migration rules. Proposed ownership does not settle unresolved product policy.",
+  "entries": [
+    {
+      "key": "cruxgarden:localAuthorId",
+      "group": "identity-and-connection",
+      "target": "installation/account",
+      "preservation": "Retain local author/home identity and connection bindings; never infer containment or export credentials.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:local:authorId",
+      "group": "identity-and-connection",
+      "target": "installation/account",
+      "preservation": "Retain local author/home identity and connection bindings; never infer containment or export credentials.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:local:homeId",
+      "group": "identity-and-connection",
+      "target": "installation/account",
+      "preservation": "Retain local author/home identity and connection bindings; never infer containment or export credentials.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:backend",
+      "group": "identity-and-connection",
+      "target": "installation/account",
+      "preservation": "Retain local author/home identity and connection bindings; never infer containment or export credentials.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:apiUrl",
+      "group": "identity-and-connection",
+      "target": "installation/account",
+      "preservation": "Retain local author/home identity and connection bindings; never infer containment or export credentials.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:connectedAccountId",
+      "group": "identity-and-connection",
+      "target": "installation/account",
+      "preservation": "Retain local author/home identity and connection bindings; never infer containment or export credentials.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:accessToken",
+      "group": "secrets",
+      "target": "OS secret store / browser credential storage",
+      "preservation": "Never transfer in selected Garden/Crux content; keep legacy secret migration/exclusion.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:refreshToken",
+      "group": "secrets",
+      "target": "OS secret store / browser credential storage",
+      "preservation": "Never transfer in selected Garden/Crux content; keep legacy secret migration/exclusion.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:apiKey:anthropic",
+      "group": "secrets",
+      "target": "OS secret store / browser credential storage",
+      "preservation": "Never transfer in selected Garden/Crux content; keep legacy secret migration/exclusion.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:anthropicApiKey",
+      "group": "secrets",
+      "target": "OS secret store / browser credential storage",
+      "preservation": "Never transfer in selected Garden/Crux content; keep legacy secret migration/exclusion.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:theme",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:tint",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:backgroundType",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:backgroundImage",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:backgroundBlockSize",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodPresetDark",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodPresetLight",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:activeMoodId",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodThemeDark",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodThemeLight",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodUserPresets",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:synthPatch",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:synthPresetBanks",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:soundTrack",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:soundEnabled",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodPackages",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:wornMoodId",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodAssets",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodCover",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:resonanceCues",
+      "group": "mood-experience",
+      "target": "Garden selection/overrides + reusable Mood content",
+      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:resonanceVolume",
+      "group": "playback-and-accessibility",
+      "target": "device preference / Garden experience boundary to resolve",
+      "preservation": "Preserve current values without enabling sound on import; decide portable defaults separately from device consent.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:resonanceOptIn",
+      "group": "playback-and-accessibility",
+      "target": "device preference / Garden experience boundary to resolve",
+      "preservation": "Preserve current values without enabling sound on import; decide portable defaults separately from device consent.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:resonancePlaying",
+      "group": "playback-and-accessibility",
+      "target": "device preference / Garden experience boundary to resolve",
+      "preservation": "Preserve current values without enabling sound on import; decide portable defaults separately from device consent.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodDockState",
+      "group": "playback-and-accessibility",
+      "target": "device preference / Garden experience boundary to resolve",
+      "preservation": "Preserve current values without enabling sound on import; decide portable defaults separately from device consent.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:motionIntensity",
+      "group": "playback-and-accessibility",
+      "target": "device preference / Garden experience boundary to resolve",
+      "preservation": "Preserve current values without enabling sound on import; decide portable defaults separately from device consent.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:liquidGlass",
+      "group": "playback-and-accessibility",
+      "target": "device preference / Garden experience boundary to resolve",
+      "preservation": "Preserve current values without enabling sound on import; decide portable defaults separately from device consent.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:backupOnShare",
+      "group": "backup",
+      "target": "connection-bound operational state",
+      "preservation": "Separate full recovery from selected Garden sharing; capture account/destination and retain pause/last-run state.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:autoBackup",
+      "group": "backup",
+      "target": "connection-bound operational state",
+      "preservation": "Separate full recovery from selected Garden sharing; capture account/destination and retain pause/last-run state.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:autoBackupPaused",
+      "group": "backup",
+      "target": "connection-bound operational state",
+      "preservation": "Separate full recovery from selected Garden sharing; capture account/destination and retain pause/last-run state.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:lastGardenBackupAt",
+      "group": "backup",
+      "target": "connection-bound operational state",
+      "preservation": "Separate full recovery from selected Garden sharing; capture account/destination and retain pause/last-run state.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:persona",
+      "group": "collaboration",
+      "target": "Garden-owned state; transcript ownership explicit",
+      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:memory",
+      "group": "collaboration",
+      "target": "Garden-owned state; transcript ownership explicit",
+      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:aiEnabled",
+      "group": "collaboration",
+      "target": "Garden-owned state; transcript ownership explicit",
+      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:defaultModel",
+      "group": "collaboration",
+      "target": "Garden-owned state; transcript ownership explicit",
+      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:keeper-model",
+      "group": "collaboration",
+      "target": "Garden-owned state; transcript ownership explicit",
+      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:keeper-conversations",
+      "group": "collaboration",
+      "target": "Garden-owned state; transcript ownership explicit",
+      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:layout:global",
+      "group": "layouts",
+      "target": "reusable layout definition + scoped workspace presentation",
+      "preservation": "Migrate old PaneType trees to explicit Garden/Crux panel bindings; pin scope unresolved.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:workspaceLayouts",
+      "group": "layouts",
+      "target": "reusable layout definition + scoped workspace presentation",
+      "preservation": "Migrate old PaneType trees to explicit Garden/Crux panel bindings; pin scope unresolved.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:installedTools",
+      "group": "installed-tools",
+      "target": "installation dependency inventory + explicit Garden associations",
+      "preservation": "Preserve package fingerprints/runtime references; installation is not Garden membership.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:agentMetrics",
+      "group": "operational",
+      "target": "installation/device operational state",
+      "preservation": "Retain metrics, output path, docked mode and onboarding flags; exclude from selected portable content unless deliberately chosen.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:agentMetricsCapture",
+      "group": "operational",
+      "target": "installation/device operational state",
+      "preservation": "Retain metrics, output path, docked mode and onboarding flags; exclude from selected portable content unless deliberately chosen.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:agentMetricsPath",
+      "group": "operational",
+      "target": "installation/device operational state",
+      "preservation": "Retain metrics, output path, docked mode and onboarding flags; exclude from selected portable content unless deliberately chosen.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:dockedMode",
+      "group": "operational",
+      "target": "installation/device operational state",
+      "preservation": "Retain metrics, output path, docked mode and onboarding flags; exclude from selected portable content unless deliberately chosen.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:tutorialSeeded",
+      "group": "operational",
+      "target": "installation/device operational state",
+      "preservation": "Retain metrics, output path, docked mode and onboarding flags; exclude from selected portable content unless deliberately chosen.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:apiKeyBannerDismissed",
+      "group": "operational",
+      "target": "installation/device operational state",
+      "preservation": "Retain metrics, output path, docked mode and onboarding flags; exclude from selected portable content unless deliberately chosen.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:publicMoodId",
+      "group": "public-visitor",
+      "target": "visitor preference",
+      "preservation": "Keep independent of private Garden ownership and publication selection.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:ui",
+      "group": "legacy-readers",
+      "target": "legacy migration input",
+      "preservation": "Preserve compatibility adapters until data is migrated and verified; no silent deletion.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodPreset",
+      "group": "legacy-readers",
+      "target": "legacy migration input",
+      "preservation": "Preserve compatibility adapters until data is migrated and verified; no silent deletion.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodOverrides",
+      "group": "legacy-readers",
+      "target": "legacy migration input",
+      "preservation": "Preserve compatibility adapters until data is migrated and verified; no silent deletion.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:keeper-history",
+      "group": "legacy-readers",
+      "target": "legacy migration input",
+      "preservation": "Preserve compatibility adapters until data is migrated and verified; no silent deletion.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:cruxspace:",
+      "group": "dynamic",
+      "target": "Garden graph",
+      "preservation": "Convert collection identity/brief/members/origin once; retain shared members and tagged conversations.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:layout:",
+      "group": "dynamic",
+      "target": "workspace presentation",
+      "preservation": "Bind layout to owner; retain ordering, closed state and old readers.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:editor-tabs:",
+      "group": "dynamic",
+      "target": "Crux local presentation",
+      "preservation": "Keep selected file/path and editor state; remap only on explicit copy.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:folder-state:",
+      "group": "dynamic",
+      "target": "Crux local presentation",
+      "preservation": "Preserve expansion state; not graph content.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:composer:",
+      "group": "dynamic",
+      "target": "Crux draft",
+      "preservation": "Preserve unsent text with captured owner; private by default.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:workshop-view:",
+      "group": "dynamic",
+      "target": "Crux local presentation",
+      "preservation": "Preserve selected view without changing content identity.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:browser:",
+      "group": "dynamic",
+      "target": "Crux browser state",
+      "preservation": "Private navigation history is not automatically portable.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:app-appearance:",
+      "group": "dynamic",
+      "target": "Crux appearance",
+      "preservation": "Retain owner association and distinguish shared content from device overrides.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:tending-seen:",
+      "group": "dynamic",
+      "target": "operational acknowledgement",
+      "preservation": "Retain owner/job reference without duplicating jobs.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:pending-open:",
+      "group": "dynamic",
+      "target": "installation deferred action",
+      "preservation": "Retain acknowledged readiness/retry semantics; exclude from sharing.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:apiKey:",
+      "group": "dynamic",
+      "target": "secret",
+      "preservation": "Never migrate into graph content or exports.",
+      "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:fn-secrets:",
+      "group": "dynamic",
+      "target": "secret",
+      "preservation": "Keep in OS secret store; never export values.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:alerts",
+      "group": "additional",
+      "target": "Garden event inbox",
+      "preservation": "Preserve owner/target, seen/snoozed state; do not replay events.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:schedules",
+      "group": "additional",
+      "target": "Garden rules + operational execution state",
+      "preservation": "Separate definitions from captured action targets and occurrence state; no duplicate timers.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodSchedules",
+      "group": "additional",
+      "target": "Garden Mood rule preference",
+      "preservation": "Retain opt-out independently from rule execution.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:location",
+      "group": "additional",
+      "target": "Garden preference / private location",
+      "preservation": "Do not leak location in selected exports by default.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:weather",
+      "group": "additional",
+      "target": "operational cache",
+      "preservation": "Retain or rebuild deliberately; not creative content.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:weatherUrl",
+      "group": "additional",
+      "target": "Garden service configuration",
+      "preservation": "Capture endpoint and privacy policy; not automatic public content.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:cruxspace-moment",
+      "group": "additional",
+      "target": "Garden history view",
+      "preservation": "Preserve selected moment/targets; not recursive descendant rollback.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:open-workspaces:v1",
+      "group": "additional",
+      "target": "installation session",
+      "preservation": "Keep background task ownership; migrate route/panel bindings separately.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:parallel-task-limit",
+      "group": "additional",
+      "target": "installation resource policy",
+      "preservation": "Preserve concurrency limit; not Mood permission.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:tending-notifications",
+      "group": "additional",
+      "target": "device notification preference",
+      "preservation": "Preserve consent; never enable because content was imported.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:export-runtime-mode",
+      "group": "additional",
+      "target": "export preference",
+      "preservation": "Preserve runtime-by-reference choice while new graph format is designed.",
+      "status": "planned"
+    },
+    {
+      "key": "cruxgarden:selftest",
+      "group": "additional",
+      "target": "diagnostic only",
+      "preservation": "Not user content; keep isolated from migrations and selected exports.",
+      "status": "planned"
+    }
+  ]
+}
