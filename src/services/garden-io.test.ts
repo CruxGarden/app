@@ -20,6 +20,130 @@ describe('Garden Export / Import', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
+  it('exports content from the captured database even when live references change afterward', async () => {
+    const crux = await svc.crux.create({ title: 'Captured work', type: 'workspace' });
+    const file = await svc.artifact.upload({
+      resourceId: crux.id,
+      blob: new File(['Snapshot bytes'], 'captured.txt'),
+      meta: { path: 'captured.txt' },
+    });
+    const db = getSqliteClient();
+    const capture = db.export.bind(db);
+    vi.spyOn(db, 'export').mockImplementation(async () => {
+      const image = await capture();
+      // A later edit removes this reference from the live working database.
+      await db.run('DELETE FROM artifacts WHERE id = ?', [file.id]);
+      return image;
+    });
+    const archive = await exportGarden();
+    const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
+    expect(await zip.file(`artifacts/${file.fingerprint}`)?.async('text')).toBe('Snapshot bytes');
+  });
+
+  it('refuses a missing referenced blob even when the archive count was adjusted and a local copy exists', async () => {
+    const incoming = await svc.crux.create({ title: 'Incoming', type: 'workspace' });
+    const file = await svc.artifact.upload({
+      resourceId: incoming.id,
+      blob: new File(['Referenced bytes'], 'incoming.txt'),
+      meta: { path: 'incoming.txt' },
+    });
+    const archive = await exportGarden();
+    const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
+    zip.remove(`artifacts/${file.fingerprint}`);
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
+    zip.file(
+      'manifest.json',
+      JSON.stringify({ ...manifest, artifactCount: manifest.artifactCount - 1 }),
+    );
+    const existing = await svc.crux.create({ title: 'Keep me', type: 'workspace' });
+    const replace = vi.spyOn(getSqliteClient(), 'import');
+    await expect(
+      importGarden({ data: await zip.generateAsync({ type: 'arraybuffer' }) }),
+    ).rejects.toThrow('missing required content');
+    expect(replace).not.toHaveBeenCalled();
+    expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
+  });
+
+  it('requires retained Growth files and author avatars, not just the current Crux files', async () => {
+    const snapshot = await svc.crux.create({
+      title: 'Retained history',
+      type: 'crux',
+      kind: 'snapshot',
+    });
+    const file = await svc.artifact.upload({
+      resourceId: snapshot.id,
+      blob: new File(['Historical bytes'], 'old.txt'),
+      meta: { path: 'old.txt' },
+    });
+    const avatar = new TextEncoder().encode('Avatar bytes');
+    const avatarFingerprint = await hashContent(avatar);
+    const db = getSqliteClient();
+    await db.blobWrite(avatarFingerprint, avatar);
+    await db.run('INSERT INTO authors (id, meta, created, updated) VALUES (?, ?, ?, ?)', [
+      'avatar-fixture',
+      JSON.stringify({ avatarFingerprint }),
+      new Date().toISOString(),
+      new Date().toISOString(),
+    ]);
+    const archive = await exportGarden();
+    const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
+    zip.remove(`artifacts/${file.fingerprint}`);
+    zip.remove(`artifacts/${avatarFingerprint}`);
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
+    zip.file(
+      'manifest.json',
+      JSON.stringify({ ...manifest, artifactCount: manifest.artifactCount - 2 }),
+    );
+    const replace = vi.spyOn(db, 'import');
+    await expect(
+      importGarden({ data: await zip.generateAsync({ type: 'arraybuffer' }) }),
+    ).rejects.toThrow('missing required content (2 blob(s))');
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing', 'corrupted'])(
+    'refuses raw database restoration with %s retained content before replacement',
+    async (fault) => {
+      const incoming = await svc.crux.create({ title: 'Incoming', type: 'workspace' });
+      const file = await svc.artifact.upload({
+        resourceId: incoming.id,
+        blob: new File(['Required bytes'], 'required.txt'),
+        meta: { path: 'required.txt' },
+      });
+      const db = getSqliteClient();
+      const image = await db.export();
+      const existing = await svc.crux.create({ title: 'Current work', type: 'workspace' });
+      if (fault === 'missing') await db.blobDelete(file.fingerprint!);
+      else await db.blobWrite(file.fingerprint!, new TextEncoder().encode('Wrong bytes'));
+      const replace = vi.spyOn(db, 'import');
+      await expect(importGarden({ data: image })).rejects.toThrow(
+        fault === 'missing' ? 'missing required content' : 'failed integrity check',
+      );
+      expect(replace).not.toHaveBeenCalled();
+      expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Current work' });
+    },
+  );
+
+  it('verifies staged bytes and refuses a silent content-write corruption', async () => {
+    const incoming = await svc.crux.create({ title: 'Incoming', type: 'workspace' });
+    await svc.artifact.upload({
+      resourceId: incoming.id,
+      blob: new File(['Required bytes'], 'required.txt'),
+      meta: { path: 'required.txt' },
+    });
+    const archive = await exportGarden();
+    const existing = await svc.crux.create({ title: 'Current work', type: 'workspace' });
+    const db = getSqliteClient();
+    const write = db.blobWrite.bind(db);
+    vi.spyOn(db, 'blobWrite').mockImplementation((fingerprint) =>
+      write(fingerprint, new TextEncoder().encode('Short write')),
+    );
+    const replace = vi.spyOn(db, 'import');
+    await expect(importGarden({ data: archive.blob })).rejects.toThrow('failed integrity check');
+    expect(replace).not.toHaveBeenCalled();
+    expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Current work' });
+  });
+
   it('preserves existing records and files when incoming blob writes fail', async () => {
     const incoming = await svc.crux.create({ title: 'Incoming', type: 'workspace' });
     await svc.artifact.upload({

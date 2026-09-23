@@ -104,14 +104,8 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
   );
   const cruxCount = cruxCountRow?.count ?? 0;
 
-  // Get unique fingerprints from all artifacts + author avatars
-  const fingerprintRows = await db.all<{ fingerprint: string }>(
-    `SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL
-     UNION
-     SELECT DISTINCT json_extract(meta, '$.avatarFingerprint') AS fingerprint
-     FROM authors
-     WHERE json_extract(meta, '$.avatarFingerprint') IS NOT NULL`,
-  );
+  // Match the captured database, even if live references change afterward.
+  const fingerprints = await db.inspectImport(sqliteData);
 
   const zip = new JSZip();
 
@@ -120,9 +114,9 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
 
   // Artifact blobs from OPFS, keyed by fingerprint
   let artifactCount = 0;
-  for (let i = 0; i < fingerprintRows.length; i++) {
-    const { fingerprint } = fingerprintRows[i]!;
-    onProgress?.(`Extracting artifact ${i + 1}/${fingerprintRows.length}...`);
+  for (let i = 0; i < fingerprints.length; i++) {
+    const fingerprint = fingerprints[i]!;
+    onProgress?.(`Extracting artifact ${i + 1}/${fingerprints.length}...`);
 
     try {
       const bytes = await db.blobRead(fingerprint);
@@ -184,7 +178,6 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
 
   // Try ZIP format first; fall back to legacy raw SQLite
   let sqliteData: ArrayBuffer;
-  // eslint-disable-next-line no-useless-assignment -- reassigned in catch fallback
   let zip: JSZip | null = null;
 
   try {
@@ -277,6 +270,16 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     }
   }
 
+  onProgress?.('Checking required content...');
+  const fingerprints = await db.inspectImport(sqliteData);
+  // ZIP archives must stand alone (after resolving declared tool runtimes).
+  // A matching local cache must not hide an incomplete portable archive.
+  if (zip) {
+    const missing = fingerprints.filter((fingerprint) => !zip.file(`artifacts/${fingerprint}`));
+    if (missing.length)
+      throw new Error(`Garden archive is missing required content (${missing.length} blob(s)).`);
+  }
+
   // Content-addressed blobs are immutable and may be shared with the current
   // database. Stage incoming content first; never wipe the old content to make
   // room for a restore. Unreferenced blobs can be collected by retention-aware
@@ -292,6 +295,21 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
       const bytes = await entry.async('uint8array');
       await db.blobWrite(fingerprint, bytes);
     }
+  }
+
+  // Verify the persisted bytes, not merely archive filenames or existence.
+  // Raw legacy database images rely on the retained local content store.
+  for (let i = 0; i < fingerprints.length; i++) {
+    const fingerprint = fingerprints[i]!;
+    onProgress?.(`Checking stored content ${i + 1}/${fingerprints.length}...`);
+    let bytes: Uint8Array;
+    try {
+      bytes = await db.blobRead(fingerprint);
+    } catch (cause) {
+      throw new Error(`Garden restore is missing required content: ${fingerprint}`, { cause });
+    }
+    if ((await hashContent(bytes)) !== fingerprint)
+      throw new Error(`Garden restore content failed integrity check: ${fingerprint}`);
   }
 
   await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();

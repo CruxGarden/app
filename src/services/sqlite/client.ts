@@ -9,6 +9,8 @@ export interface ISqliteClient {
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
+  /** Read required fingerprints from detached incoming bytes; leave the current database intact. */
+  inspectImport(data: ArrayBuffer): Promise<string[]>;
   close(): Promise<void>;
 
   // ── OPFS blob storage ──────────────────────────────
@@ -131,6 +133,10 @@ export class SqliteClient implements ISqliteClient {
 
   async export(): Promise<ArrayBuffer> {
     return (await this.sendWithRetry({ method: 'export' })) as ArrayBuffer;
+  }
+
+  async inspectImport(data: ArrayBuffer): Promise<string[]> {
+    return (await this.send({ method: 'inspect-import', data })) as string[];
   }
 
   async import(data: ArrayBuffer): Promise<void> {

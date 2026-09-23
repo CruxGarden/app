@@ -1,3 +1,4 @@
+import { RECOVERY_CONTENT_SQL, recoveryFingerprints } from '@/services/sqlite/recovery-content';
 import initSqlJs, { type Database } from 'sql.js';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -59,6 +60,16 @@ export class TestSqliteClient implements ISqliteClient {
   async export(): Promise<ArrayBuffer> {
     const data = this.db.export();
     return data.buffer as ArrayBuffer;
+  }
+
+  async inspectImport(data: ArrayBuffer): Promise<string[]> {
+    const SQL = await initSqlJs();
+    const candidate = new TestSqliteClient(new SQL.Database(new Uint8Array(data)));
+    try {
+      return recoveryFingerprints(await candidate.all(RECOVERY_CONTENT_SQL));
+    } finally {
+      await candidate.close();
+    }
   }
 
   async import(data: ArrayBuffer): Promise<void> {

@@ -100,6 +100,10 @@ export class SqliteNative implements NativeStorage {
     ) as ArrayBuffer;
   }
 
+  inspectImport(data: ArrayBuffer): string[] {
+    return inspectDesktopRecovery(data).fingerprints;
+  }
+
   import(data: ArrayBuffer): void {
     // Validate through the actual API before closing the current owner. Normalize
     // legacy optional tables/columns in detached bytes, never in the live file.

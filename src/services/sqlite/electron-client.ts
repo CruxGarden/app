@@ -40,6 +40,10 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.export();
   }
 
+  async inspectImport(data: ArrayBuffer): Promise<string[]> {
+    return this.api.inspectImport(data);
+  }
+
   async import(data: ArrayBuffer): Promise<void> {
     return this.api.import(data);
   }

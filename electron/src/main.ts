@@ -421,6 +421,7 @@ async function setupIpc() {
     return db.export();
   });
 
+  ipcMain.handle('sqlite:inspect-import', (_e: any, data: ArrayBuffer) => db.inspectImport(data));
   ipcMain.handle('sqlite:import', (_e: any, data: ArrayBuffer) => {
     return db.import(data);
   });

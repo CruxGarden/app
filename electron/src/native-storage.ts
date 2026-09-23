@@ -8,6 +8,7 @@ export interface NativeStorage {
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T[]>;
   export(): Awaitable<ArrayBuffer>;
   import(data: ArrayBuffer): Awaitable<void>;
+  inspectImport(data: ArrayBuffer): Awaitable<string[]>;
   close(): Awaitable<void>;
   blobWrite(fingerprint: string, data: Uint8Array): Awaitable<void>;
   blobRead(fingerprint: string): Awaitable<Uint8Array>;
