@@ -22,15 +22,20 @@ export class SqliteApi implements NativeStorage {
 
   static async open(filename: string, blobDir: string): Promise<SqliteApi> {
     mkdirSync(dirname(filename), { recursive: true });
+    const blobs = new NativeBlobStore(blobDir);
+    // No adapter is exposed until the API has checkpointed and completed any
+    // inline conversion. All content writes use the existing atomic blob store.
     const owner = await (existsSync(filename)
-      ? LocalGraphRuntime.open(filename)
+      ? LocalGraphRuntime.open(filename, {
+          contentStore: {
+            read: async (fp) => (blobs.blobExists(fp) ? blobs.blobRead(fp) : null),
+            write: async (fp, bytes) => {
+              blobs.blobWrite(fp, bytes);
+            },
+          },
+        })
       : LocalGraphRuntime.create(filename));
-    try {
-      return new SqliteApi(owner, new NativeBlobStore(blobDir));
-    } catch (error) {
-      await owner.close();
-      throw error;
-    }
+    return new SqliteApi(owner, blobs);
   }
 
   run(sql: string, params?: unknown[]) {
