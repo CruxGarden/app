@@ -199,6 +199,23 @@ describe('parallel tasks', () => {
       expect.arrayContaining([expect.objectContaining({ content: 'A conversation' })]),
     );
   });
+  it('does not insert a partial Task after the API refuses preparation', async () => {
+    const { main } = await fixture();
+    const db = getSqliteClient();
+    const before = await db.all('SELECT * FROM working_copies ORDER BY id');
+    db.createWorkingCopy = vi.fn(async () => {
+      throw new Error('Preview preparation refused');
+    });
+    await expect(createTask(main.id, 'Refused task')).rejects.toThrow(
+      'Preview preparation refused',
+    );
+    expect(db.createWorkingCopy).toHaveBeenCalledWith(
+      expect.objectContaining({ cruxId: main.id, title: 'Refused task', role: 'task' }),
+    );
+    expect(await db.all('SELECT * FROM working_copies ORDER BY id')).toEqual(before);
+    delete db.createWorkingCopy;
+    await expect(createTask(main.id, 'Retry task')).resolves.toMatchObject({ phase: 'ready' });
+  });
   it('keeps the original journal when API verification saving fails and retries the check', async () => {
     const { a } = await fixture();
     const review = await prepareTaskReview(a.id);

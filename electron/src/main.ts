@@ -1,4 +1,8 @@
-import type { LocalCruxCreate, LocalCruxUpdate } from '@cruxgarden/local-api';
+import type {
+  LocalWorkingCopyCreate,
+  LocalCruxCreate,
+  LocalCruxUpdate,
+} from '@cruxgarden/local-api';
 import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
@@ -460,6 +464,11 @@ async function setupIpc() {
       return db.updateWorkingCopyMeta(id, patch, title);
     },
   );
+
+  ipcMain.handle('sqlite:create-working-copy', (_e: unknown, input: LocalWorkingCopyCreate) => {
+    if (!db.createWorkingCopy) throw new Error('Owned Task creation is unavailable');
+    return db.createWorkingCopy(input);
+  });
 
   ipcMain.handle(
     'sqlite:save-task-review',

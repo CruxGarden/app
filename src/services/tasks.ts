@@ -147,19 +147,34 @@ async function provision(
     created: now,
     updated: now,
   };
-  const insert = buildInsert('working_copies', copy);
-  await db.run(insert.sql, insert.params);
+  if (db.createWorkingCopy) {
+    await db.createWorkingCopy({
+      id,
+      cruxId: owner.id,
+      taskId,
+      title,
+      baseSnapshotId: baseId,
+      role,
+      meta,
+    });
+  } else {
+    const insert = buildInsert('working_copies', copy);
+    await db.run(insert.sql, insert.params);
+  }
   try {
     const folder = await createProjectFolder(`task-${id}`);
     await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, id]);
     await projectTaskManifest(id, {}, manifest);
-    // Clone local preview data under the copy ID, never the live store or browser credentials.
-    const rows = await db.all<Record<string, unknown>>('SELECT * FROM store WHERE crux_id = ?', [
-      owner.id,
-    ]);
-    for (const row of rows) {
-      const insertStore = buildInsert('store', { ...row, id: crypto.randomUUID(), crux_id: id });
-      await db.run(insertStore.sql, insertStore.params);
+    // The API already copied every preview slot with its preparing record.
+    // Retain the legacy path only when that complete command is unavailable.
+    if (!db.createWorkingCopy) {
+      const rows = await db.all<Record<string, unknown>>('SELECT * FROM store WHERE crux_id = ?', [
+        owner.id,
+      ]);
+      for (const row of rows) {
+        const insertStore = buildInsert('store', { ...row, id: crypto.randomUUID(), crux_id: id });
+        await db.run(insertStore.sql, insertStore.params);
+      }
     }
     await db.run("UPDATE working_copies SET phase = 'ready' WHERE id = ?", [id]);
     await syncAgentsMd(await getServices().crux.findById(id), null);

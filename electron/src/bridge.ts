@@ -1,4 +1,9 @@
-import type { LocalCruxCreate, LocalCruxUpdate, LocalGraphChange } from '@cruxgarden/local-api';
+import type {
+  LocalWorkingCopyCreate,
+  LocalCruxCreate,
+  LocalCruxUpdate,
+  LocalGraphChange,
+} from '@cruxgarden/local-api';
 /**
  * The IPC bridge contract — the single declaration of what Desktop Mode
  * exposes to the renderer.
@@ -25,6 +30,7 @@ export interface SqliteBridge {
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  createWorkingCopy?(input: LocalWorkingCopyCreate): Promise<void>;
   saveTaskReview?(reviewData: string, expectedData?: string): Promise<void>;
   beginTaskMerge?(id: string, reviewData: string): Promise<void>;
   releaseTaskReview?(id: string): Promise<void>;

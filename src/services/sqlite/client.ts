@@ -14,6 +14,7 @@ export interface ISqliteClient {
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  createWorkingCopy?: SqliteBridge['createWorkingCopy'];
   saveTaskReview?: SqliteBridge['saveTaskReview'];
   beginTaskMerge?: SqliteBridge['beginTaskMerge'];
   releaseTaskReview?: SqliteBridge['releaseTaskReview'];

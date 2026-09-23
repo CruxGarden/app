@@ -1,6 +1,7 @@
 import {
   LocalGraphRuntime,
   type LocalCruxUpdate,
+  type LocalWorkingCopyCreate,
   type LocalCruxCreate,
   type PrepareCruxFolder,
   type LocalGraphChange,
@@ -69,6 +70,10 @@ export class SqliteApi implements NativeStorage {
   updateCrux(id: string, patch: LocalCruxUpdate) {
     this.assertAvailable();
     return this.owner.updateCrux(id, patch);
+  }
+  createWorkingCopy(input: LocalWorkingCopyCreate) {
+    this.assertAvailable();
+    return this.owner.createWorkingCopy(input);
   }
   saveTaskReview(reviewData: string, expectedData?: string) {
     this.assertAvailable();

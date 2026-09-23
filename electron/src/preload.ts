@@ -1,4 +1,9 @@
-import type { LocalCruxCreate, LocalCruxUpdate, LocalGraphChange } from '@cruxgarden/local-api';
+import type {
+  LocalWorkingCopyCreate,
+  LocalCruxCreate,
+  LocalCruxUpdate,
+  LocalGraphChange,
+} from '@cruxgarden/local-api';
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   ElectronBridge,
@@ -65,6 +70,8 @@ const api: ElectronBridge = {
             };
           },
           createCrux: (input: LocalCruxCreate) => ipcRenderer.invoke('sqlite:create-crux', input),
+          createWorkingCopy: (input: LocalWorkingCopyCreate) =>
+            ipcRenderer.invoke('sqlite:create-working-copy', input),
           saveTaskReview: (reviewData: string, expectedData?: string) =>
             ipcRenderer.invoke('sqlite:save-task-review', reviewData, expectedData),
           beginTaskMerge: (id: string, reviewData: string) =>
