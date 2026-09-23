@@ -13,6 +13,7 @@ export interface NativeStorage {
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  completeTaskMerge?(id: string, resultHead: string): Promise<void>;
   setWorkingCopyArchived?(id: string, archived: boolean, revision: number): Promise<void>;
   setCruxTrashed?(id: string, trashed: boolean): Promise<void>;
   deleteCrux?(id: string): Promise<void>;

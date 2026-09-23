@@ -198,6 +198,30 @@ describe('parallel tasks', () => {
       expect.arrayContaining([expect.objectContaining({ content: 'A conversation' })]),
     );
   });
+  it('keeps the recovery journal after owned finalization refusal and reuses the captured result', async () => {
+    const { main, a } = await fixture();
+    await write(a.id, 'Owned result');
+    const review = await prepareTaskReview(a.id);
+    await verifyTaskReview(review.id);
+    const db = getSqliteClient();
+    db.completeTaskMerge = vi.fn(async () => {
+      throw new Error('Journal commit refused');
+    });
+    await expect(applyTaskReview(review.id)).rejects.toThrow('Journal commit refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
+    expect(await db.get('SELECT phase FROM task_merges WHERE id = ?', [review.id])).toEqual({
+      phase: 'applying',
+    });
+    await expect(write(main.id, 'blocked')).rejects.toThrow('recovering');
+    const before = await getServices().dimension.findBySourceAndType(main.id, 'growth');
+    expect(db.completeTaskMerge).toHaveBeenCalledWith(review.id, expect.any(String));
+    delete db.completeTaskMerge;
+    await resumeTaskMerge(review.id);
+    expect(await read(main.id)).toBe('Owned result');
+    expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toHaveLength(
+      before.length,
+    );
+  });
   it('recovers a failure after Growth without creating a second merge checkpoint', async () => {
     const { main, a } = await fixture();
     await write(a.id, 'Recovered result');

@@ -1,0 +1,129 @@
+import { test, expect } from '@playwright/test';
+import { launchApp } from './launch';
+import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
+import { writeFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+test('a refused final merge journal preserves recoverable state and resumes after restart without duplicate Growth', async () => {
+  const env = { CRUX_API_OWNER: '1' };
+  let launch = await launchApp({ env });
+  const dir = launch.dir;
+  try {
+    let page = launch.page;
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await enterGarden(page);
+    const main = await createCrux(page, 'Recover merge');
+    await addArtifact(page, 'index.html');
+    await page.locator('.monaco-editor').click();
+    await page.keyboard.type('<h1>Main version</h1>');
+    await page.keyboard.press('ControlOrMeta+s');
+    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Merge task');
+    await page.getByRole('button', { name: 'Save and start task' }).click();
+    await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();
+    const copy = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const folder = await page.evaluate(
+      async (id) =>
+        (
+          (await window.electronAPI!.sqlite.get(
+            'SELECT project_folder FROM working_copies WHERE id = ?',
+            [id],
+          )) as { project_folder: string }
+        ).project_folder,
+      copy,
+    );
+    writeFileSync(join(folder, 'index.html'), '<h1>Task result</h1>');
+    await expect
+      .poll(() =>
+        page.evaluate(async (id) => {
+          const db = window.electronAPI!.sqlite;
+          const file = (await db.get(
+            "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'index.html'",
+            [id],
+          )) as { fingerprint: string };
+          return new TextDecoder().decode(await db.blobRead(file.fingerprint));
+        }, copy),
+      )
+      .toBe('<h1>Task result</h1>');
+    await page.getByRole('button', { name: 'Review changes', exact: true }).click();
+    const review = page.getByRole('dialog', { name: 'Review changes for Main' });
+    await review.getByRole('button', { name: 'Check combined result' }).click();
+    await expect(review.getByRole('checkbox')).toBeEnabled();
+    await review.getByRole('checkbox').check();
+    await page.evaluate(() =>
+      window.electronAPI!.sqlite.run(
+        "CREATE TRIGGER refuse_finish BEFORE UPDATE ON task_merges WHEN NEW.phase = 'merged' BEGIN SELECT RAISE(ABORT, 'Final journal refused'); END",
+      ),
+    );
+    await review.getByRole('button', { name: 'Merge into Main', exact: true }).click();
+    await expect(review.getByRole('alert')).toContainText('Final journal refused');
+    const journal = await page.evaluate(async (copy) => {
+      const db = window.electronAPI!.sqlite;
+      const merge = (await db.get(
+        'SELECT id, candidate_id, phase FROM task_merges WHERE copy_id = ?',
+        [copy],
+      )) as { id: string; candidate_id: string; phase: string };
+      return {
+        ...merge,
+        copies: await db.all('SELECT id, phase FROM working_copies WHERE id IN (?, ?)', [
+          copy,
+          merge.candidate_id,
+        ]),
+        results: await db.all("SELECT id FROM cruxes WHERE json_extract(meta, '$.merge.id') = ?", [
+          merge.id,
+        ]),
+      };
+    }, copy);
+    expect(journal.phase).toBe('applying');
+    expect(journal.copies).toEqual(
+      expect.arrayContaining([
+        { id: copy, phase: 'ready' },
+        { id: journal.candidate_id, phase: 'ready' },
+      ]),
+    );
+    expect(journal.results).toHaveLength(1);
+    await launch.app.close();
+    launch = await launchApp({ dir, env });
+    page = launch.page;
+    await page.getByRole('button', { name: 'Enter', exact: true }).click();
+    await page.goto(`crux-app://app/c/${main}?task=${copy}`);
+    await expect(page.getByRole('button', { name: 'Resume merge', exact: true })).toBeVisible();
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_finish'));
+    await page.getByRole('button', { name: 'Resume merge', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Resume merge', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByTestId('task-bar').getByRole('link', { name: /^Merge task/ }),
+    ).toContainText('merged');
+    const saved = await page.evaluate(
+      async ({ main, copy, journal }) => {
+        const db = window.electronAPI!.sqlite;
+        return {
+          merge: await db.get('SELECT phase FROM task_merges WHERE id = ?', [journal.id]),
+          copies: await db.all('SELECT id, phase FROM working_copies WHERE id IN (?, ?)', [
+            copy,
+            journal.candidate_id,
+          ]),
+          results: await db.all(
+            "SELECT id FROM cruxes WHERE json_extract(meta, '$.merge.id') = ?",
+            [journal.id],
+          ),
+          main: (await db.get('SELECT meta FROM cruxes WHERE id = ?', [main])) as { meta: string },
+        };
+      },
+      { main, copy, journal },
+    );
+    expect(saved.merge).toEqual({ phase: 'merged' });
+    expect(saved.copies).toEqual(
+      expect.arrayContaining([
+        { id: copy, phase: 'merged' },
+        { id: journal.candidate_id, phase: 'archived' },
+      ]),
+    );
+    expect(saved.results).toEqual(journal.results);
+    expect(
+      readFileSync(join(JSON.parse(saved.main.meta).projectFolder, 'index.html'), 'utf8'),
+    ).toBe('<h1>Task result</h1>');
+  } finally {
+    await launch.app.close();
+  }
+});

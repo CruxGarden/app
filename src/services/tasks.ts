@@ -480,12 +480,18 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
     await main.data.getState().saveMeta();
     await main.data.getState().loadCrux(main.id);
   }
-  await db.run("UPDATE working_copies SET phase = 'merged', revision = revision + 1 WHERE id = ?", [
-    review.copyId,
-  ]);
   const done: TaskReview = { ...review, phase: 'merged', resultHead };
-  await saveReview(done);
-  await releaseTaskReviewCore(review.id);
+  if (db.completeTaskMerge) {
+    await db.completeTaskMerge(review.id, resultHead);
+    announceTasksChanged();
+  } else {
+    await db.run(
+      "UPDATE working_copies SET phase = 'merged', revision = revision + 1 WHERE id = ?",
+      [review.copyId],
+    );
+    await saveReview(done);
+  }
+  await releaseTaskReviewCore(review.id, !!db.completeTaskMerge);
   const taskWorkspace = getWorkspace(review.copyId);
   if (taskWorkspace) await taskWorkspace.data.getState().loadCrux(review.copyId);
   return done;
@@ -539,16 +545,17 @@ export function mainIdFor(crux: Crux): string {
 }
 
 /** Release the candidate's runtime resources; retained files remain recoverable. */
-async function releaseTaskReviewCore(id: string): Promise<void> {
+async function releaseTaskReviewCore(id: string, finalized = false): Promise<void> {
   const review = await loadTaskReview(id);
   if (review.phase === 'applying') return;
   const { stopPreviewServer } = await import('./preview-server');
   const { stopDevServer } = await import('./site');
   await stopPreviewServer(review.candidateId);
   await stopDevServer(review.candidateId);
-  await getSqliteClient().run("UPDATE working_copies SET phase = 'archived' WHERE id = ?", [
-    review.candidateId,
-  ]);
+  if (!finalized)
+    await getSqliteClient().run("UPDATE working_copies SET phase = 'archived' WHERE id = ?", [
+      review.candidateId,
+    ]);
   if (review.phase === 'review')
     await saveReview({ ...review, phase: 'cancelled', previewUrl: undefined });
 }

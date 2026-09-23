@@ -461,6 +461,11 @@ async function setupIpc() {
     },
   );
 
+  ipcMain.handle('sqlite:complete-task-merge', (_e: unknown, id: string, resultHead: string) => {
+    if (!db.completeTaskMerge) throw new Error('Owned Task merge commands are unavailable');
+    return db.completeTaskMerge(id, resultHead);
+  });
+
   ipcMain.handle(
     'sqlite:set-working-copy-archived',
     (_e: unknown, id: string, archived: boolean, revision: number) => {
