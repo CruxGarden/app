@@ -277,98 +277,60 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     }
   }
 
-  // ── Safety backup ─────────────────────────────────────
-  // Snapshot current SQLite + blob fingerprints before destructive import.
-  // If anything fails after db.import(), we can restore the original state.
-  onProgress?.('Creating safety backup...');
-  // eslint-disable-next-line no-useless-assignment -- used in catch rollback block
-  let backupSqlite: ArrayBuffer | null = null;
-  // eslint-disable-next-line no-useless-assignment -- fingerprints used indirectly via backupBlobs loop
-  let backupFingerprints: string[] = [];
-  const backupBlobs = new Map<string, Uint8Array>();
-
-  try {
-    backupSqlite = await db.export();
-    const fpRows = await db.all<{ fingerprint: string }>(
-      `SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL
-       UNION
-       SELECT DISTINCT json_extract(meta, '$.avatarFingerprint') AS fingerprint
-       FROM authors
-       WHERE json_extract(meta, '$.avatarFingerprint') IS NOT NULL`,
-    );
-    backupFingerprints = fpRows.map((r) => r.fingerprint);
-    for (const fp of backupFingerprints) {
-      try {
-        backupBlobs.set(fp, await db.blobRead(fp));
-      } catch {
-        // Blob missing — skip (can't back up what doesn't exist)
-      }
+  // Content-addressed blobs are immutable and may be shared with the current
+  // database. Stage incoming content first; never wipe the old content to make
+  // room for a restore. Unreferenced blobs can be collected by retention-aware
+  // cleanup later, after metadata replacement and recovery are settled.
+  if (zip) {
+    const entries: { fingerprint: string; entry: JSZip.JSZipObject }[] = [];
+    zip.folder('artifacts')?.forEach((fingerprint, entry) => {
+      if (!entry.dir) entries.push({ fingerprint, entry });
+    });
+    for (let i = 0; i < entries.length; i++) {
+      const { fingerprint, entry } = entries[i]!;
+      onProgress?.(`Preparing blob ${i + 1}/${entries.length}...`);
+      const bytes = await entry.async('uint8array');
+      await db.blobWrite(fingerprint, bytes);
     }
-  } catch {
-    // Empty garden — nothing to back up, that's fine
-    backupSqlite = null;
   }
 
-  // ── Destructive import ────────────────────────────────
+  await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
+  onProgress?.('Creating safety backup...');
+  // An empty garden still has a valid database image. An export failure is
+  // never evidence that there is nothing to preserve.
+  const backupSqlite = await db.export();
   try {
     onProgress?.('Importing database...');
-    await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
     await db.import(sqliteData);
-
-    // Wipe existing blobs so orphaned files from the old garden don't linger
-    await db.blobWipeAll();
-
-    // Restore OPFS blobs from the ZIP's artifacts/ directory
-    if (zip) {
-      const artifactsFolder = zip.folder('artifacts');
-      if (artifactsFolder) {
-        const entries: { fingerprint: string; entry: JSZip.JSZipObject }[] = [];
-        artifactsFolder.forEach((relativePath, entry) => {
-          if (!entry.dir) {
-            entries.push({ fingerprint: relativePath, entry });
-          }
-        });
-
-        onProgress?.(`Restoring ${entries.length} artifact blobs...`);
-        for (let i = 0; i < entries.length; i++) {
-          const { fingerprint, entry } = entries[i]!;
-          onProgress?.(`Restoring blob ${i + 1}/${entries.length}...`);
-          const ab = await entry.async('arraybuffer');
-          await db.blobWrite(fingerprint, new Uint8Array(ab));
-        }
-      }
-    }
-  } catch (err) {
-    // ── Rollback: restore original database + blobs ────
-    onProgress?.('Import failed — restoring previous data...');
-    if (backupSqlite) {
-      try {
-        await db.import(backupSqlite);
-        await db.blobWipeAll();
-        for (const [fp, bytes] of backupBlobs) {
-          await db.blobWrite(fp, bytes);
-        }
-      } catch (restoreErr) {
-        console.error('Failed to restore backup after import failure:', restoreErr);
-      }
-    }
-    throw err;
-  }
-
-  // Provider sessions belong to the exporting installation, including Main's.
-  await db.run(`UPDATE cruxes SET meta = json_remove(meta,
+    // Provider sessions belong to the exporting installation, including Main's.
+    await db.run(`UPDATE cruxes SET meta = json_remove(meta,
     '$.settings.agentSessionId', '$.settings.agentSessions', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue')
     WHERE meta IS NOT NULL`);
 
-  // A restored task always gets a fresh directory and provider session.
-  const { portableMeta } = await import('./task-archive');
-  const copies = await db.all<{ id: string; meta: string }>('SELECT id, meta FROM working_copies');
-  for (const copy of copies)
-    await db.run('UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?', [
-      JSON.stringify(portableMeta(copy.meta)),
-      copy.id,
-    ]);
-  await db.run("UPDATE task_merges SET phase = 'cancelled' WHERE phase = 'review'");
+    // A restored task always gets a fresh directory and provider session.
+    const { portableMeta } = await import('./task-archive');
+    const copies = await db.all<{ id: string; meta: string }>(
+      'SELECT id, meta FROM working_copies',
+    );
+    for (const copy of copies)
+      await db.run('UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?', [
+        JSON.stringify(portableMeta(copy.meta)),
+        copy.id,
+      ]);
+    await db.run("UPDATE task_merges SET phase = 'cancelled' WHERE phase = 'review'");
+  } catch (error) {
+    onProgress?.('Import failed — restoring previous data...');
+    try {
+      await db.import(backupSqlite);
+    } catch (recoveryError) {
+      throw new AggregateError(
+        [error, recoveryError],
+        'Garden import failed and its database could not be restored. Existing content files have been retained.',
+        { cause: recoveryError },
+      );
+    }
+    throw error;
+  }
 
   // Desktop: the imported cruxes carry the *exporting* machine's absolute
   // Project Folder paths. Give them folders that exist here (no-op on web).

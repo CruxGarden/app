@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import JSZip from 'jszip';
 import { initServices, type Services } from './index';
 import { exportGarden, importGarden } from './garden-io';
 import { hashContent } from './sqlite/helpers';
+import { getSqliteClient } from './sqlite/client';
 
 /**
  * Garden export/import tests.
@@ -16,6 +17,49 @@ describe('Garden Export / Import', () => {
 
   beforeEach(async () => {
     svc = await initServices('local');
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('preserves existing records and files when incoming blob writes fail', async () => {
+    const incoming = await svc.crux.create({ title: 'Incoming', type: 'workspace' });
+    await svc.artifact.upload({
+      resourceId: incoming.id,
+      blob: new File(['Incoming content'], 'incoming.txt'),
+      meta: { path: 'incoming.txt' },
+    });
+    const archive = await exportGarden();
+    const existing = await svc.crux.create({ title: 'Keep me', type: 'workspace' });
+    const file = await svc.artifact.upload({
+      resourceId: existing.id,
+      blob: new File(['Irreplaceable content'], 'keep.txt'),
+      meta: { path: 'keep.txt' },
+    });
+    vi.spyOn(getSqliteClient(), 'blobWrite').mockRejectedValue(new Error('Disk full'));
+    await expect(importGarden({ data: archive.blob })).rejects.toThrow('Disk full');
+    expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
+    expect(await (await svc.artifact.downloadBlob(file.id)).text()).toBe('Irreplaceable content');
+  });
+
+  it('refuses replacement when its recovery database cannot be captured', async () => {
+    const archive = await exportGarden();
+    const existing = await svc.crux.create({ title: 'Keep me', type: 'workspace' });
+    vi.spyOn(getSqliteClient(), 'export').mockRejectedValue(new Error('Backup unavailable'));
+    await expect(importGarden({ data: archive.blob })).rejects.toThrow('Backup unavailable');
+    expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
+  });
+
+  it('restores the previous database when imported session cleanup fails', async () => {
+    const archive = await exportGarden();
+    const existing = await svc.crux.create({ title: 'Keep me', type: 'workspace' });
+    const db = getSqliteClient();
+    const run = db.run.bind(db);
+    vi.spyOn(db, 'run').mockImplementation((sql, params) => {
+      if (sql.startsWith('UPDATE cruxes SET meta = json_remove'))
+        return Promise.reject(new Error('Cleanup interrupted'));
+      return run(sql, params);
+    });
+    await expect(importGarden({ data: archive.blob })).rejects.toThrow('Cleanup interrupted');
+    expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
   });
 
   describe('basic round-trip', () => {
@@ -196,6 +240,12 @@ describe('Garden Export / Import', () => {
 
   describe('legacy format', () => {
     it('imports raw SQLite data (non-ZIP) as legacy format', async () => {
+      const crux = await svc.crux.create({ title: 'Legacy content', type: 'workspace' });
+      const file = await svc.artifact.upload({
+        resourceId: crux.id,
+        blob: new File(['Keep the existing blob'], 'legacy.txt'),
+        meta: { path: 'legacy.txt' },
+      });
       // Export the current database as raw ArrayBuffer
       const { getSqliteClient } = await import('./sqlite/client');
       const rawSqlite = await getSqliteClient().export();
@@ -203,6 +253,9 @@ describe('Garden Export / Import', () => {
       // importGarden should detect this as non-ZIP and fall back to legacy import
       const imported = await importGarden({ data: rawSqlite });
       expect(imported.cruxCount).toBeGreaterThanOrEqual(0);
+      expect(await (await svc.artifact.downloadBlob(file.id)).text()).toBe(
+        'Keep the existing blob',
+      );
     });
   });
 
