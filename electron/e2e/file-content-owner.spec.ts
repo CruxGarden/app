@@ -123,7 +123,14 @@ test('API file content publication retains old and staged bytes through failed c
       ) as typeof import('@cruxgarden/local-api');
       const directory = path.join(app.getPath('userData'), 'file-content-proof');
       const store = {
-        read: async (fp: string) => fs.readFileSync(path.join(directory, fp)),
+        read: async (fp: string) => {
+          try {
+            return fs.readFileSync(path.join(directory, fp));
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+            throw error;
+          }
+        },
         write: async () => {
           throw new Error('Retry must use already staged bytes');
         },
@@ -141,7 +148,7 @@ test('API file content publication retains old and staged bytes through failed c
         const files = await Promise.all(
           [saved.head.root, after.root].map(async (root) => {
             const file = (await tree.get(root, 'image.bin'))!;
-            return Buffer.from(await store.read(file.fingerprint)).toString();
+            return Buffer.from((await store.read(file.fingerprint))!).toString();
           }),
         );
         // Inventory the captured image after the live owner has moved on. Copy
@@ -159,12 +166,36 @@ test('API file content publication retains old and staged bytes through failed c
         } catch (error) {
           staleReadRefused = (error as Error).message.includes('File content changed');
         }
+        const renamed = await owner.editFileContent(
+          {
+            cruxId: saved.id,
+            expected: after,
+            changes: [
+              { remove: 'image.bin' },
+              { put: { ...activeFile!.entry, path: 'renamed.bin' } },
+            ],
+          },
+          {
+            ...store,
+            write: async (fp, bytes) => {
+              fs.writeFileSync(path.join(directory, fp), bytes, { flush: true });
+            },
+          },
+        );
+        const renamedFile = await owner.readFileContent(
+          { cruxId: saved.id, expected: renamed, path: 'renamed.bin' },
+          store,
+        );
+        const removedFile = await owner.readFileContent(
+          { cruxId: saved.id, expected: renamed, path: 'image.bin' },
+          store,
+        );
         const inventory = await inspectDesktopManifestRecovery(captured, store);
         const destination = path.join(directory, 'detached-recovery');
         fs.mkdirSync(destination);
         fs.writeFileSync(path.join(destination, 'garden.db'), Buffer.from(inventory.database));
         for (const fp of inventory.fingerprints)
-          fs.writeFileSync(path.join(destination, fp), await store.read(fp));
+          fs.writeFileSync(path.join(destination, fp), (await store.read(fp))!);
         const recoveredStore = {
           read: async (fp: string) => {
             try {
@@ -204,6 +235,9 @@ test('API file content publication retains old and staged bytes through failed c
             recoveredHead,
             activeFile: Buffer.from(activeFile!.bytes).toString(),
             staleReadRefused,
+            renamed,
+            renamedBytes: Buffer.from(renamedFile!.bytes).toString(),
+            removedFile,
             original: Buffer.from(originalBytes).toString(),
             missingRefused,
             retainedOldRoot: retry.fingerprints.includes(saved.head.root),
@@ -223,6 +257,9 @@ test('API file content publication retains old and staged bytes through failed c
     expect(reopened.recoveredHead).toEqual(saved.head);
     expect(reopened.activeFile).toBe('Updated\0bytes');
     expect(reopened.staleReadRefused).toBe(true);
+    expect(reopened.renamed.revision).toBe(3);
+    expect(reopened.renamedBytes).toBe('Updated\0bytes');
+    expect(reopened.removedFile).toBeNull();
     expect(reopened.original).toBe('Original\0bytes');
     expect(reopened.missingRefused).toBe(true);
     expect(reopened.retainedOldRoot).toBe(true);
