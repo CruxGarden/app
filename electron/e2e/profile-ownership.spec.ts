@@ -5,14 +5,13 @@ import { symlinkSync } from 'node:fs';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 
-for (const backend of ['native', 'api'] as const) {
-  test(`${backend} profile refuses a second desktop process before storage startup and reveals its existing window`, async () => {
-    const env = backend === 'api' ? { CRUX_API_OWNER: '1' } : {};
-    const launch = await launchApp({ env });
+for (const profilePath of ['direct', 'alias'] as const) {
+  test(`${profilePath} profile path refuses a second desktop process before storage startup and reveals its existing window`, async () => {
+    const launch = await launchApp();
     try {
       await enterGarden(launch.page);
       const id = await createCrux(launch.page, 'The original workspace');
-      if (backend === 'api') {
+      if (profilePath === 'alias') {
         await addArtifact(launch.page, 'unfinished.txt');
         await launch.page.locator('.monaco-editor').click();
         await launch.page.keyboard.type('Keep this unfinished');
@@ -31,11 +30,9 @@ for (const backend of ['native', 'api'] as const) {
       });
       const childEnv: NodeJS.ProcessEnv = {
         ...process.env,
-        CRUX_USER_DATA: backend === 'api' ? alias : join(launch.dir, 'userData'),
-        // This must never reach setupIpc. If it does, its missing Garden root
-        // makes API startup fail instead of appearing to be a successful handoff.
-        CRUX_API_OWNER: '1',
-        CRUX_GARDEN_ROOT: '',
+        CRUX_USER_DATA: profilePath === 'alias' ? alias : join(launch.dir, 'userData'),
+        // Even a failed handoff must stay inside the disposable Garden.
+        CRUX_GARDEN_ROOT: join(launch.dir, 'garden'),
         CRUX_SILENT: '1',
       };
       delete childEnv.ELECTRON_RUN_AS_NODE;
@@ -69,7 +66,7 @@ for (const backend of ['native', 'api'] as const) {
       await expect(
         launch.page.getByRole('button', { name: 'Switch Crux workspace' }),
       ).toContainText('The original workspace');
-      if (backend === 'api')
+      if (profilePath === 'alias')
         await expect(launch.page.locator('.monaco-editor')).toContainText('Keep this unfinished');
       await expect(
         launch.page.evaluate(
@@ -87,9 +84,9 @@ for (const backend of ['native', 'api'] as const) {
 }
 
 test('distinct profiles remain independent and ownership releases after quit and process termination', async () => {
-  let first = await launchApp({ env: { CRUX_API_OWNER: '1' } });
+  let first = await launchApp();
   const dir = first.dir;
-  const second = await launchApp({ env: { CRUX_API_OWNER: '1' } });
+  const second = await launchApp();
   try {
     await first.page.evaluate(() =>
       window.electronAPI!.sqlite.run("INSERT INTO settings VALUES ('ownership-test', 'first')"),
@@ -98,7 +95,7 @@ test('distinct profiles remain independent and ownership releases after quit and
       window.electronAPI!.sqlite.run("INSERT INTO settings VALUES ('ownership-test', 'second')"),
     );
     await first.app.close();
-    first = await launchApp({ dir, env: { CRUX_API_OWNER: '1' } });
+    first = await launchApp({ dir });
     expect(
       await first.page.evaluate(() =>
         window.electronAPI!.sqlite.get("SELECT value FROM settings WHERE key = 'ownership-test'"),
@@ -107,7 +104,7 @@ test('distinct profiles remain independent and ownership releases after quit and
     const child = first.app.process();
     child.kill('SIGKILL');
     await expect.poll(() => child.signalCode).toBe('SIGKILL');
-    first = await launchApp({ dir, env: { CRUX_API_OWNER: '1' } });
+    first = await launchApp({ dir });
     expect(
       await first.page.evaluate(() =>
         window.electronAPI!.sqlite.get("SELECT value FROM settings WHERE key = 'ownership-test'"),

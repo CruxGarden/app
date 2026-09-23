@@ -60,42 +60,38 @@ const api: ElectronBridge = {
       }
     : {}),
   sqlite: {
-    ...(process.env.CRUX_API_OWNER === '1'
-      ? {
-          onChange: (callback: (change: LocalGraphChange) => void) => {
-            const handler = (_event: unknown, change: LocalGraphChange) => callback(change);
-            ipcRenderer.on('sqlite:changed', handler);
-            return () => {
-              ipcRenderer.removeListener('sqlite:changed', handler);
-            };
-          },
-          createCrux: (input: LocalCruxCreate) => ipcRenderer.invoke('sqlite:create-crux', input),
-          prepareWorkingCopyFolder: (id: string, revision: number) =>
-            ipcRenderer.invoke('sqlite:prepare-working-copy-folder', id, revision),
-          finishWorkingCopySetup: (id: string, revision: number, phase: 'ready' | 'failed') =>
-            ipcRenderer.invoke('sqlite:finish-working-copy-setup', id, revision, phase),
-          createWorkingCopy: (input: LocalWorkingCopyCreate) =>
-            ipcRenderer.invoke('sqlite:create-working-copy', input),
-          saveTaskReview: (reviewData: string, expectedData?: string) =>
-            ipcRenderer.invoke('sqlite:save-task-review', reviewData, expectedData),
-          beginTaskMerge: (id: string, reviewData: string) =>
-            ipcRenderer.invoke('sqlite:begin-task-merge', id, reviewData),
-          releaseTaskReview: (id: string) => ipcRenderer.invoke('sqlite:release-task-review', id),
-          completeTaskMerge: (id: string, resultHead: string) =>
-            ipcRenderer.invoke('sqlite:complete-task-merge', id, resultHead),
-          setWorkingCopyArchived: (id: string, archived: boolean, revision: number) =>
-            ipcRenderer.invoke('sqlite:set-working-copy-archived', id, archived, revision),
-          setCruxTrashed: (id: string, trashed: boolean) =>
-            ipcRenderer.invoke('sqlite:set-crux-trashed', id, trashed),
-          deleteCrux: (id: string) => ipcRenderer.invoke('sqlite:delete-crux', id),
-          updateCrux: (id: string, patch: LocalCruxUpdate) =>
-            ipcRenderer.invoke('sqlite:update-crux', id, patch),
-          updateWorkingCopyMeta: (id: string, patch: Record<string, unknown>, title?: string) =>
-            ipcRenderer.invoke('sqlite:update-working-copy-meta', id, patch, title),
-          mergeCruxMeta: (id: string, patch: Record<string, unknown>) =>
-            ipcRenderer.invoke('sqlite:merge-crux-meta', id, patch),
-        }
-      : {}),
+    onChange: (callback: (change: LocalGraphChange) => void) => {
+      const handler = (_event: unknown, change: LocalGraphChange) => callback(change);
+      ipcRenderer.on('sqlite:changed', handler);
+      return () => {
+        ipcRenderer.removeListener('sqlite:changed', handler);
+      };
+    },
+    createCrux: (input: LocalCruxCreate) => ipcRenderer.invoke('sqlite:create-crux', input),
+    prepareWorkingCopyFolder: (id: string, revision: number) =>
+      ipcRenderer.invoke('sqlite:prepare-working-copy-folder', id, revision),
+    finishWorkingCopySetup: (id: string, revision: number, phase: 'ready' | 'failed') =>
+      ipcRenderer.invoke('sqlite:finish-working-copy-setup', id, revision, phase),
+    createWorkingCopy: (input: LocalWorkingCopyCreate) =>
+      ipcRenderer.invoke('sqlite:create-working-copy', input),
+    saveTaskReview: (reviewData: string, expectedData?: string) =>
+      ipcRenderer.invoke('sqlite:save-task-review', reviewData, expectedData),
+    beginTaskMerge: (id: string, reviewData: string) =>
+      ipcRenderer.invoke('sqlite:begin-task-merge', id, reviewData),
+    releaseTaskReview: (id: string) => ipcRenderer.invoke('sqlite:release-task-review', id),
+    completeTaskMerge: (id: string, resultHead: string) =>
+      ipcRenderer.invoke('sqlite:complete-task-merge', id, resultHead),
+    setWorkingCopyArchived: (id: string, archived: boolean, revision: number) =>
+      ipcRenderer.invoke('sqlite:set-working-copy-archived', id, archived, revision),
+    setCruxTrashed: (id: string, trashed: boolean) =>
+      ipcRenderer.invoke('sqlite:set-crux-trashed', id, trashed),
+    deleteCrux: (id: string) => ipcRenderer.invoke('sqlite:delete-crux', id),
+    updateCrux: (id: string, patch: LocalCruxUpdate) =>
+      ipcRenderer.invoke('sqlite:update-crux', id, patch),
+    updateWorkingCopyMeta: (id: string, patch: Record<string, unknown>, title?: string) =>
+      ipcRenderer.invoke('sqlite:update-working-copy-meta', id, patch, title),
+    mergeCruxMeta: (id: string, patch: Record<string, unknown>) =>
+      ipcRenderer.invoke('sqlite:merge-crux-meta', id, patch),
     run: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:run', sql, params),
     get: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:get', sql, params),
     all: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:all', sql, params),

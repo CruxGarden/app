@@ -20,7 +20,6 @@ const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
-const { SqliteNative } = require('./sqlite-native');
 const { SqliteApi } = require('./sqlite-api');
 const { SecretStore } = require('./secrets');
 const { DesktopConfig, ProjectFolders } = require('./projects');
@@ -431,14 +430,8 @@ function createWindow() {
 
 async function setupIpc() {
   registerBrowserPanel(() => mainWindow);
-  // Opt-in integration path only until all writer/migration gates are complete.
-  // Never let an accidental test switch select Daniel's ordinary profile.
-  const useApiOwner = process.env.CRUX_API_OWNER === '1';
-  if (useApiOwner && (!process.env.CRUX_USER_DATA || !process.env.CRUX_GARDEN_ROOT))
-    throw new Error('API owner tests require isolated user data and Garden root');
-  db = useApiOwner
-    ? await SqliteApi.open(getDbPath(), getBlobDir())
-    : new SqliteNative(getDbPath(), getBlobDir());
+  // The actual local API is the sole desktop database owner.
+  db = await SqliteApi.open(getDbPath(), getBlobDir());
   db.onChange?.((change) => {
     if (mainWindow && !mainWindow.webContents.isDestroyed())
       mainWindow.webContents.send('sqlite:changed', change);

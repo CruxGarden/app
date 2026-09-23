@@ -2,9 +2,8 @@ import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 
-const env = { CRUX_API_OWNER: '1' };
 test('the desktop UI saves and reopens work through the sole API database owner', async () => {
-  let launch = await launchApp({ env });
+  let launch = await launchApp();
   const dir = launch.dir;
   try {
     const refused = await launch.app.evaluate(async ({ app }) => {
@@ -26,6 +25,9 @@ test('the desktop UI saves and reopens work through the sole API database owner'
       }
     });
     expect(refused).toContain('already owned');
+    expect(await launch.page.evaluate(() => typeof window.electronAPI!.sqlite.createCrux)).toBe(
+      'function',
+    );
     await enterGarden(launch.page);
     const id = await createCrux(launch.page, 'API-owned work');
     await addArtifact(launch.page, 'owner.txt');
@@ -43,7 +45,7 @@ test('the desktop UI saves and reopens work through the sole API database owner'
       }, id);
     await expect.poll(read).toBe('Saved through the actual API');
     await launch.app.close();
-    launch = await launchApp({ dir, env });
+    launch = await launchApp({ dir });
     await launch.page.getByRole('button', { name: /enter/i }).click();
     await expect(launch.page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
       'API-owned work',
