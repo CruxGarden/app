@@ -1,3 +1,4 @@
+import { inspectDesktopRecovery } from '@cruxgarden/local-api';
 import type { NativeStorage } from './native-storage';
 const Database = require('better-sqlite3');
 const fs = require('fs');
@@ -54,10 +55,10 @@ export class SqliteNative implements NativeStorage {
    * leaves an existing table alone, so each addition is checked here, once, on
    * open — the desktop counterpart of the worker's schema_version migrations.
    */
-  private ensureColumns(): void {
-    const cols = this.db.pragma("table_info('cruxes')") as { name: string }[];
+  private ensureColumns(db = this.db): void {
+    const cols = db.pragma("table_info('cruxes')") as { name: string }[];
     if (!cols.some((c) => c.name === 'deleted'))
-      this.db.exec('ALTER TABLE cruxes ADD COLUMN deleted TEXT');
+      db.exec('ALTER TABLE cruxes ADD COLUMN deleted TEXT');
   }
 
   /** Sanitize params for better-sqlite3 which only accepts number, string, bigint, Buffer, null */
@@ -100,9 +101,23 @@ export class SqliteNative implements NativeStorage {
   }
 
   import(data: ArrayBuffer): void {
+    // Validate through the actual API before closing the current owner. Normalize
+    // legacy optional tables/columns in detached bytes, never in the live file.
+    // Content availability belongs to the restore coordinator: this primitive
+    // also restores a safety image whose pre-existing content may be incomplete.
+    const inspected = inspectDesktopRecovery(data);
+    const candidate = new Database(Buffer.from(inspected.database));
+    let prepared: Buffer;
+    try {
+      candidate.exec(loadSchema());
+      this.ensureColumns(candidate);
+      prepared = candidate.serialize();
+    } finally {
+      candidate.close();
+    }
     const dbPath = this.db.name;
     this.db.close();
-    fs.writeFileSync(dbPath, Buffer.from(data));
+    fs.writeFileSync(dbPath, prepared);
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.exec(loadSchema());
