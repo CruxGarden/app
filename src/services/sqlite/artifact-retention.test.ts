@@ -39,14 +39,39 @@ describe('shared Artifact and avatar content', () => {
     },
   );
 
-  it('still reclaims bytes that neither files nor authors retain', async () => {
+  it('keeps a historical portrait after its last editable file is deleted', async () => {
+    const crux = await cruxes.create({ title: 'Historical portrait' });
+    const file = await artifacts.create({
+      resourceId: crux.id,
+      content: 'Historical portrait bytes',
+      meta: { path: 'old-portrait.txt' },
+    });
+    const history = await cruxes.create({
+      title: 'Retained conversation',
+      meta: { authorSnapshots: { previous: { avatarFingerprint: file.fingerprint } } },
+    });
+    await artifacts.delete(file.id, { writeThrough: false });
+    expect((await cruxes.findById(history.id)).meta?.authorSnapshots).toEqual({
+      previous: { avatarFingerprint: file.fingerprint },
+    });
+    expect(new TextDecoder().decode(await getSqliteClient().blobRead(file.fingerprint!))).toBe(
+      'Historical portrait bytes',
+    );
+  });
+
+  it('retains captured backup bytes after the live file reference is removed', async () => {
     const crux = await cruxes.create({ title: 'Unreferenced bytes' });
     const file = await artifacts.create({
       resourceId: crux.id,
       content: crypto.randomUUID(),
       meta: { path: 'unused.txt' },
     });
+    const db = getSqliteClient();
+    const captured = await db.export();
+    const bytes = await db.blobRead(file.fingerprint!);
     await artifacts.delete(file.id, { writeThrough: false });
-    await expect(getSqliteClient().blobRead(file.fingerprint!)).rejects.toThrow();
+    expect(await db.inspectImport(captured)).toContain(file.fingerprint);
+    expect(await db.blobRead(file.fingerprint!)).toEqual(bytes);
+    await expect(artifacts.findById(file.id)).rejects.toThrow('Artifact not found');
   });
 });

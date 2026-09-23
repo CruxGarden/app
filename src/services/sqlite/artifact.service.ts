@@ -18,24 +18,9 @@ import {
   renameThroughArtifact,
 } from '../project-folder';
 
-/**
- * Reclaim legacy bytes only when neither Artifacts nor retained author avatars use them.
- * New content roots require the separate complete retained-root collector before cutover.
- * Safe to call even if the blob doesn't exist (blobDelete is a no-op).
- */
-async function cleanupOrphanedBlob(fingerprint: string | null): Promise<void> {
-  if (!fingerprint) return;
-  const db = getSqliteClient();
-  const row = await db.get<{ count: number }>(
-    `SELECT (SELECT COUNT(*) FROM artifacts WHERE fingerprint = ?)
-      + (SELECT COUNT(*) FROM authors WHERE json_extract(meta, '$.avatarFingerprint') = ?) as count`,
-    [fingerprint, fingerprint],
-  );
-  if ((row?.count ?? 0) === 0) {
-    await db.blobDelete(fingerprint);
-  }
-}
-
+// Blob bytes outlive file records: history, portraits, backups and staged writes
+// can still retain them. Only an API-owned collector with complete roots and
+// in-flight admission may reclaim them (ADR 0058).
 export class SqliteArtifactService implements IArtifactService {
   async findById(id: string): Promise<Artifact> {
     const row = await getSqliteClient().get('SELECT * FROM artifacts WHERE id = ?', [id]);
@@ -75,7 +60,6 @@ export class SqliteArtifactService implements IArtifactService {
     );
     if (!existing) return null;
 
-    const oldFingerprint = existing.fingerprint as string | null;
     if (!args.blobAlreadyWritten) await db.blobWrite(args.fingerprint, args.contentBytes);
     // Desktop: keep the Project Folder in sync (ADR 0001 write-through)
     if (args.writeThrough !== false) {
@@ -99,9 +83,6 @@ export class SqliteArtifactService implements IArtifactService {
         existing.id,
       ],
     );
-    if (oldFingerprint && oldFingerprint !== args.fingerprint) {
-      await cleanupOrphanedBlob(oldFingerprint);
-    }
     return this.findById(existing.id as string);
   }
 
@@ -365,7 +346,6 @@ export class SqliteArtifactService implements IArtifactService {
       });
     }
     await db.run('DELETE FROM artifacts WHERE id = ?', [id]);
-    if (row?.fingerprint) await cleanupOrphanedBlob(row.fingerprint);
   }
 
   async readContent(id: string): Promise<string> {
