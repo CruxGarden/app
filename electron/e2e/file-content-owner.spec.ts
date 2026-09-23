@@ -118,7 +118,7 @@ test('API file content publication retains old and staged bytes through failed c
       const load = process
         .getBuiltinModule('module')
         .createRequire(path.join(app.getAppPath(), 'package.json'));
-      const { LocalGraphRuntime, FileManifest } = load(
+      const { LocalGraphRuntime, FileManifest, inspectDesktopManifestRecovery } = load(
         '@cruxgarden/local-api',
       ) as typeof import('@cruxgarden/local-api');
       const directory = path.join(app.getPath('userData'), 'file-content-proof');
@@ -132,6 +132,7 @@ test('API file content publication retains old and staged bytes through failed c
       try {
         const before = await owner.fileContentHead(saved.id);
         await owner.run('DROP TRIGGER refuse_content');
+        const captured = await owner.exportDatabase();
         const after = await owner.commitFileContent(
           { cruxId: saved.id, expected: saved.head, root: saved.candidate },
           store,
@@ -143,7 +144,56 @@ test('API file content publication retains old and staged bytes through failed c
             return Buffer.from(await store.read(file.fingerprint)).toString();
           }),
         );
-        return { before, after, files, artifacts: await owner.all('SELECT * FROM artifacts') };
+        // Inventory the captured image after the live owner has moved on. Copy
+        // only that inventory into a fresh store with no source-store fallback.
+        const inventory = await inspectDesktopManifestRecovery(captured, store);
+        const destination = path.join(directory, 'detached-recovery');
+        fs.mkdirSync(destination);
+        fs.writeFileSync(path.join(destination, 'garden.db'), Buffer.from(inventory.database));
+        for (const fp of inventory.fingerprints)
+          fs.writeFileSync(path.join(destination, fp), await store.read(fp));
+        const recoveredStore = {
+          read: async (fp: string) => {
+            try {
+              return fs.readFileSync(path.join(destination, fp));
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+              throw error;
+            }
+          },
+          write: async () => {
+            throw new Error('Recovery must not stage new content');
+          },
+        };
+        const recovered = await LocalGraphRuntime.open(path.join(destination, 'garden.db'));
+        try {
+          const recoveredHead = await recovered.fileContentHead(saved.id);
+          const recoveredTree = new FileManifest(recoveredStore);
+          const original = (await recoveredTree.get(recoveredHead!.root, 'image.bin'))!;
+          const originalBytes = (await recoveredStore.read(original.fingerprint))!;
+          fs.unlinkSync(path.join(destination, original.fingerprint));
+          let missingRefused = false;
+          try {
+            await inspectDesktopManifestRecovery(inventory.database, recoveredStore);
+          } catch {
+            missingRefused = true;
+          }
+          fs.writeFileSync(path.join(destination, original.fingerprint), originalBytes);
+          const retry = await inspectDesktopManifestRecovery(inventory.database, recoveredStore);
+          return {
+            before,
+            after,
+            files,
+            artifacts: await owner.all('SELECT * FROM artifacts'),
+            recoveredHead,
+            original: Buffer.from(originalBytes).toString(),
+            missingRefused,
+            retainedOldRoot: retry.fingerprints.includes(saved.head.root),
+            excludesLaterRoot: !retry.fingerprints.includes(saved.candidate),
+          };
+        } finally {
+          await recovered.close();
+        }
       } finally {
         await owner.close();
       }
@@ -152,6 +202,11 @@ test('API file content publication retains old and staged bytes through failed c
     expect(reopened.after).toEqual({ ...saved.head, root: saved.candidate, revision: 2 });
     expect(reopened.files).toEqual(['Original\0bytes', 'Updated\0bytes']);
     expect(reopened.artifacts).toEqual([]);
+    expect(reopened.recoveredHead).toEqual(saved.head);
+    expect(reopened.original).toBe('Original\0bytes');
+    expect(reopened.missingRefused).toBe(true);
+    expect(reopened.retainedOldRoot).toBe(true);
+    expect(reopened.excludesLaterRoot).toBe(true);
   } finally {
     await launch.app.close();
   }
