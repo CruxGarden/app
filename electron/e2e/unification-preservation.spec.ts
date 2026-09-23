@@ -1,11 +1,15 @@
+import {
+  toolFunctionProfile,
+  toolFunctionIds,
+} from '../../src/test/fixtures/unification/tool-function-profile';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { legacyProfile, legacyIds } from '../../src/test/fixtures/unification/legacy-profile';
+import { legacyIds } from '../../src/test/fixtures/unification/legacy-profile';
 
 // Integration at the real Electron/API/native SQLite boundary. This does not
 // claim normal renderer ownership or selective Garden transfer has migrated.
 test('the API preserves a complete legacy profile through preparation, export and process restart', async () => {
-  const fixture = legacyProfile();
+  const fixture = toolFunctionProfile();
   let launch = await launchApp();
   try {
     const prepared = await launch.app.evaluate(async ({ app }, fixture) => {
@@ -115,7 +119,13 @@ test('the API preserves a complete legacy profile through preparation, export an
     expect(restored.bytes).toEqual(fixture.blobs);
     expect(restored.sharedId).toBe(legacyIds.shared);
     expect(restored.targets).toEqual(
-      [legacyIds.base, legacyIds.tip, legacyIds.private, legacyIds.mood].sort(),
+      [
+        legacyIds.base,
+        legacyIds.tip,
+        legacyIds.private,
+        legacyIds.mood,
+        toolFunctionIds.tool,
+      ].sort(),
     );
   } finally {
     await launch.app.close();

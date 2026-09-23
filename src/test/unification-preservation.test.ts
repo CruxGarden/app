@@ -1,7 +1,18 @@
+import {
+  toolFunctionProfile,
+  toolFunctionIds,
+  preservedFunction,
+  preservedEvent,
+  preservedSchedule,
+} from './fixtures/unification/tool-function-profile';
+import frozen from './fixtures/unification/tool-package-v1.json';
+import { installedTool, installedToolPackage } from '../services/crux-tools/installed';
+import { functionFiles } from '../services/crux-functions';
+import { getServices, initServices } from '../services';
 import { describe, expect, it } from 'vitest';
 import { getSqliteClient, setSqliteClient } from '../services/sqlite/client';
 import { createTestSqliteClient } from './sqlite-client';
-import { legacyIds, legacyProfile, seedLegacyProfile } from './fixtures/unification/legacy-profile';
+import { legacyIds, seedLegacyProfile } from './fixtures/unification/legacy-profile';
 import ledger from './fixtures/unification/settings-ledger.json';
 import { SettingsKey, isSecretSettingKey } from '../lib/constants';
 import { exportGarden, importGarden } from '../services/garden-io';
@@ -23,7 +34,7 @@ describe('unification preservation baseline', () => {
   });
 
   it('round-trips the complete legacy profile through current recovery export into a fresh database', async () => {
-    const fixture = legacyProfile();
+    const fixture = toolFunctionProfile();
     const source = getSqliteClient();
     await seedLegacyProfile(source, fixture);
     const before: Record<string, unknown[]> = {};
@@ -59,6 +70,58 @@ describe('unification preservation baseline', () => {
       name: 'My quiet room',
       space: 0.81,
     });
+    await initServices('local');
+    const tool = installedTool(frozen.manifest.id)!;
+    expect(tool).toMatchObject({
+      cruxId: toolFunctionIds.tool,
+      publishedCruxId: toolFunctionIds.publishedTool,
+    });
+    const packageFiles = await getServices().artifact.findByResource('crux', tool.cruxId);
+    expect(packageFiles).toHaveLength(1); // Immutable tool stays one content entity.
+    const unpacked = (await installedToolPackage(tool))!;
+    expect(unpacked.manifest).toMatchObject(frozen.manifest);
+    for (const file of frozen.files) {
+      const content = await unpacked.files.find((entry) => entry.path === file.path)!.read();
+      expect([...content], file.path).toEqual([...Buffer.from(file.base64, 'base64')]);
+    }
+    const legacy = installedTool('legacy-preservation-tool')!;
+    expect(await installedToolPackage(legacy)).toBeNull(); // Old per-file install still readable.
+    const legacyFiles = await getServices().artifact.findByResource('crux', legacy.cruxId);
+    expect(legacyFiles).toHaveLength(frozen.files.length);
+    for (const file of frozen.files) {
+      const artifact = legacyFiles.find((entry) => entry.meta?.path === file.path)!;
+      expect(
+        [
+          ...new Uint8Array(
+            await (await getServices().artifact.downloadBlob(artifact.id)).arrayBuffer(),
+          ),
+        ],
+        file.path,
+      ).toEqual([...Buffer.from(file.base64, 'base64')]);
+    }
+    const functions = await getServices().artifact.findByResource('crux', legacyIds.shared);
+    expect(functionFiles(functions)).toEqual([
+      { name: 'hello', path: 'functions/hello.js', kind: 'http' },
+      { name: 'on-fixture', path: 'functions/on-fixture.js', kind: 'event', event: 'fixture' },
+      { name: 'tick', path: 'functions/tick.js', kind: 'http' },
+    ]);
+    for (const [path, expected] of Object.entries({
+      'functions/hello.js': preservedFunction,
+      'functions/on-fixture.js': preservedEvent,
+      'functions/tick.js': preservedSchedule,
+    })) {
+      const file = functions.find((entry) => entry.meta?.path === path)!;
+      expect(await getServices().artifact.readContent(file.id)).toBe(expected);
+    }
+    expect(await getServices().store.get(legacyIds.shared, 'guestbook')).toEqual({
+      text: 'A retained visitor entry',
+    });
+    expect(
+      await getServices().store.get(legacyIds.shared, 'guestbook', toolFunctionIds.visitorA),
+    ).toEqual({ text: 'Private visitor 1' });
+    expect(
+      await getServices().store.get(legacyIds.shared, 'guestbook', toolFunctionIds.visitorB),
+    ).toEqual({ text: 'Private visitor 2' });
     // Recovery is intentionally whole-installation: selective export must be
     // tested separately, never inferred from this all-records preservation test.
   });
