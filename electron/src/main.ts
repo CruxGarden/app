@@ -3,6 +3,7 @@ import type {
   LocalCruxCreate,
   LocalCruxUpdate,
   FileContentRead,
+  FileContentSelection,
   FileContentEdit,
   GrowthSnapshotCreate,
 } from '@cruxgarden/local-api';
@@ -445,6 +446,9 @@ async function setupIpc() {
     return db.fileContent;
   };
   ipcMain.handle('content:head', (_e: unknown, id: string) => fileContent().head(id));
+  ipcMain.handle('content:list', (_e: unknown, input: FileContentSelection) =>
+    fileContent().list(input),
+  );
   ipcMain.handle('content:read', (_e: unknown, input: FileContentRead) =>
     fileContent().read(input),
   );

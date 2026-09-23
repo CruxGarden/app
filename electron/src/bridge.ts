@@ -5,6 +5,7 @@ import type {
   LocalGraphChange,
   LocalGraphRuntime,
   FileContentRead,
+  FileContentSelection,
   FileContentEdit,
   GrowthSnapshotCreate,
 } from '@cruxgarden/local-api';
@@ -29,6 +30,7 @@ export type { LocalGraphChange } from '@cruxgarden/local-api';
  * stays with the file service. No renderer-supplied store or executable callbacks. */
 export interface FileContentBridge {
   head(id: string): ReturnType<LocalGraphRuntime['fileContentHead']>;
+  list(input: FileContentSelection): ReturnType<LocalGraphRuntime['listFileContent']>;
   read(input: FileContentRead): ReturnType<LocalGraphRuntime['readFileContent']>;
   edit(input: FileContentEdit): ReturnType<LocalGraphRuntime['editFileContent']>;
   snapshot(input: GrowthSnapshotCreate): ReturnType<LocalGraphRuntime['createGrowthSnapshot']>;

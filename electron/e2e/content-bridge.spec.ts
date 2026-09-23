@@ -73,6 +73,12 @@ test('renderer content commands use the actual API and host blob store through f
         } catch (error) {
           staleRefused = String(error).includes('changed');
         }
+        let staleListRefused = false;
+        try {
+          await content.list({ cruxId: id, expected: head });
+        } catch (error) {
+          staleListRefused = String(error).includes('changed');
+        }
         let snapshotEditRefused = false;
         try {
           await content.edit({ cruxId: snapshotId, expected: snapshot.head, changes: [] });
@@ -92,6 +98,7 @@ test('renderer content commands use the actual API and host blob store through f
           refused,
           partial,
           staleRefused,
+          staleListRefused,
           snapshotEditRefused,
           notices,
           current: new TextDecoder().decode(current!.bytes),
@@ -104,6 +111,7 @@ test('renderer content commands use the actual API and host blob store through f
     expect(saved.refused).toBe(true);
     expect(saved.partial).toEqual([]);
     expect(saved.staleRefused).toBe(true);
+    expect(saved.staleListRefused).toBe(true);
     expect(saved.snapshotEditRefused).toBe(true);
     expect(saved.current).toBe('Saved through the renderer\0');
     expect(saved.notices).toEqual([['fileContent'], ['growth'], ['fileContent']]);
@@ -127,6 +135,11 @@ test('renderer content commands use the actual API and host blob store through f
         now: new TextDecoder().decode(now!.bytes),
         entry: old!.entry,
         head: await content.head(saved.id),
+        historicalList: await content.list({
+          cruxId: saved.snapshotId,
+          expected: saved.snapshot.head,
+        }),
+        currentList: await content.list({ cruxId: saved.id, expected: saved.latest }),
         artifacts: await db.all('SELECT id FROM artifacts WHERE resource_id IN (?, ?)', [
           saved.id,
           saved.snapshotId,
@@ -141,6 +154,11 @@ test('renderer content commands use the actual API and host blob store through f
     expect(reopened.now).toBe(saved.current);
     expect(reopened.entry).toEqual(saved.entry);
     expect(reopened.head).toEqual(saved.latest);
+    expect(reopened.historicalList).toEqual({ head: saved.snapshot.head, entries: [saved.entry] });
+    expect(reopened.currentList).toEqual({
+      head: saved.latest,
+      entries: [{ ...saved.entry, path: 'renamed.bin' }],
+    });
     expect(reopened.artifacts).toEqual([]);
     expect(reopened.growth).toEqual([{ source_id: saved.id, target_id: saved.snapshotId }]);
   } finally {

@@ -58,6 +58,10 @@ export class SqliteApi implements NativeStorage {
       this.assertAvailable();
       return this.owner.fileContentHead(id);
     },
+    list: (input) => {
+      this.assertAvailable();
+      return this.owner.listFileContent(input, this.contentStore());
+    },
     read: (input) => {
       this.assertAvailable();
       return this.owner.readFileContent(input, this.contentStore());
