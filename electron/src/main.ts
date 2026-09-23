@@ -1,3 +1,4 @@
+import type { LocalCruxUpdate } from '@cruxgarden/local-api';
 import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
@@ -442,6 +443,11 @@ async function setupIpc() {
       return db.mergeCruxMeta(id, patch);
     },
   );
+
+  ipcMain.handle('sqlite:update-crux', (_e: any, id: string, patch: LocalCruxUpdate) => {
+    if (!db.updateCrux) throw new Error('Owned Crux commands are unavailable');
+    return db.updateCrux(id, patch);
+  });
 
   ipcMain.handle('sqlite:run', (_e: any, sql: string, params?: unknown[]) => {
     return db.run(sql, params);

@@ -1,3 +1,4 @@
+import type { LocalCruxUpdate } from '@cruxgarden/local-api';
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   ElectronBridge,
@@ -56,6 +57,8 @@ const api: ElectronBridge = {
   sqlite: {
     ...(process.env.CRUX_API_OWNER === '1'
       ? {
+          updateCrux: (id: string, patch: LocalCruxUpdate) =>
+            ipcRenderer.invoke('sqlite:update-crux', id, patch),
           mergeCruxMeta: (id: string, patch: Record<string, unknown>) =>
             ipcRenderer.invoke('sqlite:merge-crux-meta', id, patch),
         }

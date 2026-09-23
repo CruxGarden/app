@@ -1,3 +1,4 @@
+import type { LocalCruxUpdate } from '@cruxgarden/local-api';
 /**
  * The IPC bridge contract — the single declaration of what Desktop Mode
  * exposes to the renderer.
@@ -19,6 +20,8 @@ export interface SqliteBridge {
   all(sql: string, params?: unknown[]): Promise<unknown[]>;
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
+  /** Complete captured detail edit, including shallow metadata merge. */
+  updateCrux?(id: string, patch: LocalCruxUpdate): Promise<void>;
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
   /** Read required fingerprints from detached incoming bytes; leave the current database intact. */

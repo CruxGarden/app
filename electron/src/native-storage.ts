@@ -1,3 +1,4 @@
+import type { SqliteBridge } from './bridge';
 type Awaitable<T> = T | Promise<T>;
 
 /** Host storage boundary. Consumers await results before using them, whether
@@ -8,6 +9,7 @@ export interface NativeStorage {
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T[]>;
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
+  updateCrux?: SqliteBridge['updateCrux'];
   export(): Awaitable<ArrayBuffer>;
   import(data: ArrayBuffer): Awaitable<void>;
   /** External content required beyond any supported inline payloads. */

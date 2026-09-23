@@ -1,3 +1,4 @@
+import type { UpdateCruxInput } from '../types';
 import type { WorkerResponse } from './worker';
 import { ElectronSqliteClient } from './electron-client';
 
@@ -9,6 +10,8 @@ export interface ISqliteClient {
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
+  /** Available when the owning backend can commit a complete Crux detail edit. */
+  updateCrux?(id: string, patch: UpdateCruxInput): Promise<void>;
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
   /** Read externally required fingerprints from detached bytes. Supported inline payloads

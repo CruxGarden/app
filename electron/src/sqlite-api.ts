@@ -1,5 +1,6 @@
 import {
   LocalGraphRuntime,
+  type LocalCruxUpdate,
   inspectDesktopContent,
   prepareDesktopContent,
 } from '@cruxgarden/local-api';
@@ -53,6 +54,10 @@ export class SqliteApi implements NativeStorage {
   mergeCruxMeta(id: string, patch: Record<string, unknown>) {
     this.assertAvailable();
     return this.owner.mergeCruxMeta(id, patch);
+  }
+  updateCrux(id: string, patch: LocalCruxUpdate) {
+    this.assertAvailable();
+    return this.owner.updateCrux(id, patch);
   }
   export() {
     this.assertAvailable();

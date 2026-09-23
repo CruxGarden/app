@@ -160,6 +160,10 @@ export class SqliteCruxService implements ICruxService {
       return updateCopyMeta(cruxId, updates.meta ?? {}, updates.title);
     }
     const db = getSqliteClient();
+    if (db.updateCrux) {
+      await db.updateCrux(cruxId, updates);
+      return this.findById(cruxId);
+    }
     if (
       updates.meta !== undefined &&
       Object.keys(updates).every((key) => key === 'meta') &&
