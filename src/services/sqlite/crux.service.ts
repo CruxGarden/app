@@ -118,7 +118,21 @@ export class SqliteCruxService implements ICruxService {
   }
 
   async create(input: CreateCruxInput): Promise<Crux> {
+    // Capture before identity lookup/queueing so caller mutation cannot redirect creation.
+    input = JSON.parse(JSON.stringify(input)) as CreateCruxInput;
     const identity = await getLocalIdentity();
+    const db = getSqliteClient();
+    if (db.createCrux) {
+      const id = await db.createCrux({
+        ...input,
+        slug: input.slug || generateSlug(input.title),
+        authorId: input.authorId || identity.authorId,
+        homeId: input.homeId || identity.homeId,
+      });
+      const crux = await this.findById(id);
+      if (crux.kind !== 'snapshot' && crux.kind !== 'tool') reportFlowActivity('crux');
+      return crux;
+    }
     const now = new Date().toISOString();
     const slug = await this.freeSlug(input.slug || generateSlug(input.title));
 

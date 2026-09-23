@@ -4,6 +4,7 @@ import type { WorkerResponse } from './worker';
 import { ElectronSqliteClient } from './electron-client';
 
 export interface ISqliteClient {
+  createCrux?: SqliteBridge['createCrux'];
   onChange?: SqliteBridge['onChange'];
   /** Initialize the worker + OPFS VFS. Resolves when the database is ready. */
   init(): Promise<void>;

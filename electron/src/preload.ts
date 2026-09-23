@@ -1,4 +1,4 @@
-import type { LocalCruxUpdate, LocalGraphChange } from '@cruxgarden/local-api';
+import type { LocalCruxCreate, LocalCruxUpdate, LocalGraphChange } from '@cruxgarden/local-api';
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   ElectronBridge,
@@ -64,6 +64,7 @@ const api: ElectronBridge = {
               ipcRenderer.removeListener('sqlite:changed', handler);
             };
           },
+          createCrux: (input: LocalCruxCreate) => ipcRenderer.invoke('sqlite:create-crux', input),
           setCruxTrashed: (id: string, trashed: boolean) =>
             ipcRenderer.invoke('sqlite:set-crux-trashed', id, trashed),
           deleteCrux: (id: string) => ipcRenderer.invoke('sqlite:delete-crux', id),

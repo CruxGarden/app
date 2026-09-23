@@ -125,12 +125,17 @@ export class ProjectFolders {
     const base = sanitizeFolderName(slug);
     let name = base;
     let counter = 2;
-    while (fs.existsSync(path.join(root, name))) {
-      name = `${base}-${counter++}`;
+    for (;;) {
+      const folder = path.join(root, name);
+      try {
+        // Exclusive allocation: never adopt a directory/symlink created by another writer.
+        fs.mkdirSync(folder);
+        return folder;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        name = `${base}-${counter++}`;
+      }
     }
-    const folder = path.join(root, name);
-    fs.mkdirSync(folder, { recursive: true });
-    return folder;
   }
 
   folderExists(folder: string): boolean {

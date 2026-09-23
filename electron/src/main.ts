@@ -1,4 +1,4 @@
-import type { LocalCruxUpdate } from '@cruxgarden/local-api';
+import type { LocalCruxCreate, LocalCruxUpdate } from '@cruxgarden/local-api';
 import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
@@ -638,6 +638,15 @@ async function setupIpc() {
   } catch (err: any) {
     debugLog(`Watcher bootstrap failed: ${err?.message}`);
   }
+
+  ipcMain.handle('sqlite:create-crux', (_e: unknown, input: LocalCruxCreate) => {
+    if (!db.createCrux) throw new Error('Owned Crux creation is unavailable');
+    return db.createCrux(input, (slug) => {
+      const folder = projects.createFolder(slug);
+      watcher.watch(folder);
+      return folder;
+    });
+  });
 
   ipcMain.handle('project:create-folder', (_e: any, slug: string) => {
     const folder = projects.createFolder(slug);

@@ -1,9 +1,11 @@
+import type { LocalCruxCreate, PrepareCruxFolder } from '@cruxgarden/local-api';
 import type { SqliteBridge } from './bridge';
 type Awaitable<T> = T | Promise<T>;
 
 /** Host storage boundary. Consumers await results before using them, whether
  * supplied by the legacy native client or the queued local API owner. */
 export interface NativeStorage {
+  createCrux?(input: LocalCruxCreate, prepareFolder?: PrepareCruxFolder): Promise<string>;
   onChange?: SqliteBridge['onChange'];
   run(sql: string, params?: unknown[]): Awaitable<{ changes: number }>;
   get<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T | undefined>;

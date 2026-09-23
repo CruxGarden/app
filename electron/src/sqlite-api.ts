@@ -1,6 +1,8 @@
 import {
   LocalGraphRuntime,
   type LocalCruxUpdate,
+  type LocalCruxCreate,
+  type PrepareCruxFolder,
   type LocalGraphChange,
   inspectDesktopContent,
   prepareDesktopContent,
@@ -59,6 +61,10 @@ export class SqliteApi implements NativeStorage {
   mergeCruxMeta(id: string, patch: Record<string, unknown>) {
     this.assertAvailable();
     return this.owner.mergeCruxMeta(id, patch);
+  }
+  createCrux(input: LocalCruxCreate, prepareFolder?: PrepareCruxFolder) {
+    this.assertAvailable();
+    return this.owner.createCrux(input, prepareFolder);
   }
   updateCrux(id: string, patch: LocalCruxUpdate) {
     this.assertAvailable();
