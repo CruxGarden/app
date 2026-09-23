@@ -70,6 +70,10 @@ const api: ElectronBridge = {
             };
           },
           createCrux: (input: LocalCruxCreate) => ipcRenderer.invoke('sqlite:create-crux', input),
+          prepareWorkingCopyFolder: (id: string, revision: number) =>
+            ipcRenderer.invoke('sqlite:prepare-working-copy-folder', id, revision),
+          finishWorkingCopySetup: (id: string, revision: number, phase: 'ready' | 'failed') =>
+            ipcRenderer.invoke('sqlite:finish-working-copy-setup', id, revision, phase),
           createWorkingCopy: (input: LocalWorkingCopyCreate) =>
             ipcRenderer.invoke('sqlite:create-working-copy', input),
           saveTaskReview: (reviewData: string, expectedData?: string) =>

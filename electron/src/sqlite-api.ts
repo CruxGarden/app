@@ -4,6 +4,7 @@ import {
   type LocalWorkingCopyCreate,
   type LocalCruxCreate,
   type PrepareCruxFolder,
+  type PrepareWorkingCopyFolder,
   type LocalGraphChange,
   inspectDesktopContent,
   prepareDesktopContent,
@@ -70,6 +71,14 @@ export class SqliteApi implements NativeStorage {
   updateCrux(id: string, patch: LocalCruxUpdate) {
     this.assertAvailable();
     return this.owner.updateCrux(id, patch);
+  }
+  prepareWorkingCopyFolder(id: string, revision: number, prepare: PrepareWorkingCopyFolder) {
+    this.assertAvailable();
+    return this.owner.prepareWorkingCopyFolder(id, revision, prepare);
+  }
+  finishWorkingCopySetup(id: string, revision: number, phase: 'ready' | 'failed') {
+    this.assertAvailable();
+    return this.owner.finishWorkingCopySetup(id, revision, phase);
   }
   createWorkingCopy(input: LocalWorkingCopyCreate) {
     this.assertAvailable();

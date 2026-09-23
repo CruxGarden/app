@@ -842,12 +842,12 @@
     {
       "file": "src/services/tasks.ts",
       "method": "db.run",
-      "statement": "insert.sql"
+      "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"
     },
     {
       "file": "src/services/tasks.ts",
       "method": "db.run",
-      "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"
+      "statement": "insert.sql"
     },
     {
       "file": "src/services/tasks.ts",
@@ -881,12 +881,7 @@
     },
     {
       "file": "src/services/tasks.ts",
-      "method": "getSqliteClient().run",
-      "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "getSqliteClient().run",
+      "method": "db.run",
       "statement": "\"UPDATE working_copies SET phase = 'ready', revision = revision + 1 WHERE id = ?\""
     },
     {

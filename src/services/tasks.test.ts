@@ -199,6 +199,32 @@ describe('parallel tasks', () => {
       expect.arrayContaining([expect.objectContaining({ content: 'A conversation' })]),
     );
   });
+  it('keeps prepared content recoverable when both setup completion and failure recording are refused', async () => {
+    const { main } = await fixture();
+    const db = getSqliteClient();
+    db.finishWorkingCopySetup = vi.fn(async () => {
+      throw new Error('Setup result refused');
+    });
+    await expect(createTask(main.id, 'Unfinished task')).rejects.toThrow('Setup result refused');
+    const unfinished = await db.get<{ id: string; phase: string; revision: number }>(
+      "SELECT id, phase, revision FROM working_copies WHERE title = 'Unfinished task'",
+    );
+    expect(unfinished?.phase).toBe('preparing');
+    expect(await read(unfinished!.id)).toBe('<h1>Base</h1>');
+    expect(db.finishWorkingCopySetup).toHaveBeenCalledWith(
+      unfinished!.id,
+      unfinished!.revision,
+      'ready',
+    );
+    expect(db.finishWorkingCopySetup).toHaveBeenCalledWith(
+      unfinished!.id,
+      unfinished!.revision,
+      'failed',
+    );
+    delete db.finishWorkingCopySetup;
+    await recoverTaskSetup(unfinished!.id);
+    expect((await findWorkingCopy(unfinished!.id))?.phase).toBe('ready');
+  });
   it('does not insert a partial Task after the API refuses preparation', async () => {
     const { main } = await fixture();
     const db = getSqliteClient();

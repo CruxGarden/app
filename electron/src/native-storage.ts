@@ -2,6 +2,7 @@ import type {
   LocalWorkingCopyCreate,
   LocalCruxCreate,
   PrepareCruxFolder,
+  PrepareWorkingCopyFolder,
 } from '@cruxgarden/local-api';
 import type { SqliteBridge } from './bridge';
 type Awaitable<T> = T | Promise<T>;
@@ -17,6 +18,12 @@ export interface NativeStorage {
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  prepareWorkingCopyFolder?(
+    id: string,
+    revision: number,
+    prepare: PrepareWorkingCopyFolder,
+  ): Promise<string>;
+  finishWorkingCopySetup?(id: string, revision: number, phase: 'ready' | 'failed'): Promise<void>;
   createWorkingCopy?(input: LocalWorkingCopyCreate): Promise<void>;
   saveTaskReview?(reviewData: string, expectedData?: string): Promise<void>;
   beginTaskMerge?(id: string, reviewData: string): Promise<void>;

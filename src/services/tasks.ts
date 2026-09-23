@@ -101,6 +101,21 @@ async function checkpoint(w: Workspace, label: string): Promise<string> {
   if (!tip) throw new Error('Could not capture the starting snapshot.');
   return tip;
 }
+async function prepareTaskFolder(copy: WorkingCopy): Promise<string | null> {
+  const db = getSqliteClient();
+  if (db.prepareWorkingCopyFolder) return db.prepareWorkingCopyFolder(copy.id, copy.revision);
+  const folder = await createProjectFolder(`task-${copy.id}`);
+  await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, copy.id]);
+  return folder;
+}
+async function finishOwnedTaskSetup(id: string, phase: 'ready' | 'failed'): Promise<boolean> {
+  const db = getSqliteClient();
+  if (!db.finishWorkingCopySetup) return false;
+  const current = await findWorkingCopy(id);
+  if (!current) throw new Error('Task setup is missing.');
+  await db.finishWorkingCopySetup(id, current.revision, phase);
+  return true;
+}
 async function provision(
   owner: Crux,
   title: string,
@@ -162,8 +177,7 @@ async function provision(
     await db.run(insert.sql, insert.params);
   }
   try {
-    const folder = await createProjectFolder(`task-${id}`);
-    await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, id]);
+    await prepareTaskFolder((await findWorkingCopy(id))!);
     await projectTaskManifest(id, {}, manifest);
     // The API already copied every preview slot with its preparing record.
     // Retain the legacy path only when that complete command is unavailable.
@@ -176,13 +190,24 @@ async function provision(
         await db.run(insertStore.sql, insertStore.params);
       }
     }
-    await db.run("UPDATE working_copies SET phase = 'ready' WHERE id = ?", [id]);
     await syncAgentsMd(await getServices().crux.findById(id), null);
+    if (!(await finishOwnedTaskSetup(id, 'ready')))
+      await db.run("UPDATE working_copies SET phase = 'ready' WHERE id = ?", [id]);
     announceTasksChanged();
     return (await findWorkingCopy(id))!;
   } catch (error) {
-    await db.run("UPDATE working_copies SET phase = 'failed' WHERE id = ?", [id]);
-    announceTasksChanged();
+    try {
+      if (!(await finishOwnedTaskSetup(id, 'failed')))
+        await db.run("UPDATE working_copies SET phase = 'failed' WHERE id = ?", [id]);
+    } catch (recoveryError) {
+      throw new AggregateError(
+        [error, recoveryError],
+        `${(error as Error).message} Task setup remains unfinished.`,
+        { cause: recoveryError },
+      );
+    } finally {
+      announceTasksChanged();
+    }
     throw error;
   }
 }
@@ -635,21 +660,23 @@ export async function recoverTaskSetup(id: string): Promise<void> {
     const api = typeof window === 'undefined' ? undefined : window.electronAPI?.project;
     if (copy.projectFolder && (await api?.folderExists(copy.projectFolder)))
       current = await captureTaskManifest(id);
-    else {
-      const folder = await createProjectFolder(`task-${id}`);
-      await getSqliteClient().run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [
-        folder,
-        id,
-      ]);
-    }
     for (const [path, file] of Object.entries(current))
       if (!sameTaskFile(file, base[path]))
         throw new Error(`Keep the unexpected changes at ${path} safe before recovering setup.`);
+    const db = getSqliteClient();
+    if (
+      db.prepareWorkingCopyFolder ||
+      !copy.projectFolder ||
+      !(await api?.folderExists(copy.projectFolder))
+    )
+      await prepareTaskFolder(copy);
     await projectTaskManifest(id, current, base);
-    await getSqliteClient().run(
-      "UPDATE working_copies SET phase = 'ready', revision = revision + 1 WHERE id = ?",
-      [id],
-    );
+    await syncAgentsMd(await getServices().crux.findById(id), null);
+    if (!(await finishOwnedTaskSetup(id, 'ready')))
+      await db.run(
+        "UPDATE working_copies SET phase = 'ready', revision = revision + 1 WHERE id = ?",
+        [id],
+      );
     const ready = await findWorkingCopy(id);
     if (ready?.projectFolder) await api?.watch(ready.projectFolder);
     await workspace!.data.getState().loadCrux(id);

@@ -465,6 +465,28 @@ async function setupIpc() {
     },
   );
 
+  ipcMain.handle(
+    'sqlite:prepare-working-copy-folder',
+    (_e: unknown, id: string, revision: number) => {
+      if (!db.prepareWorkingCopyFolder) throw new Error('Owned Task setup is unavailable');
+      return db.prepareWorkingCopyFolder(id, revision, (copyId, current) => {
+        const folder =
+          current && projects.folderExists(current)
+            ? current
+            : projects.createFolder(`task-${copyId}`);
+        watcher.watch(folder);
+        return folder;
+      });
+    },
+  );
+  ipcMain.handle(
+    'sqlite:finish-working-copy-setup',
+    (_e: unknown, id: string, revision: number, phase: 'ready' | 'failed') => {
+      if (!db.finishWorkingCopySetup) throw new Error('Owned Task setup is unavailable');
+      return db.finishWorkingCopySetup(id, revision, phase);
+    },
+  );
+
   ipcMain.handle('sqlite:create-working-copy', (_e: unknown, input: LocalWorkingCopyCreate) => {
     if (!db.createWorkingCopy) throw new Error('Owned Task creation is unavailable');
     return db.createWorkingCopy(input);
