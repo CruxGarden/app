@@ -601,7 +601,7 @@
   "literalSqlMutations": [
     {
       "file": "electron/src/sqlite-native.ts",
-      "method": "this.db.exec",
+      "method": "db.exec",
       "statement": "'ALTER TABLE cruxes ADD COLUMN deleted TEXT'"
     },
     {

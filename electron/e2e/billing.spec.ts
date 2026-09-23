@@ -81,7 +81,7 @@ test.describe('billing (mocked API)', () => {
       api.state.failIncludedUsage = false;
       api.state.billing.planId = 'gardener_plus';
       await page.evaluate(() => window.dispatchEvent(new Event('crux:usage-changed')));
-      await expect(included).toContainText('Sonnet handles requests');
+      await expect(included).toContainText('Sonnet handles included requests');
       await expect(included).not.toContainText('No allowance estimate is shown');
       await page.evaluate(() => window.dispatchEvent(new Event('focus')));
       await expect(plan.getByTestId('plan-status')).toContainText('Gardener Plus');

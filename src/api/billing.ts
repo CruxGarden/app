@@ -13,6 +13,7 @@ export interface BillingMe {
   trialEndsAt: string | null;
   canManage: boolean;
   provider: string;
+  canSimulate?: boolean;
 }
 
 export interface CatalogPrice {
@@ -64,6 +65,27 @@ export async function portal(): Promise<{ url: string }> {
 }
 export async function sync(): Promise<BillingMe> {
   const { data } = await client.post<BillingMe>('/billing/sync');
+  return data;
+}
+
+export type SimulationAction =
+  | 'activate'
+  | 'payment_failed'
+  | 'unpaid'
+  | 'cancel'
+  | 'cancel_at_period_end'
+  | 'renew'
+  | 'change_plan';
+export async function simulate(
+  action: SimulationAction,
+  planId?: string,
+  interval?: BillingInterval,
+): Promise<BillingMe> {
+  const { data } = await client.post<BillingMe>('/billing/simulation', {
+    action,
+    planId,
+    interval,
+  });
   return data;
 }
 

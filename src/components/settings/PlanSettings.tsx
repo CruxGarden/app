@@ -130,6 +130,15 @@ export default function PlanSettings() {
     setBusy(planId);
     setError(null);
     try {
+      if (
+        me.provider === 'simulation' &&
+        me.canSimulate &&
+        !['none', 'canceled'].includes(me.status)
+      ) {
+        setMe(await billingApi.simulate('change_plan', planId, interval));
+        notifyUsageChanged();
+        return;
+      }
       const { url } = await billingApi.checkout(planId, interval);
       if (catalog?.instant) {
         // mock provider: already paid — just refresh
@@ -142,6 +151,19 @@ export default function PlanSettings() {
     } catch (e) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg || 'Could not start checkout');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const simulate = async (action: billingApi.SimulationAction) => {
+    setBusy(action);
+    setError(null);
+    try {
+      setMe(await billingApi.simulate(action));
+      notifyUsageChanged();
+    } catch {
+      setError('Could not apply the simulation. Try again.');
     } finally {
       setBusy(null);
     }
@@ -187,6 +209,36 @@ export default function PlanSettings() {
           </span>
         )}
       </div>
+      {me?.provider === 'simulation' && (
+        <div className="text-xs text-text-muted mb-3" data-testid="billing-simulation">
+          <p>Billing simulation — no payments. Prices and subscription changes are examples.</p>
+          <p className="mt-1">Status: {me.status.replaceAll('_', ' ')}</p>
+          {me.canSimulate && !['none', 'canceled'].includes(me.status) && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {(
+                [
+                  ['activate', 'Payment succeeds'],
+                  ['payment_failed', 'Payment fails'],
+                  ['unpaid', 'Mark unpaid'],
+                  ['renew', 'Next renewal'],
+                  ['cancel_at_period_end', 'Cancel at period end'],
+                  ['cancel', 'Cancel now'],
+                ] as const
+              ).map(([action, label]) => (
+                <Button
+                  key={action}
+                  size="sm"
+                  variant="secondary"
+                  disabled={!!busy}
+                  onClick={() => void simulate(action)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {error && <p className="text-xs text-error mb-2">{error}</p>}
       {waiting && (
         <p className="text-xs text-text-muted mb-2" data-testid="plan-waiting">
@@ -195,8 +247,9 @@ export default function PlanSettings() {
       )}
       {me?.status === 'past_due' && (
         <p className="text-xs text-warning mb-2">
-          Your last payment didn't go through. Your plan stays for a week — update the card in
-          Manage billing.
+          {me.provider === 'simulation'
+            ? 'Simulated payment failure. The normal one-week grace period applies.'
+            : "Your last payment didn't go through. Your plan stays for a week — update the card in Manage billing."}
         </p>
       )}
 
@@ -252,7 +305,10 @@ export default function PlanSettings() {
                   <div className="mt-auto pt-2">
                     {current ? (
                       <span className="text-xxs font-mono text-accent">Current plan</span>
-                    ) : paid && (!me.canManage || me.plan.id === 'free') ? (
+                    ) : paid &&
+                      (me.provider === 'simulation'
+                        ? me.canSimulate || ['none', 'canceled'].includes(me.status)
+                        : !me.canManage || me.plan.id === 'free') ? (
                       <Button
                         size="sm"
                         variant="primary"
@@ -265,9 +321,17 @@ export default function PlanSettings() {
                           : `Choose ${plan.name}`}
                       </Button>
                     ) : paid ? (
-                      <span className="text-xxs text-text-muted">Switch in Manage billing</span>
+                      <span className="text-xxs text-text-muted">
+                        {me.provider === 'simulation'
+                          ? 'Ask the operator to change the simulation'
+                          : 'Switch in Manage billing'}
+                      </span>
                     ) : (
-                      <span className="text-xxs text-text-muted">Cancel in Manage billing</span>
+                      <span className="text-xxs text-text-muted">
+                        {me.provider === 'simulation'
+                          ? 'Use the simulation controls to cancel'
+                          : 'Cancel in Manage billing'}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -276,8 +340,14 @@ export default function PlanSettings() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
             <p className="text-xxs text-text-muted">
-              Checkout is Stripe's — Apple Pay, Google Pay and Link work, and no card details ever
-              reach Crux Garden.{catalog.trialDays > 0 ? ' Trials need no card.' : ''}
+              {me.provider === 'simulation' ? (
+                'Changes stay in this API’s database. No payment service or billing emails are used.'
+              ) : (
+                <>
+                  Checkout is Stripe's — Apple Pay, Google Pay and Link work, and no card details
+                  ever reach Crux Garden.{catalog.trialDays > 0 ? ' Trials need no card.' : ''}
+                </>
+              )}
             </p>
             {me.canManage && (
               <Button
