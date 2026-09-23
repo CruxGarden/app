@@ -79,6 +79,7 @@ export default function EditorContent({
   const documentSession = documents.get(artifact);
   const documentError = useStore(documentSession, (s) => s.error);
   const documentConflict = useStore(documentSession, (s) => s.conflict);
+  const documentDirty = useStore(documentSession, (s) => s.revision !== s.savedRevision);
   const { content, blobUrl, loading, contentVersion, setContent, expectOwnSave } = useFileContent(
     cruxId,
     artifact,
@@ -86,6 +87,11 @@ export default function EditorContent({
   const { setTabDirty, setTabScrollTop } = useUIStore(
     useShallow((s) => ({ setTabDirty: s.setTabDirty, setTabScrollTop: s.setTabScrollTop })),
   );
+  // Rebinding a tab for history resets its display flag. The retained document
+  // owns draft state, including when returning without another keystroke.
+  useEffect(() => {
+    setTabDirty(tab.id, !readOnlyTask && documentDirty);
+  }, [tab.id, setTabDirty, readOnlyTask, documentDirty]);
   const activeMode = useThemeStore((s) => s.activeMode);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);

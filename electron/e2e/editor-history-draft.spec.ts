@@ -39,14 +39,16 @@ test('reading history preserves the live editor draft and undo model without sav
     await expect(editor).not.toContainText('must not change history');
     await history.getByRole('button', { name: 'Back to current' }).click();
     await expect(editor).toContainText('Saved beginning with an unsaved ending');
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
     // Undo acts on the retained live model, not the historical editor's model.
     await editor.click();
     await page.keyboard.press('ControlOrMeta+z');
     await expect(editor).not.toContainText('unsaved ending');
     await page.keyboard.press('ControlOrMeta+Shift+z');
     await expect(editor).toContainText('with an unsaved ending');
-    await page.keyboard.press('ControlOrMeta+s');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect.poll(disk).toBe('Saved beginning with an unsaved ending');
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
   } finally {
     await app.close();
   }
