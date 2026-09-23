@@ -7,6 +7,7 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
   try {
     const created = await launch.app.evaluate(async ({ app }) => {
       const path = process.getBuiltinModule('path');
+      const fs = process.getBuiltinModule('fs');
       const { randomUUID } = process.getBuiltinModule('crypto');
       const load = process
         .getBuiltinModule('module')
@@ -25,6 +26,20 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
       seed.close();
       const runtime = await LocalGraphRuntime.open(filename);
       try {
+        const alias = path.join(app.getPath('userData'), 'api-owner-alias.db');
+        fs.linkSync(filename, alias);
+        const ownershipErrors: string[] = [];
+        for (const target of [filename, alias]) {
+          let duplicate: import('@cruxgarden/local-api').LocalGraphRuntime | undefined;
+          try {
+            duplicate = await LocalGraphRuntime.open(target);
+            ownershipErrors.push('Unexpected second owner');
+          } catch (error) {
+            ownershipErrors.push((error as Error).message);
+          } finally {
+            await duplicate?.close();
+          }
+        }
         const authorId = randomUUID();
         const homeId = randomUUID();
         const input = () => ({ slug: randomUUID(), authorId, homeId, kind: CruxKind.GARDEN });
@@ -54,6 +69,7 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
         return {
           ids,
           rolledBack,
+          ownershipErrors,
           count: rows.length,
           dimensions: dimensions.length,
           electron: process.versions.electron,
@@ -63,6 +79,10 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
       }
     });
     expect(created.rolledBack).toBe(true);
+    expect(created.ownershipErrors).toEqual([
+      'Local API database is already owned in this process',
+      'Local API database is already owned in this process',
+    ]);
     expect(created.count).toBe(2);
     expect(created.dimensions).toBe(1);
     expect(created.electron).toBeTruthy();
