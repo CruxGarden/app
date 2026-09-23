@@ -5,17 +5,36 @@ type Content = NonNullable<SqliteBridge['fileContent']>;
 export type FileReference = Parameters<Content['read']>[0];
 export type SelectedFiles = Awaited<ReturnType<Content['list']>>;
 
+/** Finish previously committed filesystem work before ingestion or portable export. */
+export async function finishPendingContentProjections(owners?: readonly string[]): Promise<void> {
+  const db = getSqliteClient();
+  if (!db.fileContent) return;
+  const prefix = 'cruxgarden:content-projection:';
+  const pending = await db.all<{ key: string }>('SELECT key FROM settings WHERE key LIKE ?', [
+    `${prefix}%`,
+  ]);
+  for (const item of pending) {
+    const id = item.key.slice(prefix.length);
+    if (!owners || owners.includes(id)) await db.fileContent.finishProjection(id);
+  }
+}
+
 /** Capture an actual API-owned file version. Consumers use its head for every
  * subsequent read/edit; they never parse manifests or resolve an ID-only file.
- * Null means this caller has not adopted manifest content yet (including Tasks).
+ * Null means this connection or content owner has no committed head yet.
  * This is an adoption boundary, not an old-format import/conversion path. */
 export async function selectCruxFiles(cruxId: string): Promise<SelectedFiles | null> {
   const db = getSqliteClient();
   const content = db.fileContent;
   if (!content) return null;
-  // Working Copies currently have a separate identity space; they are not yet
-  // supported by the API file writer and must not masquerade as Crux records.
-  if (!(await db.get('SELECT id FROM cruxes WHERE id = ?', [cruxId]))) return null;
+  // Working Copies keep their own identity and content head in the same API.
+  if (
+    !(await db.get(
+      'SELECT id FROM cruxes WHERE id = ? UNION ALL SELECT id FROM working_copies WHERE id = ?',
+      [cruxId, cruxId],
+    ))
+  )
+    return null;
   const head = await content.head(cruxId);
   return head ? content.list({ cruxId, expected: head }) : null;
 }

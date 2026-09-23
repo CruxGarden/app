@@ -957,7 +957,7 @@ async function runGardenToolInner(
       const a = artifacts.find((x) => x.type === 'artifact' && pathOf(x) === path);
       if (!a) return `No file "${path}" in "${crux.title}".`;
       if (a.encoding === 'binary') return `"${path}" is binary (${a.mimeType ?? 'unknown type'}).`;
-      const text = await (await services.artifact.downloadBlob(a.id)).text();
+      const text = await (await services.artifact.downloadBlob(a)).text();
       return text.length > 20000 ? text.slice(0, 20000) + '\n…(truncated)' : text;
     }
     case 'export_crux': {

@@ -13,7 +13,7 @@ import {
   packageAssets,
   type MoodPackage,
 } from './packages';
-import type { Crux } from '@/api/types';
+import type { Artifact, Crux } from '@/api/types';
 
 /** The few facts an Explore card needs, stored on crux.meta.mood */
 export interface MoodSummary {
@@ -100,13 +100,10 @@ export interface PublishMoodDeps {
       findById?(id: string): Promise<Crux | null>;
     };
     artifact: {
-      findByResource(
-        type: string,
-        id: string,
-      ): Promise<{ id: string; meta?: { path?: string } | null; filename?: string }[]>;
+      findByResource(type: string, id: string): Promise<Artifact[]>;
       create(input: Record<string, unknown>): Promise<unknown>;
       upload(input: Record<string, unknown>): Promise<unknown>;
-      delete(id: string): Promise<void>;
+      delete(file: Artifact): Promise<void>;
     };
   }>;
   readBlob: (fp: string) => Promise<Uint8Array>;
@@ -155,7 +152,7 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
 
   // Replace the files (a Mood crux holds nothing else)
   const existing = await artifactService.findByResource('crux', crux.id);
-  for (const a of existing) await artifactService.delete(a.id);
+  for (const a of existing) await artifactService.delete(a);
   const zip = await exportMoodPackage(pkg, deps.readBlob);
   await artifactService.upload({
     resourceId: crux.id,

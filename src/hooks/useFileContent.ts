@@ -83,7 +83,7 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
 
     const { artifact: artifactService } = getServices();
     artifactService
-      .downloadBlob(artifact.id)
+      .downloadBlob(artifact)
       .then((blob) => {
         if (cancelled) return;
         if (isTextMime(mime, filename)) {

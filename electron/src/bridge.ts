@@ -30,8 +30,10 @@ export type { LocalGraphChange } from '@cruxgarden/local-api';
 /** Named content operations. Edits record ingested content; Project Folder projection
  * stays with the file service. No renderer-supplied store or executable callbacks. */
 export interface FileContentBridge {
+  finishProjection(id: string): ReturnType<LocalGraphRuntime['finishContentProjection']>;
   head(id: string): ReturnType<LocalGraphRuntime['fileContentHead']>;
   list(input: FileContentSelection): ReturnType<LocalGraphRuntime['listFileContent']>;
+  lookup(input: FileContentRead): ReturnType<LocalGraphRuntime['lookupFileContent']>;
   read(input: FileContentRead): ReturnType<LocalGraphRuntime['readFileContent']>;
   edit(input: FileContentEdit): ReturnType<LocalGraphRuntime['editFileContent']>;
   snapshot(input: GrowthSnapshotCreate): ReturnType<LocalGraphRuntime['createGrowthSnapshot']>;

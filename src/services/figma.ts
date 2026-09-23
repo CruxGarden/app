@@ -17,7 +17,7 @@ export async function readFigmaProject(owner: string) {
   if (!file)
     throw new Error('The Figma reference file is missing. Restore figma/project.json from Growth.');
   if (!file.fingerprint) throw new Error('The Figma reference has no saved content.');
-  const data = JSON.parse(await artifact.readContent(file.id));
+  const data = JSON.parse(await artifact.readContent(file));
   if (
     data.version !== 1 ||
     data.app !== 'figma' ||

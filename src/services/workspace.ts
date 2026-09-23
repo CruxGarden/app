@@ -182,7 +182,7 @@ async function linkRecord(cruxId: string): Promise<ProjectRecord> {
   const doc = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === 'link.json');
   if (!doc) return {};
   try {
-    return JSON.parse(await (await getServices().artifact.downloadBlob(doc.id)).text());
+    return JSON.parse(await (await getServices().artifact.downloadBlob(doc)).text());
   } catch {
     return {};
   }

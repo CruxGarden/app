@@ -136,7 +136,7 @@ export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHi
         if ((sidecar.size ?? 0) > 16000) continue;
         let origin: AssetOrigin;
         try {
-          origin = JSON.parse(await artifact.readContent(sidecar.id));
+          origin = JSON.parse(await artifact.readContent(sidecar));
         } catch {
           continue;
         }
@@ -198,7 +198,8 @@ export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHi
   for (const t of transfers) {
     // The checkpoint the transfer itself took is the same event: one milestone, not two.
     const recorded = checkpoints.find(
-      (m) => m.id === t.targetNodeId && m.title === `Used ${t.label} from ${space.name}` && !m.transfer,
+      (m) =>
+        m.id === t.targetNodeId && m.title === `Used ${t.label} from ${space.name}` && !m.transfer,
     );
     if (recorded) {
       recorded.kind = 'transfer';

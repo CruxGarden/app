@@ -98,6 +98,7 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
 
   if (await db.get("SELECT id FROM task_merges WHERE phase = 'applying'"))
     throw new Error('Recover pending task merges before exporting the garden.');
+  await (await import('./file-content')).finishPendingContentProjections();
   onProgress?.('Exporting database...');
   const sqliteData = await db.export();
 

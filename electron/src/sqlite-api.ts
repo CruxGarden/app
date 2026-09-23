@@ -20,6 +20,13 @@ export class SqliteApi implements NativeStorage {
   private replacing = false;
   private importing: Promise<void> | null = null;
   private unavailable: Error | null = null;
+  private projectionHost?: (
+    folder: string,
+    entries: import('@cruxgarden/local-api').FileEntry[],
+  ) => void | Promise<void>;
+  setProjectionHost(host: NonNullable<SqliteApi['projectionHost']>) {
+    this.projectionHost = host;
+  }
 
   private constructor(
     private readonly owner: LocalGraphRuntime,
@@ -54,6 +61,15 @@ export class SqliteApi implements NativeStorage {
   }
 
   readonly fileContent: FileContentBridge = {
+    lookup: (input) => {
+      this.assertAvailable();
+      return this.owner.lookupFileContent(input, this.contentStore());
+    },
+    finishProjection: (id) => {
+      this.assertAvailable();
+      if (!this.projectionHost) throw new Error('Project Folder host is unavailable');
+      return this.owner.finishContentProjection(id, this.contentStore(), this.projectionHost);
+    },
     head: (id) => {
       this.assertAvailable();
       return this.owner.fileContentHead(id);
@@ -126,7 +142,7 @@ export class SqliteApi implements NativeStorage {
   }
   beginTaskMerge(id: string, reviewData: string) {
     this.assertAvailable();
-    return this.owner.beginTaskMerge(id, reviewData);
+    return this.owner.beginTaskMerge(id, reviewData, this.contentStore());
   }
   releaseTaskReview(id: string) {
     this.assertAvailable();

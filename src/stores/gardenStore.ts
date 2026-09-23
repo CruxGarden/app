@@ -52,14 +52,35 @@ function filterAndSort(cruxes: Crux[], search: string, sortBy: SortField): Crux[
   );
 }
 
-/**
- * One query for every crux's thumbnail: the workspace's preview.jpg artifact,
- * keyed by the crux that owns it. Snapshot clones carry their own copies under
- * the snapshot's id, so this naturally yields only live cruxes.
- */
+const thumbnailRoots = new Map<string, { root: string; fingerprint: string | null }>();
+/** Lookup only preview metadata in each changed root; never list a project's files. */
 async function loadThumbnails(): Promise<Record<string, string>> {
   try {
-    const rows = await getSqliteClient().all<{ resource_id: string; fingerprint: string }>(
+    const db = getSqliteClient();
+    if (db.fileContent) {
+      const content = db.fileContent;
+      const heads = await db.all<{ crux_id: string; root: string; revision: number }>(
+        "SELECT h.* FROM file_content_heads h JOIN cruxes c ON c.id = h.crux_id WHERE c.deleted IS NULL AND (c.kind IS NULL OR c.kind <> 'snapshot')",
+      );
+      const map: Record<string, string> = {};
+      const owners = new Set(heads.map((head) => head.crux_id));
+      for (const id of thumbnailRoots.keys()) if (!owners.has(id)) thumbnailRoots.delete(id);
+      for (const head of heads) {
+        let cached = thumbnailRoots.get(head.crux_id);
+        if (cached?.root !== head.root) {
+          const file = await content.lookup({
+            cruxId: head.crux_id,
+            expected: head,
+            path: WORKSPACE_THUMBNAIL_PATH,
+          });
+          cached = { root: head.root, fingerprint: file?.entry.fingerprint ?? null };
+          thumbnailRoots.set(head.crux_id, cached);
+        }
+        if (cached.fingerprint) map[head.crux_id] = cached.fingerprint;
+      }
+      return map;
+    }
+    const rows = await db.all<{ resource_id: string; fingerprint: string }>(
       `SELECT resource_id, fingerprint FROM artifacts
        WHERE resource_type = 'crux' AND fingerprint IS NOT NULL
          AND (lower(path) = ? OR lower(json_extract(meta, '$.path')) = ?)`,

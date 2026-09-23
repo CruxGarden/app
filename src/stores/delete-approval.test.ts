@@ -28,12 +28,19 @@ describe('delete approval lifecycle', () => {
 
   it('resolves true after the app performs the deletion', async () => {
     const store = useCruxStore.getState();
-    const pending = store.requestDeleteApproval('art-1', 'a.txt');
+    const file = await getServices().artifact.create({
+      resourceId: store.crux!.id,
+      content: 'Keep until approved',
+      meta: { path: 'a.txt' },
+    });
+    useCruxStore.setState({ artifacts: [file] });
+    const pending = store.requestDeleteApproval(file.id, 'a.txt');
     expect(useCruxStore.getState().pendingDeletes).toHaveLength(1);
 
-    await useCruxStore.getState().confirmDelete('art-1');
+    await useCruxStore.getState().confirmDelete(file.id);
     await expect(pending).resolves.toBe(true);
     expect(useCruxStore.getState().pendingDeletes).toHaveLength(0);
+    expect(await getServices().artifact.findByResource('crux', store.crux!.id)).toEqual([]);
   });
 
   it('resolves false when the user keeps the file', async () => {
@@ -70,14 +77,22 @@ describe('delete approval lifecycle', () => {
 
   it('never strands the tool call when the deletion itself fails', async () => {
     const { artifact } = getServices();
+    const file = await artifact.create({
+      resourceId: useCruxStore.getState().crux!.id,
+      content: 'Keep after refusal',
+      meta: { path: 'f.txt' },
+    });
+    useCruxStore.setState({ artifacts: [file] });
     const spy = vi.spyOn(artifact, 'delete').mockRejectedValueOnce(new Error('disk gone'));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const pending = useCruxStore.getState().requestDeleteApproval('art-6', 'f.txt');
-    await useCruxStore.getState().confirmDelete('art-6');
+    const pending = useCruxStore.getState().requestDeleteApproval(file.id, 'f.txt');
+    await useCruxStore.getState().confirmDelete(file.id);
 
     await expect(pending).resolves.toBe(false);
     expect(useCruxStore.getState().pendingDeletes).toHaveLength(0);
+    expect(spy).toHaveBeenCalledWith(file);
+    expect(useCruxStore.getState().artifacts).toEqual([file]);
 
     spy.mockRestore();
     consoleSpy.mockRestore();

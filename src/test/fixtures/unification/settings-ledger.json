@@ -589,6 +589,13 @@
       "target": "diagnostic only",
       "preservation": "Not user content; keep isolated from migrations and selected exports.",
       "status": "planned"
+    },
+    {
+      "prefix": "cruxgarden:content-projection:",
+      "group": "recovery",
+      "target": "API-owned installation journal",
+      "preservation": "Retain across process restart until the selected content head is materialized and verified. Contains an installation-local folder; ordinary portable exports require completion first. Never reinterpret as Garden preferences or Mood state.",
+      "status": "implemented"
     }
   ]
 }

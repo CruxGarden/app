@@ -436,7 +436,8 @@ function createWindow() {
 async function setupIpc() {
   registerBrowserPanel(() => mainWindow);
   // The actual local API is the sole desktop database owner.
-  db = await SqliteApi.open(getDbPath(), getBlobDir());
+  const localDb = await SqliteApi.open(getDbPath(), getBlobDir());
+  db = localDb;
   db.onChange?.((change) => {
     if (mainWindow && !mainWindow.webContents.isDestroyed())
       mainWindow.webContents.send('sqlite:changed', change);
@@ -446,12 +447,18 @@ async function setupIpc() {
     if (!db.fileContent) throw new Error('API file content commands are unavailable');
     return db.fileContent;
   };
+  ipcMain.handle('content:finish-projection', (_e: unknown, id: string) =>
+    fileContent().finishProjection(id),
+  );
   ipcMain.handle('content:head', (_e: unknown, id: string) => fileContent().head(id));
   ipcMain.handle('content:list', (_e: unknown, input: FileContentSelection) =>
     fileContent().list(input),
   );
   ipcMain.handle('content:read', (_e: unknown, input: FileContentRead) =>
     fileContent().read(input),
+  );
+  ipcMain.handle('content:lookup', (_e: unknown, input: FileContentRead) =>
+    fileContent().lookup(input),
   );
   ipcMain.handle('content:edit', (_e: unknown, input: FileContentEdit) =>
     fileContent().edit(input),
@@ -618,6 +625,29 @@ async function setupIpc() {
   // ── Project Folders (ADR 0001) ──────────────────────────────
   const desktopConfig = new DesktopConfig(app.getPath('userData'));
   const projects = new ProjectFolders(desktopConfig);
+  localDb.setProjectionHost(
+    (folder: string, files: import('@cruxgarden/local-api').FileEntry[]) => {
+      const { createHash } = require('node:crypto');
+      const entries = files.filter((file) => file.path.toLowerCase() !== 'preview.jpg');
+      const wanted = new Set(entries.map((file) => file.path));
+      projects.ensureFolder(folder);
+      for (const path of projects.listFiles(folder))
+        if (!wanted.has(path)) projects.deleteFile(folder, path);
+      for (let offset = 0; offset < entries.length; offset += 2000)
+        projects.materialize(folder, getBlobDir(), entries.slice(offset, offset + 2000));
+      for (const entry of entries) {
+        const bytes = projects.readFile(folder, entry.path);
+        if (
+          bytes.length !== entry.size ||
+          createHash('sha256').update(bytes).digest('hex') !== entry.fingerprint
+        )
+          throw new Error(`Restored file failed verification: ${entry.path}`);
+      }
+      if (projects.listFiles(folder).some((path: string) => !wanted.has(path)))
+        throw new Error('Project Folder changed during restoration');
+    },
+  );
+
   selfTestHooks.projects = projects;
 
   if (process.platform === 'darwin') {

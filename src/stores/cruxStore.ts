@@ -22,6 +22,7 @@ import {
   type SnapshotChainNode,
   type CreateSnapshotOptions,
   restoreFilesCore,
+  restoreManifestWorkspace,
   requireSafetySnapshot,
   defaultGrowthHostDeps,
 } from '@/services/growth';
@@ -763,7 +764,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         mimeType: mime,
         meta: { path },
       });
-      set((state) => ({ artifacts: [...state.artifacts, newArtifact] }));
+      set((state) => ({
+        artifacts: [...state.artifacts.filter((file) => file.id !== newArtifact.id), newArtifact],
+      }));
       return newArtifact;
     },
 
@@ -794,7 +797,10 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const oldPath = art.meta?.path || art.filename || '';
       const filename = oldPath.split('/').pop() || art.filename;
       const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
-      await artifact.update(id, { meta: { path: newPath } });
+      await artifact.update(get().artifacts.find((file) => file.id === id)!, {
+        meta: { path: newPath },
+      });
+      await get().refreshArtifacts();
       set((state) => ({
         artifacts: state.artifacts.map((a) =>
           a.id === id
@@ -810,7 +816,10 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
     renameArtifact: async (id: string, newPath: string) => {
       const { artifact } = getServices();
-      await artifact.update(id, { meta: { path: newPath } });
+      await artifact.update(get().artifacts.find((file) => file.id === id)!, {
+        meta: { path: newPath },
+      });
+      await get().refreshArtifacts();
       set((state) => ({
         artifacts: state.artifacts.map((a) =>
           a.id === id
@@ -826,7 +835,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
     deleteArtifact: async (id: string) => {
       const { artifact } = getServices();
-      await artifact.delete(id);
+      await artifact.delete(get().artifacts.find((file) => file.id === id)!);
       set((state) => ({
         artifacts: state.artifacts.filter((a) => a.id !== id),
       }));
@@ -837,7 +846,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     deleteArtifacts: async (ids: string[]) => {
       const { artifact } = getServices();
       // Delete all in parallel
-      await Promise.allSettled(ids.map((id) => artifact.delete(id)));
+      await Promise.allSettled(
+        ids.map((id) => artifact.delete(get().artifacts.find((file) => file.id === id)!)),
+      );
       const idSet = new Set(ids);
       set((state) => ({
         artifacts: state.artifacts.filter((a) => !idSet.has(a.id)),
@@ -894,6 +905,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       // — after which `readContent` refused the file the editor had just saved.
       const updated = await artifact.create({
         resourceId: art.resourceId,
+        expected: art,
         content,
         mimeType: mime,
         meta: { path: art.meta?.path },
@@ -1161,6 +1173,39 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (get().crux) await assertCopyWritable(get().crux!.id);
       const { crux } = get();
       if (!crux) return;
+      const manifestDeps = await defaultGrowthHostDeps();
+      if (manifestDeps.content) {
+        // Retry a committed restore before persisting any stale pre-restore UI state.
+        if (!(await manifestDeps.content.finishProjection(crux.id))) {
+          await get().saveMeta();
+          const state = get();
+          await restoreManifestWorkspace(
+            {
+              crux: state.crux!,
+              messages: state.messages,
+              messageSegmentStart: state.messageSegmentStart,
+              growths: state.growths,
+              growthCount: state.growthCount,
+              artifactCount: state.artifacts.length,
+            },
+            snapshotId,
+            undefined,
+            manifestDeps,
+          );
+        }
+        set({
+          viewingSnapshotId: null,
+          viewingSnapshotIndex: null,
+          workspaceArtifacts: null,
+          workspaceMessages: null,
+          workspaceSegmentStart: null,
+          snapshotMessageCount: null,
+          snapshotEntryFile: null,
+        });
+        await get().loadCrux(crux.id);
+        rebindEditorTabs(ui, get().artifacts);
+        return;
+      }
       const { artifact, crux: cruxService } = getServices();
 
       const restoredSnapshot = await cruxService.findById(snapshotId);
@@ -1220,6 +1265,39 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (get().crux) await assertCopyWritable(get().crux!.id);
       const { crux } = get();
       if (!crux) return;
+      const manifestDeps = await defaultGrowthHostDeps();
+      if (manifestDeps.content) {
+        // Retry a committed restore before persisting any stale pre-restore UI state.
+        if (!(await manifestDeps.content.finishProjection(crux.id))) {
+          await get().saveMeta();
+          const state = get();
+          await restoreManifestWorkspace(
+            {
+              crux: state.crux!,
+              messages: state.messages,
+              messageSegmentStart: state.messageSegmentStart,
+              growths: state.growths,
+              growthCount: state.growthCount,
+              artifactCount: state.artifacts.length,
+            },
+            snapshotId,
+            label,
+            manifestDeps,
+          );
+        }
+        set({
+          viewingSnapshotId: null,
+          viewingSnapshotIndex: null,
+          workspaceArtifacts: null,
+          workspaceMessages: null,
+          workspaceSegmentStart: null,
+          snapshotMessageCount: null,
+          snapshotEntryFile: null,
+        });
+        await get().loadCrux(crux.id);
+        rebindEditorTabs(ui, get().artifacts);
+        return;
+      }
       const { artifact, crux: cruxService } = getServices();
 
       // Auto-snapshot current state first

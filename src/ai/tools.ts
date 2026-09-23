@@ -1053,7 +1053,7 @@ export function createToolExecutor(
             const artifacts = await artifactService.findByResource('crux', cruxId);
             const doc = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === 'link.json');
             const record = doc
-              ? (JSON.parse(await (await artifactService.downloadBlob(doc.id)).text()) as {
+              ? (JSON.parse(await (await artifactService.downloadBlob(doc)).text()) as {
                   folder?: string;
                   script?: string;
                   port?: number;
@@ -1324,7 +1324,7 @@ async function toolEditFile(
   if (isBinaryMime(match.mimeType || ''))
     return formatToolError('edit_file', `Cannot edit binary file: ${path}`);
 
-  const rawContent = await artifactService.readContent(match.id);
+  const rawContent = await artifactService.readContent(match);
 
   // Normalize line endings to \n for reliable matching (matches API behavior)
   const content = rawContent.replace(/\r\n/g, '\n');
@@ -1446,7 +1446,7 @@ async function toolReadFile(
   if (!match) return formatToolError('read_file', `File not found: ${path}`);
 
   if (match.encoding === 'binary' || isBinaryMime(match.mimeType || '')) {
-    const blob = await artifactService.downloadBlob(match.id);
+    const blob = await artifactService.downloadBlob(match);
     const mime = match.mimeType || '';
 
     // Extract text from PDFs
@@ -1497,7 +1497,7 @@ async function toolReadFile(
   }
 
   // Return full content — no truncation (matches API behavior)
-  const content = await artifactService.readContent(match.id);
+  const content = await artifactService.readContent(match);
   return content;
 }
 
@@ -1527,7 +1527,7 @@ async function toolDeleteFile(
     return `Deleted file: ${realPath} (approved by user)`;
   }
 
-  await artifactService.delete(match.id);
+  await artifactService.delete(match);
   return `Deleted file: ${realPath}`;
 }
 
@@ -1562,7 +1562,7 @@ export async function toolSearchFiles(
     const path = file.meta?.path || file.filename;
     let content: string;
     try {
-      content = await artifactService.readContent(file.id);
+      content = await artifactService.readContent(file);
     } catch {
       continue; // unreadable file — skip, don't fail the whole search
     }
@@ -1608,7 +1608,7 @@ async function toolRenameFile(
 
   // The artifact service owns the rest: meta.path + path column + filename
   // sync, and the Project Folder rename on desktop.
-  await artifactService.update(match.id, { meta: { path: newPath } });
+  await artifactService.update(match, { meta: { path: newPath } });
   return `Renamed ${oldPath} → ${newPath}. References to the old path in other files are NOT updated automatically.`;
 }
 

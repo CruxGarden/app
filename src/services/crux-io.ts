@@ -179,7 +179,11 @@ export async function peekImport(data: Blob | ArrayBuffer): Promise<{
 
 export async function exportCrux(options: ExportOptions): Promise<ExportResult> {
   await assertMainWorkspace(options.cruxId);
-  if ((await listWorkingCopies(options.cruxId)).length) return exportTaskCrux(options);
+  const copies = await listWorkingCopies(options.cruxId);
+  await (
+    await import('./file-content')
+  ).finishPendingContentProjections([options.cruxId, ...copies.map((copy) => copy.id)]);
+  if (copies.length) return exportTaskCrux(options);
   const { cruxId, messages, summary = null, author = null, onProgress } = options;
   const { crux: cruxService, artifact, dimension } = getServices();
   const db = getSqliteClient();
@@ -323,7 +327,10 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
     const meta = { ...(growth.meta || {}) };
     if (meta.thumbnailId) {
       try {
-        const thumbArtifact = await artifact.findById(meta.thumbnailId as string);
+        const thumbArtifact = (await artifact.findByResource('crux', growth.targetId)).find(
+          (file) => file.id === meta.thumbnailId,
+        );
+        if (!thumbArtifact) throw new Error('Missing thumbnail');
         meta.thumbnailPath = (thumbArtifact.meta?.path || thumbArtifact.filename) as string;
       } catch {
         // Thumbnail artifact not found — skip

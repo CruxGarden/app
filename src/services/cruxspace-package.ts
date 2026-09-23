@@ -156,7 +156,7 @@ export async function exportCruxspace(
     )) {
       if ((sidecar.size ?? 0) > 16000) continue;
       try {
-        const origin = JSON.parse(await artifact.readContent(sidecar.id)) as AssetOrigin;
+        const origin = JSON.parse(await artifact.readContent(sidecar)) as AssetOrigin;
         if (origin?.version === 1 && origin.spaceId === spaceId)
           transfers.push({ ...origin, targetCruxId: id });
       } catch {

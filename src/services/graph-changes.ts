@@ -40,6 +40,8 @@ export async function applyGraphChange(change: LocalGraphChange): Promise<void> 
       )
     )
       return;
+    if (w.id === change.id && fields.includes('fileContent'))
+      await w.data.getState().refreshArtifacts();
     await w.data
       .getState()
       .refreshDetails(w.id === change.id ? fields : ['title'], w.id === change.id ? keys : []);

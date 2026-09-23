@@ -69,11 +69,14 @@ async function doInitServices(backend?: Backend): Promise<Services> {
   } else {
     const { SqliteCruxService } = await import('./sqlite/crux.service');
     const { SqliteArtifactService } = await import('./sqlite/artifact.service');
+    const { ManifestArtifactService } = await import('./manifest-artifact.service');
     const { SqliteDimensionService } = await import('./sqlite/dimension.service');
     const { SqliteAuthorService } = await import('./sqlite/author.service');
     services = {
       crux: new SqliteCruxService(),
-      artifact: new SqliteArtifactService(),
+      artifact: getSqliteClient().fileContent
+        ? new ManifestArtifactService()
+        : new SqliteArtifactService(),
       dimension: new SqliteDimensionService(),
       author: new SqliteAuthorService(),
       store: storeService,
@@ -92,6 +95,7 @@ async function doInitServices(backend?: Backend): Promise<Services> {
   // the front door left the watcher firing at a renderer with no listener
   // and Finder edits never appeared in the Artifacts pane. No-op on web.
   const { initIngestion, recoverProjectFolders } = await import('./ingestion');
+  await (await import('./file-content')).finishPendingContentProjections();
   initIngestion();
   await recoverProjectFolders();
   if (resolvedBackend === 'local' && getSqliteClient().onChange) {

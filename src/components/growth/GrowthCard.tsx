@@ -182,7 +182,10 @@ function useThumbnail(growth: Dimension): string | null {
     (async () => {
       try {
         const { artifact } = getServices();
-        const blob = await artifact.downloadBlob(thumbnailId);
+        const files = await artifact.findByResource('crux', growth.targetId);
+        const file = files.find((item) => item.id === thumbnailId);
+        if (!file) return;
+        const blob = await artifact.downloadBlob(file);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setUrl(objectUrl);
@@ -195,7 +198,7 @@ function useThumbnail(growth: Dimension): string | null {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [thumbnailId]);
+  }, [thumbnailId, growth.targetId]);
 
   return url;
 }

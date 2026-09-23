@@ -147,7 +147,10 @@ function makeGrowthDeps(
       cloneArtifactsToSnapshot: async () => {},
       findByResource: async () => snapshotArtifacts,
       delete: async (id, opts) => {
-        created.deletedArtifacts.push({ id, writeThrough: opts?.writeThrough });
+        created.deletedArtifacts.push({
+          id: typeof id === 'string' ? id : id.id,
+          writeThrough: opts?.writeThrough,
+        });
       },
     },
     dimension: {
@@ -613,14 +616,26 @@ describe('restoreFilesCore (diff-based)', () => {
     const c = await crux.create({ title: 'Diff', type: 'workspace' });
     await artifact.create({ resourceId: c.id, content: 'same', meta: { path: 'same.txt' } });
     await artifact.create({ resourceId: c.id, content: 'old', meta: { path: 'changed.txt' } });
-    await artifact.create({ resourceId: c.id, content: 'gone later', meta: { path: 'removed.txt' } });
-    const snapshot = await (await growthHostFor(c.id)).snapshot({ label: 'Then', requestedBy: 'person' });
-    const keep = (await artifact.findByResource('crux', c.id)).find((a) => a.meta?.path === 'same.txt')!;
+    await artifact.create({
+      resourceId: c.id,
+      content: 'gone later',
+      meta: { path: 'removed.txt' },
+    });
+    const snapshot = await (
+      await growthHostFor(c.id)
+    ).snapshot({ label: 'Then', requestedBy: 'person' });
+    const keep = (await artifact.findByResource('crux', c.id)).find(
+      (a) => a.meta?.path === 'same.txt',
+    )!;
     // Now: change one, remove one, add one.
-    const changed = (await artifact.findByResource('crux', c.id)).find((a) => a.meta?.path === 'changed.txt')!;
+    const changed = (await artifact.findByResource('crux', c.id)).find(
+      (a) => a.meta?.path === 'changed.txt',
+    )!;
     await artifact.delete(changed.id);
     await artifact.create({ resourceId: c.id, content: 'new', meta: { path: 'changed.txt' } });
-    const removed = (await artifact.findByResource('crux', c.id)).find((a) => a.meta?.path === 'removed.txt')!;
+    const removed = (await artifact.findByResource('crux', c.id)).find(
+      (a) => a.meta?.path === 'removed.txt',
+    )!;
     await artifact.delete(removed.id);
     await artifact.create({ resourceId: c.id, content: 'extra', meta: { path: 'added.txt' } });
 

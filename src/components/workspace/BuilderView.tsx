@@ -825,7 +825,7 @@ function useCollectionData(items: CollectionItem[], collection: ContentCollectio
         let data = fmCache.get(fp);
         if (!data) {
           try {
-            const content = await artifactService.readContent(item.artifact.id);
+            const content = await artifactService.readContent(item.artifact);
             data = parseFrontmatter(content).data;
             fmCache.set(fp, data);
             if (fmCache.size > 500) fmCache.clear();
@@ -890,7 +890,7 @@ function useShelf(path: string): {
     }
     (async () => {
       try {
-        const content = await getServices().artifact.readContent(artifact.id);
+        const content = await getServices().artifact.readContent(artifact);
         const shelf = parseShelf(content);
         if (!cancelled) setState({ shelf, error: null });
       } catch (err) {
@@ -1013,7 +1013,7 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
     setSaving(true);
     try {
       // Re-read at save time so a concurrent edit is not clobbered
-      const current = parseShelf(await getServices().artifact.readContent(artifact.id));
+      const current = parseShelf(await getServices().artifact.readContent(artifact));
       const next = { ...current, entries: [...current.entries, entry] };
       await saveArtifactContent(artifact.id, JSON.stringify(next, null, 2) + '\n');
       setOpen(false);

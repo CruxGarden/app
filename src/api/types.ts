@@ -372,6 +372,8 @@ export interface Tag {
 // ── Artifact ────────────────────────────────────────
 
 export interface Artifact {
+  /** Exact local content selection; file identity remains owner + logical id. */
+  fileReference?: { cruxId: string; expected: { root: string; revision: number }; path: string };
   id: string;
   type: string;
   kind: string;

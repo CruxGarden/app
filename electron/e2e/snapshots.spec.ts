@@ -120,6 +120,15 @@ test.describe('snapshots & revert', () => {
       await expect(page.getByText('v1', { exact: true })).toBeVisible();
       await expect(page.getByText('v2', { exact: true })).toBeVisible();
       await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
+      const storage = await page.evaluate(async () => {
+        const db = window.electronAPI!.sqlite;
+        return {
+          files: await db.all('SELECT id FROM artifacts'),
+          heads: await db.all('SELECT crux_id FROM file_content_heads'),
+        };
+      });
+      expect(storage.files).toEqual([]);
+      expect(storage.heads.length).toBeGreaterThanOrEqual(4);
     } finally {
       await app.close();
     }

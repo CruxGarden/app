@@ -166,6 +166,13 @@
       "ledger": "cruxgarden:connectedAccountId"
     },
     {
+      "key": "cruxgarden:content-projection:",
+      "sources": [
+        "src/services/file-content.ts"
+      ],
+      "ledger": "cruxgarden:content-projection:"
+    },
+    {
       "key": "cruxgarden:cruxspace-moment",
       "sources": [
         "src/services/cruxspace-moment.ts"

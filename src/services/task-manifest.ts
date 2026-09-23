@@ -104,7 +104,7 @@ export async function mergeTaskManifests(
             );
             const fingerprint = await hashContent(data);
             await write(fingerprint, data);
-            chosen = { ...m, fingerprint };
+            chosen = { ...m, fingerprint, size: data.byteLength };
           } else conflicts.push({ path, base: b, main: m, task: t });
         } else conflicts.push({ path, base: b, main: m, task: t });
       } else conflicts.push({ path, base: b, main: m, task: t });

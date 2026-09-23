@@ -7,7 +7,7 @@ import {
 } from './publish-mood';
 import { captureCurrentMood, getInstalledMoods, exportMoodPackage } from './packages';
 import { addAsset } from './assets';
-import type { Crux } from '@/api/types';
+import type { Artifact, Crux } from '@/api/types';
 import { initServices } from '@/services';
 import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -42,7 +42,7 @@ function fakeServices() {
       async findByResource(_t: string, id: string) {
         return artifacts
           .filter((a) => a.resourceId === id)
-          .map((a) => ({ id: a.id, meta: { path: a.path } }));
+          .map((a) => ({ ...a, meta: { path: a.path } }) as unknown as Artifact);
       },
       async create(input: Record<string, unknown>) {
         artifacts.push({
@@ -60,7 +60,8 @@ function fakeServices() {
           blob: input.blob as Blob,
         });
       },
-      async delete(id: string) {
+      async delete(file: Artifact) {
+        const id = file.id;
         const i = artifacts.findIndex((a) => a.id === id);
         if (i >= 0) artifacts.splice(i, 1);
       },

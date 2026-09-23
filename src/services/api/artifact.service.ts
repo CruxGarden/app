@@ -1,4 +1,4 @@
-import type { IArtifactService } from '../artifact.service';
+import type { ArtifactReference, IArtifactService } from '../artifact.service';
 import type {
   Artifact,
   CreateArtifactInput,
@@ -30,7 +30,8 @@ export class ApiArtifactService implements IArtifactService {
     }
   }
 
-  async findById(id: string): Promise<Artifact> {
+  async findById(reference: ArtifactReference): Promise<Artifact> {
+    const id = recordId(reference);
     const cached = this.artifactCache.get(id);
     if (cached) return cached;
     // No API endpoint for GET /attachments/:id exists.
@@ -75,7 +76,8 @@ export class ApiArtifactService implements IArtifactService {
     return attachment;
   }
 
-  async update(id: string, updates: UpdateArtifactInput): Promise<Artifact> {
+  async update(reference: ArtifactReference, updates: UpdateArtifactInput): Promise<Artifact> {
+    const id = recordId(reference);
     const meta: Record<string, unknown> = { ...updates.meta };
     if (updates.mimeType) meta.mimeType = updates.mimeType;
     if (updates.filename) meta.filename = updates.filename;
@@ -84,17 +86,20 @@ export class ApiArtifactService implements IArtifactService {
     return attachment;
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(reference: ArtifactReference): Promise<void> {
+    const id = recordId(reference);
     await cruxes.deleteArtifact(id);
     this.artifactCache.delete(id);
   }
 
-  async readContent(id: string): Promise<string> {
+  async readContent(reference: ArtifactReference): Promise<string> {
+    const id = recordId(reference);
     const blob = await this.downloadBlob(id);
     return blob.text();
   }
 
-  async downloadBlob(id: string): Promise<Blob> {
+  async downloadBlob(reference: ArtifactReference): Promise<Blob> {
+    const id = recordId(reference);
     const cached = this.artifactCache.get(id);
     if (!cached) {
       throw new NotFoundError(
@@ -119,4 +124,10 @@ export class ApiArtifactService implements IArtifactService {
   async cloneArtifactsToSnapshot(_sourceId: string, _snapshotId: string): Promise<void> {
     throw new Error('cloneArtifactsToSnapshot is only available in local-first mode');
   }
+}
+
+function recordId(reference: ArtifactReference): string {
+  if (typeof reference === 'string') return reference;
+  if (reference.fileReference) throw new Error('Use the selected file content service.');
+  return reference.id;
 }

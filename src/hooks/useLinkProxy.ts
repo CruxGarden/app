@@ -78,7 +78,7 @@ export function useLinkProxy(cruxId: string | null) {
             const artifacts = await track(getServices().artifact.findByResource('crux', cruxId!));
             const file = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === path);
             if (!file) return answer('');
-            answer(await (await getServices().artifact.downloadBlob(file.id)).text());
+            answer(await (await getServices().artifact.downloadBlob(file)).text());
             break;
           }
           case 'crux:link:write': {

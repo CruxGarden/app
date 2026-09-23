@@ -70,12 +70,41 @@ export async function indexTaskManifest(id: string, manifest: TaskManifest): Pro
 }
 
 async function indexTaskManifestCore(id: string, manifest: TaskManifest): Promise<void> {
+  const db = getSqliteClient();
+  if (db.fileContent) {
+    const head = await db.fileContent.head(id);
+    const entries = head ? (await db.fileContent.list({ cruxId: id, expected: head })).entries : [];
+    const byPath = new Map(entries.map((entry) => [entry.path, entry]));
+    const changes: Parameters<typeof db.fileContent.edit>[0]['changes'] = entries
+      .filter((entry) => isTaskArtifact(entry.path) && !manifest[entry.path])
+      .map((entry) => ({ remove: entry.path }));
+    for (const [path, file] of Object.entries(manifest)) {
+      const previous = byPath.get(path);
+      if (
+        previous &&
+        sameTaskFile(previous, file) &&
+        previous.mimeType === file.mimeType &&
+        previous.encoding === file.encoding
+      )
+        continue;
+      changes.push({
+        put: {
+          ...file,
+          path,
+          id: previous?.id ?? crypto.randomUUID(),
+          size: file.size ?? (await db.blobRead(file.fingerprint)).byteLength,
+          attributes: previous?.attributes ?? {},
+        },
+      });
+    }
+    if (changes.length || !head) await db.fileContent.edit({ cruxId: id, expected: head, changes });
+    return;
+  }
   const { artifact } = getServices();
   const current = await artifact.findByResource('crux', id);
   for (const f of current) {
     const path = String(f.meta?.path || f.filename);
-    if (isTaskArtifact(path) && !manifest[path])
-      await artifact.delete(f.id, { writeThrough: false });
+    if (isTaskArtifact(path) && !manifest[path]) await artifact.delete(f, { writeThrough: false });
   }
   // New paths whose blobs the store already holds (the manifest came from
   // indexed Artifacts) are registered in bulk: no reads, no hashing, a few

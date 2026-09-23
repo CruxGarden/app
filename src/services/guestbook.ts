@@ -91,7 +91,7 @@ export async function addGuestbook(cruxId: string): Promise<AddGuestbookResult> 
   let present = false;
   if (placement.pagePath) {
     const page = artifacts.find((a) => pathOf(a) === placement.pagePath)!;
-    const text = await (await artifact.downloadBlob(page.id)).text();
+    const text = await (await artifact.downloadBlob(page)).text();
     present = pageHasGuestbook(text);
     if (!present) {
       await artifact.create({

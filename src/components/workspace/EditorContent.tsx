@@ -398,6 +398,12 @@ export default function EditorContent({
 
       monacoRef.current = monaco;
       editorRef.current = editor;
+      // A retained model can outlive the widget that received a restore or an
+      // external edit. defaultValue only initializes new models; reconcile the
+      // existing one with its document before showing it again.
+      const restoredContent = documentSession.getState().content;
+      if (restoredContent !== null && editor.getValue() !== restoredContent)
+        editor.getModel()?.setValue(restoredContent);
       documentSession.setState({ model: editor.getModel(), focus: () => editor.focus() });
       editor.onDidChangeCursorSelection(() =>
         documentSession.setState({ view: editor.saveViewState() }),
@@ -446,10 +452,10 @@ export default function EditorContent({
   const appliedVersionRef = useRef(0);
   useEffect(() => {
     if (contentVersion === appliedVersionRef.current) return;
-    appliedVersionRef.current = contentVersion;
     const editor = editorRef.current;
     const model = editor?.getModel();
     if (!editor || !model || content === null || dirtyRef.current) return;
+    appliedVersionRef.current = contentVersion;
     if (model.getValue() === content) return;
     const viewState = editor.saveViewState();
     model.setValue(content);
@@ -463,12 +469,17 @@ export default function EditorContent({
     (value: string | undefined) => {
       if (!readOnlyTask && value !== undefined) {
         contentRef.current = value;
+        // Applying hydrated content to Monaco is not a new user edit.
+        if (value === documentSession.getState().content) {
+          dirtyRef.current = documents.dirty(artifact);
+          return;
+        }
         dirtyRef.current = true;
         setContent(value);
         setTabDirty(tab.id, true);
       }
     },
-    [tab.id, setContent, setTabDirty, readOnlyTask],
+    [tab.id, setContent, setTabDirty, readOnlyTask, documentSession, documents, artifact],
   );
 
   // Site cruxes (Astro): preview = the project's own dev server with HMR.

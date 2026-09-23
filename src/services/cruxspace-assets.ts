@@ -226,7 +226,7 @@ export async function listCruxspaceAssets(spaceId: string): Promise<CruxspaceAss
       if ((descriptor.size ?? 0) > 16000) continue;
       let output: CruxOutput;
       try {
-        output = JSON.parse(await artifact.readContent(descriptor.id));
+        output = JSON.parse(await artifact.readContent(descriptor));
         if (output.externalSource)
           output.externalSource = cleanExternalSource(output.externalSource);
       } catch {
@@ -330,7 +330,7 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
       (f) => pathOf(f) === asset.path,
     );
     if (!source) throw new Error('This output is no longer available.');
-    const blob = await artifact.downloadBlob(source.id);
+    const blob = await artifact.downloadBlob(source);
     if ((await hashContent(new Uint8Array(await blob.arrayBuffer()))) !== input.fingerprint)
       throw new Error('The selected output changed. Refresh the assets.');
     // A bundle is expanded into ordinary files under the chosen folder; the

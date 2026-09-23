@@ -127,7 +127,8 @@ function makeDeps(opts: {
         state.localMetaWrites.push(meta);
         return {};
       },
-      downloadBlob: async (artifactId) => {
+      downloadBlob: async (file) => {
+        const artifactId = file.id;
         if (opts.failBlob && artifactId === opts.failBlob) {
           throw new Error('blob missing from store');
         }
@@ -513,7 +514,7 @@ it('refuses a Notes publication with no selected pages before calling the API', 
 
 it('publishes only Moqira build output and strips private Collaboration and covers', async () => {
   const { deps, state } = makeDeps({ isSite: true });
-  deps.local.downloadBlob = async (id) =>
+  deps.local.downloadBlob = async ({ id }) =>
     new Blob([
       JSON.stringify(
         id.includes('publish.json')

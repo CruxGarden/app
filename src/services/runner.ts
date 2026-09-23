@@ -319,7 +319,7 @@ async function projectFolder(cruxId: string): Promise<string | null> {
   const doc = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === 'link.json');
   if (!doc) return null;
   try {
-    const record = JSON.parse(await (await getServices().artifact.downloadBlob(doc.id)).text());
+    const record = JSON.parse(await (await getServices().artifact.downloadBlob(doc)).text());
     return typeof record.folder === 'string' ? record.folder : null;
   } catch {
     return null;

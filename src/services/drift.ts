@@ -1,8 +1,8 @@
 /**
  * What changed on this machine since a moment in time (RESILIENCE-PLAN §3,
  * scenario 6). A crux counts as changed when its record or any of its files
- * was updated after the moment — editing a file does not touch the crux row,
- * so the artifacts table is the honest signal. Used before a pull, which would
+ * was updated after the moment. The manifest API updates the owning Crux in
+ * the content transaction. Used before a pull, which would
  * overwrite that work.
  */
 import { getSqliteClient } from '@/services/sqlite/client';
@@ -12,6 +12,7 @@ import type { Crux } from '@/api/types';
 export async function latestChangeByCrux(cruxes: Crux[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   for (const c of cruxes) out.set(c.id, new Date(c.updated).getTime() || 0);
+  if (getSqliteClient().fileContent) return out;
   try {
     const rows = await getSqliteClient().all<{ resource_id: string; updated: string }>(
       "SELECT resource_id, MAX(updated) AS updated FROM artifacts WHERE resource_type = 'crux' AND type = 'artifact' GROUP BY resource_id",

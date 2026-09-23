@@ -25,9 +25,9 @@ export default function ToolInfoSettings() {
   useEffect(() => {
     let active = true;
     setDocument({ text: '', error: '', truncated: false });
-    if (expanded && id) {
+    if (expanded && file) {
       void getServices()
-        .artifact.downloadBlob(id)
+        .artifact.downloadBlob(file)
         .then(async (blob) => {
           const text = await blob.slice(0, 131072).text();
           if (active) setDocument({ text, error: '', truncated: blob.size > 131072 });
@@ -39,7 +39,7 @@ export default function ToolInfoSettings() {
     return () => {
       active = false;
     };
-  }, [crux?.id, expanded, id, fingerprint]);
+  }, [crux?.id, expanded, id, fingerprint, file]);
   if (!info) return null;
   const notices = artifacts
     .filter((a) => isToolNotice(pathOf(a)))

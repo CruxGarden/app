@@ -116,7 +116,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         if (!file) throw new Error('This file no longer exists.');
         if ((file.size ?? 0) > 32_000_000)
           throw new Error('This file is too large to use (32 MB).');
-        const blob = await artifact.downloadBlob(file.id);
+        const blob = await artifact.downloadBlob(file);
         return {
           bytes: await blob.arrayBuffer(),
           mimeType: blob.type || guessMimeType(path),
@@ -130,7 +130,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           (f) => pathOf(f) === 'notebook/publish.json',
         );
         if (!manifest) throw new Error('The notebook publication settings are missing.');
-        const config = JSON.parse(await artifact.readContent(manifest.id));
+        const config = JSON.parse(await artifact.readContent(manifest));
         if (config.format !== 'epub')
           throw new Error(
             'Choose “Web pages and an EPUB book” under Notebook sharing settings before saving the book.',
@@ -221,7 +221,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         }
         if (!existing) throw new Error('This notebook file no longer exists.');
         if (isNotebookImage(path)) {
-          const blob = await artifact.downloadBlob(existing.id);
+          const blob = await artifact.downloadBlob(existing);
           const bytes = new Uint8Array(await blob.arrayBuffer());
           let binary = '';
           for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -231,7 +231,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           };
         }
         return {
-          content: await artifact.readContent(existing.id),
+          content: await artifact.readContent(existing),
           fingerprint: existing.fingerprint,
         };
       }
@@ -261,7 +261,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           ifChanged: true,
           silent: true,
         });
-        await artifact.delete(existing.id);
+        await artifact.delete(existing);
       } else {
         if (typeof request.content !== 'string' || request.content.length > 8_000_000)
           throw new Error('The notebook file is too large.');

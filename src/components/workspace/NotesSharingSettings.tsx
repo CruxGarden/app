@@ -29,9 +29,9 @@ export default function NotesSharingSettings() {
   useEffect(() => {
     let active = true;
     setLoaded(false);
-    if (crux?.kind === 'notes' && configId) {
+    if (crux?.kind === 'notes' && config) {
       void getServices()
-        .artifact.readContent(configId)
+        .artifact.readContent(config)
         .then((content) => {
           const parsed = JSON.parse(content);
           const value = parsed.layout ?? 'single-page';
@@ -54,7 +54,7 @@ export default function NotesSharingSettings() {
     return () => {
       active = false;
     };
-  }, [crux?.id, crux?.kind, configId, configFingerprint]);
+  }, [crux?.id, crux?.kind, configId, configFingerprint, config]);
   if (crux?.kind !== 'notes') return null;
   const copy = copyIdentity(crux);
   return (

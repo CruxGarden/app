@@ -1,5 +1,5 @@
 import { assertCopyWritable, isTaskHistoryReference } from '../working-copies';
-import type { IArtifactService } from '../artifact.service';
+import type { ArtifactReference, IArtifactService } from '../artifact.service';
 import type {
   Artifact,
   CreateArtifactInput,
@@ -22,7 +22,8 @@ import {
 // can still retain them. Only an API-owned collector with complete roots and
 // in-flight admission may reclaim them (ADR 0058).
 export class SqliteArtifactService implements IArtifactService {
-  async findById(id: string): Promise<Artifact> {
+  async findById(reference: ArtifactReference): Promise<Artifact> {
+    const id = recordId(reference);
     const row = await getSqliteClient().get('SELECT * FROM artifacts WHERE id = ?', [id]);
     if (!row) throw new NotFoundError('Artifact not found');
     return toArtifact(row);
@@ -284,7 +285,8 @@ export class SqliteArtifactService implements IArtifactService {
     return inputs.length;
   }
 
-  async update(id: string, updates: UpdateArtifactInput): Promise<Artifact> {
+  async update(reference: ArtifactReference, updates: UpdateArtifactInput): Promise<Artifact> {
+    const id = recordId(reference);
     const existing = await this.findById(id);
     await assertCopyWritable(existing.resourceId);
     const changes: Record<string, unknown> = { updated: new Date().toISOString() };
@@ -326,7 +328,8 @@ export class SqliteArtifactService implements IArtifactService {
     return this.findById(id);
   }
 
-  async delete(id: string, opts?: { writeThrough?: boolean }): Promise<void> {
+  async delete(reference: ArtifactReference, opts?: { writeThrough?: boolean }): Promise<void> {
+    const id = recordId(reference);
     const db = getSqliteClient();
     const row = await db.get<{
       fingerprint: string | null;
@@ -348,7 +351,8 @@ export class SqliteArtifactService implements IArtifactService {
     await db.run('DELETE FROM artifacts WHERE id = ?', [id]);
   }
 
-  async readContent(id: string): Promise<string> {
+  async readContent(reference: ArtifactReference): Promise<string> {
+    const id = recordId(reference);
     const row = await getSqliteClient().get<{ encoding: string; fingerprint: string | null }>(
       'SELECT encoding, fingerprint FROM artifacts WHERE id = ?',
       [id],
@@ -362,7 +366,8 @@ export class SqliteArtifactService implements IArtifactService {
     return new TextDecoder().decode(bytes);
   }
 
-  async downloadBlob(id: string): Promise<Blob> {
+  async downloadBlob(reference: ArtifactReference): Promise<Blob> {
+    const id = recordId(reference);
     const row = await getSqliteClient().get<{ mime_type: string; fingerprint: string | null }>(
       'SELECT mime_type, fingerprint FROM artifacts WHERE id = ?',
       [id],
@@ -448,4 +453,10 @@ export class SqliteArtifactService implements IArtifactService {
       );
     }
   }
+}
+
+function recordId(reference: ArtifactReference): string {
+  if (typeof reference === 'string') return reference;
+  if (reference.fileReference) throw new Error('Use the selected file content service.');
+  return reference.id;
 }

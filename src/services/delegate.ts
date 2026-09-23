@@ -324,13 +324,13 @@ function createDelegate(useCruxStore: StoreApi<CruxState>) {
       const main = (await artifact.findByResource('crux', cruxId)).find(
         (a) => a.type === 'artifact' && pathOf(a) === change.path,
       );
-      if (main) await artifact.delete(main.id);
+      if (main) await artifact.delete(main);
       return;
     }
     const src = branchArtifacts.find((a) => a.type === 'artifact' && pathOf(a) === change.path);
     if (!src) return;
     if (src.encoding === 'binary' || isBinaryMime(src.mimeType || '')) {
-      const blob = await artifact.downloadBlob(src.id);
+      const blob = await artifact.downloadBlob(src);
       await artifact.upload({
         resourceId: cruxId,
         resourceType: 'crux',
@@ -339,7 +339,7 @@ function createDelegate(useCruxStore: StoreApi<CruxState>) {
         meta: { path: change.path },
       });
     } else {
-      const content = await artifact.readContent(src.id);
+      const content = await artifact.readContent(src);
       await artifact.create({
         resourceId: cruxId,
         resourceType: 'crux',

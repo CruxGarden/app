@@ -527,7 +527,7 @@ async function readResource(
       const all = await artifact.findByResource('crux', cruxId);
       const file = all.find((a) => a.type === 'artifact' && pathOf(a) === 'AGENTS.md');
       const text = file
-        ? await artifact.readContent(file.id)
+        ? await artifact.readContent(file)
         : '# AGENTS.md\n\nThis crux has no AGENTS.md yet. Read crux://files for the file tree and ' +
           'crux://persona for the collaborator voice; do not touch `_crux/` or `.crux/`.';
       return { contents: [{ uri, mimeType: 'text/markdown', text }] };

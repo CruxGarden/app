@@ -61,7 +61,7 @@ async function loadMoodArtifacts(
       (a) => a.meta?.path === 'avatar.png' || a.meta?.path === 'avatar.jpg',
     );
     if (avatarArt) {
-      const blob = await artifact.downloadBlob(avatarArt.id);
+      const blob = await artifact.downloadBlob(avatarArt);
       avatarUrl = URL.createObjectURL(blob);
     }
 
@@ -69,7 +69,7 @@ async function loadMoodArtifacts(
       (a) => a.meta?.path === 'background.png' || a.meta?.path === 'background.jpg',
     );
     if (bgArt) {
-      const blob = await artifact.downloadBlob(bgArt.id);
+      const blob = await artifact.downloadBlob(bgArt);
       backgroundUrl = URL.createObjectURL(blob);
     }
 

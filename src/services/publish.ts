@@ -56,7 +56,7 @@ export interface PublishDeps {
   };
   local: {
     updateCruxMeta(cruxId: string, meta: Record<string, unknown>): Promise<unknown>;
-    downloadBlob(artifactId: string): Promise<Blob>;
+    downloadBlob(artifact: Artifact): Promise<Blob>;
   };
   site: {
     isSiteCrux(artifacts: Artifact[]): boolean;
@@ -259,7 +259,7 @@ export async function publishPipeline(
   if (crux.kind === 'notes') {
     const manifest = artifacts.find((a) => pathOf(a) === 'notebook/publish.json');
     if (!manifest) throw new Error('The notebook publication settings are missing.');
-    const selected = JSON.parse(await (await deps.local.downloadBlob(manifest.id)).text());
+    const selected = JSON.parse(await (await deps.local.downloadBlob(manifest)).text());
     if (!Array.isArray(selected.pages) || !selected.pages.length)
       throw new Error(
         'Select at least one note with “Include in public edition” before publishing.',
@@ -281,7 +281,7 @@ export async function publishPipeline(
     const readJson = async (path: string) => {
       const artifact = artifacts.find((a) => pathOf(a) === path);
       if (!artifact) throw new Error('Moqira publication files are missing.');
-      return JSON.parse(await (await deps.local.downloadBlob(artifact.id)).text());
+      return JSON.parse(await (await deps.local.downloadBlob(artifact)).text());
     };
     const selected = await readJson('mockups/publish.json');
     const project = await readJson('mockups/project.json');
@@ -349,7 +349,7 @@ export async function publishPipeline(
     for (const art of publishableArtifacts(artifacts)) {
       let blob: Blob;
       try {
-        blob = await deps.local.downloadBlob(art.id);
+        blob = await deps.local.downloadBlob(art);
       } catch (err) {
         throw new Error(
           `Could not read "${pathOf(art) || art.id}" from the blob store — nothing was published.`,
@@ -379,7 +379,7 @@ export async function publishPipeline(
   }
   if (thumb && !coverTaken) {
     try {
-      const blob = await deps.local.downloadBlob(thumb.id);
+      const blob = await deps.local.downloadBlob(thumb);
       if (blob.size > 0)
         filesToPublish.push({
           blob,

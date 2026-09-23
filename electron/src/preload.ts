@@ -61,9 +61,11 @@ const api: ElectronBridge = {
     : {}),
   sqlite: {
     fileContent: {
+      finishProjection: (id) => ipcRenderer.invoke('content:finish-projection', id),
       head: (id) => ipcRenderer.invoke('content:head', id),
       list: (input) => ipcRenderer.invoke('content:list', input),
       read: (input) => ipcRenderer.invoke('content:read', input),
+      lookup: (input) => ipcRenderer.invoke('content:lookup', input),
       edit: (input) => ipcRenderer.invoke('content:edit', input),
       snapshot: (input) => ipcRenderer.invoke('content:snapshot', input),
       restore: (input) => ipcRenderer.invoke('content:restore', input),

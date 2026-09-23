@@ -477,13 +477,14 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
     await window.electronAPI?.devserver?.stop(folder);
     await window.electronAPI?.preview?.stop(folder);
   }
-  await projectTaskManifest(review.cruxId, current, review.manifest);
+  const db = getSqliteClient();
+  if (db.fileContent) await db.fileContent.finishProjection(review.cruxId);
+  else await projectTaskManifest(review.cruxId, current, review.manifest);
   if (
     taskManifestKey(await captureTaskManifest(review.cruxId)) !== taskManifestKey(review.manifest)
   )
     throw new Error('Main changed during the merge. The recovery journal has been kept.');
   // Reuse a checkpoint after a crash between recording Growth and completing the journal.
-  const db = getSqliteClient();
   const existing = await db.get<{ id: string }>(
     "SELECT c.id FROM cruxes c JOIN dimensions d ON d.target_id = c.id WHERE json_extract(c.meta, '$.merge.id') = ? AND d.type = 'growth'",
     [review.id],

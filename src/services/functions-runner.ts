@@ -120,7 +120,7 @@ async function loadSource(cruxId: string, path: string): Promise<string | null> 
   const artifacts = await artifact.findByResource('crux', cruxId);
   const match = findArtifactByPath(artifacts, path);
   if (!match) return null;
-  const blob = await artifact.downloadBlob(match.id);
+  const blob = await artifact.downloadBlob(match);
   return blob.text();
 }
 
@@ -354,7 +354,7 @@ export async function emitLocal(
   for (const f of files) {
     const a = findArtifactByPath(artifacts, f.path);
     if (!a) continue;
-    const code = await (await artifact.downloadBlob(a.id)).text();
+    const code = await (await artifact.downloadBlob(a)).text();
     const pattern = matchPattern(code) ?? f.event!;
     if (!matches(pattern, name)) continue;
     const r = await runLocalHandler(cruxId, f.name, code, { event, visitorId, depth });

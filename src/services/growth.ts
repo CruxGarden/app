@@ -12,6 +12,8 @@
  */
 
 import type { RegisterArtifactInput } from './types';
+import type { ArtifactReference } from './artifact.service';
+import type { SqliteBridge } from '@/lib/platform';
 import type { Artifact, ChatMessage, Crux, Dimension } from '@/api/types';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { isGeneratedGuidePath } from './agents-md';
@@ -21,6 +23,7 @@ import { isEmbeddedApp } from './embedded-app';
 // ── Deps ────────────────────────────────────────────────────────────────────
 
 export interface GrowthDeps {
+  content?: SqliteBridge['fileContent'];
   crux: {
     create(input: Record<string, unknown>): Promise<Crux>;
     findById(id: string): Promise<Crux>;
@@ -33,7 +36,7 @@ export interface GrowthDeps {
     cloneArtifactsToSnapshot(fromId: string, toId: string): Promise<unknown>;
     findByResource(type: string, id: string): Promise<Artifact[]>;
     /** Delete one artifact row; `writeThrough: false` keeps the disk untouched and frees an orphaned blob. */
-    delete(id: string, opts?: { writeThrough?: boolean }): Promise<void>;
+    delete(id: ArtifactReference, opts?: { writeThrough?: boolean }): Promise<void>;
     /** Add rows for files whose bytes the Blob Store already holds (a diff-based restore). */
     registerMany?(inputs: RegisterArtifactInput[]): Promise<number>;
   };
@@ -46,7 +49,11 @@ export interface GrowthDeps {
 export async function defaultGrowthDeps(): Promise<GrowthDeps> {
   const { getServices } = await import('./index');
   const { crux, artifact, dimension } = getServices();
+  const { ManifestArtifactService } = await import('./manifest-artifact.service');
+  const { getSqliteClient } = await import('./sqlite/client');
   return {
+    content:
+      artifact instanceof ManifestArtifactService ? getSqliteClient().fileContent : undefined,
     crux: {
       create: (input) => crux.create(input as unknown as Parameters<typeof crux.create>[0]),
       findById: (id) => crux.findById(id),
@@ -223,6 +230,7 @@ export async function createSnapshotCore(
   options: CreateSnapshotOptions,
   deps: GrowthDeps,
 ): Promise<SnapshotResult> {
+  if (deps.content) return createManifestSnapshot(state, options, deps);
   const { crux, messages, messageSegmentStart, growths, growthCount, artifactCount } = state;
   const { label, requestedBy } = options;
 
@@ -306,6 +314,124 @@ export async function createSnapshotCore(
   };
 }
 
+/** Capture the same UI/agent snapshot metadata with an O(1) retained root. */
+async function prepareManifestSnapshot(
+  state: SnapshotWorkspaceState,
+  options: CreateSnapshotOptions,
+  deps: GrowthDeps,
+) {
+  const api = deps.content!;
+  const { crux, messages, messageSegmentStart, growths } = state;
+  const head =
+    (await api.head(crux.id)) ?? (await api.edit({ cruxId: crux.id, expected: null, changes: [] }));
+  const parentId =
+    (crux.meta?.settings?.activeBranch as string | undefined) ||
+    growths[growths.length - 1]?.targetId ||
+    null;
+  const files = await deps.artifact.findByResource('crux', crux.id);
+  const changes = isEmbeddedApp(crux)
+    ? appChanges(crux, parentId ? await deps.artifact.findByResource('crux', parentId) : [], files)
+    : null;
+  const preview = detectPreviewArtifact(files);
+  const thumb = files.find((file) => pathOf(file).toLowerCase() === 'preview.jpg');
+  const input = {
+    cruxId: crux.id,
+    expected: head,
+    snapshotId: crypto.randomUUID(),
+    parentId,
+    title: options.label || crux.title || 'Snapshot',
+    meta: {
+      ...(options.merge ? { merge: options.merge } : {}),
+      messages: messages.slice(messageSegmentStart),
+      settings: { entryFile: crux.meta?.settings?.entryFile ?? null },
+      cumulativeMessageCount: messages.length,
+      fingerprint: await deps.artifact.computeSnapshotFingerprint(crux.id),
+    },
+    dimensionMeta: {
+      artifactCount: files.length,
+      ...(changes ? { appChanges: changes } : {}),
+      ...(options.label ? { label: options.label } : {}),
+      ...(options.requestedBy ? { requestedBy: options.requestedBy } : {}),
+      ...(preview ? { preview } : {}),
+      ...(thumb ? { thumbnailId: thumb.id } : {}),
+    },
+  };
+  return { input, files };
+}
+
+async function createManifestSnapshot(
+  state: SnapshotWorkspaceState,
+  options: CreateSnapshotOptions,
+  deps: GrowthDeps,
+): Promise<SnapshotResult> {
+  const { input, files } = await prepareManifestSnapshot(state, options, deps);
+  const result = await deps.content!.snapshot(input);
+  return {
+    growth: JSON.parse(JSON.stringify(result.growth)),
+    snapshotCruxId: result.snapshot.id,
+    newSegmentStart: state.messages.length,
+    artifactNames: files.map(pathOf).filter((path) => !isHousekeepingPath(path)),
+    previousSummary: state.growths[state.growths.length - 1]?.meta?.summary as string | undefined,
+  };
+}
+
+/** UI and headless agents share the same retained-root restore and recovery. */
+export async function restoreManifestWorkspace(
+  state: SnapshotWorkspaceState,
+  snapshotId: string,
+  branchLabel: string | undefined,
+  deps: GrowthHostDeps,
+): Promise<RestoreReport> {
+  await deps.flush();
+  const api = deps.content!;
+  const { input, files } = await prepareManifestSnapshot(
+    state,
+    {
+      label: branchLabel === undefined ? SAFETY_LABEL_RESTORE : SAFETY_LABEL_BRANCH,
+      silent: true,
+    },
+    deps,
+  );
+  const targetHead = await api.head(snapshotId);
+  if (!targetHead) throw new Error('This snapshot has no retained file content.');
+  const { getSqliteClient } = await import('./sqlite/client');
+  const row = await getSqliteClient().get<{ meta: string | null }>(
+    'SELECT meta FROM cruxes WHERE id = ? UNION ALL SELECT meta FROM working_copies WHERE id = ?',
+    [state.crux.id, state.crux.id],
+  );
+  if (!row) throw new Error('Content owner not found.');
+  const messages =
+    branchLabel === undefined
+      ? []
+      : [
+          {
+            role: 'user',
+            content: `[System: Branching from snapshot "${branchLabel}". The workspace files have been restored to that point. Continue from here on a new branch.]`,
+            timestamp: new Date().toISOString(),
+          },
+        ];
+  const restored = await requireSafetySnapshot(() =>
+    api.restore({
+      safety: input,
+      target: { cruxId: snapshotId, expected: targetHead },
+      workspace: { expectedMeta: JSON.parse(row.meta || '{}'), messages },
+    }),
+  );
+  await api.finishProjection(state.crux.id);
+  const after = await deps.artifact.findByResource('crux', state.crux.id);
+  const target = state.growths.find((growth) => growth.targetId === snapshotId);
+  if (!target) throw new Error('Restored Growth relationship is missing.');
+  return {
+    safety: await snapshotInfoOf(
+      JSON.parse(JSON.stringify(restored.safety.growth)),
+      state.growths.length + 1,
+      deps,
+    ),
+    target: await snapshotInfoOf(target, state.growths.indexOf(target) + 1, deps),
+    changes: diffArtifactSets(files, after),
+  };
+}
+
 // ── AI summary ──────────────────────────────────────────────────────────────
 
 /** Build a short summary prompt for the AI */
@@ -377,8 +503,10 @@ export async function removeLatestSnapshotCore(
 
   // Artifact rows first, quietly (they mirror no folder), so blobs that only
   // this snapshot held are freed; then the crux, which takes its dimension.
-  const artifacts = await deps.artifact.findByResource('crux', tip.targetId);
-  for (const a of artifacts) await deps.artifact.delete(a.id, { writeThrough: false });
+  if (!deps.content) {
+    const artifacts = await deps.artifact.findByResource('crux', tip.targetId);
+    for (const a of artifacts) await deps.artifact.delete(a, { writeThrough: false });
+  }
   await deps.crux.delete(tip.targetId);
 
   const activeBranch = state.crux.meta?.settings?.activeBranch as string | undefined;
@@ -759,7 +887,7 @@ export async function restoreFilesCore(
       if (want && want.fingerprint && want.fingerprint === a.fingerprint) kept.add(pathKey(a));
       else gone.push(a);
     }
-    await Promise.allSettled(gone.map((a) => deps.artifact.delete(a.id)));
+    await Promise.allSettled(gone.map((a) => deps.artifact.delete(a)));
     const added = target.filter((a) => !kept.has(pathKey(a)) && a.fingerprint);
     await deps.artifact.registerMany(
       added.map((a) => ({
@@ -782,7 +910,7 @@ export async function restoreFilesCore(
       target.filter((a) => a.fingerprint).map((a) => pathKey(a)),
     );
   } else {
-    await Promise.allSettled(before.map((a) => deps.artifact.delete(a.id)));
+    await Promise.allSettled(before.map((a) => deps.artifact.delete(a)));
     await deps.artifact.cloneArtifactsToSnapshot(snapshotId, cruxId);
     await deps.projectAll(cruxId);
   }
@@ -930,6 +1058,16 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
 
     restore: async (snapshotId, actor) => {
       const { growth, number } = await resolve(snapshotId);
+      if (deps.content) {
+        const report = await restoreManifestWorkspace(
+          await stateOf(),
+          growth.targetId,
+          undefined,
+          deps,
+        );
+        announceGrowthChange(cruxId, 'restore');
+        return report;
+      }
       const target = await deps.crux.findById(growth.targetId);
       const safety = await safetySnapshot(SAFETY_LABEL_RESTORE, actor);
       const changes = await restoreFilesCore(cruxId, growth.targetId, deps);
@@ -953,6 +1091,16 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
 
     branch: async (snapshotId, label, actor) => {
       const { growth, number } = await resolve(snapshotId);
+      if (deps.content) {
+        const report = await restoreManifestWorkspace(
+          await stateOf(),
+          growth.targetId,
+          label,
+          deps,
+        );
+        announceGrowthChange(cruxId, 'branch');
+        return report;
+      }
       const target = await deps.crux.findById(growth.targetId);
       const safety = await safetySnapshot(SAFETY_LABEL_BRANCH, actor);
       const changes = await restoreFilesCore(cruxId, growth.targetId, deps);

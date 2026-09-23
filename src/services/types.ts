@@ -51,6 +51,8 @@ export interface UpdateCruxInput {
 }
 
 export interface CreateArtifactInput {
+  /** Selected file when saving an existing editor document. */
+  expected?: import('@/api/types').Artifact;
   resourceId: string;
   resourceType?: string;
   content: string;

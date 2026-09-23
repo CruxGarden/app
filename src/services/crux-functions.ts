@@ -348,7 +348,7 @@ export async function egressHosts(cruxId: string, artifacts?: Artifact[]): Promi
   const file = list.find((a) => a.type === 'artifact' && pathOf(a) === 'functions/egress.json');
   if (!file) return [];
   try {
-    const parsed = JSON.parse(await (await artifact.downloadBlob(file.id)).text()) as {
+    const parsed = JSON.parse(await (await artifact.downloadBlob(file)).text()) as {
       hosts?: unknown;
     };
     return Array.isArray(parsed.hosts) ? parsed.hosts.filter((h) => typeof h === 'string') : [];
