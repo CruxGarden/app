@@ -42,7 +42,13 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
         }
         const authorId = randomUUID();
         const homeId = randomUUID();
-        const input = () => ({ slug: randomUUID(), authorId, homeId, kind: CruxKind.GARDEN });
+        const input = () => ({
+          slug: randomUUID(),
+          title: 'Initial title',
+          authorId,
+          homeId,
+          kind: CruxKind.GARDEN,
+        });
         const ids = await runtime.execute(async ({ crux }) => {
           const root = await crux.create(input());
           const nested = await crux.create(input());
@@ -64,6 +70,11 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
         } catch (error) {
           rolledBack = (error as Error).message === 'Interrupted graph edit';
         }
+        const queuedArgs = ['Captured title', ids.nested];
+        const queuedWrite = runtime.run('UPDATE cruxes SET title = ? WHERE id = ?', queuedArgs);
+        queuedArgs[0] = 'Later title';
+        queuedArgs[1] = ids.root;
+        await queuedWrite;
         const rows = await runtime.all('SELECT * FROM cruxes');
         const dimensions = await runtime.all('SELECT * FROM dimensions');
         return {
@@ -103,6 +114,7 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
       let snapshot: import('@cruxgarden/local-api').LocalGraphRuntime | undefined;
       try {
         const crux = await runtime.execute(({ crux }) => crux.findById(ids.nested));
+        const root = await runtime.execute(({ crux }) => crux.findById(ids.root));
         const dimensions = await runtime.all('SELECT * FROM dimensions WHERE source_id = ?', [
           ids.root,
         ]);
@@ -114,6 +126,8 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
         const exportedRows = await snapshot.all('SELECT * FROM cruxes');
         return {
           id: crux.id,
+          title: crux.title,
+          rootTitle: root.title,
           visibility: crux.visibility,
           targets: dimensions.map((d) => d.target_id),
           exportCount: exportedRows.length,
@@ -125,6 +139,8 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
     }, created.ids);
     expect(restored).toEqual({
       id: created.ids.nested,
+      title: 'Captured title',
+      rootTitle: 'Initial title',
       visibility: 'private',
       targets: [created.ids.nested],
       exportCount: 2,
