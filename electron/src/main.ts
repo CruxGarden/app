@@ -16,6 +16,7 @@ const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
 const { SqliteNative } = require('./sqlite-native');
+const { SqliteApi } = require('./sqlite-api');
 const { SecretStore } = require('./secrets');
 const { DesktopConfig, ProjectFolders } = require('./projects');
 const { ProjectWatcher } = require('./watcher');
@@ -403,7 +404,14 @@ function createWindow() {
 
 async function setupIpc() {
   registerBrowserPanel(() => mainWindow);
-  db = new SqliteNative(getDbPath(), getBlobDir());
+  // Opt-in integration path only until all writer/migration gates are complete.
+  // Never let an accidental test switch select Daniel's ordinary profile.
+  const useApiOwner = process.env.CRUX_API_OWNER === '1';
+  if (useApiOwner && (!process.env.CRUX_USER_DATA || !process.env.CRUX_GARDEN_ROOT))
+    throw new Error('API owner tests require isolated user data and Garden root');
+  db = useApiOwner
+    ? await SqliteApi.open(getDbPath(), getBlobDir())
+    : new SqliteNative(getDbPath(), getBlobDir());
 
   ipcMain.handle('sqlite:run', (_e: any, sql: string, params?: unknown[]) => {
     return db.run(sql, params);

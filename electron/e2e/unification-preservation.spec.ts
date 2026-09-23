@@ -60,7 +60,9 @@ test('the API preserves a complete legacy profile through preparation, export an
       }
     }, fixture);
     expect(prepared.tables).toEqual(Object.keys(fixture.tables).sort());
-    expect(prepared.after).toEqual(prepared.before);
+    expect(prepared.before.schema_version).toEqual([]);
+    const normalized = { ...prepared.before, schema_version: [{ version: 4 }] };
+    expect(prepared.after).toEqual(normalized);
     const dir = launch.dir;
     await launch.app.close();
     launch = await launchApp({ dir });
@@ -107,9 +109,9 @@ test('the API preserves a complete legacy profile through preparation, export an
           await owner.close();
         }
       },
-      { fixture, before: prepared.before, ids: legacyIds },
+      { fixture, before: normalized, ids: legacyIds },
     );
-    expect(restored.rows).toEqual(prepared.before);
+    expect(restored.rows).toEqual(normalized);
     expect(restored.bytes).toEqual(fixture.blobs);
     expect(restored.sharedId).toBe(legacyIds.shared);
     expect(restored.targets).toEqual(

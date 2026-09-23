@@ -4,9 +4,15 @@ import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 
-for (const fault of ['disk failure', 'missing content'] as const) {
-  test(`Garden restore preserves existing work on ${fault} and retries cleanly across restart`, async () => {
-    let instance = await launchApp();
+for (const [backend, fault] of [
+  ['legacy', 'disk failure'],
+  ['legacy', 'missing content'],
+  ['api', 'disk failure'],
+  ['api', 'missing content'],
+] as const) {
+  const env = { CRUX_API_OWNER: backend === 'api' ? '1' : '0' };
+  test(`${backend} Garden restore preserves existing work on ${fault} and retries cleanly across restart`, async () => {
+    let instance = await launchApp({ env });
     const dir = instance.dir;
     const archive = join(dir, 'recovery.garden');
     const incomplete = join(dir, 'incomplete.garden');
@@ -94,10 +100,10 @@ for (const fault of ['disk failure', 'missing content'] as const) {
           const load = process
             .getBuiltinModule('module')
             .createRequire(path.join(app.getAppPath(), 'package.json'));
-          const { SqliteNative } = load('./dist/sqlite-native.js');
-          const write = SqliteNative.prototype.blobWrite;
+          const { NativeBlobStore } = load('./dist/native-blobs.js');
+          const write = NativeBlobStore.prototype.blobWrite;
           (globalThis as any).__failRestoreWrites = true;
-          SqliteNative.prototype.blobWrite = function (...args: unknown[]) {
+          NativeBlobStore.prototype.blobWrite = function (...args: unknown[]) {
             if ((globalThis as any).__failRestoreWrites)
               throw new Error('Simulated restore disk full');
             return write.apply(this, args);
@@ -121,7 +127,7 @@ for (const fault of ['disk failure', 'missing content'] as const) {
       expect(await content(original, 'original.txt')).toBe('Original exported content');
       expect(await content(existing, 'keep.txt')).toBe('Current work must survive');
       await instance.app.close();
-      instance = await launchApp({ dir });
+      instance = await launchApp({ dir, env });
       page = instance.page;
       await page.getByRole('button', { name: /enter/i }).click();
       expect(await content(existing, 'keep.txt')).toBe('Current work must survive');
@@ -150,7 +156,7 @@ for (const fault of ['disk failure', 'missing content'] as const) {
       await expect.poll(() => content(original, 'original.txt')).toBe('Original exported content');
       await expect.poll(() => content(existing, 'keep.txt')).toBeNull();
       await instance.app.close();
-      instance = await launchApp({ dir });
+      instance = await launchApp({ dir, env });
       page = instance.page;
       await page.getByRole('button', { name: /enter/i }).click();
       expect(await content(original, 'original.txt')).toBe('Original exported content');
