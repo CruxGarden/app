@@ -66,6 +66,7 @@ const api: ElectronBridge = {
       read: (input) => ipcRenderer.invoke('content:read', input),
       edit: (input) => ipcRenderer.invoke('content:edit', input),
       snapshot: (input) => ipcRenderer.invoke('content:snapshot', input),
+      restore: (input) => ipcRenderer.invoke('content:restore', input),
     },
     onChange: (callback: (change: LocalGraphChange) => void) => {
       const handler = (_event: unknown, change: LocalGraphChange) => callback(change);

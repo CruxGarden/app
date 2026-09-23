@@ -6,6 +6,7 @@ import type {
   FileContentSelection,
   FileContentEdit,
   GrowthSnapshotCreate,
+  GrowthContentRestore,
 } from '@cruxgarden/local-api';
 import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
@@ -454,6 +455,9 @@ async function setupIpc() {
   );
   ipcMain.handle('content:edit', (_e: unknown, input: FileContentEdit) =>
     fileContent().edit(input),
+  );
+  ipcMain.handle('content:restore', (_e: unknown, input: GrowthContentRestore) =>
+    fileContent().restore(input),
   );
   ipcMain.handle('content:snapshot', (_e: unknown, input: GrowthSnapshotCreate) =>
     fileContent().snapshot(input),

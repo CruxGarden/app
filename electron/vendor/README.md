@@ -5,10 +5,11 @@ The file dependency in `electron/package.json` selects the exact artifact; its
 `provenance.json` records the revision and compiled-file hashes. This is a pinned, private integration artifact; it is not published.
 The app checkout and CI can install it without a sibling API repository.
 
-The package currently supplies the tested graph/SQLite owner. Desktop startup
-still uses the existing owner; `e2e/local-api-owner.spec.ts` exercises the new
-one in separate scratch databases, including explicit API-owned fresh schema creation
-and reopening an existing legacy database. Do not open both owners over one file.
+The package supplies the actual desktop graph/SQLite owner, including schema 5
+manifest file commands. Desktop startup always uses it. The isolated
+`e2e/local-api-owner.spec.ts` and content/Growth suites exercise its packaged
+runtime, fresh databases, refused writes, recovery and restart. Do not open two
+owners over one file.
 
 To update, run `npm run build:local` in the API repository, then `npm pack
 --ignore-scripts --pack-destination /absolute/path/to/app/electron/vendor`

@@ -8,6 +8,7 @@ import type {
   FileContentSelection,
   FileContentEdit,
   GrowthSnapshotCreate,
+  GrowthContentRestore,
 } from '@cruxgarden/local-api';
 /**
  * The IPC bridge contract — the single declaration of what Desktop Mode
@@ -34,6 +35,7 @@ export interface FileContentBridge {
   read(input: FileContentRead): ReturnType<LocalGraphRuntime['readFileContent']>;
   edit(input: FileContentEdit): ReturnType<LocalGraphRuntime['editFileContent']>;
   snapshot(input: GrowthSnapshotCreate): ReturnType<LocalGraphRuntime['createGrowthSnapshot']>;
+  restore(input: GrowthContentRestore): ReturnType<LocalGraphRuntime['restoreGrowthContent']>;
 }
 
 export interface SqliteBridge {
