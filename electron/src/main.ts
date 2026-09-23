@@ -50,6 +50,7 @@ function showMainWindow() {
     createWindow();
     return;
   }
+  if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
 }
@@ -103,6 +104,10 @@ ipcMain.on('workspace:close-response', (event: any, approved: boolean) => {
   if (approved) {
     workspaceMayClose = true;
     app.quit();
+  } else {
+    // A cancelled Quit is no longer a shutdown request. Keep relaunch/docked
+    // activation working while the person continues editing.
+    quitting = false;
   }
 });
 let db: NativeStorage;
@@ -130,8 +135,25 @@ if (process.env.CRUX_FAKE_MEDIA) {
   app.commandLine.appendSwitch('use-fake-device-for-media-stream');
   app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
 }
-const userDataPath = process.env.CRUX_USER_DATA || app.getPath('userData');
+const requestedUserData = process.env.CRUX_USER_DATA || app.getPath('userData');
+fs.mkdirSync(requestedUserData, { recursive: true });
+// A symlink/path alias must not turn the same profile into a second owner.
+const userDataPath = fs.realpathSync(requestedUserData);
 app.setPath('userData', userDataPath);
+// Acquire before opening logs, SQLite, watchers or agent servers. Keep the lock
+// through teardown; Electron releases it when this process exits (including crash).
+if (!app.requestSingleInstanceLock()) app.exit(0);
+app.on('second-instance', () => {
+  // Electron emits this after ready, but asynchronous API startup may still be
+  // running. Never create a window against an uninitialized storage/IPC host.
+  void startup
+    .then(() => {
+      if (!quitting) showMainWindow();
+    })
+    .catch(() => {
+      // The startup handler below reports the failure and quits.
+    });
+});
 // Logs: installed builds write to the OS logs folder (macOS: ~/Library/Logs/Crux
 // Garden). Dev and isolated test runs write beside their own userData so they
 // never share a main.log with the installed app. Always on, never sent (ADR 0008).
