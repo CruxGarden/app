@@ -146,6 +146,19 @@ test('API file content publication retains old and staged bytes through failed c
         );
         // Inventory the captured image after the live owner has moved on. Copy
         // only that inventory into a fresh store with no source-store fallback.
+        const activeFile = await owner.readFileContent(
+          { cruxId: saved.id, expected: after, path: 'image.bin' },
+          store,
+        );
+        let staleReadRefused = false;
+        try {
+          await owner.readFileContent(
+            { cruxId: saved.id, expected: saved.head, path: 'image.bin' },
+            store,
+          );
+        } catch (error) {
+          staleReadRefused = (error as Error).message.includes('File content changed');
+        }
         const inventory = await inspectDesktopManifestRecovery(captured, store);
         const destination = path.join(directory, 'detached-recovery');
         fs.mkdirSync(destination);
@@ -168,9 +181,12 @@ test('API file content publication retains old and staged bytes through failed c
         const recovered = await LocalGraphRuntime.open(path.join(destination, 'garden.db'));
         try {
           const recoveredHead = await recovered.fileContentHead(saved.id);
-          const recoveredTree = new FileManifest(recoveredStore);
-          const original = (await recoveredTree.get(recoveredHead!.root, 'image.bin'))!;
-          const originalBytes = (await recoveredStore.read(original.fingerprint))!;
+          const recoveredFile = (await recovered.readFileContent(
+            { cruxId: saved.id, expected: recoveredHead!, path: 'image.bin' },
+            recoveredStore,
+          ))!;
+          const original = recoveredFile.entry;
+          const originalBytes = recoveredFile.bytes;
           fs.unlinkSync(path.join(destination, original.fingerprint));
           let missingRefused = false;
           try {
@@ -186,6 +202,8 @@ test('API file content publication retains old and staged bytes through failed c
             files,
             artifacts: await owner.all('SELECT * FROM artifacts'),
             recoveredHead,
+            activeFile: Buffer.from(activeFile!.bytes).toString(),
+            staleReadRefused,
             original: Buffer.from(originalBytes).toString(),
             missingRefused,
             retainedOldRoot: retry.fingerprints.includes(saved.head.root),
@@ -203,6 +221,8 @@ test('API file content publication retains old and staged bytes through failed c
     expect(reopened.files).toEqual(['Original\0bytes', 'Updated\0bytes']);
     expect(reopened.artifacts).toEqual([]);
     expect(reopened.recoveredHead).toEqual(saved.head);
+    expect(reopened.activeFile).toBe('Updated\0bytes');
+    expect(reopened.staleReadRefused).toBe(true);
     expect(reopened.original).toBe('Original\0bytes');
     expect(reopened.missingRefused).toBe(true);
     expect(reopened.retainedOldRoot).toBe(true);
