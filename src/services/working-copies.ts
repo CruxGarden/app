@@ -90,7 +90,16 @@ export async function updateCopyMeta(
   patch: Record<string, unknown>,
   title?: string,
 ): Promise<Crux> {
+  const db = getSqliteClient();
+  // Capture before waiting behind a Task operation; the API captures again at
+  // its own admission boundary. Keep the existing local lifecycle ordering.
+  const captured = db.updateWorkingCopyMeta ? JSON.parse(JSON.stringify(patch)) : patch;
   return serializeCopy(id, async () => {
+    if (db.updateWorkingCopyMeta) {
+      await db.updateWorkingCopyMeta(id, captured, title);
+      announceTasksChanged();
+      return (await workingCopyDocument(id))!;
+    }
     const copy = await findWorkingCopy(id);
     if (!copy) throw new Error('Working Copy not found.');
     const meta = { ...copy.meta, ...patch } as Record<string, unknown>;

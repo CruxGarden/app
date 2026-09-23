@@ -59,6 +59,8 @@ const api: ElectronBridge = {
       ? {
           updateCrux: (id: string, patch: LocalCruxUpdate) =>
             ipcRenderer.invoke('sqlite:update-crux', id, patch),
+          updateWorkingCopyMeta: (id: string, patch: Record<string, unknown>, title?: string) =>
+            ipcRenderer.invoke('sqlite:update-working-copy-meta', id, patch, title),
           mergeCruxMeta: (id: string, patch: Record<string, unknown>) =>
             ipcRenderer.invoke('sqlite:merge-crux-meta', id, patch),
         }

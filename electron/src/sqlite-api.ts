@@ -59,6 +59,10 @@ export class SqliteApi implements NativeStorage {
     this.assertAvailable();
     return this.owner.updateCrux(id, patch);
   }
+  updateWorkingCopyMeta(id: string, patch: Record<string, unknown>, title?: string) {
+    this.assertAvailable();
+    return this.owner.updateWorkingCopyMeta(id, patch, title);
+  }
   export() {
     this.assertAvailable();
     return this.owner.exportDatabase();

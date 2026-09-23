@@ -44,6 +44,10 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.updateCrux;
   }
 
+  get updateWorkingCopyMeta(): SqliteBridge['updateWorkingCopyMeta'] {
+    return this.api.updateWorkingCopyMeta;
+  }
+
   async export(): Promise<ArrayBuffer> {
     return this.api.export();
   }

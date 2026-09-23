@@ -20,6 +20,8 @@ export interface SqliteBridge {
   all(sql: string, params?: unknown[]): Promise<unknown[]>;
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
+  /** Atomically merge descriptive Task state without changing its identity or folder. */
+  updateWorkingCopyMeta?(id: string, patch: Record<string, unknown>, title?: string): Promise<void>;
   /** Complete captured detail edit, including shallow metadata merge. */
   updateCrux?(id: string, patch: LocalCruxUpdate): Promise<void>;
   export(): Promise<ArrayBuffer>;

@@ -449,6 +449,14 @@ async function setupIpc() {
     return db.updateCrux(id, patch);
   });
 
+  ipcMain.handle(
+    'sqlite:update-working-copy-meta',
+    (_e: any, id: string, patch: Record<string, unknown>, title?: string) => {
+      if (!db.updateWorkingCopyMeta) throw new Error('Owned Task commands are unavailable');
+      return db.updateWorkingCopyMeta(id, patch, title);
+    },
+  );
+
   ipcMain.handle('sqlite:run', (_e: any, sql: string, params?: unknown[]) => {
     return db.run(sql, params);
   });

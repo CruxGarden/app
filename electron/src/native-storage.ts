@@ -9,6 +9,8 @@ export interface NativeStorage {
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T[]>;
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
+  /** Atomically merge descriptive Task state without changing its identity or folder. */
+  updateWorkingCopyMeta?(id: string, patch: Record<string, unknown>, title?: string): Promise<void>;
   updateCrux?: SqliteBridge['updateCrux'];
   export(): Awaitable<ArrayBuffer>;
   import(data: ArrayBuffer): Awaitable<void>;
