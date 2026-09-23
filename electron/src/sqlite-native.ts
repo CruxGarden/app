@@ -116,12 +116,41 @@ export class SqliteNative implements NativeStorage {
       candidate.close();
     }
     const dbPath = this.db.name;
-    this.db.close();
-    fs.writeFileSync(dbPath, prepared);
-    this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.db.exec(loadSchema());
-    this.ensureColumns();
+    const staging = path.join(
+      path.dirname(dbPath),
+      `.${path.basename(dbPath)}.${randomUUID()}.restore`,
+    );
+    try {
+      // A short write must only damage an uncommitted file. Keep the current
+      // connection usable until the entire prepared image is flushed to disk.
+      fs.writeFileSync(staging, prepared, { flag: 'wx', mode: 0o600, flush: true });
+      if (this.db.open) this.db.close();
+      fs.renameSync(staging, dbPath);
+      this.db = new Database(dbPath);
+      this.db.pragma('journal_mode = WAL');
+    } catch (error) {
+      // Failed rename leaves the previous file intact, but its connection was
+      // closed to release WAL files. Reopen it so normal work and retries work.
+      try {
+        if (!this.db.open) {
+          this.db = new Database(dbPath);
+          this.db.pragma('journal_mode = WAL');
+        }
+      } catch (recoveryError) {
+        throw new AggregateError(
+          [error, recoveryError],
+          'Database replacement failed and storage could not be reopened.',
+          { cause: recoveryError },
+        );
+      }
+      throw error;
+    } finally {
+      try {
+        fs.rmSync(staging, { force: true });
+      } catch {
+        /* Retain an orphan temporary image rather than masking the failure. */
+      }
+    }
   }
 
   close(): void {

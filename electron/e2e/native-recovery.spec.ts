@@ -83,3 +83,107 @@ test('native restore refuses invalid and unsupported images before replacing exi
     await instance.app.close();
   }
 });
+
+test('partial database writes and failed renames preserve current records through reopen and retry', async () => {
+  const instance = await launchApp();
+  try {
+    const outcomes = await instance.app.evaluate(({ app }) => {
+      const fs = process.getBuiltinModule('fs');
+      const path = process.getBuiltinModule('path');
+      const load = process
+        .getBuiltinModule('module')
+        .createRequire(path.join(app.getAppPath(), 'package.json'));
+      const { SqliteNative } = load('./dist/sqlite-native.js');
+      const root = path.join(app.getPath('userData'), 'restore-faults');
+      const candidate = new SqliteNative(
+        path.join(root, 'candidate.db'),
+        path.join(root, 'candidate-blobs'),
+      );
+      candidate.run('INSERT INTO settings VALUES (?, ?)', ['incoming', 'replacement']);
+      const image = candidate.export();
+      candidate.close();
+      const write = fs.writeFileSync;
+      const rename = fs.renameSync;
+      const results = [];
+      for (const kind of ['partial-write', 'rename']) {
+        const folder = path.join(root, kind);
+        const filename = path.join(folder, 'garden.db');
+        const blobs = path.join(folder, 'blobs');
+        let current = new SqliteNative(filename, blobs);
+        current.run('INSERT INTO settings VALUES (?, ?)', ['protected', 'original']);
+        let error = '';
+        try {
+          if (kind === 'partial-write') {
+            fs.writeFileSync = ((file, data, options) => {
+              if (typeof file === 'string' && path.dirname(file) === folder) {
+                write(file, Buffer.from(data as Uint8Array).subarray(0, 7), options);
+                throw new Error('Injected partial database write');
+              }
+              return write(file, data, options);
+            }) as typeof fs.writeFileSync;
+          } else {
+            fs.renameSync = ((from, to) => {
+              if (to === filename) throw new Error('Injected database rename failure');
+              return rename(from, to);
+            }) as typeof fs.renameSync;
+          }
+          try {
+            current.import(image);
+          } catch (caught) {
+            error = String(caught);
+          }
+        } finally {
+          fs.writeFileSync = write;
+          fs.renameSync = rename;
+        }
+        const read = () => {
+          try {
+            return (
+              current.get('SELECT value FROM settings WHERE key = ?', ['protected'])?.value ?? null
+            );
+          } catch {
+            return null;
+          }
+        };
+        const currentValue = read();
+        let reopenedValue = null;
+        let retryValue = null;
+        try {
+          try {
+            current.close();
+          } catch {
+            /* report broken legacy handles as failed assertions */
+          }
+          current = new SqliteNative(filename, blobs);
+          reopenedValue = read();
+          current.import(image);
+          retryValue = current.get('SELECT value FROM settings WHERE key = ?', ['incoming'])?.value;
+        } catch {
+          /* preserve failure evidence from the old destructive implementation */
+        } finally {
+          try {
+            current.close();
+          } catch {}
+        }
+        results.push({
+          kind,
+          error,
+          currentValue,
+          reopenedValue,
+          retryValue,
+          files: fs.readdirSync(folder),
+        });
+      }
+      return results;
+    });
+    for (const result of outcomes) {
+      expect.soft(result.error, result.kind).toMatch(/Injected/);
+      expect.soft(result.currentValue, result.kind).toBe('original');
+      expect.soft(result.reopenedValue, result.kind).toBe('original');
+      expect.soft(result.retryValue, result.kind).toBe('replacement');
+      expect.soft(result.files.sort(), result.kind).toEqual(['blobs', 'garden.db']);
+    }
+  } finally {
+    await instance.app.close();
+  }
+});
