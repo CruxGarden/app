@@ -13,6 +13,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { NativeBlobStore } from './native-blobs';
 import type { NativeStorage } from './native-storage';
+import type { FileContentBridge } from './bridge';
 
 /** Desktop bridge to the actual API owner. No second SQL connection or fallback. */
 export class SqliteApi implements NativeStorage {
@@ -43,6 +44,34 @@ export class SqliteApi implements NativeStorage {
       : LocalGraphRuntime.create(filename));
     return new SqliteApi(owner, blobs);
   }
+
+  private contentStore() {
+    return {
+      read: async (fp: string) => (this.blobs.blobExists(fp) ? this.blobs.blobRead(fp) : null),
+      write: async (fp: string, bytes: Uint8Array) => {
+        this.blobs.blobWrite(fp, bytes);
+      },
+    };
+  }
+
+  readonly fileContent: FileContentBridge = {
+    head: (id) => {
+      this.assertAvailable();
+      return this.owner.fileContentHead(id);
+    },
+    read: (input) => {
+      this.assertAvailable();
+      return this.owner.readFileContent(input, this.contentStore());
+    },
+    edit: (input) => {
+      this.assertAvailable();
+      return this.owner.editFileContent(input, this.contentStore());
+    },
+    snapshot: (input) => {
+      this.assertAvailable();
+      return this.owner.createGrowthSnapshot(input, this.contentStore());
+    },
+  };
 
   run(sql: string, params?: unknown[]) {
     this.assertAvailable();

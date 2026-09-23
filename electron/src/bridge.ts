@@ -3,6 +3,10 @@ import type {
   LocalCruxCreate,
   LocalCruxUpdate,
   LocalGraphChange,
+  LocalGraphRuntime,
+  FileContentRead,
+  FileContentEdit,
+  GrowthSnapshotCreate,
 } from '@cruxgarden/local-api';
 /**
  * The IPC bridge contract — the single declaration of what Desktop Mode
@@ -21,7 +25,17 @@ export type { LocalGraphChange } from '@cruxgarden/local-api';
 
 // ── sqlite ──────────────────────────────────────────────────────────────────
 
+/** Named content operations. Edits record ingested content; Project Folder projection
+ * stays with the file service. No renderer-supplied store or executable callbacks. */
+export interface FileContentBridge {
+  head(id: string): ReturnType<LocalGraphRuntime['fileContentHead']>;
+  read(input: FileContentRead): ReturnType<LocalGraphRuntime['readFileContent']>;
+  edit(input: FileContentEdit): ReturnType<LocalGraphRuntime['editFileContent']>;
+  snapshot(input: GrowthSnapshotCreate): ReturnType<LocalGraphRuntime['createGrowthSnapshot']>;
+}
+
 export interface SqliteBridge {
+  fileContent?: FileContentBridge;
   createCrux?(input: LocalCruxCreate): Promise<string>;
   onChange?(callback: (change: LocalGraphChange) => void): () => void;
   run(sql: string, params?: unknown[]): Promise<{ changes: number }>;

@@ -2,6 +2,9 @@ import type {
   LocalWorkingCopyCreate,
   LocalCruxCreate,
   LocalCruxUpdate,
+  FileContentRead,
+  FileContentEdit,
+  GrowthSnapshotCreate,
 } from '@cruxgarden/local-api';
 import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
@@ -436,6 +439,21 @@ async function setupIpc() {
     if (mainWindow && !mainWindow.webContents.isDestroyed())
       mainWindow.webContents.send('sqlite:changed', change);
   });
+
+  const fileContent = () => {
+    if (!db.fileContent) throw new Error('API file content commands are unavailable');
+    return db.fileContent;
+  };
+  ipcMain.handle('content:head', (_e: unknown, id: string) => fileContent().head(id));
+  ipcMain.handle('content:read', (_e: unknown, input: FileContentRead) =>
+    fileContent().read(input),
+  );
+  ipcMain.handle('content:edit', (_e: unknown, input: FileContentEdit) =>
+    fileContent().edit(input),
+  );
+  ipcMain.handle('content:snapshot', (_e: unknown, input: GrowthSnapshotCreate) =>
+    fileContent().snapshot(input),
+  );
 
   ipcMain.handle(
     'sqlite:merge-crux-meta',

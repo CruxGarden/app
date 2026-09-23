@@ -60,6 +60,12 @@ const api: ElectronBridge = {
       }
     : {}),
   sqlite: {
+    fileContent: {
+      head: (id) => ipcRenderer.invoke('content:head', id),
+      read: (input) => ipcRenderer.invoke('content:read', input),
+      edit: (input) => ipcRenderer.invoke('content:edit', input),
+      snapshot: (input) => ipcRenderer.invoke('content:snapshot', input),
+    },
     onChange: (callback: (change: LocalGraphChange) => void) => {
       const handler = (_event: unknown, change: LocalGraphChange) => callback(change);
       ipcRenderer.on('sqlite:changed', handler);

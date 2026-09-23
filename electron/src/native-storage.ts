@@ -10,6 +10,7 @@ type Awaitable<T> = T | Promise<T>;
 /** Host storage boundary. Consumers await results before using them, whether
  * supplied by the legacy native client or the queued local API owner. */
 export interface NativeStorage {
+  fileContent?: SqliteBridge['fileContent'];
   createCrux?(input: LocalCruxCreate, prepareFolder?: PrepareCruxFolder): Promise<string>;
   onChange?: SqliteBridge['onChange'];
   run(sql: string, params?: unknown[]): Awaitable<{ changes: number }>;
