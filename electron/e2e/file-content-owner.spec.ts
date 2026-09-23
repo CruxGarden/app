@@ -15,13 +15,6 @@ test('API file content publication retains old and staged bytes through failed c
       const { LocalGraphRuntime, FileManifest, inspectDesktopRecovery } = load(
         '@cruxgarden/local-api',
       ) as typeof import('@cruxgarden/local-api');
-      // Candidate schema is installed only in this disposable database, not the app's profile.
-      const { FILE_CONTENT_SCHEMA } = load(
-        path.join(
-          path.dirname(load.resolve('@cruxgarden/local-api')),
-          'file-content.repository.js',
-        ),
-      );
       const directory = path.join(app.getPath('userData'), 'file-content-proof');
       fs.mkdirSync(directory);
       const store = {
@@ -66,13 +59,7 @@ test('API file content publication retains old and staged bytes through failed c
           ]);
         };
         const first = await stage('Original\0bytes');
-        let unadopted = false;
-        try {
-          await owner.commitFileContent({ cruxId: id, expected: null, root: first }, store);
-        } catch (error) {
-          unadopted = (error as Error).message.includes('not been adopted');
-        }
-        await owner.run(FILE_CONTENT_SCHEMA);
+        const schema = await owner.get<{ version: number }>('SELECT version FROM schema_version');
         const head = await owner.commitFileContent(
           { cruxId: id, expected: null, root: first },
           store,
@@ -97,7 +84,7 @@ test('API file content publication retains old and staged bytes through failed c
           id,
           head,
           candidate,
-          unadopted,
+          schema,
           refused,
           recoveryRefused,
           after: await owner.fileContentHead(id),
@@ -106,7 +93,7 @@ test('API file content publication retains old and staged bytes through failed c
         await owner.close();
       }
     });
-    expect(saved.unadopted).toBe(true);
+    expect(saved.schema).toEqual({ version: 5 });
     expect(saved.refused).toBe(true);
     expect(saved.recoveryRefused).toBe(true);
     expect(saved.after).toEqual(saved.head);

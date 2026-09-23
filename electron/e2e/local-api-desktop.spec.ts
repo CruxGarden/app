@@ -53,7 +53,7 @@ test('the desktop UI saves and reopens work through the sole API database owner'
       await launch.page.evaluate(() =>
         window.electronAPI!.sqlite.get('SELECT version FROM schema_version'),
       ),
-    ).toEqual({ version: 4 });
+    ).toEqual({ version: 5 });
   } finally {
     await launch.app.close();
   }
