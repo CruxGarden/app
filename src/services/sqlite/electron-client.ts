@@ -44,6 +44,13 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.mergeCruxMeta;
   }
 
+  get setCruxTrashed(): SqliteBridge['setCruxTrashed'] {
+    return this.api.setCruxTrashed;
+  }
+  get deleteCrux(): SqliteBridge['deleteCrux'] {
+    return this.api.deleteCrux;
+  }
+
   get updateCrux(): SqliteBridge['updateCrux'] {
     return this.api.updateCrux;
   }

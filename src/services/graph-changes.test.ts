@@ -116,3 +116,13 @@ it('rechecks a Task owner after an in-flight load before refreshing its title', 
   await updating;
   expect(refreshDetails).toHaveBeenCalledWith(['title'], []);
 });
+
+it('refreshes the Garden after lifecycle commits without rereading a removed workspace', async () => {
+  const refreshDetails = vi.fn(async () => {});
+  workspaces.mockReturnValue([
+    { id: 'main', cruxId: 'main', phase: 'ready', data: { getState: () => ({ refreshDetails }) } },
+  ]);
+  await applyGraphChange({ ...event, entity: 'crux-lifecycle', operation: 'purge' });
+  expect(refreshGarden).toHaveBeenCalledOnce();
+  expect(refreshDetails).not.toHaveBeenCalled();
+});

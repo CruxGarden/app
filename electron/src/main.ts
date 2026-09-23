@@ -461,6 +461,15 @@ async function setupIpc() {
     },
   );
 
+  ipcMain.handle('sqlite:set-crux-trashed', (_e: unknown, id: string, trashed: boolean) => {
+    if (!db.setCruxTrashed) throw new Error('Owned Crux lifecycle commands are unavailable');
+    return db.setCruxTrashed(id, trashed);
+  });
+  ipcMain.handle('sqlite:delete-crux', (_e: unknown, id: string) => {
+    if (!db.deleteCrux) throw new Error('Owned Crux lifecycle commands are unavailable');
+    return db.deleteCrux(id);
+  });
+
   ipcMain.handle('sqlite:run', (_e: any, sql: string, params?: unknown[]) => {
     return db.run(sql, params);
   });

@@ -187,4 +187,26 @@ describe('Crux deletion ownership', () => {
       expect(await artifact.readContent(base.file.id)).toBe('history');
     },
   );
+  it.each(['candidate_id', 'baseId'])(
+    'protects a same-owner merge %s before any snapshot files are removed',
+    async (field) => {
+      const a = await crux.create({ title: 'Merge owner' });
+      const pinned = await snapshot(a.id);
+      await getSqliteClient().run(
+        'INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          crypto.randomUUID(),
+          a.id,
+          crypto.randomUUID(),
+          field === 'candidate_id' ? pinned.value.id : crypto.randomUUID(),
+          'applying',
+          JSON.stringify(field === 'baseId' ? { baseId: pinned.value.id } : {}),
+          new Date().toISOString(),
+        ],
+      );
+      await expect(artifact.delete(pinned.file.id)).rejects.toThrow(/task|merge/);
+      await expect(crux.delete(pinned.value.id)).rejects.toThrow(/task|merge/);
+      expect(await artifact.readContent(pinned.file.id)).toBe('history');
+    },
+  );
 });

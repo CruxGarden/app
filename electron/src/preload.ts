@@ -64,6 +64,9 @@ const api: ElectronBridge = {
               ipcRenderer.removeListener('sqlite:changed', handler);
             };
           },
+          setCruxTrashed: (id: string, trashed: boolean) =>
+            ipcRenderer.invoke('sqlite:set-crux-trashed', id, trashed),
+          deleteCrux: (id: string) => ipcRenderer.invoke('sqlite:delete-crux', id),
           updateCrux: (id: string, patch: LocalCruxUpdate) =>
             ipcRenderer.invoke('sqlite:update-crux', id, patch),
           updateWorkingCopyMeta: (id: string, patch: Record<string, unknown>, title?: string) =>

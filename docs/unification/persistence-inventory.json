@@ -721,12 +721,12 @@
     },
     {
       "file": "src/services/sqlite/crux.service.ts",
-      "method": "getSqliteClient().run",
+      "method": "db.run",
       "statement": "'UPDATE cruxes SET deleted = ? WHERE id = ? AND deleted IS NULL'"
     },
     {
       "file": "src/services/sqlite/crux.service.ts",
-      "method": "getSqliteClient().run",
+      "method": "db.run",
       "statement": "'UPDATE cruxes SET deleted = NULL WHERE id = ?'"
     },
     {

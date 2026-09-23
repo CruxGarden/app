@@ -18,6 +18,10 @@ export function initGraphChanges(): void {
 }
 
 export async function applyGraphChange(change: LocalGraphChange): Promise<void> {
+  if (change.entity === 'crux-lifecycle') {
+    await useGardenStore.getState().refresh();
+    return;
+  }
   if (change.entity !== 'crux' && change.entity !== 'working-copy') return;
   const fields = change.fields ?? [];
   const keys = change.metaKeys ?? [];

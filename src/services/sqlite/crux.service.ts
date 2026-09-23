@@ -70,14 +70,18 @@ export class SqliteCruxService implements ICruxService {
   async trash(cruxId: string): Promise<void> {
     await assertMainWorkspace(cruxId);
     await assertNoOpenTasks(cruxId);
-    await getSqliteClient().run('UPDATE cruxes SET deleted = ? WHERE id = ? AND deleted IS NULL', [
+    const db = getSqliteClient();
+    if (db.setCruxTrashed) return db.setCruxTrashed(cruxId, true);
+    await db.run('UPDATE cruxes SET deleted = ? WHERE id = ? AND deleted IS NULL', [
       new Date().toISOString(),
       cruxId,
     ]);
   }
 
   async restore(cruxId: string): Promise<void> {
-    await getSqliteClient().run('UPDATE cruxes SET deleted = NULL WHERE id = ?', [cruxId]);
+    const db = getSqliteClient();
+    if (db.setCruxTrashed) return db.setCruxTrashed(cruxId, false);
+    await db.run('UPDATE cruxes SET deleted = NULL WHERE id = ?', [cruxId]);
   }
 
   async purgeTrash(olderThanMs: number): Promise<number> {
@@ -195,6 +199,7 @@ export class SqliteCruxService implements ICruxService {
     const db = getSqliteClient();
     await assertMainWorkspace(cruxId);
     await assertNoOpenTasks(cruxId);
+    if (db.deleteCrux) return db.deleteCrux(cruxId);
     if (await isTaskHistoryReference(cruxId))
       throw new Error('This snapshot is used by a task or merge.');
     await assertSnapshotUnshared(cruxId);
