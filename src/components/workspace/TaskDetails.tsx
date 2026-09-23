@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Input } from '@/components/ui';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useTendingRows } from '@/stores/tendingStore';
@@ -27,26 +27,42 @@ export default function TaskDetails() {
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState('');
   const isTask = !!identity;
+  const baseline = useRef({ id: '', name: '', notes: '' });
 
   useEffect(() => {
     let live = true;
     if (!crux) return;
+    const applyDetails = (nextName: string, nextNotes: string) => {
+      const previous = baseline.current;
+      const changedWorkspace = previous.id !== crux.id;
+      baseline.current = { id: crux.id, name: nextName, notes: nextNotes };
+      setName((current) => (changedWorkspace || current === previous.name ? nextName : current));
+      setNotes((current) => (changedWorkspace || current === previous.notes ? nextNotes : current));
+    };
     if (identity) {
-      void findWorkingCopy(crux.id).then((c) => {
-        if (!live) return;
-        setCopy(c);
-        setName(c?.title ?? '');
-        setNotes(typeof c?.meta?.notes === 'string' ? (c.meta.notes as string) : '');
-      });
+      void findWorkingCopy(crux.id)
+        .then((c) => {
+          if (!live) return;
+          setCopy(c);
+          applyDetails(
+            c?.title ?? '',
+            typeof c?.meta?.notes === 'string' ? (c.meta.notes as string) : '',
+          );
+        })
+        .catch((e) => {
+          if (live) setError((e as Error).message);
+        });
     } else {
       setCopy(null);
-      setName(crux.title ?? '');
-      setNotes(typeof crux.meta?.notes === 'string' ? (crux.meta.notes as string) : '');
+      applyDetails(
+        crux.title ?? '',
+        typeof crux.meta?.notes === 'string' ? (crux.meta.notes as string) : '',
+      );
     }
     return () => {
       live = false;
     };
-  }, [crux?.id, crux?.updated, identity?.cruxId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [crux?.id, crux?.updated, crux?.title, crux?.meta?.notes, identity?.cruxId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!crux) return null;
   const flash = (what: string) => {
@@ -60,6 +76,8 @@ export default function TaskDetails() {
     setError('');
     try {
       await data.getState().updateCrux({ title: next });
+      if (baseline.current.id === crux.id) baseline.current.name = next;
+      setName((current) => (current === name ? next : current));
       flash('Name saved');
     } catch (e) {
       setError((e as Error).message);
@@ -75,6 +93,7 @@ export default function TaskDetails() {
     try {
       if (isTask) await updateCopyMeta(crux.id, { notes });
       else await data.getState().updateCrux({ meta: { ...crux.meta, notes } });
+      if (baseline.current.id === crux.id) baseline.current.notes = notes;
       flash('Notes saved');
     } catch (e) {
       setError((e as Error).message);

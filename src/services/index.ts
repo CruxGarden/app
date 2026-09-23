@@ -94,6 +94,10 @@ async function doInitServices(backend?: Backend): Promise<Services> {
   const { initIngestion, recoverProjectFolders } = await import('./ingestion');
   initIngestion();
   await recoverProjectFolders();
+  if (resolvedBackend === 'local' && getSqliteClient().onChange) {
+    const { initGraphChanges } = await import('./graph-changes');
+    initGraphChanges();
+  }
 
   return services;
 }

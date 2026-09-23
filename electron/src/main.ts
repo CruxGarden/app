@@ -435,6 +435,10 @@ async function setupIpc() {
   db = useApiOwner
     ? await SqliteApi.open(getDbPath(), getBlobDir())
     : new SqliteNative(getDbPath(), getBlobDir());
+  db.onChange?.((change) => {
+    if (mainWindow && !mainWindow.webContents.isDestroyed())
+      mainWindow.webContents.send('sqlite:changed', change);
+  });
 
   ipcMain.handle(
     'sqlite:merge-crux-meta',

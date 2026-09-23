@@ -17,6 +17,7 @@ import type { ElectronBridge } from '../../electron/src/bridge';
 export type {
   ElectronBridge,
   SqliteBridge,
+  LocalGraphChange,
   DesktopBridge,
   ProjectBridge,
   PreviewBridge,

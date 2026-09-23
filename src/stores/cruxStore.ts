@@ -1,16 +1,9 @@
 import { flushNotebook } from '@/services/notebook-lifecycle';
-import { assertCopyWritable } from '@/services/working-copies';
+import { assertCopyWritable, copyIdentity } from '@/services/working-copies';
 import { create, useStore, type StoreApi } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, workspaceSelection, trackWorkspacePromise } from './workspaceSelection';
-import type {
-  Crux,
-  ChatMessage,
-  Artifact,
-  CruxSummary,
-  Dimension,
-  ToolCall,
-} from '@/api/types';
+import type { Crux, ChatMessage, Artifact, CruxSummary, Dimension, ToolCall } from '@/api/types';
 import type { UpdateCruxInput } from '@/services/types';
 import { getServices } from '@/services';
 import { guessMimeType } from '@/lib/mime';
@@ -116,6 +109,8 @@ export interface CruxState {
   setStreamToolCalls: (calls: ToolCall[]) => void;
   /** Re-read the workspace's artifacts from the store (snapshot-view aware). */
   refreshArtifacts: () => Promise<void>;
+  /** Refresh descriptive details only; preserve live conversation, files and history. */
+  refreshDetails: (fields: readonly string[], metaKeys: readonly string[]) => Promise<void>;
   setArtifacts: (artifacts: Artifact[]) => void;
   addArtifact: (artifact: Artifact) => void;
   /** Merge an artifact into state by id (insert or replace). */
@@ -591,6 +586,48 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       });
       metadataTail = write.catch(() => {});
       return write;
+    },
+
+    refreshDetails: (fields, metaKeys) => {
+      const generation = loadGeneration;
+      const id = get().crux?.id;
+      // Share the metadata queue so an echo cannot overtake our own save.
+      const refresh = metadataTail.then(async () => {
+        const before = get().crux;
+        if (!before || before.id !== id || generation !== loadGeneration) return;
+        const persisted = await getServices().crux.findById(before.id);
+        set((state) => {
+          const current = state.crux;
+          if (!current || current.id !== id || generation !== loadGeneration) return {};
+          const next = { ...current };
+          // Runtime settings, conversation and content have their own lifecycle.
+          // Detail invalidation must never reload or restart those systems.
+          const detailFields = [
+            'title',
+            'description',
+            'slug',
+            'type',
+            'kind',
+            'status',
+            'visibility',
+            'discoverable',
+          ] as const;
+          for (const key of detailFields) {
+            if (fields.includes(key) && current[key] === before[key])
+              Object.assign(next, { [key]: persisted[key] });
+          }
+          if (metaKeys.includes('notes') && current.meta?.notes === before.meta?.notes)
+            next.meta = { ...current.meta, notes: persisted.meta?.notes };
+          const currentCopy = copyIdentity(current),
+            savedCopy = copyIdentity(persisted);
+          if (fields.includes('title') && currentCopy && savedCopy)
+            next.meta = { ...next.meta, workingCopy: { ...currentCopy, title: savedCopy.title } };
+          next.updated = persisted.updated;
+          return { crux: next };
+        });
+      });
+      metadataTail = refresh.catch(() => {});
+      return refresh;
     },
 
     updateCrux: (dto) => {

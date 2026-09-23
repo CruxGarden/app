@@ -36,6 +36,10 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.all(sql, params) as Promise<T[]>;
   }
 
+  get onChange(): SqliteBridge['onChange'] {
+    return this.api.onChange;
+  }
+
   get mergeCruxMeta(): SqliteBridge['mergeCruxMeta'] {
     return this.api.mergeCruxMeta;
   }

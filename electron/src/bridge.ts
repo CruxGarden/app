@@ -1,4 +1,4 @@
-import type { LocalCruxUpdate } from '@cruxgarden/local-api';
+import type { LocalCruxUpdate, LocalGraphChange } from '@cruxgarden/local-api';
 /**
  * The IPC bridge contract — the single declaration of what Desktop Mode
  * exposes to the renderer.
@@ -12,9 +12,12 @@ import type { LocalCruxUpdate } from '@cruxgarden/local-api';
  * Types only — no runtime code.
  */
 
+export type { LocalGraphChange } from '@cruxgarden/local-api';
+
 // ── sqlite ──────────────────────────────────────────────────────────────────
 
 export interface SqliteBridge {
+  onChange?(callback: (change: LocalGraphChange) => void): () => void;
   run(sql: string, params?: unknown[]): Promise<{ changes: number }>;
   get(sql: string, params?: unknown[]): Promise<unknown>;
   all(sql: string, params?: unknown[]): Promise<unknown[]>;
