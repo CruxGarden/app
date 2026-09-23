@@ -19,15 +19,17 @@ import {
 } from '../project-folder';
 
 /**
- * If no other artifact row references this fingerprint, delete the OPFS blob.
+ * Reclaim legacy bytes only when neither Artifacts nor retained author avatars use them.
+ * New content roots require the separate complete retained-root collector before cutover.
  * Safe to call even if the blob doesn't exist (blobDelete is a no-op).
  */
 async function cleanupOrphanedBlob(fingerprint: string | null): Promise<void> {
   if (!fingerprint) return;
   const db = getSqliteClient();
   const row = await db.get<{ count: number }>(
-    'SELECT COUNT(*) as count FROM artifacts WHERE fingerprint = ?',
-    [fingerprint],
+    `SELECT (SELECT COUNT(*) FROM artifacts WHERE fingerprint = ?)
+      + (SELECT COUNT(*) FROM authors WHERE json_extract(meta, '$.avatarFingerprint') = ?) as count`,
+    [fingerprint, fingerprint],
   );
   if ((row?.count ?? 0) === 0) {
     await db.blobDelete(fingerprint);
