@@ -4,7 +4,7 @@ import { useMotionRole } from '@/hooks/useMotionRole';
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
-import { confirmDialog } from '@/stores/dialogStore';
+import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 
 export default function SnapshotBanner() {
   const toast = useMotionRole('toast');
@@ -19,11 +19,27 @@ export default function SnapshotBanner() {
   // control has a UI control. A label, then the workspace continues from here.
   const [branching, setBranching] = useState(false);
   const [branchLabel, setBranchLabel] = useState('');
+  const [restoring, setRestoring] = useState(false);
 
   if (viewingSnapshotId === null || viewingSnapshotIndex === null) return null;
 
   const total = growths.length;
   const label = `Viewing snapshot ${viewingSnapshotIndex + 1} of ${total}`;
+
+  const restore = async (action: () => Promise<void>) => {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      await action();
+    } catch (error) {
+      await alertDialog(
+        error instanceof Error ? error.message : 'Could not restore this snapshot. Try again.',
+        'Restore failed',
+      );
+    } finally {
+      setRestoring(false);
+    }
+  };
 
   const handleRevert = async () => {
     if (
@@ -35,15 +51,17 @@ export default function SnapshotBanner() {
         confirmLabel: 'Revert',
       })
     ) {
-      await revertToSnapshot(viewingSnapshotId);
+      await restore(() => revertToSnapshot(viewingSnapshotId));
     }
   };
 
   const handleBranch = async () => {
     const label = branchLabel.trim() || `Branch from snapshot ${viewingSnapshotIndex + 1}`;
-    setBranching(false);
-    setBranchLabel('');
-    await branchFromSnapshot(viewingSnapshotId, label);
+    await restore(async () => {
+      await branchFromSnapshot(viewingSnapshotId, label);
+      setBranching(false);
+      setBranchLabel('');
+    });
   };
 
   const btnClass = cn(
@@ -80,6 +98,7 @@ export default function SnapshotBanner() {
         {branching ? (
           <>
             <input
+              disabled={restoring}
               autoFocus
               aria-label="Branch label"
               value={branchLabel}
@@ -94,12 +113,13 @@ export default function SnapshotBanner() {
               placeholder="Branch label (optional)"
               className="h-6 w-44 px-2 text-xxs font-body rounded-[var(--radius-sm)] bg-surface border border-border text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
             />
-            <button onClick={() => void handleBranch()} className={btnClass}>
+            <button disabled={restoring} onClick={() => void handleBranch()} className={btnClass}>
               Create branch
             </button>
           </>
         ) : (
           <button
+            disabled={restoring}
             onClick={() => setBranching(true)}
             className={btnClass}
             title="Continue from this snapshot on a new line of history"
@@ -107,10 +127,11 @@ export default function SnapshotBanner() {
             Branch
           </button>
         )}
-        <button onClick={handleRevert} className={btnClass}>
+        <button disabled={restoring} onClick={handleRevert} className={btnClass}>
           Revert
         </button>
         <button
+          disabled={restoring}
           onClick={exitSnapshotView}
           className={cn(
             'px-2 py-0.5 text-xxs font-mono rounded-button',

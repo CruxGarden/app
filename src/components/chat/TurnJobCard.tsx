@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import { cn } from '@/lib/cn';
 import { useCruxStore } from '@/stores/cruxStore';
-import { confirmDialog } from '@/stores/dialogStore';
+import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
 import {
   describeCheck,
@@ -358,6 +358,11 @@ export default function TurnJobCard() {
     try {
       await revertToSnapshot(lastSnapshotId);
       await dismissJob();
+    } catch (error) {
+      await alertDialog(
+        error instanceof Error ? error.message : 'Could not restore this snapshot. Try again.',
+        'Restore failed',
+      );
     } finally {
       setRestoring(false);
     }

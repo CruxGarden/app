@@ -853,6 +853,19 @@ function announceGrowthChange(cruxId: string, kind: 'snapshot' | 'restore' | 'br
 export const SAFETY_LABEL_RESTORE = 'Before revert';
 export const SAFETY_LABEL_BRANCH = 'Before branch';
 
+/** Restoring must never proceed after losing the promised copy of current work.
+ * Shared by workspace actions and the headless agent host. */
+export async function requireSafetySnapshot<T>(capture: () => Promise<T>): Promise<T> {
+  try {
+    return await capture();
+  } catch (cause) {
+    throw new Error(
+      'Could not save a safety snapshot. Your files have not been restored. Try again.',
+      { cause },
+    );
+  }
+}
+
 /**
  * Growth over persisted state only. The current conversation segment is
  * `crux.meta.messages` (what saveMeta persists), so the segment start is 0.
@@ -900,13 +913,10 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
     return { growth, number: growths.indexOf(growth) + 1 };
   }
 
-  async function safetySnapshot(label: string, actor: GrowthActor): Promise<SnapshotInfo | null> {
-    try {
-      return await take({ label, silent: true, requestedBy: actor.requestedBy });
-    } catch (err) {
-      console.warn(`[growth] safety snapshot "${label}" failed:`, err);
-      return null;
-    }
+  function safetySnapshot(label: string, actor: GrowthActor): Promise<SnapshotInfo> {
+    return requireSafetySnapshot(() =>
+      take({ label, silent: true, requestedBy: actor.requestedBy }),
+    );
   }
 
   return {

@@ -22,6 +22,7 @@ import {
   type SnapshotChainNode,
   type CreateSnapshotOptions,
   restoreFilesCore,
+  requireSafetySnapshot,
   defaultGrowthHostDeps,
 } from '@/services/growth';
 import {
@@ -1164,11 +1165,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
       const restoredSnapshot = await cruxService.findById(snapshotId);
       // Auto-snapshot current state as a safety net before reverting
-      try {
-        await get().createSnapshot({ label: 'Before revert', silent: true });
-      } catch (err) {
-        console.warn('Failed to auto-snapshot before revert:', err);
-      }
+      await requireSafetySnapshot(() =>
+        get().createSnapshot({ label: 'Before revert', silent: true }),
+      );
 
       // Only the files that differ move (Growth module, single impl).
       await restoreFilesCore(crux.id, snapshotId, await defaultGrowthHostDeps());
@@ -1224,11 +1223,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const { artifact, crux: cruxService } = getServices();
 
       // Auto-snapshot current state first
-      try {
-        await get().createSnapshot({ label: 'Before branch', silent: true });
-      } catch (err) {
-        console.warn('Failed to auto-snapshot before branch:', err);
-      }
+      await requireSafetySnapshot(() =>
+        get().createSnapshot({ label: 'Before branch', silent: true }),
+      );
 
       // Only the files that differ move (Growth module, single impl).
       await restoreFilesCore(crux.id, snapshotId, await defaultGrowthHostDeps());
