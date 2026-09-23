@@ -187,3 +187,64 @@ test('partial database writes and failed renames preserve current records throug
     await instance.app.close();
   }
 });
+
+for (const boundary of ['before', 'after'] as const) {
+  test(`process interruption ${boundary} database rename leaves a complete recovery image`, async () => {
+    let instance = await launchApp();
+    const dir = instance.dir;
+    const child = instance.app.process();
+    try {
+      const interrupted = instance.app.evaluate(({ app }, boundary) => {
+        const fs = process.getBuiltinModule('fs');
+        const path = process.getBuiltinModule('path');
+        const load = process
+          .getBuiltinModule('module')
+          .createRequire(path.join(app.getAppPath(), 'package.json'));
+        const { SqliteNative } = load('./dist/sqlite-native.js');
+        const root = app.getPath('userData');
+        const filename = path.join(root, 'interrupted.db');
+        const current = new SqliteNative(filename, path.join(root, 'interrupted-blobs'));
+        current.run('INSERT INTO settings VALUES (?, ?)', ['checkpoint', 'original']);
+        const candidate = new SqliteNative(
+          path.join(root, 'incoming.db'),
+          path.join(root, 'incoming-blobs'),
+        );
+        candidate.run('INSERT INTO settings VALUES (?, ?)', ['checkpoint', 'replacement']);
+        const image = candidate.export();
+        candidate.close();
+        const rename = fs.renameSync;
+        fs.renameSync = ((from, to) => {
+          if (to !== filename) return rename(from, to);
+          if (boundary === 'before') process.kill(process.pid, 'SIGKILL');
+          rename(from, to);
+          process.kill(process.pid, 'SIGKILL');
+        }) as typeof fs.renameSync;
+        current.import(image);
+      }, boundary);
+      // The target process is intentionally terminated inside the commit boundary.
+      await interrupted.catch(() => undefined);
+      await expect.poll(() => child.signalCode).toBe('SIGKILL');
+      instance = await launchApp({ dir });
+      const value = await instance.app.evaluate(({ app }) => {
+        const path = process.getBuiltinModule('path');
+        const load = process
+          .getBuiltinModule('module')
+          .createRequire(path.join(app.getAppPath(), 'package.json'));
+        const { SqliteNative } = load('./dist/sqlite-native.js');
+        const root = app.getPath('userData');
+        const current = new SqliteNative(
+          path.join(root, 'interrupted.db'),
+          path.join(root, 'interrupted-blobs'),
+        );
+        try {
+          return current.get('SELECT value FROM settings WHERE key = ?', ['checkpoint']).value;
+        } finally {
+          current.close();
+        }
+      });
+      expect(value).toBe(boundary === 'before' ? 'original' : 'replacement');
+    } finally {
+      await instance.app.close();
+    }
+  });
+}
