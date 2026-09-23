@@ -165,3 +165,65 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
     await launch.app.close();
   }
 });
+
+test('the packaged API creates its own fresh schema and preserves membership through Electron restart', async () => {
+  let launch = await launchApp();
+  const dir = launch.dir;
+  try {
+    const ids = await launch.app.evaluate(async ({ app }) => {
+      const path = process.getBuiltinModule('path');
+      const { randomUUID } = process.getBuiltinModule('crypto');
+      const load = process
+        .getBuiltinModule('module')
+        .createRequire(path.join(app.getAppPath(), 'package.json'));
+      const { LocalGraphRuntime, CruxKind, inspectDesktopRecovery } = load(
+        '@cruxgarden/local-api',
+      ) as typeof import('@cruxgarden/local-api');
+      const runtime = await LocalGraphRuntime.create(
+        path.join(app.getPath('userData'), 'api-fresh.db'),
+      );
+      try {
+        const authorId = randomUUID();
+        const homeId = randomUUID();
+        const input = () => ({ slug: randomUUID(), authorId, homeId, kind: CruxKind.GARDEN });
+        const root = await runtime.execute(({ crux }) => crux.create(input()));
+        const child = await runtime.execute(({ crux }) => crux.create(input()));
+        await runtime.addGardenMember({ gardenId: root.id, memberId: child.id, authorId, homeId });
+        await runtime.run('INSERT INTO settings (key, value) VALUES (?, ?)', [
+          'fixture',
+          'fresh API',
+        ]);
+        const inspected = inspectDesktopRecovery(await runtime.closeWithRecoveryImage());
+        return { root: root.id, child: child.id, version: inspected.schemaVersion };
+      } finally {
+        await runtime.close();
+      }
+    });
+    expect(ids.version).toBe(4);
+    await launch.app.close();
+    launch = await launchApp({ dir });
+    const restored = await launch.app.evaluate(async ({ app }, ids) => {
+      const path = process.getBuiltinModule('path');
+      const load = process
+        .getBuiltinModule('module')
+        .createRequire(path.join(app.getAppPath(), 'package.json'));
+      const { LocalGraphRuntime } = load(
+        '@cruxgarden/local-api',
+      ) as typeof import('@cruxgarden/local-api');
+      const runtime = await LocalGraphRuntime.open(
+        path.join(app.getPath('userData'), 'api-fresh.db'),
+      );
+      try {
+        return {
+          members: (await runtime.listGardenMembers(ids.root)).items.map((item) => item.id),
+          setting: await runtime.get('SELECT value FROM settings WHERE key = ?', ['fixture']),
+        };
+      } finally {
+        await runtime.close();
+      }
+    }, ids);
+    expect(restored).toEqual({ members: [ids.child], setting: { value: 'fresh API' } });
+  } finally {
+    await launch.app.close();
+  }
+});

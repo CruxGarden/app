@@ -1,13 +1,14 @@
 # Local API artifact
 
-`@cruxgarden/local-api` is built from the actual Crux Garden API repository at
-`309aa17240fb`. Its `provenance.json` records the revision and compiled-file
-hashes. This is a pinned, private integration artifact; it is not published.
+`@cruxgarden/local-api` is built from the actual Crux Garden API repository.
+The file dependency in `electron/package.json` selects the exact artifact; its
+`provenance.json` records the revision and compiled-file hashes. This is a pinned, private integration artifact; it is not published.
 The app checkout and CI can install it without a sibling API repository.
 
 The package currently supplies the tested graph/SQLite owner. Desktop startup
 still uses the existing owner; `e2e/local-api-owner.spec.ts` exercises the new
-one in a separate scratch database. Do not open both owners over one file.
+one in separate scratch databases, including explicit API-owned fresh schema creation
+and reopening an existing legacy database. Do not open both owners over one file.
 
 To update, run `npm run build:local` in the API repository, then `npm pack
 --ignore-scripts --pack-destination /absolute/path/to/app/electron/vendor`
