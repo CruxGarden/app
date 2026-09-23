@@ -99,7 +99,8 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
-  const active = isSite;
+  const historical = useCruxStore((s) => s.viewingSnapshotId !== null);
+  const active = isSite && !historical;
 
   // Surface toolchain output (pnpm install progress) while starting
   useEffect(() => {
@@ -171,6 +172,7 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
 
   const restart = useCallback(
     async (port?: number | null) => {
+      if (cruxStore.getState().viewingSnapshotId) return;
       await flushNotebook(cruxId);
       if (port !== undefined) {
         // Remember the choice on the crux (null clears it), then restart on it.
@@ -205,6 +207,8 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
     (s) => (s.crux?.meta?.contentModel as ContentModel | undefined)?.collections,
   );
   const url =
-    base && phase === 'ready' ? `${base}${siteRouteFor(filePath, collections ?? [])}` : null;
+    active && base && phase === 'ready'
+      ? `${base}${siteRouteFor(filePath, collections ?? [])}`
+      : null;
   return { isSite, url, phase, detail, port: portOf(base), preferredPort, restart };
 }

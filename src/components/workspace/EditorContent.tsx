@@ -69,6 +69,7 @@ export default function EditorContent({
   captureRef,
   clean = false,
 }: EditorContentProps) {
+  const historical = useCruxStore((s) => s.viewingSnapshotId !== null);
   const readOnlyTask = useCruxStore((s) => {
     const copy = copyIdentity(s.crux);
     return s.closing || !!s.viewingSnapshotId || (!!copy && copy.phase !== 'ready');
@@ -232,7 +233,12 @@ export default function EditorContent({
   // no-write-through rule (it's app state, not a user file), and the upload.
   const savePreviewBlob = useCallback(
     (blob: Blob) => {
-      if (cruxStore.getState().closing || cruxStore.getState().crux?.id !== cruxId) return;
+      if (
+        cruxStore.getState().closing ||
+        cruxStore.getState().viewingSnapshotId ||
+        cruxStore.getState().crux?.id !== cruxId
+      )
+        return;
       saveWorkspacePreviewJpeg(cruxId, blob)
         .then((saved) => cruxStore.getState().upsertArtifact(saved))
         .catch((err) => console.error('Thumbnail save failed:', err));
@@ -289,11 +295,13 @@ export default function EditorContent({
   const isImage = isImageMime(mime);
   const isVideo = isVideoMime(mime);
   const handleCapture = useCallback(() => {
+    if (cruxStore.getState().viewingSnapshotId) return;
     if (desktopCaptureUrlRef.current) handleDesktopCapture();
     else if (isHtmlFile) handleHtmlCapture();
     else if (isImage) handleImageCapture();
     else if (isVideo) handleVideoCapture();
   }, [
+    cruxStore,
     isHtmlFile,
     isImage,
     isVideo,
@@ -318,7 +326,7 @@ export default function EditorContent({
   // rewrite preview.jpg (new JPEG bytes → new fingerprint → phantom
   // "unpublished changes").
   const isPreviewFile = isPreviewJpgPath(path);
-  const canAutoCapture = isHtmlFile && !isPreviewFile;
+  const canAutoCapture = isHtmlFile && !isPreviewFile && !historical;
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baselineVersionRef = useRef<number | null>(null);
   const changeSignal = contentVersion + savedVersion; // external loads + own saves
@@ -474,7 +482,7 @@ export default function EditorContent({
   // Keep the desktop capture target current: whatever local-server URL the
   // preview iframe is showing (dev server for Site Cruxes, static server for
   // plain cruxes). Null on web — the postMessage capture handles that path.
-  const currentIframeSrc = mountedIframeSrc({ path, site, previewUrl });
+  const currentIframeSrc = mountedIframeSrc({ path, site, previewUrl, historical });
   useEffect(() => {
     const isLocalServer =
       !!currentIframeSrc && /^http:\/\/(127\.0\.0\.1|localhost):/.test(currentIframeSrc);
@@ -500,6 +508,7 @@ export default function EditorContent({
 
   // ── Preview decision (pure) — what does this pane show? ──
   const target = previewFor({
+    historical,
     path,
     viewMode: tab.viewMode,
     mimeType: mime,

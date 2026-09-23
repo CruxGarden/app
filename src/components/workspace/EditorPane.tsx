@@ -1,3 +1,5 @@
+import { requiresLivePreview } from '@/lib/preview-decision';
+import { isSiteCrux } from '@/services/site';
 import { documentIdentity } from '@/services/workspace-documents';
 import FigmaPane from './FigmaPane';
 import BlenderPane from './BlenderPane';
@@ -37,6 +39,7 @@ class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey:
 }
 
 function AdvancedEditor() {
+  const historical = useCruxStore((s) => s.viewingSnapshotId !== null);
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
   const { editor, setActiveTab, closeTab, setTabViewMode } = useUIStore(
@@ -65,6 +68,8 @@ function AdvancedEditor() {
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
   const activeArtifact = activeTab ? (artifacts.find((a) => a.id === activeTab.id) ?? null) : null;
+  const sourceOnly =
+    !!activeTab && historical && requiresLivePreview(activeTab.path, isSiteCrux(artifacts));
 
   // Check if the crux has a form schema (set during template creation)
   const hasFormSchema = !!(crux?.meta as Record<string, unknown> | undefined)?.formSchema;
@@ -117,15 +122,20 @@ function AdvancedEditor() {
       {activeTab && activeArtifact && crux && (
         <>
           <EditorToolbar
-            tab={activeTab}
+            tab={sourceOnly ? { ...activeTab, viewMode: 'source' } : activeTab}
+            previewAvailable={!sourceOnly}
             hasContent={true}
-            hasFormSchema={hasFormSchema}
+            hasFormSchema={hasFormSchema && !sourceOnly}
             onViewModeChange={(mode) => setTabViewMode(activeTab.id, mode)}
             onSave={() => saveRef.current?.()}
-            onCapture={() => {
-              setIsCapturing(true);
-              captureRef.current?.();
-            }}
+            onCapture={
+              historical
+                ? undefined
+                : () => {
+                    setIsCapturing(true);
+                    captureRef.current?.();
+                  }
+            }
             isCapturing={isCapturing}
           />
           <EditorErrorBoundary>

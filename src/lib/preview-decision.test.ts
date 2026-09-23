@@ -405,3 +405,31 @@ describe('scaleToFit', () => {
     expect(scaleToFit(200, 100, 100, 100)).toEqual({ width: 100, height: 50 });
   });
 });
+
+describe('historical preview isolation', () => {
+  it.each([
+    { path: 'index.html', site: site(), previewUrl: LOCAL_URL },
+    { path: 'page.astro', site: site({ isSite: true, url: DEV_URL }), previewUrl: null },
+  ])('shows saved source instead of executing the live server for $path', (live) => {
+    const selected = input({ ...live, historical: true });
+    expect(previewFor(selected)).toEqual({ kind: 'source' });
+    expect(mountedIframeSrc(selected)).toBeNull();
+    expect(previewFor({ ...selected, historical: false }).kind).toBe('iframe');
+  });
+
+  it('retains previews that render only the saved file bytes', () => {
+    expect(previewFor(input({ historical: true, path: 'note.md' }))).toEqual({ kind: 'markdown' });
+    expect(previewFor(input({ historical: true, path: 'image.svg' }))).toEqual({ kind: 'svg' });
+    expect(
+      previewFor(
+        input({
+          historical: true,
+          path: 'photo.png',
+          mimeType: 'image/png',
+          hasContent: false,
+          hasBlob: true,
+        }),
+      ),
+    ).toEqual({ kind: 'image' });
+  });
+});

@@ -10,6 +10,7 @@ interface EditorToolbarProps {
   onSave?: () => void;
   onCapture?: () => void;
   isCapturing?: boolean;
+  previewAvailable?: boolean;
 }
 
 export default function EditorToolbar({
@@ -20,8 +21,9 @@ export default function EditorToolbar({
   onSave,
   onCapture,
   isCapturing,
+  previewAvailable = true,
 }: EditorToolbarProps) {
-  const canPreview = isPreviewable(tab.path) && hasContent;
+  const canPreview = previewAvailable && isPreviewable(tab.path) && hasContent;
   const inPreview = tab.viewMode === 'preview' && canPreview;
 
   // Show form button for config.json when a form schema exists
