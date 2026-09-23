@@ -83,6 +83,11 @@ test('manifest Growth retains a connected snapshot through refused writes, edits
         const beforeObjects = fs.readdirSync(directory).sort();
         const result = await owner.createGrowthSnapshot(input, store);
         const afterObjects = fs.readdirSync(directory).sort();
+        fs.writeFileSync(
+          path.join(directory, 'checkpoint.db'),
+          Buffer.from(await owner.exportDatabase()),
+          { flush: true },
+        );
         const latest = await owner.editFileContent(
           { cruxId: id, expected: head, changes: [file('Later content')] },
           store,
@@ -161,7 +166,21 @@ test('manifest Growth retains a connected snapshot through refused writes, edits
         }
         fs.writeFileSync(original, originalBytes, { flush: true });
         await inspectDesktopManifestRecovery(image, store);
+        const checkpoint = Uint8Array.from(
+          fs.readFileSync(path.join(directory, 'checkpoint.db')),
+        ).buffer;
+        const rollback = await owner.replaceDatabaseWithContent(checkpoint, store);
+        const restoredHead = await owner.fileContentHead(saved.id);
+        const restoredFile = await owner.readFileContent(
+          { cruxId: saved.id, expected: restoredHead!, path: 'document.txt' },
+          store,
+        );
+        await owner.replaceDatabaseWithContent(rollback, store);
+        const restoredLatest = await owner.fileContentHead(saved.id);
         return {
+          restoredHead,
+          restoredContent: Buffer.from(restoredFile!.bytes).toString(),
+          restoredLatest,
           snapshot: Buffer.from(snapshot!.bytes).toString(),
           current: Buffer.from(current!.bytes).toString(),
           meta: next.snapshot.meta,
@@ -174,6 +193,9 @@ test('manifest Growth retains a connected snapshot through refused writes, edits
     }, saved);
     expect(reopened.snapshot).toBe('Original\0content');
     expect(reopened.current).toBe('Later content');
+    expect(reopened.restoredHead).toEqual(saved.input.expected);
+    expect(reopened.restoredContent).toBe('Original\0content');
+    expect(reopened.restoredLatest).toEqual(saved.latest);
     expect(reopened.meta).toMatchObject({
       contentOwnerId: saved.id,
       parentCruxId: saved.input.snapshotId,
