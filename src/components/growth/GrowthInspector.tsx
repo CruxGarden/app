@@ -1,29 +1,33 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getServices } from '@/services';
-import type { Artifact, ChatMessage, Crux } from '@/api/types';
+import type { ChatMessage, Crux } from '@/api/types';
 import type { GrowthGraph, GrowthNode } from '@/services/growth-graph';
-import { pathOf } from '@/lib/artifact-path';
+import {
+  checkpointFiles,
+  readCheckpointFile,
+  type CheckpointFile,
+} from '@/services/checkpoint-files';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 
-function ArtifactContent({ artifact }: { artifact: Artifact }) {
+function ArtifactContent({ artifact }: { artifact: CheckpointFile }) {
   const [content, setContent] = useState<{ text?: string; url?: string; error?: string }>({});
   useEffect(() => {
     let live = true;
     let url: string | undefined;
+    setContent({});
     const read = async () => {
       if (artifact.size > 2 * 1024 * 1024)
         return { text: 'This Artifact is over 2 MB. Open its Working Copy to inspect it.' };
-      const service = getServices().artifact;
       if (artifact.mimeType.startsWith('image/') && artifact.mimeType !== 'image/svg+xml') {
-        const blob = await service.downloadBlob(artifact.id);
+        const blob = await readCheckpointFile(artifact);
         if (!live) return {};
         url = URL.createObjectURL(blob);
         return { url };
       }
       if (artifact.encoding !== 'utf-8')
         return { text: `Binary Artifact · ${artifact.size} bytes` };
-      const text = await service.readContent(artifact.id);
+      const text = await (await readCheckpointFile(artifact)).text();
       return { text: text.length > 30000 ? `${text.slice(0, 30000)}\n[Preview truncated]` : text };
     };
     void read()
@@ -40,7 +44,7 @@ function ArtifactContent({ artifact }: { artifact: Artifact }) {
   }, [artifact]);
   if (content.error) return <p role="alert">{content.error}</p>;
   if (content.url)
-    return <img src={content.url} alt={pathOf(artifact)} className="max-h-64 object-contain" />;
+    return <img src={content.url} alt={artifact.path} className="max-h-64 object-contain" />;
   return (
     <pre className="text-xs whitespace-pre-wrap break-words max-h-64 overflow-auto p-2 bg-surface rounded">
       {content.text ?? 'Loading Artifact…'}
@@ -61,7 +65,7 @@ export default function GrowthInspector({
 }) {
   const [detail, setDetail] = useState<{
     snapshot: Crux;
-    artifacts: Artifact[];
+    artifacts: CheckpointFile[];
     summary?: string;
   } | null>(null);
   const [error, setError] = useState('');
@@ -69,12 +73,16 @@ export default function GrowthInspector({
   const [messageLimit, setMessageLimit] = useState(20);
   const lane = graph.lanes.find((l) => l.id === node.ownerId)!;
   useEffect(() => {
+    setDetail(null);
+    setError('');
+    setFileId('');
+    setMessageLimit(20);
     if (node.kind === 'copy') return;
     let live = true;
-    const { crux, artifact, dimension } = getServices();
+    const { crux, dimension } = getServices();
     void Promise.all([
       crux.findById(node.id),
-      artifact.findByResource('crux', node.id),
+      checkpointFiles(node.id),
       node.dimensionId ? dimension.findById(node.dimensionId) : Promise.resolve(null),
     ])
       .then(([snapshot, artifacts, growth]) => {
@@ -84,7 +92,7 @@ export default function GrowthInspector({
             artifacts,
             summary: typeof growth?.meta?.summary === 'string' ? growth.meta.summary : undefined,
           });
-          setFileId(artifacts.find((a) => pathOf(a) === 'preview.jpg')?.id ?? '');
+          setFileId(artifacts.find((a) => a.path === 'preview.jpg')?.id ?? '');
         }
       })
       .catch((e: Error) => {
@@ -174,11 +182,11 @@ export default function GrowthInspector({
               <option value="">Choose an Artifact</option>
               {detail.artifacts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {pathOf(a)}
+                  {a.path}
                 </option>
               ))}
             </select>
-            {file && <ArtifactContent key={file.id} artifact={file} />}
+            {file && <ArtifactContent key={`${node.id}:${file.id}`} artifact={file} />}
           </section>
           <section className="space-y-3">
             <h4 className="font-medium">Collaboration at this checkpoint</h4>

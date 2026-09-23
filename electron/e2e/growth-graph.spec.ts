@@ -199,7 +199,8 @@ test('an empty Crux has a browsable endpoint and graph dialog traps keyboard foc
     await expect(
       graph.getByText('0 checkpoints · 0 Tasks · branches and merges preserved'),
     ).toBeVisible();
-    await expect(graph).toBeFocused();
+    // Modal owns the dialog role; the inner explorer owns keyboard focus.
+    await expect(graph.getByTestId('growth-explorer')).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(
       graph.getByRole('button', { name: 'Main Main · Working Copy', exact: true }),
