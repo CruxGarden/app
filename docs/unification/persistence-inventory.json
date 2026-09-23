@@ -124,7 +124,8 @@
     {
       "key": "cruxgarden:backgroundImage",
       "sources": [
-        "src/lib/constants.ts"
+        "src/lib/constants.ts",
+        "src/services/sqlite/content-reference-sql.ts"
       ],
       "ledger": "cruxgarden:backgroundImage"
     },
@@ -324,7 +325,8 @@
     {
       "key": "cruxgarden:moodCover",
       "sources": [
-        "src/lib/constants.ts"
+        "src/lib/constants.ts",
+        "src/services/sqlite/content-reference-sql.ts"
       ],
       "ledger": "cruxgarden:moodCover"
     },

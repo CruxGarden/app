@@ -64,6 +64,41 @@ describe('Garden Export / Import', () => {
     expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
   });
 
+  it.each(['portrait', 'Mood asset'])(
+    'refuses an archive missing a retained %s even when the bytes are locally cached',
+    async (kind) => {
+      const crux = await svc.crux.create({ title: 'Retained non-file content' });
+      const db = getSqliteClient();
+      const bytes = new TextEncoder().encode(`Retained ${kind} content`);
+      const fingerprint = await hashContent(bytes);
+      await db.blobWrite(fingerprint, bytes);
+      if (kind === 'portrait')
+        await svc.crux.update(crux.id, {
+          meta: { authorSnapshots: { previous: { avatarFingerprint: fingerprint } } },
+        });
+      else
+        await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+          'cruxgarden:moodAssets',
+          JSON.stringify([{ name: 'Retained image', fingerprint }]),
+        ]);
+      const archive = await exportGarden();
+      const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
+      expect(zip.file(`artifacts/${fingerprint}`)).not.toBeNull();
+      zip.remove(`artifacts/${fingerprint}`);
+      const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
+      zip.file(
+        'manifest.json',
+        JSON.stringify({ ...manifest, artifactCount: manifest.artifactCount - 1 }),
+      );
+      const replace = vi.spyOn(db, 'import');
+      await expect(
+        importGarden({ data: await zip.generateAsync({ type: 'arraybuffer' }) }),
+      ).rejects.toThrow('missing required content');
+      expect(replace).not.toHaveBeenCalled();
+      expect([...(await db.blobRead(fingerprint))]).toEqual([...bytes]);
+    },
+  );
+
   it('requires retained Growth files and author avatars, not just the current Crux files', async () => {
     const snapshot = await svc.crux.create({
       title: 'Retained history',
@@ -191,6 +226,9 @@ describe('Garden Export / Import', () => {
     async (phase) => {
       const db = getSqliteClient();
       const crux = await svc.crux.create({ title: 'Imported review', type: 'workspace' });
+      const bytes = new TextEncoder().encode('Retained review evidence bytes');
+      const fingerprint = await hashContent(bytes);
+      await db.blobWrite(fingerprint, bytes);
       const data = {
         id: 'review-id',
         cruxId: crux.id,
@@ -198,7 +236,7 @@ describe('Garden Export / Import', () => {
         candidateId: 'candidate-id',
         phase: 'review',
         previewUrl: 'http://localhost:12345',
-        manifest: { 'kept.txt': { fingerprint: 'evidence' } },
+        manifest: { 'kept.txt': { fingerprint } },
         verificationLog: 'Keep this evidence',
       };
       await db.run(

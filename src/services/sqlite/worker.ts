@@ -6,7 +6,7 @@ import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.
 
 import { MemoryAsyncVFS } from 'wa-sqlite/src/examples/MemoryAsyncVFS.js';
 import SCHEMA from './schema.sql?raw';
-import { RECOVERY_CONTENT_SQL, recoveryFingerprints } from './recovery-content';
+import { recoveryContentSql, recoveryFingerprints } from './recovery-content';
 
 export type WorkerRequest =
   | { id: string; method: 'init' }
@@ -400,8 +400,17 @@ async function inspectImport(data: ArrayBuffer): Promise<string[]> {
   let candidate: number | undefined;
   try {
     candidate = await sqlite3.open_v2(uri, SQLite.SQLITE_OPEN_READONLY | SQLite.SQLITE_OPEN_URI);
+    const tables = new Set<string>();
+    for await (const stmt of sqlite3.statements(
+      candidate,
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    )) {
+      const columns = getColumnNames(stmt);
+      while ((await sqlite3.step(stmt)) === SQLite.SQLITE_ROW)
+        tables.add(String(getRow(stmt, columns).name));
+    }
     const rows: Record<string, unknown>[] = [];
-    for await (const stmt of sqlite3.statements(candidate, RECOVERY_CONTENT_SQL)) {
+    for await (const stmt of sqlite3.statements(candidate, recoveryContentSql(tables))) {
       const columns = getColumnNames(stmt);
       while ((await sqlite3.step(stmt)) === SQLite.SQLITE_ROW) rows.push(getRow(stmt, columns));
     }

@@ -1,7 +1,5 @@
-import {
-  toolFunctionProfile,
-  toolFunctionIds,
-} from '../../src/test/fixtures/unification/tool-function-profile';
+import { retainedContentProfile } from '../../src/test/fixtures/unification/retained-content-profile';
+import { toolFunctionIds } from '../../src/test/fixtures/unification/tool-function-profile';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { legacyIds } from '../../src/test/fixtures/unification/legacy-profile';
@@ -9,7 +7,7 @@ import { legacyIds } from '../../src/test/fixtures/unification/legacy-profile';
 // Integration at the real Electron/API/native SQLite boundary. This does not
 // claim normal renderer ownership or selective Garden transfer has migrated.
 test('the API preserves a complete legacy profile through preparation, export and process restart', async () => {
-  const fixture = toolFunctionProfile();
+  const fixture = retainedContentProfile();
   let launch = await launchApp();
   try {
     const prepared = await launch.app.evaluate(async ({ app }, fixture) => {
@@ -19,7 +17,7 @@ test('the API preserves a complete legacy profile through preparation, export an
         .getBuiltinModule('module')
         .createRequire(path.join(app.getAppPath(), 'package.json'));
       const { SqliteNative } = load('./dist/sqlite-native.js');
-      const { LocalGraphRuntime } = load(
+      const { LocalGraphRuntime, inspectDesktopRecovery } = load(
         '@cruxgarden/local-api',
       ) as typeof import('@cruxgarden/local-api');
       const filename = path.join(app.getPath('userData'), 'preservation.db');
@@ -57,13 +55,18 @@ test('the API preserves a complete legacy profile through preparation, export an
           after[table] = await owner.all(`SELECT ${projection} FROM ${table} ORDER BY 1`);
         }
         const exported = path.join(app.getPath('userData'), 'preservation-export.db');
-        fs.writeFileSync(exported, Buffer.from(await owner.exportDatabase()));
-        return { before, after, tables };
+        const image = await owner.exportDatabase();
+        const fingerprints = inspectDesktopRecovery(image).fingerprints;
+        fs.writeFileSync(exported, Buffer.from(image));
+        return { before, after, tables, fingerprints };
       } finally {
         await owner.close();
       }
     }, fixture);
     expect(prepared.tables).toEqual(Object.keys(fixture.tables).sort());
+    expect(prepared.fingerprints).toEqual(
+      [...new Set(fixture.blobs.map((blob) => blob.fingerprint))].sort(),
+    );
     expect(prepared.before.schema_version).toEqual([]);
     const normalized = { ...prepared.before, schema_version: [{ version: 4 }] };
     expect(prepared.after).toEqual(normalized);

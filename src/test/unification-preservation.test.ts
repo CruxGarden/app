@@ -1,5 +1,5 @@
+import { retainedContentProfile } from './fixtures/unification/retained-content-profile';
 import {
-  toolFunctionProfile,
   toolFunctionIds,
   preservedFunction,
   preservedEvent,
@@ -34,7 +34,7 @@ describe('unification preservation baseline', () => {
   });
 
   it('round-trips the complete legacy profile through current recovery export into a fresh database', async () => {
-    const fixture = toolFunctionProfile();
+    const fixture = retainedContentProfile();
     const source = getSqliteClient();
     await seedLegacyProfile(source, fixture);
     const before: Record<string, unknown[]> = {};
