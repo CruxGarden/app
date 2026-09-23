@@ -172,6 +172,9 @@ it('merges editor-only customization while preserving newer notes on Main', asyn
 });
 
 it('rejects an external disk edit before the watcher has delivered it, then reloads it', async () => {
+  // Load the real audio dependency before the window stub permits snapshot cues.
+  // Teardown-only draining can race its first module evaluation in a busy full run.
+  await import('@/stores/audioStore');
   const files = new Map<string, Uint8Array>();
   vi.stubGlobal('window', {
     electronAPI: {
