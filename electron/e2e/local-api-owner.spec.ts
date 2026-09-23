@@ -119,7 +119,19 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
           ids.root,
         ]);
         const exported = path.join(app.getPath('userData'), 'api-owner-export.db');
-        fs.writeFileSync(exported, Buffer.from(await runtime.exportDatabase()));
+        const queuedWrite = runtime.run('UPDATE cruxes SET title = ? WHERE id = ?', [
+          'Recovery checkpoint',
+          ids.nested,
+        ]);
+        const recovery = runtime.closeWithRecoveryImage();
+        let lateWriteError = '';
+        try {
+          await runtime.run('UPDATE cruxes SET title = ? WHERE id = ?', ['Too late', ids.nested]);
+        } catch (error) {
+          lateWriteError = (error as Error).message;
+        }
+        await queuedWrite;
+        fs.writeFileSync(exported, Buffer.from(await recovery));
         // A different file verifies the actual serialized image, not a second
         // connection to the owner's database.
         snapshot = await LocalGraphRuntime.open(exported);
@@ -131,6 +143,8 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
           visibility: crux.visibility,
           targets: dimensions.map((d) => d.target_id),
           exportCount: exportedRows.length,
+          exportTitle: exportedRows.find((row) => row.id === ids.nested)?.title,
+          lateWriteError,
         };
       } finally {
         await snapshot?.close();
@@ -144,6 +158,8 @@ test('packaged API graph owns a scratch database with the Electron SQLite binary
       visibility: 'private',
       targets: [created.ids.nested],
       exportCount: 2,
+      exportTitle: 'Recovery checkpoint',
+      lateWriteError: 'Local API is closing',
     });
   } finally {
     await launch.app.close();
