@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 
-test('closing a review rolls back journal refusal, retries and preserves Task content after restart', async () => {
+test('review checking and closing report refused writes, retry and preserve Task content after restart', async () => {
   const env = { CRUX_API_OWNER: '1' };
   let launch = await launchApp({ env });
   const dir = launch.dir;
@@ -37,6 +37,26 @@ test('closing a review rolls back journal refusal, retries and preserves Task co
       );
       return { ...journal, candidate };
     }, copy);
+    const beforeCheck = await page.evaluate(
+      (id) => window.electronAPI!.sqlite.get('SELECT data FROM task_merges WHERE id = ?', [id]),
+      saved.id,
+    );
+    await page.evaluate(() =>
+      window.electronAPI!.sqlite.run(
+        "CREATE TRIGGER refuse_check BEFORE UPDATE ON task_merges WHEN NEW.phase = 'review' BEGIN SELECT RAISE(ABORT, 'Review check refused'); END",
+      ),
+    );
+    await review.getByRole('button', { name: 'Check combined result' }).click();
+    await expect(review.getByRole('alert')).toContainText('Review check refused');
+    expect(
+      await page.evaluate(
+        (id) => window.electronAPI!.sqlite.get('SELECT data FROM task_merges WHERE id = ?', [id]),
+        saved.id,
+      ),
+    ).toEqual(beforeCheck);
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_check'));
+    await review.getByRole('button', { name: 'Check combined result' }).click();
+    await expect(review.getByRole('checkbox')).toBeEnabled();
     await review.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(review.getByRole('alert')).toContainText('Cancellation refused');
     expect(

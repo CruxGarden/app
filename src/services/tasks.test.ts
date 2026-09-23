@@ -199,6 +199,40 @@ describe('parallel tasks', () => {
       expect.arrayContaining([expect.objectContaining({ content: 'A conversation' })]),
     );
   });
+  it('keeps the original journal when API verification saving fails and retries the check', async () => {
+    const { a } = await fixture();
+    const review = await prepareTaskReview(a.id);
+    const db = getSqliteClient();
+    db.saveTaskReview = vi.fn(async () => {
+      throw new Error('Review save refused');
+    });
+    await expect(verifyTaskReview(review.id)).rejects.toThrow('Review save refused');
+    expect(db.saveTaskReview).toHaveBeenCalledWith(expect.any(String), JSON.stringify(review));
+    const row = await db.get<{ data: string }>('SELECT data FROM task_merges WHERE id = ?', [
+      review.id,
+    ]);
+    expect(JSON.parse(row!.data)).toEqual(review);
+    expect((await findWorkingCopy(review.candidateId))?.phase).toBe('ready');
+    delete db.saveTaskReview;
+    expect((await verifyTaskReview(review.id)).verifiedKey).toBeDefined();
+  });
+  it('retains prepared content when the API refuses to create its review journal', async () => {
+    const { a } = await fixture();
+    const db = getSqliteClient();
+    db.saveTaskReview = vi.fn(async () => {
+      throw new Error('Review create refused');
+    });
+    await expect(prepareTaskReview(a.id)).rejects.toThrow('Review create refused');
+    expect(await db.all('SELECT * FROM task_merges')).toEqual([]);
+    const candidates = await db.all<{ id: string; phase: string }>(
+      "SELECT id, phase FROM working_copies WHERE role = 'review'",
+    );
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]!.phase).toBe('ready');
+    expect(await read(candidates[0]!.id)).toBe('<h1>Base</h1>');
+    delete db.saveTaskReview;
+    await expect(prepareTaskReview(a.id)).resolves.toMatchObject({ phase: 'review' });
+  });
   it('does not project files or create merge Growth after API admission refusal', async () => {
     const { main, a } = await fixture();
     await write(a.id, 'Checked result');

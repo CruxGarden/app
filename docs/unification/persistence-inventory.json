@@ -861,7 +861,7 @@
     },
     {
       "file": "src/services/tasks.ts",
-      "method": "getSqliteClient().run",
+      "method": "db.run",
       "statement": "'INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET phase = excluded.phase, data = excluded.data'"
     },
     {

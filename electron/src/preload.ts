@@ -65,6 +65,8 @@ const api: ElectronBridge = {
             };
           },
           createCrux: (input: LocalCruxCreate) => ipcRenderer.invoke('sqlite:create-crux', input),
+          saveTaskReview: (reviewData: string, expectedData?: string) =>
+            ipcRenderer.invoke('sqlite:save-task-review', reviewData, expectedData),
           beginTaskMerge: (id: string, reviewData: string) =>
             ipcRenderer.invoke('sqlite:begin-task-merge', id, reviewData),
           releaseTaskReview: (id: string) => ipcRenderer.invoke('sqlite:release-task-review', id),

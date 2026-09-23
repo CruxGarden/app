@@ -207,8 +207,17 @@ async function isAncestor(baseId: string, tip: string): Promise<boolean> {
   }
   return false;
 }
-async function saveReview(review: TaskReview): Promise<void> {
-  await getSqliteClient().run(
+async function saveReview(review: TaskReview, expected?: TaskReview): Promise<void> {
+  const db = getSqliteClient();
+  if (db.saveTaskReview) {
+    await db.saveTaskReview(
+      JSON.stringify(review),
+      expected ? JSON.stringify(expected) : undefined,
+    );
+    announceTasksChanged();
+    return;
+  }
+  await db.run(
     'INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET phase = excluded.phase, data = excluded.data',
     [
       review.id,
@@ -314,7 +323,7 @@ async function resolveTaskReviewCore(
     verifiedKey: undefined,
     verificationLog: undefined,
   };
-  await saveReview(updated);
+  await saveReview(updated, review);
   return updated;
 }
 async function verifyTaskReviewCore(id: string): Promise<TaskReview> {
@@ -354,7 +363,7 @@ async function verifyTaskReviewCore(id: string): Promise<TaskReview> {
       verificationLog: `${log}\nSetup or the build changed source Artifacts. Review the updated changes and check again.`,
       previewUrl: undefined,
     };
-    await saveReview(changed);
+    await saveReview(changed, review);
     return changed;
   }
   let previewUrl: string | undefined;
@@ -372,7 +381,7 @@ async function verifyTaskReviewCore(id: string): Promise<TaskReview> {
     verificationLog: log,
     previewUrl,
   };
-  await saveReview(verified);
+  await saveReview(verified, review);
   return verified;
 }
 async function applyTaskReviewCore(id: string): Promise<TaskReview> {
