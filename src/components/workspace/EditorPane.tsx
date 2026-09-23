@@ -1,3 +1,4 @@
+import { documentIdentity } from '@/services/workspace-documents';
 import FigmaPane from './FigmaPane';
 import BlenderPane from './BlenderPane';
 import { isEmbeddedApp } from '@/services/embedded-app';
@@ -129,7 +130,7 @@ function AdvancedEditor() {
           />
           <EditorErrorBoundary>
             <EditorContent
-              key={activeTab.id}
+              key={documentIdentity(activeArtifact)}
               tab={activeTab}
               artifact={activeArtifact}
               cruxId={crux.id}
@@ -254,7 +255,7 @@ export default function EditorPane() {
       ) : entry.artifact && crux ? (
         <EditorErrorBoundary>
           <EditorContent
-            key={entry.artifact.id}
+            key={documentIdentity(entry.artifact)}
             cruxId={crux.id}
             artifact={entry.artifact}
             clean

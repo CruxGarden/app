@@ -76,7 +76,7 @@ export default function EditorContent({
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
   const documents = documentsFor(cruxStore, uiStore);
-  const documentSession = documents.get(artifact.id);
+  const documentSession = documents.get(artifact);
   const documentError = useStore(documentSession, (s) => s.error);
   const documentConflict = useStore(documentSession, (s) => s.conflict);
   const { content, blobUrl, loading, contentVersion, setContent, expectOwnSave } = useFileContent(
@@ -90,7 +90,7 @@ export default function EditorContent({
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const contentRef = useRef<string | null>(documentSession.getState().content);
-  const dirtyRef = useRef(documents.dirty(artifact.id));
+  const dirtyRef = useRef(documents.dirty(artifact));
   const saveHandlerRef = useRef<() => void>(() => {});
   const scrollRafRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
@@ -122,6 +122,7 @@ export default function EditorContent({
   // Form data change handler — updates content as pretty JSON, marks dirty, triggers save
   const handleFormChange = useCallback(
     (newData: Record<string, unknown>) => {
+      if (readOnlyTask) return;
       const json = JSON.stringify(newData, null, 2);
       contentRef.current = json;
       dirtyRef.current = true;
@@ -133,7 +134,7 @@ export default function EditorContent({
       if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
       formSaveTimerRef.current = setTimeout(() => saveHandlerRef.current(), FORM_AUTOSAVE_MS);
     },
-    [tab.id, setContent, setTabDirty],
+    [tab.id, setContent, setTabDirty, readOnlyTask],
   );
 
   // Auto-switch config.json to form mode on first open when schema exists
@@ -198,15 +199,15 @@ export default function EditorContent({
     if (current === null || !dirtyRef.current) return;
     const cancelOwnSave = expectOwnSave();
     try {
-      await documents.save(artifact.id);
-      dirtyRef.current = documents.dirty(artifact.id);
+      await documents.save(artifact);
+      dirtyRef.current = documents.dirty(artifact);
       setSavedVersion((v) => v + 1);
       cancelOwnSave();
     } catch (err: unknown) {
       cancelOwnSave();
       console.error('Save failed:', err);
     }
-  }, [expectOwnSave, documents, artifact.id]);
+  }, [expectOwnSave, documents, artifact]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
@@ -446,14 +447,14 @@ export default function EditorContent({
   // Using defaultValue means React re-renders won't cause Monaco to re-apply content
   const handleEditorChange = useCallback(
     (value: string | undefined) => {
-      if (value !== undefined) {
+      if (!readOnlyTask && value !== undefined) {
         contentRef.current = value;
         dirtyRef.current = true;
         setContent(value);
         setTabDirty(tab.id, true);
       }
     },
-    [tab.id, setContent, setTabDirty],
+    [tab.id, setContent, setTabDirty, readOnlyTask],
   );
 
   // Site cruxes (Astro): preview = the project's own dev server with HMR.
@@ -530,7 +531,7 @@ export default function EditorContent({
         <div className="flex-1 min-h-0">
           <Editor
             key={tab.id}
-            path={`crux://${cruxId}/${artifact.id}`}
+            path={`crux://${encodeURIComponent(artifact.resourceId)}/${encodeURIComponent(artifact.id)}`}
             keepCurrentModel
             height="100%"
             language={language}
@@ -632,7 +633,7 @@ export default function EditorContent({
           {documentConflict && (
             <button
               className="ml-2 underline"
-              onClick={() => void documents.save(artifact.id, true).catch(() => {})}
+              onClick={() => void documents.save(artifact, true).catch(() => {})}
             >
               Overwrite with my edits
             </button>
