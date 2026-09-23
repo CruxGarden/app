@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.266",
-    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.31d4db30d4a2.8a644432.tgz",
+    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.a55c84fbd2ca.ada084e7.tgz",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "better-sqlite3": "^12.8.0",
     "chokidar": "^4.0.3",

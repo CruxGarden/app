@@ -622,6 +622,11 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
             savedCopy = copyIdentity(persisted);
           if (fields.includes('title') && currentCopy && savedCopy)
             next.meta = { ...next.meta, workingCopy: { ...currentCopy, title: savedCopy.title } };
+          if (fields.includes('phase') && currentCopy && savedCopy)
+            next.meta = {
+              ...next.meta,
+              workingCopy: { ...copyIdentity(next)!, phase: savedCopy.phase },
+            };
           next.updated = persisted.updated;
           return { crux: next };
         });

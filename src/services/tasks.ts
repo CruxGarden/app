@@ -500,6 +500,8 @@ export async function archiveTask(id: string, archived: boolean): Promise<void> 
   await settled([id], async () => {
     const copy = await findWorkingCopy(id);
     if (!copy || copy.phase === 'merged') throw new Error('Merged tasks are preserved in Growth.');
+    if (copy.role !== 'task' || !['ready', 'archived'].includes(copy.phase))
+      throw new Error('Only ready or archived tasks can be archived or reopened.');
     if (archived) {
       const manifest = await captureTaskManifest(id);
       await indexTaskManifest(id, manifest);
@@ -507,15 +509,21 @@ export async function archiveTask(id: string, archived: boolean): Promise<void> 
         .data.getState()
         .createSnapshot({ label: 'Before archiving task', silent: true, taskOperation: true });
     }
-    await getSqliteClient().run(
-      "UPDATE working_copies SET phase = 'ready', revision = revision + 1 WHERE id = ?",
-      [id],
-    );
-    // Archived tasks are read-only; reopening is an explicit operation.
-    if (archived)
-      await getSqliteClient().run("UPDATE working_copies SET phase = 'archived' WHERE id = ?", [
-        id,
-      ]);
+    // Snapshot preparation can update metadata/revision. Capture its final revision
+    // and let the owner reject a subsequent concurrent edit instead of overwriting it.
+    const prepared = await findWorkingCopy(id);
+    if (!prepared) throw new Error('Working Copy not found.');
+    const db = getSqliteClient();
+    if (db.setWorkingCopyArchived) {
+      await db.setWorkingCopyArchived(id, archived, prepared.revision);
+    } else {
+      const result = await db.run(
+        'UPDATE working_copies SET phase = ?, revision = revision + 1, updated = ? WHERE id = ? AND revision = ?',
+        [archived ? 'archived' : 'ready', new Date().toISOString(), id, prepared.revision],
+      );
+      if (result.changes !== 1)
+        throw new Error('This task changed while saving. Reload it before retrying.');
+    }
     if (copy.projectFolder && typeof window !== 'undefined') {
       const api = window.electronAPI?.project;
       if (archived) await api?.unwatch(copy.projectFolder);

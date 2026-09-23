@@ -411,6 +411,29 @@ describe('parallel tasks', () => {
         .map((m) => m.content),
     ).toEqual(['First task message', 'Second task message']);
   });
+  it('keeps a Task writable after owned archive refusal and never falls back to a phase write', async () => {
+    const { a } = await fixture();
+    const db = getSqliteClient();
+    db.setWorkingCopyArchived = vi.fn(async () => {
+      throw new Error('Owned archive refused');
+    });
+    await expect(archiveTask(a.id, true)).rejects.toThrow('Owned archive refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
+    expect(db.setWorkingCopyArchived).toHaveBeenCalledWith(a.id, true, expect.any(Number));
+    await write(a.id, 'Still writable');
+    expect(await read(a.id)).toBe('Still writable');
+  });
+  it('keeps an archived Task closed after owned reopen refusal', async () => {
+    const { a } = await fixture();
+    await archiveTask(a.id, true);
+    const db = getSqliteClient();
+    db.setWorkingCopyArchived = vi.fn(async () => {
+      throw new Error('Owned reopen refused');
+    });
+    await expect(archiveTask(a.id, false)).rejects.toThrow('Owned reopen refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('archived');
+    await expect(write(a.id, 'blocked')).rejects.toThrow('closed for editing');
+  });
   it('archives a task without losing its work and permits explicit reopening', async () => {
     const { a } = await fixture();
     await write(a.id, 'Keep me');

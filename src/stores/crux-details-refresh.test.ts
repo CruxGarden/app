@@ -54,3 +54,43 @@ it('cannot resurrect a closed workspace or overwrite a detail changed during the
     spy.mockRestore();
   }
 });
+
+it('refreshes Task phase without replacing live messages or editor state', async () => {
+  const crux = await getServices().crux.create({ title: 'Main' });
+  const task = {
+    ...crux,
+    meta: {
+      workingCopy: {
+        cruxId: crux.id,
+        taskId: 'task',
+        baseSnapshotId: 'base',
+        role: 'task',
+        phase: 'ready',
+        title: 'Task',
+      },
+    },
+  };
+  const store = createCruxStore();
+  store.setState({ crux: task, streamingContent: 'retained', viewingSnapshotId: 'selected' });
+  const messages = store.getState().messages;
+  const spy = vi
+    .spyOn(getServices().crux, 'findById')
+    .mockResolvedValue({
+      ...task,
+      meta: { workingCopy: { ...task.meta.workingCopy, phase: 'archived' } },
+    });
+  try {
+    await store.getState().refreshDetails(['phase'], []);
+    expect(store.getState().crux?.meta?.workingCopy).toMatchObject({
+      phase: 'archived',
+      taskId: 'task',
+    });
+    expect(store.getState().messages).toBe(messages);
+    expect(store.getState()).toMatchObject({
+      streamingContent: 'retained',
+      viewingSnapshotId: 'selected',
+    });
+  } finally {
+    spy.mockRestore();
+  }
+});

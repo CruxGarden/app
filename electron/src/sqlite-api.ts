@@ -70,6 +70,10 @@ export class SqliteApi implements NativeStorage {
     this.assertAvailable();
     return this.owner.updateCrux(id, patch);
   }
+  setWorkingCopyArchived(id: string, archived: boolean, revision: number) {
+    this.assertAvailable();
+    return this.owner.setWorkingCopyArchived(id, archived, revision);
+  }
   setCruxTrashed(id: string, trashed: boolean) {
     this.assertAvailable();
     return this.owner.setCruxTrashed(id, trashed);

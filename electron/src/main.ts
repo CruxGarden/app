@@ -461,6 +461,15 @@ async function setupIpc() {
     },
   );
 
+  ipcMain.handle(
+    'sqlite:set-working-copy-archived',
+    (_e: unknown, id: string, archived: boolean, revision: number) => {
+      if (!db.setWorkingCopyArchived)
+        throw new Error('Owned Task lifecycle commands are unavailable');
+      return db.setWorkingCopyArchived(id, archived, revision);
+    },
+  );
+
   ipcMain.handle('sqlite:set-crux-trashed', (_e: unknown, id: string, trashed: boolean) => {
     if (!db.setCruxTrashed) throw new Error('Owned Crux lifecycle commands are unavailable');
     return db.setCruxTrashed(id, trashed);

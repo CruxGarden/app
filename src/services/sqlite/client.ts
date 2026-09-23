@@ -14,6 +14,7 @@ export interface ISqliteClient {
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  setWorkingCopyArchived?: SqliteBridge['setWorkingCopyArchived'];
   setCruxTrashed?(id: string, trashed: boolean): Promise<void>;
   deleteCrux?(id: string): Promise<void>;
   /** Atomically merge descriptive Task state without changing its identity or folder. */
