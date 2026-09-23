@@ -210,8 +210,7 @@ export async function referenceArchiveRuntimes(
     'manifest.json',
     JSON.stringify({
       ...manifest,
-      version: '3.0',
-      baseVersion: manifest.version,
+      ...(manifest.version === '4.0' ? {} : { version: '3.0', baseVersion: manifest.version }),
       runtimeReferences: references,
     }),
   );
@@ -222,10 +221,12 @@ export async function hydrateArchiveRuntimes(zip: JSZip): Promise<void> {
   const entry = zip.file('manifest.json');
   if (!entry) return;
   const manifest = JSON.parse(await entry.async('text'));
-  if (String(manifest.version).split('.')[0] !== '3') return;
+  const installation = manifest.version === '4.0' && manifest.scope === 'installation';
+  if (installation && manifest.runtimeReferences === undefined) return;
+  if (!installation && String(manifest.version).split('.')[0] !== '3') return;
   const references = manifest.runtimeReferences as RuntimeReference[];
   if (
-    !['1.0', '2.0'].includes(manifest.baseVersion) ||
+    (!installation && !['1.0', '2.0'].includes(manifest.baseVersion)) ||
     !Array.isArray(references) ||
     !references.length ||
     references.length > 100_000
@@ -269,5 +270,8 @@ export async function hydrateArchiveRuntimes(zip: JSZip): Promise<void> {
     zip.file(`artifacts/${ref.fingerprint}`, bytes);
   }
   const { baseVersion, runtimeReferences: _references, ...base } = manifest;
-  zip.file('manifest.json', JSON.stringify({ ...base, version: baseVersion }));
+  zip.file(
+    'manifest.json',
+    JSON.stringify({ ...base, version: installation ? '4.0' : baseVersion }),
+  );
 }

@@ -639,6 +639,11 @@
     {
       "file": "src/services/garden-io.ts",
       "method": "db.run",
+      "statement": "'DELETE FROM file_content_heads'"
+    },
+    {
+      "file": "src/services/garden-io.ts",
+      "method": "db.run",
       "statement": "`DELETE FROM ${table}`"
     },
     {

@@ -61,7 +61,7 @@ export interface SqliteBridge {
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
   /** Read required fingerprints from detached incoming bytes; leave the current database intact. */
-  inspectImport(data: ArrayBuffer): Promise<string[]>;
+  inspectImport(data: ArrayBuffer, availableFingerprints?: string[]): Promise<string[]>;
   close(): Promise<void>;
   blobWrite(fingerprint: string, data: Uint8Array): Promise<void>;
   blobRead(fingerprint: string): Promise<Uint8Array>;

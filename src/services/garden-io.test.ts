@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import JSZip from 'jszip';
 import { initServices, type Services } from './index';
-import { exportGarden, importGarden } from './garden-io';
+import { exportGarden, importGarden, wipeGarden } from './garden-io';
 import { hashContent } from './sqlite/helpers';
 import { getSqliteClient } from './sqlite/client';
 
@@ -19,6 +19,20 @@ describe('Garden Export / Import', () => {
     svc = await initServices('local');
   });
   afterEach(() => vi.restoreAllMocks());
+
+  it('clears retained manifest heads when intentionally wiping the installation', async () => {
+    const db = getSqliteClient();
+    await db.run(
+      'CREATE TABLE file_content_heads (crux_id TEXT PRIMARY KEY, root TEXT, revision INTEGER, format_version INTEGER)',
+    );
+    const bytes = new TextEncoder().encode('Retained content');
+    const root = await hashContent(bytes);
+    await db.blobWrite(root, bytes);
+    await db.run('INSERT INTO file_content_heads VALUES (?, ?, 1, 1)', ['retained-snapshot', root]);
+    await wipeGarden();
+    expect(await db.all('SELECT * FROM file_content_heads')).toEqual([]);
+    expect(await db.blobExists(root)).toBe(false);
+  });
 
   it('exports content from the captured database even when live references change afterward', async () => {
     const crux = await svc.crux.create({ title: 'Captured work', type: 'workspace' });
@@ -137,7 +151,7 @@ describe('Garden Export / Import', () => {
   });
 
   it.each(['missing', 'corrupted'])(
-    'refuses raw database restoration with %s retained content before replacement',
+    'rejects raw database input even with %s cached content',
     async (fault) => {
       const incoming = await svc.crux.create({ title: 'Incoming', type: 'workspace' });
       const file = await svc.artifact.upload({
@@ -151,9 +165,7 @@ describe('Garden Export / Import', () => {
       if (fault === 'missing') await db.blobDelete(file.fingerprint!);
       else await db.blobWrite(file.fingerprint!, new TextEncoder().encode('Wrong bytes'));
       const replace = vi.spyOn(db, 'import');
-      await expect(importGarden({ data: image })).rejects.toThrow(
-        fault === 'missing' ? 'missing required content' : 'failed integrity check',
-      );
+      await expect(importGarden({ data: image })).rejects.toThrow('expected a current ZIP archive');
       expect(replace).not.toHaveBeenCalled();
       expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Current work' });
     },
@@ -337,13 +349,14 @@ describe('Garden Export / Import', () => {
       expect(zip.file('garden.sqlite')).not.toBeNull();
     });
 
-    it('manifest has correct v1.0 format', async () => {
+    it('marks a current whole-installation backup explicitly', async () => {
       const result = await exportGarden();
       const ab = await result.blob.arrayBuffer();
       const zip = await JSZip.loadAsync(ab);
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
 
-      expect(manifest.version).toBe('1.0');
+      expect(manifest.version).toBe('4.0');
+      expect(manifest.scope).toBe('installation');
       expect(manifest.exportedAt).toBeDefined();
       expect(typeof manifest.cruxCount).toBe('number');
       expect(typeof manifest.artifactCount).toBe('number');
@@ -402,7 +415,7 @@ describe('Garden Export / Import', () => {
 
       // Tamper with manifest fingerprint
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
-      manifest.fingerprint = 'deadbeef';
+      manifest.fingerprint = '0'.repeat(64);
       zip.file('manifest.json', JSON.stringify(manifest));
 
       const tampered = await zip.generateAsync({ type: 'arraybuffer' });
@@ -432,15 +445,15 @@ describe('Garden Export / Import', () => {
 
     it('rejects ZIP without garden.sqlite', async () => {
       const zip = new JSZip();
-      zip.file('manifest.json', JSON.stringify({ version: '1.0' }));
+      zip.file('manifest.json', JSON.stringify({ version: '4.0', scope: 'installation' }));
       const ab = await zip.generateAsync({ type: 'arraybuffer' });
 
       await expect(importGarden({ data: ab })).rejects.toThrow('missing garden.sqlite');
     });
   });
 
-  describe('legacy format', () => {
-    it('imports raw SQLite data (non-ZIP) as legacy format', async () => {
+  describe('current format only', () => {
+    it('refuses raw SQLite without replacing existing work', async () => {
       const crux = await svc.crux.create({ title: 'Legacy content', type: 'workspace' });
       const file = await svc.artifact.upload({
         resourceId: crux.id,
@@ -451,9 +464,11 @@ describe('Garden Export / Import', () => {
       const { getSqliteClient } = await import('./sqlite/client');
       const rawSqlite = await getSqliteClient().export();
 
-      // importGarden should detect this as non-ZIP and fall back to legacy import
-      const imported = await importGarden({ data: rawSqlite });
-      expect(imported.cruxCount).toBeGreaterThanOrEqual(0);
+      const replace = vi.spyOn(getSqliteClient(), 'import');
+      await expect(importGarden({ data: rawSqlite })).rejects.toThrow(
+        'expected a current ZIP archive',
+      );
+      expect(replace).not.toHaveBeenCalled();
       expect(await (await svc.artifact.downloadBlob(file.id)).text()).toBe(
         'Keep the existing blob',
       );

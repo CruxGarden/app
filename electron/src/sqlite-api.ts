@@ -6,8 +6,7 @@ import {
   type PrepareCruxFolder,
   type PrepareWorkingCopyFolder,
   type LocalGraphChange,
-  inspectDesktopContent,
-  prepareDesktopContent,
+  inspectDesktopManifestRecovery,
 } from '@cruxgarden/local-api';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -149,9 +148,24 @@ export class SqliteApi implements NativeStorage {
     this.assertAvailable();
     return this.owner.exportDatabase();
   }
-  inspectImport(data: ArrayBuffer): string[] {
+  async inspectImport(data: ArrayBuffer, availableFingerprints?: string[]): Promise<string[]> {
     this.assertAvailable();
-    return inspectDesktopContent(data).fingerprints;
+    if (
+      availableFingerprints !== undefined &&
+      (!Array.isArray(availableFingerprints) ||
+        availableFingerprints.some((fp) => typeof fp !== 'string' || !/^[a-f0-9]{64}$/.test(fp)))
+    )
+      throw new Error('Use an archive content inventory');
+    const allowed = availableFingerprints === undefined ? null : new Set(availableFingerprints);
+    const result = await inspectDesktopManifestRecovery(data, {
+      read: async (fp) => {
+        if (allowed && !allowed.has(fp))
+          throw new Error(`Garden archive is missing required content: ${fp}`);
+        return this.blobs.blobExists(fp) ? this.blobs.blobRead(fp) : null;
+      },
+    });
+    if (result.schemaVersion !== 5) throw new Error('Use a current-format database image');
+    return result.fingerprints;
   }
   import(data: ArrayBuffer): Promise<void> {
     this.assertAvailable();
@@ -162,23 +176,9 @@ export class SqliteApi implements NativeStorage {
 
   private async replace(data: ArrayBuffer): Promise<void> {
     try {
-      // Garden IO requires external content before calling us. Inline bytes are
-      // staged under the same guard as replacement, with no intervening writer,
-      // blob removal or shutdown. The API captures its previous recovery image.
-      const inspection = inspectDesktopContent(data);
-      const incoming = inspection.inline
-        ? (
-            await prepareDesktopContent(data, {
-              read: async (fp) => (this.blobs.blobExists(fp) ? this.blobs.blobRead(fp) : null),
-              write: async (fp, bytes) => {
-                this.blobs.blobWrite(fp, bytes);
-              },
-            })
-          ).database
-        : data;
-      // Keep low-level external-content rollback available for a pre-existing
-      // incomplete profile; only inline conversion requires complete blob checks.
-      await this.owner.replaceDatabase(incoming);
+      // Intake has staged content; the owner verifies both incoming and rollback
+      // roots while replacement admission excludes every other graph writer.
+      await this.owner.replaceDatabaseWithContent(data, this.contentStore());
     } catch (error) {
       // A handled failure reopens the previous database. If the owner instead
       // requires recovery, content must remain protected with its metadata.

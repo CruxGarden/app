@@ -94,8 +94,8 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.export();
   }
 
-  async inspectImport(data: ArrayBuffer): Promise<string[]> {
-    return this.api.inspectImport(data);
+  async inspectImport(data: ArrayBuffer, availableFingerprints?: string[]): Promise<string[]> {
+    return this.api.inspectImport(data, availableFingerprints);
   }
 
   async import(data: ArrayBuffer): Promise<void> {

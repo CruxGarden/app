@@ -31,9 +31,9 @@ export interface ISqliteClient {
   updateCrux?(id: string, patch: UpdateCruxInput): Promise<void>;
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
-  /** Read externally required fingerprints from detached bytes. Supported inline payloads
-   * supply their own content; leave the current database intact. */
-  inspectImport(data: ArrayBuffer): Promise<string[]>;
+  /** Read required fingerprints without replacing the database. Manifest-capable
+   * backends restrict traversal to the supplied archive inventory when present. */
+  inspectImport(data: ArrayBuffer, availableFingerprints?: string[]): Promise<string[]>;
   close(): Promise<void>;
 
   // ── OPFS blob storage ──────────────────────────────

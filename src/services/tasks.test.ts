@@ -462,7 +462,10 @@ describe('parallel tasks', () => {
     await closeCruxWorkspaces(main.id, 'save');
     const backup = await exportGarden();
     const zip = await JSZip.loadAsync(await backup.blob.arrayBuffer());
-    expect(JSON.parse(await zip.file('manifest.json')!.async('text')).version).toBe('2.0');
+    expect(JSON.parse(await zip.file('manifest.json')!.async('text'))).toMatchObject({
+      version: '4.0',
+      scope: 'installation',
+    });
     await importGarden({ data: backup.blob });
     expect(await read(a.id)).toBe('Archived work');
     expect(await read(b.id)).toBe('Unfinished work');

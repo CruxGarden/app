@@ -102,7 +102,8 @@ const api: ElectronBridge = {
     get: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:get', sql, params),
     all: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:all', sql, params),
     export: () => ipcRenderer.invoke('sqlite:export'),
-    inspectImport: (data: ArrayBuffer) => ipcRenderer.invoke('sqlite:inspect-import', data),
+    inspectImport: (data: ArrayBuffer, availableFingerprints?: string[]) =>
+      ipcRenderer.invoke('sqlite:inspect-import', data, availableFingerprints),
     import: (data: ArrayBuffer) => ipcRenderer.invoke('sqlite:import', data),
     close: () => ipcRenderer.invoke('sqlite:close'),
 

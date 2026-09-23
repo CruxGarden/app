@@ -38,8 +38,8 @@ export interface NativeStorage {
   updateCrux?: SqliteBridge['updateCrux'];
   export(): Awaitable<ArrayBuffer>;
   import(data: ArrayBuffer): Awaitable<void>;
-  /** External content required beyond any supported inline payloads. */
-  inspectImport(data: ArrayBuffer): Awaitable<string[]>;
+  /** Required content; an optional archive inventory bounds manifest traversal. */
+  inspectImport(data: ArrayBuffer, availableFingerprints?: string[]): Awaitable<string[]>;
   close(): Awaitable<void>;
   blobWrite(fingerprint: string, data: Uint8Array): Awaitable<void>;
   blobRead(fingerprint: string): Awaitable<Uint8Array>;
