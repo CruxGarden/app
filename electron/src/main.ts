@@ -461,6 +461,11 @@ async function setupIpc() {
     },
   );
 
+  ipcMain.handle('sqlite:begin-task-merge', (_e: unknown, id: string, reviewData: string) => {
+    if (!db.beginTaskMerge) throw new Error('Owned Task merge commands are unavailable');
+    return db.beginTaskMerge(id, reviewData);
+  });
+
   ipcMain.handle('sqlite:release-task-review', (_e: unknown, id: string) => {
     if (!db.releaseTaskReview) throw new Error('Owned Task review commands are unavailable');
     return db.releaseTaskReview(id);

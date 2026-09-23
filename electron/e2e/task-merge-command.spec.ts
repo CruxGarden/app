@@ -4,7 +4,7 @@ import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-test('a refused final merge journal preserves recoverable state and resumes after restart without duplicate Growth', async () => {
+test('refused admission preserves Main and refused finalization preserves recoverable state and resumes after restart without duplicate Growth', async () => {
   const env = { CRUX_API_OWNER: '1' };
   let launch = await launchApp({ env });
   const dir = launch.dir;
@@ -50,6 +50,42 @@ test('a refused final merge journal preserves recoverable state and resumes afte
     await review.getByRole('button', { name: 'Check combined result' }).click();
     await expect(review.getByRole('checkbox')).toBeEnabled();
     await review.getByRole('checkbox').check();
+    // Admission failure must happen before Main's files or merge history change.
+    const before = await page.evaluate(
+      async ({ main, copy }) => {
+        const db = window.electronAPI!.sqlite;
+        const merge = await db.get('SELECT * FROM task_merges WHERE copy_id = ?', [copy]);
+        const growth = await db.all(
+          "SELECT * FROM dimensions WHERE source_id = ? AND type = 'growth'",
+          [main],
+        );
+        const row = (await db.get('SELECT meta FROM cruxes WHERE id = ?', [main])) as {
+          meta: string;
+        };
+        await db.run(
+          "CREATE TRIGGER refuse_admission BEFORE UPDATE ON task_merges WHEN NEW.phase = 'applying' BEGIN SELECT RAISE(ABORT, 'Review admission refused'); END",
+        );
+        return { merge, growth, folder: JSON.parse(row.meta).projectFolder as string };
+      },
+      { main, copy },
+    );
+    await review.getByRole('button', { name: 'Merge into Main', exact: true }).click();
+    await expect(review.getByRole('alert')).toContainText('Review admission refused');
+    expect(readFileSync(join(before.folder, 'index.html'), 'utf8')).toBe('<h1>Main version</h1>');
+    expect(
+      await page.evaluate(
+        ({ main, copy }) =>
+          Promise.all([
+            window.electronAPI!.sqlite.get('SELECT * FROM task_merges WHERE copy_id = ?', [copy]),
+            window.electronAPI!.sqlite.all(
+              "SELECT * FROM dimensions WHERE source_id = ? AND type = 'growth'",
+              [main],
+            ),
+          ]),
+        { main, copy },
+      ),
+    ).toEqual([before.merge, before.growth]);
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_admission'));
     await page.evaluate(() =>
       window.electronAPI!.sqlite.run(
         "CREATE TRIGGER refuse_finish BEFORE UPDATE ON task_merges WHEN NEW.phase = 'merged' BEGIN SELECT RAISE(ABORT, 'Final journal refused'); END",

@@ -199,6 +199,27 @@ describe('parallel tasks', () => {
       expect.arrayContaining([expect.objectContaining({ content: 'A conversation' })]),
     );
   });
+  it('does not project files or create merge Growth after API admission refusal', async () => {
+    const { main, a } = await fixture();
+    await write(a.id, 'Checked result');
+    const review = await prepareTaskReview(a.id);
+    const verified = await verifyTaskReview(review.id);
+    const db = getSqliteClient();
+    const history = await getServices().dimension.findBySourceAndType(main.id, 'growth');
+    db.beginTaskMerge = vi.fn(async () => {
+      throw new Error('Review admission refused');
+    });
+    await expect(applyTaskReview(review.id)).rejects.toThrow('Review admission refused');
+    expect(db.beginTaskMerge).toHaveBeenCalledWith(review.id, JSON.stringify(verified));
+    expect(await read(main.id)).toBe('<h1>Base</h1>');
+    expect(await db.get('SELECT phase FROM task_merges WHERE id = ?', [review.id])).toEqual({
+      phase: 'review',
+    });
+    expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toEqual(history);
+    delete db.beginTaskMerge;
+    await applyTaskReview(review.id);
+    expect(await read(main.id)).toBe('Checked result');
+  });
   it('retains a usable review when the owning API refuses cancellation', async () => {
     const { a } = await fixture();
     const review = await prepareTaskReview(a.id);

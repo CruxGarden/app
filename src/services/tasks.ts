@@ -398,7 +398,13 @@ async function applyTaskReviewCore(id: string): Promise<TaskReview> {
     if (liveTip(main!) !== review.targetHead || liveTip(task!) !== review.sourceHead)
       throw new Error('Growth changed after review. Prepare a new review.');
     const applying: TaskReview = { ...review, phase: 'applying' };
-    await saveReview(applying); // durable before any destructive write
+    const db = getSqliteClient();
+    if (db.beginTaskMerge) {
+      // Admit the exact checked journal before any file projection; never fall
+      // back to raw SQL after the owner rejects stale or competing work.
+      await db.beginTaskMerge(id, JSON.stringify(review));
+      announceTasksChanged();
+    } else await saveReview(applying); // durable before any destructive write
     return completeMerge(applying, main!);
   });
 }

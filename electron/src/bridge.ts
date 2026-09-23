@@ -25,6 +25,7 @@ export interface SqliteBridge {
   /** Available when the owning backend can commit the complete metadata merge. */
   mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  beginTaskMerge?(id: string, reviewData: string): Promise<void>;
   releaseTaskReview?(id: string): Promise<void>;
   completeTaskMerge?(id: string, resultHead: string): Promise<void>;
   setWorkingCopyArchived?(id: string, archived: boolean, revision: number): Promise<void>;
