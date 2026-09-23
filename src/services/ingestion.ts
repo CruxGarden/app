@@ -16,6 +16,7 @@ import { Capability, can, type ProjectBridge, type ChangeBatch } from '@/lib/pla
 import { getSqliteClient } from './sqlite/client';
 import { guessMimeType, hashContent } from './sqlite/helpers';
 import { getServices } from './index';
+import { selectCruxFiles, type SelectedFiles } from './file-content';
 
 function bridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
@@ -214,6 +215,11 @@ async function processBatch(batch: ChangeBatch, strict = false): Promise<void> {
   if (!cruxId) return; // folder not registered to any crux — nothing to record
 
   const db = getSqliteClient();
+  const selected = await selectCruxFiles(cruxId);
+  if (selected) {
+    await ingestSelectedFiles(cruxId, selected, batch, api, strict);
+    return;
+  }
   const { artifact } = getServices();
   let changed = false;
 
@@ -324,6 +330,76 @@ async function processBatch(batch: ChangeBatch, strict = false): Promise<void> {
   if (changed) announceChange(cruxId);
 }
 
+/** One version-bound commit for an external change batch; never writes Artifact rows. */
+async function ingestSelectedFiles(
+  cruxId: string,
+  selected: SelectedFiles,
+  batch: ChangeBatch,
+  api: ProjectBridge,
+  strict: boolean,
+): Promise<void> {
+  const content = getSqliteClient().fileContent!;
+  const files = new Map(selected.entries.map((entry) => [entry.path, entry]));
+  const changes = new Map<string, Parameters<typeof content.edit>[0]['changes'][number]>();
+  const keeps: string[] = [];
+  for (const event of batch.events) {
+    let path = event.relPath;
+    let bytes: Uint8Array;
+    if (event.type === 'delete' || event.type === 'rmdir') {
+      if (event.type === 'rmdir') path += '/.keep';
+      if (hasExpectation(batch.folder, path)) continue;
+      if (files.delete(path)) changes.set(path, { remove: path });
+      continue;
+    }
+    if (event.type === 'mkdir') {
+      const prefix = path + '/';
+      if (
+        hasExpectedUnder(batch.folder, prefix) ||
+        [...files.keys()].some((p) => p.startsWith(prefix)) ||
+        batch.events.some((e) => e.type === 'write' && e.relPath.startsWith(prefix))
+      )
+        continue;
+      path += '/.keep';
+      bytes = new Uint8Array();
+      keeps.push(path);
+    } else {
+      if (takeExpectation(batch.folder, path) && event.own !== false) continue;
+      try {
+        bytes = await api.readFile(batch.folder, path);
+      } catch (error) {
+        if (strict) throw error;
+        else continue;
+      }
+    }
+    const fingerprint = await hashContent(bytes);
+    const before = files.get(path);
+    if (before?.fingerprint === fingerprint) continue;
+    const mime = guessMimeType(path);
+    const text = isProbablyText(bytes, mime);
+    const entry = {
+      id: before?.id ?? crypto.randomUUID(),
+      path,
+      fingerprint,
+      size: bytes.length,
+      mimeType: text && mime === 'application/octet-stream' ? 'text/plain' : mime,
+      encoding: text ? 'utf-8' : 'binary',
+      mode: before?.mode ?? 0o644,
+      attributes: before?.attributes ?? {},
+    };
+    files.set(path, entry);
+    changes.set(path, { put: entry, bytes });
+  }
+  if (!changes.size) return;
+  if ((await cruxIdForFolder(batch.folder)) !== cruxId)
+    throw new Error('Project Folder ownership changed during ingestion');
+  await content.edit({ cruxId, expected: selected.head, changes: [...changes.values()] });
+  // Preserve the app's empty-folder convention; ordinary external writes are
+  // never projected back onto disk by ingestion.
+  for (const path of keeps)
+    if (files.has(path)) await api.writeFile(batch.folder, path, new Uint8Array());
+  announceChange(cruxId);
+}
+
 // ── Lifecycle ───────────────────────────────────────────────────────────────
 
 /** Start listening for external changes. No-op on web. Idempotent. */
@@ -341,7 +417,7 @@ export async function recoverProjectFolders(): Promise<void> {
   const db = getSqliteClient();
   const folders = new Map<string, string>();
   const cruxes = await db.all<{ id: string; meta: string | null }>(
-    "SELECT id, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL",
+    "SELECT id, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL AND (kind IS NULL OR kind <> 'snapshot')",
   );
   for (const crux of cruxes) {
     const meta = JSON.parse(crux.meta || '{}');
@@ -359,10 +435,13 @@ export async function recoverProjectFolders(): Promise<void> {
     let failure: unknown;
     enqueue(async () => {
       try {
-        const indexed = await db.all<{ path: string; fingerprint: string | null }>(
-          "SELECT COALESCE(path, filename) AS path, fingerprint FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
-          [id],
-        );
+        const selected = await selectCruxFiles(id);
+        const indexed = selected
+          ? selected.entries
+          : await db.all<{ path: string; fingerprint: string | null }>(
+              "SELECT COALESCE(path, filename) AS path, fingerprint FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+              [id],
+            );
         await processBatch(await api.reconcile!(folder, indexed), true);
       } catch (error) {
         failure = error;

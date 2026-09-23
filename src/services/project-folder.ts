@@ -16,6 +16,7 @@ import { isWorkspaceThumbnail } from '@/lib/artifact-path';
 import type { Artifact } from '@/api/types';
 import { findWorkingCopy } from './working-copies';
 import { expectProjectWrites } from './ingestion';
+import { selectCruxFiles } from './file-content';
 import { reportFlowActivity } from '@/lib/moods/flow';
 
 function projectBridge(): ProjectBridge | null {
@@ -137,7 +138,7 @@ export async function rehomeProjectFolders(
 
   const db = getSqliteClient();
   const rows = await db.all<{ id: string; slug: string | null }>(
-    "SELECT id, slug FROM cruxes WHERE type = 'workspace' AND deleted IS NULL",
+    "SELECT id, slug FROM cruxes WHERE type = 'workspace' AND deleted IS NULL AND (kind IS NULL OR kind <> 'snapshot')",
   );
 
   const { getServices } = await import('./index');
@@ -149,8 +150,8 @@ export async function rehomeProjectFolders(
     onProgress?.(i, rows.length);
     try {
       const created = await api.createFolder(row.slug || 'crux');
+      await projectAllArtifacts(row.id, created);
       await cruxService.update(row.id, { meta: { projectFolder: created } });
-      await projectAllArtifacts(row.id);
       rehomed++;
     } catch (err) {
       console.error(`[project-folder] re-homing ${row.id} failed:`, err);
@@ -189,26 +190,7 @@ export async function projectArtifactPaths(
   await api.ensureFolder(folder);
   const db = getSqliteClient();
   const wanted = new Set(paths);
-  const rows = await db.all<{
-    path: string | null;
-    filename: string;
-    fingerprint: string | null;
-    meta: string;
-  }>(
-    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
-    [cruxId],
-  );
-  const entries: { path: string; fingerprint: string; mode?: number }[] = [];
-  for (const row of rows) {
-    const relPath = row.path || row.filename;
-    if (!relPath || !row.fingerprint || !wanted.has(relPath)) continue;
-    const mode = JSON.parse(row.meta || '{}').mode;
-    entries.push({
-      path: relPath,
-      fingerprint: row.fingerprint,
-      mode: typeof mode === 'number' ? mode : undefined,
-    });
-  }
+  const entries = (await projectionEntries(cruxId)).filter((entry) => wanted.has(entry.path));
   expectProjectWrites(
     folder,
     entries.map((e) => ({ relPath: e.path, fingerprint: e.fingerprint })),
@@ -224,38 +206,21 @@ export async function projectArtifactPaths(
   return folder;
 }
 
-export async function projectAllArtifacts(cruxId: string): Promise<string | null> {
+export async function projectAllArtifacts(
+  cruxId: string,
+  destination?: string,
+): Promise<string | null> {
   const api = projectBridge();
   if (!api) return null;
-  const folder = await folderForCrux(cruxId);
+  const folder = destination ?? (await folderForCrux(cruxId));
   if (!folder) return null;
 
   await api.ensureFolder(folder);
   const db = getSqliteClient();
-  const rows = await db.all<{
-    path: string | null;
-    filename: string;
-    fingerprint: string | null;
-    meta: string;
-  }>(
-    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
-    [cruxId],
+  const entries = (await projectionEntries(cruxId)).filter(
+    (entry) => !isWorkspaceThumbnail(entry.path),
   );
-
-  const wanted = new Set<string>();
-  const entries: { path: string; fingerprint: string; mode?: number }[] = [];
-  for (const row of rows) {
-    const relPath = row.path || row.filename;
-    if (!relPath || !row.fingerprint) continue;
-    if (isWorkspaceThumbnail(relPath)) continue; // app state, not a user file
-    wanted.add(relPath);
-    const mode = JSON.parse(row.meta || '{}').mode;
-    entries.push({
-      path: relPath,
-      fingerprint: row.fingerprint,
-      mode: typeof mode === 'number' ? mode : undefined,
-    });
-  }
+  const wanted = new Set(entries.map((entry) => entry.path));
   // The watcher will see these writes; they are the store's own, not new edits.
   expectProjectWrites(
     folder,
@@ -279,4 +244,31 @@ export async function projectAllArtifacts(cruxId: string): Promise<string | null
   }
 
   return folder;
+}
+
+/** Resolve one captured manifest listing, or the not-yet-replaced Artifact
+ * consumer. A manifest owner never falls back to Artifact rows on failure. */
+async function projectionEntries(
+  cruxId: string,
+): Promise<{ path: string; fingerprint: string; mode?: number }[]> {
+  const selected = await selectCruxFiles(cruxId);
+  if (selected)
+    return selected.entries.map(({ path, fingerprint, mode }) => ({ path, fingerprint, mode }));
+  const rows = await getSqliteClient().all<{
+    path: string | null;
+    filename: string;
+    fingerprint: string | null;
+    meta: string;
+  }>(
+    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+    [cruxId],
+  );
+  return rows.flatMap((row) => {
+    const path = row.path || row.filename;
+    if (!path || !row.fingerprint) return [];
+    const mode = JSON.parse(row.meta || '{}').mode;
+    return [
+      { path, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined },
+    ];
+  });
 }

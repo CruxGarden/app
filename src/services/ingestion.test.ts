@@ -93,6 +93,75 @@ describe('Ingestion (external edits → history)', () => {
     return artifact.findByResource('crux', cruxId);
   }
 
+  it.each([false, true])(
+    'commits external manifest edits without Artifact rows or write-back (refused first: %s)',
+    async (refuseFirst) => {
+      const { crux, folder } = await makeCrux('Manifest files');
+      const db = getSqliteClient();
+      const head = { cruxId: crux.id, root: 'f'.repeat(64), revision: 1, formatVersion: 1 };
+      const original = {
+        id: 'stable',
+        path: 'keep.txt',
+        fingerprint: await hashContent(new TextEncoder().encode('Old')),
+        size: 3,
+        mimeType: 'text/plain',
+        encoding: 'utf-8',
+        mode: 0o640,
+        attributes: { custom: 'preserved' },
+      };
+      const edit = vi.fn(async (_input: unknown) => ({ ...head, revision: 2 }));
+      if (refuseFirst) edit.mockRejectedValueOnce(new Error('Refused content commit'));
+      Object.defineProperty(db, 'fileContent', {
+        configurable: true,
+        value: {
+          head: async () => head,
+          list: async () => ({
+            head,
+            entries: [original, { ...original, id: 'removed', path: 'remove.txt' }],
+          }),
+          edit,
+        },
+      });
+      try {
+        bridge.externalWrite(folder, 'keep.txt', 'New\0bytes');
+        bridge.externalWrite(folder, 'new.txt', 'New file');
+        const batch: Batch = {
+          folder,
+          events: [
+            { type: 'write', relPath: 'keep.txt' },
+            { type: 'write', relPath: 'new.txt' },
+            { type: 'delete', relPath: 'remove.txt' },
+          ],
+        };
+        bridge.emit(batch);
+        await flushIngestion();
+        if (refuseFirst) {
+          expect(await artifactsOf(crux.id)).toEqual([]);
+          expect(bridge.writeLog).toEqual([]);
+          bridge.emit(batch);
+          await flushIngestion();
+        }
+        expect(edit).toHaveBeenCalledTimes(refuseFirst ? 2 : 1);
+        expect(edit.mock.calls[0]![0]).toMatchObject({
+          cruxId: crux.id,
+          expected: head,
+          changes: [
+            {
+              put: { id: 'stable', path: 'keep.txt', mode: 0o640, attributes: original.attributes },
+              bytes: new TextEncoder().encode('New\0bytes'),
+            },
+            { put: { path: 'new.txt' } },
+            { remove: 'remove.txt' },
+          ],
+        });
+        expect(await artifactsOf(crux.id)).toEqual([]);
+        expect(bridge.writeLog).toEqual([]);
+      } finally {
+        delete (db as { fileContent?: unknown }).fileContent;
+      }
+    },
+  );
+
   it('serializes Task indexing with a watcher echo arriving during a slow blob write', async () => {
     const { crux, folder } = await makeCrux('Built candidate');
     const content = 'generated lockfile';

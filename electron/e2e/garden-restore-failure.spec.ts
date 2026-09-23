@@ -126,6 +126,19 @@ for (const [backend, fault] of [
       ).toBeVisible();
       expect(await content(original, 'original.txt')).toBe('Original exported content');
       expect(await content(existing, 'keep.txt')).toBe('Current work must survive');
+      // launchApp's teardown bypasses the normal quit guard. Wait for the
+      // asynchronous workspace preference write before forcing that shutdown.
+      await expect
+        .poll(() =>
+          page.evaluate(async () => {
+            const row = (await window.electronAPI!.sqlite.get(
+              'SELECT value FROM settings WHERE key = ?',
+              ['cruxgarden:open-workspaces:v1'],
+            )) as { value: string } | undefined;
+            return row ? JSON.parse(row.value).lastActiveCruxId : null;
+          }),
+        )
+        .toBe(existing);
       await instance.app.close();
       instance = await launchApp({ dir, env });
       page = instance.page;
