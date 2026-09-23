@@ -1,6 +1,8 @@
+import { indexTaskManifest } from './task-files';
+import { getSqliteClient } from './sqlite/client';
 import { readNativeAsset } from './native-app-document';
 import { hashContent } from './sqlite/helpers';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { initIngestion, stopIngestion, flushIngestion, expectProjectWrites } from './ingestion';
 import { folderForCrux } from './project-folder';
@@ -90,6 +92,52 @@ describe('Ingestion (external edits → history)', () => {
     const { artifact } = getServices();
     return artifact.findByResource('crux', cruxId);
   }
+
+  it('serializes Task indexing with a watcher echo arriving during a slow blob write', async () => {
+    const { crux, folder } = await makeCrux('Built candidate');
+    const content = 'generated lockfile';
+    const bytes = new TextEncoder().encode(content);
+    const fingerprint = await hashContent(bytes);
+    const db = getSqliteClient();
+    await db.blobWrite(fingerprint, bytes);
+    bridge.externalWrite(folder, 'generated.txt', content);
+    const write = db.blobWrite.bind(db);
+    const spy = vi.spyOn(db, 'blobWrite').mockImplementationOnce(async (fp, data) => {
+      // A real watcher echo lands while indexing has checked that the path is
+      // absent, but has not inserted it. Both consumers must use one queue.
+      bridge.emit({ folder, events: [{ type: 'write', relPath: 'generated.txt' }] });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return write(fp, data);
+    });
+    try {
+      await indexTaskManifest(crux.id, {
+        'generated.txt': { fingerprint, encoding: 'utf-8', mimeType: 'text/plain', mode: 0o644 },
+      });
+      await flushIngestion();
+      const rows = await artifactsOf(crux.id);
+      expect(rows).toHaveLength(1);
+      expect(await getServices().artifact.readContent(rows[0]!.id)).toBe(content);
+      expect(rows[0]!.meta?.mode).toBe(0o644);
+      expect(bridge.writeLog).toEqual([]);
+      await expect(
+        indexTaskManifest(crux.id, {
+          'generated.txt': {
+            fingerprint: 'missing-blob',
+            encoding: 'utf-8',
+            mimeType: 'text/plain',
+            mode: 0o644,
+          },
+        }),
+      ).rejects.toThrow();
+      bridge.externalWrite(folder, 'generated.txt', 'Later external edit');
+      bridge.emit({ folder, events: [{ type: 'write', relPath: 'generated.txt' }] });
+      await flushIngestion();
+      expect(await getServices().artifact.readContent(rows[0]!.id)).toBe('Later external edit');
+    } finally {
+      spy.mockRestore();
+      await flushIngestion();
+    }
+  });
 
   it('ignores late events from a folder that no longer belongs to the Crux', async () => {
     const { crux, folder } = await makeCrux('Replaced');

@@ -2,7 +2,7 @@ import { getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { guessMimeType, hashContent } from './sqlite/helpers';
 import { folderForCrux } from './project-folder';
-import { flushIngestion, expectProjectWrites } from './ingestion';
+import { flushIngestion, expectProjectWrites, serializeIngestion } from './ingestion';
 import {
   isTaskArtifact,
   sameTaskFile,
@@ -65,6 +65,11 @@ export async function captureTaskManifest(id: string): Promise<TaskManifest> {
 /** Record captured disk content without echoing writes back to disk. */
 export async function indexTaskManifest(id: string, manifest: TaskManifest): Promise<void> {
   validateTaskPaths(manifest);
+  const captured = structuredClone(manifest);
+  return serializeIngestion(() => indexTaskManifestCore(id, captured));
+}
+
+async function indexTaskManifestCore(id: string, manifest: TaskManifest): Promise<void> {
   const { artifact } = getServices();
   const current = await artifact.findByResource('crux', id);
   for (const f of current) {

@@ -125,8 +125,19 @@ function takeExpectation(folder: string, relPath: string): string | null {
 let queueTail: Promise<void> = Promise.resolve();
 let unsubscribe: (() => void) | null = null;
 
+/** Serialize explicit disk-index operations with watcher batches. Callers receive
+ * failures; later ingestion must remain usable. Operations must not await this queue. */
+export function serializeIngestion<T>(operation: () => Promise<T>): Promise<T> {
+  const result = queueTail.then(operation);
+  queueTail = result.then(
+    () => {},
+    () => {},
+  );
+  return result;
+}
+
 function enqueue(fn: () => Promise<void>): void {
-  queueTail = queueTail.then(fn).catch((err) => {
+  void serializeIngestion(fn).catch((err) => {
     console.error('[ingestion] batch failed:', err);
   });
 }
