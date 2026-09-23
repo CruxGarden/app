@@ -14,6 +14,7 @@ import {
   resumeTaskMerge,
   archiveTask,
   resolveTaskReview,
+  releaseTaskReview,
 } from './tasks';
 import { findWorkingCopy } from './working-copies';
 import {
@@ -197,6 +198,23 @@ describe('parallel tasks', () => {
     expect((await getServices().crux.findById(meta.sourceHead)).meta?.messages).toEqual(
       expect.arrayContaining([expect.objectContaining({ content: 'A conversation' })]),
     );
+  });
+  it('retains a usable review when the owning API refuses cancellation', async () => {
+    const { a } = await fixture();
+    const review = await prepareTaskReview(a.id);
+    const db = getSqliteClient();
+    db.releaseTaskReview = vi.fn(async () => {
+      throw new Error('Cancel refused');
+    });
+    await expect(releaseTaskReview(review.id)).rejects.toThrow('Cancel refused');
+    expect((await findWorkingCopy(review.candidateId))?.phase).toBe('ready');
+    expect(await db.get('SELECT phase FROM task_merges WHERE id = ?', [review.id])).toEqual({
+      phase: 'review',
+    });
+    delete db.releaseTaskReview;
+    await releaseTaskReview(review.id);
+    expect((await findWorkingCopy(review.candidateId))?.phase).toBe('archived');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
   });
   it('keeps the recovery journal after owned finalization refusal and reuses the captured result', async () => {
     const { main, a } = await fixture();

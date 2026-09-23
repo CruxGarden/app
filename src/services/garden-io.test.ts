@@ -186,6 +186,45 @@ describe('Garden Export / Import', () => {
     expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
   });
 
+  it.each(['review', 'cancelled'])(
+    'restores a %s journal without a stale live preview or mismatched phase',
+    async (phase) => {
+      const db = getSqliteClient();
+      const crux = await svc.crux.create({ title: 'Imported review', type: 'workspace' });
+      const data = {
+        id: 'review-id',
+        cruxId: crux.id,
+        copyId: 'task-id',
+        candidateId: 'candidate-id',
+        phase: 'review',
+        previewUrl: 'http://localhost:12345',
+        manifest: { 'kept.txt': { fingerprint: 'evidence' } },
+        verificationLog: 'Keep this evidence',
+      };
+      await db.run(
+        'INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          data.id,
+          crux.id,
+          data.copyId,
+          data.candidateId,
+          phase,
+          JSON.stringify(data),
+          new Date().toISOString(),
+        ],
+      );
+      const archive = await exportGarden();
+      await importGarden({ data: archive.blob });
+      const row = await db.get<{ phase: string; data: string }>(
+        'SELECT phase, data FROM task_merges WHERE id = ?',
+        [data.id],
+      );
+      const { previewUrl: _preview, ...preserved } = data;
+      expect(row!.phase).toBe('cancelled');
+      expect(JSON.parse(row!.data)).toEqual({ ...preserved, phase: 'cancelled' });
+    },
+  );
+
   describe('basic round-trip', () => {
     it('exports and re-imports an empty garden', async () => {
       const result = await exportGarden();

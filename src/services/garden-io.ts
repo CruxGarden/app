@@ -335,7 +335,12 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
         JSON.stringify(portableMeta(copy.meta)),
         copy.id,
       ]);
-    await db.run("UPDATE task_merges SET phase = 'cancelled' WHERE phase = 'review'");
+    // Reviews cannot carry a live preview across installations. Keep the JSON
+    // journal consistent with its indexed phase, including older restored data.
+    await db.run(`UPDATE task_merges SET phase = 'cancelled',
+      data = CASE WHEN json_valid(data) AND json_type(data) = 'object'
+        THEN json_remove(json_set(data, '$.phase', 'cancelled'), '$.previewUrl') ELSE data END
+      WHERE phase = 'review' OR (phase = 'cancelled' AND json_extract(data, '$.phase') = 'review')`);
   } catch (error) {
     onProgress?.('Import failed — restoring previous data...');
     try {

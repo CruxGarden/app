@@ -652,7 +652,7 @@
     {
       "file": "src/services/garden-io.ts",
       "method": "db.run",
-      "statement": "\"UPDATE task_merges SET phase = 'cancelled' WHERE phase = 'review'\""
+      "statement": "`UPDATE task_merges SET phase = 'cancelled', data = CASE WHEN json_valid(data) AND json_type(data) = 'object' THEN json_remove(json_set(data, '$.phase', 'cancelled'), '$.previewUrl') ELSE data END WHERE phase = 'review' OR (phase = 'cancelled' AND json_extract(data, '$.phase') = 'review')`"
     },
     {
       "file": "src/services/index.ts",
@@ -876,7 +876,7 @@
     },
     {
       "file": "src/services/tasks.ts",
-      "method": "getSqliteClient().run",
+      "method": "db.run",
       "statement": "\"UPDATE working_copies SET phase = 'archived' WHERE id = ?\""
     },
     {

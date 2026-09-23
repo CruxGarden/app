@@ -70,6 +70,10 @@ export class SqliteApi implements NativeStorage {
     this.assertAvailable();
     return this.owner.updateCrux(id, patch);
   }
+  releaseTaskReview(id: string) {
+    this.assertAvailable();
+    return this.owner.releaseTaskReview(id);
+  }
   completeTaskMerge(id: string, resultHead: string) {
     this.assertAvailable();
     return this.owner.completeTaskMerge(id, resultHead);

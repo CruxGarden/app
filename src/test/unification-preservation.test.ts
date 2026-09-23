@@ -50,6 +50,10 @@ describe('unification preservation baseline', () => {
     before.task_merges = (before.task_merges as Record<string, unknown>[]).map((row) => ({
       ...row,
       phase: row.phase === 'review' ? 'cancelled' : row.phase,
+      data:
+        row.phase === 'review'
+          ? JSON.stringify({ ...JSON.parse(row.data as string), phase: 'cancelled' })
+          : row.data,
     }));
     for (const [table, rows] of Object.entries(before))
       expect(await destination.all(`SELECT * FROM ${table} ORDER BY 1`), table).toEqual(rows);

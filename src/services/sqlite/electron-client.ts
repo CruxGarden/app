@@ -47,6 +47,9 @@ export class ElectronSqliteClient implements ISqliteClient {
   get createCrux(): SqliteBridge['createCrux'] {
     return this.api.createCrux;
   }
+  get releaseTaskReview(): SqliteBridge['releaseTaskReview'] {
+    return this.api.releaseTaskReview;
+  }
   get completeTaskMerge(): SqliteBridge['completeTaskMerge'] {
     return this.api.completeTaskMerge;
   }

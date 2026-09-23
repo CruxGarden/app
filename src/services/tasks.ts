@@ -491,7 +491,7 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
     );
     await saveReview(done);
   }
-  await releaseTaskReviewCore(review.id, !!db.completeTaskMerge);
+  await releaseTaskReviewCore(review.id);
   const taskWorkspace = getWorkspace(review.copyId);
   if (taskWorkspace) await taskWorkspace.data.getState().loadCrux(review.copyId);
   return done;
@@ -545,19 +545,22 @@ export function mainIdFor(crux: Crux): string {
 }
 
 /** Release the candidate's runtime resources; retained files remain recoverable. */
-async function releaseTaskReviewCore(id: string, finalized = false): Promise<void> {
+async function releaseTaskReviewCore(id: string): Promise<void> {
   const review = await loadTaskReview(id);
   if (review.phase === 'applying') return;
   const { stopPreviewServer } = await import('./preview-server');
   const { stopDevServer } = await import('./site');
   await stopPreviewServer(review.candidateId);
   await stopDevServer(review.candidateId);
-  if (!finalized)
-    await getSqliteClient().run("UPDATE working_copies SET phase = 'archived' WHERE id = ?", [
-      review.candidateId,
-    ]);
-  if (review.phase === 'review')
-    await saveReview({ ...review, phase: 'cancelled', previewUrl: undefined });
+  const db = getSqliteClient();
+  if (db.releaseTaskReview) {
+    await db.releaseTaskReview(id);
+    announceTasksChanged();
+  } else {
+    await db.run("UPDATE working_copies SET phase = 'archived' WHERE id = ?", [review.candidateId]);
+    if (review.phase === 'review')
+      await saveReview({ ...review, phase: 'cancelled', previewUrl: undefined });
+  }
 }
 
 /** Capture all writable copies for a coherent private archive, without generating new Growth. */
