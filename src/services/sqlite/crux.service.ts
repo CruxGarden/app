@@ -159,6 +159,15 @@ export class SqliteCruxService implements ICruxService {
         throw new Error('Change the Crux’s details in Main.');
       return updateCopyMeta(cruxId, updates.meta ?? {}, updates.title);
     }
+    const db = getSqliteClient();
+    if (
+      updates.meta !== undefined &&
+      Object.keys(updates).every((key) => key === 'meta') &&
+      db.mergeCruxMeta
+    ) {
+      await db.mergeCruxMeta(cruxId, updates.meta);
+      return this.findById(cruxId);
+    }
     const existing = await this.findById(cruxId);
     const changes: Record<string, unknown> = { updated: new Date().toISOString() };
     if (updates.title !== undefined) changes.title = updates.title;

@@ -50,6 +50,10 @@ export class SqliteApi implements NativeStorage {
     this.assertAvailable();
     return this.owner.all<T>(sql, params);
   }
+  mergeCruxMeta(id: string, patch: Record<string, unknown>) {
+    this.assertAvailable();
+    return this.owner.mergeCruxMeta(id, patch);
+  }
   export() {
     this.assertAvailable();
     return this.owner.exportDatabase();

@@ -435,6 +435,14 @@ async function setupIpc() {
     ? await SqliteApi.open(getDbPath(), getBlobDir())
     : new SqliteNative(getDbPath(), getBlobDir());
 
+  ipcMain.handle(
+    'sqlite:merge-crux-meta',
+    (_e: any, id: string, patch: Record<string, unknown>) => {
+      if (!db.mergeCruxMeta) throw new Error('Owned metadata commands are unavailable');
+      return db.mergeCruxMeta(id, patch);
+    },
+  );
+
   ipcMain.handle('sqlite:run', (_e: any, sql: string, params?: unknown[]) => {
     return db.run(sql, params);
   });

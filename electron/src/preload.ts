@@ -54,6 +54,12 @@ const api: ElectronBridge = {
       }
     : {}),
   sqlite: {
+    ...(process.env.CRUX_API_OWNER === '1'
+      ? {
+          mergeCruxMeta: (id: string, patch: Record<string, unknown>) =>
+            ipcRenderer.invoke('sqlite:merge-crux-meta', id, patch),
+        }
+      : {}),
     run: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:run', sql, params),
     get: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:get', sql, params),
     all: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:all', sql, params),

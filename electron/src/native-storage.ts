@@ -6,6 +6,8 @@ export interface NativeStorage {
   run(sql: string, params?: unknown[]): Awaitable<{ changes: number }>;
   get<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T | undefined>;
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T[]>;
+  /** Available when the owning backend can commit the complete metadata merge. */
+  mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   export(): Awaitable<ArrayBuffer>;
   import(data: ArrayBuffer): Awaitable<void>;
   /** External content required beyond any supported inline payloads. */

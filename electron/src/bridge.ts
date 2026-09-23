@@ -17,6 +17,8 @@ export interface SqliteBridge {
   run(sql: string, params?: unknown[]): Promise<{ changes: number }>;
   get(sql: string, params?: unknown[]): Promise<unknown>;
   all(sql: string, params?: unknown[]): Promise<unknown[]>;
+  /** Available when the owning backend can commit the complete metadata merge. */
+  mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
   /** Read required fingerprints from detached incoming bytes; leave the current database intact. */
