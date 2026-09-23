@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { initServices } from './index';
 import { SqliteCruxService } from './sqlite/crux.service';
 import { SqliteArtifactService } from './sqlite/artifact.service';
 import {
@@ -6,6 +7,7 @@ import {
   artifactRelPath,
   projectAllArtifacts,
   projectFolderExists,
+  rehomeProjectFolders,
 } from './project-folder';
 
 /**
@@ -82,6 +84,26 @@ describe('Project Folder write-through (ADR 0001)', () => {
     expect(crux.meta?.projectFolder).toBe('/garden/my-blog');
     expect(bridge.folders.has('/garden/my-blog')).toBe(true);
     expect(await folderForCrux(crux.id)).toBe('/garden/my-blog');
+  });
+
+  it('restores into a fresh folder even when the exporting folder still exists', async () => {
+    await initServices('local');
+    const crux = await cruxService.create({ title: 'Restore me', type: 'workspace' });
+    const old = crux.meta!.projectFolder as string;
+    await artifactService.create({
+      resourceId: crux.id,
+      content: 'restored bytes',
+      meta: { path: 'original.txt' },
+    });
+    // The incoming database and a still-existing pre-restore folder disagree.
+    bridge.files.set(`${old}::original.txt`, new TextEncoder().encode('original bytes'));
+    bridge.files.set(`${old}::untracked.txt`, new TextEncoder().encode('keep this too'));
+    expect(await rehomeProjectFolders()).toBe(1);
+    const current = await folderForCrux(crux.id);
+    expect(current).not.toBe(old);
+    expect(text(bridge.files.get(`${current}::original.txt`))).toBe('restored bytes');
+    expect(text(bridge.files.get(`${old}::original.txt`))).toBe('original bytes');
+    expect(text(bridge.files.get(`${old}::untracked.txt`))).toBe('keep this too');
   });
 
   it('snapshot and mood cruxes get no folder', async () => {

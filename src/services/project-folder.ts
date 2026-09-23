@@ -122,16 +122,12 @@ export async function projectFolderExists(cruxId: string): Promise<boolean | nul
 }
 
 /**
- * Give every workspace crux a Project Folder that exists on THIS machine.
- *
- * `meta.projectFolder` is an absolute path, so a garden pulled from another
- * machine (or another account name) arrives pointing at folders that are not
- * under this Garden Root: no folder is created, write-through silently
- * no-ops, and `astro dev` has nothing to run in. Re-homing creates a fresh
- * folder for each such crux and materializes its artifacts into it.
- *
- * Cruxes whose folder already exists are left alone, so this is safe to run
- * after any import. Returns the number re-homed (0 on web).
+ * Materialize restored work into fresh local Project Folders. An exporting
+ * folder may still exist on this machine but contain different (or untracked)
+ * work. Reusing it would let stale disk files override restored database bytes;
+ * overwriting it would destroy the pre-restore work. Keep that folder intact.
+ * Called after full Garden import, not during ordinary startup. Returns the
+ * number re-homed (0 on web).
  */
 export async function rehomeProjectFolders(
   onProgress?: (done: number, total: number) => void,
@@ -140,8 +136,8 @@ export async function rehomeProjectFolders(
   if (!api) return 0;
 
   const db = getSqliteClient();
-  const rows = await db.all<{ id: string; slug: string | null; meta: string | null }>(
-    "SELECT id, slug, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL",
+  const rows = await db.all<{ id: string; slug: string | null }>(
+    "SELECT id, slug FROM cruxes WHERE type = 'workspace' AND deleted IS NULL",
   );
 
   const { getServices } = await import('./index');
@@ -152,17 +148,6 @@ export async function rehomeProjectFolders(
     const row = rows[i]!;
     onProgress?.(i, rows.length);
     try {
-      let meta: { projectFolder?: unknown } = {};
-      try {
-        meta = JSON.parse(row.meta || '{}');
-      } catch {
-        /* unreadable meta — treat as no folder */
-      }
-      const folder = typeof meta.projectFolder === 'string' ? meta.projectFolder : null;
-      // folderExists answers false for a path outside every known root, which
-      // is exactly the foreign-machine case.
-      if (folder && (await api.folderExists(folder))) continue;
-
       const created = await api.createFolder(row.slug || 'crux');
       await cruxService.update(row.id, { meta: { projectFolder: created } });
       await projectAllArtifacts(row.id);

@@ -9,7 +9,8 @@ export interface ISqliteClient {
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
-  /** Read required fingerprints from detached incoming bytes; leave the current database intact. */
+  /** Read externally required fingerprints from detached bytes. Supported inline payloads
+   * supply their own content; leave the current database intact. */
   inspectImport(data: ArrayBuffer): Promise<string[]>;
   close(): Promise<void>;
 

@@ -1,4 +1,8 @@
-import { LocalGraphRuntime, inspectDesktopRecovery } from '@cruxgarden/local-api';
+import {
+  LocalGraphRuntime,
+  inspectDesktopContent,
+  prepareDesktopContent,
+} from '@cruxgarden/local-api';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { NativeBlobStore } from './native-blobs';
@@ -8,6 +12,7 @@ import type { NativeStorage } from './native-storage';
 export class SqliteApi implements NativeStorage {
   private closed = false;
   private replacing = false;
+  private importing: Promise<void> | null = null;
   private unavailable: Error | null = null;
 
   private constructor(
@@ -29,27 +34,51 @@ export class SqliteApi implements NativeStorage {
   }
 
   run(sql: string, params?: unknown[]) {
+    this.assertAvailable();
     return this.owner.run(sql, params);
   }
   get<T = Record<string, unknown>>(sql: string, params?: unknown[]) {
+    this.assertAvailable();
     return this.owner.get<T>(sql, params);
   }
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]) {
+    this.assertAvailable();
     return this.owner.all<T>(sql, params);
   }
   export() {
+    this.assertAvailable();
     return this.owner.exportDatabase();
   }
   inspectImport(data: ArrayBuffer): string[] {
     this.assertAvailable();
-    return inspectDesktopRecovery(data).fingerprints;
+    return inspectDesktopContent(data).fingerprints;
   }
-  async import(data: ArrayBuffer): Promise<void> {
+  import(data: ArrayBuffer): Promise<void> {
     this.assertAvailable();
     this.replacing = true;
+    this.importing = this.replace(data);
+    return this.importing;
+  }
+
+  private async replace(data: ArrayBuffer): Promise<void> {
     try {
-      // Garden IO stages verified blobs and holds the installation recovery image.
-      await this.owner.replaceDatabase(data);
+      // Garden IO requires external content before calling us. Inline bytes are
+      // staged under the same guard as replacement, with no intervening writer,
+      // blob removal or shutdown. The API captures its previous recovery image.
+      const inspection = inspectDesktopContent(data);
+      const incoming = inspection.inline
+        ? (
+            await prepareDesktopContent(data, {
+              read: async (fp) => (this.blobs.blobExists(fp) ? this.blobs.blobRead(fp) : null),
+              write: async (fp, bytes) => {
+                this.blobs.blobWrite(fp, bytes);
+              },
+            })
+          ).database
+        : data;
+      // Keep low-level external-content rollback available for a pre-existing
+      // incomplete profile; only inline conversion requires complete blob checks.
+      await this.owner.replaceDatabase(incoming);
     } catch (error) {
       // A handled failure reopens the previous database. If the owner instead
       // requires recovery, content must remain protected with its metadata.
@@ -63,9 +92,15 @@ export class SqliteApi implements NativeStorage {
       this.replacing = false;
     }
   }
-  close(): Promise<void> {
+  async close(): Promise<void> {
     this.closed = true;
-    return this.owner.close();
+    try {
+      await this.importing;
+    } catch {
+      // The import caller observes its error; still drain/close the owner. A
+      // recovery-required owner continues to refuse unsafe shutdown itself.
+    }
+    await this.owner.close();
   }
 
   private assertAvailable(): void {

@@ -350,8 +350,8 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     throw error;
   }
 
-  // Desktop: the imported cruxes carry the *exporting* machine's absolute
-  // Project Folder paths. Give them folders that exist here (no-op on web).
+  // Desktop: materialize into fresh folders even on the exporting machine.
+  // Existing folders may hold different work and must remain intact (no-op on web).
   onProgress?.('Setting up project folders...');
   try {
     const { rehomeProjectFolders } = await import('./project-folder');
