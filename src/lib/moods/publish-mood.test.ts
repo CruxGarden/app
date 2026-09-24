@@ -1,3 +1,4 @@
+import { hashContent } from '@/services/sqlite/helpers';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   publishMood,
@@ -79,18 +80,21 @@ describe('publishing a Mood', () => {
   });
 
   it('writes the package, manifest, preview and cover; republish rewrites', async () => {
-    addAsset({ fingerprint: 'cov', name: 'cover.jpg', type: 'image/jpeg', size: 3 });
-    setSetting(SettingsKey.MoodCover, 'cov');
+    const cover = await hashContent(new Uint8Array([1, 2, 3]));
+    addAsset({ fingerprint: cover, name: 'cover.jpg', type: 'image/jpeg', size: 3 });
+    setSetting(SettingsKey.MoodCover, cover);
     const pkg = captureCurrentMood({ name: 'Sea Glass', author: 'tester' });
     expect(moodSummary(pkg).cover).toBe('cover.jpg');
     expect(moodPreviewHtml(pkg)).toContain('src="cover.jpg"');
 
     const f = fakeServices();
-    const blobs = new Map([['cov', new Uint8Array([1, 2, 3])]]);
+    const blobs = new Map([[cover, new Uint8Array([1, 2, 3])]]);
     let publishedArtifacts = 0;
+    let reads = 0;
     const deps = {
       services: async () => f.services,
       readBlob: async (fp: string) => {
+        reads++;
         const b = blobs.get(fp);
         if (!b) throw new Error('missing ' + fp);
         return b;
@@ -103,6 +107,7 @@ describe('publishing a Mood', () => {
     };
     const out = await publishMood(pkg, deps);
     expect(out.publishedCruxId).toBe('crux-1');
+    expect(reads).toBe(1); // cover preview uses the same verified archive bytes
     expect(out.publishedAt).toBe('2026-09-03T00:00:00.000Z');
     const paths = f.artifacts.map((a) => a.path).sort();
     expect(paths).toEqual(['cover.jpg', 'index.html', 'mood.cruxmood', 'mood.json']);
@@ -117,6 +122,17 @@ describe('publishing a Mood', () => {
     await publishMood(out, deps);
     expect(f.cruxes.size).toBe(1);
     expect(f.artifacts.filter((a) => a.resourceId === 'crux-1')).toHaveLength(4);
+    const saved = [...f.artifacts];
+    await expect(
+      publishMood(out, {
+        ...deps,
+        readBlob: async () => {
+          throw new Error('Unavailable');
+        },
+      }),
+    ).rejects.toThrow('Mood asset');
+    expect(f.artifacts).toEqual(saved);
+    expect(f.cruxes.size).toBe(1);
   });
 
   it('installs from a published package (published file first, API fallback)', async () => {

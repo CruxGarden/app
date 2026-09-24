@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+import { hashContent } from '@/services/sqlite/helpers';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   captureCurrentMood,
@@ -47,14 +49,16 @@ describe('Mood Packages', () => {
   });
 
   it('exports a .cruxmood with referenced assets and imports it back', async () => {
-    sound.setTrack({ fingerprint: 'abc123', name: 'Bed', type: 'audio/mpeg' });
-    const pkg = captureCurrentMood({ name: 'With Music', cover: 'cover9' });
-    expect(pkg.sound.track).toEqual({ fingerprint: 'abc123', name: 'Bed', type: 'audio/mpeg' });
-    expect(packageAssets(pkg)).toEqual(expect.arrayContaining(['cover9', 'abc123']));
+    const audio = await hashContent(new Uint8Array([1, 2, 3]));
+    const cover = await hashContent(new Uint8Array([9, 9]));
+    sound.setTrack({ fingerprint: audio, name: 'Bed', type: 'audio/mpeg' });
+    const pkg = captureCurrentMood({ name: 'With Music', cover });
+    expect(pkg.sound.track).toEqual({ fingerprint: audio, name: 'Bed', type: 'audio/mpeg' });
+    expect(packageAssets(pkg)).toEqual(expect.arrayContaining([cover, audio]));
 
     const store = new Map<string, Uint8Array>([
-      ['abc123', new Uint8Array([1, 2, 3])],
-      ['cover9', new Uint8Array([9, 9])],
+      [audio, new Uint8Array([1, 2, 3])],
+      [cover, new Uint8Array([9, 9])],
     ]);
     const zip = await exportMoodPackage(pkg, async (fp) => {
       const b = store.get(fp);
@@ -64,18 +68,20 @@ describe('Mood Packages', () => {
     const written: Uint8Array[] = [];
     const back = await importMoodPackage(await zip.arrayBuffer(), async (bytes) => {
       written.push(bytes);
-      return 'fp';
+      return hashContent(bytes);
     });
     expect(back?.name).toBe('With Music');
-    expect(back?.sound.track?.fingerprint).toBe('abc123');
+    expect(back?.sound.track?.fingerprint).toBe(audio);
     expect(written.map((w) => w.length).sort()).toEqual([2, 3]);
 
     // audio can be left out of an export
     const noAudio = await exportMoodPackage(pkg, async (fp) => store.get(fp)!, {
       includeAudio: false,
     });
-    const back2 = await importMoodPackage(await noAudio.arrayBuffer(), async () => 'x');
+    const back2 = await importMoodPackage(await noAudio.arrayBuffer(), hashContent);
     expect(back2?.name).toBe('With Music');
+    expect(back2?.sound.track).toBeNull();
+    expect(packageAssets(back2!)).toEqual([cover]);
   });
 
   it('exports a bundled background before apply and retains its cues without changing the worn Mood', async () => {
@@ -91,7 +97,7 @@ describe('Mood Packages', () => {
       const written: Uint8Array[] = [];
       const back = await importMoodPackage(await zip.arrayBuffer(), async (data) => {
         written.push(data);
-        return 'stored';
+        return hashContent(data);
       });
       expect(written).toEqual([bytes]);
       expect(back?.background.image).toMatch(/^[a-f0-9]{64}$/);
@@ -103,6 +109,65 @@ describe('Mood Packages', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it('hashes only the requested asset bytes when the store returns a pooled buffer view', async () => {
+    const bytes = Buffer.from([0, 9, 8, 7, 0]).subarray(1, 4);
+    const fingerprint = await hashContent(new Uint8Array([9, 8, 7]));
+    const pkg = captureCurrentMood({ name: 'View', cover: fingerprint });
+    const archive = await exportMoodPackage(pkg, async () => bytes);
+    expect(await importMoodPackage(await archive.arrayBuffer(), hashContent)).toMatchObject({
+      cover: fingerprint,
+    });
+  });
+
+  it('refuses missing or corrupt export bytes instead of silently dropping a referenced asset', async () => {
+    const bytes = new Uint8Array([9, 8, 7]);
+    const pkg = captureCurrentMood({ name: 'Complete', cover: await hashContent(bytes) });
+    await expect(
+      exportMoodPackage(pkg, async () => {
+        throw new Error('Disk unavailable');
+      }),
+    ).rejects.toThrow('Mood asset');
+    await expect(exportMoodPackage(pkg, async () => new Uint8Array([1]))).rejects.toThrow(
+      'fingerprint',
+    );
+  });
+
+  it.each(['missing', 'corrupt', 'invalid fingerprint'])(
+    'preflights every asset before storing a %s package',
+    async (damage) => {
+      const first = new Uint8Array([1, 2]),
+        second = new Uint8Array([3, 4]);
+      const cover = await hashContent(first),
+        avatar = await hashContent(second);
+      const pkg = captureCurrentMood({ name: 'Keep intact', cover });
+      pkg.persona = {
+        name: 'Guest',
+        greeting: '',
+        systemPrompt: '',
+        thumbnailFingerprint: damage === 'invalid fingerprint' ? 'invalid' : avatar,
+      };
+      const zip = new JSZip();
+      zip.file('package.json', JSON.stringify(pkg));
+      zip.file(`assets/${cover}`, first);
+      if (damage !== 'missing') zip.file(`assets/${avatar}`, new Uint8Array([0]));
+      const put = vi.fn(hashContent);
+      await expect(
+        importMoodPackage(await zip.generateAsync({ type: 'arraybuffer' }), put),
+      ).rejects.toThrow(/Mood asset/);
+      expect(put).not.toHaveBeenCalled();
+    },
+  );
+
+  it('checks the store receipt and does not return an installed package after a refused write', async () => {
+    const bytes = new Uint8Array([9]);
+    const pkg = captureCurrentMood({ name: 'Receipt', cover: await hashContent(bytes) });
+    const zip = await exportMoodPackage(pkg, async () => bytes);
+    await expect(importMoodPackage(await zip.arrayBuffer(), async () => 'wrong')).rejects.toThrow(
+      /Mood asset/,
+    );
+    expect(getInstalledMoods()).toEqual([]);
   });
 
   it('applying a Mood keeps the user avatars unless the package brings its own', () => {

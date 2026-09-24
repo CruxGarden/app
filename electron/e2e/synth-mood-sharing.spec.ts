@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { test, expect, type Page } from '@playwright/test';
 import { join } from 'node:path';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -94,7 +95,8 @@ test('a custom Synth preset travels in a Mood to a clean garden, survives restar
 });
 
 test('a damaged Mood import reports failure and leaves the current sound intact', async () => {
-  const { app, page, dir } = await launchApp();
+  let instance = await launchApp();
+  const { page, dir } = instance;
   try {
     await enterGarden(page);
     const before = (await audio(page)).synth;
@@ -105,6 +107,16 @@ test('a damaged Mood import reports failure and leaves the current sound intact'
     await expect(page.getByRole('status')).toContainText('Could not import this Mood');
     expect((await audio(page)).synth).toEqual(before);
     await expect(page.getByRole('button', { name: 'Import…', exact: true })).toBeEnabled();
+    const coverBytes = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+      'base64',
+    );
+    const cover = createHash('sha256').update(coverBytes).digest('hex');
+    // A local cached copy must not conceal a missing incoming dependency.
+    await page.evaluate(
+      ({ cover, bytes }) => window.electronAPI!.sqlite.blobWrite(cover, Uint8Array.from(bytes)),
+      { cover, bytes: [...coverBytes] },
+    );
     const valid = new JSZip();
     valid.file(
       'package.json',
@@ -112,15 +124,40 @@ test('a damaged Mood import reports failure and leaves the current sound intact'
         format: 'crux-mood',
         version: 1,
         name: 'Recovered sound',
+        cover,
         sound: { synth: before, synthPresets: [{ ...before, name: 'Retry preset' }] },
       }),
     );
+    for (const corrupt of [false, true]) {
+      if (corrupt) valid.file(`assets/${cover}`, Buffer.from([0, 1]));
+      writeFileSync(damaged, await valid.generateAsync({ type: 'nodebuffer' }));
+      await page.getByLabel('Import a Mood file', { exact: true }).setInputFiles(damaged);
+      await expect(page.getByRole('status')).toContainText('Could not import this Mood');
+      await expect(
+        page.getByRole('button', { name: 'Apply Recovered sound', exact: true }),
+      ).toHaveCount(0);
+      expect((await audio(page)).synth).toEqual(before);
+    }
+    valid.file(`assets/${cover}`, coverBytes);
     writeFileSync(damaged, await valid.generateAsync({ type: 'nodebuffer' }));
     await page.getByLabel('Import a Mood file', { exact: true }).setInputFiles(damaged);
     await expect(page.getByRole('status')).toContainText('Imported "Recovered sound"');
     await page.getByRole('button', { name: 'Apply Recovered sound', exact: true }).click();
     expect((await audio(page)).synth).toEqual(before);
+    await instance.app.close();
+    instance = await launchApp({ dir });
+    await instance.page.getByRole('button', { name: 'Enter', exact: true }).click();
+    await instance.page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await expect(
+      instance.page.getByRole('button', { name: 'Apply Recovered sound', exact: true }),
+    ).toBeVisible();
+    expect(
+      await instance.page.evaluate(
+        async (fp) => Array.from(await window.electronAPI!.sqlite.blobRead(fp)),
+        cover,
+      ),
+    ).toEqual([...coverBytes]);
   } finally {
-    await app.close();
+    await instance.app.close();
   }
 });

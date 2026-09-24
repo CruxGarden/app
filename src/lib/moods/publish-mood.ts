@@ -1,3 +1,4 @@
+import JSZip from 'jszip';
 /**
  * Publishing a Mood: the package becomes a crux of kind "mood" in your garden
  * — a real Project Folder holding mood.cruxmood (the package with assets),
@@ -116,6 +117,14 @@ export interface PublishMoodDeps {
  * the package with publishedCruxId/publishedAt set (and installs that).
  */
 export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Promise<MoodPackage> {
+  pkg = structuredClone(pkg);
+  // Prepare and verify the complete archive before replacing any existing files.
+  const zip = await exportMoodPackage(pkg, deps.readBlob);
+  const coverBytes = pkg.cover
+    ? await (await JSZip.loadAsync(await zip.arrayBuffer()))
+        .file(`assets/${pkg.cover}`)!
+        .async('uint8array')
+    : null;
   const { crux: cruxService, artifact: artifactService } = await deps.services();
   const summary = moodSummary(pkg);
   const meta = {
@@ -153,26 +162,20 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
   // Replace the files (a Mood crux holds nothing else)
   const existing = await artifactService.findByResource('crux', crux.id);
   for (const a of existing) await artifactService.delete(a);
-  const zip = await exportMoodPackage(pkg, deps.readBlob);
   await artifactService.upload({
     resourceId: crux.id,
     resourceType: 'crux',
     blob: zip,
     meta: { path: 'mood.cruxmood' },
   });
-  if (pkg.cover && summary.cover) {
-    try {
-      const bytes = await deps.readBlob(pkg.cover);
-      const type = pkg.assets?.find((a) => a.fingerprint === pkg.cover)?.type || 'image/png';
-      await artifactService.upload({
-        resourceId: crux.id,
-        resourceType: 'crux',
-        blob: new Blob([bytes as BlobPart], { type }),
-        meta: { path: summary.cover },
-      });
-    } catch {
-      /* no cover bytes: the card falls back to the swatch */
-    }
+  if (coverBytes && summary.cover) {
+    const type = pkg.assets?.find((a) => a.fingerprint === pkg.cover)?.type || 'image/png';
+    await artifactService.upload({
+      resourceId: crux.id,
+      resourceType: 'crux',
+      blob: new Blob([coverBytes as BlobPart], { type }),
+      meta: { path: summary.cover },
+    });
   }
   await artifactService.create({
     resourceId: crux.id,
