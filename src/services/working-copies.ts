@@ -152,6 +152,8 @@ export async function isTaskHistoryReference(snapshotId: string): Promise<boolea
       UNION SELECT json_extract(data, '$.sourceHead') FROM task_merges
       UNION SELECT json_extract(data, '$.targetHead') FROM task_merges
       UNION SELECT json_extract(data, '$.resultHead') FROM task_merges
+      UNION SELECT json_extract(data, '$.sourceState.workspace.parentId') FROM task_merges
+      UNION SELECT json_extract(data, '$.targetState.workspace.parentId') FROM task_merges
       UNION SELECT json_extract(data, '$.resultState.workspace.parentId') FROM task_merges
       UNION SELECT json_extract(data, '$.targetWorkspace.parentId') FROM task_merges
       UNION SELECT json_extract(data, '$.baseId') FROM task_merges

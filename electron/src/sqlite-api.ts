@@ -263,7 +263,7 @@ export class SqliteApi implements NativeStorage {
   }
   saveTaskReview(reviewData: string, expectedData?: string) {
     this.assertAvailable();
-    return this.owner.saveTaskReview(reviewData, expectedData);
+    return this.owner.saveTaskReview(reviewData, expectedData, this.contentStore());
   }
   beginTaskMerge(id: string, reviewData: string) {
     this.assertAvailable();

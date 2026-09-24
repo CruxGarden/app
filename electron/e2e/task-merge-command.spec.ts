@@ -44,8 +44,19 @@ test('refused admission preserves Main and refused finalization preserves recove
         }, copy),
       )
       .toBe('<h1>Task result</h1>');
+    const beforeReviewGrowth = await page.evaluate(() =>
+      window.electronAPI!.sqlite.all("SELECT * FROM dimensions WHERE type = 'growth' ORDER BY id"),
+    );
     await page.getByRole('button', { name: 'Review changes', exact: true }).click();
     const review = page.getByRole('dialog', { name: 'Review changes for Main' });
+    await expect(review).toBeVisible();
+    expect(
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.all(
+          "SELECT * FROM dimensions WHERE type = 'growth' ORDER BY id",
+        ),
+      ),
+    ).toEqual(beforeReviewGrowth);
     await review.getByRole('button', { name: 'Check combined result' }).click();
     await expect(review.getByRole('checkbox')).toBeEnabled();
     await review.getByRole('checkbox').check();
@@ -126,16 +137,16 @@ test('refused admission preserves Main and refused finalization preserves recove
     await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_finish'));
     // A damaged transcript must not silently complete with a truncated Collaboration.
     const transcript = await page.evaluate(
-      async ({ main, copy, mergeId }) => {
+      async ({ main, mergeId }) => {
         const db = window.electronAPI!.sqlite;
         const journal = (await db.get('SELECT * FROM task_merges WHERE id = ?', [mergeId])) as {
           data: string;
         };
-        const source = JSON.parse(journal.data).sourceHead as string;
+        const source = JSON.parse(journal.data).sourceState.workspace.parentId as string;
         const mainRow = await db.get('SELECT * FROM cruxes WHERE id = ?', [main]);
         await db.run(
           "UPDATE dimensions SET deleted = ? WHERE source_id = ? AND target_id = ? AND type = 'growth'",
-          [new Date().toISOString(), copy, source],
+          [new Date().toISOString(), main, source],
         );
         return { source, journal, mainRow };
       },
@@ -161,12 +172,12 @@ test('refused admission preserves Main and refused finalization preserves recove
       ),
     ).toEqual({ journal: transcript.journal, mainRow: transcript.mainRow });
     await page.evaluate(
-      ({ copy, source }) =>
+      ({ main, source }) =>
         window.electronAPI!.sqlite.run(
           'UPDATE dimensions SET deleted = NULL WHERE source_id = ? AND target_id = ?',
-          [copy, source],
+          [main, source],
         ),
-      { copy, source: transcript.source },
+      { main, source: transcript.source },
     );
     await page.getByRole('button', { name: 'Resume merge', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Resume merge', exact: true })).toHaveCount(0);

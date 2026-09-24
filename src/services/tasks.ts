@@ -44,8 +44,10 @@ export interface TaskReview {
   manifest: TaskManifest;
   conflicts: TaskConflict[];
   resolutions: Record<string, TaskResolution>;
-  sourceHead: string;
-  targetHead: string;
+  sourceHead?: string;
+  targetHead?: string;
+  sourceState?: NonNullable<TaskReview['resultState']>;
+  targetState?: NonNullable<TaskReview['resultState']>;
   phase: 'review' | 'applying' | 'merged' | 'cancelled';
   verifiedKey?: string;
   verificationLog?: string;
@@ -296,16 +298,27 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
   if (!copy || copy.phase !== 'ready' || copy.role !== 'task')
     throw new Error('Choose an unfinished task to review.');
   return settled([copy.cruxId, copyId], async ([main, task]) => {
-    const targetHead = await head(main!);
-    const sourceHead = await head(task!);
-    if (!(await isAncestor(copy.baseSnapshotId, targetHead)))
+    const db = getSqliteClient();
+    const owned = !!db.saveTaskReview;
+    if (owned) {
+      for (const workspace of [main!, task!]) {
+        await indexTaskManifest(workspace.id, await captureTaskManifest(workspace.id));
+        await workspace.data.getState().saveMeta();
+        await workspace.data.getState().refreshArtifacts();
+      }
+    }
+    const targetHead = owned
+      ? main!.data.getState().crux?.meta?.settings?.activeBranch ||
+        main!.data.getState().growths.at(-1)?.targetId
+      : await head(main!);
+    const sourceHead = owned ? undefined : await head(task!);
+    if (!targetHead || !(await isAncestor(copy.baseSnapshotId, targetHead)))
       throw new Error(
         'Main was restored past this task’s base. Reconcile the histories before merging.',
       );
     const base = await indexedTaskManifest(copy.baseSnapshotId);
-    const target = await indexedTaskManifest(targetHead);
-    const source = await indexedTaskManifest(sourceHead);
-    const db = getSqliteClient();
+    const target = await indexedTaskManifest(owned ? copy.cruxId : targetHead);
+    const source = await indexedTaskManifest(owned ? copyId : sourceHead!);
     const merged = await mergeTaskManifests(
       base,
       target,
@@ -317,7 +330,7 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
     const candidate = await provision(
       main!.data.getState().crux!,
       `Review ${copy.title}`,
-      targetHead,
+      owned ? copy.baseSnapshotId : targetHead,
       merged.conflicts.length ? target : merged.manifest,
       'review',
     );
@@ -332,12 +345,11 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
       manifest: merged.manifest,
       conflicts: merged.conflicts,
       resolutions: {},
-      sourceHead,
-      targetHead,
+      ...(!owned ? { sourceHead, targetHead } : {}),
       phase: 'review',
     };
     await saveReview(review);
-    return review;
+    return owned ? loadTaskReview(review.id) : review;
   });
 }
 async function resolveTaskReviewCore(
@@ -449,7 +461,10 @@ async function applyTaskReviewCore(id: string): Promise<TaskReview> {
     const liveTip = (w: Workspace) =>
       w.data.getState().crux?.meta?.settings?.activeBranch ||
       w.data.getState().growths.at(-1)?.targetId;
-    if (liveTip(main!) !== review.targetHead || liveTip(task!) !== review.sourceHead)
+    if (
+      !getSqliteClient().beginTaskMerge &&
+      (liveTip(main!) !== review.targetHead || liveTip(task!) !== review.sourceHead)
+    )
       throw new Error('Growth changed after review. Prepare a new review.');
     const applying: TaskReview = { ...review, phase: 'applying' };
     const db = getSqliteClient();
@@ -507,7 +522,7 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
   let resultHead = existing?.id;
   if (!resultHead) {
     const copy = await findWorkingCopy(review.copyId);
-    const transcript = await collectChainMessages(review.sourceHead, async (id) => {
+    const transcript = await collectChainMessages(review.sourceHead!, async (id) => {
       const node = await getServices().crux.findById(id);
       if (node.meta?.contentOwnerId !== review.copyId) return null;
       return {

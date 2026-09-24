@@ -86,8 +86,8 @@ describe('whole Crux Growth projection', () => {
       ]),
     );
     const ancestry = growthAncestry(graph, result.resultHead!);
-    expect(ancestry.has(review.sourceHead)).toBe(true);
-    expect(ancestry.has(review.targetHead)).toBe(true);
+    expect(ancestry.has(review.sourceHead!)).toBe(true);
+    expect(ancestry.has(review.targetHead!)).toBe(true);
     expect(layoutGrowthGraph(graph).cyclic).toBe(false);
     expect(graph.warnings).toEqual([]);
   });

@@ -19,6 +19,8 @@ const historyReferences = [
     'targetHead',
     'resultHead',
     'baseId',
+    'sourceState.workspace.parentId',
+    'targetState.workspace.parentId',
     'resultState.workspace.parentId',
     'targetWorkspace.parentId',
   ].map((path) => `SELECT crux_id, json_extract(data, '$.${path}') FROM task_merges`),
