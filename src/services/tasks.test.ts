@@ -1,3 +1,4 @@
+import * as editHistory from './edit-history';
 import * as taskFiles from './task-files';
 import { exportGarden, importGarden } from './garden-io';
 import { cruxUpsertFields, publishPipeline, unpublishPipeline } from './publish';
@@ -577,10 +578,36 @@ describe('parallel tasks', () => {
     expect((await findWorkingCopy(a.id))?.phase).toBe('archived');
     await expect(write(a.id, 'blocked')).rejects.toThrow('closed for editing');
   });
+  it('refuses Task archive when protected recovery fails, keeping the Task writable', async () => {
+    const { a } = await fixture();
+    await write(a.id, 'Still working');
+    vi.spyOn(editHistory, 'captureEditCheckpoint').mockRejectedValueOnce(
+      new Error('Recovery refused'),
+    );
+    await expect(archiveTask(a.id, true)).rejects.toThrow('Recovery refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
+    expect(await read(a.id)).toBe('Still working');
+    await write(a.id, 'Can continue');
+  });
   it('archives a task without losing its work and permits explicit reopening', async () => {
     const { a } = await fixture();
     await write(a.id, 'Keep me');
+    const workspace = await openWorkspace(a.id);
+    workspace.data.setState({
+      messages: [
+        {
+          role: 'user',
+          content: 'Unmarked task conversation',
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    });
+    await workspace.data.getState().saveMeta();
+    const before = await getServices().dimension.findBySourceAndType(a.id, 'growth');
+    const messages = (await getServices().crux.findById(a.id)).meta?.messages;
     await archiveTask(a.id, true);
+    expect(await getServices().dimension.findBySourceAndType(a.id, 'growth')).toEqual(before);
+    expect((await getServices().crux.findById(a.id)).meta?.messages).toEqual(messages);
     await expect(write(a.id, 'blocked')).rejects.toThrow('closed for editing');
     expect(await read(a.id)).toBe('Keep me');
     await archiveTask(a.id, false);

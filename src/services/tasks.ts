@@ -1,3 +1,4 @@
+import { captureEditCheckpoint } from './edit-history';
 import { collectChainMessages } from './growth';
 import type { Crux } from '@/api/types';
 import { getServices } from './index';
@@ -567,11 +568,9 @@ export async function archiveTask(id: string, archived: boolean): Promise<void> 
     if (archived) {
       const manifest = await captureTaskManifest(id);
       await indexTaskManifest(id, manifest);
-      await getWorkspace(id)!
-        .data.getState()
-        .createSnapshot({ label: 'Before archiving task', silent: true, taskOperation: true });
+      await captureEditCheckpoint(id, 'safety');
     }
-    // Snapshot preparation can update metadata/revision. Capture its final revision
+    // Content preparation can update metadata/revision. Capture its final revision
     // and let the owner reject a subsequent concurrent edit instead of overwriting it.
     const prepared = await findWorkingCopy(id);
     if (!prepared) throw new Error('Working Copy not found.');
