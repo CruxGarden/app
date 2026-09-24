@@ -40,7 +40,7 @@ test('Navigator search disambiguates locations, shares routes, retries and survi
     await expect(nav).toBeHidden();
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', second);
     await expect(origin).toHaveText('Studio');
-    expect(new URL(page.url()).searchParams.get('navView')).toBe('neighborhood');
+    expect(new URL(page.url()).searchParams.get('navView')).toBeNull();
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', first);
     await page.getByRole('button', { name: 'Navigator', exact: true }).click();

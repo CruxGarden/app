@@ -424,6 +424,13 @@
       "ledger": "cruxgarden:motionIntensity"
     },
     {
+      "key": "cruxgarden:navigation:",
+      "sources": [
+        "src/services/navigation-preferences.ts"
+      ],
+      "ledger": "cruxgarden:navigation:"
+    },
+    {
       "key": "cruxgarden:open-workspaces:v1",
       "sources": [
         "src/stores/workspaceRegistry.ts"

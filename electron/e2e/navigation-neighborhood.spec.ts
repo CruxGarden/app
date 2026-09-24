@@ -76,7 +76,10 @@ test('Neighborhood follows real dimensions across Gardens, reveals a second hop 
       'Studio',
     );
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', target);
-    expect(new URL(page.url()).searchParams.get('navView')).toBe('neighborhood');
+    expect(new URL(page.url()).searchParams.get('navView')).toBeNull();
+    // Entering another Garden resolves its preference instead of copying the source view.
+    await nav.getByRole('combobox', { name: 'Navigation view' }).selectOption('neighborhood');
+    await expect(nav.getByRole('combobox', { name: 'Navigation view' })).toBeEnabled();
     await expect(neighborhood.getByRole('region', { name: 'Grafts', exact: true })).toContainText(
       'Low tide',
     );

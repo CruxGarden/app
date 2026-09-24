@@ -603,6 +603,13 @@
       "target": "API-owned installation import receipt",
       "preservation": "Retain request digest, destination identities and any verified private safety archive fingerprint across restart and whole-installation recovery. Not portable Garden preferences; selected-graph exports exclude these installation receipts. Safety bytes remain until explicit recovery retention policy exists.",
       "status": "implemented"
+    },
+    {
+      "prefix": "cruxgarden:navigation:",
+      "group": "navigation-preferences",
+      "target": "installation/account",
+      "preservation": "Per-profile navigation defaults and per-Garden personal choices. Kept in profile backups, excluded from portable Garden graph content. Garden author intent lives in its own typed metadata.",
+      "status": "implemented"
     }
   ]
 }

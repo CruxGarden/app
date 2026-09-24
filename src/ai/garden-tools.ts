@@ -60,6 +60,25 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: 'garden_navigation',
+    description:
+      'Inspect or change Navigator preferences using the same controls as the app. Garden view is portable author intent; inherit clears it. Personal choices/defaults belong to the current profile, never to the Garden. Actions: inspect, garden, choose, default, always, reset. Pass an explicit gardenId; always takes enabled and garden/choose/default take view.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        gardenId: { type: 'string' },
+        action: {
+          type: 'string',
+          enum: ['inspect', 'garden', 'choose', 'default', 'always', 'reset'],
+        },
+        view: { type: 'string', enum: ['tree', 'neighborhood', 'inherit'] },
+        enabled: { type: 'boolean' },
+      },
+      required: ['gardenId', 'action'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'garden_graph',
     description:
       'Navigate the local Garden graph using the same controls as the app. Inspect returns the root or chosen Garden and its members. Create makes a child Garden. Parents returns the placement array for cruxId. Link plants an unplaced Crux; move requires expectedParents from inspection and moves it atomically. Unlink removes its placement without deleting content. Open changes the visible Garden. Pass gardenId explicitly for mutations.',
@@ -454,6 +473,24 @@ export function validateGardenTool(
       if (!str(input.cruxId, 80) || !['inspect', 'retry', 'dismiss'].includes(String(input.action)))
         return { valid: false, error: 'cruxId and an import action are required' };
       return { valid: true };
+    case 'garden_navigation':
+      if (
+        !str(input.gardenId, 80) ||
+        !['inspect', 'garden', 'choose', 'default', 'always', 'reset'].includes(
+          String(input.action),
+        )
+      )
+        return { valid: false, error: 'gardenId and a navigation action are required' };
+      if (input.action === 'always' && typeof input.enabled !== 'boolean')
+        return { valid: false, error: 'enabled is required' };
+      if (
+        ['garden', 'choose', 'default'].includes(String(input.action)) &&
+        !['tree', 'neighborhood', ...(input.action === 'garden' ? ['inherit'] : [])].includes(
+          String(input.view),
+        )
+      )
+        return { valid: false, error: 'Choose a supported navigation view' };
+      return { valid: true };
     case 'garden_graph':
       if (
         !['inspect', 'parents', 'create', 'link', 'move', 'unlink', 'open'].includes(
@@ -732,6 +769,25 @@ async function runGardenToolInner(
       if (input.action === 'retry') await retryDeferredImport(ownerId);
       if (input.action === 'dismiss') await dismissDeferredImport(ownerId);
       return JSON.stringify(readDeferredImport(ownerId));
+    }
+    case 'garden_navigation': {
+      const { useAppStore } = await import('@/stores/appStore');
+      const authorId = useAppStore.getState().author?.id;
+      if (!authorId) throw new Error('Choose a profile before changing navigation.');
+      const gardenId = input.gardenId as string;
+      const owner = await services.crux.findById(gardenId);
+      if (owner.kind !== 'garden' || owner.deleted) throw new Error('This Garden is unavailable.');
+      const { readNavigationPreferences, saveGardenNavigation, saveUserNavigation } =
+        await import('@/services/navigation-preferences');
+      const view = input.view as 'tree' | 'neighborhood';
+      if (input.action === 'garden')
+        await saveGardenNavigation(gardenId, input.view === 'inherit' ? null : view);
+      if (input.action === 'choose') await saveUserNavigation(authorId, { gardenId, view });
+      if (input.action === 'default') await saveUserNavigation(authorId, { defaultView: view });
+      if (input.action === 'always')
+        await saveUserNavigation(authorId, { always: input.enabled as boolean });
+      if (input.action === 'reset') await saveUserNavigation(authorId, { gardenId, view: null });
+      return JSON.stringify(await readNavigationPreferences(authorId, gardenId));
     }
     case 'garden_graph': {
       const db = getSqliteClient();

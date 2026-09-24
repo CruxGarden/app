@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useMatch, useSearchParams } from 'react-router-dom';
+import { useMatch } from 'react-router-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import {
   gardenPath,
@@ -19,8 +19,6 @@ import type { NavigationGraph, NavigationViewProps } from './navigation-view';
 export function useNavigationView(enabled = true): NavigationViewProps & { refresh: () => void } {
   const { root, garden, revision } = useGardenContext();
   const route = useMatch('/c/:id');
-  const [search] = useSearchParams();
-  const neighborhood = search.get('navView') === 'neighborhood';
   const navigate = useMoodNavigate();
   const [refreshRevision, setRefresh] = useState(0);
   useEffect(() => {
@@ -56,11 +54,9 @@ export function useNavigationView(enabled = true): NavigationViewProps & { refre
   const navigateTo = useCallback<NavigationViewProps['navigate']>(
     (gardenId, cruxId, selection) => {
       const path = cruxId ? inGarden(`/c/${cruxId}`, gardenId) : gardenPath(gardenId);
-      navigate(
-        `${path}${neighborhood ? '&navView=neighborhood' : ''}${selection ? `&growth=${encodeURIComponent(selection.growthId)}` : ''}`,
-      );
+      navigate(`${path}${selection ? `&growth=${encodeURIComponent(selection.growthId)}` : ''}`);
     },
-    [navigate, neighborhood],
+    [navigate],
   );
   return {
     graph,

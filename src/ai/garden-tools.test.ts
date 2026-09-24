@@ -14,6 +14,7 @@ describe("the Keeper's garden tools", () => {
     expect(GARDEN_TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
       'file_import',
       'garden_collaboration',
+      'garden_navigation',
       'garden_graph',
       'list_cruxes',
       'list_cruxspaces',
@@ -165,4 +166,22 @@ describe("the Keeper's garden tools", () => {
     expect(validateGardenTool('add_to_garden', { gardenCruxId: 'g' }).valid).toBe(false);
     expect(validateGardenTool('add_to_garden', { gardenCruxId: 'g', title: 'x' }).valid).toBe(true);
   });
+});
+
+it('validates scoped navigation controls without allowing inherit as a personal view', () => {
+  expect(
+    validateGardenTool('garden_navigation', { gardenId: 'g', action: 'garden', view: 'inherit' })
+      .valid,
+  ).toBe(true);
+  expect(
+    validateGardenTool('garden_navigation', { gardenId: 'g', action: 'choose', view: 'inherit' })
+      .valid,
+  ).toBe(false);
+  expect(validateGardenTool('garden_navigation', { action: 'garden', view: 'tree' }).valid).toBe(
+    false,
+  );
+  expect(
+    validateGardenTool('garden_navigation', { gardenId: 'g', action: 'always', enabled: 'true' })
+      .valid,
+  ).toBe(false);
 });
