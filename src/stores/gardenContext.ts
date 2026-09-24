@@ -38,3 +38,11 @@ export function inGarden(path: string, gardenId = captureGardenId()): string {
   return `${pathname}?${params}${hash ? `#${hash}` : ''}`;
 }
 export const gardenPath = (id: string) => `/home?garden=${encodeURIComponent(id)}`;
+
+/** Enter a Garden's Home; only creative Cruxes open an editor workspace. */
+export function cruxPath(
+  crux: Pick<GardenIdentity, 'id' | 'kind'>,
+  gardenId = captureGardenId(),
+): string {
+  return crux.kind === 'garden' ? gardenPath(crux.id) : inGarden(`/c/${crux.id}`, gardenId);
+}

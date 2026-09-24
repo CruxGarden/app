@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { getServices } from '@/services';
+import { gardenPath } from '@/stores/gardenContext';
 import TendingDestination from '@/components/workspace/TendingDestination';
 import { copyIdentity, findWorkingCopy } from '@/services/working-copies';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -18,6 +20,7 @@ const GrowthExplorer = lazy(() => import('@/components/growth/GrowthExplorer'));
 import { APP_NAME } from '@/lib/constants';
 
 export default function CruxBuilder() {
+  const navigate = useNavigate();
   const { id: cruxId } = useParams<{ id: string }>();
   const [search] = useSearchParams();
   const taskId = search.get('task');
@@ -31,6 +34,14 @@ export default function CruxBuilder() {
     let cancelled = false;
     setError(null);
     void (async () => {
+      if (!taskId) {
+        const crux = await getServices().crux.findById(id);
+        if (cancelled) return;
+        if (crux.kind === 'garden') {
+          navigate(gardenPath(crux.id), { replace: true });
+          return;
+        }
+      }
       if (taskId) {
         const copy = await findWorkingCopy(taskId);
         if (!copy || copy.cruxId !== cruxId || copy.role !== 'task')
@@ -44,7 +55,7 @@ export default function CruxBuilder() {
       cancelled = true;
       leaveWorkspaceView();
     };
-  }, [id, cruxId, taskId, retry]);
+  }, [id, cruxId, taskId, retry, navigate]);
   const openError = error ?? workspace?.error;
   if (openError)
     return (

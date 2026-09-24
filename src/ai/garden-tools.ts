@@ -1,6 +1,6 @@
 import { getPersona } from '@/services/persona';
 import { getSqliteClient } from '@/services/sqlite/client';
-import { useGardenContext, gardenPath } from '@/stores/gardenContext';
+import { useGardenContext, gardenPath, cruxPath } from '@/stores/gardenContext';
 import type { ToolDefinition } from './tools';
 import { getServices } from '@/services';
 import {
@@ -906,6 +906,11 @@ async function runGardenToolInner(
         return `${visible ? 'Opened' : 'Closed'} the ${DEFAULT_PANE_LABELS[pane]} pane.`;
       }
       const crux = await resolveCrux(input);
+      if (crux.kind === 'garden') {
+        if (what !== 'crux') return 'Open a member Crux to show its files.';
+        navigateTo(cruxPath(crux));
+        return `Showing Garden "${crux.title}" (${crux.id}).`;
+      }
       const { activateWorkspace } = await import('@/stores/workspaceRegistry');
       await activateWorkspace(crux.id);
       const w = await loadedWorkspace(crux.id);

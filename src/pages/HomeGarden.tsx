@@ -1,4 +1,5 @@
-import { useGardenContext, captureGardenId, inGarden } from '@/stores/gardenContext';
+import { useGardenContext, captureGardenId, cruxPath, inGarden } from '@/stores/gardenContext';
+import { getServices } from '@/services';
 import GardenActions from '@/components/garden/GardenActions';
 import { useTendingRows } from '@/stores/tendingStore';
 import { startFromFiles, filesFromDataTransfer } from '@/services/file-routing';
@@ -66,8 +67,9 @@ export default function HomeGarden() {
         if (single && /\.crux$/i.test(single.name)) {
           setDropNotice(`Importing ${single.name}…`);
           const result = await importCrux({ data: single, mode: 'clone', gardenId });
+          const imported = await getServices().crux.findById(result.cruxId);
           refresh();
-          if (window.location.href === origin) navigate(inGarden(`/c/${result.cruxId}`, gardenId));
+          if (window.location.href === origin) navigate(cruxPath(imported, gardenId));
           return;
         }
         if (single && /\.cruxspace$/i.test(single.name)) {

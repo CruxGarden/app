@@ -1,4 +1,4 @@
-import { captureGardenId, inGarden } from '@/stores/gardenContext';
+import { captureGardenId, cruxPath, inGarden } from '@/stores/gardenContext';
 import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
 import { isEmbeddedApp } from '@/services/embedded-app';
@@ -652,6 +652,15 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         // this build lacks) installs the tool instead of opening as a Crux:
         // the Crux becomes the tool's Template Crux and the picker's Create works.
         const imported = await getServices().crux.findById(result.cruxId);
+        if (imported.kind === 'garden') {
+          // Garden payload belongs to the imported Garden. It must not become the
+          // destination's editor layout, tool installation or global appearance.
+          refresh();
+          reset();
+          onClose();
+          if (window.location.href === origin) navigate(cruxPath(imported, gardenId));
+          return;
+        }
         const toolId = typeof imported?.meta?.template === 'string' ? imported.meta.template : null;
         if (toolId && toolManifest(toolId) && !isToolAvailable(toolId)) {
           const tool = await installToolFromCrux(result.cruxId);
@@ -710,7 +719,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         refresh();
         reset();
         onClose();
-        if (window.location.href === origin) navigate(inGarden(`/c/${result.cruxId}`, gardenId));
+        if (window.location.href === origin) navigate(cruxPath(imported, gardenId));
       } catch (err) {
         console.error('Import failed:', err);
         void alertDialog(
