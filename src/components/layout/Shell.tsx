@@ -1,5 +1,8 @@
-import { useGardenContext } from '@/stores/gardenContext';
-import { getServices } from '@/services';
+import { gardenPath, useGardenContext } from '@/stores/gardenContext';
+import {
+  resolveWorkspaceDestination,
+  type WorkspaceDestination,
+} from '@/services/garden-navigation';
 import GardenNavigator from './GardenNavigator';
 import TendingNotifications from '@/components/tending/TendingNotifications';
 import { startTendingCatalog } from '@/stores/tendingStore';
@@ -35,31 +38,70 @@ export default function Shell() {
   const rootGarden = useGardenContext((s) => s.root);
   const activeGarden = useGardenContext((s) => s.garden);
   const gardenId = new URLSearchParams(location.search).get('garden') ?? rootGarden?.id;
-  const [gardenError, setGardenError] = useState<string | null>(null);
+  const routeCruxId = /^\/c\/([^/]+)$/.exec(location.pathname)?.[1] ?? null;
+  const revision = useGardenContext((s) => s.revision);
+  // Only the resolved Garden/Crux pair unlocks its content. Task/Growth query
+  // changes do not tear down an already resolved workspace.
+  const requestKey = `${location.pathname}:${gardenId ?? ''}`;
+  const [destination, setDestination] = useState<{
+    key: string;
+    value?: WorkspaceDestination;
+    error?: string;
+  } | null>(null);
+  const [locationRetry, setLocationRetry] = useState(0);
+  const resolved = destination?.key === requestKey ? destination : null;
+  const locationPath = (id: string) => {
+    const query = new URLSearchParams(location.search);
+    query.set('garden', id);
+    return `${location.pathname}?${query}${location.hash}`;
+  };
   useEffect(() => {
-    if (!servicesReady || !gardenId) return;
+    if (!servicesReady || (!gardenId && !routeCruxId)) return;
     let cancelled = false;
-    setGardenError(null);
-    void getServices()
-      .crux.findById(gardenId)
-      .then((garden) => {
-        if (garden.kind !== 'garden' || garden.deleted)
-          throw new Error('This Garden is unavailable.');
+    void resolveWorkspaceDestination(gardenId, routeCruxId)
+      .then((value) => {
         if (cancelled) return;
-        useGardenContext.getState().select(garden);
-        if (!new URLSearchParams(location.search).has('garden')) {
+        if (value.status === 'ready') {
           const query = new URLSearchParams(location.search);
-          query.set('garden', garden.id);
-          navigate(`${location.pathname}?${query}`, { replace: true });
+          const enterGarden = !!routeCruxId && value.cruxId === null;
+          if (query.get('garden') !== value.garden.id || enterGarden) {
+            query.set('garden', value.garden.id);
+            if (enterGarden) {
+              query.delete('task');
+              query.delete('growth');
+            }
+            // Canonicalize the new entry, preserving the location we came from.
+            void navigate(`${enterGarden ? '/home' : location.pathname}?${query}${location.hash}`, {
+              replace: true,
+            });
+            return;
+          }
+          useGardenContext.getState().select(value.garden);
         }
+        setDestination({ key: requestKey, value });
       })
-      .catch((error) => {
-        if (!cancelled) setGardenError((error as Error).message);
+      .catch((error: unknown) => {
+        if (!cancelled)
+          setDestination({
+            key: requestKey,
+            error: error instanceof Error ? error.message : String(error),
+          });
       });
     return () => {
       cancelled = true;
     };
-  }, [servicesReady, gardenId, location.pathname, location.search, navigate]);
+  }, [
+    servicesReady,
+    gardenId,
+    routeCruxId,
+    requestKey,
+    revision,
+    location.pathname,
+    location.search,
+    location.hash,
+    locationRetry,
+    navigate,
+  ]);
   const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
 
   useEffect(() => {
@@ -159,16 +201,73 @@ export default function Shell() {
         <div className="flex flex-1 min-h-0 overflow-x-auto">
           {servicesReady && <GardenNavigator />}
           <main className="relative flex-1 min-w-0 min-h-0 overflow-y-auto">
-            {initError || gardenError ? (
+            {initError || resolved?.error ? (
               <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
-                <div className="max-w-sm flex flex-col gap-2">
-                  <h2 className="font-display text-base text-text">Crux Garden couldn't start</h2>
-                  <p className="text-xs text-text-muted">{initError || gardenError}</p>
+                <div className="max-w-sm flex flex-col gap-3">
+                  <h2 className="font-display text-base text-text">
+                    {initError ? "Crux Garden couldn't start" : 'Could not open this location'}
+                  </h2>
+                  <p className="text-sm text-text-muted">{initError || resolved?.error}</p>
+                  {!initError && (
+                    <button
+                      className="text-accent cursor-pointer"
+                      onClick={() => setLocationRetry((n) => n + 1)}
+                    >
+                      Retry location
+                    </button>
+                  )}
+                  <button
+                    className="text-accent cursor-pointer"
+                    onClick={() => useGardenContext.getState().setNavigatorOpen(true)}
+                  >
+                    Open Navigator
+                  </button>
                 </div>
               </div>
-            ) : servicesReady && (!gardenId || activeGarden?.id === gardenId) ? (
+            ) : resolved?.value?.status === 'choose' ? (
+              <section className="p-8 max-w-md mx-auto" aria-label="Choose Garden">
+                <h1 className="text-base font-display mb-2">Choose a Garden</h1>
+                <p className="text-sm text-text-muted mb-4">
+                  This Crux is in more than one Garden.
+                </p>
+                {resolved.value.choices.map((choice) => (
+                  <button
+                    key={choice.id}
+                    disabled={!choice.available}
+                    className="block w-full text-left p-3 rounded hover:bg-surface disabled:opacity-50 cursor-pointer"
+                    onClick={() => {
+                      void navigate(locationPath(choice.id), { replace: true });
+                    }}
+                  >
+                    {choice.title || 'Untitled Garden'}
+                    {!choice.available && ' · Unavailable'}
+                  </button>
+                ))}
+              </section>
+            ) : resolved?.value?.status === 'unplaced' ? (
+              <section className="p-8 max-w-md mx-auto" aria-label="Unplaced Crux">
+                <h1 className="text-base font-display mb-2">This Crux isn’t in a Garden yet</h1>
+                <p className="text-sm text-text-muted mb-4">
+                  Open a Garden and choose Add existing Crux to place it. Its content is still here.
+                </p>
+                {rootGarden && (
+                  <button
+                    className="text-accent cursor-pointer"
+                    onClick={() => {
+                      void navigate(gardenPath(rootGarden.id));
+                    }}
+                  >
+                    Open {rootGarden.title || 'My Garden'}
+                  </button>
+                )}
+              </section>
+            ) : servicesReady && resolved?.value?.status === 'ready' ? (
               <Outlet />
-            ) : null}
+            ) : (
+              <p role="status" className="p-8 text-sm text-text-muted">
+                Opening location…
+              </p>
+            )}
           </main>
           {servicesReady && activeGarden && aiEnabled && consoleOpen && (
             <GardenPanel

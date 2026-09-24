@@ -172,6 +172,20 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
       'aria-current',
       'page',
     );
+    // An outside agent's Crux link resolves its real container even while the
+    // person is in another Garden. Canonicalization keeps just one history entry.
+    const darkroomUrl = page.url();
+    await call('show', { what: 'crux', cruxId: project });
+    await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', project);
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+      'Observatory',
+    );
+    expect(new URL(page.url()).searchParams.get('garden')).toBe(childId);
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(page).toHaveURL(darkroomUrl);
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+      'Darkroom',
+    );
     // Agent-driven navigation and human Back/Forward share browser history.
     await call('garden_graph', { action: 'open', gardenId: childId });
     await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(

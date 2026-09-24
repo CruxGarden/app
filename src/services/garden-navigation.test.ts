@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { gardenLocation } from './garden-navigation';
+import { gardenLocation, resolveWorkspaceDestination } from './garden-navigation';
 
 const db = vi.hoisted(() => ({ get: vi.fn(), gardenMembership: { parents: vi.fn() } }));
 vi.mock('./sqlite/client', () => ({ getSqliteClient: () => db }));
@@ -50,4 +50,67 @@ it('allows a failed ancestry read to be retried using current API data', async (
     'home',
     'low-tide',
   ]);
+});
+
+it('opens a link in its actual containing Garden even when the link carries another context', async () => {
+  db.get.mockImplementation(async (_sql, [id]) => ({
+    id,
+    slug: id,
+    kind: id === 'song' ? 'workspace' : 'garden',
+  }));
+  db.gardenMembership.parents.mockResolvedValue([
+    { id: 'music', slug: 'music', kind: 'garden', available: true },
+  ]);
+  const result = await resolveWorkspaceDestination('home', 'song');
+  expect(result).toEqual({
+    status: 'ready',
+    garden: { id: 'music', slug: 'music', kind: 'garden' },
+    cruxId: 'song',
+  });
+});
+it('requires an explicit location when a link has ambiguous parents', async () => {
+  db.get.mockImplementation(async (_sql, [id]) => ({
+    id,
+    slug: id,
+    kind: id === 'song' ? 'workspace' : 'garden',
+  }));
+  db.gardenMembership.parents.mockResolvedValue(
+    ['music', 'studio'].map((id) => ({ id, slug: id, kind: 'garden', available: true })),
+  );
+  expect((await resolveWorkspaceDestination('home', 'song')).status).toBe('choose');
+  expect(await resolveWorkspaceDestination('studio', 'song')).toMatchObject({
+    status: 'ready',
+    garden: { id: 'studio' },
+  });
+});
+it('does not silently adopt unplaced Cruxes into the requested Garden', async () => {
+  db.get.mockResolvedValue({ id: 'song', slug: 'song', kind: 'workspace' });
+  db.gardenMembership.parents.mockResolvedValue([]);
+  expect(await resolveWorkspaceDestination('home', 'song')).toMatchObject({
+    status: 'unplaced',
+    crux: { id: 'song' },
+  });
+});
+it('opens Garden links on their own Home without manufacturing another Crux location', async () => {
+  expect(await resolveWorkspaceDestination('home', 'music')).toMatchObject({
+    status: 'ready',
+    garden: { id: 'music' },
+    cruxId: null,
+  });
+  expect(db.gardenMembership.parents).not.toHaveBeenCalled();
+});
+it('refuses missing destinations, direct version links and unavailable containers', async () => {
+  db.get.mockResolvedValueOnce(undefined);
+  await expect(resolveWorkspaceDestination('home', 'missing')).rejects.toThrow(
+    'no longer available',
+  );
+  db.get.mockResolvedValueOnce({ id: 'version', kind: 'snapshot' });
+  await expect(resolveWorkspaceDestination('home', 'version')).rejects.toThrow('Growth');
+  db.get.mockResolvedValueOnce({ id: 'song', kind: 'workspace' });
+  db.gardenMembership.parents.mockResolvedValue([
+    { id: 'music', kind: 'garden', available: false },
+  ]);
+  await expect(resolveWorkspaceDestination('home', 'song')).rejects.toThrow(
+    'containing this Crux is unavailable',
+  );
 });
