@@ -151,9 +151,10 @@ export async function assertCopyWritable(id: string): Promise<void> {
     throw new Error('This task is closed for editing. Start a new task from Main.');
   const pending = await getSqliteClient().get(
     "SELECT id FROM task_merges WHERE crux_id = ? AND phase = 'applying'",
-    [id],
+    [copy?.cruxId ?? id],
   );
-  if (pending) throw new Error('Finish recovering the pending merge before editing Main.');
+  if (pending)
+    throw new Error('Finish recovering the pending merge before editing this workspace.');
 }
 
 /** Protect all ancestry referenced by a task, including a retained merge candidate. */

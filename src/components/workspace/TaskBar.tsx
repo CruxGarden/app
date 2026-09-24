@@ -61,7 +61,7 @@ function FileText({ file }: { file?: TaskFile }) {
     </pre>
   );
 }
-function ReviewDiff({ review }: { review: TaskReview }) {
+function ReviewDiff({ review, targetName }: { review: TaskReview; targetName: string }) {
   const paths = [...new Set([...Object.keys(review.main), ...Object.keys(review.manifest)])]
     .filter((path) => !sameTaskFile(review.main[path], review.manifest[path]))
     .sort();
@@ -85,7 +85,7 @@ function ReviewDiff({ review }: { review: TaskReview }) {
       </label>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="text-xs text-text-muted">Main before merge</p>
+          <p className="text-xs text-text-muted">{targetName} before merge</p>
           <FileText file={review.main[path]} />
         </div>
         <div>
@@ -171,6 +171,12 @@ export default function TaskBar() {
     }
   }
   const current = tasks.find((t) => t.id === crux.id);
+  const nameForTarget = (id?: string) =>
+    !id || id === mainId ? 'Main' : (tasks.find((task) => task.id === id)?.title ?? 'source task');
+  const targetName = nameForTarget(review?.targetId);
+  const returnUrl = (result: TaskReview) =>
+    url(result.targetId && result.targetId !== mainId ? result.targetId : undefined);
+
   const url = (id?: string) => (id ? `/c/${mainId}?task=${id}` : `/c/${mainId}`);
   return (
     <>
@@ -251,7 +257,8 @@ export default function TaskBar() {
           )}
           {current?.phase === 'merged' && (
             <span className="text-xs text-text-muted">
-              Merged into Main. Start a new task for further changes.
+              Merged into {nameForTarget(current.baseState?.sourceId)}. Start a new task for further
+              changes.
             </span>
           )}
           {(current?.phase === 'failed' || current?.phase === 'preparing') && (
@@ -307,14 +314,15 @@ export default function TaskBar() {
         )}
         {pending && (
           <div role="alert" className="text-sm flex items-center gap-3">
-            A merge was interrupted. Main is protected until it is recovered.
+            A merge was interrupted. {nameForTarget(pending.targetId)} is protected until it is
+            recovered.
             <Button
               size="sm"
               disabled={!!busy}
               onClick={() =>
                 void run('Recovering merge…', async () => {
-                  await resumeTaskMerge(pending.id);
-                  navigate(url());
+                  const result = await resumeTaskMerge(pending.id);
+                  navigate(returnUrl(result));
                 })
               }
             >
@@ -413,12 +421,12 @@ export default function TaskBar() {
             });
         }}
         size="xl"
-        title="Review changes for Main"
+        title={`Review changes for ${targetName}`}
         className="max-h-[90vh] overflow-auto"
       >
         {review && (
           <div className="space-y-4 text-sm">
-            <p>Compare the combined result with Main. Other tasks remain separate.</p>
+            <p>Compare the combined result with {targetName}. Other tasks remain separate.</p>
             {review.conflicts.map((c) => (
               <div key={c.path} className="border border-border rounded p-3 space-y-2">
                 <p>
@@ -426,7 +434,7 @@ export default function TaskBar() {
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    Main
+                    {targetName}
                     <FileText file={c.main} />
                   </div>
                   <div>
@@ -453,13 +461,13 @@ export default function TaskBar() {
                         })
                       }
                     >
-                      Use {choice === 'main' ? 'Main' : 'task'}
+                      Use {choice === 'main' ? targetName : 'task'}
                     </Button>
                   ))}
                 </div>
               </div>
             ))}
-            {!review.conflicts.length && <ReviewDiff review={review} />}
+            {!review.conflicts.length && <ReviewDiff review={review} targetName={targetName} />}
             {review.verificationLog && (
               <details>
                 <summary>Verification result</summary>
@@ -476,7 +484,8 @@ export default function TaskBar() {
                 onChange={(e) => setInspected(e.target.checked)}
                 disabled={!review.verifiedKey}
               />
-              I reviewed the combined changes and preview, and paused external writers to Main.
+              I reviewed the combined changes and preview, and paused external writers to{' '}
+              {targetName}.
             </label>
             {error && (
               <p role="alert" className="text-error">
@@ -501,14 +510,14 @@ export default function TaskBar() {
                 size="sm"
                 disabled={!!busy || !inspected || !review.verifiedKey || !!review.conflicts.length}
                 onClick={() =>
-                  void run('Merging into Main…', async () => {
-                    await applyTaskReview(review.id);
+                  void run(`Merging into ${targetName}…`, async () => {
+                    const result = await applyTaskReview(review.id);
                     setReview(null);
-                    navigate(url());
+                    navigate(returnUrl(result));
                   })
                 }
               >
-                Merge into Main
+                Merge into {targetName}
               </Button>
             </div>
           </div>

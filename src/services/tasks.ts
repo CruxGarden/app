@@ -37,6 +37,8 @@ import { openWorkspace, getWorkspace, type Workspace } from '@/stores/workspaceR
 export interface TaskReview {
   id: string;
   cruxId: string;
+  /** Actual destination; the owning Crux stays cruxId. */
+  targetId?: string;
   copyId: string;
   candidateId: string;
   base: TaskManifest;
@@ -135,10 +137,13 @@ async function provision(
   const db = getSqliteClient();
   const id = crypto.randomUUID();
   const taskId = crypto.randomUUID();
+  const cruxId = copyIdentity(owner)?.cruxId ?? owner.id;
   const now = new Date().toISOString();
   // Only portable project guidance is inherited; never provider resume/auth/approval state.
   const sourceMeta = db.createWorkingCopy
-    ? ((await getServices().crux.findById(owner.id)).meta ?? {})
+    ? owner.id !== cruxId
+      ? (await findWorkingCopy(owner.id))!.meta
+      : ((await getServices().crux.findById(owner.id)).meta ?? {})
     : (owner.meta ?? {});
   const meta = {
     ...Object.fromEntries(
@@ -160,7 +165,7 @@ async function provision(
   };
   const copy = {
     id,
-    cruxId: owner.id,
+    cruxId,
     taskId,
     title,
     baseSnapshotId: baseId,
@@ -175,10 +180,11 @@ async function provision(
   if (db.createWorkingCopy) {
     await db.createWorkingCopy({
       id,
-      cruxId: owner.id,
+      cruxId,
       taskId,
       title,
       base: {
+        ...(owner.id !== cruxId ? { sourceId: owner.id } : {}),
         expected: await db.fileContent!.head(owner.id),
         expectedMeta: sourceMeta,
       },
@@ -316,7 +322,8 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
   const copy = await findWorkingCopy(copyId);
   if (!copy || copy.phase !== 'ready' || copy.role !== 'task')
     throw new Error('Choose an unfinished task to review.');
-  return settled([copy.cruxId, copyId], async ([main, task]) => {
+  const targetId = copy.baseState?.sourceId ?? copy.cruxId;
+  return settled([targetId, copyId], async ([main, task]) => {
     const db = getSqliteClient();
     const owned = !!db.saveTaskReview;
     if (owned) {
@@ -338,7 +345,7 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
     const base = getSqliteClient().workingCopyBase
       ? await startingTaskManifest(copy.id)
       : await indexedTaskManifest(copy.baseSnapshotId!);
-    const target = await indexedTaskManifest(owned ? copy.cruxId : targetHead!);
+    const target = await indexedTaskManifest(owned ? targetId : targetHead!);
     const source = await indexedTaskManifest(owned ? copyId : sourceHead!);
     const merged = await mergeTaskManifests(
       base,
@@ -358,6 +365,7 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
     const review: TaskReview = {
       id: crypto.randomUUID(),
       cruxId: copy.cruxId,
+      ...(owned ? { targetId } : {}),
       copyId,
       candidateId: candidate.id,
       base,
@@ -471,9 +479,10 @@ async function applyTaskReviewCore(id: string): Promise<TaskReview> {
     review.verifiedKey !== taskManifestKey(review.manifest)
   )
     throw new Error('Check the resolved candidate before merging.');
-  return settled([review.cruxId, review.copyId], async ([main, task]) => {
+  const targetId = review.targetId ?? review.cruxId;
+  return settled([targetId, review.copyId], async ([main, task]) => {
     for (const [copyId, expected] of [
-      [review.cruxId, review.main],
+      [targetId, review.main],
       [review.copyId, review.task],
       [review.candidateId, review.manifest],
     ] as const)
@@ -499,7 +508,8 @@ async function applyTaskReviewCore(id: string): Promise<TaskReview> {
   });
 }
 async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskReview> {
-  const current = await captureTaskManifest(review.cruxId);
+  const targetId = review.targetId ?? review.cruxId;
+  const current = await captureTaskManifest(targetId);
   for (const path of new Set([
     ...Object.keys(current),
     ...Object.keys(review.main),
@@ -519,12 +529,12 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
     await window.electronAPI?.preview?.stop(folder);
   }
   const db = getSqliteClient();
-  if (db.fileContent) await db.fileContent.finishProjection(review.cruxId);
-  else await projectTaskManifest(review.cruxId, current, review.manifest);
-  if (
-    taskManifestKey(await captureTaskManifest(review.cruxId)) !== taskManifestKey(review.manifest)
-  )
-    throw new Error('Main changed during the merge. The recovery journal has been kept.');
+  if (db.fileContent) await db.fileContent.finishProjection(targetId);
+  else await projectTaskManifest(targetId, current, review.manifest);
+  if (taskManifestKey(await captureTaskManifest(targetId)) !== taskManifestKey(review.manifest))
+    throw new Error(
+      'The destination changed during the merge. The recovery journal has been kept.',
+    );
   if (db.completeTaskMerge) {
     await db.completeTaskMerge(review.id);
     announceTasksChanged();
@@ -601,7 +611,9 @@ async function resumeTaskMergeCore(id: string): Promise<TaskReview> {
   const review = await loadTaskReview(id);
   if (review.phase === 'merged') return review;
   if (review.phase !== 'applying') throw new Error('There is no interrupted merge to recover.');
-  return settled([review.cruxId, review.copyId], async ([main]) => completeMerge(review, main!));
+  return settled([review.targetId ?? review.cruxId, review.copyId], async ([main]) =>
+    completeMerge(review, main!),
+  );
 }
 export async function archiveTask(id: string, archived: boolean): Promise<void> {
   await settled([id], async () => {

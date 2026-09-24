@@ -1593,11 +1593,12 @@ async function setupIpc() {
     if (!owner || projects.resolveKnownFolder(owner.folder) !== cwd)
       throw new Error('The agent directory does not match its open Working Copy.');
     if (
-      await db.get("SELECT id FROM task_merges WHERE crux_id = ? AND phase = 'applying'", [
-        opts.cruxId,
-      ])
+      await db.get(
+        "SELECT id FROM task_merges WHERE crux_id = COALESCE((SELECT crux_id FROM working_copies WHERE id = ?), ?) AND phase = 'applying'",
+        [opts.cruxId, opts.cruxId],
+      )
     )
-      throw new Error('Recover the pending merge before starting an agent in Main.');
+      throw new Error('Recover the pending merge before starting an agent in this workspace.');
     return agentProvider.start({ ...opts, cwd });
   });
   ipcMain.handle('agent:interrupt', (_e: any, runId: string) => agentProvider.interrupt(runId));

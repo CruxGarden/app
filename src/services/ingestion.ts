@@ -416,17 +416,27 @@ export async function recoverProjectFolders(): Promise<void> {
   if (!api?.reconcile) return;
   const db = getSqliteClient();
   const folders = new Map<string, string>();
+  // An admitted merge owns recovery for its whole Crux. Leave disk changes
+  // untouched until Resume validates them against the retained journal; an
+  // ordinary startup scan must neither ingest them nor prevent opening the UI.
+  const protectedCruxes = new Set(
+    (
+      await db.all<{ crux_id: string }>("SELECT crux_id FROM task_merges WHERE phase = 'applying'")
+    ).map((row) => row.crux_id),
+  );
   const cruxes = await db.all<{ id: string; meta: string | null }>(
     "SELECT id, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL AND (kind IS NULL OR kind <> 'snapshot')",
   );
   for (const crux of cruxes) {
+    if (protectedCruxes.has(crux.id)) continue;
     const meta = JSON.parse(crux.meta || '{}');
     if (typeof meta.projectFolder === 'string') folders.set(crux.id, meta.projectFolder);
   }
-  const copies = await db.all<{ id: string; project_folder: string | null }>(
-    "SELECT id, project_folder FROM working_copies WHERE phase = 'ready'",
+  const copies = await db.all<{ id: string; crux_id: string; project_folder: string | null }>(
+    "SELECT id, crux_id, project_folder FROM working_copies WHERE phase = 'ready'",
   );
   for (const copy of copies) {
+    if (protectedCruxes.has(copy.crux_id)) continue;
     if (copy.project_folder) folders.set(copy.id, copy.project_folder);
   }
   for (const [id, folder] of folders) {
