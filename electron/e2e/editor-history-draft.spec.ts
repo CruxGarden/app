@@ -20,7 +20,7 @@ test('reading history preserves the live editor draft and undo model without sav
     await expect.poll(disk).toBe('Saved beginning');
     await togglePanel(page, 'Toggle history');
     const history = page.getByTestId('pane-body-history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Saved checkpoint');
     await history.getByPlaceholder('Label (optional)').press('Enter');
     await expect(history.getByText('Saved checkpoint', { exact: true })).toBeVisible();

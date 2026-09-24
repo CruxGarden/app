@@ -44,7 +44,7 @@ function writeRound(i: number, path = 'progress.txt'): ConversationEvent[] {
 function harness() {
   const updates: TurnJob[] = [];
   const snapshots: string[] = [];
-  let counter = 0;
+
   return {
     updates,
     snapshots,
@@ -52,9 +52,8 @@ function harness() {
       update: (j: TurnJob) => {
         updates.push(j);
       },
-      snapshot: async (label: string) => {
-        snapshots.push(label);
-        return `snap-${++counter}`;
+      checkpoint: async () => {
+        snapshots.push('recovery');
       },
     },
   };
@@ -110,7 +109,7 @@ describe('runTurnJob', () => {
     ]);
   });
 
-  it('parses the plan, snapshots per mutating round, advances steps, finishes done', async () => {
+  it('parses the plan, retains recovery per mutating round, advances steps, finishes done', async () => {
     const h = harness();
     const job = newTurnJob('crux-1', 'Please plan three steps');
     const result = await runTurnJob(job, {
@@ -130,17 +129,13 @@ describe('runTurnJob', () => {
     expect(result.job.status).toBe('done');
     expect(result.job.plan.explicit).toBe(true);
     expect(result.job.plan.steps.map((s) => s.status)).toEqual(['done', 'done', 'done']);
-    expect(result.job.snapshotIds).toEqual(['snap-1', 'snap-2', 'snap-3']);
-    expect(h.snapshots).toEqual([
-      'Step 1: Lay the foundation',
-      'Step 2: Raise the walls',
-      'Step 3: Put on the roof',
-    ]);
+    expect(result.job.snapshotIds).toEqual([]);
+    expect(h.snapshots).toEqual(['recovery', 'recovery', 'recovery']);
     // The last step's snapshot captured everything: no end-of-turn double-up.
     expect(result.uncapturedMutation).toBe(false);
     expect(result.content).toContain('Done.');
     expect(result.toolCalls).toHaveLength(3);
-    expect(describeJobSummary(summarizeJob(result.job))).toBe('Ran 3 steps · 3 snapshots');
+    expect(describeJobSummary(summarizeJob(result.job))).toBe('Ran 3 steps');
 
     // The plan was published as soon as the fence closed, with step 1 running
     const planned = h.updates.find((u) => u.plan.explicit)!;
@@ -227,11 +222,29 @@ describe('runTurnJob', () => {
     expect(result.job.status).toBe('interrupted');
     expect(result.job.stopReason).toBe('stopped');
     expect(result.job.plan.steps.map((s) => s.status)).toEqual(['done', 'interrupted', 'pending']);
-    expect(result.job.snapshotIds).toEqual(['snap-1']);
+    expect(result.job.snapshotIds).toEqual([]);
     expect(result.job.endedAt).toBeDefined();
-    expect(describeJobSummary(summarizeJob(result.job))).toBe(
-      'Stopped after 1 of 3 steps · 1 snapshot',
-    );
+    expect(describeJobSummary(summarizeJob(result.job))).toBe('Stopped after 1 of 3 steps');
+  });
+
+  it('advances after a recovery failure without counting read-only rounds as new steps', async () => {
+    const h = harness();
+    const result = await runTurnJob(newTurnJob('c', 'three steps'), {
+      ...h.deps,
+      checkpoint: async () => {
+        throw new Error('disk unavailable');
+      },
+      run: () =>
+        events([
+          { type: 'text', content: PLAN },
+          ...writeRound(0),
+          { type: 'step_end', index: 1 },
+          { type: 'done', textContent: '', hadMutation: true },
+        ]),
+    });
+    expect(result.job.currentStep).toBe(1);
+    expect(result.job.snapshotIds).toEqual([]);
+    expect(result.uncapturedMutation).toBe(true);
   });
 
   it('an engine error fails the job', async () => {

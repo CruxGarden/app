@@ -229,8 +229,11 @@ describe('AGENTS.md as the single source (B1)', () => {
     expect(system).toContain(
       '**snapshot** / **list_snapshots** / **restore** / **branch** / **diff**',
     );
-    expect(system).toMatch(/Before a risky or multi-file change, call snapshot/);
-    expect(system).toMatch(/call restore with that snapshot id/);
+    expect(system).toContain('call snapshot only when the person asks to mark a version');
+    expect(system).toContain(
+      'edit_history restore to recover files while keeping the conversation',
+    );
+    expect(system).not.toContain('app also snapshots automatically');
   });
 });
 

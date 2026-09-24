@@ -135,7 +135,7 @@ test('make the ad with Crux Garden', async () => {
         .isVisible()
         .catch(() => false))
     ) {
-      await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+      await history.getByRole('button', { name: 'Mark version', exact: true }).click();
       await history.getByPlaceholder('Label (optional)').fill('Made this ad');
       await history.getByRole('button', { name: 'Save', exact: true }).click();
       await expect(history.getByText('Made this ad', { exact: true })).toBeVisible({

@@ -38,7 +38,7 @@ test('home from a Notes crux', async () => {
     )
       await togglePanel(page, 'Toggle history');
     const history = page.getByTestId('pane-body-history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Brief');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(history.getByText('Brief', { exact: true })).toBeVisible({ timeout: 30_000 });

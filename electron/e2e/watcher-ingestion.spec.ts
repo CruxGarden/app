@@ -38,7 +38,7 @@ test('an external edit immediately after an app write enters history instead of 
       .toBe(fingerprint);
     await togglePanel(page, 'Toggle history');
     const history = page.getByTestId('pane-body-history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('External edit preserved');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(history.getByText('External edit preserved', { exact: true })).toBeVisible();

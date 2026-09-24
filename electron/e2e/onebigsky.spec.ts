@@ -94,7 +94,7 @@ test('One Big Sky: offline game, keyboard match, focus pause and preserved sourc
       .toBe(fingerprint);
     const history = page.getByTestId('pane-body-history');
     if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Our sky arena');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(history.getByText('Our sky arena', { exact: true })).toBeVisible();

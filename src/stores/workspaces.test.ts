@@ -164,6 +164,18 @@ describe('independent Crux workspaces', () => {
   });
 });
 describe('retained documents and trustworthy saves', () => {
+  it('clears a failed read after valid recovery without hiding a dirty draft save error', async () => {
+    const { wa, fa } = await pair();
+    const docs = documentsFor(wa.data, wa.ui);
+    docs.get(fa).setState({ error: 'Could not load this Artifact.' });
+    docs.hydrate(fa, 'Recovered');
+    expect(docs.get(fa).getState().error).toBeNull();
+    docs.edit(fa, 'Unsaved');
+    docs.get(fa).setState({ error: 'Save refused' });
+    docs.hydrate(fa, 'Recovered');
+    expect(docs.get(fa).getState()).toMatchObject({ content: 'Unsaved', error: 'Save refused' });
+  });
+
   it('a delayed A save writes A; newer A typing stays dirty while B is visible', async () => {
     const { a, b, fa, fb, wa, wb, service } = await pair();
     const docs = documentsFor(wa.data, wa.ui);

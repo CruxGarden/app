@@ -74,7 +74,7 @@ test.describe('growth actions (History pane)', () => {
 
       await ensurePane(page, 'history', 'Toggle history');
       const history = page.getByTestId('pane-body-history');
-      const takeSnapshot = history.getByRole('button', { name: 'Take snapshot' });
+      const takeSnapshot = history.getByRole('button', { name: 'Mark version' });
       const removeLatest = page.getByTestId('growth-remove-latest');
       const banner = page.getByText(/^Viewing snapshot \d+ of \d+$/);
       const badge = (n: number) => history.getByText(`#${n}`, { exact: true });
@@ -83,11 +83,8 @@ test.describe('growth actions (History pane)', () => {
       await expect(history.getByText('No snapshots yet')).toBeVisible();
       await expect(removeLatest).toHaveCount(0);
 
-      // ── auto-snapshot frequency: default, change, read back ──
-      const frequency = history.getByRole('combobox');
-      await expect(frequency).toHaveValue('ai-turn');
-      await frequency.selectOption('manual');
-      await expect(frequency).toHaveValue('manual');
+      // Ordinary saves do not add Growth; only explicitly marked versions do.
+      await expect(history.getByRole('combobox')).toHaveCount(0);
 
       // ── label a snapshot ──
       const snapshotWithLabel = async (label: string) => {
@@ -225,7 +222,7 @@ test.describe('growth actions (History pane)', () => {
       await page.getByRole('button', { name: /^Open My Crux/ }).click();
       await expect(page.getByRole('tree')).toBeVisible({ timeout: 30_000 });
       await ensurePane(page, 'history', 'Toggle history');
-      await expect(history.getByRole('combobox')).toHaveValue('manual');
+      await expect(history.getByRole('combobox')).toHaveCount(0);
       for (const label of ['v1', 'v2', 'Before revert', 'Before branch'])
         await expect(history.getByText(label, { exact: true })).toBeVisible({ timeout: 30_000 });
       await expect(badge(4)).toBeVisible();

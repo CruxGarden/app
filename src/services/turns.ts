@@ -1,3 +1,4 @@
+import { captureEditCheckpoint } from './edit-history';
 import { createTaskSlots } from './task-slots';
 import { getSetting } from './settings';
 import { copyIdentity } from './working-copies';
@@ -15,7 +16,6 @@ import { isAiMock } from '@/lib/platform';
 import { playCue, duckAudio } from '@/services/cues';
 import { chatSessionFor } from '@/services/chat-session';
 import { meterTurn } from '@/services/agent-metrics';
-import type { SnapshotFrequency } from '@/services/growth';
 import { isSiteCrux } from '@/services/site';
 import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
 import type { ChatMessage } from '@/api/types';
@@ -32,8 +32,6 @@ import {
   runTurnJob,
   shouldAutoCheck,
   stampJob,
-  verificationOf,
-  withCheckSnapshot,
   withLiveParallelState,
   type TurnJob,
   type TurnStopReason,
@@ -177,17 +175,14 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     // Turn/policy/refresh state lives in a per-crux session (services/chat-session):
     // hiding the pane must not abort the turn.
     return chatSessionFor(cruxId, {
-      frequency: () =>
-        (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-        'ai-turn',
+      frequency: () => 'ai-turn',
       snapshot: () => {
         // A timed policy can fire long after the user moved on — snapshotting
         // then would capture a different crux entirely.
         if (useCruxStore.getState().crux?.id !== cruxId) return;
-        return useCruxStore
-          .getState()
-          .createSnapshot({ silent: false, ifChanged: true })
-          .catch((err) => console.warn('Auto-snapshot failed:', err));
+        return captureEditCheckpoint(cruxId)
+          .then(() => {})
+          .catch((err) => console.warn('Edit recovery failed:', err));
       },
     });
   }
@@ -476,12 +471,6 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       return runTool(name, input);
     };
 
-    // Per-step snapshots only under the per-turn policy. Timed and manual
-    // frequencies keep their meaning: fewer snapshots, decided at the end.
-    const perStepSnapshots =
-      ((useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-        'ai-turn') === 'ai-turn';
-
     const latestSnapshotId = () => {
       const growths = useCruxStore.getState().growths;
       return growths.length > 0 ? growths[growths.length - 1]!.targetId : null;
@@ -535,6 +524,9 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     };
 
     const result = await runTurnJob(args.job, {
+      checkpoint: async () => {
+        await captureEditCheckpoint(cruxId);
+      },
       metrics: meterTurn({ model }),
       run: () =>
         isAgentModel(model)
@@ -571,15 +563,6 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
         }, 150);
       },
       onUsage: (i, o, c) => useCruxStore.getState().addTokenUsage(i, o, c),
-      snapshot: perStepSnapshots
-        ? async (label) => {
-            if (!stillHere()) return null;
-            const before = latestSnapshotId();
-            await useCruxStore.getState().createSnapshot({ label, silent: true, ifChanged: true });
-            const after = latestSnapshotId();
-            return after && after !== before ? after : null;
-          }
-        : undefined,
       latestSnapshotId,
       stopReason: () => stopReasons.get(cruxId) ?? null,
       aborted: () => controller.signal.aborted,
@@ -663,8 +646,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       return;
     }
 
-    // End-of-turn auto-snapshot — only for changes no step snapshot captured,
-    // so a planned turn never doubles up on its last step.
+    // Capture remaining edits when no completed step retained them.
     if (result.uncapturedMutation) {
       await session.policy.notifyMutation();
     }
@@ -718,42 +700,15 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     });
   }
 
-  /**
-   * Record the verdict on Growth: snapshot the current state if it changed
-   * (per-turn policy), then write `verification` onto the latest snapshot —
-   * which is the state the screenshot shows either way.
-   */
-  async function recordVerification(job: TurnJob, uncapturedMutation: boolean): Promise<TurnJob> {
-    const store = useCruxStore.getState();
-    if (!store.crux || store.crux.id !== job.cruxId) return job;
-    const frequency =
-      (store.crux.meta?.settings?.snapshotFrequency as SnapshotFrequency | undefined) || 'ai-turn';
-    if (frequency === 'ai-turn') {
-      try {
-        await store.createSnapshot({ silent: true, ifChanged: true });
-      } catch (err) {
-        console.warn('Snapshot after check failed:', err);
-      }
-    } else if (uncapturedMutation) {
-      sessionFor(job.cruxId).policy.notifyMutation();
-    }
-    const verification = verificationOf(job);
-    const latest = useCruxStore.getState().growths.at(-1);
-    if (!verification || !latest) return job;
+  /** Checks stay with their Turn; routine recovery must not relabel an older chosen version. */
+  async function recordVerification(job: TurnJob): Promise<TurnJob> {
+    if (useCruxStore.getState().crux?.id !== job.cruxId) return job;
     try {
-      const { getServices } = await import('@/services');
-      await getServices().dimension.update(latest.id, {
-        meta: { ...(latest.meta ?? {}), verification },
-      });
-      useCruxStore.setState((s) => ({
-        growths: s.growths.map((g) =>
-          g.id === latest.id ? { ...g, meta: { ...g.meta, verification } } : g,
-        ),
-      }));
+      await captureEditCheckpoint(job.cruxId);
     } catch (err) {
-      console.warn('Recording the check on the snapshot failed:', err);
+      console.warn('Recovery checkpoint after check failed:', err);
     }
-    return withCheckSnapshot(job, latest.targetId);
+    return job;
   }
 
   /**
@@ -833,7 +788,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       // Restamp BEFORE the snapshot: the snapshot segments the transcript, and
       // only the live segment is persisted by saveMeta afterwards.
       restampLastReply(job);
-      job = await recordVerification(job, args.uncapturedMutation);
+      job = await recordVerification(job);
       if (!stillHere()) return;
       publishJob(job);
       await useCruxStore.getState().persistTurnState();
@@ -851,7 +806,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       note: outcome.note,
     });
     restampLastReply(job); // before the snapshot, for the same reason as above
-    job = await recordVerification(job, args.uncapturedMutation);
+    job = await recordVerification(job);
     if (!stillHere()) return;
     job = continueJobForFix(job, outcome.problems);
     useCruxStore.getState().addMessage({

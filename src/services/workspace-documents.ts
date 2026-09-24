@@ -80,7 +80,7 @@ export function createDocuments(data: StoreApi<CruxState>, ui: StoreApi<UIState>
         if (s.fingerprint !== fingerprint) doc.setState({ conflict: true });
         return;
       }
-      doc.setState({ content, fingerprint, conflict: false });
+      doc.setState({ content, fingerprint, conflict: false, error: null });
     },
     save(file: string | DocumentReference, overwrite = false): Promise<void> {
       // Capture before queueing. A later history selection cannot redirect it.

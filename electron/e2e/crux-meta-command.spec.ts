@@ -73,7 +73,7 @@ test('owned metadata commands preserve concurrent fields, serve normal Growth an
     if (!(await launch.page.getByTestId('pane-body-history').isVisible()))
       await togglePanel(launch.page, 'Toggle history');
     const history = launch.page.getByTestId('pane-body-history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Owned metadata checkpoint');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(history.getByText('Owned metadata checkpoint', { exact: true })).toBeVisible();

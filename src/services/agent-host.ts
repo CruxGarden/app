@@ -1,3 +1,4 @@
+import { captureEditCheckpoint } from './edit-history';
 import { useGardenContext } from '@/stores/gardenContext';
 import { reportFlowActivity } from '@/lib/moods/flow';
 import {
@@ -41,7 +42,6 @@ import type { AgentHostRequest, AgentHostServer } from '@/lib/platform';
 import { publicCruxUrl } from '@/lib/public-url';
 import { getServices } from '@/services';
 import { chatSessionFor } from '@/services/chat-session';
-import type { SnapshotFrequency } from '@/services/growth';
 import { getPersona, getPersonaFingerprint } from '@/services/persona';
 import { startPreviewServer } from '@/services/preview-server';
 import { folderForCrux } from '@/services/project-folder';
@@ -381,14 +381,11 @@ function createWorkspaceHost(w: Workspace) {
   /** The same per-crux session the chat hook uses — so the auto-snapshot policy is shared. */
   function sessionFor(cruxId: string) {
     return chatSessionFor(cruxId, {
-      frequency: () =>
-        (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-        'ai-turn',
+      frequency: () => 'ai-turn',
       snapshot: () => {
         if (useCruxStore.getState().crux?.id !== cruxId) return;
-        useCruxStore
-          .getState()
-          .createSnapshot({ silent: false })
+        return captureEditCheckpoint(cruxId)
+          .then(() => {})
           .catch((err) => console.warn('Auto-snapshot failed:', err));
       },
     });

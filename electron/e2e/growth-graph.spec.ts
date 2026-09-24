@@ -53,11 +53,11 @@ async function checkpoint(
   if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
     await togglePanel(page, 'Toggle collaboration');
   const pane = await history(page);
-  await pane.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+  await pane.getByRole('button', { name: 'Mark version', exact: true }).click();
   await pane.getByPlaceholder('Label (optional)').fill(label);
   await pane.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(pane.getByText(label, { exact: true })).toBeVisible();
-  await expect(pane.getByRole('button', { name: 'Take snapshot', exact: true })).toBeEnabled();
+  await expect(pane.getByRole('button', { name: 'Mark version', exact: true })).toBeEnabled();
 }
 
 test('Whole Crux Growth explores merged and independent Tasks in 2D and 3D without changing files', async () => {

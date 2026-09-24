@@ -69,7 +69,7 @@ test('after a process crash, offline file changes enter the index and the next G
     expect(readFileSync(join(folder, 'note.txt'), 'utf8')).toBe('Edited while closed');
     await togglePanel(second.page, 'Toggle history');
     const history = second.page.getByTestId('pane-body-history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Recovered disk state');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(history.getByText('Recovered disk state', { exact: true })).toBeVisible();

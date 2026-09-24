@@ -24,6 +24,7 @@ import {
 } from '@/services/growth';
 
 export const GROWTH_TOOL_NAMES = [
+  'edit_history',
   'snapshot',
   'list_snapshots',
   'restore',
@@ -41,19 +42,32 @@ const SNAPSHOT_REF =
 
 export const GROWTH_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
+    name: 'edit_history',
+    description:
+      'Inspect recent automatic file recovery separately from deliberate Growth. List returns retained checkpoint IDs; inspect lists their files; capture retains the settled files without a Growth edge; restore recovers files and keeps both the current files as a safety copy and the ongoing conversation. Automatic entries retain the latest 20. Use snapshot only for a deliberate creative milestone.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['list', 'inspect', 'capture', 'restore'] },
+        checkpointId: { type: 'string' },
+      },
+      required: ['action'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'snapshot',
     description:
       'Record a Growth snapshot of the workspace as it is right now — every file plus the conversation so far — and return its id. ' +
-      'USE WHEN: before a risky or multi-file change (a checkpoint you can restore), after finishing a coherent piece of work, or when the user asks to save a version. ' +
-      'Snapshots are cheap (metadata only) and appear in the Growth timeline with the label you give them. ' +
-      'The app also snapshots automatically after a turn that changed files; if you already snapshotted at the end of your work, the automatic one is skipped.',
+      'USE WHEN: the person asks to mark a creative version, such as demo, rough mix or master. ' +
+      'For routine saves, undo or a recovery point before risky work, use edit_history. Automatic edits never need a Growth version.',
+
     input_schema: {
       type: 'object',
       properties: {
         label: {
           type: 'string',
-          description:
-            'Short label shown in the timeline, e.g. "Before restyling the header". Optional.',
+          description: 'Short label shown in the timeline, e.g. "Rough mix". Optional.',
         },
       },
       required: [],
@@ -133,7 +147,7 @@ export const GROWTH_TOOL_DEFINITIONS: ToolDefinition[] = [
 ];
 
 /** Growth tools that change workspace files. */
-export const MUTATING_GROWTH_TOOLS = ['restore', 'branch'];
+export const MUTATING_GROWTH_TOOLS = ['restore', 'branch', 'edit_history'];
 
 export interface GrowthToolContext {
   cruxId: string;
@@ -146,6 +160,27 @@ export async function runGrowthTool(
   input: Record<string, unknown>,
   ctx: GrowthToolContext,
 ): Promise<string> {
+  if (toolName === 'edit_history') {
+    try {
+      const history = await import('@/services/edit-history');
+      if (input.action === 'list') return JSON.stringify(await history.listEditHistory(ctx.cruxId));
+      if (input.action === 'capture')
+        return JSON.stringify(await history.captureEditCheckpoint(ctx.cruxId));
+      if (
+        !['inspect', 'restore'].includes(String(input.action)) ||
+        typeof input.checkpointId !== 'string' ||
+        !input.checkpointId
+      )
+        throw new Error('Choose a history action and an inspected checkpoint ID');
+      return JSON.stringify(
+        input.action === 'inspect'
+          ? await history.inspectEditCheckpoint(ctx.cruxId, input.checkpointId)
+          : await history.restoreEditCheckpoint(ctx.cruxId, input.checkpointId),
+      );
+    } catch (err) {
+      return formatToolError(toolName, err as Error);
+    }
+  }
   const host = await growthHostFor(ctx.cruxId);
   const actor = { requestedBy: ctx.requestedBy };
   try {

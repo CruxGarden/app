@@ -23,7 +23,7 @@ for (const action of ['Revert', 'Branch'] as const) {
       await expect.poll(disk).toBe('Earlier version');
       await togglePanel(page, 'Toggle history');
       const history = page.getByTestId('pane-body-history');
-      await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+      await history.getByRole('button', { name: 'Mark version', exact: true }).click();
       await history.getByPlaceholder('Label (optional)').fill('Earlier');
       await history.getByPlaceholder('Label (optional)').press('Enter');
       await expect(history.getByText('Earlier', { exact: true })).toBeVisible();

@@ -774,6 +774,34 @@ async function setupIpc() {
     )
       throw new Error('Garden membership is only available from Garden');
   };
+  ipcMain.handle('history:list', (event: Electron.IpcMainInvokeEvent, id: string) => {
+    gardenCaller(event);
+    return localDb.fileContent.history(id);
+  });
+  ipcMain.handle(
+    'history:capture',
+    (event: Electron.IpcMainInvokeEvent, input: FileContentSelection) => {
+      gardenCaller(event);
+      return localDb.fileContent.checkpoint(input);
+    },
+  );
+  ipcMain.handle(
+    'history:inspect',
+    (event: Electron.IpcMainInvokeEvent, id: string, checkpointId: string) => {
+      gardenCaller(event);
+      return localDb.fileContent.inspectCheckpoint(id, checkpointId);
+    },
+  );
+  ipcMain.handle(
+    'history:restore',
+    (
+      event: Electron.IpcMainInvokeEvent,
+      input: FileContentSelection & { checkpointId: string },
+    ) => {
+      gardenCaller(event);
+      return localDb.fileContent.restoreCheckpoint(input);
+    },
+  );
   ipcMain.handle('garden:enter-local', (event: Electron.IpcMainInvokeEvent) => {
     gardenCaller(event);
     return localDb.enterLocalGarden();

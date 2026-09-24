@@ -52,6 +52,18 @@ export function validateToolInput(
       return validateSearchFiles(input);
     case 'rename_file':
       return validateRenameFile(input);
+    case 'edit_history':
+      if (!['list', 'inspect', 'capture', 'restore'].includes(String(input.action)))
+        return { valid: false, error: 'Choose list, inspect, capture or restore.' };
+      if (
+        ['inspect', 'restore'].includes(String(input.action)) &&
+        (typeof input.checkpointId !== 'string' || !input.checkpointId.trim())
+      )
+        return {
+          valid: false,
+          error: 'checkpointId is required. List retained edit history first.',
+        };
+      return { valid: true };
     case 'snapshot':
       return validateOptionalLabel(input);
     case 'list_snapshots':

@@ -23,7 +23,7 @@ test('an interrupted restore resumes on startup without an old workspace save re
       await page.keyboard.type(text);
       await page.keyboard.press('ControlOrMeta+s');
       await expect.poll(disk).toBe(text);
-      await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+      await history.getByRole('button', { name: 'Mark version', exact: true }).click();
       await history.getByPlaceholder('Label (optional)').fill(text);
       await history.getByPlaceholder('Label (optional)').press('Enter');
       await expect(history.getByText(text, { exact: true })).toBeVisible();

@@ -92,14 +92,14 @@ export async function snapshot(page: Page, label: string) {
     await pane.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   }
   await expect(pane).toBeVisible();
-  await expect(pane.getByRole('button', { name: 'Take snapshot', exact: true })).toBeEnabled({
+  await expect(pane.getByRole('button', { name: 'Mark version', exact: true })).toBeEnabled({
     timeout: 120000,
   });
-  await pane.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+  await pane.getByRole('button', { name: 'Mark version', exact: true }).click();
   await pane.getByPlaceholder('Label (optional)').fill(label);
   await pane.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(pane.getByText(label, { exact: true })).toBeVisible();
-  await expect(pane.getByRole('button', { name: 'Take snapshot', exact: true })).toBeEnabled();
+  await expect(pane.getByRole('button', { name: 'Mark version', exact: true })).toBeEnabled();
   await togglePanel(page, 'Toggle history');
 }
 

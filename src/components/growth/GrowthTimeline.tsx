@@ -1,3 +1,5 @@
+import EditHistory from './EditHistory';
+import { getSqliteClient } from '@/services/sqlite/client';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useState, useRef, useEffect } from 'react';
 import type { Dimension, CruxSummary as CruxSummaryType } from '@/api/types';
@@ -47,15 +49,6 @@ function BackIcon() {
   );
 }
 
-type SnapshotFrequency = 'ai-turn' | '2m' | '5m' | '10m' | 'manual';
-const FREQUENCY_OPTIONS: { value: SnapshotFrequency; label: string }[] = [
-  { value: 'ai-turn', label: 'Every AI turn' },
-  { value: '2m', label: 'Every 2 min' },
-  { value: '5m', label: 'Every 5 min' },
-  { value: '10m', label: 'Every 10 min' },
-  { value: 'manual', label: 'Manual only' },
-];
-
 interface GrowthTimelineProps {
   growths: Dimension[];
   summary: CruxSummaryType | null;
@@ -82,17 +75,7 @@ export default function GrowthTimeline({
   const labelInputRef = useRef<HTMLInputElement>(null);
 
   const crux = useCruxStore((s) => s.crux);
-  const saveMeta = useCruxStore((s) => s.saveMeta);
-  const frequency = (crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) || 'ai-turn';
-
-  const setFrequency = (freq: SnapshotFrequency) => {
-    if (!crux) return;
-    cruxStore
-      .getState()
-      .patchCruxMeta({ settings: { ...crux.meta?.settings, snapshotFrequency: freq } });
-    saveMeta();
-  };
-
+  const [view, setView] = useState<'growth' | 'history'>('growth');
   const detailGrowth = detailIndex !== null ? growths[detailIndex] : null;
   const isViewingSnapshot = viewingSnapshotIndex !== null;
 
@@ -135,154 +118,159 @@ export default function GrowthTimeline({
 
   return (
     <div className="flex flex-col h-full">
+      {crux && getSqliteClient().fileContent && (
+        <div
+          className="flex gap-3 px-3 py-2 border-b border-border text-xs"
+          aria-label="History views"
+        >
+          <button
+            className="cursor-pointer"
+            aria-pressed={view === 'growth'}
+            onClick={() => setView('growth')}
+          >
+            Growth
+          </button>
+          <button
+            className="cursor-pointer"
+            aria-pressed={view === 'history'}
+            onClick={() => setView('history')}
+          >
+            Edit history
+          </button>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {detailGrowth && detailIndex !== null ? (
-          <GrowthDetail
-            growth={detailGrowth}
-            index={detailIndex}
-            onClose={() => setDetailIndex(null)}
-          />
+        {view === 'history' && crux ? (
+          <EditHistory key={crux.id} cruxId={crux.id} />
         ) : (
-          <div className="flex flex-col gap-3 p-3">
-            {/* Capture controls — hidden while viewing a snapshot */}
-            {!isViewingSnapshot && !showLabelInput && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <PaneAction
-                  onClick={() => setShowLabelInput(true)}
-                  disabled={isCreatingGrowth}
-                  busy={isCreatingGrowth && 'Capturing...'}
-                  icon={<LayersIcon />}
-                  className="flex-1"
-                >
-                  Take snapshot
-                </PaneAction>
-                <label
-                  className="flex items-center gap-1.5 shrink-0"
-                  title="Auto-snapshot: when a version is captured without asking"
-                >
-                  <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
-                    Auto
-                  </span>
-                  <select
-                    value={frequency}
-                    onChange={(e) => setFrequency(e.target.value as SnapshotFrequency)}
-                    className={cn(
-                      'h-8 text-xs font-body bg-surface text-text border border-border rounded-[var(--radius-sm)]',
-                      'px-2 outline-none cursor-pointer hover:border-accent focus:border-input-border-active',
-                    )}
-                  >
-                    {FREQUENCY_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            )}
-            {/* Walk history back one step: the tip goes, files stay */}
-            {!isViewingSnapshot && !showLabelInput && growths.length > 0 && (
-              <button
-                onClick={handleRemoveLatest}
-                disabled={isCreatingGrowth || removing}
-                className="self-start px-0.5 text-2xs font-mono text-text-muted hover:text-error transition-colors cursor-pointer disabled:opacity-50"
-                title="Remove the most recent snapshot. Your files stay as they are."
-                data-testid="growth-remove-latest"
-              >
-                {removing ? 'Removing…' : 'Remove last snapshot'}
-              </button>
-            )}
-            {!isViewingSnapshot && showLabelInput && (
-              <div className="flex gap-1.5">
-                <input
-                  ref={labelInputRef}
-                  type="text"
-                  value={labelText}
-                  onChange={(e) => setLabelText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSnapshot();
-                    if (e.key === 'Escape') {
-                      setShowLabelInput(false);
-                      setLabelText('');
-                    }
-                  }}
-                  placeholder="Label (optional)"
-                  className={cn(
-                    'flex-1 min-w-0 px-2.5 h-8 text-xs font-body rounded-[var(--radius-sm)]',
-                    'bg-surface border border-border text-text placeholder:text-text-muted',
-                    'focus:outline-none focus:border-input-border-active',
-                  )}
-                />
-                <button
-                  onClick={handleSnapshot}
-                  className={cn(
-                    'px-3 h-8 text-xs font-body font-medium rounded-[var(--radius-sm)]',
-                    'bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer',
-                  )}
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => {
-                    setShowLabelInput(false);
-                    setLabelText('');
-                  }}
-                  aria-label="Cancel"
-                  className="px-2 h-8 text-sm text-text-muted hover:text-text transition-colors cursor-pointer"
-                >
-                  &times;
-                </button>
-              </div>
-            )}
-
-            {/* Back to current — shown while viewing a snapshot */}
-            {isViewingSnapshot && (
-              <PaneAction onClick={onExitSnapshot} icon={<BackIcon />}>
-                Back to current
-              </PaneAction>
-            )}
-
-            {summary && <CruxSummary summary={summary} className="mb-1" />}
-
-            {isCreatingGrowth && (
-              <div className="px-2">
-                <LoadingPanel label="Capturing snapshot..." />
-              </div>
-            )}
-
-            {growths.length > 0 && (
-              <div className="relative">
-                <div className="relative flex flex-col gap-3">
-                  {/* Reverse chronological — most recent first */}
-                  {[...growths].reverse().map((growth) => {
-                    const originalIndex = growths.indexOf(growth);
-                    return (
-                      <GrowthCard
-                        key={growth.id}
-                        growth={growth}
-                        index={originalIndex}
-                        isActive={detailIndex === originalIndex}
-                        isViewing={viewingSnapshotIndex === originalIndex}
-                        onClick={() => onViewSnapshot(growth.targetId, originalIndex)}
-                        onDetailClick={(e) => {
-                          e.stopPropagation();
-                          setDetailIndex(detailIndex === originalIndex ? null : originalIndex);
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {growths.length === 0 && !isCreatingGrowth && !summary && (
-              <PaneEmpty
-                title="No snapshots yet"
-                description="Every version is kept. Take one now, or let auto-snapshot capture each AI turn."
-                className="py-6"
+          <>
+            {detailGrowth && detailIndex !== null ? (
+              <GrowthDetail
+                growth={detailGrowth}
+                index={detailIndex}
+                onClose={() => setDetailIndex(null)}
               />
+            ) : (
+              <div className="flex flex-col gap-3 p-3">
+                {/* Capture controls — hidden while viewing a snapshot */}
+                {!isViewingSnapshot && !showLabelInput && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <PaneAction
+                      onClick={() => setShowLabelInput(true)}
+                      disabled={isCreatingGrowth}
+                      busy={isCreatingGrowth && 'Capturing...'}
+                      icon={<LayersIcon />}
+                      className="flex-1"
+                    >
+                      Mark version
+                    </PaneAction>
+                  </div>
+                )}
+                {/* Walk history back one step: the tip goes, files stay */}
+                {!isViewingSnapshot && !showLabelInput && growths.length > 0 && (
+                  <button
+                    onClick={handleRemoveLatest}
+                    disabled={isCreatingGrowth || removing}
+                    className="self-start px-0.5 text-2xs font-mono text-text-muted hover:text-error transition-colors cursor-pointer disabled:opacity-50"
+                    title="Remove the most recent snapshot. Your files stay as they are."
+                    data-testid="growth-remove-latest"
+                  >
+                    {removing ? 'Removing…' : 'Remove last snapshot'}
+                  </button>
+                )}
+                {!isViewingSnapshot && showLabelInput && (
+                  <div className="flex gap-1.5">
+                    <input
+                      ref={labelInputRef}
+                      type="text"
+                      value={labelText}
+                      onChange={(e) => setLabelText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSnapshot();
+                        if (e.key === 'Escape') {
+                          setShowLabelInput(false);
+                          setLabelText('');
+                        }
+                      }}
+                      placeholder="Label (optional)"
+                      className={cn(
+                        'flex-1 min-w-0 px-2.5 h-8 text-xs font-body rounded-[var(--radius-sm)]',
+                        'bg-surface border border-border text-text placeholder:text-text-muted',
+                        'focus:outline-none focus:border-input-border-active',
+                      )}
+                    />
+                    <button
+                      onClick={handleSnapshot}
+                      className={cn(
+                        'px-3 h-8 text-xs font-body font-medium rounded-[var(--radius-sm)]',
+                        'bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer',
+                      )}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLabelInput(false);
+                        setLabelText('');
+                      }}
+                      aria-label="Cancel"
+                      className="px-2 h-8 text-sm text-text-muted hover:text-text transition-colors cursor-pointer"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )}
+
+                {/* Back to current — shown while viewing a snapshot */}
+                {isViewingSnapshot && (
+                  <PaneAction onClick={onExitSnapshot} icon={<BackIcon />}>
+                    Back to current
+                  </PaneAction>
+                )}
+
+                {summary && <CruxSummary summary={summary} className="mb-1" />}
+
+                {isCreatingGrowth && (
+                  <div className="px-2">
+                    <LoadingPanel label="Capturing snapshot..." />
+                  </div>
+                )}
+
+                {growths.length > 0 && (
+                  <div className="relative">
+                    <div className="relative flex flex-col gap-3">
+                      {/* Reverse chronological — most recent first */}
+                      {[...growths].reverse().map((growth) => {
+                        const originalIndex = growths.indexOf(growth);
+                        return (
+                          <GrowthCard
+                            key={growth.id}
+                            growth={growth}
+                            index={originalIndex}
+                            isActive={detailIndex === originalIndex}
+                            isViewing={viewingSnapshotIndex === originalIndex}
+                            onClick={() => onViewSnapshot(growth.targetId, originalIndex)}
+                            onDetailClick={(e) => {
+                              e.stopPropagation();
+                              setDetailIndex(detailIndex === originalIndex ? null : originalIndex);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {growths.length === 0 && !isCreatingGrowth && !summary && (
+                  <PaneEmpty
+                    title="No snapshots yet"
+                    description="Mark a version when it matters: a demo, a rough mix, a master. Routine saves live in Edit history."
+                    className="py-6"
+                  />
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>

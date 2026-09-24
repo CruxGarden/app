@@ -24,7 +24,7 @@ test('historical HTML shows saved source without mounting the live preview or ch
     );
     await togglePanel(page, 'Toggle history');
     const history = page.getByTestId('pane-body-history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Earlier page');
     await history.getByPlaceholder('Label (optional)').press('Enter');
     await expect(history.getByText('Earlier page', { exact: true })).toBeVisible();

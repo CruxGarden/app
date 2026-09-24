@@ -170,6 +170,22 @@ export class SqliteApi implements NativeStorage {
   };
 
   readonly fileContent: FileContentBridge = {
+    history: (id) => {
+      this.assertAvailable();
+      return this.owner.listEditHistory(id);
+    },
+    checkpoint: (input) => {
+      this.assertAvailable();
+      return this.owner.createEditCheckpoint(input, this.contentStore());
+    },
+    inspectCheckpoint: (id, checkpointId) => {
+      this.assertAvailable();
+      return this.owner.inspectEditCheckpoint(id, checkpointId, this.contentStore());
+    },
+    restoreCheckpoint: (input) => {
+      this.assertAvailable();
+      return this.owner.restoreEditCheckpoint(input, this.contentStore());
+    },
     lookup: (input) => {
       this.assertAvailable();
       return this.owner.lookupFileContent(input, this.contentStore());

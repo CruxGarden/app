@@ -205,9 +205,9 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
 const GROWTH_TOOL_GUIDANCE =
   '### Growth (version history)\n' +
   'Every snapshot holds every file plus the conversation so far; the person sees them in the Growth timeline with your label and that you took them.\n' +
-  '- Before a risky or multi-file change, call snapshot with a short label — a checkpoint you can come back to.\n' +
-  '- If a check fails after your change (check_site errors, a broken preview) and going back beats fixing forward, call restore with that snapshot id. A safety snapshot of the current state is taken first, so nothing is lost.\n' +
-  '- After finishing a coherent piece of work, snapshot again. The app also snapshots automatically after a turn that changed files, and skips its own when yours already captured the same files.\n' +
+  '- Growth is deliberate: call snapshot only when the person asks to mark a version, such as demo, rough mix or master.\n' +
+  '- For routine recovery before risky work, use edit_history capture. Use edit_history list and inspect to find a retained checkpoint, then edit_history restore to recover files while keeping the conversation.\n' +
+  '- Routine saves and AI edits stay in bounded Edit history, never automatic Growth.\n' +
   '- Use diff to see what a restore would change, branch when the user wants to try another direction from an earlier version, list_snapshots for ids.\n' +
   '- Snapshots refer to files and the conversation, never to the theme or the sound.\n\n';
 

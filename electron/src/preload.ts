@@ -76,6 +76,11 @@ const api: ElectronBridge = {
       import: (bytes, input) => ipcRenderer.invoke('archive:import', bytes, input),
     },
     fileContent: {
+      history: (id) => ipcRenderer.invoke('history:list', id),
+      checkpoint: (input) => ipcRenderer.invoke('history:capture', input),
+      inspectCheckpoint: (id, checkpointId) =>
+        ipcRenderer.invoke('history:inspect', id, checkpointId),
+      restoreCheckpoint: (input) => ipcRenderer.invoke('history:restore', input),
       finishProjection: (id) => ipcRenderer.invoke('content:finish-projection', id),
       head: (id) => ipcRenderer.invoke('content:head', id),
       list: (input) => ipcRenderer.invoke('content:list', input),

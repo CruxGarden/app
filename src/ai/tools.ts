@@ -1158,6 +1158,7 @@ export function createToolExecutor(
               : 'Native tools are not available here (desktop only).';
             break;
           }
+          case 'edit_history':
           case 'snapshot':
           case 'list_snapshots':
           case 'restore':
@@ -1266,6 +1267,14 @@ export function didMutate(toolName: string, result: string | ToolResultContent):
   if (typeof result !== 'string') return false;
   if (result.startsWith('Error')) return false;
   if (result.startsWith(DELETE_DECLINED)) return false;
+  if (toolName === 'edit_history') {
+    try {
+      const recovery = JSON.parse(result);
+      return !!recovery && ('head' in recovery || recovery.recovered === true);
+    } catch {
+      return false;
+    }
+  }
   return true;
 }
 

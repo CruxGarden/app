@@ -94,12 +94,12 @@ test.describe('verify before done (mock AI)', () => {
       await expect(checkMessage).toHaveCount(1);
       await page.screenshot({ path: 'e2e/.results/verify-3-checked.png' });
 
-      // Growth: the failed state and the fixed state each carry their verdict
+      // Verification stays on the reply/job; recovery is separate from chosen Growth.
       await togglePanel(page, 'Toggle history');
-      const badges = page.getByTestId('growth-checked');
-      await expect(badges.filter({ hasText: 'Checked ✓' })).toHaveCount(1, { timeout: 30_000 });
-      await expect(badges.filter({ hasText: 'Check found problems' })).toHaveCount(1);
-      await page.screenshot({ path: 'e2e/.results/verify-4-growth.png' });
+      const history = page.getByTestId('pane-body-history');
+      await expect(history.getByText('No snapshots yet')).toBeVisible();
+      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await expect(history.locator('[data-checkpoint-id]').first()).toBeVisible();
 
       // The person's "Check it" on the unchanged page: passes, no follow-up
       // turn. It sits in the Workshop's preview bar, beside Screenshot.
@@ -112,7 +112,11 @@ test.describe('verify before done (mock AI)', () => {
       await expect(checkMessage).toHaveCount(1);
       await expect(page.getByText('Fixed — added the heading.')).toHaveCount(1);
       await expect(results).toHaveCount(2);
-      await expect(badges.filter({ hasText: 'Checked ✓' })).toHaveCount(1);
+      expect(
+        await page.evaluate(() =>
+          window.electronAPI!.sqlite.all("SELECT id FROM dimensions WHERE type='growth'"),
+        ),
+      ).toEqual([]);
       await page.screenshot({ path: 'e2e/.results/verify-5-check-it.png' });
       await card.getByRole('button', { name: 'Dismiss' }).click();
       await expect(card).toHaveCount(0);

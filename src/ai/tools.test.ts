@@ -45,6 +45,7 @@ describe('TOOL_DEFINITIONS', () => {
     const names = defaultToolDefinitions().map((t) => t.name);
     for (const name of GROWTH_TOOL_DEFINITIONS.map((t) => t.name)) expect(names).toContain(name);
     expect(GROWTH_TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
+      'edit_history',
       'snapshot',
       'list_snapshots',
       'restore',
@@ -85,9 +86,29 @@ describe('MUTATING_TOOLS', () => {
       // Growth tools that replace files (B0); snapshot/list/diff do not mutate
       'restore',
       'branch',
+      'edit_history',
       // Subagents (B5): the merge lands files on the main line
       'delegate',
     ]);
+  });
+});
+
+describe('edit recovery controls', () => {
+  it('validates recovery commands and treats reads/captures as non-file mutations', async () => {
+    const { validateToolInput } = await import('./validation');
+    expect(validateToolInput('edit_history', { action: 'list' }).valid).toBe(true);
+    expect(validateToolInput('edit_history', { action: 'restore' }).valid).toBe(false);
+    expect(validateToolInput('edit_history', { action: 'forget' }).valid).toBe(false);
+    expect(didMutate('edit_history', JSON.stringify({ checkpoints: [] }))).toBe(false);
+    expect(didMutate('edit_history', JSON.stringify({ id: 'capture', root: 'hash' }))).toBe(false);
+    expect(didMutate('edit_history', JSON.stringify({ head: { root: 'hash' }, safety: {} }))).toBe(
+      true,
+    );
+    const { scopeViolation } = await import('@/lib/write-scope');
+    expect(
+      scopeViolation('edit_history', { action: 'restore' }, { paths: ['note.txt'] }),
+    ).toContain('scope');
+    expect(scopeViolation('edit_history', { action: 'list' }, { paths: ['note.txt'] })).toBeNull();
   });
 });
 
