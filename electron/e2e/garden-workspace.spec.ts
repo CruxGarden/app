@@ -74,6 +74,18 @@ test('Garden Home, recursive Navigator, shared Cruxes and outside agents use the
     );
     await nav.getByRole('button', { name: 'Observatory', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Open Night atlas', exact: true })).toBeVisible();
+    // Navigator is a view of the same Garden/Crux graph, not a Gardens-only menu.
+    await expect(nav.getByRole('button', { name: 'Night atlas', exact: true })).toBeVisible();
+    await nav.getByRole('button', { name: 'Night atlas', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(nav.getByRole('button', { name: 'Night atlas', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(nav.getByRole('button', { name: 'Night atlas', exact: true })).toBeInViewport();
+    expect(new URL(page.url()).searchParams.get('garden')).toBe(childId);
+    await page.screenshot({ path: 'e2e/.results/navigation-tree.png' });
+    await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
 
     // Supporting surfaces are panels; Home and Navigator remain interactive.
     await page.keyboard.press('ControlOrMeta+,');

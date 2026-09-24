@@ -1,112 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMatch } from 'react-router-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
-import { gardenPath, useGardenContext, type GardenIdentity } from '@/stores/gardenContext';
+import { gardenPath, inGarden, useGardenContext } from '@/stores/gardenContext';
 import { gardenAncestors, gardenMembers } from '@/services/garden-navigation';
-import { ChevronRightIcon, ChevronDownIcon, CloseIcon, FolderIcon } from '@/components/ui/icons';
-import { cn } from '@/lib/cn';
-
-function GardenBranch({
-  garden,
-  ancestors = [],
-  activePath,
-}: {
-  garden: GardenIdentity;
-  ancestors?: string[];
-  activePath: Set<string>;
-}) {
-  const navigate = useMoodNavigate();
-  const revision = useGardenContext((s) => s.revision);
-  const active = useGardenContext((s) => s.garden?.id);
-  const [expanded, setExpanded] = useState(ancestors.length === 0);
-  const [children, setChildren] = useState<GardenIdentity[]>([]);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    if (activePath.has(garden.id)) setExpanded(true);
-  }, [activePath, garden.id]);
-  useEffect(() => {
-    if (!expanded) return;
-    let cancelled = false;
-    setError('');
-    void gardenMembers(garden.id)
-      .then((rows) => {
-        if (!cancelled) setChildren(rows.filter((row) => row.kind === 'garden'));
-      })
-      .catch((err) => {
-        if (!cancelled) setError((err as Error).message);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [expanded, garden.id, active, revision]);
-  if (ancestors.includes(garden.id)) return null;
-  return (
-    <li>
-      <div
-        className={cn(
-          'flex items-center gap-1 rounded-lg',
-          active === garden.id ? 'bg-accent-muted text-accent' : 'text-text-muted hover:bg-surface',
-        )}
-      >
-        <button
-          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${garden.title}`}
-          aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}
-          className="p-1.5 rounded cursor-pointer"
-        >
-          {expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-        </button>
-        <button
-          aria-current={active === garden.id ? 'page' : undefined}
-          onClick={() => navigate(gardenPath(garden.id))}
-          className="flex items-center gap-2 py-2 pr-2 flex-1 min-w-0 text-left text-sm cursor-pointer"
-        >
-          <FolderIcon />
-          <span className="truncate">{garden.title || 'Untitled Garden'}</span>
-        </button>
-      </div>
-      {expanded && (
-        <ul className="ml-3 pl-2 border-l border-border">
-          {children.map((child) => (
-            <GardenBranch
-              key={child.id}
-              garden={child}
-              ancestors={[...ancestors, garden.id]}
-              activePath={activePath}
-            />
-          ))}
-          {error && (
-            <li role="alert" className="p-2 text-xs text-error">
-              {error}
-            </li>
-          )}
-        </ul>
-      )}
-    </li>
-  );
-}
+import { CloseIcon } from '@/components/ui/icons';
+import NavigationTree, { type NavigationGraph } from './NavigationTree';
 
 /** A real workspace panel: navigation does not obscure or suspend the work. */
 export default function GardenNavigator() {
   const { root, garden, revision, navigatorOpen, setNavigatorOpen } = useGardenContext();
-  const gardenId = garden?.id;
-  const [activePath, setActivePath] = useState<Set<string>>(new Set());
-  const [error, setError] = useState('');
-  useEffect(() => {
-    if (!navigatorOpen || !gardenId) return;
-    let cancelled = false;
-    setError('');
-    void gardenAncestors(gardenId)
-      .then((ids) => {
-        if (!cancelled) setActivePath(new Set(ids));
-      })
-      .catch((err) => {
-        if (!cancelled) setError((err as Error).message);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [gardenId, revision, navigatorOpen]);
-  if (!navigatorOpen || !root) return null;
+  const route = useMatch('/c/:id');
+  const navigate = useMoodNavigate();
+  const graph = useMemo<NavigationGraph>(
+    () => ({
+      roots: root ? [root] : [],
+      revision,
+      members: gardenMembers,
+      ancestors: gardenAncestors,
+    }),
+    [root, revision],
+  );
+  const navigateTo = useCallback(
+    (gardenId: string, cruxId: string | null) => {
+      navigate(cruxId ? inGarden(`/c/${cruxId}`, gardenId) : gardenPath(gardenId));
+    },
+    [navigate],
+  );
+  if (!navigatorOpen || !root || !garden) return null;
   return (
     <aside
       aria-label="Navigator"
@@ -126,14 +46,12 @@ export default function GardenNavigator() {
         <p className="px-2 pt-3 pb-2 text-xxs tracking-widest uppercase text-text-muted">
           On this device
         </p>
-        {error && (
-          <p role="alert" className="p-2 text-xs text-error">
-            {error}
-          </p>
-        )}
-        <ul>
-          <GardenBranch garden={root} activePath={activePath} />
-        </ul>
+        <NavigationTree
+          graph={graph}
+          gardenId={garden.id}
+          cruxId={route?.params.id ?? null}
+          navigate={navigateTo}
+        />
       </div>
     </aside>
   );
