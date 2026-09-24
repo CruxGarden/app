@@ -14,6 +14,8 @@ import {
   registeredGrowthHost,
   growthHostFor,
   workspaceGrowthHost,
+  restoreManifestWorkspace,
+  recoveredRestore,
   UnknownSnapshotError,
   SnapshotPolicy,
   type SnapshotChainNode,
@@ -586,7 +588,18 @@ describe('workspaceGrowthHost (over the store actions)', () => {
     expect(calls[1]).toBe('revert:s1');
     expect(report.target).toMatchObject({ id: 's1', label: 'good' });
     expect(report.safety).toMatchObject({ id: 's2', label: 'Before revert', number: 2 });
-    expect(report.changes.modified).toEqual([{ path: 'index.html', size: 1, previousSize: 2 }]);
+    expect(report.changes!.modified).toEqual([{ path: 'index.html', size: 1, previousSize: 2 }]);
+  });
+
+  it('returns a completed recovery without attributing it to the newly requested version', async () => {
+    const { actions, deps } = fakeWorkspace();
+    const host = workspaceGrowthHost(actions, deps);
+    await host.snapshot({ label: 'unrequested', requestedBy: 'person' });
+    await host.snapshot({ label: 'new request', requestedBy: 'person' });
+    actions.revertToSnapshot = async () => recoveredRestore();
+    const report = await host.restore('#2', { requestedBy: 'agent' });
+    expect(report).toEqual({ recovered: true, target: null, safety: null, changes: null });
+    expect(await host.list()).toHaveLength(2);
   });
 
   it('branch and diff resolve references the same way; unknown ids are refused before any action', async () => {
@@ -600,7 +613,7 @@ describe('workspaceGrowthHost (over the store actions)', () => {
     const report = await host.branch('latest', 'Alt', { requestedBy: 'collaborator' });
     expect(calls[1]).toBe('branch:s1:Alt');
     expect(report.safety).toMatchObject({ label: 'Before branch' });
-    expect(report.changes.removed.map((f) => f.path)).toEqual(['index.html']);
+    expect(report.changes!.removed.map((f) => f.path)).toEqual(['index.html']);
     // diff: snapshot vs working (files now empty)
     const d = await host.diff('s1');
     expect(d.removed.map((f) => f.path)).toEqual(['index.html']);
@@ -661,4 +674,42 @@ describe('restoreFilesCore (diff-based)', () => {
     expect(diff.removed.map((f) => f.path)).toEqual(['added.txt']);
     expect(diff.modified.map((f) => f.path)).toEqual(['changed.txt']);
   });
+});
+
+it('headless restore finishes pending projection before flushing stale state or starting another restore', async () => {
+  const { deps } = makeGrowthDeps([]);
+  const finishProjection = vi.fn(async () => true);
+  const flush = vi.fn(async () => {});
+  // A pending projection must be the only content operation in this invocation.
+  const content = new Proxy(
+    { finishProjection },
+    {
+      get(target, property) {
+        if (property === 'finishProjection') return target.finishProjection;
+        throw new Error(`Unexpected content operation: ${String(property)}`);
+      },
+    },
+  ) as unknown as NonNullable<GrowthDeps['content']>;
+  const report = await restoreManifestWorkspace(
+    {
+      crux: { id: 'owner', meta: {} } as Crux,
+      messages: [],
+      messageSegmentStart: 0,
+      growths: [],
+      growthCount: 0,
+      artifactCount: 0,
+    },
+    'different-requested-version',
+    undefined,
+    {
+      ...deps,
+      content,
+      flush,
+      projectAll: async () => {},
+      dimension: { ...deps.dimension, findBySourceAndType: async () => [] },
+    },
+  );
+  expect(finishProjection).toHaveBeenCalledWith('owner');
+  expect(flush).not.toHaveBeenCalled();
+  expect(report).toEqual({ recovered: true, target: null, safety: null, changes: null });
 });

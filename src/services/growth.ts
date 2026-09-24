@@ -389,8 +389,9 @@ export async function restoreManifestWorkspace(
   branchLabel: string | undefined,
   deps: GrowthHostDeps,
 ): Promise<RestoreReport> {
-  await deps.flush();
   const api = deps.content!;
+  if (await api.finishProjection(state.crux.id)) return recoveredRestore();
+  await deps.flush();
   const head = await api.head(state.crux.id);
   if (!head) throw new Error('This Crux has no retained file content.');
   const files = await deps.artifact.findByResource('crux', state.crux.id);
@@ -922,13 +923,31 @@ export interface GrowthActor {
   requestedBy: string;
 }
 
-export interface RestoreReport {
+export interface RestoredReport {
+  recovered?: false;
   /** Protected recovery (desktop) or the Web snapshot copy retained before restoring. */
   safety: RestoreSafety | null;
   /** The snapshot the workspace now matches. */
   target: SnapshotInfo;
   changes: SnapshotDiff;
 }
+
+/** Finishing an earlier disk projection does not execute the newly requested restore. */
+export interface RecoveredRestore {
+  recovered: true;
+  safety: null;
+  target: null;
+  changes: null;
+}
+export type RestoreReport = RestoredReport | RecoveredRestore;
+export const RESTORE_RECOVERED_MESSAGE =
+  'The interrupted operation has finished. No new restore was started. Check the current workspace, then choose a version again if you want to restore it.';
+export const recoveredRestore = (): RecoveredRestore => ({
+  recovered: true,
+  safety: null,
+  target: null,
+  changes: null,
+});
 
 export interface GrowthHost {
   snapshot(opts: { label?: string } & GrowthActor): Promise<SnapshotInfo>;
@@ -1161,7 +1180,7 @@ export interface WorkspaceGrowthActions {
 /**
  * A GrowthHost over the open workspace's store actions: snapshots land in the
  * live timeline, restores rebuild the live conversation, and the store's own
- * safety snapshots ("Before revert" / "Before branch") are the ones taken.
+ * native recovery receipts are returned unchanged, including completed retries.
  * Register with `registerGrowthHost(cruxId, workspaceGrowthHost(...))` when a
  * crux is loaded; unregister on reset.
  */

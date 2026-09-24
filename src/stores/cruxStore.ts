@@ -26,6 +26,7 @@ import {
   type CreateSnapshotOptions,
   restoreFilesCore,
   restoreManifestWorkspace,
+  recoveredRestore,
   requireSafetySnapshot,
   defaultGrowthHostDeps,
 } from '@/services/growth';
@@ -1187,7 +1188,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (!crux) return;
       const manifestDeps = await defaultGrowthHostDeps();
       if (manifestDeps.content) {
-        let report: RestoreReport | undefined;
+        let report: RestoreReport = recoveredRestore();
         // Retry a committed restore before persisting any stale pre-restore UI state.
         if (!(await manifestDeps.content.finishProjection(crux.id))) {
           await get().saveMeta();
@@ -1280,7 +1281,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (!crux) return;
       const manifestDeps = await defaultGrowthHostDeps();
       if (manifestDeps.content) {
-        let report: RestoreReport | undefined;
+        let report: RestoreReport = recoveredRestore();
         // Retry a committed restore before persisting any stale pre-restore UI state.
         if (!(await manifestDeps.content.finishProjection(crux.id))) {
           await get().saveMeta();

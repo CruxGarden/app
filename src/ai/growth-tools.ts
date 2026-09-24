@@ -21,6 +21,7 @@ import {
   type SnapshotInfo,
   type SnapshotDiff,
   type RestoreReport,
+  RESTORE_RECOVERED_MESSAGE,
 } from '@/services/growth';
 
 export const GROWTH_TOOL_NAMES = [
@@ -283,6 +284,7 @@ export function describeDiff(d: SnapshotDiff): string {
 }
 
 function describeRestore(verb: string, report: RestoreReport): string {
+  if (report.recovered) return RESTORE_RECOVERED_MESSAGE;
   const { target, safety, changes } = report;
   const lines = [
     `${verb} snapshot #${target.number}${target.label ? ` "${target.label}"` : ''} (${target.id}).`,

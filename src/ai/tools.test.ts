@@ -799,6 +799,32 @@ describe('growth tools', () => {
     expect(list.split('\n')).toHaveLength(2);
   });
 
+  it.each(['restore', 'branch'])(
+    'the %s tool describes pending recovery without claiming the requested version',
+    async (tool) => {
+      const { registerGrowthHost, recoveredRestore, RESTORE_RECOVERED_MESSAGE } =
+        await import('@/services/growth');
+      const off = registerGrowthHost(cruxId, {
+        restore: async () => recoveredRestore(),
+        branch: async () => recoveredRestore(),
+        snapshot: async () => {
+          throw new Error('Unexpected version creation');
+        },
+        list: async () => [],
+        diff: async () => {
+          throw new Error('Unexpected diff');
+        },
+      });
+      try {
+        const result = await execute(tool, { snapshotId: '#2', label: 'New branch' });
+        expect(result).toBe(RESTORE_RECOVERED_MESSAGE);
+        expect(result).not.toContain('snapshot #2');
+      } finally {
+        off();
+      }
+    },
+  );
+
   it('restore accepts "#N" and "latest" references', async () => {
     await execute('snapshot', { label: 'a' });
     await execute('read_file', { path: 'index.html' });

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RESTORE_RECOVERED_MESSAGE, type RestoreReport } from '@/services/growth';
 import { motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import { isEmbeddedApp } from '@/services/embedded-app';
@@ -26,11 +27,12 @@ export default function SnapshotBanner() {
   const total = growths.length;
   const label = `Viewing snapshot ${viewingSnapshotIndex + 1} of ${total}`;
 
-  const restore = async (action: () => Promise<unknown>) => {
+  const restore = async (action: () => Promise<RestoreReport | void>) => {
     if (restoring) return;
     setRestoring(true);
     try {
-      await action();
+      const result = await action();
+      if (result?.recovered) await alertDialog(RESTORE_RECOVERED_MESSAGE, 'Recovery complete');
     } catch (error) {
       await alertDialog(
         error instanceof Error ? error.message : 'Could not restore this snapshot. Try again.',
