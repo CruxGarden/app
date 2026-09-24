@@ -8,6 +8,7 @@ import { exportCrux, importCrux } from './crux-io';
 import { pathOf } from '@/lib/artifact-path';
 import { isLocalCreationTool } from './embedded-app';
 import { parseFigmaReference } from '../../electron/src/figma-reference';
+import { growthHostFor } from './growth';
 import { figmaLayout } from '../../electron/src/figma-layout';
 const link = 'https://www.figma.com/design/Abcdef1234/Test?node-id=1-2&utm_source=discard';
 const canonical = 'https://www.figma.com/design/Abcdef1234?node-id=1-2';
@@ -87,6 +88,8 @@ it('preserves a changed link and carries imported asset provenance through trans
   expect(JSON.parse(await artifact.readContent(sidecar.id)).externalSource).toEqual(
     output.externalSource,
   );
+  expect(await (await growthHostFor(source.id)).list()).toHaveLength(0);
+  expect(await (await growthHostFor(target.id)).list()).toHaveLength(0);
   const archive = await exportCrux({ cruxId: source.id });
   const imported = await importCrux({ data: archive.blob, mode: 'clone' });
   expect((await readFigmaProject(imported.cruxId)).reference?.url).toBe(canonical);

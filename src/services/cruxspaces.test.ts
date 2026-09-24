@@ -52,7 +52,9 @@ it('restores imported image and origin together through Growth', async () => {
     targetCruxId: target.id,
     path: 'assets/cover.png',
   });
-  const after = (await growth.list()).at(-1)!;
+  expect(await (await growthHostFor(source.id)).list()).toHaveLength(0);
+  expect(await growth.list()).toHaveLength(1);
+  const after = await growth.snapshot({ label: 'Artwork placed', requestedBy: 'person' });
   await growth.restore(before.id, { requestedBy: 'person' });
   expect(
     (await artifact.findByResource('crux', target.id)).some(

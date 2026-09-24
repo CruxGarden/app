@@ -58,15 +58,11 @@ export interface CruxspaceHistory {
   transfers: CruxspaceTransfer[];
   /** The steps worth walking: named checkpoints, outputs, transfers and merges. */
   milestones: CruxspaceMilestone[];
-  /** Every checkpoint including automatic saves, for the curious. */
+  /** Recorded Growth and transfer events; edit recovery lives separately. */
   checkpoints: CruxspaceMilestone[];
   /** Lane id → member id, for navigation from any node. */
   laneOwners: Record<string, string>;
 }
-
-/** Labels the app writes on its own; they are history, not milestones of the story. */
-const AUTOMATIC = [/^Checkpoint \d+$/, /^Project saved$/, /^Before task\b/, /^Before revert\b/];
-const automatic = (title: string) => AUTOMATIC.some((r) => r.test(title));
 
 export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHistory> {
   await flushIngestion();
@@ -81,6 +77,23 @@ export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHi
   const laneOwners: Record<string, string> = {};
   const members: CruxspaceMember[] = [];
   const graphs = new Map<string, GrowthGraph>();
+  // Read retained manifests, never file bytes. Labels and nearby timestamps do
+  // not prove that a marked version contains an output or its transfer record.
+  const retained = new Map<string, ReturnType<typeof artifact.findByResource>>();
+  const contains = async (node: GrowthNode, path: string, fingerprint: string) => {
+    let files = retained.get(node.id);
+    if (!files) {
+      files = artifact.findByResource('crux', node.id);
+      retained.set(node.id, files);
+    }
+    return (await files).some((file) => pathOf(file) === path && file.fingerprint === fingerprint);
+  };
+  const containingVersion = async (candidates: GrowthNode[], path: string, fingerprint: string) => {
+    for (const candidate of candidates) {
+      if (await contains(candidate, path, fingerprint)) return candidate;
+    }
+    return null;
+  };
 
   for (const id of space.cruxIds) {
     const member = live.get(id);
@@ -153,9 +166,19 @@ export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHi
         seen.add(key);
         const sourceGraph = graphs.get(origin.sourceCruxId);
         const sourceNode = sourceGraph
-          ? outputNode(sourceGraph, origin.label, origin.imported)
+          ? await containingVersion(
+              versionCandidates(sourceGraph, origin.sourceCruxId, origin.imported, 'before'),
+              origin.sourcePath,
+              origin.fingerprint,
+            )
           : null;
-        const targetNode = firstNodeAfter(graph, lane.id, origin.imported);
+        const targetNode = sidecar.fingerprint
+          ? await containingVersion(
+              versionCandidates(graph, lane.id, origin.imported, 'after'),
+              pathOf(sidecar),
+              sidecar.fingerprint,
+            )
+          : null;
         transfers.push({
           ...origin,
           id: `transfer:${key}`,
@@ -196,16 +219,6 @@ export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHi
       nodeId: n.id,
     }));
   for (const t of transfers) {
-    // The checkpoint the transfer itself took is the same event: one milestone, not two.
-    const recorded = checkpoints.find(
-      (m) =>
-        m.id === t.targetNodeId && m.title === `Used ${t.label} from ${space.name}` && !m.transfer,
-    );
-    if (recorded) {
-      recorded.kind = 'transfer';
-      recorded.transfer = t;
-      continue;
-    }
     checkpoints.push({
       id: t.id,
       created: t.imported,
@@ -219,7 +232,7 @@ export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHi
     });
   }
   checkpoints.sort((a, b) => a.created.localeCompare(b.created) || a.id.localeCompare(b.id));
-  const milestones = checkpoints.filter((m) => m.kind !== 'checkpoint' || !automatic(m.title));
+  const milestones = checkpoints;
 
   return {
     space,
@@ -232,23 +245,23 @@ export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHi
   };
 }
 
-/** The checkpoint that recorded the output: its labelled checkpoint, else the last Main checkpoint before the transfer. */
-function outputNode(graph: GrowthGraph, label: string, before: string): GrowthNode | null {
-  const main = graph.lanes.find((l) => l.phase === 'main')?.id;
-  const candidates = graph.nodes
-    .filter((n) => n.ownerId === main && n.kind !== 'copy' && n.created <= before)
-    .sort((a, b) => a.created.localeCompare(b.created));
-  return (
-    [...candidates].reverse().find((n) => n.title === `Output: ${label}`) ??
-    candidates.at(-1) ??
-    null
-  );
-}
-/** The first checkpoint of a lane at or after a moment: the one that holds the transferred file. */
-function firstNodeAfter(graph: GrowthGraph, laneId: string, at: string): GrowthNode | null {
-  return (
-    graph.nodes
-      .filter((n) => n.ownerId === laneId && n.kind !== 'copy' && n.created >= at)
-      .sort((a, b) => a.created.localeCompare(b.created))[0] ?? null
-  );
+/** Eligible marked versions, nearest first; the caller must verify retained content. */
+function versionCandidates(
+  graph: GrowthGraph,
+  ownerId: string,
+  at: string,
+  direction: 'before' | 'after',
+): GrowthNode[] {
+  return graph.nodes
+    .filter(
+      (node) =>
+        node.ownerId === ownerId &&
+        node.kind !== 'copy' &&
+        (direction === 'before' ? node.created <= at : node.created >= at),
+    )
+    .sort((a, b) =>
+      direction === 'before'
+        ? b.created.localeCompare(a.created)
+        : a.created.localeCompare(b.created),
+    );
 }

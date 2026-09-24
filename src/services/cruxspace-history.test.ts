@@ -22,14 +22,22 @@ const png = () =>
 
 beforeEach(() => initServices('local'));
 
-it('combines every member’s Growth into one graph with transfers as cross-Crux links and an ordered milestone list', async () => {
+it('keeps transfers distinct from deliberate versions and never classifies versions by their label', async () => {
   const { crux, artifact } = getServices();
   const source = await crux.create({ title: 'Artwork', type: 'workspace' });
   const target = await crux.create({ title: 'Website', type: 'workspace' });
-  await artifact.create({ resourceId: target.id, content: '<h1>Hi</h1>', meta: { path: 'index.html' } });
+  await artifact.create({
+    resourceId: target.id,
+    content: '<h1>Hi</h1>',
+    meta: { path: 'index.html' },
+  });
   const targetGrowth = await growthHostFor(target.id);
   await targetGrowth.snapshot({ label: 'Blank page', requestedBy: 'person' });
-  const space = await createCruxspace({ name: 'Release', brief: 'Ship the cover.', cruxIds: [source.id, target.id] });
+  const space = await createCruxspace({
+    name: 'Release',
+    brief: 'Ship the cover.',
+    cruxIds: [source.id, target.id],
+  });
   const output = await saveCruxOutput(source.id, png(), 'Cover');
   await copyCruxspaceAsset({
     spaceId: space.id,
@@ -39,45 +47,49 @@ it('combines every member’s Growth into one graph with transfers as cross-Crux
     targetCruxId: target.id,
     path: 'assets/cover.png',
   });
+  const unmarked = await loadCruxspaceHistory(space.id);
+  expect(unmarked.transfers[0]).toMatchObject({ sourceNodeId: null, targetNodeId: null });
+  expect(unmarked.graph.links.some((link) => link.kind === 'transfer')).toBe(false);
+  expect(unmarked.milestones.filter((m) => m.kind === 'transfer')).toHaveLength(1);
   await targetGrowth.snapshot({ label: 'Cover placed', requestedBy: 'person' });
   await targetGrowth.snapshot({ label: 'Project saved', requestedBy: 'person' });
 
   const history = await loadCruxspaceHistory(space.id);
   expect(history.space.name).toBe('Release');
-  expect(history.members.map((m) => [m.title, m.checkpoints, m.outputs.length, m.transfersIn, m.transfersOut])).toEqual([
-    ['Artwork', 1, 1, 0, 1],
-    ['Website', 4, 0, 1, 0],
+  expect(
+    history.members.map((m) => [
+      m.title,
+      m.checkpoints,
+      m.outputs.length,
+      m.transfersIn,
+      m.transfersOut,
+    ]),
+  ).toEqual([
+    ['Artwork', 0, 1, 0, 1],
+    ['Website', 3, 0, 1, 0],
   ]);
   expect(history.graph.lanes.map((l) => l.title)).toEqual(['Artwork', 'Website']);
   expect(history.laneOwners).toEqual({ [source.id]: source.id, [target.id]: target.id });
   const transfer = history.transfers[0]!;
-  expect(transfer).toMatchObject({ sourceCruxId: source.id, targetCruxId: target.id, label: 'Cover', path: 'assets/cover.png' });
-  const sourceNode = history.graph.nodes.find((n) => n.id === transfer.sourceNodeId)!;
-  const targetNode = history.graph.nodes.find((n) => n.id === transfer.targetNodeId)!;
-  expect(sourceNode.title).toBe('Output: Cover');
-  expect(targetNode.title).toBe('Used Cover from Release');
-  expect(history.graph.links).toContainEqual({
-    source: sourceNode.id,
-    target: targetNode.id,
-    kind: 'transfer',
-    skipped: 0,
-    label: 'Cover → Website',
+  expect(transfer).toMatchObject({
+    sourceCruxId: source.id,
+    targetCruxId: target.id,
+    label: 'Cover',
+    path: 'assets/cover.png',
   });
+  expect(transfer.sourceNodeId).toBeNull();
+  expect(history.graph.nodes.find((n) => n.id === transfer.targetNodeId)?.title).toBe(
+    'Cover placed',
+  );
+  expect(history.graph.links.some((link) => link.kind === 'transfer')).toBe(false);
   expect(history.milestones.map((m) => [m.kind, m.memberTitle, m.title])).toEqual([
     ['checkpoint', 'Website', 'Blank page'],
-    ['checkpoint', 'Artwork', 'Output: Cover'],
-    ['transfer', 'Website', 'Used Cover from Release'],
+    ['transfer', 'Website', 'Cover from Artwork → assets/cover.png'],
     ['checkpoint', 'Website', 'Cover placed'],
+    ['checkpoint', 'Website', 'Project saved'],
   ]);
-  expect(history.milestones[2]!.transfer?.path).toBe('assets/cover.png');
-  // Automatic saves stay out of the walk but remain reachable as checkpoints.
-  expect(history.checkpoints.map((m) => m.title)).toEqual([
-    'Blank page',
-    'Output: Cover',
-    'Used Cover from Release',
-    'Cover placed',
-    'Project saved',
-  ]);
+  expect(history.milestones[1]!.transfer?.path).toBe('assets/cover.png');
+  expect(history.checkpoints).toEqual(history.milestones);
   // Milestones are strictly time-ordered so a walkthrough steps forward through them.
   const times = history.milestones.map((m) => m.created);
   expect([...times].sort()).toEqual(times);
@@ -94,7 +106,9 @@ it('reports members that are gone without failing the rest', async () => {
     ['A', true],
     ['Unavailable Crux', false],
   ]);
-  expect(history.graph.warnings).toContain('Some members are no longer in this Garden; their history is omitted.');
+  expect(history.graph.warnings).toContain(
+    'Some members are no longer in this Garden; their history is omitted.',
+  );
 });
 
 it('picks the last checkpoint at or before a moment', () => {
@@ -105,4 +119,51 @@ it('picks the last checkpoint at or before a moment', () => {
   expect(snapshotIndexAt(growths, '2026-01-02T00:00:00Z')).toBe(1);
   expect(snapshotIndexAt(growths, '2026-01-02T12:00:00Z')).toBe(1);
   expect(snapshotIndexAt(growths, '2026-02-01T00:00:00Z')).toBe(2);
+});
+
+it('connects transfers only to marked versions that actually retain their output and provenance', async () => {
+  const { crux, artifact } = getServices();
+  const source = await crux.create({ title: 'Art', type: 'workspace' });
+  const target = await crux.create({ title: 'Site', type: 'workspace' });
+  const sourceGrowth = await growthHostFor(source.id);
+  const targetGrowth = await growthHostFor(target.id);
+  const space = await createCruxspace({
+    name: 'Release',
+    brief: '',
+    cruxIds: [source.id, target.id],
+  });
+  await sourceGrowth.snapshot({ label: 'Output: Cover', requestedBy: 'person' });
+  const output = await saveCruxOutput(source.id, png(), 'Cover');
+  const sourceVersion = await sourceGrowth.snapshot({
+    label: 'Master artwork',
+    requestedBy: 'person',
+  });
+  const transfer = await copyCruxspaceAsset({
+    spaceId: space.id,
+    outputId: output.id,
+    sourceCruxId: source.id,
+    fingerprint: output.fingerprint,
+    targetCruxId: target.id,
+    path: 'assets/cover.png',
+  });
+  const targetVersion = await targetGrowth.snapshot({ label: 'Demo', requestedBy: 'person' });
+  const history = await loadCruxspaceHistory(space.id);
+  expect(history.transfers[0]).toMatchObject({
+    sourceNodeId: sourceVersion.id,
+    targetNodeId: targetVersion.id,
+  });
+  expect(history.graph.links).toContainEqual({
+    source: sourceVersion.id,
+    target: targetVersion.id,
+    kind: 'transfer',
+    skipped: 0,
+    label: 'Cover → Site',
+  });
+  // A timestamp and matching title are not evidence of content in a marked version.
+  const sidecar = (await artifact.findByResource('crux', target.id)).find(
+    (f) => f.meta?.path === transfer.provenancePath,
+  )!;
+  await artifact.delete(sidecar.id);
+  await targetGrowth.snapshot({ label: 'Used Cover from Release', requestedBy: 'person' });
+  expect((await loadCruxspaceHistory(space.id)).transfers).toHaveLength(0);
 });

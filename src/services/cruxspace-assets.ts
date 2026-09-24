@@ -6,7 +6,7 @@ import { pathOf } from '@/lib/artifact-path';
 import { assertCopyWritable, findWorkingCopy, serializeCopy } from './working-copies';
 import { flushIngestion } from './ingestion';
 import { folderForCrux } from './project-folder';
-import { growthHostFor } from './growth';
+import { captureEditCheckpoint } from './edit-history';
 import { guessMimeType } from './sqlite/helpers';
 
 /** The remote source of an imported export; it is not a remote-document backup. */
@@ -151,11 +151,11 @@ function validPath(path: string) {
     /^[\w /.-]+$/.test(path)
   );
 }
-async function checkpoint(owner: string, label: string) {
+async function checkpoint(owner: string) {
   await flushIngestion();
   if (typeof window !== 'undefined')
     window.dispatchEvent(new CustomEvent('crux:external-change', { detail: { cruxId: owner } }));
-  await (await growthHostFor(owner)).snapshot({ label, requestedBy: 'person' });
+  await captureEditCheckpoint(owner);
 }
 
 /** A finished output and its descriptor are ordinary files; Growth and archives retain both. */
@@ -166,9 +166,8 @@ export async function saveCruxOutput(
   externalSource?: ExternalOutputSource,
 ): Promise<CruxOutput> {
   const source = externalSource ? cleanExternalSource(externalSource) : undefined;
-  // The checkpoint runs after the copy's serialization lock is released: the
-  // snapshot path itself updates the Working Copy under that lock, so taking
-  // it inside would wait on itself forever when a turn snapshot is queued.
+  // Settle ingestion and capture recovery after releasing the copy's lock;
+  // ingestion can itself need that lock. Saving an output does not mark a version.
   const output = await serializeCopy(owner, async () => {
     await assertCopyWritable(owner);
     await getServices().crux.findById(owner);
@@ -206,7 +205,7 @@ export async function saveCruxOutput(
     });
     return output;
   });
-  await checkpoint(owner, `Output: ${output.label}`);
+  await checkpoint(owner);
   return output;
 }
 
@@ -418,6 +417,6 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
     };
   });
   // See saveCruxOutput: checkpoint only after releasing the copy's lock.
-  await checkpoint(input.targetCruxId, result.label);
+  await checkpoint(input.targetCruxId);
   return result;
 }
