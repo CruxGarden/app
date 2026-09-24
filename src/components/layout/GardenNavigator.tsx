@@ -1,66 +1,16 @@
-import { useCallback, useMemo, useEffect, useState } from 'react';
-import { useMatch, useSearchParams } from 'react-router-dom';
-import { useMoodNavigate } from '@/hooks/useMoodNavigate';
-import { gardenPath, inGarden, useGardenContext } from '@/stores/gardenContext';
-import { gardenAncestors, gardenMembers } from '@/services/garden-navigation';
+import { useSearchParams } from 'react-router-dom';
+import { useGardenContext } from '@/stores/gardenContext';
 import { CloseIcon } from '@/components/ui/icons';
 import NavigationNeighborhood from './NavigationNeighborhood';
-import {
-  navigationNeighborhood,
-  navigationVersionTarget,
-} from '@/services/navigation-neighborhood';
-import { getSqliteClient } from '@/services/sqlite/client';
-import type { GardenIdentity } from '@/stores/gardenContext';
 import NavigationTree from './NavigationTree';
-import type { NavigationGraph } from './navigation-view';
+import { useNavigationView } from './useNavigationView';
 
 /** A real workspace panel: navigation does not obscure or suspend the work. */
 export default function GardenNavigator() {
-  const { root, garden, revision, navigatorOpen, setNavigatorOpen } = useGardenContext();
-  const route = useMatch('/c/:id');
-  const navigate = useMoodNavigate();
+  const { root, garden, navigatorOpen, setNavigatorOpen } = useGardenContext();
+  const viewProps = useNavigationView(navigatorOpen);
   const [search, setSearch] = useSearchParams();
   const view = search.get('navView') === 'neighborhood' ? 'neighborhood' : 'tree';
-  const [refresh, setRefresh] = useState(0);
-  useEffect(() => {
-    if (!navigatorOpen) return;
-    return getSqliteClient().onChange?.((change) => {
-      if (
-        change.entity === 'database' ||
-        (change.entity === 'crux' &&
-          change.fields?.some((field) => field === 'title' || field === 'growth'))
-      )
-        setRefresh((n) => n + 1);
-    });
-  }, [navigatorOpen]);
-  const graph = useMemo<NavigationGraph>(
-    () => ({
-      roots: root ? [root] : [],
-      revision: revision + refresh,
-      neighborhood: navigationNeighborhood,
-      versionTarget: navigationVersionTarget,
-      identity: async (id) => {
-        const row = await getSqliteClient().get<GardenIdentity>(
-          'SELECT id, title, slug, kind FROM cruxes WHERE id = ? AND deleted IS NULL',
-          [id],
-        );
-        if (!row) throw new Error('This location is unavailable.');
-        return row;
-      },
-      members: gardenMembers,
-      ancestors: gardenAncestors,
-    }),
-    [root, revision, refresh],
-  );
-  const navigateTo = useCallback(
-    (gardenId: string, cruxId: string | null, selection?: { growthId: string }) => {
-      const path = cruxId ? inGarden(`/c/${cruxId}`, gardenId) : gardenPath(gardenId);
-      navigate(
-        `${path}${view === 'neighborhood' ? '&navView=neighborhood' : ''}${selection ? `&growth=${encodeURIComponent(selection.growthId)}` : ''}`,
-      );
-    },
-    [navigate, view],
-  );
   if (!navigatorOpen || !root || !garden) return null;
   return (
     <aside
@@ -93,7 +43,7 @@ export default function GardenNavigator() {
         </select>
         <button
           aria-label="Refresh navigation"
-          onClick={() => setRefresh((n) => n + 1)}
+          onClick={viewProps.refresh}
           className="p-1.5 rounded hover:bg-surface cursor-pointer"
         >
           ↻
@@ -106,19 +56,9 @@ export default function GardenNavigator() {
           </p>
         )}
         {view === 'tree' ? (
-          <NavigationTree
-            graph={graph}
-            gardenId={garden.id}
-            cruxId={route?.params.id ?? null}
-            navigate={navigateTo}
-          />
+          <NavigationTree {...viewProps} />
         ) : (
-          <NavigationNeighborhood
-            graph={graph}
-            gardenId={garden.id}
-            cruxId={route?.params.id ?? null}
-            navigate={navigateTo}
-          />
+          <NavigationNeighborhood {...viewProps} />
         )}
       </div>
     </aside>

@@ -17,6 +17,7 @@ import { WorkspaceLayout } from '@/components/workspace';
 import SnapshotBanner from '@/components/growth/SnapshotBanner';
 import CruxspaceMomentBanner from '@/components/growth/CruxspaceMomentBanner';
 const GrowthExplorer = lazy(() => import('@/components/growth/GrowthExplorer'));
+import CruxDimensions from '@/components/layout/CruxDimensions';
 import { APP_NAME } from '@/lib/constants';
 
 export default function CruxBuilder() {
@@ -127,6 +128,7 @@ function Builder() {
       <div className="flex-1 min-h-0">
         <WorkspaceLayout />
       </div>
+      <CruxDimensions />
     </div>
   );
 }
