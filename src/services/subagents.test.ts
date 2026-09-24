@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Artifact } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
 import {
@@ -40,6 +40,34 @@ const art = (path: string, fingerprint: string, extra: Partial<Artifact> = {}): 
 const BASE = [art('index.md', 'i0'), art('notes.md', 'n0'), art('AGENTS.md', 'g0')];
 
 describe('partitionChanges (merge rules)', () => {
+  it('preserves a permission-only worker change and distinguishes conflicting permissions', () => {
+    const file = (mode: number) => art('run.sh', 'same-bytes', { meta: { path: 'run.sh', mode } });
+    expect(partitionChanges([file(0o644)], [{ branch: 0, artifacts: [file(0o755)] }])).toEqual({
+      unique: [{ path: 'run.sh', branch: 0, kind: 'modified' }],
+      conflicts: [],
+    });
+    expect(
+      partitionChanges(
+        [file(0o644)],
+        [
+          { branch: 0, artifacts: [file(0o755)] },
+          { branch: 1, artifacts: [file(0o700)] },
+        ],
+      ).conflicts,
+    ).toHaveLength(1);
+  });
+
+  it('combines identical removals without asking for an unnecessary choice', () => {
+    expect(
+      partitionChanges(
+        [art('old.md', 'old')],
+        [
+          { branch: 0, artifacts: [] },
+          { branch: 1, artifacts: [] },
+        ],
+      ),
+    ).toEqual({ unique: [{ path: 'old.md', branch: 0, kind: 'removed' }], conflicts: [] });
+  });
   it('applies files touched by exactly one branch; two different versions conflict', () => {
     const a = [...BASE, art('alpha.md', 'a1'), art('notes.md', 'nA')].filter(
       (x) => x.fingerprint !== 'n0',
@@ -377,6 +405,37 @@ describe('runSubagents', () => {
     });
     expect(started).toBe(false);
     expect(runs[0]!.status).toBe('interrupted');
+  });
+
+  it('does not start a worker whose workspace failed to prepare', async () => {
+    const t = task('unprepared');
+    const converse = vi.fn();
+    const runs = await runSubagents(
+      [t],
+      [{ ...newSubagentRun(t), status: 'failed', error: 'Could not retain source' }],
+      {
+        converse,
+        update: () => {},
+      },
+    );
+    expect(converse).not.toHaveBeenCalled();
+    expect(runs[0]!.error).toBe('Could not retain source');
+  });
+
+  it('does not call a worker done when its result could not be retained', async () => {
+    const t = task('unretained');
+    async function* completed(): AsyncGenerator<ConversationEvent> {
+      yield { type: 'text', content: 'Finished' };
+    }
+    const runs = await runSubagents([t], [newSubagentRun(t)], {
+      converse: () => completed(),
+      update: () => {},
+      finish: async () => {
+        throw new Error('Transcript write refused');
+      },
+    });
+    expect(runs[0]!.status).toBe('failed');
+    expect(runs[0]!.error).toContain('Transcript write refused');
   });
 });
 

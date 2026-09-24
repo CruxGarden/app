@@ -1,4 +1,5 @@
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
+import { cruxes } from '@/api';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
@@ -95,11 +96,16 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
     const file = files.find((f) => f.meta?.path === 'data/project.json')!;
     expect(JSON.parse(await services.artifact.readContent(file.id))).toEqual(document);
     // The Whiteboard shares its drawing as a view-mode page; the other samplers stay local
-    if (type === 'excalidraw')
-      await expect(publishPipeline(crux, artifacts)).rejects.not.toThrow(
-        'Website sharing is not available',
-      );
-    else
+    if (type === 'excalidraw') {
+      // Reach the publish-state check without contacting a real service.
+      const probe = vi.spyOn(cruxes, 'get').mockRejectedValue(new Error('Publish probe offline'));
+      try {
+        await expect(publishPipeline(crux, artifacts)).rejects.toThrow('Publish probe offline');
+        expect(probe).toHaveBeenCalledWith(crux.id);
+      } finally {
+        probe.mockRestore();
+      }
+    } else
       await expect(publishPipeline(crux, artifacts)).rejects.toThrow(
         'Website sharing is not available',
       );

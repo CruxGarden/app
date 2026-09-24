@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { copyIdentity, TASKS_CHANGED } from '@/services/working-copies';
 import { motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import { cn } from '@/lib/cn';
@@ -181,7 +183,19 @@ function MergePanel({
   runs: SubagentRun[];
   busy: boolean;
 }) {
-  const { chooseConflict, mergeNow } = useDelegate();
+  const { chooseConflict, mergeNow, refreshResult } = useDelegate();
+  const crux = useCruxStore((s) => s.crux);
+  const closing = useCruxStore((s) => s.closing);
+  useEffect(() => {
+    if (!refreshResult || closing || busy) return;
+    const refresh = () => {
+      void refreshResult().catch(console.error);
+    };
+    refresh();
+    window.addEventListener(TASKS_CHANGED, refresh);
+    return () => window.removeEventListener(TASKS_CHANGED, refresh);
+  }, [refreshResult, closing, busy, crux, merge.status]);
+  const cruxId = copyIdentity(crux)?.cruxId ?? crux?.id;
   const [merging, setMerging] = useState(false);
   const titleOf = (branch: number) => runs[branch]?.title ?? `Worker ${branch + 1}`;
   const decided = conflictsDecided(merge.conflicts);
@@ -199,7 +213,7 @@ function MergePanel({
           <span className="text-text-muted">
             {' '}
             · {merge.applied.length} file{merge.applied.length === 1 ? '' : 's'}
-            {pending ? ' merged so far' : ''}
+            {pending ? (merge.resultCopyId ? ' prepared' : ' merged so far') : ''}
           </span>
         )}
       </div>
@@ -276,6 +290,19 @@ function MergePanel({
             {merging ? 'Merging…' : 'Merge'}
           </button>
         </div>
+      )}
+      {merge.error && (
+        <p role="alert" className="text-xs text-error">
+          {merge.error}
+        </p>
+      )}
+      {pending && merge.resultCopyId && merge.error && cruxId && (
+        <Link
+          className="text-xs text-accent underline"
+          to={`/c/${cruxId}?task=${merge.resultCopyId}`}
+        >
+          Open result Task
+        </Link>
       )}
     </div>
   );

@@ -1,4 +1,6 @@
 import { trackWorkspaceOperation } from '@/stores/workspaceSelection';
+import { createWorkingCopyDelegate } from './delegate-working-copies';
+import { getSqliteClient } from './sqlite/client';
 import { useCruxStoreApi, type CruxState } from '@/stores/cruxStore';
 import type { StoreApi } from 'zustand';
 import { getServices } from '@/services';
@@ -72,6 +74,8 @@ export function delegateFor(data: StoreApi<CruxState>) {
   return delegate;
 }
 function createDelegate(useCruxStore: StoreApi<CruxState>) {
+  if (getSqliteClient().createWorkingCopy) return createWorkingCopyDelegate(useCruxStore);
+  // Parked Web mode retains its existing snapshot-based implementation.
   let merging = false;
   const store = () => useCruxStore.getState();
 
@@ -428,5 +432,6 @@ function createDelegate(useCruxStore: StoreApi<CruxState>) {
     delegateTasks,
     chooseConflict,
     mergeNow: trackWorkspaceOperation(useCruxStore, mergeNow),
+    refreshResult: undefined,
   };
 }

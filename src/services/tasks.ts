@@ -1,6 +1,9 @@
 import { captureEditCheckpoint } from './edit-history';
 import { collectChainMessages } from './growth';
-import type { Crux } from '@/api/types';
+import type { Crux, CruxMeta } from '@/api/types';
+import type { StoreApi } from 'zustand';
+import type { CruxState } from '@/stores/cruxStore';
+import type { ISqliteClient } from './sqlite/client';
 import { getServices } from './index';
 import { isEmbeddedApp } from './embedded-app';
 import { getSqliteClient } from './sqlite/client';
@@ -62,7 +65,30 @@ export interface TaskReview {
   };
 }
 const operations = new Set<string>();
-async function settled<T>(ids: string[], fn: (workspaces: Workspace[]) => Promise<T>): Promise<T> {
+/** Internal delegation admission: only the exact owning turn can participate while active. */
+export interface TaskTurnContext {
+  data: StoreApi<CruxState>;
+  jobId: string;
+  signal: AbortSignal;
+}
+function assertTaskTurn(context?: TaskTurnContext) {
+  if (!context) return;
+  const state = context.data.getState();
+  if (
+    context.signal.aborted ||
+    state.closing ||
+    state.turnJob?.id !== context.jobId ||
+    !state.crux ||
+    getWorkspace(state.crux.id)?.data !== context.data
+  )
+    throw new Error('The parent turn stopped or its workspace changed.');
+}
+async function settled<T>(
+  ids: string[],
+  fn: (workspaces: Workspace[]) => Promise<T>,
+  context?: TaskTurnContext,
+): Promise<T> {
+  assertTaskTurn(context);
   if (ids.some((id) => operations.has(id)))
     throw new Error('Another task operation is using this workspace.');
   ids.forEach((id) => operations.add(id));
@@ -71,10 +97,12 @@ async function settled<T>(ids: string[], fn: (workspaces: Workspace[]) => Promis
     for (const id of ids) {
       const w = await openWorkspace(id);
       const s = w.data.getState();
+      const participating = context?.data === w.data;
       if (
         s.closing ||
-        s.isStreaming ||
-        ['planning', 'running', 'checking'].includes(s.turnJob?.status ?? '') ||
+        (!participating &&
+          (s.isStreaming ||
+            ['planning', 'running', 'checking'].includes(s.turnJob?.status ?? ''))) ||
         s.publishPhase ||
         s.uploadProgress ||
         s.pendingDeletes.length ||
@@ -86,16 +114,18 @@ async function settled<T>(ids: string[], fn: (workspaces: Workspace[]) => Promis
       const docs = documentsFor(w.data, w.ui);
       if (docs.hasDirty())
         throw new Error('Save your open Artifacts before starting or reviewing a task.');
-      w.data.setState({ closing: true });
+      if (!participating) w.data.setState({ closing: true });
       workspaces.push(w);
-      while (w.operations.size) await Promise.all([...w.operations]);
+      // The participating turn is itself in this set. Waiting on it deadlocks.
+      if (!participating) while (w.operations.size) await Promise.all([...w.operations]);
       await docs.drain();
       await s.drain();
     }
     ids.forEach((id) => lockedContentOwners.add(id));
+    assertTaskTurn(context);
     return await fn(workspaces);
   } finally {
-    for (const w of workspaces) w.data.setState({ closing: false });
+    for (const w of workspaces) if (context?.data !== w.data) w.data.setState({ closing: false });
     ids.forEach((id) => {
       operations.delete(id);
       lockedContentOwners.delete(id);
@@ -133,6 +163,7 @@ async function provision(
   manifest: TaskManifest,
   role: 'task' | 'review',
   prompt = '',
+  frozenBase?: NonNullable<Parameters<NonNullable<ISqliteClient['createWorkingCopy']>>[0]['base']>,
 ): Promise<WorkingCopy> {
   const db = getSqliteClient();
   const id = crypto.randomUUID();
@@ -140,11 +171,13 @@ async function provision(
   const cruxId = copyIdentity(owner)?.cruxId ?? owner.id;
   const now = new Date().toISOString();
   // Only portable project guidance is inherited; never provider resume/auth/approval state.
-  const sourceMeta = db.createWorkingCopy
-    ? owner.id !== cruxId
-      ? (await findWorkingCopy(owner.id))!.meta
-      : ((await getServices().crux.findById(owner.id)).meta ?? {})
-    : (owner.meta ?? {});
+  const sourceMeta: CruxMeta = frozenBase
+    ? (frozenBase.expectedMeta as CruxMeta)
+    : db.createWorkingCopy
+      ? owner.id !== cruxId
+        ? (await findWorkingCopy(owner.id))!.meta
+        : ((await getServices().crux.findById(owner.id)).meta ?? {})
+      : (owner.meta ?? {});
   const meta = {
     ...Object.fromEntries(
       ['kind', 'template', 'contentModel', 'personaSnapshots', 'authorSnapshots']
@@ -183,7 +216,7 @@ async function provision(
       cruxId,
       taskId,
       title,
-      base: {
+      base: frozenBase ?? {
         ...(owner.id !== cruxId ? { sourceId: owner.id } : {}),
         expected: await db.fileContent!.head(owner.id),
         expectedMeta: sourceMeta,
@@ -230,6 +263,46 @@ async function provision(
     }
     throw error;
   }
+}
+/** Capture once, then require the same source for every worker and combined result. */
+export async function createDelegatedTasks(
+  context: TaskTurnContext,
+  tasks: { title: string; prompt: string }[],
+) {
+  const id = context.data.getState().crux?.id;
+  if (!id || !getSqliteClient().createWorkingCopy)
+    throw new Error('Retained Tasks are unavailable.');
+  return settled(
+    [id],
+    async ([workspace]) => {
+      await indexTaskManifest(id, await captureTaskManifest(id));
+      await workspace!.data.getState().saveMeta();
+      const source = await getServices().crux.findById(id);
+      const copy = await findWorkingCopy(id);
+      const base = {
+        ...(copy ? { sourceId: id } : {}),
+        expected: await getSqliteClient().fileContent!.head(id),
+        expectedMeta: copy?.meta ?? source.meta ?? {},
+      };
+      const manifest = await indexedTaskManifest(id);
+      const copies: (WorkingCopy | null)[] = [],
+        errors: (string | undefined)[] = [];
+      for (const task of tasks) {
+        try {
+          assertTaskTurn(context);
+          copies.push(
+            await provision(source, task.title, null, manifest, 'task', task.prompt, base),
+          );
+          errors.push(undefined);
+        } catch (error) {
+          copies.push(null);
+          errors.push((error as Error).message);
+        }
+      }
+      return { copies, errors };
+    },
+    context,
+  );
 }
 export async function createTask(cruxId: string, title: string, prompt = ''): Promise<WorkingCopy> {
   if (!title.trim()) throw new Error('Give the task a name.');
@@ -318,68 +391,75 @@ export async function pendingTaskMerge(cruxId: string): Promise<TaskReview | nul
   );
   return row ? (JSON.parse(row.data) as TaskReview) : null;
 }
-export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
+export async function prepareTaskReview(
+  copyId: string,
+  context?: TaskTurnContext,
+): Promise<TaskReview> {
   const copy = await findWorkingCopy(copyId);
   if (!copy || copy.phase !== 'ready' || copy.role !== 'task')
     throw new Error('Choose an unfinished task to review.');
   const targetId = copy.baseState?.sourceId ?? copy.cruxId;
-  return settled([targetId, copyId], async ([main, task]) => {
-    const db = getSqliteClient();
-    const owned = !!db.saveTaskReview;
-    if (owned) {
-      for (const workspace of [main!, task!]) {
-        await indexTaskManifest(workspace.id, await captureTaskManifest(workspace.id));
-        await workspace.data.getState().saveMeta();
-        await workspace.data.getState().refreshArtifacts();
+  return settled(
+    [targetId, copyId],
+    async ([main, task]) => {
+      const db = getSqliteClient();
+      const owned = !!db.saveTaskReview;
+      if (owned) {
+        for (const workspace of [main!, task!]) {
+          await indexTaskManifest(workspace.id, await captureTaskManifest(workspace.id));
+          await workspace.data.getState().saveMeta();
+          await workspace.data.getState().refreshArtifacts();
+        }
       }
-    }
-    const targetHead = owned
-      ? main!.data.getState().crux?.meta?.settings?.activeBranch ||
-        main!.data.getState().growths.at(-1)?.targetId
-      : await head(main!);
-    const sourceHead = owned ? undefined : await head(task!);
-    if (!owned && (!targetHead || !(await isAncestor(copy.baseSnapshotId!, targetHead))))
-      throw new Error(
-        'Main was restored past this task’s base. Reconcile the histories before merging.',
+      const targetHead = owned
+        ? main!.data.getState().crux?.meta?.settings?.activeBranch ||
+          main!.data.getState().growths.at(-1)?.targetId
+        : await head(main!);
+      const sourceHead = owned ? undefined : await head(task!);
+      if (!owned && (!targetHead || !(await isAncestor(copy.baseSnapshotId!, targetHead))))
+        throw new Error(
+          'Main was restored past this task’s base. Reconcile the histories before merging.',
+        );
+      const base = getSqliteClient().workingCopyBase
+        ? await startingTaskManifest(copy.id)
+        : await indexedTaskManifest(copy.baseSnapshotId!);
+      const target = await indexedTaskManifest(owned ? targetId : targetHead!);
+      const source = await indexedTaskManifest(owned ? copyId : sourceHead!);
+      const merged = await mergeTaskManifests(
+        base,
+        target,
+        source,
+        (fp) => db.blobRead(fp),
+        (fp, bytes) => db.blobWrite(fp, bytes),
       );
-    const base = getSqliteClient().workingCopyBase
-      ? await startingTaskManifest(copy.id)
-      : await indexedTaskManifest(copy.baseSnapshotId!);
-    const target = await indexedTaskManifest(owned ? targetId : targetHead!);
-    const source = await indexedTaskManifest(owned ? copyId : sourceHead!);
-    const merged = await mergeTaskManifests(
-      base,
-      target,
-      source,
-      (fp) => db.blobRead(fp),
-      (fp, bytes) => db.blobWrite(fp, bytes),
-    );
-    // On conflicts, preview stays on Main until explicit resolution finishes.
-    const candidate = await provision(
-      main!.data.getState().crux!,
-      `Review ${copy.title}`,
-      owned ? null : targetHead!,
-      merged.conflicts.length ? target : merged.manifest,
-      'review',
-    );
-    const review: TaskReview = {
-      id: crypto.randomUUID(),
-      cruxId: copy.cruxId,
-      ...(owned ? { targetId } : {}),
-      copyId,
-      candidateId: candidate.id,
-      base,
-      main: target,
-      task: source,
-      manifest: merged.manifest,
-      conflicts: merged.conflicts,
-      resolutions: {},
-      ...(!owned ? { sourceHead, targetHead } : {}),
-      phase: 'review',
-    };
-    await saveReview(review);
-    return owned ? loadTaskReview(review.id) : review;
-  });
+      // On conflicts, preview stays on Main until explicit resolution finishes.
+      const candidate = await provision(
+        main!.data.getState().crux!,
+        `Review ${copy.title}`,
+        owned ? null : targetHead!,
+        merged.conflicts.length ? target : merged.manifest,
+        'review',
+      );
+      const review: TaskReview = {
+        id: crypto.randomUUID(),
+        cruxId: copy.cruxId,
+        ...(owned ? { targetId } : {}),
+        copyId,
+        candidateId: candidate.id,
+        base,
+        main: target,
+        task: source,
+        manifest: merged.manifest,
+        conflicts: merged.conflicts,
+        resolutions: {},
+        ...(!owned ? { sourceHead, targetHead } : {}),
+        phase: 'review',
+      };
+      await saveReview(review);
+      return owned ? loadTaskReview(review.id) : review;
+    },
+    context,
+  );
 }
 async function resolveTaskReviewCore(
   id: string,
@@ -470,7 +550,7 @@ async function verifyTaskReviewCore(id: string): Promise<TaskReview> {
   await saveReview(verified, review);
   return verified;
 }
-async function applyTaskReviewCore(id: string): Promise<TaskReview> {
+async function applyTaskReviewCore(id: string, context?: TaskTurnContext): Promise<TaskReview> {
   const review = await loadTaskReview(id);
   if (review.phase === 'merged') return review;
   if (
@@ -480,34 +560,43 @@ async function applyTaskReviewCore(id: string): Promise<TaskReview> {
   )
     throw new Error('Check the resolved candidate before merging.');
   const targetId = review.targetId ?? review.cruxId;
-  return settled([targetId, review.copyId], async ([main, task]) => {
-    for (const [copyId, expected] of [
-      [targetId, review.main],
-      [review.copyId, review.task],
-      [review.candidateId, review.manifest],
-    ] as const)
-      if (taskManifestKey(await captureTaskManifest(copyId)) !== taskManifestKey(expected))
-        throw new Error('The files changed after review. Prepare a new review before merging.');
-    const liveTip = (w: Workspace) =>
-      w.data.getState().crux?.meta?.settings?.activeBranch ||
-      w.data.getState().growths.at(-1)?.targetId;
-    if (
-      !getSqliteClient().beginTaskMerge &&
-      (liveTip(main!) !== review.targetHead || liveTip(task!) !== review.sourceHead)
-    )
-      throw new Error('Growth changed after review. Prepare a new review.');
-    const applying: TaskReview = { ...review, phase: 'applying' };
-    const db = getSqliteClient();
-    if (db.beginTaskMerge) {
-      // Admit the exact checked journal before any file projection; never fall
-      // back to raw SQL after the owner rejects stale or competing work.
-      await db.beginTaskMerge(id, JSON.stringify(review));
-      announceTasksChanged();
-    } else await saveReview(applying); // durable before any destructive write
-    return completeMerge(applying, main!);
-  });
+  return settled(
+    [targetId, review.copyId],
+    async ([main, task]) => {
+      for (const [copyId, expected] of [
+        [targetId, review.main],
+        [review.copyId, review.task],
+        [review.candidateId, review.manifest],
+      ] as const)
+        if (taskManifestKey(await captureTaskManifest(copyId)) !== taskManifestKey(expected))
+          throw new Error('The files changed after review. Prepare a new review before merging.');
+      const liveTip = (w: Workspace) =>
+        w.data.getState().crux?.meta?.settings?.activeBranch ||
+        w.data.getState().growths.at(-1)?.targetId;
+      if (
+        !getSqliteClient().beginTaskMerge &&
+        (liveTip(main!) !== review.targetHead || liveTip(task!) !== review.sourceHead)
+      )
+        throw new Error('Growth changed after review. Prepare a new review.');
+      const applying: TaskReview = { ...review, phase: 'applying' };
+      const db = getSqliteClient();
+      if (db.beginTaskMerge) {
+        // Admit the exact checked journal before any file projection; never fall
+        // back to raw SQL after the owner rejects stale or competing work.
+        assertTaskTurn(context);
+        await db.beginTaskMerge(id, JSON.stringify(review));
+        announceTasksChanged();
+      } else await saveReview(applying); // durable before any destructive write
+      return completeMerge(applying, main!, context);
+    },
+    context,
+  );
 }
-async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskReview> {
+async function completeMerge(
+  review: TaskReview,
+  main: Workspace,
+  context?: TaskTurnContext,
+): Promise<TaskReview> {
   const targetId = review.targetId ?? review.cruxId;
   const current = await captureTaskManifest(targetId);
   for (const path of new Set([
@@ -538,7 +627,20 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
   if (db.completeTaskMerge) {
     await db.completeTaskMerge(review.id);
     announceTasksChanged();
-    await main.data.getState().loadCrux(main.id);
+    if (context?.data === main.data) {
+      // Reload only committed workspace state. loadCrux reconciles persisted
+      // running jobs as interrupted, which is wrong inside their live turn.
+      const crux = await getServices().crux.findById(main.id);
+      const state = main.data.getState();
+      main.data.setState({
+        crux,
+        messages: [
+          ...state.messages.slice(0, state.messageSegmentStart),
+          ...(crux.meta?.messages ?? []),
+        ],
+      });
+      await main.data.getState().refreshArtifacts();
+    } else await main.data.getState().loadCrux(main.id);
     await releaseTaskReviewCore(review.id);
     const taskWorkspace = getWorkspace(review.copyId);
     if (taskWorkspace) await taskWorkspace.data.getState().loadCrux(review.copyId);
@@ -607,12 +709,14 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
   if (taskWorkspace) await taskWorkspace.data.getState().loadCrux(review.copyId);
   return done;
 }
-async function resumeTaskMergeCore(id: string): Promise<TaskReview> {
+async function resumeTaskMergeCore(id: string, context?: TaskTurnContext): Promise<TaskReview> {
   const review = await loadTaskReview(id);
   if (review.phase === 'merged') return review;
   if (review.phase !== 'applying') throw new Error('There is no interrupted merge to recover.');
-  return settled([review.targetId ?? review.cruxId, review.copyId], async ([main]) =>
-    completeMerge(review, main!),
+  return settled(
+    [review.targetId ?? review.cruxId, review.copyId],
+    async ([main]) => completeMerge(review, main!, context),
+    context,
   );
 }
 export async function archiveTask(id: string, archived: boolean): Promise<void> {
@@ -698,10 +802,10 @@ export const resolveTaskReview = (id: string, choices: Record<string, TaskResolu
   serializeCopy(`review:${id}`, () => resolveTaskReviewCore(id, choices));
 export const verifyTaskReview = (id: string) =>
   serializeCopy(`review:${id}`, () => verifyTaskReviewCore(id));
-export const applyTaskReview = (id: string) =>
-  serializeCopy(`review:${id}`, () => applyTaskReviewCore(id));
-export const resumeTaskMerge = (id: string) =>
-  serializeCopy(`review:${id}`, () => resumeTaskMergeCore(id));
+export const applyTaskReview = (id: string, context?: TaskTurnContext) =>
+  serializeCopy(`review:${id}`, () => applyTaskReviewCore(id, context));
+export const resumeTaskMerge = (id: string, context?: TaskTurnContext) =>
+  serializeCopy(`review:${id}`, () => resumeTaskMergeCore(id, context));
 export const releaseTaskReview = (id: string) =>
   serializeCopy(`review:${id}`, () => releaseTaskReviewCore(id));
 

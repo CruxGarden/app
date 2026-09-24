@@ -3050,6 +3050,7 @@ function delegateScript(
         });
       }
       if (rounds.length === 1) {
+        if (/\bwithout overlap\b/i.test(text)) return textStream(`Wrote ${subFile(title)}.`);
         return toolCallStream('write_file', { path: SHARED_FILE, content: subNotes(title) });
       }
       return textStream(`Wrote ${subFile(title)} and ${SHARED_FILE}.`);
@@ -3057,14 +3058,18 @@ function delegateScript(
   }
   if (!/\bin parallel\b/i.test(text)) return null;
   const last = prompt[prompt.length - 1];
-  if (last?.role === 'tool') return textStream('Done — merged the parallel work.');
+  if (last?.role === 'tool') return textStream('Done — parallel workers finished.');
   const slowly = /\bslowly\b/i.test(text);
+  const separate = /\bwithout overlap\b/i.test(text);
   return toolCallStream('delegate', {
     tasks: SUB_TITLES.map((title) => ({
       title,
       instructions:
-        `Write ${subFile(title)} with a line of your own, then add your notes to ${SHARED_FILE}.` +
-        (slowly ? ' Take it slowly.' : ''),
+        (separate
+          ? `Write ${subFile(title)} with a line of your own.`
+          : `Write ${subFile(title)} with a line of your own, then add your notes to ${SHARED_FILE}.`) +
+        (slowly ? ' Take it slowly.' : '') +
+        (separate ? ' Without overlap: only write your own file.' : ''),
       paths: [subFile(title), SHARED_FILE],
     })),
   });
