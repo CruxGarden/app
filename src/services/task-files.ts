@@ -10,6 +10,21 @@ import {
   type TaskManifest,
 } from './task-manifest';
 
+/** Read the API-retained starting files; never reconstruct them from mutable Main. */
+export async function startingTaskManifest(id: string): Promise<TaskManifest> {
+  const read = getSqliteClient().workingCopyBase;
+  if (!read) throw new Error('Task starting-state inspection is unavailable.');
+  const base = await read(id);
+  const manifest: TaskManifest = {};
+  for (const entry of base.entries) {
+    if (!isTaskArtifact(entry.path)) continue;
+    const { fingerprint, mimeType, encoding, mode, size } = entry;
+    manifest[entry.path] = { fingerprint, mimeType, encoding, mode, size };
+  }
+  validateTaskPaths(manifest);
+  return manifest;
+}
+
 export async function indexedTaskManifest(id: string): Promise<TaskManifest> {
   const files = await getServices().artifact.findByResource('crux', id);
   const manifest: TaskManifest = {};

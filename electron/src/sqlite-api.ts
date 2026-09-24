@@ -259,7 +259,11 @@ export class SqliteApi implements NativeStorage {
   }
   createWorkingCopy(input: LocalWorkingCopyCreate) {
     this.assertAvailable();
-    return this.owner.createWorkingCopy(input);
+    return this.owner.createWorkingCopy(input, this.contentStore());
+  }
+  workingCopyBase(id: string) {
+    this.assertAvailable();
+    return this.owner.workingCopyBase(id, this.contentStore());
   }
   saveTaskReview(reviewData: string, expectedData?: string) {
     this.assertAvailable();

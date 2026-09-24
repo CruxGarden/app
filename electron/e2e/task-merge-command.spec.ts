@@ -44,6 +44,27 @@ test('refused admission preserves Main and refused finalization preserves recove
         }, copy),
       )
       .toBe('<h1>Task result</h1>');
+    // Mark a deliberate version only to exercise damaged ancestry during recovery.
+    // Task creation itself must have added no Growth at all.
+    expect(
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.all("SELECT id FROM dimensions WHERE type='growth'"),
+      ),
+    ).toEqual([]);
+    await page.evaluate(async (id) => {
+      const db = window.electronAPI!.sqlite;
+      const head = await db.fileContent!.head(id);
+      const marked = await db.fileContent!.snapshot({
+        cruxId: id,
+        expected: head,
+        snapshotId: crypto.randomUUID(),
+        parentId: null,
+        meta: { label: 'Ready for review' },
+      });
+      await db.updateWorkingCopyMeta!(id, { settings: { activeBranch: marked.snapshot.id } });
+    }, copy);
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();
     const beforeReviewGrowth = await page.evaluate(() =>
       window.electronAPI!.sqlite.all("SELECT * FROM dimensions WHERE type = 'growth' ORDER BY id"),
     );
@@ -137,7 +158,7 @@ test('refused admission preserves Main and refused finalization preserves recove
     await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_finish'));
     // A damaged transcript must not silently complete with a truncated Collaboration.
     const transcript = await page.evaluate(
-      async ({ main, mergeId }) => {
+      async ({ main, copy, mergeId }) => {
         const db = window.electronAPI!.sqlite;
         const journal = (await db.get('SELECT * FROM task_merges WHERE id = ?', [mergeId])) as {
           data: string;
@@ -146,7 +167,7 @@ test('refused admission preserves Main and refused finalization preserves recove
         const mainRow = await db.get('SELECT * FROM cruxes WHERE id = ?', [main]);
         await db.run(
           "UPDATE dimensions SET deleted = ? WHERE source_id = ? AND target_id = ? AND type = 'growth'",
-          [new Date().toISOString(), main, source],
+          [new Date().toISOString(), copy, source],
         );
         return { source, journal, mainRow };
       },
@@ -172,12 +193,12 @@ test('refused admission preserves Main and refused finalization preserves recove
       ),
     ).toEqual({ journal: transcript.journal, mainRow: transcript.mainRow });
     await page.evaluate(
-      ({ main, source }) =>
+      ({ copy, source }) =>
         window.electronAPI!.sqlite.run(
           'UPDATE dimensions SET deleted = NULL WHERE source_id = ? AND target_id = ?',
-          [main, source],
+          [copy, source],
         ),
-      { main, source: transcript.source },
+      { copy, source: transcript.source },
     );
     await page.getByRole('button', { name: 'Resume merge', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Resume merge', exact: true })).toHaveCount(0);

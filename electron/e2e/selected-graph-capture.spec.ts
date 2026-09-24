@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
 // Host-contract test: the actual API package and native Blob Store, in an
-// isolated database. This does not claim that the .crux UI format has switched.
-test('the packaged API captures a shared Garden graph and retained Task content through process restart and content refusal', async () => {
+// isolated database. UI transfer is covered by private-archive-ui.spec.ts.
+test('the packaged API captures a placed Garden graph with a lateral Graft and retained Task content through process restart and content refusal', async () => {
   let launch = await launchApp();
   const dir = launch.dir;
   try {
@@ -51,10 +51,17 @@ test('the packaged API captures a shared Garden graph and retained Task content 
         });
         for (const [gardenId, memberId] of [
           [root, child],
-          [root, work],
           [child, work],
         ])
           await runtime.execute(({ garden }) => garden.add({ ...identity, gardenId, memberId }));
+        await runtime.execute(({ dimension }) =>
+          dimension.create({
+            ...identity,
+            sourceId: root,
+            targetId: work,
+            type: DimensionType.GRAFT,
+          }),
+        );
         await runtime.execute(({ dimension }) =>
           dimension.create({
             ...identity,
@@ -84,15 +91,21 @@ test('the packaged API captures a shared Garden graph and retained Task content 
           store,
         );
         const task = randomUUID();
-        await runtime.createWorkingCopy({
-          id: task,
-          cruxId: work,
-          taskId: randomUUID(),
-          title: 'Task',
-          baseSnapshotId: snapshot.snapshot.id,
-          role: 'task',
-          meta: {},
-        });
+        await runtime.createWorkingCopy(
+          {
+            id: task,
+            cruxId: work,
+            taskId: randomUUID(),
+            title: 'Task',
+            base: {
+              expected: await runtime.fileContentHead(work),
+              expectedMeta: (await runtime.execute(({ crux }) => crux.findById(work))).meta ?? {},
+            },
+            role: 'task',
+            meta: {},
+          },
+          store,
+        );
         const later = new TextEncoder().encode('Current Main');
         await runtime.editFileContent(
           {
@@ -135,7 +148,7 @@ test('the packaged API captures a shared Garden graph and retained Task content 
     );
     expect(saved.capture.dimensions.filter((edge) => edge.targetId === saved.work)).toHaveLength(2);
     expect(saved.capture.workingCopies).toMatchObject([
-      { id: saved.task, baseSnapshotId: saved.snapshot },
+      { id: saved.task, baseState: { workspace: { parentId: saved.snapshot } } },
     ]);
     expect(saved.capture.contentHeads).toHaveLength(3);
     expect(saved.capture.fingerprints).toContain(saved.fingerprint);

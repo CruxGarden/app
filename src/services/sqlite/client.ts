@@ -21,6 +21,7 @@ export interface ISqliteClient {
   prepareWorkingCopyFolder?: SqliteBridge['prepareWorkingCopyFolder'];
   finishWorkingCopySetup?: SqliteBridge['finishWorkingCopySetup'];
   createWorkingCopy?: SqliteBridge['createWorkingCopy'];
+  workingCopyBase?: SqliteBridge['workingCopyBase'];
   saveTaskReview?: SqliteBridge['saveTaskReview'];
   beginTaskMerge?: SqliteBridge['beginTaskMerge'];
   releaseTaskReview?: SqliteBridge['releaseTaskReview'];

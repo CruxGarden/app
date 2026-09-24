@@ -104,6 +104,7 @@ const api: ElectronBridge = {
       ipcRenderer.invoke('sqlite:finish-working-copy-setup', id, revision, phase),
     createWorkingCopy: (input: LocalWorkingCopyCreate) =>
       ipcRenderer.invoke('sqlite:create-working-copy', input),
+    workingCopyBase: (id: string) => ipcRenderer.invoke('sqlite:working-copy-base', id),
     saveTaskReview: (reviewData: string, expectedData?: string) =>
       ipcRenderer.invoke('sqlite:save-task-review', reviewData, expectedData),
     beginTaskMerge: (id: string, reviewData: string) =>

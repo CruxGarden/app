@@ -69,6 +69,9 @@ export class ElectronSqliteClient implements ISqliteClient {
   get finishWorkingCopySetup(): SqliteBridge['finishWorkingCopySetup'] {
     return this.api.finishWorkingCopySetup;
   }
+  get workingCopyBase(): SqliteBridge['workingCopyBase'] {
+    return this.api.workingCopyBase;
+  }
   get createWorkingCopy(): SqliteBridge['createWorkingCopy'] {
     return this.api.createWorkingCopy;
   }

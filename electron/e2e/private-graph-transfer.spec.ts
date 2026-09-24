@@ -112,15 +112,21 @@ test('a private graph archive crosses clean profiles with single placement, reta
           store,
         );
         const task = randomUUID();
-        await runtime.createWorkingCopy({
-          id: task,
-          taskId: randomUUID(),
-          cruxId: work,
-          title: 'Saved Task',
-          baseSnapshotId: growth.snapshot.id,
-          role: 'task',
-          meta: { settings: { activeBranch: growth.snapshot.id } },
-        });
+        await runtime.createWorkingCopy(
+          {
+            id: task,
+            taskId: randomUUID(),
+            cruxId: work,
+            title: 'Saved Task',
+            base: {
+              expected: await runtime.fileContentHead(work),
+              expectedMeta: (await runtime.execute(({ crux }) => crux.findById(work))).meta ?? {},
+            },
+            role: 'task',
+            meta: { settings: { activeBranch: growth.snapshot.id } },
+          },
+          store,
+        );
         const current = new TextEncoder().encode('New Main content');
         await runtime.editFileContent(
           {

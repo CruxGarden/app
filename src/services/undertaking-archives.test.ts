@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import JSZip from 'jszip';
 import catalog from '@/data/cruxspace-templates.json';
 
-// These shipped assets are authored through MCP, not assembled by the web-only
+// These shipped assets are authored through the actual API, not assembled by the web-only
 // test database. An old bundled format otherwise passes importer unit tests but
 // fails when someone starts an undertaking in the desktop app.
 for (const template of catalog) {
@@ -23,7 +23,7 @@ for (const template of catalog) {
         expect(envelope).toMatchObject({
           archiveVersion: 3,
           purpose: 'private-backup',
-          graphVersion: 1,
+          graphVersion: 2,
           payloadVersion: 1,
         });
         const graphBytes = await zip.file(`${member.archive}graph.json`)!.async('uint8array');

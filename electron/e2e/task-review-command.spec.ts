@@ -20,7 +20,31 @@ test('review checking and closing report refused writes, retry and preserve Task
     await page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();
     const copy = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    await page.evaluate(() =>
+      window.electronAPI!.sqlite.run(
+        "CREATE TRIGGER refuse_initial_review BEFORE INSERT ON task_merges BEGIN SELECT RAISE(ABORT, 'Review create refused'); END",
+      ),
+    );
     await page.getByRole('button', { name: 'Review changes', exact: true }).click();
+    await expect(page.getByTestId('task-bar').getByRole('alert')).toContainText(
+      'Review create refused',
+    );
+    expect(
+      await page.evaluate(() => window.electronAPI!.sqlite.all('SELECT id FROM task_merges')),
+    ).toEqual([]);
+    const candidates = await page.evaluate(() =>
+      window.electronAPI!.sqlite.all("SELECT id, phase FROM working_copies WHERE role='review'"),
+    );
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({ phase: 'ready' });
+    expect(
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.all("SELECT id FROM dimensions WHERE type='growth'"),
+      ),
+    ).toEqual([]);
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_initial_review'));
+    await page.getByRole('button', { name: 'Review changes', exact: true }).click();
+
     const review = page.getByRole('dialog', { name: 'Review changes for Main' });
     await expect(review).toBeVisible();
     const saved = await page.evaluate(async (copy) => {

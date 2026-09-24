@@ -19,6 +19,7 @@ import {
 } from './working-copies';
 import {
   indexedTaskManifest,
+  startingTaskManifest,
   captureTaskManifest,
   indexTaskManifest,
   projectTaskManifest,
@@ -126,7 +127,7 @@ async function finishOwnedTaskSetup(id: string, phase: 'ready' | 'failed'): Prom
 async function provision(
   owner: Crux,
   title: string,
-  baseId: string,
+  baseId: string | null,
   manifest: TaskManifest,
   role: 'task' | 'review',
   prompt = '',
@@ -136,7 +137,9 @@ async function provision(
   const taskId = crypto.randomUUID();
   const now = new Date().toISOString();
   // Only portable project guidance is inherited; never provider resume/auth/approval state.
-  const sourceMeta = owner.meta ?? {};
+  const sourceMeta = db.createWorkingCopy
+    ? ((await getServices().crux.findById(owner.id)).meta ?? {})
+    : (owner.meta ?? {});
   const meta = {
     ...Object.fromEntries(
       ['kind', 'template', 'contentModel', 'personaSnapshots', 'authorSnapshots']
@@ -175,7 +178,10 @@ async function provision(
       cruxId: owner.id,
       taskId,
       title,
-      baseSnapshotId: baseId,
+      base: {
+        expected: await db.fileContent!.head(owner.id),
+        expectedMeta: sourceMeta,
+      },
       role,
       meta,
     });
@@ -184,6 +190,7 @@ async function provision(
     await db.run(insert.sql, insert.params);
   }
   try {
+    if (db.workingCopyBase && role === 'task') manifest = await startingTaskManifest(id);
     await prepareTaskFolder((await findWorkingCopy(id))!);
     await projectTaskManifest(id, {}, manifest);
     // The API already copied every preview slot with its preparing record.
@@ -222,6 +229,18 @@ export async function createTask(cruxId: string, title: string, prompt = ''): Pr
   if (!title.trim()) throw new Error('Give the task a name.');
   if (await findWorkingCopy(cruxId)) throw new Error('Start new tasks from Main.');
   return settled([cruxId], async ([main]) => {
+    if (getSqliteClient().createWorkingCopy) {
+      await indexTaskManifest(cruxId, await captureTaskManifest(cruxId));
+      await main!.data.getState().saveMeta();
+      return provision(
+        main!.data.getState().crux!,
+        title.trim(),
+        null,
+        await indexedTaskManifest(cruxId),
+        'task',
+        prompt,
+      );
+    }
     const base = await checkpoint(main!, `Before task: ${title.trim()}`);
     return provision(
       main!.data.getState().crux!,
@@ -312,12 +331,14 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
         main!.data.getState().growths.at(-1)?.targetId
       : await head(main!);
     const sourceHead = owned ? undefined : await head(task!);
-    if (!targetHead || !(await isAncestor(copy.baseSnapshotId, targetHead)))
+    if (!owned && (!targetHead || !(await isAncestor(copy.baseSnapshotId!, targetHead))))
       throw new Error(
         'Main was restored past this task’s base. Reconcile the histories before merging.',
       );
-    const base = await indexedTaskManifest(copy.baseSnapshotId);
-    const target = await indexedTaskManifest(owned ? copy.cruxId : targetHead);
+    const base = getSqliteClient().workingCopyBase
+      ? await startingTaskManifest(copy.id)
+      : await indexedTaskManifest(copy.baseSnapshotId!);
+    const target = await indexedTaskManifest(owned ? copy.cruxId : targetHead!);
     const source = await indexedTaskManifest(owned ? copyId : sourceHead!);
     const merged = await mergeTaskManifests(
       base,
@@ -330,7 +351,7 @@ export async function prepareTaskReview(copyId: string): Promise<TaskReview> {
     const candidate = await provision(
       main!.data.getState().crux!,
       `Review ${copy.title}`,
-      owned ? copy.baseSnapshotId : targetHead,
+      owned ? null : targetHead!,
       merged.conflicts.length ? target : merged.manifest,
       'review',
     );
@@ -678,7 +699,9 @@ export async function recoverTaskSetup(id: string): Promise<void> {
     const copy = await findWorkingCopy(id);
     if (!copy || copy.role !== 'task' || !['preparing', 'failed'].includes(copy.phase))
       throw new Error('This task does not need setup recovery.');
-    const base = await indexedTaskManifest(copy.baseSnapshotId);
+    const base = getSqliteClient().workingCopyBase
+      ? await startingTaskManifest(copy.id)
+      : await indexedTaskManifest(copy.baseSnapshotId!);
     let current: TaskManifest = {};
     const api = typeof window === 'undefined' ? undefined : window.electronAPI?.project;
     if (copy.projectFolder && (await api?.folderExists(copy.projectFolder)))

@@ -16,7 +16,28 @@ test('owned Task edits preserve independent state through UI failure, retry and 
     await launch.page.keyboard.press('ControlOrMeta+s');
     await launch.page.getByRole('button', { name: 'New task', exact: true }).click();
     await launch.page.getByRole('textbox', { name: 'Task name', exact: true }).fill('First task');
+    await launch.page.evaluate(() =>
+      window.electronAPI!.sqlite.run(
+        'CREATE TRIGGER refuse_create BEFORE INSERT ON working_copies BEGIN SELECT RAISE(IGNORE); END',
+      ),
+    );
     await launch.page.getByRole('button', { name: 'Save and start task' }).click();
+    await expect(
+      launch.page.getByRole('dialog', { name: 'New task', exact: true }).getByRole('alert'),
+    ).toBeVisible();
+    expect(
+      await launch.page.evaluate(() =>
+        window.electronAPI!.sqlite.all('SELECT id FROM working_copies'),
+      ),
+    ).toEqual([]);
+    expect(
+      await launch.page.evaluate(() =>
+        window.electronAPI!.sqlite.all("SELECT id FROM dimensions WHERE type='growth'"),
+      ),
+    ).toEqual([]);
+    await launch.page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_create'));
+    await launch.page.getByRole('button', { name: 'Save and start task' }).click();
+
     await expect(launch.page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);
     await expect(
       launch.page.getByRole('button', { name: 'Review changes', exact: true }),
@@ -105,18 +126,16 @@ test('owned Task edits preserve independent state through UI failure, retry and 
     expect(await read()).toMatchObject({
       crux_id: main,
       task_id: original.task_id,
-      base_snapshot_id: original.base_snapshot_id,
+      base_state: original.base_state,
       project_folder: original.project_folder,
       phase: 'ready',
       meta: { ...parallel, notes: 'Saved after retry' },
     });
     const saved = await launch.page.evaluate(async (id) => {
       const db = window.electronAPI!.sqlite;
-      const row = (await db.get(
-        'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-        [id, 'kept.txt'],
-      )) as { fingerprint: string };
-      return new TextDecoder().decode(await db.blobRead(row.fingerprint));
+      const head = await db.fileContent!.head(id);
+      const file = await db.fileContent!.read({ cruxId: id, expected: head, path: 'kept.txt' });
+      return file ? new TextDecoder().decode(file.bytes) : null;
     }, id);
     expect(saved).toBe('Preserved task content');
   } finally {

@@ -10,7 +10,7 @@ import { enterGarden, createCrux, storedCrux, addArtifact } from './multi-crux-h
 import { togglePanel } from './panel-helpers';
 import { exportNativeCrux } from './native-archive-helpers';
 
-test('the visible Crux exporter and importer preserve Main, Tasks, Growth and binary files across profiles and restart', async () => {
+test('the visible Crux exporter and importer preserve Main, Tasks, starting state and binary files across profiles and restart', async () => {
   test.setTimeout(180_000);
   const source = await launchApp();
   const filename = join(source.dir, 'private.crux');
@@ -56,7 +56,9 @@ test('the visible Crux exporter and importer preserve Main, Tasks, Growth and bi
     const zip = await JSZip.loadAsync(readFileSync(filename));
     const graph = JSON.parse(await zip.file('graph.json')!.async('text'));
     expect(graph.workingCopies).toHaveLength(1);
-    expect(graph.cruxes.some((row: { kind: string }) => row.kind === 'snapshot')).toBe(true);
+    expect(graph.cruxes.some((row: { kind: string }) => row.kind === 'snapshot')).toBe(false);
+    expect(graph.workingCopies[0].baseState.workspace.parentId).toBeNull();
+    expect(graph.fingerprints).toContain(graph.workingCopies[0].baseState.root);
     expect(JSON.stringify(graph)).not.toContain(meta.projectFolder);
     expect(graph.cruxes.find((row: { id: string }) => row.id === originalId)).not.toHaveProperty(
       'visibility',
@@ -124,6 +126,13 @@ test('the visible Crux exporter and importer preserve Main, Tasks, Growth and bi
         window.electronAPI!.sqlite.all('SELECT id FROM artifacts'),
       ),
     ).toEqual([]);
+    const startingText = await destination.page.evaluate(async (id) => {
+      const db = window.electronAPI!.sqlite;
+      const base = await db.workingCopyBase!(id);
+      const entry = base.entries.find((file) => file.path === 'note.txt')!;
+      return new TextDecoder().decode(await db.blobRead(entry.fingerprint));
+    }, copies[0].id);
+    expect(startingText).toBe('Earlier text');
     await destination.app.close();
     destination = await launchApp({ dir });
     await destination.page.getByRole('button', { name: /enter/i }).click();

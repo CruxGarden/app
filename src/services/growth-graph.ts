@@ -53,7 +53,7 @@ export async function loadGrowthGraph(cruxId: string): Promise<GrowthGraph> {
   );
   if (!main) throw new Error('This Crux is no longer available.');
   const tasks = await db.all<GrowthLane>(
-    `SELECT id, title, phase, base_snapshot_id AS baseId,
+    `SELECT id, title, phase, ${db.workingCopyBase ? "json_extract(base_state, '$.workspace.parentId')" : 'base_snapshot_id'} AS baseId,
        json_extract(meta, '$.settings.activeBranch') AS headId,
        json_type(meta, '$.settings.activeBranch') IS NOT NULL AS headSelected
      FROM working_copies WHERE crux_id = ? AND role = 'task' ORDER BY created, id`,

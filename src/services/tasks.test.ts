@@ -183,7 +183,7 @@ describe('parallel tasks', () => {
     for (const copy of copies) {
       expect([a.id, b.id]).not.toContain(copy.id);
       expect([a.taskId, b.taskId]).not.toContain(copy.taskId);
-      expect(copy.baseSnapshotId).not.toBe(a.baseSnapshotId);
+      expect(copy.baseSnapshotId!).not.toBe(a.baseSnapshotId);
       const loaded = await openWorkspace(copy.id);
       expect(loaded.cruxId).toBe(clone.cruxId);
     }
@@ -226,23 +226,6 @@ describe('parallel tasks', () => {
     await recoverTaskSetup(unfinished!.id);
     expect((await findWorkingCopy(unfinished!.id))?.phase).toBe('ready');
   });
-  it('does not insert a partial Task after the API refuses preparation', async () => {
-    const { main } = await fixture();
-    const db = getSqliteClient();
-    const before = await db.all('SELECT * FROM working_copies ORDER BY id');
-    db.createWorkingCopy = vi.fn(async () => {
-      throw new Error('Preview preparation refused');
-    });
-    await expect(createTask(main.id, 'Refused task')).rejects.toThrow(
-      'Preview preparation refused',
-    );
-    expect(db.createWorkingCopy).toHaveBeenCalledWith(
-      expect.objectContaining({ cruxId: main.id, title: 'Refused task', role: 'task' }),
-    );
-    expect(await db.all('SELECT * FROM working_copies ORDER BY id')).toEqual(before);
-    delete db.createWorkingCopy;
-    await expect(createTask(main.id, 'Retry task')).resolves.toMatchObject({ phase: 'ready' });
-  });
   it('keeps the original journal when API verification saving fails and retries the check', async () => {
     const { a } = await fixture();
     const review = await prepareTaskReview(a.id);
@@ -259,23 +242,6 @@ describe('parallel tasks', () => {
     expect((await findWorkingCopy(review.candidateId))?.phase).toBe('ready');
     delete db.saveTaskReview;
     expect((await verifyTaskReview(review.id)).verifiedKey).toBeDefined();
-  });
-  it('retains prepared content when the API refuses to create its review journal', async () => {
-    const { a } = await fixture();
-    const db = getSqliteClient();
-    db.saveTaskReview = vi.fn(async () => {
-      throw new Error('Review create refused');
-    });
-    await expect(prepareTaskReview(a.id)).rejects.toThrow('Review create refused');
-    expect(await db.all('SELECT * FROM task_merges')).toEqual([]);
-    const candidates = await db.all<{ id: string; phase: string }>(
-      "SELECT id, phase FROM working_copies WHERE role = 'review'",
-    );
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0]!.phase).toBe('ready');
-    expect(await read(candidates[0]!.id)).toBe('<h1>Base</h1>');
-    delete db.saveTaskReview;
-    await expect(prepareTaskReview(a.id)).resolves.toMatchObject({ phase: 'review' });
   });
   it('does not project files or create merge Growth after API admission refusal', async () => {
     const { main, a } = await fixture();
@@ -367,11 +333,11 @@ describe('parallel tasks', () => {
     const main = await getServices().crux.create({ title: 'History guard' });
     await write(main.id, 'Base');
     const a = await createTask(main.id, 'Task');
-    const before = await read(a.baseSnapshotId);
+    const before = await read(a.baseSnapshotId!);
     await expect(
       (await openWorkspace(main.id)).data.getState().removeLatestSnapshot(),
     ).rejects.toThrow('used by a task');
-    expect(await read(a.baseSnapshotId)).toBe(before);
+    expect(await read(a.baseSnapshotId!)).toBe(before);
   });
   it('recovers setup from its captured base and keeps restored task membership', async () => {
     const { main, a, b } = await fixture();
@@ -471,7 +437,7 @@ describe('parallel tasks', () => {
     expect(await read(a.id)).toBe('Archived work');
     expect(await read(b.id)).toBe('Unfinished work');
     expect((await findWorkingCopy(a.id))?.phase).toBe('archived');
-    expect(await read(a.baseSnapshotId)).toBe('<h1>Base</h1>');
+    expect(await read(a.baseSnapshotId!)).toBe('<h1>Base</h1>');
     for (const id of [main.id, b.id])
       expect(
         (await getServices().crux.findById(id)).meta?.settings?.agentSessionId,

@@ -523,6 +523,10 @@ async function setupIpc() {
     },
   );
 
+  ipcMain.handle('sqlite:working-copy-base', (_e: unknown, id: string) => {
+    if (!db.workingCopyBase) throw new Error('Task starting-state inspection is unavailable');
+    return db.workingCopyBase(id);
+  });
   ipcMain.handle('sqlite:create-working-copy', (_e: unknown, input: LocalWorkingCopyCreate) => {
     if (!db.createWorkingCopy) throw new Error('Owned Task creation is unavailable');
     return db.createWorkingCopy(input);

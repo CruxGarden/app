@@ -26,6 +26,7 @@ export interface NativeStorage {
   ): Promise<string>;
   finishWorkingCopySetup?(id: string, revision: number, phase: 'ready' | 'failed'): Promise<void>;
   createWorkingCopy?(input: LocalWorkingCopyCreate): Promise<void>;
+  workingCopyBase?: SqliteBridge['workingCopyBase'];
   saveTaskReview?(reviewData: string, expectedData?: string): Promise<void>;
   beginTaskMerge?(id: string, reviewData: string): Promise<void>;
   releaseTaskReview?(id: string): Promise<void>;
