@@ -43,11 +43,17 @@ test('a queued document import survives closing Workshop, changing Gardens and r
     )) as { value: string } | undefined;
     expect(pending, 'Closing before dispatch must retain the import request').toBeDefined();
     expect(existsSync(join(folder, 'notebook/Imported/Letter/Letter.md'))).toBe(false);
-    await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+    {
+      await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Garden location', exact: true })
+        .getByRole('button', { name: 'Close crux', exact: true })
+        .click();
+    }
     await page.getByRole('button', { name: 'New Garden', exact: true }).click();
     await page.getByRole('textbox', { name: 'Garden name' }).fill('Other work');
     await page.getByRole('button', { name: 'Create Garden', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Other work',
     );
     await instance.app.close();

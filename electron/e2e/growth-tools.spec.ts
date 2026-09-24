@@ -93,7 +93,13 @@ test.describe('growth tools (mock AI)', () => {
 
       // Re-open the Crux: the chosen version and protected recovery both persist,
       // and the editor shows the restored content.
-      await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+      {
+        await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+        await page
+          .getByRole('dialog', { name: 'Garden location', exact: true })
+          .getByRole('button', { name: 'Close crux', exact: true })
+          .click();
+      }
       await page.getByRole('button', { name: 'Open My Crux', exact: true }).click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 30_000 });
       // Artifacts is not an open-by-default pane

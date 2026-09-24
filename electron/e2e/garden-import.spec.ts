@@ -125,7 +125,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     const retryChooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
     await (await retryChooser).setFiles(archive.filename);
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Fieldwork',
     );
     const imported = new URL(page.url()).searchParams.get('garden')!;
@@ -177,7 +177,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     );
     await page.getByTestId('home-drop').dispatchEvent('drop', { dataTransfer: transfer });
     await transfer.dispose();
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Fieldwork',
     );
     expect(new URL(page.url()).searchParams.get('garden')).not.toBe(imported);
@@ -205,7 +205,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     ).toContainText('Private field observations');
     // A direct Crux URL for a Garden has the same meaning as the ordinary picker.
     await page.goto(`crux-app://app/c/${imported}?garden=${home}`);
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Fieldwork',
     );
     expect(new URL(page.url()).pathname).toBe('/home');
@@ -227,7 +227,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
       arguments: { what: 'crux', cruxId: child },
     });
     expect(shown.isError).not.toBe(true);
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Observations',
     );
     await expect(page.locator('[data-workspace-id]')).toHaveCount(0);

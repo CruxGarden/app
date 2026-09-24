@@ -14,7 +14,7 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
   try {
     await enterGarden(instance.page);
     const { page } = instance;
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'My Garden',
     );
     await expect.poll(() => new URL(page.url()).searchParams.get('garden')).not.toBeNull();
@@ -39,14 +39,20 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
       window.electronAPI!.sqlite.run('DROP TRIGGER garden_workspace_refusal'),
     );
     await page.getByRole('button', { name: 'Create Garden', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Observatory',
     );
     const childId = new URL(page.url()).searchParams.get('garden')!;
     expect(childId).not.toBe(rootId);
     const project = await createCrux(page, 'Night atlas');
     expect(new URL(page.url()).searchParams.get('garden')).toBe(childId);
-    await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+    {
+      await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Garden location', exact: true })
+        .getByRole('button', { name: 'Close crux', exact: true })
+        .click();
+    }
     await expect(page.getByRole('button', { name: 'Open Night atlas', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Navigator', exact: true }).click();
     const nav = page.getByRole('complementary', { name: 'Navigator' });
@@ -98,7 +104,13 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
     await expect(nav.getByRole('button', { name: 'Night atlas', exact: true })).toBeInViewport();
     expect(new URL(page.url()).searchParams.get('garden')).toBe(childId);
     await page.screenshot({ path: 'e2e/.results/navigation-tree.png' });
-    await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+    {
+      await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Garden location', exact: true })
+        .getByRole('button', { name: 'Close crux', exact: true })
+        .click();
+    }
 
     // Supporting surfaces are panels; Home and Navigator remain interactive.
     await page.keyboard.press('ControlOrMeta+,');
@@ -151,7 +163,7 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
     });
     await call('plant_crux', { title: 'Agent study', gardenId: agentGarden.id, template: 'blank' });
     await call('garden_graph', { action: 'open', gardenId: agentGarden.id });
-    await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Darkroom',
     );
     await expect(page.getByRole('button', { name: 'Open Agent study', exact: true })).toBeVisible();

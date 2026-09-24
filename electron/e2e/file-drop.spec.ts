@@ -4,7 +4,13 @@ import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 async function home(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+  if (/\/c\//.test(page.url())) {
+    await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Garden location', exact: true })
+      .getByRole('button', { name: 'Close crux', exact: true })
+      .click();
+  }
   await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible();
 }
 

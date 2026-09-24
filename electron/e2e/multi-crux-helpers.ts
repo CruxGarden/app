@@ -8,8 +8,13 @@ export async function enterGarden(page: Page) {
 }
 export async function createCrux(page: Page, title: string) {
   // The garden breadcrumb remains reachable while existing workspaces stay open.
-  if (/\/c\//.test(page.url()))
-    await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+  if (/\/c\//.test(page.url())) {
+    await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Garden location', exact: true })
+      .getByRole('button', { name: 'Close crux', exact: true })
+      .click();
+  }
   await page.getByRole('button', { name: 'Add Crux' }).click();
   await page.getByRole('button', { name: /^Blank/ }).click();
   await page.getByPlaceholder('My Crux').fill(title);

@@ -1,6 +1,7 @@
 import { getSqliteClient } from './sqlite/client';
 import { fromRow } from './sqlite/helpers';
 import type { Crux } from '@/api/types';
+import type { GardenIdentity } from '@/stores/gardenContext';
 
 /** Hydrate only this Garden's bounded API projection; never infer membership. */
 export async function gardenMembers(gardenId: string): Promise<Crux[]> {
@@ -42,4 +43,38 @@ export async function gardenAncestors(gardenId: string): Promise<string[]> {
     [gardenId],
   );
   return rows.map((row) => row.id);
+}
+
+/** Ordered location, distinct from the unordered ancestor set used to reveal a Tree.
+ * Multiple containers are shown as a choice, never resolved by picking the first.
+ */
+export async function gardenLocation(gardenId: string): Promise<{
+  chain: GardenIdentity[];
+  containers: GardenIdentity[];
+}> {
+  const db = getSqliteClient();
+  if (!db.gardenMembership) throw new Error('Garden navigation is unavailable on this connection.');
+  const read = async (id: string) => {
+    const row = await db.get<GardenIdentity>(
+      'SELECT id, title, slug, kind FROM cruxes WHERE id = ? AND kind = ? AND deleted IS NULL',
+      [id, 'garden'],
+    );
+    if (!row) throw new Error('This Garden is no longer available. Reopen the Navigator.');
+    return row;
+  };
+  const chain: GardenIdentity[] = [];
+  const seen = new Set<string>();
+  let id = gardenId;
+  while (true) {
+    if (seen.has(id)) throw new Error('This Garden’s location contains a cycle.');
+    if (seen.size >= 256) throw new Error('This Garden’s location is too deep to display.');
+    seen.add(id);
+    chain.push(await read(id));
+    const parents = await db.gardenMembership.parents(id);
+    if (parents.length !== 1) {
+      const containers = await Promise.all(parents.map((parent) => read(parent.id)));
+      return { chain: chain.reverse(), containers };
+    }
+    id = parents[0]!.id;
+  }
 }

@@ -109,7 +109,13 @@ test('a captured preview appears on its Garden card with files held only in mani
       'A visible creation',
     );
     await page.getByTitle('Capture preview (saves as preview.jpg)').click();
-    await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+    {
+      await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Garden location', exact: true })
+        .getByRole('button', { name: 'Close crux', exact: true })
+        .click();
+    }
     const image = page
       .getByRole('button', { name: 'Open Captured preview', exact: true })
       .locator('img');

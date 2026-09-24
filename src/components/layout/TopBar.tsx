@@ -1,5 +1,5 @@
-import { useGardenContext, gardenPath } from '@/stores/gardenContext';
-import { useMoodNavigate } from '@/hooks/useMoodNavigate';
+import { useGardenContext } from '@/stores/gardenContext';
+import GardenLocation from './GardenLocation';
 import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import PanelPicker from './PanelPicker';
@@ -14,7 +14,6 @@ import { Capability, can } from '@/lib/platform';
 import { useShallow } from 'zustand/react/shallow';
 
 export default function TopBar() {
-  const navigate = useMoodNavigate();
   const { paneOrder, paneVisibility, togglePane, activeCruxId } = useWorkspaceUIStore(
     useShallow((s) => ({
       paneOrder: s.paneOrder,
@@ -60,13 +59,7 @@ export default function TopBar() {
         >
           <PlusCircleIcon />
         </IconButton>
-        <button
-          aria-label="Garden Home"
-          onClick={() => navigate(garden ? gardenPath(garden.id) : '/home')}
-          className="max-w-48 truncate text-sm font-display text-toolbar-text px-2 py-1 hover:bg-action-button-hover rounded-[var(--radius-sm)] cursor-pointer"
-        >
-          {garden?.title || 'Garden'}
-        </button>
+        <GardenLocation />
         <span className="text-toolbar-text-muted shrink-0">
           {activeCruxId && <ChevronRightIcon />}
         </span>
