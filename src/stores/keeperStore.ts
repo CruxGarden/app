@@ -1,6 +1,14 @@
 import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from '@/ai/garden-access';
 import { reportFlowActivity } from '@/lib/moods/flow';
-import { create } from 'zustand';
+import { useStore } from 'zustand';
+import { createStore } from 'zustand/vanilla';
+import { useGardenContext } from './gardenContext';
+import {
+  loadGardenCollaboration,
+  saveGardenCollaboration,
+  type KeeperConversation,
+} from '@/services/garden-collaboration';
+export type { KeeperConversation } from '@/services/garden-collaboration';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
 import { runConversation } from '@/ai/engine';
@@ -19,8 +27,6 @@ import {
 } from '@/ai/garden-tools';
 import { SKILL_TOOL_DEFINITIONS, runSkillTool } from '@/ai/skills';
 import { isAiMock } from '@/lib/platform';
-import { SettingsKey } from '@/lib/constants';
-import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { getPersona } from '@/components/mood/mood-helpers';
 
 /**
@@ -31,17 +37,6 @@ import { getPersona } from '@/components/mood/mood-helpers';
  * Keeper, so `run_turn` can bring a member crux into view while the Keeper
  * keeps its own account here.
  */
-export interface KeeperConversation {
-  id: string;
-  title: string;
-  createdAt: number;
-  messages: ChatMessage[];
-  /** The Cruxspace this conversation built or tends, if any — carried in its package. */
-  cruxspaceId?: string;
-}
-
-export const MAX_KEEPER_CONVERSATIONS = 20;
-
 /** Appended to a reply the person stopped, so the next turn resumes from the trail. */
 export const STOPPED_NOTE =
   '*Stopped here by the person. Say "continue" to pick it up from this point.*';
@@ -62,36 +57,18 @@ export const KEEPER_SYSTEM_PROMPT =
   'and publish them for others to see. Every version is preserved through the conversation history. ' +
   'You are always available to help with questions about the app, creative ideas, or just to chat.';
 
-function loadConversations(): KeeperConversation[] {
-  try {
-    const raw = getSetting(SettingsKey.KeeperConversations);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (c): c is KeeperConversation =>
-          !!c && typeof c === 'object' && typeof (c as KeeperConversation).id === 'string',
-      )
-      .map((c) => ({ ...c, messages: Array.isArray(c.messages) ? c.messages : [] }))
-      .slice(0, MAX_KEEPER_CONVERSATIONS);
-  } catch {
-    return [];
-  }
-}
-
-function saveConversations(convos: KeeperConversation[]) {
-  try {
-    if (convos.length) setSetting(SettingsKey.KeeperConversations, JSON.stringify(convos));
-    else removeSetting(SettingsKey.KeeperConversations);
-  } catch {
-    /* a full store keeps the last good save */
-  }
-}
-
 const title = (text: string) => (text.length > 40 ? text.slice(0, 40) + '…' : text);
 
-interface KeeperState {
+export interface KeeperState {
+  loaded: boolean;
+  loading: boolean;
+  saveError: string;
+  dirty: boolean;
+  draft: string;
+  turnId: string | null;
+  load: () => Promise<void>;
+  flush: () => Promise<void>;
+  setDraft: (draft: string) => void;
   conversations: KeeperConversation[];
   activeId: string | null;
   model: string;
@@ -111,220 +88,367 @@ interface KeeperState {
   stop: () => void;
 }
 
-let controller: AbortController | null = null;
-
-export const useKeeperStore = create<KeeperState>((set, get) => {
-  const conversations = loadConversations();
-  const commit = (update: (prev: KeeperConversation[]) => KeeperConversation[]) => {
-    const next = update(get().conversations);
-    saveConversations(next);
-    set({ conversations: next });
-  };
-  return {
-    conversations,
-    activeId: conversations[0]?.id ?? null,
-    model: resolveModel(getSetting(SettingsKey.KeeperModel)) || DEFAULT_MODEL,
-    streaming: false,
-    streamContent: '',
-    toolCalls: [],
-    toolActivity: '',
-    error: '',
-    working: null,
-    setActive: (id) => set({ activeId: id }),
-    setModel: (model) => {
-      set({ model });
-      try {
-        setSetting(SettingsKey.KeeperModel, model);
-      } catch {
-        /* ignore */
-      }
-    },
-    newConversation: () => {
-      const id = crypto.randomUUID();
-      commit((prev) =>
-        [{ id, title: 'New conversation', createdAt: Date.now(), messages: [] }, ...prev].slice(
-          0,
-          MAX_KEEPER_CONVERSATIONS,
-        ),
-      );
-      set({ activeId: id });
-      return id;
-    },
-    deleteConversation: (id) => {
-      commit((prev) => prev.filter((c) => c.id !== id));
-      if (get().activeId === id) set({ activeId: get().conversations[0]?.id ?? null });
-    },
-    tagConversation: (id, cruxspaceId) =>
-      commit((prev) => prev.map((c) => (c.id === id ? { ...c, cruxspaceId } : c))),
-    stop: () => controller?.abort(),
-    send: async (text) => {
-      const trimmed = text.trim();
-      if (!trimmed || get().streaming) return;
-      const model = get().model;
-      const providerId = getProviderForModel(model);
-      const apiKey = (await getApiKey(providerId)) ?? (isAiMock() ? 'mock' : null);
-      if (!apiKey) {
-        set({
-          error: `No API key for ${providerId}. Add one in Settings to chat with The Keeper.`,
-        });
-        return;
-      }
-      let targetId = get().activeId;
-      if (!targetId || !get().conversations.some((c) => c.id === targetId)) {
-        targetId = get().newConversation();
-      }
-      const persona = getPersona();
-      const userMsg: ChatMessage = {
-        role: 'user',
-        content: trimmed,
-        timestamp: new Date().toISOString(),
-      };
-      const before = get().conversations.find((c) => c.id === targetId)?.messages ?? [];
-      let current = [...before, userMsg];
-      const first = before.length === 0;
-      commit((prev) =>
-        prev.map((c) =>
-          c.id === targetId
-            ? { ...c, messages: current, ...(first ? { title: title(trimmed) } : {}) }
-            : c,
-        ),
-      );
-      set({
-        error: '',
-        streaming: true,
-        streamContent: '',
-        toolCalls: [],
-        toolActivity: '',
-        working: 'Thinking…',
+/** One lifetime per captured Garden. Navigation only chooses which lifetime to render. */
+export function createKeeperStore(gardenId: string) {
+  let controller: AbortController | null = null;
+  let loading: Promise<void> | null = null;
+  let writes = Promise.resolve();
+  let revision = 0;
+  let running: Promise<void> | null = null;
+  const store = createStore<KeeperState>((set, get) => {
+    const persist = () => {
+      if (!get().loaded)
+        return Promise.reject(new Error('Load this Garden’s conversations before changing them.'));
+      const ownRevision = ++revision;
+      const state = get();
+      const value = structuredClone({
+        version: 1 as const,
+        model: state.model,
+        activeId: state.activeId,
+        conversations: state.conversations,
       });
+      set({ dirty: true });
+      const operation = writes.catch(() => {}).then(() => saveGardenCollaboration(gardenId, value));
+      writes = operation;
+      void operation.then(
+        () => {
+          if (revision === ownRevision) set({ dirty: false, saveError: '' });
+        },
+        (error: unknown) => {
+          if (revision === ownRevision)
+            set({ saveError: `Conversation not saved: ${(error as Error).message}` });
+        },
+      );
+      return operation;
+    };
+    const saveSoon = () => {
+      void persist().catch(() => {});
+    };
+    const commit = (update: (prev: KeeperConversation[]) => KeeperConversation[]) => {
+      set({ conversations: update(get().conversations) });
+      return persist();
+    };
+    return {
+      loaded: false,
+      loading: false,
+      saveError: '',
+      dirty: false,
+      draft: '',
+      turnId: null,
+      conversations: [],
+      activeId: null,
+      model: DEFAULT_MODEL,
+      streaming: false,
+      streamContent: '',
+      toolCalls: [],
+      toolActivity: '',
+      error: '',
+      working: null,
+      load: () => {
+        if (get().loaded) return Promise.resolve();
+        if (loading) return loading;
+        set({ loading: true, error: '' });
+        loading = loadGardenCollaboration(gardenId)
+          .then((state) => {
+            set({ ...state, model: resolveModel(state.model) || DEFAULT_MODEL, loaded: true });
+          })
+          .catch((error: unknown) => {
+            set({ error: (error as Error).message });
+          })
+          .finally(() => {
+            loading = null;
+            set({ loading: false });
+          });
+        return loading;
+      },
+      flush: async () => {
+        if (get().dirty) await persist();
+        else await writes;
+      },
+      setDraft: (draft) => set({ draft }),
+      setActive: (id) => {
+        if (!get().loaded || (id !== null && !get().conversations.some((c) => c.id === id))) return;
+        set({ activeId: id });
+        saveSoon();
+      },
+      setModel: (model) => {
+        if (!get().loaded || get().streaming) return;
+        set({ model });
+        saveSoon();
+      },
+      newConversation: () => {
+        if (!get().loaded) throw new Error('Wait for this Garden’s conversations to load.');
+        const id = crypto.randomUUID();
+        set({ activeId: id });
+        void commit((prev) => [
+          { id, title: 'New conversation', createdAt: Date.now(), messages: [] },
+          ...prev,
+        ]).catch(() => {});
+        return id;
+      },
+      deleteConversation: (id) => {
+        if (!get().loaded || get().turnId === id) return;
+        const conversations = get().conversations.filter((c) => c.id !== id);
+        set({
+          conversations,
+          activeId: get().activeId === id ? (conversations[0]?.id ?? null) : get().activeId,
+        });
+        saveSoon();
+      },
+      tagConversation: (id, cruxspaceId) => {
+        void commit((prev) => prev.map((c) => (c.id === id ? { ...c, cruxspaceId } : c))).catch(
+          () => {},
+        );
+      },
+      stop: () => controller?.abort(),
+      send: (text) => {
+        if (running) return running;
+        running = send(text).finally(() => {
+          running = null;
+        });
+        return running;
+      },
+    };
+
+    async function send(text: string) {
+      const trimmed = text.trim();
+      if (!trimmed || get().streaming || !get().loaded) return;
+      const persona = structuredClone(getPersona());
+      const draft = get().draft;
+      let targetId = get().activeId;
+      if (!targetId || !get().conversations.some((c) => c.id === targetId))
+        targetId = get().newConversation();
       controller = new AbortController();
-      const themeExecute = createThemeToolExecutor();
-      const execute = async (name: string, input: Record<string, unknown>) => {
-        if (isGardenAccessTool(name)) return runGardenAccess(name, input, 'The Keeper');
-        if (isGardenTool(name)) {
-          const result = await runGardenTool(name, input);
-          // A Cruxspace this conversation made is the one its package carries.
-          const made = name === 'create_cruxspace' && /^id: (\S+)$/m.exec(result)?.[1];
-          if (made && targetId) get().tagConversation(targetId, made);
-          return result;
-        }
-        if (name === 'load_skill') return runSkillTool(input);
-        return themeExecute(name, input);
-      };
-      const normalized: NormalizedMessage[] = current.map((m) => ({
-        role: m.role,
-        content: m.content || '',
-      }));
-      let accumulated = '';
-      const calls: ToolCall[] = [];
-      const keep = (text: string, done: ToolCall[], stopped: boolean) => {
-        if (stopped)
-          for (const tc of done) if (tc.result === undefined) tc.result = 'Stopped by the person.';
-        const content = stopped ? `${text}${text ? '\n\n' : ''}${STOPPED_NOTE}` : text;
-        if (content || done.length) {
-          current = [
-            ...current,
-            {
-              role: 'assistant',
-              content,
-              timestamp: new Date().toISOString(),
-              model,
-              ...(done.length ? { toolCalls: done } : {}),
-            },
-          ];
-        }
-        const tId = targetId;
-        commit((prev) => prev.map((c) => (c.id === tId ? { ...c, messages: current } : c)));
-      };
+      set({ streaming: true, turnId: targetId, error: '', working: 'Thinking…' });
       try {
-        for await (const event of runConversation(
-          apiKey,
-          '',
-          normalized,
-          model,
-          execute,
-          controller.signal,
-          {
-            systemPrompt:
-              (persona.systemPrompt || KEEPER_SYSTEM_PROMPT) +
-              '\n\n' +
-              GARDEN_TOOL_GUIDANCE +
-              '\n\n' +
-              THEME_TOOL_GUIDANCE,
-            tools: [
-              ...GARDEN_TOOL_DEFINITIONS,
-              ...GARDEN_ACCESS_TOOLS,
-              ...SKILL_TOOL_DEFINITIONS,
-              ...THEME_TOOL_DEFINITIONS,
-            ],
-          },
-        )) {
-          if (event.type === 'text') {
-            if (event.content.trim()) reportFlowActivity('collaboration');
-            accumulated += event.content;
-            set({ streamContent: accumulated, working: 'Replying…' });
-          } else if (event.type === 'tool_start') {
-            calls.push({ id: event.id, name: event.name, input: event.input });
-            set({ toolCalls: [...calls], toolActivity: event.name, working: event.name });
-          } else if (event.type === 'tool_result') {
-            reportFlowActivity('tool');
-            const tc = calls.find((c) => c.id === event.id);
-            if (tc) {
-              tc.result = event.result;
-              if (event.error) tc.error = true;
-            }
-            set({ toolCalls: [...calls], toolActivity: '' });
-          } else if (event.type === 'error') {
-            set({ error: event.message });
-          }
+        const model = get().model;
+        const providerId = getProviderForModel(model);
+        const apiKey = (await getApiKey(providerId)) ?? (isAiMock() ? 'mock' : null);
+        if (!apiKey) {
+          set({
+            error: `No API key for ${providerId}. Add one in Settings to chat with The Keeper.`,
+          });
+          return;
         }
-        // The engine may end the stream quietly on abort rather than throw.
-        keep(accumulated, calls, controller?.signal.aborted ?? false);
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') {
-          // Stopped by the person: what was done stays in the conversation, marked,
-          // so they can pick it up themselves or say "continue" and the Keeper
-          // resumes from the trail rather than from the beginning.
-          keep(accumulated, calls, true);
-        } else set({ error: (err as Error).message });
+        if (controller.signal.aborted) return;
+        const userMsg: ChatMessage = {
+          role: 'user',
+          content: trimmed,
+          timestamp: new Date().toISOString(),
+        };
+        const before = get().conversations.find((c) => c.id === targetId)?.messages ?? [];
+        // A prompt whose durable save failed remains available to resend. Reuse that
+        // unanswered prompt instead of duplicating it after Retry save.
+        const last = before.at(-1);
+        let current =
+          last?.role === 'user' && last.content === trimmed ? [...before] : [...before, userMsg];
+        const first = before.length === 0;
+        await commit((prev) =>
+          prev.map((c) =>
+            c.id === targetId
+              ? { ...c, messages: current, ...(first ? { title: title(trimmed) } : {}) }
+              : c,
+          ),
+        );
+        set({
+          error: '',
+          streaming: true,
+          streamContent: '',
+          toolCalls: [],
+          toolActivity: '',
+          working: 'Thinking…',
+        });
+        if (controller.signal.aborted) return;
+        if (draft.trim() === trimmed && get().draft === draft) set({ draft: '' });
+        const themeExecute = createThemeToolExecutor();
+        const execute = async (name: string, input: Record<string, unknown>) => {
+          if (isGardenAccessTool(name)) {
+            const nested = input.input as Record<string, unknown> | undefined;
+            const bound =
+              name === 'call_garden_tool' &&
+              input.name === 'plant_crux' &&
+              nested &&
+              !nested.gardenId
+                ? { ...input, input: { ...nested, gardenId } }
+                : input;
+            return runGardenAccess(name, bound, 'The Keeper', gardenId);
+          }
+          if (isGardenTool(name)) {
+            const result = await runGardenTool(
+              name,
+              name === 'plant_crux' && !input.gardenId ? { ...input, gardenId } : input,
+            );
+            // A Cruxspace this conversation made is the one its package carries.
+            const made = name === 'create_cruxspace' && /^id: (\S+)$/m.exec(result)?.[1];
+            if (made && targetId) get().tagConversation(targetId, made);
+            return result;
+          }
+          if (name === 'load_skill') return runSkillTool(input);
+          return themeExecute(name, input);
+        };
+        const normalized: NormalizedMessage[] = current.map((m) => ({
+          role: m.role,
+          content: m.content || '',
+        }));
+        let accumulated = '';
+        const calls: ToolCall[] = [];
+        const keep = async (text: string, done: ToolCall[], stopped: boolean) => {
+          if (stopped)
+            for (const tc of done)
+              if (tc.result === undefined) tc.result = 'Stopped by the person.';
+          const content = stopped ? `${text}${text ? '\n\n' : ''}${STOPPED_NOTE}` : text;
+          if (content || done.length) {
+            current = [
+              ...current,
+              {
+                role: 'assistant',
+                content,
+                timestamp: new Date().toISOString(),
+                model,
+                ...(done.length ? { toolCalls: done } : {}),
+              },
+            ];
+          }
+          const tId = targetId;
+          await commit((prev) => prev.map((c) => (c.id === tId ? { ...c, messages: current } : c)));
+        };
+        try {
+          for await (const event of runConversation(
+            apiKey,
+            '',
+            normalized,
+            model,
+            execute,
+            controller.signal,
+            {
+              systemPrompt:
+                (persona.systemPrompt || KEEPER_SYSTEM_PROMPT) +
+                '\n\n' +
+                GARDEN_TOOL_GUIDANCE +
+                '\n\n' +
+                THEME_TOOL_GUIDANCE,
+              tools: [
+                ...GARDEN_TOOL_DEFINITIONS,
+                ...GARDEN_ACCESS_TOOLS,
+                ...SKILL_TOOL_DEFINITIONS,
+                ...THEME_TOOL_DEFINITIONS,
+              ],
+            },
+          )) {
+            if (event.type === 'text') {
+              if (event.content.trim()) reportFlowActivity('collaboration');
+              accumulated += event.content;
+              set({ streamContent: accumulated, working: 'Replying…' });
+            } else if (event.type === 'tool_start') {
+              calls.push({ id: event.id, name: event.name, input: event.input });
+              set({ toolCalls: [...calls], toolActivity: event.name, working: event.name });
+            } else if (event.type === 'tool_result') {
+              reportFlowActivity('tool');
+              const tc = calls.find((c) => c.id === event.id);
+              if (tc) {
+                tc.result = event.result;
+                if (event.error) tc.error = true;
+              }
+              set({ toolCalls: [...calls], toolActivity: '' });
+            } else if (event.type === 'error') {
+              set({ error: event.message });
+            }
+          }
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError') set({ error: (err as Error).message });
+        }
+        // Persist once, outside the provider catch. A failed write keeps the same reply
+        // in memory for Retry save; it must not append the assistant a second time.
+        await keep(accumulated, calls, controller.signal.aborted);
+      } catch (error) {
+        if (!get().saveError) set({ error: (error as Error).message });
       } finally {
         controller = null;
         set({
           streaming: false,
+          turnId: null,
           streamContent: '',
           toolCalls: [],
           toolActivity: '',
           working: null,
         });
       }
+    }
+  });
+  return {
+    store,
+    stopAndFlush: async () => {
+      controller?.abort();
+      if (running) await running;
+      await store.getState().flush();
     },
   };
-});
-
-/** The conversations that built or tend a Cruxspace — what its package carries. */
-export function keeperConversationsFor(cruxspaceId: string): KeeperConversation[] {
-  return useKeeperStore.getState().conversations.filter((c) => c.cruxspaceId === cruxspaceId);
 }
 
-/** Conversations arriving with a package: new ids, retagged to the space as it now is, kept newest first. */
-export function adoptKeeperConversations(convos: KeeperConversation[], cruxspaceId: string): void {
-  const state = useKeeperStore.getState();
+const keepers = new Map<string, ReturnType<typeof createKeeperStore>>();
+export function keeperFor(gardenId: string) {
+  if (!gardenId) throw new Error('Choose a Garden first.');
+  let keeper = keepers.get(gardenId);
+  if (!keeper) {
+    keeper = createKeeperStore(gardenId);
+    keepers.set(gardenId, keeper);
+  }
+  return keeper.store;
+}
+
+export function useKeeperStore<T>(selector: (state: KeeperState) => T): T {
+  const gardenId = useGardenContext((s) => s.garden?.id);
+  if (!gardenId) throw new Error('Choose a Garden first.');
+  return useStore(keeperFor(gardenId), selector);
+}
+export function keeperNeedsCloseDecision() {
+  return [...keepers.values()].some(
+    ({ store }) => store.getState().streaming || store.getState().dirty,
+  );
+}
+export async function shutdownKeepers() {
+  await Promise.all([...keepers.values()].map((keeper) => keeper.stopAndFlush()));
+}
+
+/** Existing collection packages bind their conversations to the installation root. */
+function rootKeeper() {
+  const id = useGardenContext.getState().root?.id;
+  if (!id) throw new Error('The local Garden is not ready.');
+  return keeperFor(id);
+}
+export async function keeperConversationsFor(cruxspaceId: string): Promise<KeeperConversation[]> {
+  if (!useGardenContext.getState().root) return [];
+  const store = rootKeeper();
+  await store.getState().load();
+  if (!store.getState().loaded) throw new Error(store.getState().error);
+  return store.getState().conversations.filter((c) => c.cruxspaceId === cruxspaceId);
+}
+export async function adoptKeeperConversations(
+  convos: KeeperConversation[],
+  cruxspaceId: string,
+): Promise<void> {
+  const store = rootKeeper();
+  await store.getState().load();
+  if (!store.getState().loaded) throw new Error(store.getState().error);
   const adopted = convos
     .filter((c) => c && Array.isArray(c.messages))
     .map((c) => ({ ...c, id: crypto.randomUUID(), cruxspaceId }));
-  const next = [...adopted, ...state.conversations].slice(0, MAX_KEEPER_CONVERSATIONS);
-  saveConversations(next);
-  useKeeperStore.setState({ conversations: next, activeId: next[0]?.id ?? state.activeId });
+  store.setState({ conversations: [...adopted, ...store.getState().conversations], dirty: true });
+  await store.getState().flush();
 }
 
-/** Outside garden actions are readable alongside the Keeper's conversations. */
-export function recordGardenAgentAction(
+/** Outside actions have an explicit captured Garden owner too. */
+export async function recordGardenAgentAction(
+  gardenId: string,
   agent: string,
   name: string,
   result: string,
   requestId: string,
-): void {
-  const state = useKeeperStore.getState();
+): Promise<void> {
+  const store = keeperFor(gardenId);
+  await store.getState().load();
+  const state = store.getState();
+  if (!state.loaded) throw new Error(state.error);
   const id = `outside-agent:${agent}`;
   const prior = state.conversations.find((c) => c.id === id);
   const message: ChatMessage = {
@@ -335,20 +459,18 @@ export function recordGardenAgentAction(
     timestamp: new Date().toISOString(),
     toolCalls: [{ id: requestId, name, input: {}, result: result.slice(0, 4000) }],
   };
-  const messages = [
-    ...(prior?.messages ?? []).filter((m) => m.toolCalls?.[0]?.id !== requestId),
-    message,
-  ].slice(-200);
   const conversation: KeeperConversation = {
     id,
     title: `${agent} · garden actions`,
     createdAt: prior?.createdAt ?? Date.now(),
-    messages,
+    messages: [
+      ...(prior?.messages ?? []).filter((m) => m.toolCalls?.[0]?.id !== requestId),
+      message,
+    ],
   };
-  const conversations = [conversation, ...state.conversations.filter((c) => c.id !== id)].slice(
-    0,
-    MAX_KEEPER_CONVERSATIONS,
-  );
-  saveConversations(conversations);
-  useKeeperStore.setState({ conversations });
+  store.setState({
+    conversations: [conversation, ...state.conversations.filter((c) => c.id !== id)],
+    dirty: true,
+  });
+  await store.getState().flush();
 }

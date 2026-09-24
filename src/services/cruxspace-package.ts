@@ -193,7 +193,7 @@ export async function exportCruxspace(
     },
     // Loaded on demand: the Keeper's store pulls the engine and every tool into
     // the module graph, and this service is imported early.
-    keeper: (await import('@/stores/keeperStore')).keeperConversationsFor(space.id),
+    keeper: await (await import('@/stores/keeperStore')).keeperConversationsFor(space.id),
     members,
     transfers: transfers.sort((a, b) => a.imported.localeCompare(b.imported)),
     unavailable,
@@ -305,7 +305,9 @@ export async function importCruxspace(
     });
     // The garden-level history comes back with it, retagged to the space it now is.
     if (manifest.keeper?.length)
-      (await import('@/stores/keeperStore')).adoptKeeperConversations(manifest.keeper, space.id);
+      await (
+        await import('@/stores/keeperStore')
+      ).adoptKeeperConversations(manifest.keeper, space.id);
     return {
       space,
       members: imported,

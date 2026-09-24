@@ -98,6 +98,14 @@ export function getMockLanguageModel(): LanguageModel {
           });
         };
 
+        if (lastUserText(prompt).includes('[garden:owned-turn]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) {
+            await waitForMockHandoff(abortSignal);
+            return toolCallStream('plant_crux', { title: 'Studio companion', template: 'blank' });
+          }
+          return textStream('Done — created in the original Garden.');
+        }
         if (lastUserText(prompt).includes('[garden:plant]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (rounds.length === 0) return toolCallStream('list_garden_tools', {});

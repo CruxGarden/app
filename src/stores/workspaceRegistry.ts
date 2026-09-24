@@ -354,6 +354,7 @@ if (typeof window !== 'undefined') {
 
 /** Orderly application exit preserves membership but never resumes provider calls. */
 export async function shutdownWorkspaces(documents: 'save' | 'discard'): Promise<void> {
+  await (await import('./keeperStore')).shutdownKeepers();
   const state = useWorkspaceRegistry.getState();
   const saved = {
     version: 1,
@@ -366,6 +367,7 @@ export async function shutdownWorkspaces(documents: 'save' | 'discard'): Promise
 }
 /** Garden replacement must never inherit callbacks or open sessions from the old database. */
 export async function prepareGardenReplacement(): Promise<void> {
+  await (await import('./keeperStore')).shutdownKeepers();
   if (allWorkspaces().length)
     throw new Error('Close all open Crux workspaces before replacing this garden.');
   leaveWorkspaceView();

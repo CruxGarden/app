@@ -170,9 +170,12 @@ export default function Shell() {
               <Outlet />
             ) : null}
           </main>
-          {aiEnabled && consoleOpen && (
-            <GardenPanel title="Console" onClose={() => setConsoleOpen(false)}>
-              <Console />
+          {servicesReady && activeGarden && aiEnabled && consoleOpen && (
+            <GardenPanel
+              title={`${activeGarden.title || 'Garden'} · Collaboration`}
+              onClose={() => setConsoleOpen(false)}
+            >
+              <Console key={activeGarden.id} />
             </GardenPanel>
           )}
           {moodPanelOpen && (

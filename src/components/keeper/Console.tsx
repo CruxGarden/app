@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { cn } from '@/lib/cn';
 import { getModelShortName } from '@/ai/providers';
 import { Reply, PersonPill, StatusLine } from '@/components/chat/Reply';
 import ComposerPill from '@/components/chat/ComposerPill';
@@ -45,24 +44,7 @@ export function ConsoleAvatar({
   );
 }
 
-/** Relative age for conversation list rows ("just now", "5m ago", "Jul 4") */
-function formatRelativeTime(ts: number): string {
-  const d = new Date(ts);
-  const now = new Date();
-  const diff = now.getTime() - ts;
-  if (diff < 60_000) return 'just now';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  if (d.getFullYear() === now.getFullYear()) {
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
-}
-
-// ── Component ──
-
-// No props — visibility controlled by Modal wrapper in Shell
-
+/** Garden Collaboration is a supporting panel; its lifetime is owned by its store. */
 function UserAvatar() {
   const author = useAppStore((s) => s.author);
   const avatarUrl = useAvatarUrl(author);
@@ -81,16 +63,23 @@ function UserAvatar() {
 
 export default function Console() {
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
-  const keeperAvatarSrc = useKeeperAvatar();
-  const sidebarThumbFp = persona.thumbnailFingerprint || persona.thumbnailFingerprintLight;
-  const sidebarThumbUrl = useBlobUrl(sidebarThumbFp);
   // Read persona on mount (Modal only mounts content when open)
   useEffect(() => {
     setPersona(getPersona());
   }, []);
 
+  const loaded = useKeeperStore((s) => s.loaded);
+  const loading = useKeeperStore((s) => s.loading);
+  const load = useKeeperStore((s) => s.load);
+  const flush = useKeeperStore((s) => s.flush);
+  const saveError = useKeeperStore((s) => s.saveError);
+  const turnId = useKeeperStore((s) => s.turnId);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   // The conversations and the Keeper's turn live in the store, so closing
-  // this modal never aborts the Keeper: it keeps working (planting, running a
+  // this panel never aborts the Keeper: it keeps working (planting, running a
   // turn in a member) and this view catches up when reopened.
   const conversations = useKeeperStore((s) => s.conversations);
   const activeId = useKeeperStore((s) => s.activeId);
@@ -110,7 +99,9 @@ export default function Console() {
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const displayMessages = useMemo(() => active?.messages ?? [], [active?.messages]);
 
-  const [input, setInput] = useState('');
+  const input = useKeeperStore((s) => s.draft);
+  const setInput = useKeeperStore((s) => s.setDraft);
+  const showingTurn = streaming && activeId === turnId;
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -134,10 +125,9 @@ export default function Console() {
 
   const send = useCallback(() => {
     const text = input.trim();
-    if (!text || streaming) return;
-    setInput('');
+    if (!text || streaming || !loaded) return;
     void sendToKeeper(text);
-  }, [input, streaming, sendToKeeper]);
+  }, [input, streaming, loaded, sendToKeeper]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -161,63 +151,50 @@ export default function Console() {
           '--text-muted': 'var(--console-text-muted)',
         } as React.CSSProperties
       }
+      className="h-full min-h-0"
     >
       <div className="flex flex-row h-full">
-        {/* Sidebar — portrait + conversation history */}
-        <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
-          <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
-            <PersonaAvatar
-              src={sidebarThumbUrl || keeperAvatarSrc}
-              alt="Console"
-              className="w-full h-full rounded-none"
-            />
-          </div>
-          {/* Conversation history */}
-          <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">
-            <div className="p-2">
-              <button
-                onClick={newConversation}
-                className="w-full px-2 py-1.5 mb-2 text-2xs font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
-              >
-                New Conversation
-              </button>
-              {conversations.map((c) => (
-                <div
-                  key={c.id}
-                  className={cn(
-                    'group flex items-start gap-1 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer transition-colors',
-                    c.id === activeId
-                      ? 'bg-accent/10 text-text'
-                      : 'text-text-muted hover:bg-accent/10 hover:text-text',
-                  )}
-                  onClick={() => setActive(c.id)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-2xs font-mono truncate">{c.title}</p>
-                    <p className="text-3xs font-mono text-text-muted/60">
-                      {formatRelativeTime(c.createdAt)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteConversation(c.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-60 hover:!opacity-100 text-2xs text-text-muted hover:text-error shrink-0 cursor-pointer transition-opacity"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* Chat column */}
         <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <select
+              aria-label="Garden conversation"
+              value={activeId ?? ''}
+              onChange={(e) => setActive(e.target.value || null)}
+              disabled={!loaded}
+              className="min-w-0 flex-1 bg-input text-text text-xs rounded-[var(--radius-sm)] p-1.5"
+            >
+              <option value="" disabled>
+                Choose a conversation
+              </option>
+              {conversations.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={newConversation}
+              disabled={!loaded}
+              aria-label="New Conversation"
+              className="text-xs text-accent px-1.5 py-1 cursor-pointer"
+            >
+              New
+            </button>
+            {activeId && (
+              <button
+                onClick={() => deleteConversation(activeId)}
+                disabled={activeId === turnId}
+                aria-label="Delete conversation"
+                className="text-xs text-text-muted px-1.5 py-1 cursor-pointer disabled:opacity-40"
+              >
+                Delete
+              </button>
+            )}
+          </div>
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-            {displayMessages.length === 0 && !streaming && (
+            {loaded && displayMessages.length === 0 && !showingTurn && (
               <p className="text-xs text-text-muted text-center py-4">
                 {persona.greeting || 'The Keeper tends the garden. Ask anything.'}
               </p>
@@ -242,7 +219,7 @@ export default function Console() {
             )}
 
             {/* The reply as it streams, the work so far folded beneath it */}
-            {streaming && (streamContent || toolCalls.length > 0) && (
+            {showingTurn && (streamContent || toolCalls.length > 0) && (
               <Reply
                 avatar={<ConsoleAvatar bordered />}
                 name={persona.name || 'The Keeper'}
@@ -253,7 +230,7 @@ export default function Console() {
             )}
 
             {/* One quiet line while the Keeper works */}
-            {streaming && (
+            {showingTurn && (
               <StatusLine
                 text={toolActivity ? `Working… · ${toolActivity}` : 'Working…'}
                 testId="keeper-status"
@@ -263,6 +240,20 @@ export default function Console() {
             <div ref={bottomRef} />
           </div>
 
+          {!loaded && (
+            <div role="status" className="px-4 py-2 text-xs text-text-muted">
+              {loading ? (
+                'Loading conversations…'
+              ) : (
+                <button onClick={() => void load()}>Try loading again</button>
+              )}
+            </div>
+          )}
+          {saveError && (
+            <div role="alert" className="px-4 py-2 text-xs text-error">
+              {saveError} <button onClick={() => void flush().catch(() => {})}>Retry save</button>
+            </div>
+          )}
           {/* Error */}
           {error && (
             <div className="px-4 py-2 text-xs text-error bg-error-muted border-t border-border">
@@ -275,13 +266,14 @@ export default function Console() {
             <ComposerPill
               textareaRef={inputRef}
               streaming={streaming}
-              canSend={!!input.trim()}
+              canSend={loaded && !!input.trim()}
               onSend={send}
               onStop={stop}
               hint={streaming ? 'The Keeper is working' : undefined}
               testId="keeper-composer"
               textarea={{
                 value: input,
+                disabled: !loaded,
                 onChange: (e) => setInput(e.target.value),
                 onKeyDown: handleKeyDown,
                 onInput: (e) => {
@@ -292,7 +284,7 @@ export default function Console() {
               }}
             />
             <div className="px-3 pb-2">
-              <ModelSelector value={model} onChange={changeModel} disabled={streaming} />
+              <ModelSelector value={model} onChange={changeModel} disabled={!loaded || streaming} />
             </div>
           </div>
         </div>

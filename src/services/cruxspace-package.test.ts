@@ -1,3 +1,4 @@
+import { useGardenContext } from '@/stores/gardenContext';
 import { beforeEach, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { getServices, initServices } from './index';
@@ -10,7 +11,7 @@ import {
   toolsNeeded,
   missingTools,
 } from './cruxspace-package';
-import { useKeeperStore, keeperConversationsFor } from '@/stores/keeperStore';
+import { keeperFor, keeperConversationsFor } from '@/stores/keeperStore';
 import { growthHostFor } from './growth';
 
 const png = () =>
@@ -26,7 +27,10 @@ const png = () =>
     { type: 'image/png' },
   );
 
-beforeEach(() => initServices('local'));
+beforeEach(async () => {
+  useGardenContext.setState({ root: null, garden: null });
+  await initServices('local');
+});
 
 async function makeSpace() {
   const { crux, artifact } = getServices();
@@ -145,8 +149,12 @@ it('refuses packages that are not Cruxspaces and leaves nothing behind', async (
 
 it("carries the Keeper's conversation that built the Cruxspace, and brings it back retagged", async () => {
   const { space } = await makeSpace();
-  // The garden-level conversation, as the Keeper's store records it.
-  useKeeperStore.setState({
+  const root = await getServices().crux.create({ title: 'Local', kind: 'garden' });
+  useGardenContext.getState().initialize(root);
+  const keeper = keeperFor(root.id);
+  await keeper.getState().load();
+  // The Garden owns the conversation that built the collection.
+  keeper.setState({
     conversations: [
       {
         id: 'k1',
@@ -167,9 +175,9 @@ it("carries the Keeper's conversation that built the Cruxspace, and brings it ba
   expect(manifest.keeper![0]!.messages[1]!.content).toBe('Planted Release.');
 
   // A copy into the same Garden: the conversation arrives with a new id, tagged to the copy.
-  useKeeperStore.setState({ conversations: [], activeId: null });
+  keeper.setState({ conversations: [], activeId: null });
   const copy = await importCruxspace({ data: blob });
-  const carried = keeperConversationsFor(copy.space.id);
+  const carried = await keeperConversationsFor(copy.space.id);
   expect(carried).toHaveLength(1);
   expect(carried[0]!.id).not.toBe('k1');
   expect(carried[0]!.messages.map((m) => m.content)).toEqual([

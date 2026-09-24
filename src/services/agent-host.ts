@@ -1,3 +1,4 @@
+import { useGardenContext } from '@/stores/gardenContext';
 import { reportFlowActivity } from '@/lib/moods/flow';
 import {
   GARDEN_HOST_ID,
@@ -238,8 +239,16 @@ async function handleRequest(request: AgentHostRequest): Promise<unknown> {
     if (request.kind === 'tools/list') return [...GARDEN_ACCESS_TOOLS, ...gardenOperatingTools()];
     if (request.kind !== 'tools/call')
       throw new Error('The garden host has no Crux resources. Use its operating tools.');
+    // The installation-level MCP host has a stable root owner, independent of navigation.
+    const gardenId = useGardenContext.getState().root?.id;
+    if (!gardenId) throw new Error('The local Garden is not ready.');
     const { recordGardenAgentAction } = await import('@/stores/keeperStore');
-    recordGardenAgentAction(request.agent, request.name, 'Working…', request.id);
+    // Collaboration already persists its own owner-bound history. Do not copy private
+    // transcripts returned by inspect into the installation root’s action log.
+    const operation = request.name === 'call_garden_tool' ? request.input.name : request.name;
+    const logAction = operation !== 'garden_collaboration';
+    if (logAction)
+      await recordGardenAgentAction(gardenId, request.agent, request.name, 'Working…', request.id);
     let result: ToolResultContent;
     try {
       result = isGardenAccessTool(request.name)
@@ -249,7 +258,14 @@ async function handleRequest(request: AgentHostRequest): Promise<unknown> {
       result = `Error: ${errorMessage(error)}`;
     }
     if (!resultText(result).startsWith('Error')) reportFlowActivity('tool');
-    recordGardenAgentAction(request.agent, request.name, resultText(result), request.id);
+    if (logAction)
+      await recordGardenAgentAction(
+        gardenId,
+        request.agent,
+        request.name,
+        resultText(result),
+        request.id,
+      );
     return toMcpResult(result);
   }
   switch (request.kind) {

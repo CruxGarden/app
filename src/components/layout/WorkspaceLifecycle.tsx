@@ -1,3 +1,4 @@
+import { keeperNeedsCloseDecision } from '@/stores/keeperStore';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -19,18 +20,20 @@ export default function WorkspaceLifecycle() {
   useEffect(() => {
     const bridge = window.electronAPI?.desktop;
     const off = bridge?.onCloseRequest?.(() => {
-      const needsDecision = allWorkspaces().some((w) => {
-        const s = w.data.getState();
-        return (
-          documentsFor(w.data, w.ui).hasDirty() ||
-          s.isStreaming ||
-          s.publishPhase ||
-          s.uploadProgress ||
-          ['running', 'planning', 'checking'].includes(s.turnJob?.status ?? '') ||
-          s.pendingDeletes.length ||
-          w.ui.getState().pendingAgentApprovals.length
-        );
-      });
+      const needsDecision =
+        keeperNeedsCloseDecision() ||
+        allWorkspaces().some((w) => {
+          const s = w.data.getState();
+          return (
+            documentsFor(w.data, w.ui).hasDirty() ||
+            s.isStreaming ||
+            s.publishPhase ||
+            s.uploadProgress ||
+            ['running', 'planning', 'checking'].includes(s.turnJob?.status ?? '') ||
+            s.pendingDeletes.length ||
+            w.ui.getState().pendingAgentApprovals.length
+          );
+        });
       if (needsDecision) setRequested(true);
       else
         void shutdownWorkspaces('save')
@@ -43,9 +46,10 @@ export default function WorkspaceLifecycle() {
     const unload = (e: BeforeUnloadEvent) => {
       if (
         !bridge?.onCloseRequest &&
-        allWorkspaces().some(
-          (w) => documentsFor(w.data, w.ui).hasDirty() || w.data.getState().isStreaming,
-        )
+        (keeperNeedsCloseDecision() ||
+          allWorkspaces().some(
+            (w) => documentsFor(w.data, w.ui).hasDirty() || w.data.getState().isStreaming,
+          ))
       )
         e.preventDefault();
     };

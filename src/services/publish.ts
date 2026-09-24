@@ -222,6 +222,9 @@ export function describePublishFailure(err: unknown): PublishFailure {
 // ── The pipeline ────────────────────────────────────────────────────────────
 
 export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<string, unknown> {
+  const publicMeta = portableMeta(crux.meta);
+  // Garden Collaboration is private workspace state, never a public making-of transcript.
+  delete publicMeta.gardenCollaboration;
   return {
     title: crux.title,
     slug: crux.slug,
@@ -232,7 +235,7 @@ export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<s
     discoverable: crux.discoverable,
     meta: isEmbeddedApp(crux)
       ? { messages: [] }
-      : { ...portableMeta(crux.meta), ...(messages ? { messages } : {}) },
+      : { ...publicMeta, ...(messages ? { messages } : {}) },
   };
 }
 

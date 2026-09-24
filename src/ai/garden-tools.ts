@@ -39,6 +39,26 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: 'garden_collaboration',
+    description:
+      'Read or control a Garden’s private Collaboration using the same history and turn controls as its panel. Always pass the owner gardenId. Send starts a background turn; inspect reports its progress. Navigation never changes the owner. These conversations are private and are not published.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        gardenId: { type: 'string' },
+        action: {
+          type: 'string',
+          enum: ['inspect', 'new', 'send', 'stop', 'delete', 'model', 'retry-save'],
+        },
+        conversationId: { type: 'string' },
+        message: { type: 'string' },
+        model: { type: 'string' },
+      },
+      required: ['gardenId', 'action'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'garden_graph',
     description:
       'Navigate the local Garden graph using the same controls as the app. Inspect returns the root or chosen Garden and its members. Create makes a child Garden; link/unlink changes containment without copying or deleting content. Open changes the visible Garden. Pass gardenId explicitly for mutations.',
@@ -410,6 +430,21 @@ export function validateGardenTool(
   )
     return { valid: false, error: 'runtime must be reference or included' };
   switch (name) {
+    case 'garden_collaboration':
+      if (
+        !str(input.gardenId, 80) ||
+        !['inspect', 'new', 'send', 'stop', 'delete', 'model', 'retry-save'].includes(
+          String(input.action),
+        )
+      )
+        return { valid: false, error: 'gardenId and a Collaboration action are required' };
+      if (input.action === 'send' && !str(input.message, 100000))
+        return { valid: false, error: 'message is required' };
+      if (input.action === 'delete' && !str(input.conversationId, 160))
+        return { valid: false, error: 'conversationId is required' };
+      if (input.action === 'model' && !str(input.model, 160))
+        return { valid: false, error: 'model is required' };
+      return { valid: true };
     case 'file_import':
       if (!str(input.cruxId, 80) || !['inspect', 'retry', 'dismiss'].includes(String(input.action)))
         return { valid: false, error: 'cruxId and an import action are required' };
@@ -626,6 +661,52 @@ async function runGardenToolInner(
 ): Promise<string> {
   const services = getServices();
   switch (name) {
+    case 'garden_collaboration': {
+      const { keeperFor } = await import('@/stores/keeperStore');
+      const store = keeperFor(input.gardenId as string);
+      await store.getState().load();
+      if (!store.getState().loaded) throw new Error(store.getState().error);
+      const action = input.action as string;
+      if (
+        input.conversationId &&
+        !store.getState().conversations.some((c) => c.id === input.conversationId)
+      )
+        throw new Error('That conversation does not belong to this Garden.');
+      if (action === 'send') {
+        if (store.getState().streaming)
+          throw new Error('This Garden’s collaborator is already working.');
+        if (input.conversationId) store.getState().setActive(input.conversationId as string);
+        void store.getState().send(input.message as string);
+      } else if (action === 'new') store.getState().newConversation();
+      else if (action === 'stop') store.getState().stop();
+      else if (action === 'delete') {
+        if (store.getState().turnId === input.conversationId)
+          throw new Error('Stop this conversation before deleting it.');
+        store.getState().deleteConversation(input.conversationId as string);
+      } else if (action === 'model') {
+        if (store.getState().streaming)
+          throw new Error('Wait for this turn before changing its model.');
+        const { resolveModel, getModelInfo } = await import('@/ai/providers');
+        const model = resolveModel(input.model as string);
+        if (!getModelInfo(model)) throw new Error('Choose an available model.');
+        store.getState().setModel(model);
+      }
+      if (['new', 'delete', 'model', 'retry-save'].includes(action)) await store.getState().flush();
+      const state = store.getState();
+      return JSON.stringify({
+        gardenId: input.gardenId,
+        activeId: state.activeId,
+        model: state.model,
+        streaming: state.streaming,
+        turnId: state.turnId,
+        streamContent: state.streamContent,
+        error: state.error,
+        saveError: state.saveError,
+        conversations: input.conversationId
+          ? state.conversations.filter((c) => c.id === input.conversationId)
+          : state.conversations,
+      });
+    }
     case 'file_import': {
       const { readDeferredImport, retryDeferredImport, dismissDeferredImport } =
         await import('@/services/deferred-import');

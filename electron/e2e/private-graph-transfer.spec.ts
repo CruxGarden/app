@@ -37,6 +37,24 @@ test('a private graph archive crosses clean profiles with shared membership, ret
           meta: {
             mood: { synth: { tracks: [{ volume: 0.4, brightness: 0.2 }] } },
             layout: { panels: ['collaboration', 'artifacts'] },
+            gardenCollaboration: {
+              version: 1,
+              model: 'claude-sonnet-5',
+              activeId: 'conversation-one',
+              conversations: [
+                {
+                  id: 'conversation-one',
+                  title: 'Private Garden idea',
+                  createdAt: 1,
+                  messages: [
+                    {
+                      role: 'user',
+                      content: 'Private Garden conversation travels only in this backup.',
+                    },
+                  ],
+                },
+              ],
+            },
           },
         });
         const child = await runtime.createCrux({
@@ -298,6 +316,24 @@ test('a private graph archive crosses clean profiles with shared membership, ret
       imported.graph.dimensions.filter((edge) => edge.targetId === imported.result.ids[saved.work]),
     ).toHaveLength(2);
     expect(imported.graph.boundary[0].targetId).toBe(saved.outside);
+    expect(
+      imported.graph.cruxes.find((crux) => crux.id === imported.result.ids[saved.garden])?.meta
+        .gardenCollaboration,
+    ).toEqual({
+      version: 1,
+      model: 'claude-sonnet-5',
+      activeId: 'conversation-one',
+      conversations: [
+        {
+          id: 'conversation-one',
+          title: 'Private Garden idea',
+          createdAt: 1,
+          messages: [
+            { role: 'user', content: 'Private Garden conversation travels only in this backup.' },
+          ],
+        },
+      ],
+    });
     const dir = destination.dir;
     await destination.app.close();
     destination = await launchApp({ dir });
