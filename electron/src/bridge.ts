@@ -72,6 +72,7 @@ export interface PrivateArchiveBridge {
 }
 
 export interface SqliteBridge {
+  enterLocalGarden?(): ReturnType<LocalGraphRuntime['enterLocalGarden']>;
   gardenMembership?: GardenMembershipBridge;
   fileContent?: FileContentBridge;
   privateArchive?: PrivateArchiveBridge;

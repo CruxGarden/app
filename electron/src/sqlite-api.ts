@@ -113,6 +113,11 @@ export class SqliteApi implements NativeStorage {
     };
   }
 
+  enterLocalGarden() {
+    this.assertAvailable();
+    return this.owner.enterLocalGarden();
+  }
+
   readonly gardenMembership: GardenMembershipBridge = {
     add: async (input) => {
       this.assertAvailable();

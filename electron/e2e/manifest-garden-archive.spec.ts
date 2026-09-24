@@ -28,6 +28,7 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
     const saved = await launch.page.evaluate(async () => {
       const db = window.electronAPI!.sqlite;
       const content = db.fileContent!;
+      const root = await db.enterLocalGarden!();
       const id = await db.createCrux!({
         slug: `archive-${crypto.randomUUID()}`,
         title: 'Manifest history',
@@ -35,6 +36,7 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
         authorId: crypto.randomUUID(),
         homeId: crypto.randomUUID(),
       });
+      await db.gardenMembership!.add({ gardenId: root.id, memberId: id });
       const file = async (text: string) => {
         const bytes = new TextEncoder().encode(text);
         const fingerprint = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
@@ -69,7 +71,7 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
         expected: first,
         changes: [await file('Current\0content')],
       });
-      return { id, first, snapshot, latest, fingerprint: original.put.fingerprint };
+      return { id, root, first, snapshot, latest, fingerprint: original.put.fingerprint };
     });
     await openData(launch.page);
     await launch.app.evaluate(({ session }, destination) => {
@@ -126,6 +128,12 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
       console.log('Destination renderer error:', error.message),
     );
     await enterGarden(launch.page);
+    // Recovery must replace the destination's installation entry, not retain
+    // its root or reinterpret the imported root as another member.
+    const destinationRoot = await launch.page.evaluate(() =>
+      window.electronAPI!.sqlite.enterLocalGarden!(),
+    );
+    expect(destinationRoot.id).not.toBe(saved.root.id);
     await openData(launch.page);
     await importArchive(launch.page, archive);
     await expect
@@ -157,6 +165,8 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
         saved.snapshot.snapshot.id,
       ])) as { meta: string };
       return {
+        root: await db.enterLocalGarden!(),
+        members: await db.gardenMembership!.list(saved.root.id),
         old: new TextDecoder().decode(old!.bytes),
         current: new TextDecoder().decode(current!.bytes),
         attributes: old!.entry.attributes,
@@ -187,6 +197,8 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
       edges: [{ target_id: saved.snapshot.snapshot.id }],
       artifacts: [],
     });
+    expect(restored.root).toEqual(saved.root);
+    expect(restored.members.items.map((item) => item.id)).toEqual([saved.id]);
     expect(restored.snapshotFolder).toBeUndefined();
     const disk = await launch.app.evaluate((_electron, folder) => {
       const fs = process.getBuiltinModule('fs');

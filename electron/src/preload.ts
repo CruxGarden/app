@@ -60,6 +60,7 @@ const api: ElectronBridge = {
       }
     : {}),
   sqlite: {
+    enterLocalGarden: () => ipcRenderer.invoke('garden:enter-local'),
     gardenMembership: {
       add: (input) => ipcRenderer.invoke('garden-membership:add', input),
       remove: (gardenId, memberId) =>

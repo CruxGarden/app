@@ -774,6 +774,10 @@ async function setupIpc() {
     )
       throw new Error('Garden membership is only available from Garden');
   };
+  ipcMain.handle('garden:enter-local', (event: Electron.IpcMainInvokeEvent) => {
+    gardenCaller(event);
+    return localDb.enterLocalGarden();
+  });
   ipcMain.handle(
     'garden-membership:add',
     (event: Electron.IpcMainInvokeEvent, input: { gardenId: string; memberId: string }) => {
