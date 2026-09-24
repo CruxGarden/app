@@ -133,6 +133,9 @@ test('Garden Collaboration owns history, drafts and background work across navig
     await expect(childPanel().getByPlaceholder('Send a message...')).toHaveValue(
       'My separate Writing draft',
     );
+    await expect(
+      page.getByRole('button', { name: 'Close Writing · Collaboration', exact: true }),
+    ).toBeInViewport();
     await page.screenshot({ path: 'e2e/.results/garden-collaboration.png' });
     await client.close();
     client = undefined;

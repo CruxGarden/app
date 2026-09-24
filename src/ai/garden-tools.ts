@@ -1,3 +1,4 @@
+import { getPersona } from '@/services/persona';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useGardenContext, gardenPath } from '@/stores/gardenContext';
 import type { ToolDefinition } from './tools';
@@ -789,6 +790,7 @@ async function runGardenToolInner(
       return `Cruxspace "${space.name}" created.\nid: ${space.id}\nmembers: ${space.cruxIds.length}`;
     }
     case 'plant_crux': {
+      const creationPersona = getPersona();
       const requestedGarden =
         typeof input.gardenId === 'string' ? input.gardenId : useGardenContext.getState().root?.id;
       const { createCruxStore } = await import('@/stores/cruxStore');
@@ -798,7 +800,9 @@ async function runGardenToolInner(
       if (template !== 'blank' && !manifest && !(await templateExists(template)))
         return `Error: no template "${template}" in this garden. Use "blank", a tool id (e.g. "notes-app"), or install_tool first.`;
       const store = createCruxStore();
-      let crux = await store.getState().createCrux(input.title as string, requestedGarden);
+      let crux = await store
+        .getState()
+        .createCrux(input.title as string, requestedGarden, creationPersona);
       if (template !== 'blank') {
         const { templateCatalog } = await import('@/components/garden/NewCruxModal');
         const kind =

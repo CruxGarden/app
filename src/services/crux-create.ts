@@ -1,3 +1,9 @@
+import {
+  getPersona,
+  getPersonaFingerprint,
+  personaSnapshotOf,
+  type PersonaSnapshot,
+} from './persona';
 import { installedTool, installedToolPackage } from './crux-tools/installed';
 import { toolManifest } from './crux-tools/registry';
 import type { Crux, CruxKind, ChatMessage } from '@/api/types';
@@ -32,6 +38,15 @@ export async function applyTemplateToCrux(
   templateId: string,
   kind: CruxKind,
 ): Promise<TemplateApplyResult> {
+  // Creation already captured its speaker before async API admission. The template
+  // replaces that greeting, so retain the same speaker even after navigation/Mood changes.
+  const initialFingerprint = crux.meta?.messages?.find(
+    (message) => message.role === 'assistant' && message.personaFingerprint,
+  )?.personaFingerprint;
+  const snapshots = crux.meta?.personaSnapshots as Record<string, PersonaSnapshot> | undefined;
+  const initialPersona = initialFingerprint ? snapshots?.[initialFingerprint] : undefined;
+  const persona = structuredClone(initialPersona ?? getPersona());
+  const fingerprint = initialPersona ? initialFingerprint! : getPersonaFingerprint(persona);
   let def = await loadTemplate(templateId);
   const services = getServices();
   // A tool installed into this garden rather than built in: its files are
@@ -131,11 +146,9 @@ export async function applyTemplateToCrux(
   }
 
   const meta = applyTemplateMeta(crux.meta as Record<string, unknown>, def, templateId);
-  // Template greetings are spoken by the current persona too
+  // Template greetings retain the captured creation Persona.
   if (def.greeting) {
-    const { getPersona, getPersonaFingerprint, personaSnapshotOf } = await import('./persona');
-    const persona = getPersona();
-    const pf = getPersonaFingerprint(persona);
+    const pf = fingerprint;
     const msgs = (meta.messages as ChatMessage[] | undefined) ?? [];
     meta.messages = msgs.map((m) =>
       m.role === 'assistant' && !m.personaFingerprint

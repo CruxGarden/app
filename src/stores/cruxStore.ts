@@ -39,7 +39,12 @@ import { settleIngestion } from '@/services/ingestion';
 import { disposeChatSession } from '@/services/chat-session';
 import { reconcilePersistedJob, type TurnJob } from '@/services/turn-jobs';
 import { captureWorkspacePreview } from '@/services/preview-capture';
-import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
+import {
+  getPersona,
+  getPersonaFingerprint,
+  personaSnapshotOf,
+  type PersonaSettings,
+} from '@/services/persona';
 import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
 import { useUIStore, type UIState } from '@/stores/uiStore';
 import { playCue } from '@/services/cues';
@@ -97,7 +102,7 @@ export interface CruxState {
   // Actions
   loadCrux: (id: string) => Promise<void>;
   restoreProjectFolder: () => Promise<void>;
-  createCrux: (title?: string, gardenId?: string) => Promise<Crux>;
+  createCrux: (title?: string, gardenId?: string, persona?: PersonaSettings) => Promise<Crux>;
   addMessage: (message: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
   /** Shallow-merge a patch into crux.meta in memory (persist with saveMeta). */
@@ -416,7 +421,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       set({ folderMissing: false });
     },
 
-    createCrux: async (title?: string, gardenId = captureGardenId()) => {
+    createCrux: async (title?: string, gardenId = captureGardenId(), persona = getPersona()) => {
       const { crux: cruxService } = getServices();
 
       const slug =
@@ -430,7 +435,6 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       // The greeting is spoken by the current persona: stamp it and record the
       // persona snapshot so the bubble is labelled correctly (and stays so if
       // the Mood changes later).
-      const persona = getPersona();
       const pf = getPersonaFingerprint(persona);
       const greeting: ChatMessage = {
         role: 'assistant',

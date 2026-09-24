@@ -1,3 +1,8 @@
+import { setSetting } from './settings';
+import { SettingsKey } from '@/lib/constants';
+import { DEFAULT_PERSONA, getPersonaFingerprint } from './persona';
+import { createCruxStore } from '@/stores/cruxStore';
+import { runGardenTool } from '@/ai/garden-tools';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { initServices, getServices } from './index';
 import { applyTemplateToCrux } from './crux-create';
@@ -33,6 +38,37 @@ describe('applyTemplateToCrux', () => {
     expect(result.layout).toBeTruthy();
     // No Project Folder in the test environment → no AGENTS.md (Desktop Mode writes it)
     expect(paths).not.toContain('AGENTS.md');
+  });
+
+  it('keeps the original creator on template greetings when Mood changes during creation and setup', async () => {
+    const original = { ...DEFAULT_PERSONA, name: 'Studio guide', systemPrompt: 'Studio voice' };
+    const other = { ...DEFAULT_PERSONA, name: 'Writing guide', systemPrompt: 'Writing voice' };
+    setSetting(SettingsKey.Persona, JSON.stringify(original));
+    const pending = createCruxStore().getState().createCrux('Captured creator');
+    setSetting(SettingsKey.Persona, JSON.stringify(other));
+    const crux = await pending;
+    vi.stubGlobal('fetch', async () => new Response(new Uint8Array([0, 1, 2])));
+    const result = await applyTemplateToCrux(crux, 'astro-blog', 'webapp');
+    const fingerprint = getPersonaFingerprint(original);
+    expect(result.messages?.[0]?.personaFingerprint).toBe(fingerprint);
+    expect(result.crux.meta?.personaSnapshots).toEqual({
+      [fingerprint]: expect.objectContaining({
+        name: 'Studio guide',
+        systemPrompt: 'Studio voice',
+      }),
+    });
+  });
+
+  it('captures an agent creation’s Persona before asynchronous discovery', async () => {
+    const original = { ...DEFAULT_PERSONA, name: 'Original agent creator' };
+    setSetting(SettingsKey.Persona, JSON.stringify(original));
+    const pending = runGardenTool('plant_crux', { title: 'Agent context', template: 'blank' });
+    setSetting(SettingsKey.Persona, JSON.stringify({ ...DEFAULT_PERSONA, name: 'Later visitor' }));
+    const result = await pending;
+    const id = /^id: (.+)$/m.exec(result)?.[1];
+    expect(id).toBeTruthy();
+    const crux = await getServices().crux.findById(id!);
+    expect(crux.meta?.messages?.[0]?.personaFingerprint).toBe(getPersonaFingerprint(original));
   });
 
   it('an unknown template only sets the kind', async () => {
