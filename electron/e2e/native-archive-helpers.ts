@@ -29,9 +29,10 @@ export async function exportNativeCrux(
       session.defaultSession.on('will-download', listener);
     }, path);
     await open();
-    await page
-      .getByRole('radio', { name: runtime === 'included' ? /^Include tools/ : /^By reference/ })
-      .check();
+    const choice = page.getByRole('radio', {
+      name: runtime === 'included' ? /^Include tools/ : /^By reference/,
+    });
+    if (await choice.count()) await choice.check();
     await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
     await expect
       .poll(
@@ -64,9 +65,10 @@ export async function exportNativeCrux(
     };
   });
   await open();
-  await page
-    .getByRole('radio', { name: runtime === 'included' ? /^Include tools/ : /^By reference/ })
-    .check();
+  const choice = page.getByRole('radio', {
+    name: runtime === 'included' ? /^Include tools/ : /^By reference/,
+  });
+  if (await choice.count()) await choice.check();
   await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
   await expect
     .poll(

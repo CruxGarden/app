@@ -596,6 +596,13 @@
       "target": "API-owned installation journal",
       "preservation": "Retain across process restart until the selected content head is materialized and verified. Contains an installation-local folder; ordinary portable exports require completion first. Never reinterpret as Garden preferences or Mood state.",
       "status": "implemented"
+    },
+    {
+      "prefix": "cruxgarden:graph-import:",
+      "group": "recovery",
+      "target": "API-owned installation import receipt",
+      "preservation": "Retain request digest, destination identities and any verified private safety archive fingerprint across restart and whole-installation recovery. Not portable Garden preferences; selected-graph exports exclude these installation receipts. Safety bytes remain until explicit recovery retention policy exists.",
+      "status": "implemented"
     }
   ]
 }

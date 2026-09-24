@@ -1,3 +1,4 @@
+import { getSqliteClient } from '@/services/sqlite/client';
 import { useEffect, useState, useId } from 'react';
 import {
   archiveRuntimeMode,
@@ -16,6 +17,25 @@ export default function RuntimeExportChoice({
   template?: string;
   artifacts?: Artifact[];
   disabled?: boolean;
+}) {
+  if (getSqliteClient().fileContent)
+    return (
+      <p className="text-xs text-text-muted">
+        Includes files, tools, conversation, Tasks and Growth. This private backup is
+        self-contained.
+      </p>
+    );
+  return <RuntimeChoice template={template} artifacts={artifacts} disabled={disabled} />;
+}
+
+function RuntimeChoice({
+  template,
+  artifacts,
+  disabled,
+}: {
+  template?: string;
+  artifacts?: Artifact[];
+  disabled: boolean;
 }) {
   const group = useId();
   const [mode, setMode] = useState(archiveRuntimeMode);

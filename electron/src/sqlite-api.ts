@@ -38,11 +38,31 @@ export class SqliteApi implements NativeStorage {
     this.importHost = host;
   }
 
+  async privateArchiveReplacementToken(selection: GraphSelection) {
+    this.assertAvailable();
+    return this.owner.privateGraphReplacementToken(selection, this.contentStore());
+  }
+
   async exportPrivateArchive(selection: GraphSelection): Promise<Uint8Array> {
     this.assertAvailable();
     const store = this.contentStore();
     const graph = await this.owner.exportPrivateGraph(selection, store);
     return packPrivateGraph(graph, store);
+  }
+
+  async inspectPrivateArchive(bytes: Uint8Array) {
+    this.assertAvailable();
+    const { graph } = await openPrivateGraphArchive(Uint8Array.from(bytes));
+    const roots = graph.selection?.roots;
+    if (!roots || !graph.cruxes) throw new Error('The archive is missing its graph');
+    const root = graph.cruxes.find((row) => row.id === roots[0]);
+    if (!root) throw new Error('The archive is missing its selected Crux');
+    return {
+      root,
+      roots,
+      includeMembers: graph.selection?.includeMembers === true,
+      growthCount: graph.cruxes.filter((row) => row.kind === 'snapshot').length,
+    };
   }
 
   async importPrivateArchive(bytes: Uint8Array, input: Omit<PrivateGraphImport, 'graph'>) {

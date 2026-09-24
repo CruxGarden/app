@@ -42,6 +42,7 @@ export interface WorkspaceSummary {
   tending?: TendingState;
 }
 const sessions = new Map<string, Workspace>();
+const replacingCruxes = new Set<string>();
 const KEY = 'cruxgarden:open-workspaces:v1';
 export const useWorkspaceRegistry = create<{
   entries: WorkspaceSummary[];
@@ -142,6 +143,11 @@ export function allWorkspaces(): Workspace[] {
   return [...sessions.values()];
 }
 export async function openWorkspace(id: string): Promise<Workspace> {
+  if (replacingCruxes.size) {
+    const owner = replacingCruxes.has(id) ? id : (await findWorkingCopy(id))?.cruxId;
+    if (owner && replacingCruxes.has(owner))
+      throw new Error('This Crux is being restored. Wait for it to finish.');
+  }
   let w = sessions.get(id);
   if (w) {
     if (w.phase === 'closing') throw new Error('This workspace is closing.');
@@ -380,4 +386,38 @@ export async function closeCruxWorkspaces(
       throw new Error('Wait for this Crux’s task operations to finish before closing.');
   }
   for (const id of ids) await closeWorkspace(id, { stop: true, documents });
+}
+
+/** Replacement excludes new sessions and disposes old callbacks before admitting
+ * the new graph. Reopen retained sessions against their new Project Folders. */
+export async function withClosedCruxWorkspaces<T>(
+  cruxId: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  if (replacingCruxes.has(cruxId)) throw new Error('This Crux is already being restored.');
+  replacingCruxes.add(cruxId);
+  const reopen: string[] = [];
+  const active = useWorkspaceRegistry.getState().activeId;
+  try {
+    for (const entry of useWorkspaceRegistry.getState().entries)
+      if (entry.id === cruxId || (await findWorkingCopy(entry.id))?.cruxId === cruxId)
+        reopen.push(entry.id);
+    await closeCruxWorkspaces(cruxId, 'save');
+    await flushIngestion();
+    return await operation();
+  } finally {
+    replacingCruxes.delete(cruxId);
+    for (const id of reopen) {
+      // A restored archive may legitimately predate a Task's creation.
+      if (id !== cruxId && !(await findWorkingCopy(id))) continue;
+      await openWorkspace(id);
+    }
+    if (
+      active &&
+      reopen.includes(active) &&
+      getWorkspace(active) &&
+      !useWorkspaceRegistry.getState().activeId
+    )
+      await activateWorkspace(active);
+  }
 }

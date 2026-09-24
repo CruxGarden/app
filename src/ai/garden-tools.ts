@@ -287,7 +287,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           enum: ['reference', 'included'],
           description:
-            'Reference unchanged tool files, or include them for a self-contained archive. Omit to use the saved export preference.',
+            'Desktop private backups always include tool files. In Web Mode, reference unchanged tool files or include them; omit to use the saved Web export preference.',
         },
       },
       required: [],

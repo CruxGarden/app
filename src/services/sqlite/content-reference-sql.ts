@@ -4,6 +4,7 @@
 export function recoveryContentSql(tables: ReadonlySet<string>): string {
   const refs = [
     'SELECT fingerprint FROM artifacts',
+    "SELECT json_extract(value, '$.result.safetyArchive') AS fingerprint FROM settings WHERE key LIKE 'cruxgarden:graph-import:%'",
     "SELECT json_extract(meta, '$.avatarFingerprint') AS fingerprint FROM authors",
   ];
   const owners = ['SELECT meta AS data FROM cruxes'];

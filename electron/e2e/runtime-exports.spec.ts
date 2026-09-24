@@ -6,10 +6,9 @@ import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
-test('tool references make a smaller archive and restore an editable Calendar in a fresh garden', async () => {
+test('a self-contained private archive restores an editable Calendar in a fresh garden', async () => {
   test.setTimeout(240_000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
-  const reference = join(first.dir, 'reference.crux');
   const included = join(first.dir, 'included.crux');
   const evidence = resolve(__dirname, '../../docs/runtime-exports');
   mkdirSync(evidence, { recursive: true });
@@ -35,37 +34,29 @@ test('tool references make a smaller archive and restore an editable Calendar in
     await frame.locator('#event-save').click();
     await expect(frame.locator('.ec-event')).toContainText('Creative afternoon');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden');
-    await exportNativeCrux(page, reference, app, undefined, 'reference');
-    const zip = await JSZip.loadAsync(readFileSync(reference));
+    await exportNativeCrux(page, included, app);
+    const zip = await JSZip.loadAsync(readFileSync(included));
     const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
-    expect(manifest.version).toBe('3.0');
-    expect(manifest.runtimeReferences.length).toBeGreaterThan(0);
-    for (const ref of manifest.runtimeReferences) {
-      expect(ref.tool).toBe('eventcalendar-app');
-      expect(zip.file(`artifacts/${ref.fingerprint}`)).toBeNull();
-      expect(ref.path).not.toMatch(/^data\//);
-    }
-    await exportNativeCrux(page, included, app, async () => {}, 'included');
-    const full = await JSZip.loadAsync(readFileSync(included));
-    expect(
-      JSON.parse(await full.file('manifest.json')!.async('text')).runtimeReferences,
-    ).toBeUndefined();
-    expect(readFileSync(reference).length).toBeLessThan(readFileSync(included).length);
-    await page.screenshot({ path: join(evidence, 'export-options.png') });
-    await page.reload();
-    await page.getByRole('button', { name: 'Export complete Crux', exact: true }).click();
-    await expect(page.getByRole('radio', { name: /^Include tools/ })).toBeChecked();
-    console.log('Archive sizes', {
-      reference: readFileSync(reference).length,
-      included: readFileSync(included).length,
+    expect(manifest).toMatchObject({
+      archiveVersion: 3,
+      purpose: 'private-backup',
+      graphVersion: 1,
+      payloadVersion: 1,
     });
+    const graph = JSON.parse(await zip.file('graph.json')!.async('text'));
+    for (const fingerprint of graph.fingerprints)
+      expect(zip.file(`content/${fingerprint}`)).not.toBeNull();
+    expect(graph.fingerprints.length).toBeGreaterThan(0);
+    await expect(page.getByText(/This private backup is self-contained/)).toBeVisible();
+    await expect(page.getByRole('radio', { name: /^By reference/ })).toHaveCount(0);
+    await page.screenshot({ path: join(evidence, 'export-options.png') });
   } finally {
     await first.app.close();
   }
   const second = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   try {
     await enterGarden(second.page);
-    await importNativeCrux(second.page, reference);
+    await importNativeCrux(second.page, included);
     const frame = second.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 120_000,

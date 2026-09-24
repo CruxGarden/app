@@ -1,3 +1,4 @@
+import { exportPrivateCrux, importPrivateCrux, privateArchiveBytes } from './private-crux-archive';
 import {
   archiveRuntimeMode,
   referenceArchiveRuntimes,
@@ -64,6 +65,8 @@ export interface ImportConflictInfo {
 }
 
 export interface ImportOptions {
+  /** Reuse for retries of the same import action. */
+  requestId?: string;
   data: Blob | ArrayBuffer;
   mode?: ImportMode;
   onProgress?: (done: number, total: number) => void;
@@ -144,28 +147,36 @@ function withoutInstallationMeta(
 
 /**
  * Parse a .crux ZIP and return metadata for conflict detection.
- * Does NOT import — just reads crux.json to check if a conflict exists.
+ * Does not import; the native API validates the current private graph envelope.
  */
 export async function peekImport(data: Blob | ArrayBuffer): Promise<{
   cruxData: Record<string, unknown>;
   conflict: ImportConflictInfo | null;
 }> {
-  const zip = await JSZip.loadAsync(await toArrayBuffer(data));
-  const cruxJsonFile = zip.file('crux.json');
-  if (!cruxJsonFile) throw new Error('Invalid .crux file: missing crux.json');
-  const cruxData = JSON.parse(await cruxJsonFile.async('text'));
+  const db = getSqliteClient();
+  let cruxData: Record<string, unknown>;
+  if (db.fileContent) {
+    if (!db.privateArchive) throw new Error('The API archive service is unavailable.');
+    cruxData = (await db.privateArchive.inspect(await privateArchiveBytes(data))).root;
+  } else {
+    const zip = await JSZip.loadAsync(await toArrayBuffer(data));
+    const cruxJsonFile = zip.file('crux.json');
+    if (!cruxJsonFile) throw new Error('Invalid .crux file: missing crux.json');
+    cruxData = JSON.parse(await cruxJsonFile.async('text'));
+  }
 
   let conflict: ImportConflictInfo | null = null;
-  if (cruxData.id) {
+  if (typeof cruxData.id === 'string') {
     try {
       const { crux: cruxService } = getServices();
       const existing = await cruxService.findById(cruxData.id);
+      const meta = cruxData.meta as Record<string, unknown> | undefined;
       conflict = {
-        title: cruxData.title || 'Imported Crux',
+        title: String(cruxData.title || 'Imported Crux'),
         installedVersion: existing.meta?.growthCount || 0,
         installedUpdated: existing.updated,
-        incomingVersion: cruxData.meta?.growthCount || 0,
-        incomingUpdated: cruxData.updated || cruxData.meta?.exportedAt || '',
+        incomingVersion: Number(meta?.growthCount) || 0,
+        incomingUpdated: String(cruxData.updated || meta?.exportedAt || ''),
       };
     } catch {
       // No conflict — crux doesn't exist locally
@@ -183,6 +194,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   await (
     await import('./file-content')
   ).finishPendingContentProjections([options.cruxId, ...copies.map((copy) => copy.id)]);
+  if (getSqliteClient().fileContent) return exportPrivateCrux(options);
   if (copies.length) return exportTaskCrux(options);
   const { cruxId, messages, summary = null, author = null, onProgress } = options;
   const { crux: cruxService, artifact, dimension } = getServices();
@@ -514,6 +526,7 @@ export async function exportArtifactsZip(
 // ── Import ──────────────────────────────────────────────
 
 export async function importCrux(options: ImportOptions): Promise<ImportResult> {
+  if (getSqliteClient().fileContent) return importPrivateCrux(options);
   const { data, mode = 'restore', onProgress } = options;
   const zip = await JSZip.loadAsync(await toArrayBuffer(data));
   await hydrateArchiveRuntimes(zip);

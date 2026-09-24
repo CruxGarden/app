@@ -4,6 +4,8 @@ import type {
   LocalCruxUpdate,
   LocalGraphChange,
   LocalGraphRuntime,
+  GraphSelection,
+  PrivateGraphImport,
   FileContentRead,
   FileContentSelection,
   FileContentEdit,
@@ -40,8 +42,26 @@ export interface FileContentBridge {
   restore(input: GrowthContentRestore): ReturnType<LocalGraphRuntime['restoreGrowthContent']>;
 }
 
+export interface PrivateArchiveBridge {
+  replacementToken(selection: GraphSelection): Promise<string>;
+  export(selection: GraphSelection): Promise<Uint8Array>;
+  inspect(
+    bytes: Uint8Array,
+  ): Promise<{
+    root: Record<string, unknown>;
+    roots: string[];
+    includeMembers: boolean;
+    growthCount: number;
+  }>;
+  import(
+    bytes: Uint8Array,
+    input: Omit<PrivateGraphImport, 'graph'>,
+  ): ReturnType<LocalGraphRuntime['importPrivateGraph']>;
+}
+
 export interface SqliteBridge {
   fileContent?: FileContentBridge;
+  privateArchive?: PrivateArchiveBridge;
   createCrux?(input: LocalCruxCreate): Promise<string>;
   onChange?(callback: (change: LocalGraphChange) => void): () => void;
   run(sql: string, params?: unknown[]): Promise<{ changes: number }>;

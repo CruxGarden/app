@@ -1,3 +1,4 @@
+import type { GraphSelection, PrivateGraphImport } from '@cruxgarden/local-api';
 import type {
   LocalWorkingCopyCreate,
   LocalCruxCreate,
@@ -758,6 +759,60 @@ async function setupIpc() {
   } catch (err: any) {
     debugLog(`Watcher bootstrap failed: ${err?.message}`);
   }
+
+  const archiveCaller = (event: Electron.IpcMainInvokeEvent) => {
+    if (
+      event.sender !== mainWindow?.webContents ||
+      event.senderFrame !== mainWindow?.webContents.mainFrame
+    )
+      throw new Error('Private archives are only available from Garden');
+  };
+  ipcMain.handle(
+    'archive:replacement-token',
+    (event: Electron.IpcMainInvokeEvent, selection: GraphSelection) => {
+      archiveCaller(event);
+      return localDb.privateArchiveReplacementToken(selection);
+    },
+  );
+  ipcMain.handle(
+    'archive:export',
+    (event: Electron.IpcMainInvokeEvent, selection: GraphSelection) => {
+      archiveCaller(event);
+      return localDb.exportPrivateArchive(selection);
+    },
+  );
+  ipcMain.handle('archive:inspect', (event: Electron.IpcMainInvokeEvent, bytes: Uint8Array) => {
+    archiveCaller(event);
+    return localDb.inspectPrivateArchive(bytes);
+  });
+  ipcMain.handle(
+    'archive:import',
+    async (
+      event: Electron.IpcMainInvokeEvent,
+      bytes: Uint8Array,
+      input: Omit<PrivateGraphImport, 'graph'>,
+    ) => {
+      archiveCaller(event);
+      const result = await localDb.importPrivateArchive(bytes, input);
+      // Watch only committed registrations; failed preparation never becomes a writer.
+      for (const id of Object.values(result.ids)) {
+        const row = await db.get<{ meta: string }>(
+          'SELECT meta FROM cruxes WHERE id = ? AND deleted IS NULL',
+          [id],
+        );
+        const folder = row
+          ? JSON.parse(row.meta).projectFolder
+          : (
+              await db.get<{ project_folder: string }>(
+                "SELECT project_folder FROM working_copies WHERE id = ? AND phase = 'ready'",
+                [id],
+              )
+            )?.project_folder;
+        if (folder) watcher.watch(folder);
+      }
+      return result;
+    },
+  );
 
   ipcMain.handle('sqlite:create-crux', (_e: unknown, input: LocalCruxCreate) => {
     if (!db.createCrux) throw new Error('Owned Crux creation is unavailable');

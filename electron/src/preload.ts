@@ -60,6 +60,12 @@ const api: ElectronBridge = {
       }
     : {}),
   sqlite: {
+    privateArchive: {
+      replacementToken: (selection) => ipcRenderer.invoke('archive:replacement-token', selection),
+      export: (selection) => ipcRenderer.invoke('archive:export', selection),
+      inspect: (bytes) => ipcRenderer.invoke('archive:inspect', bytes),
+      import: (bytes, input) => ipcRenderer.invoke('archive:import', bytes, input),
+    },
     fileContent: {
       finishProjection: (id) => ipcRenderer.invoke('content:finish-projection', id),
       head: (id) => ipcRenderer.invoke('content:head', id),

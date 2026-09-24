@@ -7,6 +7,7 @@ import {
   activateWorkspace,
   allWorkspaces,
   closeWorkspace,
+  withClosedCruxWorkspaces,
   getWorkspace,
   leaveWorkspaceView,
   openWorkspace,
@@ -568,4 +569,22 @@ describe('document owners with shared logical file IDs', () => {
     expect(docs.dirty(fa)).toBe(false);
     expect(wa.data.getState().artifacts).toEqual([historical]);
   });
+});
+
+it('restoration excludes new sessions, preserves unrelated work and reopens after failure', async () => {
+  const { a, b, wa, wb } = await pair();
+  await activateWorkspace(a.id);
+  await expect(
+    withClosedCruxWorkspaces(a.id, async () => {
+      expect(getWorkspace(a.id)).toBeUndefined();
+      await expect(openWorkspace(a.id)).rejects.toThrow('being restored');
+      expect(await openWorkspace(b.id)).toBe(wb);
+      await activateWorkspace(b.id);
+      throw new Error('Broken archive');
+    }),
+  ).rejects.toThrow('Broken archive');
+  expect(getWorkspace(a.id)).toBeDefined();
+  expect(getWorkspace(a.id)).not.toBe(wa);
+  expect(getWorkspace(b.id)).toBe(wb);
+  expect(useWorkspaceRegistry.getState().activeId).toBe(b.id);
 });

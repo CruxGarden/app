@@ -5,6 +5,7 @@ import { ElectronSqliteClient } from './electron-client';
 
 export interface ISqliteClient {
   fileContent?: SqliteBridge['fileContent'];
+  privateArchive?: SqliteBridge['privateArchive'];
   createCrux?: SqliteBridge['createCrux'];
   onChange?: SqliteBridge['onChange'];
   /** Initialize the worker + OPFS VFS. Resolves when the database is ready. */

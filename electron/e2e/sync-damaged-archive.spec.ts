@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import JSZip from 'jszip';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
@@ -29,8 +30,9 @@ test('damaged cloud archives fail without altering local files, shared blobs or 
     await expect(page.getByText('Pushed successfully')).toBeVisible();
     const original = api.state.sync.cruxes[id]!.data!;
     const archive = await JSZip.loadAsync(original);
-    const version = JSON.parse(await archive.file('versions/current.json')!.async('text'));
-    const fingerprint = version.artifacts['safe.txt'].fingerprint as string;
+    const graph = JSON.parse(await archive.file('graph.json')!.async('text'));
+    const fingerprint = createHash('sha256').update('Keep these original bytes').digest('hex');
+    expect(graph.fingerprints).toContain(fingerprint);
     await createCrux(page, 'Other draft');
     await page.getByPlaceholder('Send a message...').fill('Keep this unsent thought');
     await switchCrux(page, 'Protected work');
@@ -58,8 +60,8 @@ test('damaged cloud archives fail without altering local files, shared blobs or 
 
     for (const damage of ['corrupt', 'missing', 'truncated']) {
       const damaged = await JSZip.loadAsync(original);
-      if (damage === 'corrupt') damaged.file(`artifacts/${fingerprint}`, 'Corrupted cloud bytes');
-      if (damage === 'missing') damaged.remove(`artifacts/${fingerprint}`);
+      if (damage === 'corrupt') damaged.file(`content/${fingerprint}`, 'Corrupted cloud bytes');
+      if (damage === 'missing') damaged.remove(`content/${fingerprint}`);
       api.state.sync.cruxes[id]!.data =
         damage === 'truncated'
           ? original.subarray(0, Math.floor(original.length / 2))
@@ -87,6 +89,22 @@ test('damaged cloud archives fail without altering local files, shared blobs or 
       .click();
     await expect(page.getByText('Pull complete', { exact: true })).toBeVisible();
     await verifyBytes();
+    const retained = await page.evaluate(async () => {
+      const receipts = (await window.electronAPI!.sqlite.all(
+        "SELECT value FROM settings WHERE key LIKE 'cruxgarden:graph-import:%'",
+      )) as { value: string }[];
+      const safety = receipts
+        .map((row) => JSON.parse(row.value).result.safetyArchive)
+        .filter(Boolean);
+      return {
+        count: safety.length,
+        available: await Promise.all(safety.map((fp) => window.electronAPI!.sqlite.blobExists(fp))),
+        artifacts: await window.electronAPI!.sqlite.all('SELECT id FROM artifacts'),
+      };
+    });
+    expect(retained.count).toBe(1);
+    expect(retained.available).toEqual([true]);
+    expect(retained.artifacts).toEqual([]);
     await instance.app.close();
     instance = await launchApp({ dir, env: { CRUX_API_URL: api.url } });
     page = instance.page;
