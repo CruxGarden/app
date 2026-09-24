@@ -599,7 +599,7 @@ describe('workspaceGrowthHost (over the store actions)', () => {
     expect(calls).toHaveLength(1);
     const report = await host.branch('latest', 'Alt', { requestedBy: 'collaborator' });
     expect(calls[1]).toBe('branch:s1:Alt');
-    expect(report.safety?.label).toBe('Before branch');
+    expect(report.safety).toMatchObject({ label: 'Before branch' });
     expect(report.changes.removed.map((f) => f.path)).toEqual(['index.html']);
     // diff: snapshot vs working (files now empty)
     const d = await host.diff('s1');

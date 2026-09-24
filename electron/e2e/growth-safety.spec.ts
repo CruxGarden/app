@@ -6,8 +6,8 @@ import { addArtifact, createCrux, enterGarden, storedCrux } from './multi-crux-h
 import { togglePanel } from './panel-helpers';
 
 for (const action of ['Revert', 'Branch'] as const) {
-  test(`${action} refuses a failed safety snapshot and preserves current files through retry and restart`, async () => {
-    let launch = await launchApp();
+  test(`${action} refuses a failed recovery copy and preserves current files through retry and restart`, async () => {
+    let launch = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     const dir = launch.dir;
     try {
       const { page } = launch;
@@ -32,11 +32,18 @@ for (const action of ['Revert', 'Branch'] as const) {
       await page.keyboard.type('Current work must survive');
       await page.keyboard.press('ControlOrMeta+s');
       await expect.poll(disk).toBe('Current work must survive');
+      const input = page.getByPlaceholder('Send a message...');
+      await input.fill('Please write hello');
+      await input.press('Enter');
+      await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible();
+      const unmarked = await storedCrux(page, id);
+      expect(unmarked.messages.length).toBeGreaterThan(0);
+
       await history.getByRole('button').filter({ hasText: 'Earlier' }).first().click();
       await expect(page.getByText('read-only', { exact: true })).toBeVisible();
       await page.evaluate(() =>
         window.electronAPI!.sqlite.run(
-          "CREATE TRIGGER refuse_safety BEFORE INSERT ON cruxes WHEN NEW.kind = 'snapshot' BEGIN SELECT RAISE(ABORT, 'Safety snapshot refused'); END",
+          "CREATE TRIGGER refuse_safety BEFORE UPDATE ON edit_history BEGIN SELECT RAISE(ABORT, 'Recovery refused'); END",
         ),
       );
       if (action === 'Branch') {
@@ -56,7 +63,7 @@ for (const action of ['Revert', 'Branch'] as const) {
       };
       await restore();
       const error = page.getByRole('alertdialog', { name: 'Restore failed' });
-      await expect(error).toContainText('Could not save a safety snapshot');
+      await expect(error).toContainText('Could not save a safety copy');
       expect(disk()).toBe('Current work must survive');
       await error.getByRole('button', { name: 'OK', exact: true }).click();
       await expect(page.getByText('read-only', { exact: true })).toBeVisible();
@@ -68,23 +75,51 @@ for (const action of ['Revert', 'Branch'] as const) {
       await restore();
       await expect.poll(disk).toBe('Earlier version');
       await expect(page.getByText('read-only', { exact: true })).toHaveCount(0);
-      const label = action === 'Revert' ? 'Before revert' : 'Before branch';
-      await expect(history.getByText(label, { exact: true })).toBeVisible();
-      await history.getByRole('button').filter({ hasText: label }).first().click();
-      await expect(editor).toContainText('Current work must survive');
-      await history.getByRole('button', { name: 'Back to current' }).click();
+      expect(
+        await page.evaluate(
+          (id) =>
+            window.electronAPI!.sqlite.all(
+              "SELECT id FROM dimensions WHERE source_id=? AND type='growth'",
+              [id],
+            ),
+          id,
+        ),
+      ).toHaveLength(1);
+      const recovery = await page.evaluate(async (id) => {
+        const history = await window.electronAPI!.sqlite.fileContent!.history(id);
+        return history.checkpoints.filter((item) => item.workspace).at(-1)!;
+      }, id);
+      expect(recovery.workspace!.messages).toEqual(unmarked.messages);
+      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      const row = history.locator(`[data-checkpoint-id="${recovery.id}"]`);
+      await row.getByRole('button', { name: /Inspect recovery/ }).click();
+      await expect(row.getByText('notes.txt', { exact: true })).toBeVisible();
+      await row.getByRole('button', { name: /Restore workspace recovery/ }).click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Restore workspace', exact: true })
+        .click();
+      await expect(history.getByRole('status')).toContainText('Files and conversation restored');
+      await expect.poll(disk).toBe('Current work must survive');
+      expect((await storedCrux(page, id)).messages).toEqual(unmarked.messages);
+      await page.screenshot({ path: `e2e/.results/growth-${action.toLowerCase()}-recovery.png` });
       await launch.app.close();
-      launch = await launchApp({ dir });
-      await launch.page.getByRole('button', { name: /enter/i }).click();
-      await expect(launch.page.locator('[data-workspace-id]')).toBeVisible();
-      expect(disk()).toBe('Earlier version');
-      const reopenedHistory = launch.page.getByTestId('pane-body-history');
-      if (!(await reopenedHistory.isVisible())) await togglePanel(launch.page, 'Toggle history');
-      await reopenedHistory.getByRole('button').filter({ hasText: label }).first().click();
-      await launch.page.getByRole('tree').getByText('notes.txt', { exact: true }).click();
-      await expect(launch.page.locator('.monaco-editor').first()).toContainText(
-        'Current work must survive',
-      );
+      launch = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
+      await launch.page.getByRole('button', { name: 'Enter', exact: true }).click();
+      await launch.page.getByRole('button', { name: `Open Safe ${action}`, exact: true }).click();
+      expect(disk()).toBe('Current work must survive');
+      expect((await storedCrux(launch.page, id)).messages).toEqual(unmarked.messages);
+      await expect(launch.page.getByText('Please write hello', { exact: true })).toHaveCount(1);
+      expect(
+        await launch.page.evaluate(
+          (id) =>
+            window.electronAPI!.sqlite.all(
+              "SELECT id FROM dimensions WHERE source_id=? AND type='growth'",
+              [id],
+            ),
+          id,
+        ),
+      ).toHaveLength(1);
     } finally {
       await launch.app.close();
     }

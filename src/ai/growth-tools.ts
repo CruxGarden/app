@@ -44,12 +44,17 @@ export const GROWTH_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'edit_history',
     description:
-      'Inspect recent automatic file recovery separately from deliberate Growth. List returns retained checkpoint IDs; inspect lists their files; capture retains the settled files without a Growth edge (reason safety protects them from automatic eviction); restore recovers files and keeps both the current files as a safety copy and the ongoing conversation. Automatic entries retain the latest 20. Use snapshot only for a deliberate creative milestone.',
+      'Inspect recent automatic file recovery separately from deliberate Growth. List returns retained checkpoint IDs; inspect lists their files; capture retains the settled files without a Growth edge (reason safety protects them from automatic eviction); restore recovers files and keeps both the current files as a safety copy and the ongoing conversation. Set includeConversation to true only when explicitly recovering the conversation and branch from a protected workspace copy; inspect it first. Automatic entries retain the latest 20. Use snapshot only for a deliberate creative milestone.',
     input_schema: {
       type: 'object',
       properties: {
         action: { type: 'string', enum: ['list', 'inspect', 'capture', 'restore'] },
         checkpointId: { type: 'string' },
+        includeConversation: {
+          type: 'boolean',
+          description:
+            'Restore only: recover the saved conversation and branch as well as files. Defaults to false.',
+        },
         reason: {
           type: 'string',
           enum: ['autosave', 'safety'],
@@ -101,7 +106,7 @@ export const GROWTH_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'restore',
     description:
-      "Restore the workspace files to a snapshot's state. A safety snapshot of the current state is taken first, so nothing is lost. " +
+      "Restore the workspace files to a snapshot's state. A protected recovery copy of the current files and conversation is kept first, so nothing is lost. " +
       'The conversation continues from the restored snapshot. ' +
       'USE WHEN: A change broke the site (check_site fails, the preview is wrong) and fixing forward is worse than going back, or the user asks to undo to a version. ' +
       'Returns what changed (files added, removed, modified).',
@@ -117,7 +122,7 @@ export const GROWTH_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'branch',
     description:
-      'Start a new Growth branch from a snapshot: the files are restored to that point and later snapshots chain from it, while the current line of work stays in history. A safety snapshot is taken first. ' +
+      'Start a new Growth branch from a snapshot: the files are restored to that point and later snapshots chain from it, while the current line of work stays in history. A protected recovery copy is kept first. ' +
       'USE WHEN: The user wants to try a different direction from an earlier version without losing the current one.',
     input_schema: {
       type: 'object',
@@ -186,7 +191,11 @@ export async function runGrowthTool(
       return JSON.stringify(
         input.action === 'inspect'
           ? await history.inspectEditCheckpoint(ctx.cruxId, input.checkpointId)
-          : await history.restoreEditCheckpoint(ctx.cruxId, input.checkpointId),
+          : await history.restoreEditCheckpoint(
+              ctx.cruxId,
+              input.checkpointId,
+              input.includeConversation === true,
+            ),
       );
     } catch (err) {
       return formatToolError(toolName, err as Error);
@@ -280,8 +289,10 @@ function describeRestore(verb: string, report: RestoreReport): string {
   ];
   lines.push(
     safety
-      ? `Safety snapshot #${safety.number} "${safety.label ?? ''}" (${safety.id}) holds the state from before this operation.`
-      : 'Warning: the safety snapshot could not be taken; the previous state is not recoverable from history.',
+      ? safety.kind === 'recovery'
+        ? `Protected recovery ${safety.id} holds the previous files and conversation context. Use edit_history to inspect it or restore it; it is not a Growth version.`
+        : `Safety snapshot #${safety.number} "${safety.label ?? ''}" (${safety.id}) holds the state from before this operation.`
+      : 'Inspect Edit history for the recovery copy retained by the previous restore.',
   );
   lines.push(
     diffIsEmpty(changes)

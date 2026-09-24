@@ -32,6 +32,36 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
         void refresh();
     });
   }, [cruxId, refresh]);
+  const restore = async (checkpointId: string, includeConversation = false) => {
+    if (
+      !(await confirmDialog({
+        title: includeConversation ? 'Restore this workspace?' : 'Restore these files?',
+        message: includeConversation
+          ? 'Your current files and conversation context will be kept as a safety copy. This returns to the saved conversation and version branch.'
+          : 'Your current files will be kept as a safety copy. Your conversation stays unchanged.',
+        confirmLabel: includeConversation ? 'Restore workspace' : 'Restore files',
+      }))
+    )
+      return;
+    setBusy(true);
+    setError('');
+    setStatus('');
+    try {
+      const result = await restoreEditCheckpoint(cruxId, checkpointId, includeConversation);
+      setStatus(
+        'recovered' in result
+          ? 'Finished the previous restore. Select another recovery point if needed.'
+          : includeConversation
+            ? 'Files and conversation restored. The previous workspace is kept as a safety copy.'
+            : 'Files restored. The previous files are kept as a safety copy.',
+      );
+      await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <section aria-label="Edit history" className="p-3 space-y-3">
       <p className="text-xs text-text-muted">
@@ -75,7 +105,7 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
                   {new Date(checkpoint.created).toLocaleString()}
                 </time>
               </div>
-              <div className="flex gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -100,37 +130,28 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
                   size="sm"
                   disabled={busy}
                   aria-label={`Restore recovery point ${index + 1}`}
-                  onClick={async () => {
-                    if (
-                      !(await confirmDialog({
-                        title: 'Restore these files?',
-                        message:
-                          'Your current files will be kept as a safety copy. Your conversation stays unchanged.',
-                        confirmLabel: 'Restore files',
-                      }))
-                    )
-                      return;
-                    setBusy(true);
-                    setError('');
-                    setStatus('');
-                    try {
-                      const result = await restoreEditCheckpoint(cruxId, checkpoint.id);
-                      setStatus(
-                        'recovered' in result
-                          ? 'Finished the previous restore. Select another recovery point if needed.'
-                          : 'Files restored. The previous files are kept as a safety copy.',
-                      );
-                      await refresh();
-                    } catch (err) {
-                      setError((err as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
+                  onClick={() => void restore(checkpoint.id)}
                 >
                   Restore files
                 </Button>
+                {checkpoint.workspace && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    aria-label={`Restore workspace recovery point ${index + 1}`}
+                    onClick={() => void restore(checkpoint.id, true)}
+                  >
+                    Restore workspace
+                  </Button>
+                )}
               </div>
+              {checkpoint.workspace && (
+                <p className="mt-2 text-xs text-text-muted">
+                  Includes the saved version branch and {checkpoint.workspace.messages.length}{' '}
+                  unmarked conversation messages.
+                </p>
+              )}
               {files?.id === checkpoint.id && (
                 <ul className="mt-2 text-xs font-mono text-text-muted break-all">
                   {files.paths.map((path) => (

@@ -27,7 +27,11 @@ export async function captureEditCheckpoint(
 }
 
 /** Both UI and agents restore through this path, including unsaved edits and disk recovery. */
-export async function restoreEditCheckpoint(cruxId: string, checkpointId: string) {
+export async function restoreEditCheckpoint(
+  cruxId: string,
+  checkpointId: string,
+  includeConversation = false,
+) {
   const workspace = getWorkspace(cruxId);
   await assertCopyWritable(cruxId);
   await flushNotebook(cruxId);
@@ -39,13 +43,29 @@ export async function restoreEditCheckpoint(cruxId: string, checkpointId: string
   const content = api();
   // Complete an already committed projection rather than replaying an uncertain restore.
   if (await content.finishProjection(cruxId)) {
-    await workspace?.data.getState().refreshArtifacts();
+    await workspace?.data.getState().loadCrux(cruxId);
     return { recovered: true };
   }
   const head = await content.head(cruxId);
   if (!head) throw new Error('This Crux has no saved file content.');
-  const result = await content.restoreCheckpoint({ cruxId, expected: head, checkpointId });
+  let context: { expectedMeta: Record<string, unknown> } | undefined;
+  if (includeConversation) {
+    await workspace?.data.getState().saveMeta();
+    const row = await getSqliteClient().get<{ meta: string | null }>(
+      'SELECT meta FROM cruxes WHERE id = ? UNION ALL SELECT meta FROM working_copies WHERE id = ?',
+      [cruxId, cruxId],
+    );
+    if (!row) throw new Error('This workspace is no longer available.');
+    context = { expectedMeta: JSON.parse(row.meta || '{}') };
+  }
+  const result = await content.restoreCheckpoint({
+    cruxId,
+    expected: head,
+    checkpointId,
+    ...(context ? { workspace: context } : {}),
+  });
   await content.finishProjection(cruxId);
-  await workspace?.data.getState().refreshArtifacts();
+  if (includeConversation) await workspace?.data.getState().loadCrux(cruxId);
+  else await workspace?.data.getState().refreshArtifacts();
   return result;
 }

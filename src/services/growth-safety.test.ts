@@ -38,14 +38,16 @@ it.each(['restore', 'branch'] as const)(
       action === 'restore'
         ? host.restore(first.id, { requestedBy: 'agent:test' })
         : host.branch(first.id, 'New direction', { requestedBy: 'agent:test' });
-    await expect(restore()).rejects.toThrow('Could not save a safety snapshot');
+    await expect(restore()).rejects.toThrow('Could not save a safety copy');
     expect(await read(main.id)).toBe('Current work must survive');
     expect((await getServices().crux.findById(main.id)).meta).toEqual(before.meta);
     expect(await host.list()).toHaveLength(1);
     await db.run('DROP TRIGGER refuse_safety');
     const result = await restore();
     expect(await read(main.id)).toBe('Earlier version');
-    expect(result.safety?.label).toBe(action === 'restore' ? 'Before revert' : 'Before branch');
+    expect(result.safety).toMatchObject({
+      label: action === 'restore' ? 'Before revert' : 'Before branch',
+    });
     expect(await read(result.safety!.id)).toBe('Current work must survive');
     expect((await getServices().crux.findById(result.safety!.id)).meta?.messages).toEqual(
       before.meta?.messages,
@@ -71,7 +73,7 @@ it.each(['restore', 'branch'] as const)(
       action === 'restore'
         ? store.getState().revertToSnapshot(first.id)
         : store.getState().branchFromSnapshot(first.id, 'New direction');
-    await expect(restore()).rejects.toThrow('Could not save a safety snapshot');
+    await expect(restore()).rejects.toThrow('Could not save a safety copy');
     expect(await read(main.id)).toBe('Current work must survive');
     expect(store.getState().viewingSnapshotId).toBe(first.id);
     expect(store.getState().messages).toEqual(messages);

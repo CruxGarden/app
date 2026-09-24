@@ -231,7 +231,7 @@ export interface CruxMeta {
     systemPrompt?: string;
     palette?: Record<string, string>;
     snapshotFrequency?: string;
-    activeBranch?: string;
+    activeBranch?: string | null;
     /** Agent Host switched on for this crux (MCP server per crux, ADR 0013). Off by default. */
     agentHost?: boolean;
     /** The Claude Code session this crux's Agent Provider turns resume (ADR 0019). */

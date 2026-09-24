@@ -51,6 +51,7 @@ test('an interrupted restore resumes on startup without an old workspace save re
     await launch.app.close();
     launch = await launchApp({ dir });
     await launch.page.getByRole('button', { name: /enter/i }).click();
+    await launch.page.getByRole('button', { name: 'Open Restore recovery', exact: true }).click();
     await expect(launch.page.locator('[data-workspace-id]')).toBeVisible();
     expect((await storedCrux(launch.page, id)).settings.activeBranch).toBe(earlier);
     expect(disk()).toBe('Earlier');
@@ -69,7 +70,7 @@ test('an interrupted restore resumes on startup without an old workspace save re
     );
     expect(state.pending).toEqual([]);
     expect(state.files).toEqual([]);
-    expect(state.growth).toHaveLength(3);
+    expect(state.growth).toHaveLength(2);
   } finally {
     await launch.app.close();
   }
@@ -89,7 +90,7 @@ test('a captured preview appears on its Garden card with files held only in mani
       'A visible creation',
     );
     await page.getByTitle('Capture preview (saves as preview.jpg)').click();
-    await page.locator('header').getByRole('button').first().click();
+    await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
     const image = page
       .getByRole('button', { name: 'Open Captured preview', exact: true })
       .locator('img');

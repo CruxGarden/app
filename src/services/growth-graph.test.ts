@@ -203,3 +203,30 @@ describe('graph presentation preserves history', () => {
     );
   });
 });
+
+it('keeps an explicitly empty restored branch separate from existing marked versions and advances after marking', async () => {
+  const { crux } = getServices();
+  const created = await crux.create({ title: 'Independent directions' });
+  const workspace = await openWorkspace(created.id);
+  workspace.data.setState({
+    messages: [{ role: 'user', content: 'Old direction', timestamp: new Date().toISOString() }],
+  });
+  await workspace.data.getState().createSnapshot({ label: 'Old direction' });
+  workspace.data.getState().patchCruxMeta({ settings: { activeBranch: null } });
+  workspace.data.setState({
+    messages: [{ role: 'user', content: 'New direction', timestamp: new Date().toISOString() }],
+    messageSegmentStart: 0,
+  });
+  await workspace.data.getState().saveMeta();
+  await workspace.data.getState().loadCrux(created.id);
+  expect(workspace.data.getState().messages.map((m) => m.content)).toEqual(['New direction']);
+  const empty = await loadGrowthGraph(created.id);
+  expect(empty.nodes.find((n) => n.kind === 'copy')?.parentId).toBeNull();
+  expect(empty.links.some((link) => link.kind === 'copy')).toBe(false);
+  await workspace.data.getState().createSnapshot({ label: 'New root' });
+  const tip = workspace.data.getState().growths.at(-1)!.targetId;
+  expect((await crux.findById(tip)).meta?.parentCruxId).toBeNull();
+  expect(workspace.data.getState().crux?.meta?.settings?.activeBranch).toBe(tip);
+  await workspace.data.getState().loadCrux(created.id);
+  expect(workspace.data.getState().messages.map((m) => m.content)).toEqual(['New direction']);
+});

@@ -20,6 +20,18 @@ import { isGeneratedGuidePath } from './agents-md';
 import { appChanges } from './app-changes';
 import { isEmbeddedApp } from './embedded-app';
 
+/** An explicitly empty branch is distinct from an unset tip. */
+export function growthTip(crux: Crux, growths: Dimension[]): string | null {
+  const selected = crux.meta?.settings?.activeBranch;
+  return selected !== undefined ? selected : (sortGrowths(growths).at(-1)?.targetId ?? null);
+}
+type RecoveryCheckpoint = Awaited<
+  ReturnType<NonNullable<SqliteBridge['fileContent']>['checkpoint']>
+>;
+export type RestoreSafety =
+  | ({ kind: 'recovery' } & RecoveryCheckpoint)
+  | ({ kind: 'version' } & SnapshotInfo);
+
 // ── Deps ────────────────────────────────────────────────────────────────────
 
 export interface GrowthDeps {
@@ -235,9 +247,7 @@ export async function createSnapshotCore(
   const { label, requestedBy } = options;
 
   // Parent: activeBranch if set (after branching), otherwise the latest snapshot
-  const activeBranch = crux.meta?.settings?.activeBranch as string | undefined;
-  const parentCruxId =
-    activeBranch || (growths.length > 0 ? growths[growths.length - 1]!.targetId : null);
+  const parentCruxId = growthTip(crux, growths);
 
   // Snapshot crux holds only this segment's messages plus the cumulative
   // count so snapshot viewing can truncate correctly.
@@ -324,10 +334,7 @@ async function prepareManifestSnapshot(
   const { crux, messages, messageSegmentStart, growths } = state;
   const head =
     (await api.head(crux.id)) ?? (await api.edit({ cruxId: crux.id, expected: null, changes: [] }));
-  const parentId =
-    (crux.meta?.settings?.activeBranch as string | undefined) ||
-    growths[growths.length - 1]?.targetId ||
-    null;
+  const parentId = growthTip(crux, growths);
   const files = await deps.artifact.findByResource('crux', crux.id);
   const changes = isEmbeddedApp(crux)
     ? appChanges(crux, parentId ? await deps.artifact.findByResource('crux', parentId) : [], files)
@@ -384,14 +391,9 @@ export async function restoreManifestWorkspace(
 ): Promise<RestoreReport> {
   await deps.flush();
   const api = deps.content!;
-  const { input, files } = await prepareManifestSnapshot(
-    state,
-    {
-      label: branchLabel === undefined ? SAFETY_LABEL_RESTORE : SAFETY_LABEL_BRANCH,
-      silent: true,
-    },
-    deps,
-  );
+  const head = await api.head(state.crux.id);
+  if (!head) throw new Error('This Crux has no retained file content.');
+  const files = await deps.artifact.findByResource('crux', state.crux.id);
   const targetHead = await api.head(snapshotId);
   if (!targetHead) throw new Error('This snapshot has no retained file content.');
   const { getSqliteClient } = await import('./sqlite/client');
@@ -412,7 +414,7 @@ export async function restoreManifestWorkspace(
         ];
   const restored = await requireSafetySnapshot(() =>
     api.restore({
-      safety: input,
+      safety: { cruxId: state.crux.id, expected: head },
       target: { cruxId: snapshotId, expected: targetHead },
       workspace: { expectedMeta: JSON.parse(row.meta || '{}'), messages },
     }),
@@ -422,11 +424,7 @@ export async function restoreManifestWorkspace(
   const target = state.growths.find((growth) => growth.targetId === snapshotId);
   if (!target) throw new Error('Restored Growth relationship is missing.');
   return {
-    safety: await snapshotInfoOf(
-      JSON.parse(JSON.stringify(restored.safety.growth)),
-      state.growths.length + 1,
-      deps,
-    ),
+    safety: { kind: 'recovery', ...restored.safety },
     target: await snapshotInfoOf(target, state.growths.indexOf(target) + 1, deps),
     changes: diffArtifactSets(files, after),
   };
@@ -828,9 +826,7 @@ export async function workspaceUnchangedSinceTip(
   growths: Dimension[],
   deps: Pick<GrowthDeps, 'crux' | 'artifact'>,
 ): Promise<boolean> {
-  const tipId =
-    (crux.meta?.settings?.activeBranch as string | undefined) ||
-    sortGrowths(growths)[growths.length - 1]?.targetId;
+  const tipId = growthTip(crux, growths);
   if (!tipId) return false;
   try {
     const tip = await deps.crux.findById(tipId);
@@ -927,8 +923,8 @@ export interface GrowthActor {
 }
 
 export interface RestoreReport {
-  /** The safety snapshot taken first (null if it could not be taken). */
-  safety: SnapshotInfo | null;
+  /** Protected recovery (desktop) or the Web snapshot copy retained before restoring. */
+  safety: RestoreSafety | null;
   /** The snapshot the workspace now matches. */
   target: SnapshotInfo;
   changes: SnapshotDiff;
@@ -987,10 +983,9 @@ export async function requireSafetySnapshot<T>(capture: () => Promise<T>): Promi
   try {
     return await capture();
   } catch (cause) {
-    throw new Error(
-      'Could not save a safety snapshot. Your files have not been restored. Try again.',
-      { cause },
-    );
+    throw new Error('Could not save a safety copy. Your files have not been restored. Try again.', {
+      cause,
+    });
   }
 }
 
@@ -1021,7 +1016,7 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
     const state = await stateOf();
     const result = await createSnapshotCore(state, options, deps);
     const settings = { ...(state.crux.meta?.settings ?? {}) };
-    if (settings.activeBranch) settings.activeBranch = result.snapshotCruxId;
+    settings.activeBranch = result.snapshotCruxId;
     // The segment is captured: start a fresh one, exactly like the store does.
     await deps.crux.update(cruxId, {
       meta: {
@@ -1086,7 +1081,11 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
         },
       });
       announceGrowthChange(cruxId, 'restore');
-      return { safety, target: await snapshotInfoOf(growth, number, deps), changes };
+      return {
+        safety: { kind: 'version', ...safety },
+        target: await snapshotInfoOf(growth, number, deps),
+        changes,
+      };
     },
 
     branch: async (snapshotId, label, actor) => {
@@ -1122,7 +1121,11 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
         },
       });
       announceGrowthChange(cruxId, 'branch');
-      return { safety, target: await snapshotInfoOf(growth, number, deps), changes };
+      return {
+        safety: { kind: 'version', ...safety },
+        target: await snapshotInfoOf(growth, number, deps),
+        changes,
+      };
     },
 
     diff: async (fromId, toId) => {
@@ -1151,8 +1154,8 @@ export interface WorkspaceGrowthActions {
   getCrux(): Crux | null;
   getGrowths(): Dimension[];
   createSnapshot(options: CreateSnapshotOptions): Promise<void>;
-  revertToSnapshot(snapshotId: string): Promise<void>;
-  branchFromSnapshot(snapshotId: string, label: string): Promise<void>;
+  revertToSnapshot(snapshotId: string): Promise<RestoreReport | void>;
+  branchFromSnapshot(snapshotId: string, label: string): Promise<RestoreReport | void>;
 }
 
 /**
@@ -1185,12 +1188,16 @@ export function workspaceGrowthHost(
   async function restoreLike(
     op: 'restore' | 'branch',
     snapshotId: string,
-    run: (target: Dimension) => Promise<void>,
+    run: (target: Dimension) => Promise<RestoreReport | void>,
   ): Promise<RestoreReport> {
     const { growth, number } = resolve(snapshotId);
     const growthsBefore = actions.getGrowths();
     const filesBefore = await deps.artifact.findByResource('crux', cruxId);
-    await run(growth);
+    const report = await run(growth);
+    if (report) {
+      announceGrowthChange(cruxId, op);
+      return report;
+    }
     const filesAfter = await deps.artifact.findByResource('crux', cruxId);
     // The store took its safety snapshot inside the action: it is the one new
     // growth (the restored-to snapshot already existed).
@@ -1198,7 +1205,7 @@ export function workspaceGrowthHost(
     const safety = added.length > 0 ? await infoFor(added[0]!) : null;
     announceGrowthChange(cruxId, op);
     return {
-      safety,
+      safety: safety ? { kind: 'version', ...safety } : null,
       target: await snapshotInfoOf(growth, number, deps),
       changes: diffArtifactSets(filesBefore, filesAfter),
     };

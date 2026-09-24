@@ -26,7 +26,7 @@ export default function SnapshotBanner() {
   const total = growths.length;
   const label = `Viewing snapshot ${viewingSnapshotIndex + 1} of ${total}`;
 
-  const restore = async (action: () => Promise<void>) => {
+  const restore = async (action: () => Promise<unknown>) => {
     if (restoring) return;
     setRestoring(true);
     try {
@@ -46,8 +46,8 @@ export default function SnapshotBanner() {
       await confirmDialog({
         title: 'Revert to snapshot',
         message: embedded
-          ? 'Restore the app code and all its content to this checkpoint? Later content will be replaced. Your current state will be saved as a snapshot first.'
-          : 'Revert workspace to this snapshot? Your current state will be saved as a snapshot first.',
+          ? 'Restore the app code and all its content to this checkpoint? Later content will be replaced. Your current state will be kept as a safety copy first.'
+          : 'Revert workspace to this snapshot? Your current state will be kept as a safety copy first.',
         confirmLabel: 'Revert',
       })
     ) {

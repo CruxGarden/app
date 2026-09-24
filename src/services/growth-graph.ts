@@ -6,6 +6,8 @@ export interface GrowthLane {
   phase: string;
   baseId: string | null;
   headId: string | null;
+  /** Distinguishes an explicitly empty branch from an unset tip. */
+  headSelected?: boolean;
 }
 export interface GrowthNode {
   id: string;
@@ -38,20 +40,34 @@ export interface GrowthGraph {
 /** A read-only projection. Never load Artifact bytes, conversations or provider state here. */
 export async function loadGrowthGraph(cruxId: string): Promise<GrowthGraph> {
   const db = getSqliteClient();
-  const main = await db.get<{ id: string; title: string; headId: string | null }>(
-    `SELECT id, title, json_extract(meta, '$.settings.activeBranch') AS headId
+  const main = await db.get<{
+    id: string;
+    title: string;
+    headId: string | null;
+    headSelected: boolean;
+  }>(
+    `SELECT id, title, json_extract(meta, '$.settings.activeBranch') AS headId,
+       json_type(meta, '$.settings.activeBranch') IS NOT NULL AS headSelected
      FROM cruxes WHERE id = ? AND deleted IS NULL AND (kind IS NULL OR kind != 'snapshot')`,
     [cruxId],
   );
   if (!main) throw new Error('This Crux is no longer available.');
   const tasks = await db.all<GrowthLane>(
     `SELECT id, title, phase, base_snapshot_id AS baseId,
-       json_extract(meta, '$.settings.activeBranch') AS headId
+       json_extract(meta, '$.settings.activeBranch') AS headId,
+       json_type(meta, '$.settings.activeBranch') IS NOT NULL AS headSelected
      FROM working_copies WHERE crux_id = ? AND role = 'task' ORDER BY created, id`,
     [cruxId],
   );
   const lanes: GrowthLane[] = [
-    { id: main.id, title: 'Main', phase: 'main', baseId: null, headId: main.headId },
+    {
+      id: main.id,
+      title: 'Main',
+      phase: 'main',
+      baseId: null,
+      headId: main.headId,
+      headSelected: main.headSelected,
+    },
     ...tasks,
   ];
   // Scope by durable content ownership, including archived/merged Tasks, excluding review folders.
@@ -123,7 +139,7 @@ export function buildGrowthGraph(
   }
   for (const lane of lanes) {
     const fallback = latestByOwner.get(lane.id) ?? lane.baseId;
-    const head = lane.headId ?? fallback;
+    const head = lane.headSelected ? lane.headId : (lane.headId ?? fallback);
     const id = `copy:${lane.id}`;
     nodes.push({
       id,

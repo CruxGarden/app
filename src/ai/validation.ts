@@ -54,6 +54,11 @@ export function validateToolInput(
       return validateRenameFile(input);
     case 'edit_history':
       if (
+        input.includeConversation !== undefined &&
+        (input.action !== 'restore' || typeof input.includeConversation !== 'boolean')
+      )
+        return { valid: false, error: 'Only restore accepts includeConversation, as a boolean.' };
+      if (
         input.reason !== undefined &&
         (input.action !== 'capture' || !['autosave', 'safety'].includes(String(input.reason)))
       )

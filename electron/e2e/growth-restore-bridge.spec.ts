@@ -52,15 +52,10 @@ test('renderer restores retained content atomically through refusal, retry and d
         expected: first,
         changes: [await file('Current work')],
       });
+      const messages = [{ role: 'user', content: 'Keep this conversation' }];
+      await db.updateCrux!(id, { meta: { messages } });
       const input = {
-        safety: {
-          cruxId: id,
-          expected: current,
-          snapshotId: crypto.randomUUID(),
-          parentId: target.snapshot.id,
-          meta: { messages: [{ role: 'user', content: 'Keep this conversation' }] },
-          dimensionMeta: { label: 'Before revert' },
-        },
+        safety: { cruxId: id, expected: current },
         target: { cruxId: target.snapshot.id, expected: target.head },
       };
       await db.run(
@@ -79,7 +74,7 @@ test('renderer restores retained content atomically through refusal, retry and d
         target,
         error,
         head: await content.head(id),
-        partial: await db.all('SELECT id FROM cruxes WHERE id = ?', [input.safety.snapshotId]),
+        safety: (await content.history(id)).checkpoints.filter((p) => p.reason === 'safety'),
         growth: await db.all("SELECT id FROM dimensions WHERE source_id = ? AND type = 'growth'", [
           id,
         ]),
@@ -87,7 +82,7 @@ test('renderer restores retained content atomically through refusal, retry and d
     });
     expect(saved.error).toContain('Root refused');
     expect(saved.head).toEqual(saved.current);
-    expect(saved.partial).toEqual([]);
+    expect(saved.safety).toEqual([]);
     expect(saved.growth).toHaveLength(1);
     await launch.app.close();
     launch = await launchApp({ dir });
@@ -129,7 +124,7 @@ test('renderer restores retained content atomically through refusal, retry and d
       mode: 0o640,
       attributes: { keep: 'metadata' },
     });
-    expect(retried.notices).toEqual([['growth', 'fileContent']]);
+    expect(retried.notices).toEqual([['editHistory', 'fileContent']]);
     await launch.app.close();
     launch = await launchApp({ dir });
     const reopened = await launch.page.evaluate(
@@ -142,15 +137,11 @@ test('renderer restores retained content atomically through refusal, retry and d
           );
         return {
           live: await read(saved.id, retried.result.head),
-          safety: await read(saved.input.safety.snapshotId, retried.result.safety.head),
+          safety: await content.inspectCheckpoint(saved.id, retried.result.safety.id),
           target: await read(saved.target.snapshot.id, saved.target.head),
-          artifacts: await db.all('SELECT id FROM artifacts WHERE resource_id IN (?, ?, ?)', [
+          artifacts: await db.all('SELECT id FROM artifacts'),
+          growth: await db.all("SELECT id FROM dimensions WHERE source_id=? AND type='growth'", [
             saved.id,
-            saved.target.snapshot.id,
-            saved.input.safety.snapshotId,
-          ]),
-          safetySnapshot: await db.get('SELECT meta FROM cruxes WHERE id = ?', [
-            saved.input.safety.snapshotId,
           ]),
         };
       },
@@ -158,11 +149,12 @@ test('renderer restores retained content atomically through refusal, retry and d
     );
     expect(reopened.live).toBe('Earlier version\0');
     expect(reopened.target).toBe('Earlier version\0');
-    expect(reopened.safety).toBe('Current work');
+    expect(reopened.safety.checkpoint.root).toBe(saved.current.root);
+    expect(reopened.growth).toHaveLength(1);
     expect(reopened.artifacts).toEqual([]);
-    expect(JSON.parse((reopened.safetySnapshot as { meta: string }).meta).messages).toEqual(
-      saved.input.safety.meta.messages,
-    );
+    expect(reopened.safety.checkpoint.workspace!.messages).toEqual([
+      { role: 'user', content: 'Keep this conversation' },
+    ]);
   } finally {
     await launch.app.close();
   }

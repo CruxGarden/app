@@ -11,6 +11,8 @@ import { guessMimeType } from '@/lib/mime';
 import { hasContentChanged } from '@/services/publish';
 import {
   walkSnapshotChain,
+  growthTip,
+  type RestoreReport,
   collectChainMessages,
   chainLookupFromService,
   createSnapshotCore,
@@ -174,10 +176,10 @@ export interface CruxState {
   // Snapshot viewing actions
   viewSnapshot: (snapshotId: string, index: number) => Promise<void>;
   exitSnapshotView: () => Promise<void>;
-  revertToSnapshot: (snapshotId: string) => Promise<void>;
+  revertToSnapshot: (snapshotId: string) => Promise<RestoreReport | void>;
 
   // Branching actions
-  branchFromSnapshot: (snapshotId: string, label: string) => Promise<void>;
+  branchFromSnapshot: (snapshotId: string, label: string) => Promise<RestoreReport | void>;
 
   // Delete confirmation actions — the AI's delete_file tool blocks on
   // requestDeleteApproval; ChatPane's banner resolves it via confirm/dismiss.
@@ -335,14 +337,11 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           }
         }
 
-        // Active tip: the workspace's activeBranch setting, or the latest snapshot
-        const activeBranchTip = (crux.meta?.settings?.activeBranch as string) || null;
-        const tipId =
-          activeBranchTip && snapshotNodes.has(activeBranchTip)
-            ? activeBranchTip
-            : sortedGrowths[sortedGrowths.length - 1]!.targetId;
+        const tipId = growthTip(crux, sortedGrowths);
 
-        const chain = await walkSnapshotChain(tipId, async (id) => snapshotNodes.get(id) ?? null);
+        const chain = tipId
+          ? await walkSnapshotChain(tipId, async (id) => snapshotNodes.get(id) ?? null)
+          : [];
         priorMessages = chain.flatMap((n) => n.messages);
       }
 
@@ -1003,7 +1002,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (result.activeBranch !== undefined) {
         const settings = { ...(get().crux?.meta?.settings ?? {}) } as Record<string, unknown>;
         if (result.activeBranch) settings.activeBranch = result.activeBranch;
-        else delete settings.activeBranch;
+        else settings.activeBranch = null;
         get().patchCruxMeta({ settings });
       }
       await get().saveMeta();
@@ -1057,18 +1056,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         // Advance segment start so saveMeta only persists new messages going forward
         set({ messageSegmentStart: result.newSegmentStart });
 
-        // Advance the branch tip. `branchFromSnapshot` sets activeBranch and it was
-        // never moved on, so every later snapshot re-parented onto the branch point
-        // (a star, not a chain) and loadCrux — which walks back from activeBranch —
-        // dropped every post-branch conversation segment on reload.
-        if (get().crux?.meta?.settings?.activeBranch) {
-          get().patchCruxMeta({
-            settings: {
-              ...(get().crux!.meta!.settings as Record<string, unknown>),
-              activeBranch: result.snapshotCruxId,
-            },
-          });
-        }
+        get().patchCruxMeta({
+          settings: { ...(get().crux?.meta?.settings ?? {}), activeBranch: result.snapshotCruxId },
+        });
         await get().saveMeta();
         void playCue('snapshot', get().crux?.id);
 
@@ -1197,11 +1187,12 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (!crux) return;
       const manifestDeps = await defaultGrowthHostDeps();
       if (manifestDeps.content) {
+        let report: RestoreReport | undefined;
         // Retry a committed restore before persisting any stale pre-restore UI state.
         if (!(await manifestDeps.content.finishProjection(crux.id))) {
           await get().saveMeta();
           const state = get();
-          await restoreManifestWorkspace(
+          report = await restoreManifestWorkspace(
             {
               crux: state.crux!,
               messages: state.messages,
@@ -1226,7 +1217,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         });
         await get().loadCrux(crux.id);
         rebindEditorTabs(ui, get().artifacts);
-        return;
+        return report;
       }
       const { artifact, crux: cruxService } = getServices();
 
@@ -1289,11 +1280,12 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (!crux) return;
       const manifestDeps = await defaultGrowthHostDeps();
       if (manifestDeps.content) {
+        let report: RestoreReport | undefined;
         // Retry a committed restore before persisting any stale pre-restore UI state.
         if (!(await manifestDeps.content.finishProjection(crux.id))) {
           await get().saveMeta();
           const state = get();
-          await restoreManifestWorkspace(
+          report = await restoreManifestWorkspace(
             {
               crux: state.crux!,
               messages: state.messages,
@@ -1318,7 +1310,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         });
         await get().loadCrux(crux.id);
         rebindEditorTabs(ui, get().artifacts);
-        return;
+        return report;
       }
       const { artifact, crux: cruxService } = getServices();
 

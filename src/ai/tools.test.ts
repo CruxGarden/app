@@ -99,6 +99,23 @@ describe('edit recovery controls', () => {
     expect(validateToolInput('edit_history', { action: 'list' }).valid).toBe(true);
     expect(validateToolInput('edit_history', { action: 'restore' }).valid).toBe(false);
     expect(validateToolInput('edit_history', { action: 'forget' }).valid).toBe(false);
+    expect(
+      validateToolInput('edit_history', {
+        action: 'restore',
+        checkpointId: 'chosen',
+        includeConversation: true,
+      }).valid,
+    ).toBe(true);
+    expect(
+      validateToolInput('edit_history', { action: 'capture', includeConversation: true }).valid,
+    ).toBe(false);
+    expect(
+      validateToolInput('edit_history', {
+        action: 'restore',
+        checkpointId: 'chosen',
+        includeConversation: 'true',
+      }).valid,
+    ).toBe(false);
     expect(didMutate('edit_history', JSON.stringify({ checkpoints: [] }))).toBe(false);
     expect(didMutate('edit_history', JSON.stringify({ id: 'capture', root: 'hash' }))).toBe(false);
     expect(didMutate('edit_history', JSON.stringify({ head: { root: 'hash' }, safety: {} }))).toBe(
