@@ -834,30 +834,46 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     deleteArtifact: async (id: string) => {
-      const { artifact } = getServices();
-      await artifact.delete(get().artifacts.find((file) => file.id === id)!);
-      set((state) => ({
-        artifacts: state.artifacts.filter((a) => a.id !== id),
-      }));
-      // Also close any editor tab for this file
-      ui.getState().closeTab(id);
+      await get().deleteArtifacts([id]);
     },
 
     deleteArtifacts: async (ids: string[]) => {
+      if (!ids.length) return;
+      const current = get();
+      if (current.viewingSnapshotId) throw new Error('Growth files are read-only.');
+      const ownerId = current.crux?.id;
+      const files = [...new Set(ids)].map((id) => {
+        const file = current.artifacts.find((item) => item.id === id);
+        if (!file || file.resourceId !== ownerId)
+          throw new Error('The selected file is no longer in this Crux. Refresh and try again.');
+        return file;
+      });
       const { artifact } = getServices();
-      // Delete all in parallel
-      await Promise.allSettled(
-        ids.map((id) => artifact.delete(get().artifacts.find((file) => file.id === id)!)),
+      const results = await Promise.allSettled(files.map((file) => artifact.delete(file)));
+      const deleted = new Set(
+        files.filter((_, index) => results[index]!.status === 'fulfilled').map((file) => file.id),
       );
-      const idSet = new Set(ids);
-      set((state) => ({
-        artifacts: state.artifacts.filter((a) => !idSet.has(a.id)),
-      }));
-      // Close editor tabs for all deleted files
-      const uiStore = ui.getState();
-      for (const id of ids) {
-        uiStore.closeTab(id);
+      // A rejected delete must keep its file and unsaved editor available. A
+      // navigation while deletion runs must not mutate another owner's view.
+      if (get().crux?.id === ownerId) {
+        set((state) =>
+          liveArtifactPatch(
+            state,
+            (state.workspaceArtifacts ?? state.artifacts).filter((file) => !deleted.has(file.id)),
+          ),
+        );
+        if (!get().viewingSnapshotId) for (const id of deleted) ui.getState().closeTab(id);
       }
+      const failures = results.flatMap((result, index) =>
+        result.status === 'rejected'
+          ? [{ file: files[index]!, reason: result.reason as unknown }]
+          : [],
+      );
+      if (failures.length)
+        throw new AggregateError(
+          failures.map((failure) => failure.reason),
+          `Could not delete ${failures.map(({ file }) => file.meta?.path ?? file.filename).join(', ')}. Review the remaining files and try again.`,
+        );
     },
 
     uploadFiles: async (files: { file: File; path: string }[]) => {

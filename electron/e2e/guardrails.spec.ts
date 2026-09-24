@@ -1,6 +1,9 @@
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
+import { storedCrux } from './multi-crux-helpers';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * Guardrails (RESILIENCE-PLAN § Guardrails): the destructive actions that are
@@ -60,6 +63,55 @@ async function plantWithFile(page: Page) {
 
 test.describe('guardrails: a way back from every destructive action', () => {
   test.setTimeout(180_000);
+
+  test('a refused safety snapshot reports deletion failure, preserves the file and supports retry after restart', async () => {
+    let launch = await launchApp();
+    const dir = launch.dir;
+    try {
+      const { page } = launch;
+      await plantWithFile(page);
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const meta = await storedCrux(page, id);
+      const file = join(meta.projectFolder, 'index.html');
+      await expect.poll(() => readFileSync(file, 'utf8')).toBe('<h1>Keep me</h1>');
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.run(
+          "CREATE TRIGGER refuse_delete_safety BEFORE INSERT ON cruxes WHEN NEW.kind = 'snapshot' BEGIN SELECT RAISE(ABORT, 'Safety snapshot unavailable'); END",
+        ),
+      );
+      const tree = page.getByRole('tree');
+      await tree.getByText('index.html', { exact: true }).click({ button: 'right' });
+      await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      const failure = page.getByRole('alertdialog', { name: 'Delete failed' });
+      await expect(failure).toBeVisible();
+      expect(readFileSync(file, 'utf8')).toBe('<h1>Keep me</h1>');
+      await failure.getByRole('button', { name: 'OK' }).click();
+      await expect(tree.getByText('index.html', { exact: true })).toBeVisible();
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.run('DROP TRIGGER refuse_delete_safety'),
+      );
+      await launch.app.close();
+      launch = await launchApp({ dir });
+      await launch.page.getByRole('button', { name: /enter/i }).click();
+      const restoredTree = launch.page.getByRole('tree');
+      await expect(restoredTree.getByText('index.html', { exact: true })).toBeVisible();
+      await restoredTree.getByText('index.html', { exact: true }).click({ button: 'right' });
+      await launch.page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+      await launch.page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect.poll(() => existsSync(file)).toBe(false);
+      await expect(restoredTree.getByText('index.html', { exact: true })).toHaveCount(0);
+      await ensurePane(launch.page, 'history', 'Toggle history');
+      await launch.page
+        .getByTestId('pane-body-history')
+        .getByText('Before deleting index.html', { exact: true })
+        .click();
+      await launch.page.getByRole('tree').getByText('index.html', { exact: true }).click();
+      await expect(launch.page.locator('.monaco-editor').first()).toContainText('Keep me');
+    } finally {
+      await launch.app.close();
+    }
+  });
 
   test('deleting a file takes a "Before deleting" snapshot first', async () => {
     const { app, page } = await launchApp();

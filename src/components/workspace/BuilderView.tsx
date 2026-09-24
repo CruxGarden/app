@@ -1,4 +1,5 @@
 import { useCruxStoreApi } from '@/stores/cruxStore';
+import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
@@ -738,7 +739,7 @@ function useOpenFileByPath() {
 function CollectionSection({ collection }: { collection: ContentCollection }) {
   const items = useCollectionItems(collection);
   const openFile = useUIStore((s) => s.openFile);
-  const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
+  const cruxStore = useCruxStoreApi();
 
   // Read frontmatter lazily per render from the store's cached content is not
   // available — items carry parsed data via readContent on demand instead.
@@ -784,15 +785,11 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
               </button>
               <button
                 onClick={async () => {
-                  if (
-                    await confirmDialog({
-                      message: `Delete "${itemLabel(data, collection) || item.path}"? It stays in history.`,
-                      confirmLabel: 'Delete',
-                      danger: true,
-                    })
-                  ) {
-                    await deleteArtifacts([item.artifact.id]);
-                  }
+                  await confirmAndDeleteArtifacts(
+                    cruxStore,
+                    [item.artifact.id],
+                    `Delete "${itemLabel(data, collection) || item.path}"?`,
+                  );
                 }}
                 className="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-xs text-text-muted hover:text-error transition-opacity cursor-pointer px-1"
                 title={`Delete ${collection.singular.toLowerCase()}`}
