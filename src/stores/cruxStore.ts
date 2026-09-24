@@ -1,3 +1,4 @@
+import { captureGardenId } from './gardenContext';
 import { flushNotebook } from '@/services/notebook-lifecycle';
 import { assertCopyWritable, copyIdentity } from '@/services/working-copies';
 import { create, useStore, type StoreApi } from 'zustand';
@@ -96,7 +97,7 @@ export interface CruxState {
   // Actions
   loadCrux: (id: string) => Promise<void>;
   restoreProjectFolder: () => Promise<void>;
-  createCrux: (title?: string) => Promise<Crux>;
+  createCrux: (title?: string, gardenId?: string) => Promise<Crux>;
   addMessage: (message: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
   /** Shallow-merge a patch into crux.meta in memory (persist with saveMeta). */
@@ -415,7 +416,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       set({ folderMissing: false });
     },
 
-    createCrux: async (title?: string) => {
+    createCrux: async (title?: string, gardenId = captureGardenId()) => {
       const { crux: cruxService } = getServices();
 
       const slug =
@@ -442,6 +443,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const personaSnapshots = { [pf]: personaSnapshotOf(persona) };
 
       const crux = await cruxService.create({
+        ...(gardenId ? { gardenId } : {}),
         slug,
         title: title || 'New Crux',
         type: 'workspace',

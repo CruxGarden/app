@@ -127,7 +127,11 @@ test('the visible Crux exporter and importer preserve Main, Tasks, Growth and bi
     await destination.app.close();
     destination = await launchApp({ dir });
     await destination.page.getByRole('button', { name: /enter/i }).click();
-    await expect(destination.page.locator('[data-workspace-id]')).toBeVisible();
+    await destination.page.getByRole('button', { name: 'Open Portable work', exact: true }).click();
+    await expect(destination.page.locator('[data-workspace-id]')).toHaveAttribute(
+      'data-workspace-id',
+      importedId,
+    );
     await destination.page.goto(`crux-app://app/c/${importedId}?task=${copies[0].id}`);
     await expect(
       destination.page.getByRole('button', { name: 'Review changes', exact: true }),
@@ -153,7 +157,7 @@ test('an authenticated outside agent exports the same private graph archive thro
         requestInit: { headers: { Authorization: `Bearer ${config.token}` } },
       }),
     );
-    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const call = async (name: string, args: Record<string, unknown>) => {
       const result = await client.callTool({ name, arguments: args });
       expect(result.isError).not.toBe(true);

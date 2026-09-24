@@ -1,3 +1,5 @@
+import { useGardenContext, captureGardenId, inGarden } from '@/stores/gardenContext';
+import GardenActions from '@/components/garden/GardenActions';
 import { useTendingRows } from '@/stores/tendingStore';
 import { startFromFiles, filesFromDataTransfer } from '@/services/file-routing';
 import { importCrux } from '@/services/crux-io';
@@ -26,6 +28,8 @@ import { useAuthStore } from '@/stores/authStore';
 import * as cruxesApi from '@/api/cruxes';
 
 export default function HomeGarden() {
+  const garden = useGardenContext((s) => s.garden);
+  const loadError = useGardenStore((s) => s.error);
   const author = useAppStore((s) => s.author);
   const avatarUrl = useAvatarUrl(author);
   const {
@@ -54,14 +58,16 @@ export default function HomeGarden() {
   const [dropNotice, setDropNotice] = useState('');
   const handleDropFiles = useCallback(
     async (dt: DataTransfer) => {
+      const origin = window.location.href;
+      const gardenId = captureGardenId();
       setDropNotice('');
       try {
         const single = dt.files.length === 1 ? dt.files[0]! : null;
         if (single && /\.crux$/i.test(single.name)) {
           setDropNotice(`Importing ${single.name}…`);
-          const result = await importCrux({ data: single, mode: 'clone' });
+          const result = await importCrux({ data: single, mode: 'clone', gardenId });
           refresh();
-          navigate(`/c/${result.cruxId}`);
+          if (window.location.href === origin) navigate(inGarden(`/c/${result.cruxId}`, gardenId));
           return;
         }
         if (single && /\.cruxspace$/i.test(single.name)) {
@@ -73,8 +79,8 @@ export default function HomeGarden() {
         }
         const { files, folder } = await filesFromDataTransfer(dt);
         setDropNotice(`Starting from ${folder ?? files[0]?.path ?? 'the drop'}…`);
-        const { cruxId } = await startFromFiles(files, folder);
-        navigate(`/c/${cruxId}`);
+        const { cruxId } = await startFromFiles(files, folder, gardenId);
+        if (window.location.href === origin) navigate(inGarden(`/c/${cruxId}`, gardenId));
       } catch (err) {
         setDropNotice(err instanceof Error ? err.message : 'Could not start from that drop.');
       }
@@ -104,13 +110,25 @@ export default function HomeGarden() {
 
   // Page title
   useEffect(() => {
-    document.title = author ? author.username : 'Garden';
+    document.title = garden?.title || (author ? author.username : 'Garden');
     return () => {
       document.title = APP_NAME;
     };
-  }, [author]);
+  }, [author, garden?.title]);
 
-  if (loading) return null;
+  if (loading)
+    return (
+      <p role="status" className="p-6 text-sm text-text-muted">
+        Opening Garden…
+      </p>
+    );
+  if (loadError)
+    return (
+      <div role="alert" className="p-6 text-text">
+        <p>{loadError}</p>
+        <button onClick={() => void refresh()}>Retry</button>
+      </div>
+    );
 
   return (
     <div
@@ -154,7 +172,7 @@ export default function HomeGarden() {
             )}
             <div className="min-w-0">
               <h1 className="font-display text-lg font-medium text-text truncate">
-                {author ? author.username : 'Garden'}
+                {garden?.title || (author ? author.username : 'Garden')}
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">Home Garden</p>
@@ -218,9 +236,12 @@ export default function HomeGarden() {
       {/* Cruxes the account has and this machine does not (RESILIENCE-PLAN §2c) */}
       <RecoverSection />
 
-      <Gardens />
-
-      <Cruxspaces />
+      {garden && <GardenActions />}
+      <details className="mb-4 text-sm text-text-muted">
+        <summary className="cursor-pointer py-2">Shared gardens & collections</summary>
+        <Gardens />
+        <Cruxspaces />
+      </details>
 
       {/* Content */}
       {cruxList.length === 0 && search.length > 0 ? (

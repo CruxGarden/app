@@ -8,19 +8,12 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
   const dir = instance.dir;
   try {
     await enterGarden(instance.page);
+    // Normal startup now admits the API-owned root and identity before actions.
     expect(
-      await instance.page.evaluate(async () => {
-        try {
-          await window.electronAPI!.sqlite.gardenMembership!.add({
-            gardenId: crypto.randomUUID(),
-            memberId: crypto.randomUUID(),
-          });
-          return 'NOT REFUSED';
-        } catch (error) {
-          return (error as Error).message;
-        }
-      }),
-    ).toContain('local Garden identity');
+      await instance.page.evaluate(
+        async () => (await window.electronAPI!.sqlite.enterLocalGarden!()).kind,
+      ),
+    ).toBe('garden');
     const projectId = await createCrux(instance.page, 'Shared project');
     const setup = await instance.page.evaluate(async (member) => {
       const db = window.electronAPI!.sqlite;

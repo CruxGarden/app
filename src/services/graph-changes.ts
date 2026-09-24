@@ -1,3 +1,4 @@
+import { useGardenContext } from '@/stores/gardenContext';
 import type { LocalGraphChange } from '@/lib/platform';
 import { getSqliteClient } from './sqlite/client';
 import { allWorkspaces } from '@/stores/workspaceRegistry';
@@ -18,7 +19,8 @@ export function initGraphChanges(): void {
 }
 
 export async function applyGraphChange(change: LocalGraphChange): Promise<void> {
-  if (change.entity === 'crux-lifecycle') {
+  if (change.entity === 'crux-lifecycle' || change.entity === 'garden-membership') {
+    useGardenContext.setState((s) => ({ revision: s.revision + 1 }));
     await useGardenStore.getState().refresh();
     return;
   }

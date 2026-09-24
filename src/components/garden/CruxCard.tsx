@@ -1,3 +1,7 @@
+import { getSqliteClient } from '@/services/sqlite/client';
+import { alertDialog } from '@/stores/dialogStore';
+import { useGardenStore } from '@/stores/gardenStore';
+import { gardenPath, useGardenContext } from '@/stores/gardenContext';
 import { useState, useRef, useCallback, lazy, Suspense } from 'react';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { Link } from 'react-router-dom';
@@ -30,6 +34,7 @@ const KIND_LABELS: Record<string, string> = {
   document: 'Document',
   image: 'Image',
   notes: 'Notes',
+  garden: 'Garden',
 };
 
 /** Stand-in for cruxes that have no screenshot yet: the title's initial, plain. */
@@ -55,6 +60,7 @@ export default function CruxCard({
   thumbnailUrl,
   tendingCount,
 }: CruxCardProps) {
+  const garden = useGardenContext((s) => s.garden);
   const navigate = useMoodNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -88,7 +94,7 @@ export default function CruxCard({
           // being opened carries the name, set before the old screen is captured.
           const title = e.currentTarget.querySelector('h3');
           if (title) title.style.viewTransitionName = `crux-${crux.id}`;
-          navigate(linkTo || `/c/${crux.id}`);
+          navigate(linkTo || (crux.kind === 'garden' ? gardenPath(crux.id) : `/c/${crux.id}`));
         }}
         className="flex flex-col text-left cursor-pointer outline-none flex-1"
         aria-label={`Open ${crux.title || crux.slug}`}
@@ -191,6 +197,25 @@ export default function CruxCard({
               >
                 Export...
               </button>
+              {onDelete && garden && (
+                <button
+                  role="menuitem"
+                  className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const gardenId = garden.id;
+                    setMenuOpen(false);
+                    void getSqliteClient()
+                      .gardenMembership!.remove(gardenId, crux.id)
+                      .then(() => useGardenStore.getState().refresh())
+                      .catch((error) =>
+                        alertDialog((error as Error).message, 'Could not remove Crux'),
+                      );
+                  }}
+                >
+                  Remove from Garden
+                </button>
+              )}
               {onDelete && (
                 <button
                   role="menuitem"

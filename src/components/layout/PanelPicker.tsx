@@ -14,6 +14,7 @@ import { arrangeWorkspacePanels } from '@/services/workspace-layouts';
 /** Discovery for closed panels. Opening uses the same workspace operation as agents. */
 export default function PanelPicker() {
   const ui = useWorkspaceUIStoreApi();
+  const activeCruxId = useWorkspaceUIStore((s) => s.activeCruxId);
   const visibility = useWorkspaceUIStore((s) => s.paneVisibility);
   const labels = usePaneLabels();
   const [open, setOpen] = useState(false);
@@ -68,10 +69,12 @@ export default function PanelPicker() {
     setOpen(false);
     trigger.current?.focus();
   };
-  const available = DEFAULT_PANE_ORDER.filter((pane) => !visibility[pane]).filter((pane) => {
-    const config = PANE_BUTTONS.find((b) => b.type === pane)!;
-    return `${labels[pane]} ${config.label}`.toLowerCase().includes(query.trim().toLowerCase());
-  });
+  const available = (activeCruxId ? DEFAULT_PANE_ORDER : [])
+    .filter((pane) => !visibility[pane])
+    .filter((pane) => {
+      const config = PANE_BUTTONS.find((b) => b.type === pane)!;
+      return `${labels[pane]} ${config.label}`.toLowerCase().includes(query.trim().toLowerCase());
+    });
   return (
     <div ref={root} className="relative shrink-0">
       <button
@@ -136,6 +139,25 @@ export default function PanelPicker() {
               onChange={(e) => setQuery(e.target.value)}
               className="w-full px-2 py-2 mb-1 text-sm bg-input text-input-text border border-input-border rounded-input"
             />
+            {[
+              ['Mood', () => useUIStore.getState().setMoodPanelOpen(true)],
+              ['Explore', () => useUIStore.getState().setExploreOpen(true)],
+              ['Settings', () => useUIStore.getState().setSettingsOpen(true)],
+              ['Console', () => useUIStore.getState().setConsoleOpen(true)],
+            ]
+              .filter(([label]) => String(label).toLowerCase().includes(query.toLowerCase()))
+              .map(([label, action]) => (
+                <button
+                  key={String(label)}
+                  className="w-full text-left text-sm px-2 py-2 hover:bg-dropdown-item-hover rounded-[var(--radius-sm)] cursor-pointer"
+                  onClick={() => {
+                    (action as () => void)();
+                    finish();
+                  }}
+                >
+                  {String(label)}
+                </button>
+              ))}
             {available.map((pane) => {
               const config = PANE_BUTTONS.find((b) => b.type === pane)!;
               const Icon = config.icon;

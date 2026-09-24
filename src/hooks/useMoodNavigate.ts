@@ -1,3 +1,4 @@
+import { inGarden } from '@/stores/gardenContext';
 import { useCallback } from 'react';
 import { useNavigate, type NavigateOptions, type To } from 'react-router-dom';
 
@@ -13,7 +14,8 @@ import { useNavigate, type NavigateOptions, type To } from 'react-router-dom';
 export function useMoodNavigate() {
   const navigate = useNavigate();
   return useCallback(
-    (to: To, options?: NavigateOptions) => navigate(to, { viewTransition: true, ...options }),
+    (to: To, options?: NavigateOptions) =>
+      navigate(typeof to === 'string' ? inGarden(to) : to, { viewTransition: true, ...options }),
     [navigate],
   );
 }

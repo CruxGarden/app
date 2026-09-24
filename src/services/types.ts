@@ -24,6 +24,7 @@ export type {
 // Intentionally minimal — services fill in defaults.
 
 export interface CreateCruxInput {
+  gardenId?: string;
   id?: string;
   title?: string;
   slug?: string;

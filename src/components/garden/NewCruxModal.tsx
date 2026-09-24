@@ -1,3 +1,4 @@
+import { captureGardenId, inGarden } from '@/stores/gardenContext';
 import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
 import { isEmbeddedApp } from '@/services/embedded-app';
@@ -634,12 +635,15 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
 
   const handleImport = useCallback(
     async (file: File) => {
+      const origin = window.location.href;
+      const gardenId = captureGardenId();
       setImporting(true);
       setImportProgress({ done: 0, total: 0 });
 
       try {
         const result = await importCrux({
           data: file,
+          gardenId,
           mode: 'clone',
           onProgress: (done, total) => setImportProgress({ done, total }),
         });
@@ -706,7 +710,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         refresh();
         reset();
         onClose();
-        navigate(`/c/${result.cruxId}`);
+        if (window.location.href === origin) navigate(inGarden(`/c/${result.cruxId}`, gardenId));
       } catch (err) {
         console.error('Import failed:', err);
         void alertDialog(
@@ -734,14 +738,20 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   const startFileRef = useRef<HTMLInputElement>(null);
   const handleStartFromFiles = useCallback(
     async (files: File[]) => {
+      const origin = window.location.href;
+      const gardenId = captureGardenId();
       if (creating || importing) return;
       setCreateError(null);
       setCreating(true);
       try {
-        const { cruxId } = await startFromFiles(files.map((file) => ({ path: file.name, file })));
+        const { cruxId } = await startFromFiles(
+          files.map((file) => ({ path: file.name, file })),
+          null,
+          gardenId,
+        );
         reset();
         onClose();
-        navigate(`/c/${cruxId}`);
+        if (window.location.href === origin) navigate(inGarden(`/c/${cruxId}`, gardenId));
       } catch (err) {
         setCreateError(err instanceof Error ? err.message : 'Could not start from that file.');
         setCreating(false);
@@ -751,6 +761,8 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   );
 
   const handleCreate = async (quickStart = false) => {
+    const origin = window.location.href;
+    const gardenId = captureGardenId();
     if (creating || importing) return;
     if (!quickStart && !isToolAvailable(template.id)) {
       setCreateError(`${template.label} is not included in this build.`);
@@ -763,7 +775,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         ? undefined
         : title.trim() || template.defaultTitle || undefined;
 
-      const crux = await createCrux(effectiveTitle);
+      const crux = await createCrux(effectiveTitle, gardenId);
 
       if (!quickStart && template.id !== 'blank') {
         const applied = await applyTemplateToCrux(crux, template.id, template.kind);
@@ -787,7 +799,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
 
       reset();
       onClose();
-      navigate(`/c/${crux.id}`);
+      if (window.location.href === origin) navigate(inGarden(`/c/${crux.id}`, gardenId));
     } catch (err) {
       // A crux row may already exist at this point (see the create → template
       // → update sequence above); the user must be told rather than left

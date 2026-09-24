@@ -1,3 +1,4 @@
+import { inGarden } from '@/stores/gardenContext';
 /**
  * Navigation from outside React (a tool executor, a store): the app's router
  * registers its `navigate` once at boot; services call `navigateTo`. Nothing
@@ -11,6 +12,6 @@ export function registerNavigator(fn: Navigate): void {
 }
 
 export function navigateTo(path: string): void {
-  if (current) void current(path);
+  if (current) void current(inGarden(path));
   else if (typeof window !== 'undefined') window.location.hash = path;
 }

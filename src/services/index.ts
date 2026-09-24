@@ -85,6 +85,14 @@ async function doInitServices(backend?: Backend): Promise<Services> {
 
   currentBackend = resolvedBackend;
 
+  // Admit the actual local root before UI/tool consumers can initialize identity.
+  const localEntry = getSqliteClient().enterLocalGarden;
+  if (resolvedBackend === 'local' && localEntry) {
+    const root = await localEntry();
+    const { useGardenContext } = await import('@/stores/gardenContext');
+    useGardenContext.getState().initialize(root);
+  }
+
   // Populate settings cache from SQLite + migrate localStorage values
   await initSettings();
 

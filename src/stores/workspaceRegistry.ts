@@ -1,6 +1,6 @@
 import { flushNotebook } from '@/services/notebook-lifecycle';
 import { tendingState, tendingLabel, type TendingState } from '@/services/tending-state';
-import { findWorkingCopy } from '@/services/working-copies';
+import { copyIdentity, findWorkingCopy } from '@/services/working-copies';
 import { maintainNotesManifest } from '@/services/notes-manifest';
 import { registerPreviewOwner } from '@/services/preview-owners';
 import { setActivePreview } from '@/lib/preview-registry';
@@ -34,6 +34,7 @@ export interface Workspace extends WorkspaceStores {
 }
 export interface WorkspaceSummary {
   id: string;
+  cruxId?: string;
   phase?: Workspace['phase'];
   lifetimeId?: string;
   title: string;
@@ -121,6 +122,7 @@ function summarize(w: Workspace) {
   const tending = workspaceTending(w);
   const next = {
     id: w.id,
+    cruxId: w.cruxId,
     phase: w.phase,
     lifetimeId: w.lifetimeId,
     tending,
@@ -321,6 +323,7 @@ export async function restoreWorkspaceList(): Promise<string | null> {
     restored: true,
     entries: ids.map((id) => ({
       id,
+      cruxId: copyIdentity(valid.get(id))?.cruxId ?? id,
       title: valid.get(id)!.title || 'Untitled',
       status: 'Not loaded',
       dirty: false,

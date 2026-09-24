@@ -1,21 +1,14 @@
+import { useGardenContext, gardenPath } from '@/stores/gardenContext';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
-import TendingLink from '@/components/tending/TendingLink';
-import AlertsBell from '@/components/tending/AlertsBell';
-import TimerChip from '@/components/tending/TimerChip';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import PanelPicker from './PanelPicker';
-import CruxspaceCrumb from './CruxspaceCrumb';
-import { useGardenTitle, usePaneLabels } from '@/hooks/usePaneLabels';
-import { useAppStore } from '@/stores/appStore';
+import { usePaneLabels } from '@/hooks/usePaneLabels';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
-import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/cn';
-import MoodBar from '@/components/mood/MoodBar';
 import { ConsoleAvatar } from '@/components/keeper/Console';
-import KeeperActivity from '@/components/keeper/KeeperActivity';
-import { SearchIcon, MoodIcon, ChevronRightIcon } from '@/components/ui/icons';
+import { SearchIcon, MoodIcon, ChevronRightIcon, PlusCircleIcon } from '@/components/ui/icons';
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
 import { useShallow } from 'zustand/react/shallow';
@@ -30,9 +23,9 @@ export default function TopBar() {
       activeCruxId: s.activeCruxId,
     })),
   );
-  const username = useAppStore((s) => s.author?.username);
+  const garden = useGardenContext((s) => s.garden);
+  const navigatorOpen = useGardenContext((s) => s.navigatorOpen);
   // The garden's own title, if it has one; the pane names as the garden calls them.
-  const gardenTitle = useGardenTitle();
   const paneLabels = usePaneLabels();
   const aiEnabled = useUIStore((s) => s.aiEnabled);
 
@@ -58,32 +51,26 @@ export default function TopBar() {
         className="flex flex-1 basis-72 items-center gap-1.5 min-w-0"
         style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
       >
-        {username ? (
-          <button
-            onClick={() => navigate('/home')}
-            className="shrink-0 max-w-36 truncate text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
-          >
-            <span className="md:hidden">Garden</span>
-            <span className="hidden md:inline">{gardenTitle || username}</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => navigate('/')}
-            className="shrink-0 cursor-pointer text-sm font-display font-medium text-toolbar-text whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
-          >
-            {APP_NAME}
-          </button>
-        )}
+        <IconButton
+          label="Navigator"
+          size="sm"
+          active={navigatorOpen}
+          onClick={() => useGardenContext.getState().setNavigatorOpen(!navigatorOpen)}
+          tooltip={{ label: 'Navigator' }}
+        >
+          <PlusCircleIcon />
+        </IconButton>
+        <button
+          aria-label="Garden Home"
+          onClick={() => navigate(garden ? gardenPath(garden.id) : '/home')}
+          className="max-w-48 truncate text-sm font-display text-toolbar-text px-2 py-1 hover:bg-action-button-hover rounded-[var(--radius-sm)] cursor-pointer"
+        >
+          {garden?.title || 'Garden'}
+        </button>
         <span className="text-toolbar-text-muted shrink-0">
-          <ChevronRightIcon />
+          {activeCruxId && <ChevronRightIcon />}
         </span>
-        <CruxspaceCrumb />
         <WorkspaceSwitcher />
-        <div className="hidden xl:block">
-          <TendingLink />
-        </div>
-        <TimerChip />
-        <AlertsBell />
       </nav>
 
       {/* Right: pane toggles + console + user menu */}
@@ -137,16 +124,10 @@ export default function TopBar() {
                   );
                 })}
               </div>
-
-              <PanelPicker key={activeCruxId} />
             </div>
             <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
           </>
         )}
-        <div className="hidden xl:block">
-          <MoodBar className="mr-1" />
-        </div>
-        <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
         <IconButton
           label="Explore"
           size="sm"
@@ -166,7 +147,6 @@ export default function TopBar() {
         {aiEnabled && (
           <>
             <div className="w-px h-5 bg-toolbar-divider mx-1" />
-            <KeeperActivity />
             <div className="relative group/btn flex items-center">
               <button
                 onClick={() => useUIStore.getState().toggleConsole()}
@@ -190,6 +170,7 @@ export default function TopBar() {
           </>
         )}
         <div className="w-px h-5 bg-toolbar-divider mx-1" />
+        <PanelPicker key={activeCruxId || garden?.id} />
         <UserMenu />
       </div>
     </header>

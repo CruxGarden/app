@@ -12,6 +12,7 @@ describe("the Keeper's garden tools", () => {
   });
   it('names the operations the person has in the hub, the picker, the Collaboration and Explore', () => {
     expect(GARDEN_TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
+      'garden_graph',
       'list_cruxes',
       'list_cruxspaces',
       'create_cruxspace',

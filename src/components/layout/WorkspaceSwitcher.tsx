@@ -5,11 +5,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useWorkspaceRegistry, openWorkspace, closeWorkspace } from '@/stores/workspaceRegistry';
-import { useUIStore } from '@/stores/uiStore';
 import { useDialogStore } from '@/stores/dialogStore';
 import { getServices } from '@/services';
+import { FolderIcon } from '@/components/ui/icons';
 import { recentOrder, nextRecent } from '@/lib/workspace-switching';
-import { useActiveCruxspaces } from '@/hooks/useActiveCruxspaces';
+import { useGardenContext } from '@/stores/gardenContext';
+import { gardenMembers } from '@/services/garden-navigation';
 
 const focusByCrux = new Map<string, { selector: string; start?: number; end?: number }>();
 function rememberFocus(id: string | null, target = document.activeElement) {
@@ -81,9 +82,11 @@ export default function WorkspaceSwitcher() {
   const [query, setQuery] = useState('');
   const [picker, setPicker] = useState(false);
   const [available, setAvailable] = useState<{ id: string; title: string; slug: string }[]>([]);
-  // The Cruxes of the Cruxspace the active Crux is in, open or not, so the
-  // switcher moves within a Cruxspace (Garden › Cruxspace › Crux).
-  const { current: space, rootId } = useActiveCruxspaces();
+  // Display the active Garden only; other workspaces keep running in the registry.
+  const garden = useGardenContext((s) => s.garden);
+  const gardenId = garden?.id;
+  const revision = useGardenContext((s) => s.revision);
+  const space = garden ? { name: garden.title } : null;
   const [members, setMembers] = useState<{ id: string; title: string; slug: string }[]>([]);
   const [index, setIndex] = useState(0);
   const [recent, setRecent] = useState<{ ids: string[]; index: number } | null>(null);
@@ -98,10 +101,35 @@ export default function WorkspaceSwitcher() {
   const search = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   const invoking = useRef<HTMLElement | null>(null);
+  const scopedEntries = garden
+    ? entries.filter((entry) => members.some((member) => member.id === (entry.cruxId ?? entry.id)))
+    : entries;
   const active = entries.find((e) => e.id === activeId);
+  useEffect(() => {
+    let cancelled = false;
+    setMembers([]);
+    if (gardenId)
+      void gardenMembers(gardenId)
+        .then((rows) => {
+          if (!cancelled)
+            setMembers(
+              rows
+                .filter((row) => row.kind !== 'garden')
+                .map((row) => ({ id: row.id, slug: row.slug, title: row.title || 'Untitled' })),
+            );
+        })
+        .catch((err) => {
+          if (!cancelled) setError((err as Error).message);
+        });
+    return () => {
+      cancelled = true;
+    };
+  }, [gardenId, revision]);
   const modal = open || !!closing || !!renaming;
   const rows = (
-    picker ? available : [...entries, ...members.filter((m) => !entries.some((e) => e.id === m.id))]
+    picker
+      ? available
+      : [...scopedEntries, ...members.filter((m) => !scopedEntries.some((e) => e.id === m.id))]
   ).filter((e) =>
     `${e.title} ${'slug' in e ? e.slug : ''}`.toLowerCase().includes(query.toLowerCase()),
   );
@@ -145,22 +173,7 @@ export default function WorkspaceSwitcher() {
     setQuery('');
     setIndex(0);
     setOpen(true);
-    setMembers([]);
-    if (space && rootId) {
-      const ids = space.cruxIds.filter((id) => id !== rootId);
-      void getServices()
-        .crux.listAll()
-        .then((cruxes) =>
-          setMembers(
-            ids.flatMap((id) => {
-              const c = cruxes.find((x) => x.id === id);
-              return c ? [{ id: c.id, title: c.title || 'Untitled', slug: c.slug }] : [];
-            }),
-          ),
-        )
-        .catch(() => setMembers([]));
-    }
-  }, [space, rootId]);
+  }, []);
   useEffect(() => {
     if (closing || renaming) dialog.current?.querySelector<HTMLElement>('input, button')?.focus();
     else if (open) search.current?.focus();
@@ -168,12 +181,7 @@ export default function WorkspaceSwitcher() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.isComposing || e.getModifierState('AltGraph')) return;
-      const global = useUIStore.getState();
       const otherModal =
-        global.settingsOpen ||
-        global.moodPanelOpen ||
-        global.exploreOpen ||
-        global.consoleOpen ||
         useDialogStore.getState().queue.length > 0 ||
         !!document.querySelector('[aria-label="Close Crux Garden"], [data-modal-open="true"]');
       if (otherModal || closing || renaming) {
@@ -202,7 +210,7 @@ export default function WorkspaceSwitcher() {
         const ids =
           current?.ids ??
           recentOrder(
-            state.entries.map((x) => x.id),
+            scopedEntries.map((x) => x.id),
             state.mru,
           );
         if (!ids.length) return;
@@ -266,7 +274,7 @@ export default function WorkspaceSwitcher() {
       window.removeEventListener('keyup', up, true);
       window.removeEventListener('blur', blur);
     };
-  }, [beginSearch, cancel, choose, closing, renaming, open]);
+  }, [beginSearch, cancel, choose, closing, renaming, open, scopedEntries]);
   const close = async (documents: 'save' | 'discard') => {
     if (!closing || busy) return;
     setBusy(true);
@@ -275,7 +283,7 @@ export default function WorkspaceSwitcher() {
       await closeWorkspace(closing, { stop: true, documents });
       const state = useWorkspaceRegistry.getState();
       if (closing === activeId) {
-        const next = state.mru[0];
+        const next = state.mru.find((id) => scopedEntries.some((entry) => entry.id === id));
         navigate(next ? `/c/${next}` : '/home');
         if (next) restoreFocus(next);
       }
@@ -305,10 +313,10 @@ export default function WorkspaceSwitcher() {
         onClick={beginSearch}
       >
         <span style={active ? { viewTransitionName: `crux-${active.id}` } : undefined}>
-          {active?.title ?? 'Open Cruxes'}
+          {active?.title ?? <FolderIcon />}
         </span>{' '}
-        ▾ {entries.length > 1 || !active ? `(${entries.length})` : ''}
-        {entries.some((e) => e.id !== activeId && /approval|merge|Failed|Done/.test(e.status))
+        {active ? '▾' : null}
+        {scopedEntries.some((e) => e.id !== activeId && /approval|merge|Failed|Done/.test(e.status))
           ? ' •'
           : ''}
       </button>
@@ -525,10 +533,12 @@ export default function WorkspaceSwitcher() {
                     <button
                       onClick={async () => {
                         try {
-                          const cruxes = await getServices().crux.listAll();
+                          const cruxes = garden
+                            ? await gardenMembers(garden.id)
+                            : await getServices().crux.listAll();
                           setAvailable(
                             cruxes
-                              .filter((c) => c.kind !== 'snapshot')
+                              .filter((c) => c.kind !== 'snapshot' && c.kind !== 'garden')
                               .map((c) => ({
                                 id: c.id,
                                 title: c.title || 'Untitled',

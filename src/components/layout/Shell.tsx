@@ -1,11 +1,14 @@
+import { useGardenContext } from '@/stores/gardenContext';
+import { getServices } from '@/services';
+import GardenNavigator from './GardenNavigator';
 import TendingNotifications from '@/components/tending/TendingNotifications';
 import { startTendingCatalog } from '@/stores/tendingStore';
 import WorkspaceLifecycle from './WorkspaceLifecycle';
 import { restoreWorkspaceList } from '@/stores/workspaceRegistry';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TopBar from './TopBar';
-import { Modal, DialogHost } from '@/components/ui';
+import { DialogHost } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { useAppStore } from '@/stores/appStore';
 import { dismissSplash } from '@/lib/splash';
@@ -22,8 +25,6 @@ import { MotionConfig } from 'motion/react';
 export default function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentPath = useRef(location.pathname);
-  currentPath.current = location.pathname;
   const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
   const [initError, setInitError] = useState<string | null>(null);
   const aiEnabled = useUIStore((s) => s.aiEnabled);
@@ -31,17 +32,39 @@ export default function Shell() {
   const setConsoleOpen = useUIStore((s) => s.setConsoleOpen);
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const exploreOpen = useUIStore((s) => s.exploreOpen);
+  const rootGarden = useGardenContext((s) => s.root);
+  const activeGarden = useGardenContext((s) => s.garden);
+  const gardenId = new URLSearchParams(location.search).get('garden') ?? rootGarden?.id;
+  const [gardenError, setGardenError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!servicesReady || !gardenId) return;
+    let cancelled = false;
+    setGardenError(null);
+    void getServices()
+      .crux.findById(gardenId)
+      .then((garden) => {
+        if (garden.kind !== 'garden' || garden.deleted)
+          throw new Error('This Garden is unavailable.');
+        if (cancelled) return;
+        useGardenContext.getState().select(garden);
+        if (!new URLSearchParams(location.search).has('garden')) {
+          const query = new URLSearchParams(location.search);
+          query.set('garden', garden.id);
+          navigate(`${location.pathname}?${query}`, { replace: true });
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) setGardenError((error as Error).message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [servicesReady, gardenId, location.pathname, location.search, navigate]);
   const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
 
   useEffect(() => {
     if (!servicesReady) return;
-    const path = currentPath.current;
-    void restoreWorkspaceList()
-      .then((id) => {
-        if (id && path === '/home' && currentPath.current === path)
-          navigate(`/c/${id}`, { replace: true });
-      })
-      .catch(console.error);
+    void restoreWorkspaceList().catch(console.error);
   }, [servicesReady, navigate]);
 
   useEffect(() => {
@@ -133,74 +156,84 @@ export default function Shell() {
         </div>
 
         {/* Main */}
-        <main className="relative flex-1 min-h-0 overflow-y-auto">
-          {initError ? (
-            <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
-              <div className="max-w-sm flex flex-col gap-2">
-                <h2 className="font-display text-base text-text">Crux Garden couldn't start</h2>
-                <p className="text-xs text-text-muted">{initError}</p>
+        <div className="flex flex-1 min-h-0 overflow-x-auto">
+          {servicesReady && <GardenNavigator />}
+          <main className="relative flex-1 min-w-0 min-h-0 overflow-y-auto">
+            {initError || gardenError ? (
+              <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
+                <div className="max-w-sm flex flex-col gap-2">
+                  <h2 className="font-display text-base text-text">Crux Garden couldn't start</h2>
+                  <p className="text-xs text-text-muted">{initError || gardenError}</p>
+                </div>
               </div>
-            </div>
-          ) : servicesReady ? (
-            <Outlet />
-          ) : null}
-        </main>
+            ) : servicesReady && (!gardenId || activeGarden?.id === gardenId) ? (
+              <Outlet />
+            ) : null}
+          </main>
+          {aiEnabled && consoleOpen && (
+            <GardenPanel title="Console" onClose={() => setConsoleOpen(false)}>
+              <Console />
+            </GardenPanel>
+          )}
+          {moodPanelOpen && (
+            <GardenPanel title="Mood" onClose={() => useUIStore.getState().setMoodPanelOpen(false)}>
+              <Mood compact />
+            </GardenPanel>
+          )}
+          {settingsOpen && (
+            <GardenPanel
+              title="Settings"
+              onClose={() => useUIStore.getState().setSettingsOpen(false)}
+            >
+              <Settings />
+            </GardenPanel>
+          )}
+          {exploreOpen && (
+            <GardenPanel
+              title="Explore"
+              onClose={() => useUIStore.getState().setExploreOpen(false)}
+            >
+              <Explore onNavigate={() => useUIStore.getState().setExploreOpen(false)} />
+            </GardenPanel>
+          )}
+        </div>
 
         {/* App confirm/alert dialogs (replaces window.confirm/alert) */}
         <DialogHost />
-
-        {/* Console Modal */}
-        {aiEnabled && (
-          <Modal
-            open={consoleOpen}
-            onClose={() => setConsoleOpen(false)}
-            size="lg"
-            title="Console — The Keeper"
-            className="h-[min(520px,70vh)]"
-            flush
-          >
-            <Suspense fallback={null}>
-              <Console />
-            </Suspense>
-          </Modal>
-        )}
-
-        {/* Mood Modal — quick picks; the Mood Builder page has the full editor */}
-        <Modal
-          open={moodPanelOpen}
-          onClose={() => useUIStore.getState().setMoodPanelOpen(false)}
-          size="screen"
-          title="Mood"
-        >
-          <Suspense fallback={null}>
-            <Mood compact />
-          </Suspense>
-        </Modal>
-
-        {/* Settings Modal */}
-        <Modal
-          open={settingsOpen}
-          onClose={() => useUIStore.getState().setSettingsOpen(false)}
-          size="screen"
-          title="Settings"
-        >
-          <Suspense fallback={null}>
-            <Settings />
-          </Suspense>
-        </Modal>
-
-        {/* Explore Modal */}
-        <Modal
-          open={exploreOpen}
-          onClose={() => useUIStore.getState().setExploreOpen(false)}
-          size="screen"
-          title="Explore"
-        >
-          <Suspense fallback={null}>
-            <Explore onNavigate={() => useUIStore.getState().setExploreOpen(false)} />
-          </Suspense>
-        </Modal>
       </div>
     </MotionConfig>
+  );
+}
+
+function GardenPanel({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      aria-label={title}
+      className="w-[min(32rem,45vw)] min-w-64 shrink-0 border-l border-border bg-panel flex flex-col min-h-0 text-text"
+    >
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <h2 className="text-sm font-display font-medium">{title}</h2>
+        <button
+          aria-label={`Close ${title}`}
+          onClick={onClose}
+          className="px-2 text-text-muted hover:text-text cursor-pointer"
+        >
+          ×
+        </button>
+      </header>
+      <div className="flex-1 min-h-0 overflow-auto">
+        <Suspense fallback={<p className="p-4 text-sm text-text-muted">Opening {title}…</p>}>
+          {children}
+        </Suspense>
+      </div>
+    </section>
   );
 }

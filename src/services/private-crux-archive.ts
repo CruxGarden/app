@@ -1,3 +1,4 @@
+import { captureGardenId } from '@/stores/gardenContext';
 import type { ExportOptions, ExportResult, ImportOptions, ImportResult } from './crux-io';
 import type { CruxMeta } from '@/api/types';
 import { getSqliteClient } from './sqlite/client';
@@ -33,6 +34,7 @@ export async function exportPrivateCrux(options: ExportOptions): Promise<ExportR
 }
 export async function importPrivateCrux(options: ImportOptions): Promise<ImportResult> {
   const api = bridge();
+  const gardenId = options.gardenId ?? captureGardenId();
   const mode = options.mode ?? 'restore';
   const requestId = options.requestId ?? crypto.randomUUID();
   const data = privateArchiveBytes(options.data);
@@ -46,6 +48,7 @@ export async function importPrivateCrux(options: ImportOptions): Promise<ImportR
       requestId,
       mode: mode === 'clone' ? 'copy' : mode,
       destination: identity,
+      ...(gardenId ? { gardenId } : {}),
       ...(replacementToken ? { replacementToken } : {}),
     });
   const result = await (async () => {

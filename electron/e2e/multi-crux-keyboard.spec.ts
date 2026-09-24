@@ -14,7 +14,7 @@ test('keyboard-only search, MRU commit/reverse/cancel and composer focus', async
     await createCrux(page, 'Gamma');
     await input.fill('C draft');
     await page.keyboard.press(shortcut);
-    const search = page.getByRole('textbox', { name: 'Find an open Crux' });
+    const search = page.getByRole('textbox', { name: 'Find a Crux in My Garden' });
     await expect(search).toBeFocused();
     await page.keyboard.type('Alpha');
     await page.keyboard.press('Enter');
@@ -56,7 +56,7 @@ test('keyboard-only search, MRU commit/reverse/cancel and composer focus', async
   }
 });
 
-test('zero/one workspace, modal precedence, and keyboard-only close at a narrow width', async () => {
+test('zero/one workspace, supporting panels, and keyboard-only close at a narrow width', async () => {
   const { app, page } = await launchApp();
   const shortcut = process.platform === 'darwin' ? 'Meta+Alt+k' : 'Control+Alt+k';
   try {
@@ -79,15 +79,16 @@ test('zero/one workspace, modal precedence, and keyboard-only close at a narrow 
     await expect(input).toBeFocused();
     await expect(input).toHaveValue('Alpha draft');
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,');
-    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Settings', exact: true })).toBeVisible();
     await page.keyboard.press(shortcut);
-    await expect(page.getByRole('dialog', { name: 'Switch Crux workspace' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Switch Crux workspace' })).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Settings', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     await page.setViewportSize({ width: 800, height: 700 });
     await page.keyboard.press(shortcut);
     const dialog = page.getByRole('dialog', { name: 'Switch Crux workspace' });
-    await expect(dialog.getByRole('textbox', { name: 'Find an open Crux' })).toBeFocused();
+    await expect(dialog.getByRole('textbox', { name: 'Find a Crux in My Garden' })).toBeFocused();
     const box = await dialog.boundingBox();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(800);
@@ -103,7 +104,8 @@ test('zero/one workspace, modal precedence, and keyboard-only close at a narrow 
     await page.keyboard.press('Enter');
     await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
     await page.keyboard.press(shortcut);
-    await expect(page.getByRole('dialog')).toContainText('No matching Cruxes');
+    await expect(page.getByRole('dialog')).toContainText('In My Garden · not open');
+    await expect(page.getByRole('button', { name: 'Close Alpha workspace' })).toHaveCount(0);
   } finally {
     await app.close();
   }

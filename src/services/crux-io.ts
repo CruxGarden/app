@@ -65,6 +65,7 @@ export interface ImportConflictInfo {
 }
 
 export interface ImportOptions {
+  gardenId?: string;
   /** Reuse for retries of the same import action. */
   requestId?: string;
   data: Blob | ArrayBuffer;

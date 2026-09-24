@@ -1,3 +1,4 @@
+import { captureGardenId } from '@/stores/gardenContext';
 /**
  * File-drop routing (V1-GAPS-PLAN.md §2.3): a file or folder dropped on Home
  * or chosen in Add Crux picks the Crux Tool, makes the Crux with the file
@@ -161,6 +162,7 @@ export interface StartFromFilesResult {
 export async function startFromFiles(
   files: DroppedFile[],
   folderName: string | null = null,
+  gardenId = captureGardenId(),
 ): Promise<StartFromFilesResult> {
   if (!files.length) throw new Error('Drop a file or a folder.');
   const route = folderName ? routeFolder(files) : routeFile(files[0]!.path);
@@ -178,7 +180,7 @@ export async function startFromFiles(
       ? stem(files[0]!.path)
       : `${stem(files[0]!.path)} and ${files.length - 1} more`;
   const store = createCruxStore();
-  const crux = await store.getState().createCrux(title);
+  const crux = await store.getState().createCrux(title, gardenId);
   let latest = crux;
   let messages = (crux.meta?.messages as ChatMessage[] | undefined) ?? [];
   if (route.templateId !== 'blank') {

@@ -67,8 +67,9 @@ test('window close guards hidden edits, saves all, and relaunch restores members
     try {
       await second.page.getByRole('button', { name: 'Enter', exact: true }).click();
       await expect(
-        second.page.getByRole('button', { name: 'Switch Crux workspace' }),
-      ).toContainText('Beta');
+        second.page.getByRole('button', { name: 'Add Crux', exact: true }),
+      ).toBeVisible();
+      await switchCrux(second.page, 'Beta');
       await expect(second.page.getByPlaceholder('Send a message...')).toHaveValue('Remember Beta');
       await second.page.getByRole('button', { name: 'Switch Crux workspace' }).click();
       await expect(second.page.getByRole('button', { name: /^Alpha Not loaded/ })).toBeVisible();

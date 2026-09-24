@@ -8,7 +8,7 @@ async function openData(page: Page) {
   await page.getByRole('button', { name: 'Account menu' }).click();
   await page.getByRole('button', { name: /^Settings/ }).click();
   await page
-    .getByRole('dialog', { name: 'Settings', exact: true })
+    .getByRole('region', { name: 'Settings', exact: true })
     .getByRole('button', { name: 'Garden', exact: true })
     .click();
 }

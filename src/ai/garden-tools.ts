@@ -1,3 +1,5 @@
+import { getSqliteClient } from '@/services/sqlite/client';
+import { useGardenContext, gardenPath } from '@/stores/gardenContext';
 import type { ToolDefinition } from './tools';
 import { getServices } from '@/services';
 import {
@@ -22,6 +24,22 @@ const SHOW_WHAT = ['home', 'crux', 'pane', 'file', 'settings', 'explore'] as con
 const PANES = Object.keys(DEFAULT_PANE_LABELS) as PaneType[];
 
 export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'garden_graph',
+    description:
+      'Navigate the local Garden graph using the same controls as the app. Inspect returns the root or chosen Garden and its members. Create makes a child Garden; link/unlink changes containment without copying or deleting content. Open changes the visible Garden. Pass gardenId explicitly for mutations.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['inspect', 'create', 'link', 'unlink', 'open'] },
+        gardenId: { type: 'string' },
+        title: { type: 'string' },
+        cruxId: { type: 'string' },
+      },
+      required: ['action'],
+      additionalProperties: false,
+    },
+  },
   {
     name: 'list_cruxes',
     description:
@@ -73,6 +91,10 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
       type: 'object',
       properties: {
         title: { type: 'string' },
+        gardenId: {
+          type: 'string',
+          description: 'Destination Garden identity. Omit for the local root.',
+        },
         template: { type: 'string', description: 'Default "blank".' },
         brief: { type: 'string', description: 'What this crux is for and what to make first.' },
         cruxspaceId: { type: 'string', description: 'A Cruxspace to add it to (optional).' },
@@ -374,6 +396,16 @@ export function validateGardenTool(
   )
     return { valid: false, error: 'runtime must be reference or included' };
   switch (name) {
+    case 'garden_graph':
+      if (!['inspect', 'create', 'link', 'unlink', 'open'].includes(String(input.action)))
+        return { valid: false, error: 'Choose a Garden action' };
+      if (input.action !== 'inspect' && !str(input.gardenId, 80))
+        return { valid: false, error: 'gardenId is required' };
+      if (input.action === 'create' && !str(input.title, 200))
+        return { valid: false, error: 'title is required' };
+      if (['link', 'unlink'].includes(String(input.action)) && !str(input.cruxId, 80))
+        return { valid: false, error: 'cruxId is required' };
+      return { valid: true };
     case 'list_cruxes':
     case 'list_cruxspaces':
       return { valid: true };
@@ -518,7 +550,12 @@ export async function runGardenTool(
     return result;
   } finally {
     // The garden changed under the person: the Home lists follow.
-    if (name === 'plant_crux' || name === 'create_cruxspace' || name === 'install_tool') {
+    if (
+      name === 'garden_graph' ||
+      name === 'plant_crux' ||
+      name === 'create_cruxspace' ||
+      name === 'install_tool'
+    ) {
       const { useGardenStore } = await import('@/stores/gardenStore');
       void useGardenStore.getState().refresh();
     }
@@ -571,6 +608,39 @@ async function runGardenToolInner(
 ): Promise<string> {
   const services = getServices();
   switch (name) {
+    case 'garden_graph': {
+      const db = getSqliteClient();
+      if (!db.enterLocalGarden || !db.gardenMembership)
+        throw new Error('This connection does not support Garden navigation');
+      const gardenId =
+        typeof input.gardenId === 'string' ? input.gardenId : (await db.enterLocalGarden()).id;
+      const garden = await services.crux.findById(gardenId);
+      if (garden.kind !== 'garden' || garden.deleted) throw new Error('This Garden is unavailable');
+      if (input.action === 'create')
+        return JSON.stringify(
+          await services.crux.create({ title: input.title as string, kind: 'garden', gardenId }),
+        );
+      if (input.action === 'link')
+        return JSON.stringify(
+          await db.gardenMembership.add({ gardenId, memberId: input.cruxId as string }),
+        );
+      if (input.action === 'unlink')
+        return JSON.stringify(await db.gardenMembership.remove(gardenId, input.cruxId as string));
+      if (input.action === 'open') {
+        const { navigateTo } = await import('@/lib/navigate');
+        navigateTo(gardenPath(gardenId));
+        return `Opened ${garden.title || 'Garden'}`;
+      }
+      const { gardenMembers } = await import('@/services/garden-navigation');
+      return JSON.stringify({
+        garden: { id: garden.id, title: garden.title },
+        members: (await gardenMembers(gardenId)).map(({ id, title, kind }) => ({
+          id,
+          title,
+          kind,
+        })),
+      });
+    }
     case 'list_cruxes': {
       const [cruxes, spaces] = await Promise.all([services.crux.listAll(), listCruxspaces()]);
       const rows = cruxes
@@ -611,6 +681,8 @@ async function runGardenToolInner(
       return `Cruxspace "${space.name}" created.\nid: ${space.id}\nmembers: ${space.cruxIds.length}`;
     }
     case 'plant_crux': {
+      const requestedGarden =
+        typeof input.gardenId === 'string' ? input.gardenId : useGardenContext.getState().root?.id;
       const { createCruxStore } = await import('@/stores/cruxStore');
       const { applyTemplateToCrux } = await import('@/services/crux-create');
       const template = (input.template as string | undefined) ?? 'blank';
@@ -618,7 +690,7 @@ async function runGardenToolInner(
       if (template !== 'blank' && !manifest && !(await templateExists(template)))
         return `Error: no template "${template}" in this garden. Use "blank", a tool id (e.g. "notes-app"), or install_tool first.`;
       const store = createCruxStore();
-      let crux = await store.getState().createCrux(input.title as string);
+      let crux = await store.getState().createCrux(input.title as string, requestedGarden);
       if (template !== 'blank') {
         const { templateCatalog } = await import('@/components/garden/NewCruxModal');
         const kind =
@@ -698,11 +770,11 @@ async function runGardenToolInner(
       // The console closes so the person sees what you bring into view.
       ui.setConsoleOpen(false);
       if (what === 'home') {
-        navigateTo('/');
+        navigateTo('/home');
         return 'Showing the home garden.';
       }
       if (what === 'explore') {
-        navigateTo('/explore');
+        ui.setExploreOpen(true);
         return 'Showing Explore.';
       }
       if (what === 'settings') {

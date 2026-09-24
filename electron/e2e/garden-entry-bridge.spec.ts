@@ -38,7 +38,7 @@ test('the packaged API supplies one local Garden entry across renderer calls and
       },
       { root: roots[0].id, project },
     );
-    expect(before.before.items).toEqual([]);
+    expect(before.before.items.map((item) => item.id)).toEqual([project]);
     expect(before.errors).toHaveLength(2);
     for (const error of before.errors) expect(error).toContain('local Garden entry');
     await instance.app.close();

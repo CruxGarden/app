@@ -1,3 +1,5 @@
+import { captureGardenId } from './gardenContext';
+import { gardenMembers } from '@/services/garden-navigation';
 import { allWorkspaces } from './workspaceRegistry';
 
 import { create } from 'zustand';
@@ -22,6 +24,7 @@ interface GardenState {
   /** cruxId → fingerprint of its captured preview.jpg (only cruxes that have one). */
   thumbnails: Record<string, string>;
   loading: boolean;
+  error: string | null;
   search: string;
   sortBy: SortField;
 
@@ -95,12 +98,15 @@ async function loadThumbnails(): Promise<Record<string, string>> {
   }
 }
 
+let loadGeneration = 0;
+
 export const useGardenStore = create<GardenState>((set, get) => ({
   allCruxes: [],
   cruxList: [],
   trashed: [],
   thumbnails: {},
   loading: true,
+  error: null,
   search: '',
   sortBy: 'created',
 
@@ -123,7 +129,9 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   load: async () => {
-    set({ loading: true });
+    const generation = ++loadGeneration;
+    const gardenId = captureGardenId();
+    set({ loading: true, error: null });
     try {
       const { search, sortBy } = get();
       const { crux: cruxService } = getServices();
@@ -131,15 +139,23 @@ export const useGardenStore = create<GardenState>((set, get) => ({
         console.warn('[gardenStore] trash purge skipped:', err);
       });
       const [data, trashed, thumbnails] = await Promise.all([
-        cruxService.listAll(),
+        gardenId ? gardenMembers(gardenId) : cruxService.listAll(),
         cruxService.listTrashed(),
         loadThumbnails(),
       ]);
-      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), trashed, thumbnails });
+      if (generation !== loadGeneration) return;
+      set({
+        loading: false,
+        error: null,
+        allCruxes: data,
+        cruxList: filterAndSort(data, search, sortBy),
+        trashed,
+        thumbnails,
+      });
     } catch (err) {
-      console.error('[gardenStore] Failed to load cruxes:', err);
+      if (generation === loadGeneration) set({ error: (err as Error).message });
     } finally {
-      set({ loading: false });
+      if (generation === loadGeneration) set({ loading: false });
     }
   },
 
@@ -158,17 +174,28 @@ export const useGardenStore = create<GardenState>((set, get) => ({
 
   /** Reload the lists in place: no `loading` flip, so the Home Garden stays mounted. */
   refresh: async () => {
+    const generation = ++loadGeneration;
+    const gardenId = captureGardenId();
     try {
       const { search, sortBy } = get();
       const { crux: cruxService } = getServices();
       const [data, trashed, thumbnails] = await Promise.all([
-        cruxService.listAll(),
+        gardenId ? gardenMembers(gardenId) : cruxService.listAll(),
         cruxService.listTrashed(),
         loadThumbnails(),
       ]);
-      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), trashed, thumbnails });
+      if (generation !== loadGeneration) return;
+      set({
+        loading: false,
+        error: null,
+        allCruxes: data,
+        cruxList: filterAndSort(data, search, sortBy),
+        trashed,
+        thumbnails,
+      });
     } catch (err) {
       console.error('[gardenStore] Failed to refresh cruxes:', err);
+      if (generation === loadGeneration) set({ loading: false, error: (err as Error).message });
     }
   },
 }));
