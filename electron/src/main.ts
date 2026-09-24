@@ -819,6 +819,24 @@ async function setupIpc() {
     gardenCaller(event);
     return localDb.enterLocalGarden();
   });
+  ipcMain.handle('garden-mood:read', (event: Electron.IpcMainInvokeEvent, id: string) => {
+    gardenCaller(event);
+    return localDb.gardenMood.read(id);
+  });
+  ipcMain.handle('garden-mood:resolve', (event: Electron.IpcMainInvokeEvent, id: string) => {
+    gardenCaller(event);
+    return localDb.gardenMood.resolve(id);
+  });
+  ipcMain.handle(
+    'garden-mood:select',
+    (
+      event: Electron.IpcMainInvokeEvent,
+      input: Parameters<import('./bridge').GardenMoodBridge['select']>[0],
+    ) => {
+      gardenCaller(event);
+      return localDb.gardenMood.select(input);
+    },
+  );
   ipcMain.handle(
     'garden-membership:add',
     (event: Electron.IpcMainInvokeEvent, input: { gardenId: string; memberId: string }) => {

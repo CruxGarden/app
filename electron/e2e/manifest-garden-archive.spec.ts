@@ -37,6 +37,19 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
         homeId: crypto.randomUUID(),
       });
       await db.gardenMembership!.add({ gardenId: root.id, memberId: id });
+      const moodId = await db.createCrux!({
+        slug: crypto.randomUUID(),
+        kind: 'mood',
+        title: 'Retained Mood',
+        authorId: crypto.randomUUID(),
+        homeId: crypto.randomUUID(),
+      });
+      await db.gardenMood!.select({
+        gardenId: root.id,
+        mode: 'own',
+        moodId,
+        expected: (await db.gardenMood!.read(root.id)).selection,
+      });
       const file = async (text: string) => {
         const bytes = new TextEncoder().encode(text);
         const fingerprint = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
@@ -71,7 +84,7 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
         expected: first,
         changes: [await file('Current\0content')],
       });
-      return { id, root, first, snapshot, latest, fingerprint: original.put.fingerprint };
+      return { id, root, moodId, first, snapshot, latest, fingerprint: original.put.fingerprint };
     });
     await openData(launch.page);
     await launch.app.evaluate(({ session }, destination) => {
@@ -83,6 +96,7 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
       });
     }, archive);
     await launch.page.getByRole('button', { name: 'Export garden', exact: true }).click();
+    await expect(launch.page.getByText('Export complete', { exact: true })).toBeVisible();
     await expect
       .poll(() => launch.app.evaluate(() => (globalThis as any).__manifestExport))
       .toBe('completed');
@@ -166,6 +180,7 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
       ])) as { meta: string };
       return {
         root: await db.enterLocalGarden!(),
+        mood: await db.gardenMood!.resolve(saved.root.id),
         members: await db.gardenMembership!.list(saved.root.id),
         old: new TextDecoder().decode(old!.bytes),
         current: new TextDecoder().decode(current!.bytes),
@@ -187,6 +202,7 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
       };
     }, saved);
     expect(restored).toMatchObject({
+      mood: { moodId: saved.moodId, mode: 'own', sourceGardenId: saved.root.id },
       old: 'Retained\0history',
       current: 'Current\0content',
       attributes: { note: 'Keep this attribute' },

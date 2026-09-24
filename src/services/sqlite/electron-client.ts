@@ -40,6 +40,10 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.enterLocalGarden;
   }
 
+  get gardenMood(): SqliteBridge['gardenMood'] {
+    return this.api.gardenMood;
+  }
+
   get gardenMembership(): SqliteBridge['gardenMembership'] {
     return this.api.gardenMembership;
   }

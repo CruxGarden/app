@@ -17,7 +17,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { NativeBlobStore } from './native-blobs';
 import type { NativeStorage } from './native-storage';
-import type { FileContentBridge, GardenMembershipBridge } from './bridge';
+import type { FileContentBridge, GardenMembershipBridge, GardenMoodBridge } from './bridge';
 
 /** Desktop bridge to the actual API owner. No second SQL connection or fallback. */
 export class SqliteApi implements NativeStorage {
@@ -134,6 +134,25 @@ export class SqliteApi implements NativeStorage {
       throw new Error('Set up the local Garden identity before changing its contents.');
     return { authorId: identity.authorId, homeId: identity.homeId, generation };
   }
+
+  readonly gardenMood: GardenMoodBridge = {
+    read: (id) => {
+      this.assertAvailable();
+      return this.owner.readGardenMood(id);
+    },
+    resolve: (id) => {
+      this.assertAvailable();
+      return this.owner.resolveGardenMood(id);
+    },
+    select: async (input) => {
+      const captured = structuredClone(input);
+      const { generation, ...identity } = await this.gardenIdentity();
+      this.assertAvailable();
+      if (generation !== this.profileGeneration)
+        throw new Error('The Garden changed. Reopen it before changing its Mood.');
+      return this.owner.selectGardenMood({ ...captured, ...identity });
+    },
+  };
 
   readonly gardenMembership: GardenMembershipBridge = {
     add: async (input) => {
@@ -317,7 +336,9 @@ export class SqliteApi implements NativeStorage {
         return this.blobs.blobExists(fp) ? this.blobs.blobRead(fp) : null;
       },
     });
-    if (result.schemaVersion !== 5) throw new Error('Use a current-format database image');
+    // The API validates the supported schema; manifest-backed images start at 5.
+    // Keep admission aligned with replaceDatabaseWithContent as the API evolves.
+    if (result.schemaVersion < 5) throw new Error('Use a current-format database image');
     return result.fingerprints;
   }
   import(data: ArrayBuffer): Promise<void> {

@@ -1,4 +1,5 @@
 import type {
+  SelectGardenMood,
   LocalWorkingCopyCreate,
   LocalCruxCreate,
   LocalCruxUpdate,
@@ -49,6 +50,15 @@ export interface GardenMembershipBridge {
   ): ReturnType<LocalGraphRuntime['listGardenMembers']>;
 }
 
+/** Garden-owned selection; attribution comes only from the trusted host. */
+export interface GardenMoodBridge {
+  read(gardenId: string): ReturnType<LocalGraphRuntime['readGardenMood']>;
+  resolve(gardenId: string): ReturnType<LocalGraphRuntime['resolveGardenMood']>;
+  select(
+    input: Omit<SelectGardenMood, 'authorId' | 'homeId'>,
+  ): ReturnType<LocalGraphRuntime['selectGardenMood']>;
+}
+
 // ── sqlite ──────────────────────────────────────────────────────────────────
 
 /** Named content operations. Edits record ingested content; Project Folder projection
@@ -91,6 +101,7 @@ export interface PrivateArchiveBridge {
 export interface SqliteBridge {
   enterLocalGarden?(): ReturnType<LocalGraphRuntime['enterLocalGarden']>;
   gardenMembership?: GardenMembershipBridge;
+  gardenMood?: GardenMoodBridge;
   fileContent?: FileContentBridge;
   privateArchive?: PrivateArchiveBridge;
   createCrux?(input: LocalCruxCreate): Promise<string>;

@@ -61,6 +61,11 @@ const api: ElectronBridge = {
     : {}),
   sqlite: {
     enterLocalGarden: () => ipcRenderer.invoke('garden:enter-local'),
+    gardenMood: {
+      read: (id) => ipcRenderer.invoke('garden-mood:read', id),
+      resolve: (id) => ipcRenderer.invoke('garden-mood:resolve', id),
+      select: (input) => ipcRenderer.invoke('garden-mood:select', input),
+    },
     gardenMembership: {
       add: (input) => ipcRenderer.invoke('garden-membership:add', input),
       parents: (memberId) => ipcRenderer.invoke('garden-membership:parents', memberId),
