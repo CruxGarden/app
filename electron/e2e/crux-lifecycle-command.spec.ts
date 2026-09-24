@@ -23,10 +23,11 @@ test('owned lifecycle failure is atomic, retries after restart, and leaves Proje
     const saved = await page.evaluate(async (id) => {
       const db = window.electronAPI!.sqlite;
       const row = (await db.get('SELECT meta FROM cruxes WHERE id = ?', [id])) as { meta: string };
-      const file = (await db.get(
-        'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-        [id, 'kept.txt'],
-      )) as { fingerprint: string };
+      const head = await db.fileContent!.head(id);
+      const file = (await db.fileContent!.list({ cruxId: id, expected: head })).entries.find(
+        (f) => f.path === 'kept.txt',
+      )!;
+      await db.fileContent!.checkpoint({ cruxId: id, expected: head, reason: 'safety' });
       await db.setCruxTrashed!(id, true);
       await db.run(
         "CREATE TRIGGER refuse_purge BEFORE DELETE ON cruxes BEGIN SELECT RAISE(ABORT, 'Cannot commit purge'); END",
@@ -56,11 +57,13 @@ test('owned lifecycle failure is atomic, retries after restart, and leaves Proje
       const db = window.electronAPI!.sqlite;
       return {
         crux: await db.get('SELECT id FROM cruxes WHERE id = ?', [id]),
-        files: await db.all('SELECT id FROM artifacts WHERE resource_id = ?', [id]),
+        files: await db.all('SELECT crux_id FROM file_content_heads WHERE crux_id = ?', [id]),
+        history: await db.all('SELECT crux_id FROM edit_history WHERE crux_id = ?', [id]),
       };
     }, id);
     expect(retained.crux).toEqual({ id });
-    expect(retained.files.length).toBeGreaterThan(0);
+    expect(retained.files).toEqual([{ crux_id: id }]);
+    expect(retained.history).toEqual([{ crux_id: id }]);
     await launch.app.close();
     launch = await launchApp({ dir, env });
     page = launch.page;
@@ -80,6 +83,15 @@ test('owned lifecycle failure is atomic, retries after restart, and leaves Proje
         id,
       ),
     ).toBeUndefined();
+    expect(
+      await page.evaluate(async (id) => {
+        const db = window.electronAPI!.sqlite;
+        return {
+          heads: await db.all('SELECT crux_id FROM file_content_heads WHERE crux_id = ?', [id]),
+          history: await db.all('SELECT crux_id FROM edit_history WHERE crux_id = ?', [id]),
+        };
+      }, id),
+    ).toEqual({ heads: [], history: [] });
     expect(
       await page.evaluate((fp) => window.electronAPI!.sqlite.blobExists(fp), saved.fingerprint),
     ).toBe(true);

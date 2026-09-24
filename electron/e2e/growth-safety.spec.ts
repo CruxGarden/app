@@ -90,6 +90,24 @@ for (const action of ['Revert', 'Branch'] as const) {
         return history.checkpoints.filter((item) => item.workspace).at(-1)!;
       }, id);
       expect(recovery.workspace!.messages).toEqual(unmarked.messages);
+      const retainedParent = recovery.workspace!.parentId!;
+      for (const operation of ['trash', 'purge'] as const) {
+        const refusal = await page.evaluate(
+          async ({ retainedParent, operation }) => {
+            try {
+              const db = window.electronAPI!.sqlite;
+              if (operation === 'trash') await db.setCruxTrashed!(retainedParent, true);
+              else await db.deleteCrux!(retainedParent);
+              return 'unexpected deletion';
+            } catch (error) {
+              return String(error);
+            }
+          },
+          { retainedParent, operation },
+        );
+        expect(refusal).toContain('recovery copy');
+      }
+
       await history.getByRole('button', { name: 'Edit history', exact: true }).click();
       const row = history.locator(`[data-checkpoint-id="${recovery.id}"]`);
       await row.getByRole('button', { name: /Inspect recovery/ }).click();
