@@ -101,6 +101,25 @@ export function setSetting(key: string, value: string): void {
   }
 }
 
+/** A delivery marker must observe its own write result: a concurrent flush
+ * cannot consume its failure. Publish to the cache only after this commit.
+ */
+export async function setSettingDurably(key: string, value: string): Promise<void> {
+  if (!ready || isSecretSettingKey(key)) throw new Error('This setting cannot be persisted here.');
+  const db = getSqliteClient();
+  const operation = writes.then(() =>
+    db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]),
+  );
+  writes = operation
+    .then(() => {})
+    .catch((error) => {
+      writeFailure = error;
+    });
+  await operation;
+  cache.set(key, value);
+  if (SYNC_KEYS.has(key) && typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+}
+
 /** Remove a setting from cache + SQLite + localStorage. */
 export function removeSetting(key: string): void {
   cache.delete(key);

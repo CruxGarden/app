@@ -441,8 +441,7 @@
     {
       "key": "cruxgarden:pending-open:",
       "sources": [
-        "src/hooks/useNotebookProxy.ts",
-        "src/services/file-routing.ts"
+        "src/services/deferred-import.ts"
       ],
       "ledger": "cruxgarden:pending-open:"
     },
@@ -686,6 +685,11 @@
       "file": "src/services/project-folder.ts",
       "method": "db.run",
       "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"
+    },
+    {
+      "file": "src/services/settings.ts",
+      "method": "db.run",
+      "statement": "'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'"
     },
     {
       "file": "src/services/settings.ts",

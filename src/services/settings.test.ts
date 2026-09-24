@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { initSettings, setSetting, getSetting, clearAllSettings } from './settings';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  initSettings,
+  setSetting,
+  getSetting,
+  clearAllSettings,
+  setSettingDurably,
+  flushSettings,
+} from './settings';
 import { getSqliteClient } from './sqlite/client';
 import { SettingsKey } from '@/lib/constants';
 
@@ -90,4 +97,22 @@ describe('Settings secrets exclusion', () => {
       expect(key).not.toContain('refreshToken');
     }
   });
+});
+
+it('durable markers reject their own failed write even when another consumer flushes concurrently', async () => {
+  await initSettings();
+  const key = 'cruxgarden:pending-open:write-proof';
+  await setSettingDurably(key, 'queued');
+  const db = getSqliteClient();
+  const run = vi.spyOn(db, 'run').mockRejectedValueOnce(new Error('disk full'));
+  const operation = setSettingDurably(key, 'dispatched');
+  const flush = flushSettings().catch(() => {});
+  await expect(operation).rejects.toThrow('disk full');
+  await flush;
+  expect(getSetting(key)).toBe('queued');
+  run.mockRestore();
+  expect((await sqliteSettingRows()).get(key)).toBe('queued');
+  await setSettingDurably(key, 'dispatched');
+  expect((await sqliteSettingRows()).get(key)).toBe('dispatched');
+  expect(getSetting(key)).toBe('dispatched');
 });

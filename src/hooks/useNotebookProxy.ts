@@ -1,6 +1,10 @@
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { registerAppTools, executeAppTool } from '@/services/embedded-app-tool-registry';
-import { getSetting, removeSetting } from '@/services/settings';
+import {
+  deliverDeferredImport,
+  readDeferredImport,
+  subscribeDeferredImports,
+} from '@/services/deferred-import';
 import { embeddedAppToolAdapter } from '@/services/embedded-app-tool-adapters';
 import { useBlocker } from 'react-router-dom';
 import {
@@ -137,6 +141,33 @@ export function useNotebookProxy(cruxId: string | null) {
         });
       },
     });
+    let importTimer: ReturnType<typeof setTimeout> | undefined;
+    const importReady = () =>
+      !!peer &&
+      !workspace.getState().viewingSnapshotId &&
+      [...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].some(
+        (frame) => frame.dataset.cruxId === cruxId && frame.contentWindow === peer!.source,
+      );
+    function scheduleImport() {
+      const request = readDeferredImport(cruxId!);
+      if (
+        importTimer ||
+        !importReady() ||
+        request?.state !== 'queued' ||
+        !toolAdapter?.tools.some((tool) => tool.name === request.tool)
+      )
+        return;
+      importTimer = setTimeout(() => {
+        importTimer = undefined;
+        void trackWorkspacePromise(
+          workspace,
+          deliverDeferredImport(cruxId!, importReady, (tool, input) =>
+            executeAppTool(cruxId!, tool, input),
+          ),
+        ).catch((error) => console.warn('[file-drop] import state could not be saved:', error));
+      }, 1500);
+    }
+    const unsubscribeImports = subscribeDeferredImports(scheduleImport);
     function receive(event: MessageEvent) {
       if (
         event.data?.type !== protocol ||
@@ -150,26 +181,7 @@ export function useNotebookProxy(cruxId: string | null) {
       if (!frame || new URL(frame.src, location.href).origin !== event.origin) return;
       peer = { source: event.source!, origin: event.origin };
       if (!isEmbeddedApp(workspace.getState().crux)) return;
-      // A file the Crux was started from (file-drop routing): once the app speaks, ask it to open the file.
-      const pendingKey = `cruxgarden:pending-open:${cruxId}`;
-      const pending = toolAdapter && cruxId ? getSetting(pendingKey) : null;
-      if (pending && cruxId) {
-        removeSetting(pendingKey);
-        try {
-          const { tool, input } = JSON.parse(pending) as {
-            tool: string;
-            input: Record<string, unknown>;
-          };
-          if (toolAdapter!.tools.some((t) => t.name === tool))
-            setTimeout(() => {
-              void executeAppTool(cruxId!, tool, input).catch((error) =>
-                console.warn('[file-drop] the app could not open the file:', error),
-              );
-            }, 1500);
-        } catch {
-          /* a malformed note: nothing to open */
-        }
-      }
+      scheduleImport();
       if (event.data.op === 'tool-result') {
         const command = commands.get(event.data.commandId);
         commands.delete(event.data.commandId);
@@ -201,6 +213,8 @@ export function useNotebookProxy(cruxId: string | null) {
     }
     window.addEventListener('message', receive);
     return () => {
+      if (importTimer) clearTimeout(importTimer);
+      unsubscribeImports();
       unregister();
       unregisterAppTools();
       window.removeEventListener('message', receive);

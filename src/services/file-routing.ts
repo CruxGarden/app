@@ -9,7 +9,7 @@ import type { ChatMessage, CruxKind } from '@/api/types';
 import { toolRoutes } from '@/services/crux-tools/registry';
 import { getServices } from './index';
 import { applyTemplateToCrux } from './crux-create';
-import { setSetting } from './settings';
+import { queueDeferredImport } from './deferred-import';
 import { createCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -229,10 +229,7 @@ export async function startFromFiles(
     placed.push(path);
   }
   if (route.open && placed.length === 1)
-    setSetting(
-      `cruxgarden:pending-open:${crux.id}`,
-      JSON.stringify({ tool: route.open.tool, input: route.open.input(placed[0]!) }),
-    );
+    await queueDeferredImport(crux.id, route.open.tool, route.open.input(placed[0]!));
   const where = placed.length === 1 ? placed[0] : `${base || 'the Crux'} (${placed.length} files)`;
   // The notice is part of the Crux's Collaboration, so it is there when the Crux opens.
   const notice: ChatMessage = {

@@ -3,7 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
-import { home } from './game-cruxspace-helpers';
+async function home(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Garden Home', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible();
+}
 
 /**
  * File-drop routing (V1-GAPS-PLAN.md §2.3): a file chosen in Add Crux or
@@ -15,10 +18,10 @@ const fixtures = resolve(__dirname, 'fixtures');
 const currentId = (page: import('@playwright/test').Page) =>
   page.locator('[data-workspace-id]').getAttribute('data-workspace-id');
 
-test('Start from a file: a document becomes a notebook, an image a miniPaint Crux, a dropped CSV a spreadsheet', async () => {
+test('Start from files: documents, available image tools, explicit refusal and a dropped spreadsheet', async () => {
   test.setTimeout(300000);
   const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
-  const evidence = resolve(__dirname, '../../docs/file-drop');
+  const evidence = resolve(__dirname, '.results/file-drop');
   try {
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 2000, height: 1200 });
@@ -63,9 +66,29 @@ test('Start from a file: a document becomes a notebook, an image a miniPaint Cru
       ).toHaveText('Saved', { timeout: 120000 });
     });
 
-    await test.step('an image: a miniPaint Crux with the image in it', async () => {
+    await test.step('an image uses its installed tool or refuses without creating an empty Crux', async () => {
       await home(page);
-      const { folder } = await startFrom(join(fixtures, 'documents/seal.png'));
+      await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
+      const imageTool = page.locator('[data-template-id="minipaint-app"]');
+      const installed = !(await imageTool.innerText()).includes('not installed');
+      const chooser = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Start from a file…', exact: true }).click();
+      await (await chooser).setFiles(join(fixtures, 'documents/seal.png'));
+      if (!installed) {
+        await expect(page.getByRole('alert')).toContainText('No Crux Tool opens seal.png');
+        expect(
+          await page.evaluate(() =>
+            window.electronAPI!.sqlite.all("SELECT id FROM cruxes WHERE title = 'seal'"),
+          ),
+        ).toEqual([]);
+        await page
+          .getByRole('dialog', { name: 'Add Crux' })
+          .getByRole('button', { name: 'Close', exact: true })
+          .click();
+        return;
+      }
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
+      const folder = (await storedCrux(page, (await currentId(page))!)).projectFolder;
       expect(existsSync(join(folder, 'images/seal.png'))).toBe(true);
       await expect(page.getByText(/Started from seal\.png/)).toBeVisible();
       await expect(page.getByText(/Open it from miniPaint/)).toBeVisible();

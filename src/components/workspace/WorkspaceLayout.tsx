@@ -1,3 +1,4 @@
+import DeferredImportNotice from './DeferredImportNotice';
 import { useAppAppearance } from '@/hooks/useAppAppearance';
 import TaskBar from './TaskBar';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
@@ -444,33 +445,37 @@ export default function WorkspaceLayout() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      {/* Exactly one layout is mounted. Rendering both and hiding one with CSS
+      <div className="flex h-full min-h-0 flex-col">
+        <DeferredImportNotice />
+        <div className="flex-1 min-h-0">
+          {/* Exactly one layout is mounted. Rendering both and hiding one with CSS
           double-mounted every pane: two chat trees (two useChat loops, two
           auto-snapshot policies), duplicate DOM, and 2× re-renders per
           streamed token. */}
-      {isDesktopLayout ? (
-        <div className="h-full min-h-0">
-          {mosaicLayout ? (
-            <MosaicWithoutDragDropContext<PaneType>
-              renderTile={renderTile}
-              value={mosaicLayout}
-              onChange={handleChange}
-              resize={{ minimumPaneSizePercentage: 5 }}
-              className="crux-mosaic-theme"
-            />
-          ) : null}
+          {isDesktopLayout ? (
+            <div className="h-full min-h-0">
+              {mosaicLayout ? (
+                <MosaicWithoutDragDropContext<PaneType>
+                  renderTile={renderTile}
+                  value={mosaicLayout}
+                  onChange={handleChange}
+                  resize={{ minimumPaneSizePercentage: 5 }}
+                  className="crux-mosaic-theme"
+                />
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex flex-col h-full min-h-0">
+              <div className="flex-1 min-h-0 group/pane">
+                <Suspense fallback={null}>
+                  <MobilePane pane={mobileActivePane} />
+                </Suspense>
+              </div>
+              <MobilePaneSwitcher />
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="flex flex-col h-full min-h-0">
-          <div className="flex-1 min-h-0 group/pane">
-            <Suspense fallback={null}>
-              <MobilePane pane={mobileActivePane} />
-            </Suspense>
-          </div>
-          <MobilePaneSwitcher />
-        </div>
-      )}
-
+      </div>
       {/* Context menu overlay */}
       <ContextMenu
         onNewFile={handleNewFile}

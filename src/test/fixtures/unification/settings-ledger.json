@@ -489,7 +489,7 @@
       "prefix": "cruxgarden:pending-open:",
       "group": "dynamic",
       "target": "installation deferred action",
-      "preservation": "Retain acknowledged readiness/retry semantics; exclude from sharing.",
+      "preservation": "Owner-bound queued/dispatched/completed import delivery. Unknown effects require explicit retry or dismissal; exclude from sharing.",
       "status": "planned"
     },
     {

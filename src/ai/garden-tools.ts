@@ -25,6 +25,20 @@ const PANES = Object.keys(DEFAULT_PANE_LABELS) as PaneType[];
 
 export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
+    name: 'file_import',
+    description:
+      'Inspect a Crux’s deferred file import, or explicitly retry/dismiss an interrupted import using the same controls as the app. Inspect Workshop before retrying an unconfirmed import: the earlier attempt may already have created content. Never retry automatically. Opening Workshop delivers queued imports.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        cruxId: { type: 'string' },
+        action: { type: 'string', enum: ['inspect', 'retry', 'dismiss'] },
+      },
+      required: ['cruxId', 'action'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'garden_graph',
     description:
       'Navigate the local Garden graph using the same controls as the app. Inspect returns the root or chosen Garden and its members. Create makes a child Garden; link/unlink changes containment without copying or deleting content. Open changes the visible Garden. Pass gardenId explicitly for mutations.',
@@ -396,6 +410,10 @@ export function validateGardenTool(
   )
     return { valid: false, error: 'runtime must be reference or included' };
   switch (name) {
+    case 'file_import':
+      if (!str(input.cruxId, 80) || !['inspect', 'retry', 'dismiss'].includes(String(input.action)))
+        return { valid: false, error: 'cruxId and an import action are required' };
+      return { valid: true };
     case 'garden_graph':
       if (!['inspect', 'create', 'link', 'unlink', 'open'].includes(String(input.action)))
         return { valid: false, error: 'Choose a Garden action' };
@@ -608,6 +626,15 @@ async function runGardenToolInner(
 ): Promise<string> {
   const services = getServices();
   switch (name) {
+    case 'file_import': {
+      const { readDeferredImport, retryDeferredImport, dismissDeferredImport } =
+        await import('@/services/deferred-import');
+      const ownerId = input.cruxId as string;
+      await services.crux.findById(ownerId);
+      if (input.action === 'retry') await retryDeferredImport(ownerId);
+      if (input.action === 'dismiss') await dismissDeferredImport(ownerId);
+      return JSON.stringify(readDeferredImport(ownerId));
+    }
     case 'garden_graph': {
       const db = getSqliteClient();
       if (!db.enterLocalGarden || !db.gardenMembership)

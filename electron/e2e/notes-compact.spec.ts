@@ -67,6 +67,7 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
     page = instance.page;
     await page.setViewportSize({ width: 1400, height: 1000 });
     await page.getByRole('button', { name: /enter/i }).click();
+    await page.getByRole('button', { name: 'Open Compact notebook', exact: true }).click();
     const restored = page.frameLocator('iframe[data-crux-id]');
     await expect(restored.locator('.tiptap').first()).toContainText(
       'Written in a narrow notebook panel.',
