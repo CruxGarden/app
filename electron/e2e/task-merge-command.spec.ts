@@ -124,6 +124,50 @@ test('refused admission preserves Main and refused finalization preserves recove
     await page.goto(`crux-app://app/c/${main}?task=${copy}`);
     await expect(page.getByRole('button', { name: 'Resume merge', exact: true })).toBeVisible();
     await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_finish'));
+    // A damaged transcript must not silently complete with a truncated Collaboration.
+    const transcript = await page.evaluate(
+      async ({ main, copy, mergeId }) => {
+        const db = window.electronAPI!.sqlite;
+        const journal = (await db.get('SELECT * FROM task_merges WHERE id = ?', [mergeId])) as {
+          data: string;
+        };
+        const source = JSON.parse(journal.data).sourceHead as string;
+        const mainRow = await db.get('SELECT * FROM cruxes WHERE id = ?', [main]);
+        await db.run(
+          "UPDATE dimensions SET deleted = ? WHERE source_id = ? AND target_id = ? AND type = 'growth'",
+          [new Date().toISOString(), copy, source],
+        );
+        return { source, journal, mainRow };
+      },
+      { main, copy, mergeId: journal.id },
+    );
+    await page.getByRole('button', { name: 'Resume merge', exact: true }).click();
+    await expect(
+      page
+        .getByTestId('task-bar')
+        .getByRole('alert')
+        .filter({ hasText: 'Recovery context requires retained Growth' }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        async ({ main, mergeId }) => {
+          const db = window.electronAPI!.sqlite;
+          return {
+            journal: await db.get('SELECT * FROM task_merges WHERE id = ?', [mergeId]),
+            mainRow: await db.get('SELECT * FROM cruxes WHERE id = ?', [main]),
+          };
+        },
+        { main, mergeId: journal.id },
+      ),
+    ).toEqual({ journal: transcript.journal, mainRow: transcript.mainRow });
+    await page.evaluate(
+      ({ copy, source }) =>
+        window.electronAPI!.sqlite.run(
+          'UPDATE dimensions SET deleted = NULL WHERE source_id = ? AND target_id = ?',
+          [copy, source],
+        ),
+      { copy, source: transcript.source },
+    );
     await page.getByRole('button', { name: 'Resume merge', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Resume merge', exact: true })).toHaveCount(0);
     await expect(
