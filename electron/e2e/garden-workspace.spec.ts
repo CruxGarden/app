@@ -172,6 +172,19 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
       'aria-current',
       'page',
     );
+    // Agent-driven navigation and human Back/Forward share browser history.
+    await call('garden_graph', { action: 'open', gardenId: childId });
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+      'Observatory',
+    );
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+      'Darkroom',
+    );
+    await page.getByRole('button', { name: 'Forward', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+      'Observatory',
+    );
     // Moving Gardens does not discard the original open workspace.
     await nav.getByRole('button', { name: 'Observatory', exact: true }).click();
     await page.getByRole('button', { name: 'Switch Crux workspace', exact: true }).click();

@@ -1,5 +1,6 @@
 import { useGardenContext } from '@/stores/gardenContext';
 import GardenLocation from './GardenLocation';
+import NavigationHistory from './NavigationHistory';
 import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import PanelPicker from './PanelPicker';
@@ -59,6 +60,7 @@ export default function TopBar() {
         >
           <PlusCircleIcon />
         </IconButton>
+        <NavigationHistory />
         <GardenLocation />
         <span className="text-toolbar-text-muted shrink-0">
           {activeCruxId && <ChevronRightIcon />}
