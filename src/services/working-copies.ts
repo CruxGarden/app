@@ -11,6 +11,8 @@ export interface WorkingCopy {
   /** Parked Web mode still uses snapshot bases; native Tasks retain baseState. */
   baseSnapshotId?: string;
   baseState?: {
+    /** The exact Task source; absence means Main. */
+    sourceId?: string;
     root: string;
     workspace: { parentId: string | null; messages: unknown[]; entryFile: string | null };
   };

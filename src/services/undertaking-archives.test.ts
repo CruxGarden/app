@@ -23,7 +23,7 @@ for (const template of catalog) {
         expect(envelope).toMatchObject({
           archiveVersion: 3,
           purpose: 'private-backup',
-          graphVersion: 2,
+          graphVersion: 3,
           payloadVersion: 1,
         });
         const graphBytes = await zip.file(`${member.archive}graph.json`)!.async('uint8array');

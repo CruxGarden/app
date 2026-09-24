@@ -40,7 +40,7 @@ test('a self-contained private archive restores an editable Calendar in a fresh 
     expect(manifest).toMatchObject({
       archiveVersion: 3,
       purpose: 'private-backup',
-      graphVersion: 2,
+      graphVersion: 3,
       payloadVersion: 1,
     });
     const graph = JSON.parse(await zip.file('graph.json')!.async('text'));
