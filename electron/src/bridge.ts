@@ -27,6 +27,20 @@ import type {
 
 export type { LocalGraphChange } from '@cruxgarden/local-api';
 
+/** Structural containment, distinct from people/access membership. The host
+ * supplies attribution; a link never grants access or deletes its target. */
+export interface GardenMembershipBridge {
+  add(input: {
+    gardenId: string;
+    memberId: string;
+  }): ReturnType<LocalGraphRuntime['addGardenMember']>;
+  remove(gardenId: string, memberId: string): ReturnType<LocalGraphRuntime['removeGardenMember']>;
+  list(
+    gardenId: string,
+    options?: { limit?: number; after?: string },
+  ): ReturnType<LocalGraphRuntime['listGardenMembers']>;
+}
+
 // ── sqlite ──────────────────────────────────────────────────────────────────
 
 /** Named content operations. Edits record ingested content; Project Folder projection
@@ -45,9 +59,7 @@ export interface FileContentBridge {
 export interface PrivateArchiveBridge {
   replacementToken(selection: GraphSelection): Promise<string>;
   export(selection: GraphSelection): Promise<Uint8Array>;
-  inspect(
-    bytes: Uint8Array,
-  ): Promise<{
+  inspect(bytes: Uint8Array): Promise<{
     root: Record<string, unknown>;
     roots: string[];
     includeMembers: boolean;
@@ -60,6 +72,7 @@ export interface PrivateArchiveBridge {
 }
 
 export interface SqliteBridge {
+  gardenMembership?: GardenMembershipBridge;
   fileContent?: FileContentBridge;
   privateArchive?: PrivateArchiveBridge;
   createCrux?(input: LocalCruxCreate): Promise<string>;

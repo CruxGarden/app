@@ -767,6 +767,38 @@ async function setupIpc() {
     )
       throw new Error('Private archives are only available from Garden');
   };
+  const gardenCaller = (event: Electron.IpcMainInvokeEvent) => {
+    if (
+      event.sender !== mainWindow?.webContents ||
+      event.senderFrame !== mainWindow?.webContents.mainFrame
+    )
+      throw new Error('Garden membership is only available from Garden');
+  };
+  ipcMain.handle(
+    'garden-membership:add',
+    (event: Electron.IpcMainInvokeEvent, input: { gardenId: string; memberId: string }) => {
+      gardenCaller(event);
+      return localDb.gardenMembership.add(input);
+    },
+  );
+  ipcMain.handle(
+    'garden-membership:remove',
+    (event: Electron.IpcMainInvokeEvent, gardenId: string, memberId: string) => {
+      gardenCaller(event);
+      return localDb.gardenMembership.remove(gardenId, memberId);
+    },
+  );
+  ipcMain.handle(
+    'garden-membership:list',
+    (
+      event: Electron.IpcMainInvokeEvent,
+      gardenId: string,
+      options?: { limit?: number; after?: string },
+    ) => {
+      gardenCaller(event);
+      return localDb.gardenMembership.list(gardenId, options);
+    },
+  );
   ipcMain.handle(
     'archive:replacement-token',
     (event: Electron.IpcMainInvokeEvent, selection: GraphSelection) => {

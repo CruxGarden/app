@@ -17,12 +17,13 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { NativeBlobStore } from './native-blobs';
 import type { NativeStorage } from './native-storage';
-import type { FileContentBridge } from './bridge';
+import type { FileContentBridge, GardenMembershipBridge } from './bridge';
 
 /** Desktop bridge to the actual API owner. No second SQL connection or fallback. */
 export class SqliteApi implements NativeStorage {
   private closed = false;
   private replacing = false;
+  private profileGeneration = 0;
   private importing: Promise<void> | null = null;
   private unavailable: Error | null = null;
   private projectionHost?: (
@@ -111,6 +112,40 @@ export class SqliteApi implements NativeStorage {
       },
     };
   }
+
+  readonly gardenMembership: GardenMembershipBridge = {
+    add: async (input) => {
+      this.assertAvailable();
+      const { gardenId, memberId } = input;
+      const generation = this.profileGeneration;
+      // One identity read, captured before the queued write. Extra renderer
+      // fields cannot supply an author/home or survive a profile replacement.
+      const identity = await this.owner.get<{ authorId: string | null; homeId: string | null }>(
+        `SELECT
+          (SELECT value FROM settings WHERE key = 'cruxgarden:local:authorId') AS authorId,
+          (SELECT value FROM settings WHERE key = 'cruxgarden:local:homeId') AS homeId`,
+      );
+      this.assertAvailable();
+      if (generation !== this.profileGeneration)
+        throw new Error('The Garden changed. Reopen it before adding a member.');
+      if (!identity?.authorId || !identity.homeId)
+        throw new Error('Set up the local Garden identity before adding members.');
+      return this.owner.addGardenMember({
+        gardenId,
+        memberId,
+        authorId: identity.authorId,
+        homeId: identity.homeId,
+      });
+    },
+    remove: (gardenId, memberId) => {
+      this.assertAvailable();
+      return this.owner.removeGardenMember(gardenId, memberId);
+    },
+    list: (gardenId, options) => {
+      this.assertAvailable();
+      return this.owner.listGardenMembers(gardenId, options);
+    },
+  };
 
   readonly fileContent: FileContentBridge = {
     lookup: (input) => {
@@ -246,6 +281,7 @@ export class SqliteApi implements NativeStorage {
   import(data: ArrayBuffer): Promise<void> {
     this.assertAvailable();
     this.replacing = true;
+    this.profileGeneration++;
     this.importing = this.replace(data);
     return this.importing;
   }

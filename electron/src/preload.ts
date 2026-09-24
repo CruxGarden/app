@@ -60,6 +60,12 @@ const api: ElectronBridge = {
       }
     : {}),
   sqlite: {
+    gardenMembership: {
+      add: (input) => ipcRenderer.invoke('garden-membership:add', input),
+      remove: (gardenId, memberId) =>
+        ipcRenderer.invoke('garden-membership:remove', gardenId, memberId),
+      list: (gardenId, options) => ipcRenderer.invoke('garden-membership:list', gardenId, options),
+    },
     privateArchive: {
       replacementToken: (selection) => ipcRenderer.invoke('archive:replacement-token', selection),
       export: (selection) => ipcRenderer.invoke('archive:export', selection),

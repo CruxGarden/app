@@ -297,6 +297,7 @@
     {
       "key": "cruxgarden:local:authorId",
       "sources": [
+        "electron/src/sqlite-api.ts",
         "src/lib/constants.ts"
       ],
       "ledger": "cruxgarden:local:authorId"
@@ -304,6 +305,7 @@
     {
       "key": "cruxgarden:local:homeId",
       "sources": [
+        "electron/src/sqlite-api.ts",
         "src/lib/constants.ts"
       ],
       "ledger": "cruxgarden:local:homeId"

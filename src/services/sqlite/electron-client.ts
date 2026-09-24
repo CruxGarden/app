@@ -36,6 +36,10 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.all(sql, params) as Promise<T[]>;
   }
 
+  get gardenMembership(): SqliteBridge['gardenMembership'] {
+    return this.api.gardenMembership;
+  }
+
   get privateArchive(): SqliteBridge['privateArchive'] {
     return this.api.privateArchive;
   }

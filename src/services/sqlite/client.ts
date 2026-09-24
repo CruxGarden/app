@@ -4,6 +4,7 @@ import type { WorkerResponse } from './worker';
 import { ElectronSqliteClient } from './electron-client';
 
 export interface ISqliteClient {
+  gardenMembership?: SqliteBridge['gardenMembership'];
   fileContent?: SqliteBridge['fileContent'];
   privateArchive?: SqliteBridge['privateArchive'];
   createCrux?: SqliteBridge['createCrux'];
