@@ -648,6 +648,10 @@ async function setupIpc() {
     },
   );
 
+  localDb.setImportHost(
+    require('./import-workspaces').importedWorkspacePreparer(projects, getBlobDir()),
+  );
+
   selfTestHooks.projects = projects;
 
   if (process.platform === 'darwin') {

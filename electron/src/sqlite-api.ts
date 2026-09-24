@@ -1,5 +1,10 @@
 import {
   LocalGraphRuntime,
+  packPrivateGraph,
+  openPrivateGraphArchive,
+  type PrivateGraphImport,
+  type PrepareImportedWorkspace,
+  type GraphSelection,
   type LocalCruxUpdate,
   type LocalWorkingCopyCreate,
   type LocalCruxCreate,
@@ -26,6 +31,33 @@ export class SqliteApi implements NativeStorage {
   ) => void | Promise<void>;
   setProjectionHost(host: NonNullable<SqliteApi['projectionHost']>) {
     this.projectionHost = host;
+  }
+
+  private importHost?: PrepareImportedWorkspace;
+  setImportHost(host: PrepareImportedWorkspace) {
+    this.importHost = host;
+  }
+
+  async exportPrivateArchive(selection: GraphSelection): Promise<Uint8Array> {
+    this.assertAvailable();
+    const store = this.contentStore();
+    const graph = await this.owner.exportPrivateGraph(selection, store);
+    return packPrivateGraph(graph, store);
+  }
+
+  async importPrivateArchive(bytes: Uint8Array, input: Omit<PrivateGraphImport, 'graph'>) {
+    this.assertAvailable();
+    const prepare = this.importHost;
+    if (!prepare) throw new Error('The imported workspace host is unavailable');
+    const captured = JSON.parse(JSON.stringify(input));
+    const archive = await openPrivateGraphArchive(Uint8Array.from(bytes));
+    this.assertAvailable();
+    return this.owner.importPrivateGraph(
+      { ...captured, graph: archive.graph },
+      archive.content,
+      this.contentStore(),
+      prepare,
+    );
   }
 
   private constructor(
