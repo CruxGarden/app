@@ -47,6 +47,16 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
       .poll(() => readFileSync(join(folder, 'notebook/Welcome.md'), 'utf8'))
       .toContain('Written in a narrow notebook panel.');
 
+    expect(
+      await page.evaluate(
+        (id) =>
+          window.electronAPI!.sqlite.all(
+            "SELECT id FROM dimensions WHERE source_id=? AND type='growth'",
+            [id],
+          ),
+        id,
+      ),
+    ).toEqual([]);
     // Resizing a real panel must update the controls, not just hide their panes in CSS.
     await page.setViewportSize({ width: 2600, height: 1100 });
     await expect.poll(() => frame.locator('body').evaluate(() => innerWidth)).toBeGreaterThan(980);

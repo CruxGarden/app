@@ -62,8 +62,7 @@ it('preserves folders, frontmatter, metadata and image bytes, remains private, a
     imported: 4,
     notes: 1,
   });
-  expect(store.getState().growths.length).toBe(before + 1);
-  expect(store.getState().growths.at(-1)?.meta?.appChanges).toEqual({ app: 0, content: 4 });
+  expect(store.getState().growths.length).toBe(before);
   expect(await call({ op: 'read', path: 'Imported/Vault/Folder/Note.md' })).toMatchObject({
     content: markdown,
   });
@@ -99,6 +98,6 @@ it('retains a recoverable partial copy when storage fails and never replaces exi
   expect(await call({ op: 'read', path: 'Imported/Vault/Folder/Note.md' })).toMatchObject({
     content: markdown,
   });
-  expect(store.getState().growths.at(-1)?.meta?.label).toBe('Partial notebook import: 1 files');
+  expect(store.getState().growths).toHaveLength(0);
   vi.restoreAllMocks();
 });

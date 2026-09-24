@@ -101,6 +101,9 @@ test('edit recovery preserves files and conversation without growing the deliber
     await call('edit_history', { action: 'restore', checkpointId: safety.id });
     await expect.poll(disk).toBe('master');
     await expect(editor).toContainText('master');
+    expect(
+      JSON.parse(await call('edit_history', { action: 'capture', reason: 'safety' })).reason,
+    ).toBe('safety');
     await history.getByRole('button', { name: 'Growth', exact: true }).click();
     await expect(history.getByText('Master', { exact: true })).toBeVisible();
     const growth = () =>
@@ -126,7 +129,7 @@ test('edit recovery preserves files and conversation without growing the deliber
     const reopened = launch.page.getByTestId('pane-body-history');
     if (!(await reopened.isVisible())) await togglePanel(launch.page, 'Toggle history');
     await reopened.getByRole('button', { name: 'Edit history', exact: true }).click();
-    await expect(reopened.getByText('Before restore').first()).toBeVisible();
+    await expect(reopened.getByText('Safety copy').first()).toBeVisible();
     expect(disk()).toBe('master');
   } finally {
     await client?.close().catch(() => {});

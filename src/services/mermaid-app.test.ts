@@ -31,6 +31,8 @@ it('preserves native Mermaid native diagram source, configuration and history in
   const saved = (await call({ op: 'write', path: 'project.json', content, expected: null })) as {
     fingerprint: string;
   };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   const snapshot = store.getState().growths[0]!.targetId;
   await expect(
     call({ op: 'write', path: 'project.json', content, expected: null }),

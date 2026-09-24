@@ -1,3 +1,4 @@
+import { captureEditCheckpoint } from './edit-history';
 import { importNativeAsset, readNativeAsset, validateNativeDocument } from './native-app-document';
 import { notebookPath, isNotebookImage } from './notebook-path';
 import { importNotebook } from './notebook-import';
@@ -256,11 +257,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         )
           throw new Error('Only an existing note, folder marker or image can be deleted.');
         // Preserve a recovery point even for a note changed by an external editor.
-        await state.createSnapshot({
-          label: 'Before deleting a note',
-          ifChanged: true,
-          silent: true,
-        });
+        await captureEditCheckpoint(owner, 'safety');
         await artifact.delete(existing);
       } else {
         if (typeof request.content !== 'string' || request.content.length > 8_000_000)
@@ -313,21 +310,8 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         }
       }
       await workspace.getState().refreshArtifacts();
-      await workspace.getState().createSnapshot({
-        label:
-          sampler || native
-            ? 'Project saved'
-            : cardinal
-              ? 'Instrument saved'
-              : moqira
-                ? 'Wireframes saved'
-                : op === 'delete'
-                  ? 'Deleted a note'
-                  : 'Notebook saved',
-        ifChanged: true,
-        silent: true,
-      });
-      // A watcher can ingest another writer during refresh/snapshot. Acknowledge
+      // The API retains bounded edit history as content changes; saves are not Growth.
+      // A watcher can ingest another writer during refresh. Acknowledge
       // our bytes, never that newer version: the next save must detect its conflict.
       return { fingerprint: writtenFingerprint };
     });

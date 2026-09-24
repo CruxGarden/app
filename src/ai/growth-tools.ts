@@ -44,12 +44,18 @@ export const GROWTH_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'edit_history',
     description:
-      'Inspect recent automatic file recovery separately from deliberate Growth. List returns retained checkpoint IDs; inspect lists their files; capture retains the settled files without a Growth edge; restore recovers files and keeps both the current files as a safety copy and the ongoing conversation. Automatic entries retain the latest 20. Use snapshot only for a deliberate creative milestone.',
+      'Inspect recent automatic file recovery separately from deliberate Growth. List returns retained checkpoint IDs; inspect lists their files; capture retains the settled files without a Growth edge (reason safety protects them from automatic eviction); restore recovers files and keeps both the current files as a safety copy and the ongoing conversation. Automatic entries retain the latest 20. Use snapshot only for a deliberate creative milestone.',
     input_schema: {
       type: 'object',
       properties: {
         action: { type: 'string', enum: ['list', 'inspect', 'capture', 'restore'] },
         checkpointId: { type: 'string' },
+        reason: {
+          type: 'string',
+          enum: ['autosave', 'safety'],
+          description:
+            'Capture only: safety protects a recovery copy before destructive work; autosave keeps bounded recent history.',
+        },
       },
       required: ['action'],
       additionalProperties: false,
@@ -165,7 +171,12 @@ export async function runGrowthTool(
       const history = await import('@/services/edit-history');
       if (input.action === 'list') return JSON.stringify(await history.listEditHistory(ctx.cruxId));
       if (input.action === 'capture')
-        return JSON.stringify(await history.captureEditCheckpoint(ctx.cruxId));
+        return JSON.stringify(
+          await history.captureEditCheckpoint(
+            ctx.cruxId,
+            input.reason === 'safety' ? 'safety' : 'autosave',
+          ),
+        );
       if (
         !['inspect', 'restore'].includes(String(input.action)) ||
         typeof input.checkpointId !== 'string' ||

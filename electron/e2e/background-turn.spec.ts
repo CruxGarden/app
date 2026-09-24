@@ -9,9 +9,34 @@ import { launchApp } from './launch';
  * (CRUX_AI_MOCK=1, "three steps" in ai/mock-model.ts): the model opens with a
  * three-step ```plan, writes step-N.txt once per step and thinks ~5s before
  * step 2. The turn is a job the store tracks — the composer stays live, the
- * job card shows the steps advance, Stop leaves the last snapshot restorable,
+ * job card shows the steps advance, Stop leaves the last edit recovery available,
  * and a relaunch mid-job reports the job as interrupted rather than losing it.
  */
+async function latestRecovery(page: Page): Promise<string> {
+  const id = await page.locator('[data-workspace-id]').getAttribute('data-workspace-id');
+  return page.evaluate(async (id) => {
+    const row = (await window.electronAPI!.sqlite.get(
+      'SELECT checkpoints FROM edit_history WHERE crux_id=?',
+      [id],
+    )) as { checkpoints: string };
+    return JSON.parse(row.checkpoints).at(-1).id;
+  }, id);
+}
+async function restoreRecovery(page: Page, id: string) {
+  const history = page.getByTestId('pane-body-history');
+  if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
+  await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+  await history
+    .locator(`[data-checkpoint-id="${id}"]`)
+    .getByRole('button', { name: /Restore recovery/ })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Restore files', exact: true })
+    .click();
+  await expect(history.getByRole('status')).toContainText('Files restored');
+}
+
 test.describe('background turns (mock AI)', () => {
   test.setTimeout(150_000);
 
@@ -75,20 +100,16 @@ test.describe('background turns (mock AI)', () => {
       });
       await expect(card).toHaveCount(0);
       await expect(input).toHaveValue('a thought for later');
-      await expect(page.getByTestId('turn-summary')).toHaveText('Ran 3 steps · 3 snapshots');
+      await expect(page.getByTestId('turn-summary')).toHaveText('Ran 3 steps');
       for (const n of [1, 2, 3]) {
         await expect.poll(() => onDisk(gardenRoot, `step-${n}.txt`)).toBe(`step ${n}\n`);
       }
 
-      // One snapshot per step, labelled — and no end-of-turn double-up
       await togglePanel(page, 'Toggle history');
-      await expect(page.getByText('Step 1: Lay the foundation', { exact: true })).toBeVisible({
-        timeout: 30_000,
-      });
-      await expect(page.getByText('Step 2: Raise the walls', { exact: true })).toBeVisible();
-      await expect(page.getByText('Step 3: Put on the roof', { exact: true })).toBeVisible();
-      await expect(page.getByText('#3', { exact: true })).toBeVisible();
-      await expect(page.getByText('#4', { exact: true })).toHaveCount(0);
+      const history = page.getByTestId('pane-body-history');
+      await expect(history.getByText('No snapshots yet')).toBeVisible();
+      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await expect(history.locator('[data-checkpoint-id]').first()).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/background-2-done.png' });
     } finally {
       await app.close();
@@ -113,42 +134,31 @@ test.describe('background turns (mock AI)', () => {
       await expect(card).toContainText('Stopped');
       await expect(step(page, 2)).toHaveAttribute('data-status', 'interrupted');
       await expect(step(page, 3)).toHaveAttribute('data-status', 'pending');
-      await expect(card).toContainText('1 of 3 steps · 1 snapshot');
-      await expect(page.getByTestId('turn-summary')).toHaveText(
-        'Stopped after 1 of 3 steps · 1 snapshot',
-      );
+      await expect(page.getByTestId('turn-summary')).toHaveText('Stopped after 1 of 3 steps');
       // The composer is back to plain Send
       await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/background-3-stopped.png' });
 
       // Someone (an editor, another agent) changes the file after the stop —
-      // Restore last snapshot brings back step-one state, folder included.
+      // Restore last recovery point brings back step-one state, folder included.
       expect(onDisk(gardenRoot, 'step-1.txt')).toBe('step 1\n');
       expect(onDisk(gardenRoot, 'step-2.txt')).toBeNull();
+      const checkpoint = await latestRecovery(page);
       writeFileSync(join(folderOf(gardenRoot), 'step-1.txt'), 'edited after the stop\n');
       await expect.poll(() => onDisk(gardenRoot, 'step-1.txt')).toBe('edited after the stop\n');
 
-      const restore = card.getByRole('button', { name: 'Restore last snapshot' });
-      await expect(restore).toHaveAttribute('title', 'Step 1: Lay the foundation');
-      await restore.click();
-      const dialog = page.getByRole('dialog');
-      await expect(dialog).toContainText('Step 1: Lay the foundation');
-      await dialog.getByRole('button', { name: 'Restore' }).click();
+      await restoreRecovery(page, checkpoint);
 
       await expect
         .poll(() => onDisk(gardenRoot, 'step-1.txt'), { timeout: 30_000 })
         .toBe('step 1\n');
-      await expect(card).toHaveCount(0);
-      await togglePanel(page, 'Toggle history');
-      await expect(page.getByText('Before revert', { exact: true })).toBeVisible({
-        timeout: 30_000,
-      });
+      await expect(card).toHaveAttribute('data-status', 'interrupted');
     } finally {
       await app.close();
     }
   });
 
-  test('a relaunch mid-job reports the job as interrupted with its last snapshot', async () => {
+  test('a relaunch mid-job reports the job as interrupted with its last recovery point', async () => {
     const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     const { dir } = first;
     const gardenRoot = join(dir, 'garden');
@@ -171,7 +181,7 @@ test.describe('background turns (mock AI)', () => {
     const { page } = again;
     try {
       await page.getByRole('button', { name: /enter/i }).click();
-      // The last workspace now opens when entering the garden.
+      await page.getByRole('button', { name: 'Open My Crux', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
         'My Crux',
       );
@@ -182,30 +192,17 @@ test.describe('background turns (mock AI)', () => {
       await expect(card).toContainText('Interrupted — the app closed while this was running');
       await expect(step(page, 1)).toHaveAttribute('data-status', 'done');
       await expect(step(page, 2)).toHaveAttribute('data-status', 'interrupted');
-      await expect(card).toContainText('1 of 3 steps · 1 snapshot');
       // Nothing is running: the composer is plain Send again
       await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/background-4-relaunched.png' });
 
+      const checkpoint = await latestRecovery(page);
       writeFileSync(join(folderOf(gardenRoot), 'step-1.txt'), 'edited while closed\n');
-      // The edit is recorded once the OS reports it (a moment; a person's click
-      // never beats it) — restore then knows the file moved on.
-      const recorded = () =>
-        page.evaluate(async () => {
-          const row = (await window.electronAPI!.sqlite.get(
-            "SELECT a.fingerprint FROM artifacts a JOIN cruxes c ON c.id = a.resource_id WHERE c.type = 'workspace' AND a.path = 'step-1.txt'",
-            [],
-          )) as { fingerprint: string } | undefined;
-          return row?.fingerprint ?? null;
-        });
-      const before = await recorded();
-      await expect.poll(recorded, { timeout: 30_000 }).not.toBe(before);
-      await card.getByRole('button', { name: 'Restore last snapshot' }).click();
-      await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
+      await restoreRecovery(page, checkpoint);
       await expect
         .poll(() => onDisk(gardenRoot, 'step-1.txt'), { timeout: 30_000 })
         .toBe('step 1\n');
-      await expect(card).toHaveCount(0);
+      await expect(card).toHaveAttribute('data-status', 'interrupted');
     } finally {
       await again.app.close();
     }

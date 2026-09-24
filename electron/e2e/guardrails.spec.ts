@@ -1,14 +1,14 @@
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
-import { storedCrux } from './multi-crux-helpers';
+import { storedCrux, enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
  * Guardrails (RESILIENCE-PLAN § Guardrails): the destructive actions that are
  * easy to reach each leave a way back.
- *   - deleting a file takes a labelled snapshot first, so Growth holds it
+ *   - deleting a file keeps a protected Edit history copy without a Growth edge
  *   - Clear on the crux store offers "Export a copy, then clear" — and exports
  *   - Wipe garden offers "Export, then wipe" — the .garden file is written
  *     before anything goes
@@ -43,17 +43,9 @@ async function ensurePane(page: Page, type: string, toggle: string) {
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 async function plantWithFile(page: Page) {
-  await page.getByRole('button', { name: /enter/i }).click();
-  await page.getByText('Plant a new garden').click();
-  await page.getByRole('button', { name: 'Welcome' }).click();
-  await page.getByRole('button', { name: 'Add Crux' }).click();
-  await page.getByRole('button', { name: /^Blank/ }).click();
-  await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await page.getByRole('button', { name: 'Add files', exact: true }).click();
-  await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });
-  const nameInput = page.getByRole('tree').getByRole('textbox');
-  await nameInput.fill('index.html');
-  await nameInput.press('Enter');
+  await enterGarden(page);
+  await createCrux(page, 'My Crux');
+  await addArtifact(page, 'index.html');
   const monaco = page.locator('.monaco-editor').first();
   await expect(monaco).toBeVisible({ timeout: 30_000 });
   await monaco.click();
@@ -64,7 +56,7 @@ async function plantWithFile(page: Page) {
 test.describe('guardrails: a way back from every destructive action', () => {
   test.setTimeout(180_000);
 
-  test('a refused safety snapshot reports deletion failure, preserves the file and supports retry after restart', async () => {
+  test('a refused safety checkpoint reports deletion failure, preserves the file and supports retry after restart', async () => {
     let launch = await launchApp();
     const dir = launch.dir;
     try {
@@ -73,10 +65,12 @@ test.describe('guardrails: a way back from every destructive action', () => {
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       const meta = await storedCrux(page, id);
       const file = join(meta.projectFolder, 'index.html');
-      await expect.poll(() => readFileSync(file, 'utf8')).toBe('<h1>Keep me</h1>');
+      await expect
+        .poll(() => (existsSync(file) ? readFileSync(file, 'utf8') : null))
+        .toBe('<h1>Keep me</h1>');
       await page.evaluate(() =>
         window.electronAPI!.sqlite.run(
-          "CREATE TRIGGER refuse_delete_safety BEFORE INSERT ON cruxes WHEN NEW.kind = 'snapshot' BEGIN SELECT RAISE(ABORT, 'Safety snapshot unavailable'); END",
+          "CREATE TRIGGER refuse_delete_safety BEFORE UPDATE ON edit_history BEGIN SELECT RAISE(ABORT, 'Safety snapshot unavailable'); END",
         ),
       );
       const tree = page.getByRole('tree');
@@ -94,6 +88,7 @@ test.describe('guardrails: a way back from every destructive action', () => {
       await launch.app.close();
       launch = await launchApp({ dir });
       await launch.page.getByRole('button', { name: /enter/i }).click();
+      await launch.page.getByRole('button', { name: 'Open My Crux', exact: true }).click();
       const restoredTree = launch.page.getByRole('tree');
       await expect(restoredTree.getByText('index.html', { exact: true })).toBeVisible();
       await restoredTree.getByText('index.html', { exact: true }).click({ button: 'right' });
@@ -102,10 +97,22 @@ test.describe('guardrails: a way back from every destructive action', () => {
       await expect.poll(() => existsSync(file)).toBe(false);
       await expect(restoredTree.getByText('index.html', { exact: true })).toHaveCount(0);
       await ensurePane(launch.page, 'history', 'Toggle history');
-      await launch.page
-        .getByTestId('pane-body-history')
-        .getByText('Before deleting index.html', { exact: true })
+      const history = launch.page.getByTestId('pane-body-history');
+      await expect(history.getByText('No snapshots yet')).toBeVisible();
+      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await history
+        .locator('li')
+        .filter({ hasText: 'Safety copy' })
+        .first()
+        .getByRole('button', { name: /Restore recovery/ })
         .click();
+      await launch.page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Restore files', exact: true })
+        .click();
+      await expect
+        .poll(() => (existsSync(file) ? readFileSync(file, 'utf8') : null))
+        .toBe('<h1>Keep me</h1>');
       await launch.page.getByRole('tree').getByText('index.html', { exact: true }).click();
       await expect(launch.page.locator('.monaco-editor').first()).toContainText('Keep me');
     } finally {
@@ -113,7 +120,7 @@ test.describe('guardrails: a way back from every destructive action', () => {
     }
   });
 
-  test('deleting a file takes a "Before deleting" snapshot first', async () => {
+  test('deleting a file keeps protected Edit history without Growth', async () => {
     const { app, page } = await launchApp();
     try {
       await plantWithFile(page);
@@ -121,17 +128,16 @@ test.describe('guardrails: a way back from every destructive action', () => {
       await tree.getByText('index.html', { exact: true }).click({ button: 'right' });
       await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
       const dialog = page.getByRole('dialog');
-      await expect(dialog).toContainText('A snapshot is taken first');
+      await expect(dialog).toContainText('A safety copy is kept in Edit history');
       await dialog.getByRole('button', { name: 'Delete' }).click();
       await expect(tree.getByText('index.html', { exact: true })).toHaveCount(0, {
         timeout: 15_000,
       });
       await ensurePane(page, 'history', 'Toggle history');
-      await expect(
-        page.getByTestId('pane-body-history').getByText('Before deleting index.html', {
-          exact: true,
-        }),
-      ).toBeVisible({ timeout: 30_000 });
+      const history = page.getByTestId('pane-body-history');
+      await expect(history.getByText('No snapshots yet')).toBeVisible();
+      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await expect(history.getByText('Safety copy', { exact: true })).toBeVisible();
     } finally {
       await app.close();
     }

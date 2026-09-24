@@ -8,6 +8,7 @@ import type {
   FileContentEdit,
   GrowthSnapshotCreate,
   GrowthContentRestore,
+  EditCheckpointCapture,
 } from '@cruxgarden/local-api';
 import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
@@ -780,7 +781,7 @@ async function setupIpc() {
   });
   ipcMain.handle(
     'history:capture',
-    (event: Electron.IpcMainInvokeEvent, input: FileContentSelection) => {
+    (event: Electron.IpcMainInvokeEvent, input: EditCheckpointCapture) => {
       gardenCaller(event);
       return localDb.fileContent.checkpoint(input);
     },

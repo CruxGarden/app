@@ -15,11 +15,15 @@ export const inspectEditCheckpoint = (cruxId: string, checkpointId: string) =>
   api().inspectCheckpoint(cruxId, checkpointId);
 
 /** Captures only settled files; it never splits the Collaboration transcript or creates Growth. */
-export async function captureEditCheckpoint(cruxId: string) {
+export async function captureEditCheckpoint(
+  cruxId: string,
+  reason: 'autosave' | 'safety' = 'autosave',
+) {
+  const content = getSqliteClient().fileContent;
+  if (!content) return null;
   await settleIngestion();
-  const content = api();
   const head = await content.head(cruxId);
-  return head ? content.checkpoint({ cruxId, expected: head }) : null;
+  return head ? content.checkpoint({ cruxId, expected: head, reason }) : null;
 }
 
 /** Both UI and agents restore through this path, including unsaved edits and disk recovery. */

@@ -1,3 +1,4 @@
+import { captureEditCheckpoint } from './edit-history';
 import type { StoreApi } from 'zustand';
 import type { CruxState } from '@/stores/cruxStore';
 import { getServices } from './index';
@@ -77,7 +78,7 @@ export async function importNotebook(
       }
       throw new Error('This import folder already exists on disk. Choose another import name.');
     }
-  await state.createSnapshot({ label: 'Before notebook import', ifChanged: true, silent: true });
+  await captureEditCheckpoint(owner, 'safety');
   let imported = 0;
   try {
     for (const [index, file] of files.entries()) {
@@ -96,19 +97,14 @@ export async function importNotebook(
     }
   } catch (error) {
     await workspace.getState().refreshArtifacts();
-    if (imported)
-      await workspace
-        .getState()
-        .createSnapshot({ label: `Partial notebook import: ${imported} files`, silent: true });
+    if (imported) await captureEditCheckpoint(owner);
     throw new Error(
       `${imported} of ${files.length} files were copied into ${root}. Existing files were kept. ${String(error)}`,
       { cause: error },
     );
   }
   await workspace.getState().refreshArtifacts();
-  await workspace
-    .getState()
-    .createSnapshot({ label: `Imported notebook: ${name}`, ifChanged: true, silent: true });
+  await captureEditCheckpoint(owner);
   return {
     root,
     imported,

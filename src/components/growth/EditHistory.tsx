@@ -70,7 +70,7 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
               data-checkpoint-id={checkpoint.id}
             >
               <div className="flex justify-between gap-2">
-                <span>{checkpoint.reason === 'safety' ? 'Before restore' : 'Autosave'}</span>
+                <span>{checkpoint.reason === 'safety' ? 'Safety copy' : 'Autosave'}</span>
                 <time className="text-xs text-text-muted" dateTime={checkpoint.created}>
                   {new Date(checkpoint.created).toLocaleString()}
                 </time>

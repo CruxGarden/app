@@ -66,6 +66,8 @@ it('preserves native OpenMosh sessions and original media through Growth and a c
   const saved = (await call({ op: 'write', path: 'project.json', content, expected: null })) as {
     fingerprint: string;
   };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   const snapshot = store.getState().growths[0]!.targetId;
   expect(((await call({ op: 'read', path: 'project.json' })) as { content: string }).content).toBe(
     content,

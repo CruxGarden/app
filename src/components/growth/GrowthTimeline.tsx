@@ -124,14 +124,14 @@ export default function GrowthTimeline({
           aria-label="History views"
         >
           <button
-            className="cursor-pointer"
+            className="cursor-pointer px-2 py-1 rounded-[var(--radius-sm)] aria-pressed:bg-accent/15 aria-pressed:text-accent"
             aria-pressed={view === 'growth'}
             onClick={() => setView('growth')}
           >
             Growth
           </button>
           <button
-            className="cursor-pointer"
+            className="cursor-pointer px-2 py-1 rounded-[var(--radius-sm)] aria-pressed:bg-accent/15 aria-pressed:text-accent"
             aria-pressed={view === 'history'}
             onClick={() => setView('history')}
           >

@@ -69,7 +69,7 @@ it('flushes pending edits, preserves publication fields and carries the choice t
     custom: { color: 'green' },
     layout: 'separate-pages',
   });
-  expect(store.getState().growths.length).toBeGreaterThanOrEqual(3);
+  expect(store.getState().growths).toHaveLength(0);
   const task = await createTask(crux.id, 'Try another layout');
   const taskStore = createCruxStore();
   taskStore.setState({ crux: await getServices().crux.findById(task.id) });

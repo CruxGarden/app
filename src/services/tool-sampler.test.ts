@@ -33,6 +33,8 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
       content: JSON.stringify(document),
       expected: null,
     })) as { fingerprint: string };
+    expect(store.getState().growths).toHaveLength(0);
+    await store.getState().createSnapshot({ label: 'Chosen version' });
     expect(store.getState().growths.length).toBe(1);
     const initialSnapshot = store.getState().growths[0]!.targetId;
     const adapter = embeddedAppToolAdapter(crux)!;
@@ -165,7 +167,7 @@ it.each(['openmosh', 'excalidraw'])(
   },
 );
 
-it('acknowledges the bytes written, even when an external edit arrives during snapshot creation', async () => {
+it('acknowledges the bytes written, even when an external edit arrives during the post-save refresh', async () => {
   const services = getServices();
   const crux = await services.crux.create({
     title: 'Race',
@@ -186,7 +188,7 @@ it('acknowledges the bytes written, even when an external edit arrives during sn
   const mine = JSON.stringify({ ...starter('tables'), title: 'My import' });
   const theirs = JSON.stringify({ ...starter('tables'), title: 'External edit' });
   store.setState({
-    createSnapshot: async () => {
+    refreshArtifacts: async () => {
       await services.artifact.create({
         resourceId: crux.id,
         content: theirs,

@@ -60,7 +60,7 @@ describe('notebook Artifact bridge', () => {
   ])('rejects %s', (path) => {
     expect(() => notebookPath(path)).toThrow();
   });
-  it('acknowledges durable saves, records Growth and rejects stale writers', async () => {
+  it('acknowledges durable saves without automatic Growth and rejects stale writers', async () => {
     const { call, store, crux } = await fixture();
     const first = (await call({
       op: 'write',
@@ -72,7 +72,7 @@ describe('notebook Artifact bridge', () => {
       content: '# First',
       fingerprint: first.fingerprint,
     });
-    expect(store.getState().growths).toHaveLength(1);
+    expect(store.getState().growths).toHaveLength(0);
     await call({
       op: 'write',
       path: 'Ideas/First.md',

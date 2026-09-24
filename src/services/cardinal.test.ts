@@ -33,6 +33,8 @@ it('preserves a Cardinal instrument in Growth and archives, protects ownership a
     content,
     expected: null,
   })) as { fingerprint: string };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   expect(store.getState().growths).toHaveLength(1);
   await expect(
     call({ op: 'write', path: 'instrument.json', content, expected: null }),

@@ -12,6 +12,7 @@ import type {
   GrowthSnapshotCreate,
   GrowthContentRestore,
   EditCheckpointRestore,
+  EditCheckpointCapture,
 } from '@cruxgarden/local-api';
 /**
  * The IPC bridge contract — the single declaration of what Desktop Mode
@@ -54,7 +55,7 @@ export interface GardenMembershipBridge {
  * stays with the file service. No renderer-supplied store or executable callbacks. */
 export interface FileContentBridge {
   history(cruxId: string): ReturnType<LocalGraphRuntime['listEditHistory']>;
-  checkpoint(input: FileContentSelection): ReturnType<LocalGraphRuntime['createEditCheckpoint']>;
+  checkpoint(input: EditCheckpointCapture): ReturnType<LocalGraphRuntime['createEditCheckpoint']>;
   inspectCheckpoint(
     cruxId: string,
     checkpointId: string,

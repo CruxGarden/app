@@ -32,6 +32,8 @@ it('saves Moqira as Artifacts, records Growth, rejects stale writes and survives
   const result = (await call({ op: 'write', path: 'project.json', content, expected: null })) as {
     fingerprint: string;
   };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   expect(store.getState().growths).toHaveLength(1);
   await expect(
     call({ op: 'write', path: 'project.json', content, expected: null }),

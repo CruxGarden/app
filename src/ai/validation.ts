@@ -53,6 +53,11 @@ export function validateToolInput(
     case 'rename_file':
       return validateRenameFile(input);
     case 'edit_history':
+      if (
+        input.reason !== undefined &&
+        (input.action !== 'capture' || !['autosave', 'safety'].includes(String(input.reason)))
+      )
+        return { valid: false, error: 'Only capture accepts a reason: autosave or safety.' };
       if (!['list', 'inspect', 'capture', 'restore'].includes(String(input.action)))
         return { valid: false, error: 'Choose list, inspect, capture or restore.' };
       if (

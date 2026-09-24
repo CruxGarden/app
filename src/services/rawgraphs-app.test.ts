@@ -59,6 +59,8 @@ it('preserves dataset bytes and chart mappings through Growth and complete Crux 
   const saved = (await call({ op: 'write', path: 'project.json', content, expected: null })) as {
     fingerprint: string;
   };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   const snapshot = store.getState().growths[0]!.targetId;
   await expect(
     call({ op: 'write', path: 'project.json', content, expected: null }),
