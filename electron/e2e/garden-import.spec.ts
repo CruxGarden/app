@@ -6,7 +6,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
 
-test('imported Garden graphs open Home and preserve shared members and private conversations through restart', async () => {
+test('imported Garden graphs open Home and preserve nested members and private conversations through restart', async () => {
   test.setTimeout(150_000);
   let instance = await launchApp();
   const dir = instance.dir;
@@ -19,7 +19,7 @@ test('imported Garden graphs open Home and preserve shared members and private c
       const load = process
         .getBuiltinModule('module')
         .createRequire(path.join(app.getAppPath(), 'package.json'));
-      const { LocalGraphRuntime, CruxKind, packPrivateGraph } = load(
+      const { LocalGraphRuntime, CruxKind, DimensionType, packPrivateGraph } = load(
         '@cruxgarden/local-api',
       ) as typeof import('@cruxgarden/local-api');
       const runtime = await LocalGraphRuntime.create(
@@ -70,12 +70,19 @@ test('imported Garden graphs open Home and preserve shared members and private c
         await runtime.editFileContent({ cruxId: work, expected: null, changes: [] }, store);
         for (const [gardenId, memberId] of [
           [garden, child],
-          [garden, work],
           [child, work],
         ])
           await runtime.execute(({ garden: service }) =>
             service.add({ ...identity, gardenId, memberId }),
           );
+        await runtime.execute(({ dimension }) =>
+          dimension.create({
+            ...identity,
+            sourceId: garden,
+            targetId: work,
+            type: DimensionType.GRAFT,
+          }),
+        );
         const graph = await runtime.exportPrivateGraph(
           { roots: [garden], includeMembers: true },
           store,
@@ -132,7 +139,9 @@ test('imported Garden graphs open Home and preserve shared members and private c
         ),
       ),
     ).toEqual(appearance);
-    await expect(page.getByRole('button', { name: 'Open Field notes', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open Field notes', exact: true })).toHaveCount(
+      0,
+    );
     await page.getByRole('button', { name: 'Open Observations', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Open Field notes', exact: true })).toBeVisible();
     const child = new URL(page.url()).searchParams.get('garden')!;
@@ -143,7 +152,8 @@ test('imported Garden graphs open Home and preserve shared members and private c
       },
       { imported, child },
     );
-    expect(members[0].items.map((row) => row.id)).toContain(members[1].items[0].id);
+    expect(members[0].items.map((row) => row.id)).toEqual([child]);
+    expect(members[1].items).toHaveLength(1);
     await page.getByRole('button', { name: 'Navigator', exact: true }).click();
     await page
       .getByRole('complementary', { name: 'Navigator' })

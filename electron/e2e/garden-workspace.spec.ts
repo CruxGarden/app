@@ -6,7 +6,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
 
-test('Garden Home, recursive Navigator, shared Cruxes and outside agents use the same graph', async () => {
+test('Garden Home, recursive Navigator, Crux moves and outside agents use the same graph', async () => {
   test.setTimeout(150_000);
   let instance = await launchApp();
   const dir = instance.dir;
@@ -61,18 +61,31 @@ test('Garden Home, recursive Navigator, shared Cruxes and outside agents use the
     await expect(switcher.getByRole('button', { name: /Night atlas/ })).toHaveCount(0);
     await switcher.getByRole('button', { name: 'Cancel', exact: true }).click();
 
-    // An explicit second membership shares one identity, not a copy.
+    // Move explicitly between Gardens; one identity and one placement.
     await page.getByRole('button', { name: 'Add existing Crux', exact: true }).click();
-    await page.getByRole('button', { name: 'Add Night atlas to this Garden', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Move Night atlas to this Garden', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Done', exact: true }).click();
-    const card = page.getByRole('button', { name: 'Open Night atlas', exact: true }).locator('..');
-    await card.hover();
-    await card.getByRole('button', { name: 'Crux actions' }).click();
-    await page.getByRole('menuitem', { name: 'Remove from Garden', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Open Night atlas', exact: true })).toBeVisible();
+    expect(
+      await page.evaluate(
+        async (id) =>
+          (await window.electronAPI!.sqlite.gardenMembership!.parents(id)).map(
+            (parent) => parent.id,
+          ),
+        project,
+      ),
+    ).toEqual([rootId]);
+    await nav.getByRole('button', { name: 'Observatory', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Open Night atlas', exact: true })).toHaveCount(
       0,
     );
-    await nav.getByRole('button', { name: 'Observatory', exact: true }).click();
+    await page.getByRole('button', { name: 'Add existing Crux', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Move Night atlas to this Garden', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Open Night atlas', exact: true })).toBeVisible();
     // Navigator is a view of the same Garden/Crux graph, not a Gardens-only menu.
     await expect(nav.getByRole('button', { name: 'Night atlas', exact: true })).toBeVisible();
@@ -117,6 +130,25 @@ test('Garden Home, recursive Navigator, shared Cruxes and outside agents use the
     const agentGarden = JSON.parse(
       await call('garden_graph', { action: 'create', gardenId: childId, title: 'Darkroom' }),
     );
+    const parents = JSON.parse(await call('garden_graph', { action: 'parents', cruxId: project }));
+    expect(parents.map((parent: { id: string }) => parent.id)).toEqual([childId]);
+    await call('garden_graph', {
+      action: 'move',
+      gardenId: agentGarden.id,
+      cruxId: project,
+      expectedParents: [childId],
+    });
+    const refused = await client!.callTool({
+      name: 'garden_graph',
+      arguments: { action: 'move', gardenId: childId, cruxId: project, expectedParents: [childId] },
+    });
+    expect(JSON.stringify(refused)).toContain('location changed');
+    await call('garden_graph', {
+      action: 'move',
+      gardenId: childId,
+      cruxId: project,
+      expectedParents: [agentGarden.id],
+    });
     await call('plant_crux', { title: 'Agent study', gardenId: agentGarden.id, template: 'blank' });
     await call('garden_graph', { action: 'open', gardenId: agentGarden.id });
     await expect(page.getByRole('button', { name: 'Garden Home', exact: true })).toHaveText(

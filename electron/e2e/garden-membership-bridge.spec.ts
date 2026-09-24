@@ -43,8 +43,11 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
       input.gardenId = ids.other;
       await pending;
       await api.add({ gardenId: ids.root, memberId: ids.child });
-      await api.add({ gardenId: ids.root, memberId: ids.member });
-      await api.add({ gardenId: ids.other, memberId: ids.member });
+      await api.move({
+        gardenId: ids.root,
+        memberId: ids.member,
+        expectedParents: (await api.parents(ids.member)).map((parent) => parent.id),
+      });
       const first = await api.list(ids.root, { limit: 1 });
       const second = await api.list(ids.root, { limit: 1, after: first.next! });
       const edge = await db.get(
@@ -58,6 +61,7 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
         () => api.add({ gardenId: ids.root, memberId: ids.snapshot }),
         () => api.add({ gardenId: ids.member, memberId: ids.other }),
         () => api.list(ids.root, { limit: 0 }),
+        () => api.add({ gardenId: ids.other, memberId: ids.member }),
       ]) {
         try {
           await operation();
@@ -66,7 +70,7 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
           errors.push((error as Error).message);
         }
       }
-      await api.remove(ids.root, ids.member);
+      await api.move({ gardenId: ids.other, memberId: ids.member, expectedParents: [ids.root] });
       return {
         first,
         second,
@@ -89,6 +93,7 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
     expect(result.errors[2]).toContain('Snapshots');
     expect(result.errors[3]).toContain('Garden');
     expect(result.errors[4]).toContain('page size');
+    expect(result.errors[5]).toContain('already planted');
     expect(result.root.items.map((item) => item.id)).toEqual([setup.child]);
     expect(result.other.items.map((item) => item.id)).toEqual([setup.member]);
     expect(result.member).toEqual({ deleted: null });
@@ -100,7 +105,11 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
       );
       let error = '';
       try {
-        await db.gardenMembership!.add({ gardenId: ids.child, memberId: ids.member });
+        await db.gardenMembership!.move({
+          gardenId: ids.child,
+          memberId: ids.member,
+          expectedParents: [ids.other],
+        });
       } catch (failure) {
         error = (failure as Error).message;
       } finally {
@@ -108,7 +117,16 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
       }
       return { error, members: await db.gardenMembership!.list(ids.child) };
     }, setup);
-    expect(refused.error).not.toBe('');
+    expect(refused.error).toContain('Membership refused');
+    expect(
+      await instance.page.evaluate(
+        async (memberId) =>
+          (await window.electronAPI!.sqlite.gardenMembership!.parents(memberId)).map(
+            (parent) => parent.id,
+          ),
+        projectId,
+      ),
+    ).toEqual([setup.other]);
     expect(refused.members.items).toEqual([]);
 
     // A second renderer with the preload still cannot invoke Garden commands.
@@ -144,7 +162,7 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
     const restored = await instance.page.evaluate(async (ids) => {
       const api = window.electronAPI!.sqlite.gardenMembership!;
       const before = await api.list(ids.child);
-      await api.add({ gardenId: ids.child, memberId: ids.member });
+      await api.move({ gardenId: ids.child, memberId: ids.member, expectedParents: [ids.other] });
       return {
         before,
         child: await api.list(ids.child),
@@ -155,7 +173,7 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
     expect(restored.before.items).toEqual([]);
     expect(restored.child.items.map((item) => item.id)).toEqual([setup.member]);
     expect(restored.root.items.map((item) => item.id)).toEqual([setup.child]);
-    expect(restored.other.items.map((item) => item.id)).toEqual([setup.member]);
+    expect(restored.other.items).toEqual([]);
   } finally {
     await instance.app.close().catch(() => {});
   }
@@ -210,6 +228,10 @@ test('a membership request cannot carry its captured identity through profile re
           () => 'NOT REFUSED',
           (error) => (error as Error).message,
         );
+        const moving = db.gardenMembership.move({ gardenId, memberId, expectedParents: [] }).then(
+          () => 'NOT REFUSED',
+          (error) => (error as Error).message,
+        );
         await ready;
         owner.get = original;
         await db.import(image);
@@ -217,12 +239,19 @@ test('a membership request cannot carry its captured identity through profile re
         const refused = await pending;
         const before = await db.gardenMembership.list(gardenId);
         await db.gardenMembership.add({ gardenId, memberId });
-        return { refused, before, after: await db.gardenMembership.list(gardenId), memberId };
+        return {
+          refused,
+          moveRefused: await moving,
+          before,
+          after: await db.gardenMembership.list(gardenId),
+          memberId,
+        };
       } finally {
         await db.close();
       }
     });
     expect(result.refused).toContain('Garden changed');
+    expect(result.moveRefused).toContain('Garden changed');
     expect(result.before.items).toEqual([]);
     expect(result.after.items.map((item) => item.id)).toEqual([result.memberId]);
   } finally {

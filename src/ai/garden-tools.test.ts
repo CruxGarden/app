@@ -45,6 +45,35 @@ describe("the Keeper's garden tools", () => {
     expect(isGardenTool('write_file')).toBe(false);
   });
 
+  it('requires inspected parents for explicit moves, while location reads need no destination', () => {
+    expect(validateGardenTool('garden_graph', { action: 'parents', cruxId: 'work' }).valid).toBe(
+      true,
+    );
+    expect(
+      validateGardenTool('garden_graph', {
+        action: 'move',
+        gardenId: 'destination',
+        cruxId: 'work',
+      }).valid,
+    ).toBe(false);
+    expect(
+      validateGardenTool('garden_graph', {
+        action: 'move',
+        gardenId: 'destination',
+        cruxId: 'work',
+        expectedParents: ['origin'],
+      }).valid,
+    ).toBe(true);
+    expect(
+      validateGardenTool('garden_graph', {
+        action: 'move',
+        gardenId: 'destination',
+        cruxId: 'work',
+        expectedParents: [null],
+      }).valid,
+    ).toBe(false);
+  });
+
   it('validates before it acts', () => {
     expect(validateGardenTool('plant_crux', { title: 'Field notes' }).valid).toBe(true);
     expect(validateGardenTool('plant_crux', {}).valid).toBe(false);

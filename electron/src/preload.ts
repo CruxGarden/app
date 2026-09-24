@@ -63,6 +63,8 @@ const api: ElectronBridge = {
     enterLocalGarden: () => ipcRenderer.invoke('garden:enter-local'),
     gardenMembership: {
       add: (input) => ipcRenderer.invoke('garden-membership:add', input),
+      parents: (memberId) => ipcRenderer.invoke('garden-membership:parents', memberId),
+      move: (input) => ipcRenderer.invoke('garden-membership:move', input),
       remove: (gardenId, memberId) =>
         ipcRenderer.invoke('garden-membership:remove', gardenId, memberId),
       list: (gardenId, options) => ipcRenderer.invoke('garden-membership:list', gardenId, options),

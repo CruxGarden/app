@@ -34,6 +34,12 @@ export interface GardenMembershipBridge {
     gardenId: string;
     memberId: string;
   }): ReturnType<LocalGraphRuntime['addGardenMember']>;
+  parents(memberId: string): ReturnType<LocalGraphRuntime['gardenParents']>;
+  move(input: {
+    gardenId: string;
+    memberId: string;
+    expectedParents: string[];
+  }): ReturnType<LocalGraphRuntime['moveGardenMember']>;
   remove(gardenId: string, memberId: string): ReturnType<LocalGraphRuntime['removeGardenMember']>;
   list(
     gardenId: string,

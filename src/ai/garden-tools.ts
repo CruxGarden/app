@@ -62,14 +62,18 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'garden_graph',
     description:
-      'Navigate the local Garden graph using the same controls as the app. Inspect returns the root or chosen Garden and its members. Create makes a child Garden; link/unlink changes containment without copying or deleting content. Open changes the visible Garden. Pass gardenId explicitly for mutations.',
+      'Navigate the local Garden graph using the same controls as the app. Inspect returns the root or chosen Garden and its members. Create makes a child Garden. Parents returns the placement array for cruxId. Link plants an unplaced Crux; move requires expectedParents from inspection and moves it atomically. Unlink removes its placement without deleting content. Open changes the visible Garden. Pass gardenId explicitly for mutations.',
     input_schema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['inspect', 'create', 'link', 'unlink', 'open'] },
+        action: {
+          type: 'string',
+          enum: ['inspect', 'parents', 'create', 'link', 'move', 'unlink', 'open'],
+        },
         gardenId: { type: 'string' },
         title: { type: 'string' },
         cruxId: { type: 'string' },
+        expectedParents: { type: 'array', items: { type: 'string' } },
       },
       required: ['action'],
       additionalProperties: false,
@@ -451,14 +455,26 @@ export function validateGardenTool(
         return { valid: false, error: 'cruxId and an import action are required' };
       return { valid: true };
     case 'garden_graph':
-      if (!['inspect', 'create', 'link', 'unlink', 'open'].includes(String(input.action)))
+      if (
+        !['inspect', 'parents', 'create', 'link', 'move', 'unlink', 'open'].includes(
+          String(input.action),
+        )
+      )
         return { valid: false, error: 'Choose a Garden action' };
-      if (input.action !== 'inspect' && !str(input.gardenId, 80))
+      if (!['inspect', 'parents'].includes(String(input.action)) && !str(input.gardenId, 80))
         return { valid: false, error: 'gardenId is required' };
       if (input.action === 'create' && !str(input.title, 200))
         return { valid: false, error: 'title is required' };
-      if (['link', 'unlink'].includes(String(input.action)) && !str(input.cruxId, 80))
+      if (
+        ['parents', 'link', 'move', 'unlink'].includes(String(input.action)) &&
+        !str(input.cruxId, 80)
+      )
         return { valid: false, error: 'cruxId is required' };
+      if (
+        input.action === 'move' &&
+        (!Array.isArray(input.expectedParents) || input.expectedParents.some((id) => !str(id, 80)))
+      )
+        return { valid: false, error: 'Inspect parents and pass their ids as expectedParents' };
       return { valid: true };
     case 'list_cruxes':
     case 'list_cruxspaces':
@@ -721,6 +737,12 @@ async function runGardenToolInner(
       const db = getSqliteClient();
       if (!db.enterLocalGarden || !db.gardenMembership)
         throw new Error('This connection does not support Garden navigation');
+      if (input.action === 'parents')
+        return JSON.stringify(await db.gardenMembership.parents(input.cruxId as string));
+      const expectedParents = Array.isArray(input.expectedParents)
+        ? ([...input.expectedParents] as string[])
+        : [];
+      const memberId = input.cruxId as string;
       const gardenId =
         typeof input.gardenId === 'string' ? input.gardenId : (await db.enterLocalGarden()).id;
       const garden = await services.crux.findById(gardenId);
@@ -728,6 +750,10 @@ async function runGardenToolInner(
       if (input.action === 'create')
         return JSON.stringify(
           await services.crux.create({ title: input.title as string, kind: 'garden', gardenId }),
+        );
+      if (input.action === 'move')
+        return JSON.stringify(
+          await db.gardenMembership.move({ gardenId, memberId, expectedParents }),
         );
       if (input.action === 'link')
         return JSON.stringify(
@@ -743,6 +769,7 @@ async function runGardenToolInner(
       const { gardenMembers } = await import('@/services/garden-navigation');
       return JSON.stringify({
         garden: { id: garden.id, title: garden.title },
+        parents: await db.gardenMembership.parents(gardenId),
         members: (await gardenMembers(gardenId)).map(({ id, title, kind }) => ({
           id,
           title,

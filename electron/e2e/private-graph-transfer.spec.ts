@@ -3,7 +3,7 @@ import { launchApp } from './launch';
 
 // Real packaged API + native blobs + archive, across independent Electron
 // profiles, including verified destination Project Folders. Renderer UI adoption remains separate.
-test('a private graph archive crosses clean profiles with shared membership, retained content and idempotent restart', async () => {
+test('a private graph archive crosses clean profiles with single placement, retained content and idempotent restart', async () => {
   let source = await launchApp();
   const sourceDir = source.dir;
   let destination: Awaited<ReturnType<typeof launchApp>> | undefined;
@@ -78,7 +78,6 @@ test('a private graph archive crosses clean profiles with shared membership, ret
         });
         for (const [gardenId, memberId] of [
           [garden, child],
-          [garden, work],
           [child, work],
         ])
           await runtime.execute(({ garden: service }) =>
@@ -139,6 +138,14 @@ test('a private graph archive crosses clean profiles with shared membership, ret
             ],
           },
           store,
+        );
+        await runtime.execute(({ dimension }) =>
+          dimension.create({
+            ...identity,
+            sourceId: garden,
+            targetId: work,
+            type: DimensionType.GRAFT,
+          }),
         );
         const graph = await runtime.exportPrivateGraph(
           { roots: [garden], includeMembers: true },

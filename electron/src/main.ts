@@ -786,6 +786,23 @@ async function setupIpc() {
     },
   );
   ipcMain.handle(
+    'garden-membership:parents',
+    (event: Electron.IpcMainInvokeEvent, memberId: string) => {
+      gardenCaller(event);
+      return localDb.gardenMembership.parents(memberId);
+    },
+  );
+  ipcMain.handle(
+    'garden-membership:move',
+    (
+      event: Electron.IpcMainInvokeEvent,
+      input: { gardenId: string; memberId: string; expectedParents: string[] },
+    ) => {
+      gardenCaller(event);
+      return localDb.gardenMembership.move(input);
+    },
+  );
+  ipcMain.handle(
     'garden-membership:remove',
     (event: Electron.IpcMainInvokeEvent, gardenId: string, memberId: string) => {
       gardenCaller(event);

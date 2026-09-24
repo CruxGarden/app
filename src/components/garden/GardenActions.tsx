@@ -7,13 +7,16 @@ import { getSqliteClient } from '@/services/sqlite/client';
 import type { Crux } from '@/api/types';
 import { Button } from '@/components/ui';
 
-/** Small, in-panel actions. A link is always explicit and never clones content. */
+/** Explicit placement actions; moving preserves the Crux and its content. */
 export default function GardenActions() {
   const garden = useGardenContext((s) => s.garden);
   const members = useGardenStore((s) => s.allCruxes);
+  const root = useGardenContext((s) => s.root);
   const [mode, setMode] = useState<'new' | 'add' | null>(null);
   const [title, setTitle] = useState('');
-  const [available, setAvailable] = useState<Crux[]>([]);
+  const [available, setAvailable] = useState<
+    { crux: Crux; parents: { id: string; title?: string; slug: string }[] }[]
+  >([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const navigate = useMoodNavigate();
@@ -41,17 +44,31 @@ export default function GardenActions() {
           onClick={() => {
             setMode('add');
             setError('');
+            setAvailable([]);
+            setBusy(true);
+            const destination = garden.id;
             void getServices()
               .crux.listAll()
-              .then((rows) =>
-                setAvailable(
-                  rows.filter(
-                    (row) =>
-                      row.id !== garden.id && !members.some((member) => member.id === row.id),
-                  ),
-                ),
-              )
-              .catch((err) => setError((err as Error).message));
+              .then(async (rows) => {
+                const candidates = rows.filter(
+                  (row) =>
+                    row.id !== destination &&
+                    row.id !== root?.id &&
+                    !members.some((member) => member.id === row.id),
+                );
+                const locations = await Promise.all(
+                  candidates.map(async (crux) => ({
+                    crux,
+                    parents: await getSqliteClient().gardenMembership!.parents(crux.id),
+                  })),
+                );
+                if (useGardenContext.getState().garden?.id === destination) setAvailable(locations);
+              })
+              .catch((err) => {
+                if (useGardenContext.getState().garden?.id === destination)
+                  setError((err as Error).message);
+              })
+              .finally(() => setBusy(false));
           }}
         >
           Add existing Crux
@@ -110,40 +127,54 @@ export default function GardenActions() {
           </div>
           <ul className="max-h-60 overflow-auto">
             {available
-              .filter((row) =>
+              .filter(({ crux: row }) =>
                 `${row.title} ${row.slug}`.toLowerCase().includes(title.toLowerCase()),
               )
-              .map((row) => (
+              .map(({ crux: row, parents }) => (
                 <li
                   key={row.id}
                   className="flex items-center justify-between gap-3 py-2 text-sm text-text"
                 >
-                  <span className="truncate">{row.title || row.slug}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{row.title || row.slug}</span>
+                    <span className="block truncate text-xs text-text-muted">
+                      {parents.length
+                        ? `In ${parents.map((parent) => parent.title || parent.slug).join(', ')}`
+                        : 'Not in a Garden'}
+                    </span>
+                  </span>
                   <button
                     disabled={busy}
-                    aria-label={`Add ${row.title || row.slug} to this Garden`}
+                    aria-label={`${parents.length ? 'Move' : 'Add'} ${row.title || row.slug} to this Garden`}
                     className="text-accent cursor-pointer shrink-0"
                     onClick={() => {
                       const destination = garden.id;
                       setBusy(true);
                       setError('');
-                      void getSqliteClient()
-                        .gardenMembership!.add({ gardenId: destination, memberId: row.id })
+                      const membership = getSqliteClient().gardenMembership!;
+                      const request = parents.length
+                        ? membership.move({
+                            gardenId: destination,
+                            memberId: row.id,
+                            expectedParents: parents.map((parent) => parent.id),
+                          })
+                        : membership.add({ gardenId: destination, memberId: row.id });
+                      void request
                         .then(() => {
-                          setAvailable((rows) => rows.filter((item) => item.id !== row.id));
+                          setAvailable((rows) => rows.filter((item) => item.crux.id !== row.id));
                           void useGardenStore.getState().refresh();
                         })
                         .catch((err) => setError((err as Error).message))
                         .finally(() => setBusy(false));
                     }}
                   >
-                    Add
+                    {parents.length ? 'Move here' : 'Add'}
                   </button>
                 </li>
               ))}
           </ul>
-          {!available.length && (
-            <p className="text-sm text-text-muted py-2">Everything is already here.</p>
+          {!busy && !available.length && (
+            <p className="text-sm text-text-muted py-2">No other Cruxes to add.</p>
           )}
         </div>
       )}

@@ -238,7 +238,7 @@ export default function HomeGarden() {
       {/* Cruxes the account has and this machine does not (RESILIENCE-PLAN §2c) */}
       <RecoverSection />
 
-      {garden && <GardenActions />}
+      {garden && <GardenActions key={garden.id} />}
       <details className="mb-4 text-sm text-text-muted">
         <summary className="cursor-pointer py-2">Shared gardens & collections</summary>
         <Gardens />

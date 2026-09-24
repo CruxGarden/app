@@ -118,29 +118,46 @@ export class SqliteApi implements NativeStorage {
     return this.owner.enterLocalGarden();
   }
 
+  /** Attribution is host-owned and must not cross a profile replacement. */
+  private async gardenIdentity() {
+    this.assertAvailable();
+    const generation = this.profileGeneration;
+    const identity = await this.owner.get<{ authorId: string | null; homeId: string | null }>(
+      `SELECT
+        (SELECT value FROM settings WHERE key = 'cruxgarden:local:authorId') AS authorId,
+        (SELECT value FROM settings WHERE key = 'cruxgarden:local:homeId') AS homeId`,
+    );
+    this.assertAvailable();
+    if (generation !== this.profileGeneration)
+      throw new Error('The Garden changed. Reopen it before changing its contents.');
+    if (!identity?.authorId || !identity.homeId)
+      throw new Error('Set up the local Garden identity before changing its contents.');
+    return { authorId: identity.authorId, homeId: identity.homeId, generation };
+  }
+
   readonly gardenMembership: GardenMembershipBridge = {
     add: async (input) => {
-      this.assertAvailable();
       const { gardenId, memberId } = input;
-      const generation = this.profileGeneration;
-      // One identity read, captured before the queued write. Extra renderer
-      // fields cannot supply an author/home or survive a profile replacement.
-      const identity = await this.owner.get<{ authorId: string | null; homeId: string | null }>(
-        `SELECT
-          (SELECT value FROM settings WHERE key = 'cruxgarden:local:authorId') AS authorId,
-          (SELECT value FROM settings WHERE key = 'cruxgarden:local:homeId') AS homeId`,
-      );
+      const { generation, ...identity } = await this.gardenIdentity();
       this.assertAvailable();
       if (generation !== this.profileGeneration)
-        throw new Error('The Garden changed. Reopen it before adding a member.');
-      if (!identity?.authorId || !identity.homeId)
-        throw new Error('Set up the local Garden identity before adding members.');
-      return this.owner.addGardenMember({
-        gardenId,
-        memberId,
-        authorId: identity.authorId,
-        homeId: identity.homeId,
-      });
+        throw new Error('The Garden changed. Reopen it before changing its contents.');
+      return this.owner.addGardenMember({ gardenId, memberId, ...identity });
+    },
+    move: async (input) => {
+      const { gardenId, memberId } = input;
+      if (!Array.isArray(input.expectedParents))
+        throw new Error('Inspect this Crux’s location before moving it');
+      const expectedParents = [...input.expectedParents];
+      const { generation, ...identity } = await this.gardenIdentity();
+      this.assertAvailable();
+      if (generation !== this.profileGeneration)
+        throw new Error('The Garden changed. Reopen it before changing its contents.');
+      return this.owner.moveGardenMember({ gardenId, memberId, expectedParents, ...identity });
+    },
+    parents: (memberId) => {
+      this.assertAvailable();
+      return this.owner.gardenParents(memberId);
     },
     remove: (gardenId, memberId) => {
       this.assertAvailable();
