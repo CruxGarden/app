@@ -12,6 +12,9 @@ export const useGardenContext = create<{
   garden: GardenIdentity | null;
   navigatorOpen: boolean;
   revision: number;
+  searchRequest: { token: number; closeOnExit: boolean; returnFocus: HTMLElement | null } | null;
+  requestSearch: () => void;
+  finishSearch: () => void;
   initialize: (root: GardenIdentity) => void;
   select: (garden: GardenIdentity) => void;
   setNavigatorOpen: (open: boolean) => void;
@@ -20,9 +23,23 @@ export const useGardenContext = create<{
   garden: null,
   navigatorOpen: false,
   revision: 0,
+  searchRequest: null,
+  requestSearch: () =>
+    set((state) => ({
+      navigatorOpen: true,
+      searchRequest: {
+        token: (state.searchRequest?.token ?? 0) + 1,
+        closeOnExit: state.searchRequest?.closeOnExit ?? !state.navigatorOpen,
+        returnFocus:
+          state.searchRequest?.returnFocus ??
+          (document.activeElement instanceof HTMLElement ? document.activeElement : null),
+      },
+    })),
+  finishSearch: () => set({ searchRequest: null }),
   initialize: (root) => set({ root, garden: root }),
   select: (garden) => set({ garden }),
-  setNavigatorOpen: (navigatorOpen) => set({ navigatorOpen }),
+  setNavigatorOpen: (navigatorOpen) =>
+    set((state) => ({ navigatorOpen, searchRequest: navigatorOpen ? state.searchRequest : null })),
 }));
 
 export const captureGardenId = () => useGardenContext.getState().garden?.id;

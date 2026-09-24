@@ -127,7 +127,7 @@ export default function TopBar() {
           label="Explore"
           size="sm"
           onClick={() => useUIStore.getState().setExploreOpen(true)}
-          tooltip={{ label: 'Explore', shortcut: 'K' }}
+          tooltip={{ label: 'Explore' }}
         >
           <SearchIcon />
         </IconButton>

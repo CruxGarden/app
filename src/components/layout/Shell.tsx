@@ -159,10 +159,11 @@ export default function Shell() {
         return;
       }
 
-      // Cmd+K → toggle explore
-      if (meta && e.key === 'k') {
+      // Cmd/Ctrl+K searches available Gardens and Cruxes in Navigator.
+      if (meta && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        if (document.querySelector('[data-modal-open="true"], [aria-modal="true"]')) return;
         e.preventDefault();
-        useUIStore.getState().setExploreOpen(!useUIStore.getState().exploreOpen);
+        useGardenContext.getState().requestSearch();
         return;
       }
 
@@ -181,7 +182,14 @@ export default function Shell() {
       }
     };
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const offCommand = window.electronAPI?.desktop.onWorkspaceCommand?.((command) => {
+      if (command === 'navigate')
+        handler(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+    });
+    return () => {
+      window.removeEventListener('keydown', handler);
+      offCommand?.();
+    };
   }, [consoleOpen, setConsoleOpen, aiEnabled]);
 
   return (

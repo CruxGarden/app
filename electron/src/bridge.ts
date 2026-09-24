@@ -129,7 +129,7 @@ export interface SqliteBridge {
 
 // ── desktop ─────────────────────────────────────────────────────────────────
 
-export type WorkspaceCommand = 'search' | 'next' | 'previous' | 'commit' | 'cancel';
+export type WorkspaceCommand = 'navigate' | 'search' | 'next' | 'previous' | 'commit' | 'cancel';
 export interface DesktopBridge {
   /** Creative input, including cross-origin Workshop apps. No content or coordinates. */
   onCreativeActivity?(

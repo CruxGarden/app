@@ -344,26 +344,34 @@ function createWindow() {
     const down = input.type === 'keyDown';
     const search =
       down && (input.control || input.meta) && input.alt && input.key?.toLowerCase() === 'k';
+    const navigate =
+      down &&
+      (input.control || input.meta) &&
+      !input.alt &&
+      !input.shift &&
+      input.key?.toLowerCase() === 'k';
     const cycle = down && input.control && input.key === 'Tab';
     const commit = input.type === 'keyUp' && input.key === 'Control' && cyclingWorkspaces;
     const cancel = down && input.key === 'Escape' && cyclingWorkspaces;
-    if (!search && !cycle && !commit && !cancel) return;
+    if (!navigate && !search && !cycle && !commit && !cancel) return;
     event.preventDefault();
     // A cross-origin frame can retain the native keyboard target after DOM focus changes.
-    if (search || cycle) mainWindow.webContents.focus();
+    if (navigate || search || cycle) mainWindow.webContents.focus();
     if (cycle) cyclingWorkspaces = true;
     if (commit || cancel) cyclingWorkspaces = false;
     mainWindow.webContents.send(
       'workspace:command',
-      search
-        ? 'search'
-        : cycle
-          ? input.shift
-            ? 'previous'
-            : 'next'
-          : commit
-            ? 'commit'
-            : 'cancel',
+      navigate
+        ? 'navigate'
+        : search
+          ? 'search'
+          : cycle
+            ? input.shift
+              ? 'previous'
+              : 'next'
+            : commit
+              ? 'commit'
+              : 'cancel',
     );
   });
   mainWindow.on('blur', () => {

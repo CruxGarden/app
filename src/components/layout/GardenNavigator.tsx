@@ -3,6 +3,7 @@ import { useGardenContext } from '@/stores/gardenContext';
 import { CloseIcon } from '@/components/ui/icons';
 import NavigationNeighborhood from './NavigationNeighborhood';
 import NavigationTree from './NavigationTree';
+import NavigationSearch from './NavigationSearch';
 import { useNavigationView } from './useNavigationView';
 
 /** A real workspace panel: navigation does not obscure or suspend the work. */
@@ -27,40 +28,42 @@ export default function GardenNavigator() {
           <CloseIcon />
         </button>
       </div>
-      <div className="flex items-center gap-2 px-4 pb-3">
-        <select
-          aria-label="Navigation view"
-          value={view}
-          onChange={(event) => {
-            const next = new URLSearchParams(search);
-            next.set('navView', event.target.value);
-            setSearch(next, { replace: true });
-          }}
-          className="min-w-0 flex-1 rounded bg-surface text-sm p-1.5"
-        >
-          <option value="tree">Tree</option>
-          <option value="neighborhood">Neighborhood</option>
-        </select>
-        <button
-          aria-label="Refresh navigation"
-          onClick={viewProps.refresh}
-          className="p-1.5 rounded hover:bg-surface cursor-pointer"
-        >
-          ↻
-        </button>
-      </div>
-      <div className="overflow-y-auto flex-1 px-2 pb-4">
-        {view === 'tree' && (
-          <p className="px-2 pt-3 pb-2 text-xxs tracking-widest uppercase text-text-muted">
-            On this device
-          </p>
-        )}
-        {view === 'tree' ? (
-          <NavigationTree {...viewProps} />
-        ) : (
-          <NavigationNeighborhood {...viewProps} />
-        )}
-      </div>
+      <NavigationSearch {...viewProps}>
+        <div className="flex items-center gap-2 px-4 pb-3">
+          <select
+            aria-label="Navigation view"
+            value={view}
+            onChange={(event) => {
+              const next = new URLSearchParams(search);
+              next.set('navView', event.target.value);
+              setSearch(next, { replace: true });
+            }}
+            className="min-w-0 flex-1 rounded bg-surface text-sm p-1.5"
+          >
+            <option value="tree">Tree</option>
+            <option value="neighborhood">Neighborhood</option>
+          </select>
+          <button
+            aria-label="Refresh navigation"
+            onClick={viewProps.refresh}
+            className="p-1.5 rounded hover:bg-surface cursor-pointer"
+          >
+            ↻
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-2 pb-4">
+          {view === 'tree' && (
+            <p className="px-2 pt-3 pb-2 text-xxs tracking-widest uppercase text-text-muted">
+              On this device
+            </p>
+          )}
+          {view === 'tree' ? (
+            <NavigationTree {...viewProps} />
+          ) : (
+            <NavigationNeighborhood {...viewProps} />
+          )}
+        </div>
+      </NavigationSearch>
     </aside>
   );
 }

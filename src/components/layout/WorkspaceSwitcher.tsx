@@ -186,7 +186,7 @@ export default function WorkspaceSwitcher() {
         !!document.querySelector('[aria-label="Close Crux Garden"], [data-modal-open="true"]');
       if (otherModal || closing || renaming) {
         // Reserve these chords even while another dialog owns input; otherwise
-        // Shell's broader Cmd/Ctrl+K handler opens Explore behind that dialog.
+        // Keep Shell's Navigator shortcut from acting behind this dialog.
         if (
           ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === 'k') ||
           (e.ctrlKey && e.key === 'Tab')
@@ -250,6 +250,7 @@ export default function WorkspaceSwitcher() {
       if (recentRef.current && !document.hasFocus()) cancel();
     };
     const offCommand = window.electronAPI?.desktop.onWorkspaceCommand?.((command) => {
+      if (command === 'navigate') return;
       const event =
         command === 'search'
           ? new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, altKey: true })
