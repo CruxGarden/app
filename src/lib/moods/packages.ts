@@ -457,7 +457,7 @@ function moodFingerprint(fp: string): void {
 }
 async function verifyMoodAsset(fp: string, bytes: Uint8Array): Promise<void> {
   moodFingerprint(fp);
-  if (!(bytes instanceof Uint8Array) || (await hashContent(Uint8Array.from(bytes))) !== fp)
+  if (!(bytes instanceof Uint8Array) || (await hashContent(bytes)) !== fp)
     throw new Error(`Mood asset fingerprint does not match its content: ${fp}`);
 }
 

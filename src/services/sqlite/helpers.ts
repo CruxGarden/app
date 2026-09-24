@@ -72,13 +72,18 @@ export { guessMimeType } from '@/lib/mime';
 // ── Content hashing ──────────────────────────────────
 
 export async function hashContent(content: string | Blob | Uint8Array): Promise<string> {
-  let buffer: ArrayBuffer;
+  let buffer: ArrayBuffer | Uint8Array<ArrayBuffer>;
   if (typeof content === 'string') {
     buffer = new TextEncoder().encode(content).buffer as ArrayBuffer;
   } else if (content instanceof Blob) {
     buffer = await content.arrayBuffer();
   } else {
-    buffer = content.buffer as ArrayBuffer;
+    // A view can cover only part of a pooled allocation. Hash the bytes the
+    // caller supplied, not its neighbours. Ordinary ArrayBuffers need no copy.
+    buffer =
+      content.buffer instanceof ArrayBuffer
+        ? new Uint8Array(content.buffer, content.byteOffset, content.byteLength)
+        : Uint8Array.from(content);
   }
   const digest = await crypto.subtle.digest('SHA-256', buffer);
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -121,7 +126,9 @@ export function buildInsertMany(
     for (const k of keys) {
       const v = data[k];
       params.push(
-        v !== null && typeof v === 'object' && !(v instanceof Uint8Array) ? JSON.stringify(v) : (v ?? null),
+        v !== null && typeof v === 'object' && !(v instanceof Uint8Array)
+          ? JSON.stringify(v)
+          : (v ?? null),
       );
     }
   return { sql: `INSERT INTO ${table} (${cols}) VALUES ${rows.map(() => row).join(', ')}`, params };
