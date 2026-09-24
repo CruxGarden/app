@@ -1,21 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import type { NavigationViewProps } from './navigation-view';
 import type { GardenIdentity } from '@/stores/gardenContext';
 import { ChevronRightIcon, ChevronDownIcon, FolderIcon, SproutIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
-
-/** Read-only graph projection shared by navigation views. It never owns graph state. */
-export interface NavigationGraph {
-  roots: GardenIdentity[];
-  revision: number;
-  members: (gardenId: string) => Promise<GardenIdentity[]>;
-  ancestors: (gardenId: string) => Promise<string[]>;
-}
-export interface NavigationViewProps {
-  graph: NavigationGraph;
-  gardenId: string;
-  cruxId: string | null;
-  navigate: (gardenId: string, cruxId: string | null) => void;
-}
 
 function Branch({
   node,

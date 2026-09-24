@@ -1,30 +1,65 @@
-import { useCallback, useMemo } from 'react';
-import { useMatch } from 'react-router-dom';
+import { useCallback, useMemo, useEffect, useState } from 'react';
+import { useMatch, useSearchParams } from 'react-router-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { gardenPath, inGarden, useGardenContext } from '@/stores/gardenContext';
 import { gardenAncestors, gardenMembers } from '@/services/garden-navigation';
 import { CloseIcon } from '@/components/ui/icons';
-import NavigationTree, { type NavigationGraph } from './NavigationTree';
+import NavigationNeighborhood from './NavigationNeighborhood';
+import {
+  navigationNeighborhood,
+  navigationVersionTarget,
+} from '@/services/navigation-neighborhood';
+import { getSqliteClient } from '@/services/sqlite/client';
+import type { GardenIdentity } from '@/stores/gardenContext';
+import NavigationTree from './NavigationTree';
+import type { NavigationGraph } from './navigation-view';
 
 /** A real workspace panel: navigation does not obscure or suspend the work. */
 export default function GardenNavigator() {
   const { root, garden, revision, navigatorOpen, setNavigatorOpen } = useGardenContext();
   const route = useMatch('/c/:id');
   const navigate = useMoodNavigate();
+  const [search, setSearch] = useSearchParams();
+  const view = search.get('navView') === 'neighborhood' ? 'neighborhood' : 'tree';
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    if (!navigatorOpen) return;
+    return getSqliteClient().onChange?.((change) => {
+      if (
+        change.entity === 'database' ||
+        (change.entity === 'crux' &&
+          change.fields?.some((field) => field === 'title' || field === 'growth'))
+      )
+        setRefresh((n) => n + 1);
+    });
+  }, [navigatorOpen]);
   const graph = useMemo<NavigationGraph>(
     () => ({
       roots: root ? [root] : [],
-      revision,
+      revision: revision + refresh,
+      neighborhood: navigationNeighborhood,
+      versionTarget: navigationVersionTarget,
+      identity: async (id) => {
+        const row = await getSqliteClient().get<GardenIdentity>(
+          'SELECT id, title, slug, kind FROM cruxes WHERE id = ? AND deleted IS NULL',
+          [id],
+        );
+        if (!row) throw new Error('This location is unavailable.');
+        return row;
+      },
       members: gardenMembers,
       ancestors: gardenAncestors,
     }),
-    [root, revision],
+    [root, revision, refresh],
   );
   const navigateTo = useCallback(
-    (gardenId: string, cruxId: string | null) => {
-      navigate(cruxId ? inGarden(`/c/${cruxId}`, gardenId) : gardenPath(gardenId));
+    (gardenId: string, cruxId: string | null, selection?: { growthId: string }) => {
+      const path = cruxId ? inGarden(`/c/${cruxId}`, gardenId) : gardenPath(gardenId);
+      navigate(
+        `${path}${view === 'neighborhood' ? '&navView=neighborhood' : ''}${selection ? `&growth=${encodeURIComponent(selection.growthId)}` : ''}`,
+      );
     },
-    [navigate],
+    [navigate, view],
   );
   if (!navigatorOpen || !root || !garden) return null;
   return (
@@ -42,16 +77,49 @@ export default function GardenNavigator() {
           <CloseIcon />
         </button>
       </div>
+      <div className="flex items-center gap-2 px-4 pb-3">
+        <select
+          aria-label="Navigation view"
+          value={view}
+          onChange={(event) => {
+            const next = new URLSearchParams(search);
+            next.set('navView', event.target.value);
+            setSearch(next, { replace: true });
+          }}
+          className="min-w-0 flex-1 rounded bg-surface text-sm p-1.5"
+        >
+          <option value="tree">Tree</option>
+          <option value="neighborhood">Neighborhood</option>
+        </select>
+        <button
+          aria-label="Refresh navigation"
+          onClick={() => setRefresh((n) => n + 1)}
+          className="p-1.5 rounded hover:bg-surface cursor-pointer"
+        >
+          ↻
+        </button>
+      </div>
       <div className="overflow-y-auto flex-1 px-2 pb-4">
-        <p className="px-2 pt-3 pb-2 text-xxs tracking-widest uppercase text-text-muted">
-          On this device
-        </p>
-        <NavigationTree
-          graph={graph}
-          gardenId={garden.id}
-          cruxId={route?.params.id ?? null}
-          navigate={navigateTo}
-        />
+        {view === 'tree' && (
+          <p className="px-2 pt-3 pb-2 text-xxs tracking-widest uppercase text-text-muted">
+            On this device
+          </p>
+        )}
+        {view === 'tree' ? (
+          <NavigationTree
+            graph={graph}
+            gardenId={garden.id}
+            cruxId={route?.params.id ?? null}
+            navigate={navigateTo}
+          />
+        ) : (
+          <NavigationNeighborhood
+            graph={graph}
+            gardenId={garden.id}
+            cruxId={route?.params.id ?? null}
+            navigate={navigateTo}
+          />
+        )}
       </div>
     </aside>
   );
