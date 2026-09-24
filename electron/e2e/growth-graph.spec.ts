@@ -38,15 +38,14 @@ async function checkpoint(
   const fingerprint = createHash('sha256').update(content).digest('hex');
   await expect
     .poll(async () => {
-      const row = (await page.evaluate(
-        async (id) =>
-          window.electronAPI!.sqlite.get(
-            "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'index.html'",
-            [id],
-          ),
-        copy.id,
-      )) as { fingerprint: string } | undefined;
-      return row?.fingerprint;
+      return page.evaluate(async (id) => {
+        const content = window.electronAPI!.sqlite.fileContent!;
+        const head = await content.head(id);
+        if (!head) return null;
+        return (await content.list({ cruxId: id, expected: head })).entries.find(
+          (file) => file.path === 'index.html',
+        )?.fingerprint;
+      }, copy.id);
     })
     .toBe(fingerprint);
 
@@ -97,6 +96,12 @@ test('Whole Crux Growth explores merged and independent Tasks in 2D and 3D witho
     await review.getByRole('button', { name: 'Merge into Main', exact: true }).click();
     await expect(review).toHaveCount(0);
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', main);
+    await checkpoint(
+      page,
+      { id: main, folder: meta.projectFolder },
+      '<h1>Checkout ready</h1>',
+      'Accepted Checkout',
+    );
     const pane = await history(page);
     const open = pane.getByRole('button', { name: 'Whole Crux · branches & merges' });
     await open.click();
@@ -122,12 +127,11 @@ test('Whole Crux Growth explores merged and independent Tasks in 2D and 3D witho
       )
       .toBe(true);
     await graph.getByRole('button', { name: 'Expand checkpoints', exact: true }).click();
-    await graph.getByLabel('Find checkpoint').fill('Merged Checkout');
+    await graph.getByLabel('Find checkpoint').fill('Accepted Checkout');
     await graph
-      .getByRole('button', { name: 'Merged Checkout Main · Merge checkpoint', exact: true })
+      .getByRole('button', { name: 'Accepted Checkout Main · Checkpoint', exact: true })
       .click();
     const inspector = graph.getByTestId('growth-inspector');
-    await expect(inspector.getByText('Brought together', { exact: true })).toBeVisible();
     await expect(
       inspector.getByText('Completed workspace Checkout.', { exact: false }),
     ).toBeVisible();

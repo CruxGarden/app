@@ -36,12 +36,11 @@ test('refused admission preserves Main and refused finalization preserves recove
     await expect
       .poll(() =>
         page.evaluate(async (id) => {
-          const db = window.electronAPI!.sqlite;
-          const file = (await db.get(
-            "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'index.html'",
-            [id],
-          )) as { fingerprint: string };
-          return new TextDecoder().decode(await db.blobRead(file.fingerprint));
+          const content = window.electronAPI!.sqlite.fileContent!;
+          const head = await content.head(id);
+          if (!head) return null;
+          const file = await content.read({ cruxId: id, expected: head, path: 'index.html' });
+          return file ? new TextDecoder().decode(file.bytes) : null;
         }, copy),
       )
       .toBe('<h1>Task result</h1>');
@@ -117,7 +116,7 @@ test('refused admission preserves Main and refused finalization preserves recove
         { id: journal.candidate_id, phase: 'ready' },
       ]),
     );
-    expect(journal.results).toHaveLength(1);
+    expect(journal.results).toHaveLength(0);
     await launch.app.close();
     launch = await launchApp({ dir, env });
     page = launch.page;
@@ -134,7 +133,10 @@ test('refused admission preserves Main and refused finalization preserves recove
       async ({ main, copy, journal }) => {
         const db = window.electronAPI!.sqlite;
         return {
-          merge: await db.get('SELECT phase FROM task_merges WHERE id = ?', [journal.id]),
+          merge: await db.get('SELECT phase, data FROM task_merges WHERE id = ?', [journal.id]),
+          growth: await db.all("SELECT * FROM dimensions WHERE source_id = ? AND type = 'growth'", [
+            main,
+          ]),
           copies: await db.all('SELECT id, phase FROM working_copies WHERE id IN (?, ?)', [
             copy,
             journal.candidate_id,
@@ -148,7 +150,23 @@ test('refused admission preserves Main and refused finalization preserves recove
       },
       { main, copy, journal },
     );
-    expect(saved.merge).toEqual({ phase: 'merged' });
+    expect(saved.merge).toMatchObject({ phase: 'merged' });
+    expect(saved.growth).toEqual(before.growth);
+    const result = JSON.parse((saved.merge as { data: string }).data).resultState;
+    expect(result.root).toMatch(/^[a-f0-9]{64}$/);
+    expect(
+      result.workspace.messages.filter(
+        (message: { taskMergeId?: string }) => message.taskMergeId === journal.id,
+      ),
+    ).toHaveLength(1);
+    expect(JSON.parse(saved.main.meta).messages).toEqual(result.workspace.messages);
+    await page.evaluate((id) => window.electronAPI!.sqlite.completeTaskMerge!(id), journal.id);
+    expect(
+      await page.evaluate(
+        (id) => window.electronAPI!.sqlite.get('SELECT meta FROM cruxes WHERE id = ?', [id]),
+        main,
+      ),
+    ).toEqual(saved.main);
     expect(saved.copies).toEqual(
       expect.arrayContaining([
         { id: copy, phase: 'merged' },

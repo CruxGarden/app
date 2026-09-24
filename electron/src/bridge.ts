@@ -107,7 +107,7 @@ export interface SqliteBridge {
   saveTaskReview?(reviewData: string, expectedData?: string): Promise<void>;
   beginTaskMerge?(id: string, reviewData: string): Promise<void>;
   releaseTaskReview?(id: string): Promise<void>;
-  completeTaskMerge?(id: string, resultHead: string): Promise<void>;
+  completeTaskMerge?(id: string): Promise<void>;
   setWorkingCopyArchived?(id: string, archived: boolean, revision: number): Promise<void>;
   setCruxTrashed?(id: string, trashed: boolean): Promise<void>;
   deleteCrux?(id: string): Promise<void>;

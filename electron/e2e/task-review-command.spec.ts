@@ -86,11 +86,13 @@ test('review checking and closing report refused writes, retry and preserve Task
       async ({ copy, saved, main }) => {
         const db = window.electronAPI!.sqlite;
         const content = async (id: string) => {
-          const file = (await db.get(
-            "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'kept.txt'",
-            [id],
-          )) as { fingerprint: string };
-          return new TextDecoder().decode(await db.blobRead(file.fingerprint));
+          const head = await db.fileContent!.head(id);
+          const file = await db.fileContent!.read({
+            cruxId: id,
+            expected: head!,
+            path: 'kept.txt',
+          });
+          return new TextDecoder().decode(file!.bytes);
         };
         return {
           journal: await db.get('SELECT phase FROM task_merges WHERE id = ?', [saved.id]),

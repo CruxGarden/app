@@ -14,9 +14,14 @@ const historyReferences = [
   ),
   'SELECT id, base_snapshot_id FROM working_copies',
   'SELECT crux_id, candidate_id FROM task_merges',
-  ...['sourceHead', 'targetHead', 'resultHead', 'baseId'].map(
-    (path) => `SELECT crux_id, json_extract(data, '$.${path}') FROM task_merges`,
-  ),
+  ...[
+    'sourceHead',
+    'targetHead',
+    'resultHead',
+    'baseId',
+    'resultState.workspace.parentId',
+    'targetWorkspace.parentId',
+  ].map((path) => `SELECT crux_id, json_extract(data, '$.${path}') FROM task_merges`),
 ].join('\nUNION\n');
 
 /**

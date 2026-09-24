@@ -273,9 +273,9 @@ export class SqliteApi implements NativeStorage {
     this.assertAvailable();
     return this.owner.releaseTaskReview(id);
   }
-  completeTaskMerge(id: string, resultHead: string) {
+  completeTaskMerge(id: string) {
     this.assertAvailable();
-    return this.owner.completeTaskMerge(id, resultHead);
+    return this.owner.completeTaskMerge(id, this.contentStore());
   }
   setWorkingCopyArchived(id: string, archived: boolean, revision: number) {
     this.assertAvailable();

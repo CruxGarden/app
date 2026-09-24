@@ -134,17 +134,22 @@ test('parallel built-in turns keep files, history, and hidden approvals scoped t
         .poll(() =>
           page.evaluate(
             async (id) =>
-              (
-                await window.electronAPI!.sqlite.all(
-                  "SELECT id FROM dimensions WHERE source_id = ? AND type = 'growth'",
-                  [id],
-                )
-              ).length,
+              (await window.electronAPI!.sqlite.fileContent!.history(id))?.checkpoints.length ?? 0,
             copy.id,
           ),
         )
         .toBeGreaterThan(0);
     }
+    expect(
+      await page.evaluate(
+        ({ a, b }) =>
+          window.electronAPI!.sqlite.all(
+            "SELECT id FROM dimensions WHERE source_id IN (?, ?) AND type = 'growth'",
+            [a, b],
+          ),
+        { a: a.id, b: b.id },
+      ),
+    ).toEqual([]);
     await choose('Alpha');
     await expect(page.getByText('Completed workspace Beta.', { exact: true })).toHaveCount(0);
     await input.fill('[workspace:Alpha:delete]');

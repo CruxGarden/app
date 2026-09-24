@@ -51,6 +51,10 @@ export interface TaskReview {
   verificationLog?: string;
   previewUrl?: string;
   resultHead?: string;
+  resultState?: {
+    root: string;
+    workspace: { parentId: string | null; messages: unknown[]; entryFile: string | null };
+  };
 }
 const operations = new Set<string>();
 async function settled<T>(ids: string[], fn: (workspaces: Workspace[]) => Promise<T>): Promise<T> {
@@ -485,6 +489,16 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
     taskManifestKey(await captureTaskManifest(review.cruxId)) !== taskManifestKey(review.manifest)
   )
     throw new Error('Main changed during the merge. The recovery journal has been kept.');
+  if (db.completeTaskMerge) {
+    await db.completeTaskMerge(review.id);
+    announceTasksChanged();
+    await main.data.getState().loadCrux(main.id);
+    await releaseTaskReviewCore(review.id);
+    const taskWorkspace = getWorkspace(review.copyId);
+    if (taskWorkspace) await taskWorkspace.data.getState().loadCrux(review.copyId);
+    return loadTaskReview(review.id);
+  }
+  // Parked Web Mode still uses its existing snapshot-based Task implementation.
   // Reuse a checkpoint after a crash between recording Growth and completing the journal.
   const existing = await db.get<{ id: string }>(
     "SELECT c.id FROM cruxes c JOIN dimensions d ON d.target_id = c.id WHERE json_extract(c.meta, '$.merge.id') = ? AND d.type = 'growth'",
@@ -538,16 +552,10 @@ async function completeMerge(review: TaskReview, main: Workspace): Promise<TaskR
     await main.data.getState().loadCrux(main.id);
   }
   const done: TaskReview = { ...review, phase: 'merged', resultHead };
-  if (db.completeTaskMerge) {
-    await db.completeTaskMerge(review.id, resultHead);
-    announceTasksChanged();
-  } else {
-    await db.run(
-      "UPDATE working_copies SET phase = 'merged', revision = revision + 1 WHERE id = ?",
-      [review.copyId],
-    );
-    await saveReview(done);
-  }
+  await db.run("UPDATE working_copies SET phase = 'merged', revision = revision + 1 WHERE id = ?", [
+    review.copyId,
+  ]);
+  await saveReview(done);
   await releaseTaskReviewCore(review.id);
   const taskWorkspace = getWorkspace(review.copyId);
   if (taskWorkspace) await taskWorkspace.data.getState().loadCrux(review.copyId);

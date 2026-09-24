@@ -109,8 +109,7 @@ const api: ElectronBridge = {
     beginTaskMerge: (id: string, reviewData: string) =>
       ipcRenderer.invoke('sqlite:begin-task-merge', id, reviewData),
     releaseTaskReview: (id: string) => ipcRenderer.invoke('sqlite:release-task-review', id),
-    completeTaskMerge: (id: string, resultHead: string) =>
-      ipcRenderer.invoke('sqlite:complete-task-merge', id, resultHead),
+    completeTaskMerge: (id: string) => ipcRenderer.invoke('sqlite:complete-task-merge', id),
     setWorkingCopyArchived: (id: string, archived: boolean, revision: number) =>
       ipcRenderer.invoke('sqlite:set-working-copy-archived', id, archived, revision),
     setCruxTrashed: (id: string, trashed: boolean) =>

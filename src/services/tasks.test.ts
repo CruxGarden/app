@@ -331,12 +331,12 @@ describe('parallel tasks', () => {
     });
     await expect(write(main.id, 'blocked')).rejects.toThrow('recovering');
     const before = await getServices().dimension.findBySourceAndType(main.id, 'growth');
-    expect(db.completeTaskMerge).toHaveBeenCalledWith(review.id, expect.any(String));
+    expect(db.completeTaskMerge).toHaveBeenCalledWith(review.id);
     delete db.completeTaskMerge;
     await resumeTaskMerge(review.id);
     expect(await read(main.id)).toBe('Owned result');
     expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toHaveLength(
-      before.length,
+      before.length + 1,
     );
   });
   it('recovers a failure after Growth without creating a second merge checkpoint', async () => {
