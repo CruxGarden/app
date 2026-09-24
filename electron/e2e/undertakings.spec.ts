@@ -30,6 +30,7 @@ async function openNote(page: Page, title: string) {
   await expect(field).toBeVisible({ timeout: 120000 });
   if ((await field.inputValue()) === title) return;
   const show = frame.getByRole('button', { name: 'Show left sidebar', exact: true });
+  await expect(frame.getByRole('button', { name: /^(Show|Hide) left sidebar$/ })).toBeVisible();
   if (await show.isVisible()) await show.click();
   await frame.getByRole('button', { name: title, exact: true }).first().click();
   await expect(field).toHaveValue(title);
