@@ -4,6 +4,9 @@ import type { GardenIdentity } from '@/stores/gardenContext';
 import { ChevronRightIcon, ChevronDownIcon, FolderIcon, SproutIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 
+/** Expansion outlives a remount (another Garden's view preference, a reload of the view). */
+const opened = new Set<string>();
+
 function Branch({
   node,
   parents,
@@ -21,13 +24,20 @@ function Branch({
     : node.id === cruxId && parents.at(-1) === gardenId;
   const reveal = isGarden ? node.id === gardenId && !cruxId : selected;
   const button = useRef<HTMLButtonElement>(null);
-  const [expanded, setExpanded] = useState(parents.length === 0);
+  const [expanded, setOpen] = useState(parents.length === 0 || opened.has(node.id));
+  const setExpanded = (open: boolean) => {
+    if (open) opened.add(node.id);
+    else opened.delete(node.id);
+    setOpen(open);
+  };
   const [children, setChildren] = useState<GardenIdentity[]>([]);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-    if (activePath.has(node.id)) setExpanded(true);
+    if (!activePath.has(node.id)) return;
+    opened.add(node.id);
+    setOpen(true);
   }, [activePath, node.id]);
   useEffect(() => {
     if (reveal) button.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
