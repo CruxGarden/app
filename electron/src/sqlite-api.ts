@@ -262,7 +262,7 @@ export class SqliteApi implements NativeStorage {
   }
   createCrux(input: LocalCruxCreate, prepareFolder?: PrepareCruxFolder) {
     this.assertAvailable();
-    return this.owner.createCrux(input, prepareFolder);
+    return this.owner.createCrux(input, prepareFolder, this.contentStore());
   }
   updateCrux(id: string, patch: LocalCruxUpdate) {
     this.assertAvailable();

@@ -926,14 +926,18 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.handle('sqlite:create-crux', (_e: unknown, input: LocalCruxCreate) => {
-    if (!db.createCrux) throw new Error('Owned Crux creation is unavailable');
-    return db.createCrux(input, (slug) => {
-      const folder = projects.createFolder(slug);
-      watcher.watch(folder);
-      return folder;
-    });
-  });
+  ipcMain.handle(
+    'sqlite:create-crux',
+    (event: Electron.IpcMainInvokeEvent, input: LocalCruxCreate) => {
+      gardenCaller(event);
+      if (!db.createCrux) throw new Error('Owned Crux creation is unavailable');
+      return db.createCrux(input, (slug) => {
+        const folder = projects.createFolder(slug);
+        watcher.watch(folder);
+        return folder;
+      });
+    },
+  );
 
   ipcMain.handle('project:create-folder', (_e: any, slug: string) => {
     const folder = projects.createFolder(slug);

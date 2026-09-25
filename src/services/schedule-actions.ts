@@ -77,8 +77,8 @@ let runtime: ActionRuntime = {
   },
   async wearMood(moodId) {
     const { bundledMood } = await import('@/lib/moods/bundled-moods');
-    const { getInstalledMoods, applyMood } = await import('@/lib/moods/packages');
-    const pkg = bundledMood(moodId) ?? getInstalledMoods().find((m) => m.id === moodId);
+    const { refreshInstalledMoods, applyMood } = await import('@/lib/moods/packages');
+    const pkg = bundledMood(moodId) ?? (await refreshInstalledMoods()).find((m) => m.id === moodId);
     if (!pkg) return null;
     await applyMood(pkg);
     return pkg.name;

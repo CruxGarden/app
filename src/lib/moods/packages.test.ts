@@ -39,12 +39,12 @@ describe('Mood Packages', () => {
     expect(validateMoodPackage({ format: 'nope' })).toBeNull();
   });
 
-  it('installs, lists, replaces by id, deletes', () => {
-    installMood(captureCurrentMood({ name: 'A' }));
-    installMood(captureCurrentMood({ name: 'B' }));
-    installMood(captureCurrentMood({ name: 'A' }));
+  it('installs, lists, replaces by id, deletes', async () => {
+    await installMood(captureCurrentMood({ name: 'A' }));
+    await installMood(captureCurrentMood({ name: 'B' }));
+    await installMood(captureCurrentMood({ name: 'A' }));
     expect(getInstalledMoods().map((m) => m.name)).toEqual(['B', 'A']);
-    deleteMood('mood-a');
+    await deleteMood('mood-a');
     expect(getInstalledMoods().map((m) => m.name)).toEqual(['B']);
   });
 

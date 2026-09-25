@@ -1,3 +1,12 @@
+import { captureGardenId } from '@/stores/gardenContext';
+import {
+  cachedMoodLibrary,
+  nativeMoodLibrary,
+  refreshMoodLibrary,
+  saveMoodCrux,
+  trashMoodCrux,
+  retainCurrentMoodPackages,
+} from '@/services/mood-library';
 import { hashContent } from '@/services/sqlite/helpers';
 import {
   parseSynthPatch,
@@ -8,7 +17,7 @@ import {
 } from '@/audio/synth-patch';
 /**
  * Mood Packages — the installable, shareable bundle: theme + background +
- * sound + persona + meta. Stored in settings (JSON) with every binary
+ * sound + persona + meta. Stored as native Mood Crux content (settings on Web), with every binary
  * (cover, background image, the track, persona avatars) in the Blob Store
  * by fingerprint; exported as a `.cruxmood` zip that carries those assets.
  */
@@ -24,7 +33,7 @@ import {
   setThemeOverrides,
   type MoodSection,
 } from './active';
-import { getSetting, setSetting } from '@/services/settings';
+import { getSetting, setSetting, setSettingDurably } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { BgType } from '@/lib/types';
 import type { PersonaSettings } from '@/services/persona';
@@ -201,7 +210,7 @@ function cleanSchedule(raw: unknown): MoodSchedule[] {
   ];
 }
 
-export function getInstalledMoods(): MoodPackage[] {
+function settingsMoods(): MoodPackage[] {
   const raw = getSetting(SettingsKey.MoodPackages) as string | null;
   if (!raw) return [];
   try {
@@ -219,14 +228,56 @@ function write(list: MoodPackage[]) {
   listeners.forEach((fn) => fn());
 }
 
-export function installMood(pkg: MoodPackage): MoodPackage {
-  const rest = getInstalledMoods().filter((m) => m.id !== pkg.id);
-  write([...rest, pkg]);
-  return pkg;
+export function getInstalledMoods(): MoodPackage[] {
+  return nativeMoodLibrary() ? cachedMoodLibrary() : settingsMoods();
 }
 
-export function deleteMood(id: string): void {
-  write(getInstalledMoods().filter((m) => m.id !== id));
+async function retainSavedMoods(): Promise<void> {
+  const raw = getSetting(SettingsKey.MoodPackages);
+  if (!raw) return;
+  const parsed: unknown = JSON.parse(raw);
+  if (
+    !Array.isArray(parsed) ||
+    parsed.some((pkg) => pkg?.version !== 1 || !validateMoodPackage(pkg))
+  )
+    throw new Error('The saved Mood library needs attention before it can be moved.');
+  await retainCurrentMoodPackages(parsed, async () => {
+    if (getSetting(SettingsKey.MoodPackages) !== raw)
+      throw new Error('The saved Mood library changed. Retry.');
+    await setSettingDurably(SettingsKey.MoodPackages, '');
+  });
+}
+
+export async function refreshInstalledMoods(gardenId = captureGardenId()): Promise<MoodPackage[]> {
+  if (!nativeMoodLibrary()) return settingsMoods();
+  await retainSavedMoods();
+  const packages = await refreshMoodLibrary(gardenId);
+  listeners.forEach((fn) => fn());
+  return packages;
+}
+
+export async function installMood(
+  pkg: MoodPackage,
+  options: { source?: MoodPackage; gardenId?: string } = {},
+): Promise<MoodPackage> {
+  const gardenId = options.gardenId ?? captureGardenId();
+  const captured = structuredClone(pkg);
+  if (nativeMoodLibrary()) {
+    await retainSavedMoods();
+    const saved = await saveMoodCrux(captured, options.source, gardenId);
+    listeners.forEach((fn) => fn());
+    return saved;
+  }
+  const rest = settingsMoods().filter((m) => m.id !== captured.id);
+  write([...rest, captured]);
+  return captured;
+}
+
+export async function deleteMood(id: string): Promise<void> {
+  if (nativeMoodLibrary()) {
+    await trashMoodCrux(id);
+    listeners.forEach((fn) => fn());
+  } else write(settingsMoods().filter((m) => m.id !== id));
 }
 
 /** Everything the app is wearing right now, as one package. */

@@ -52,9 +52,11 @@ test.describe('publish + discover moods (mocked API)', () => {
       await page.getByRole('button', { name: 'Save current as Mood' }).click();
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Sea Glass');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
-      await expect(page.getByRole('status')).toContainText('Saved "Sea Glass"');
+      await expect(page.getByRole('status').filter({ hasText: 'Saved "Sea Glass"' })).toBeVisible();
       await page.getByRole('button', { name: 'Publish Sea Glass' }).click();
-      await expect(page.getByRole('status')).toContainText('Published "Sea Glass"', {
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Published "Sea Glass"' }),
+      ).toBeVisible({
         timeout: 60_000,
       });
       await expect(page.getByRole('button', { name: 'Republish Sea Glass' })).toBeVisible();
@@ -70,9 +72,12 @@ test.describe('publish + discover moods (mocked API)', () => {
       expect((moodCrux!.meta as Record<string, unknown>).mood).toMatchObject({ section: 'Dark' });
 
       // Explore → Moods shows it with a swatch; Install pulls the package from the API
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Close Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Explore', exact: true }).click();
-      await page.getByRole('button', { name: 'Moods', exact: true }).click();
+      await page
+        .getByRole('region', { name: 'Explore', exact: true })
+        .getByRole('button', { name: 'Moods', exact: true })
+        .click();
       const card = page.getByTestId(`explore-mood-${moodCrux!.id as string}`);
       await expect(card).toBeVisible({ timeout: 30_000 });
       await expect(card).toContainText('Sea Glass');

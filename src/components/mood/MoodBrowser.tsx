@@ -1,3 +1,5 @@
+import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
+import { getSqliteClient } from '@/services/sqlite/client';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
@@ -15,6 +17,7 @@ import {
   deleteMood,
   exportMoodPackage,
   getInstalledMoods,
+  refreshInstalledMoods,
   importMoodPackage,
   installMood,
   onMoodPackagesChange,
@@ -171,6 +174,7 @@ function MoodCard({
             <button
               type="button"
               onClick={onDelete}
+              disabled={busy}
               aria-label={`Delete Mood ${pkg.name}`}
               title="Delete"
               className={cn(iconBtn, 'hover:text-error')}
@@ -189,7 +193,40 @@ const HYPER_MOODS = BUNDLED_MOODS.filter((m) => m.id !== 'plasma' && !materialCh
 
 export default function MoodBrowser() {
   const [moods, setMoods] = useState<MoodPackage[]>(() => getInstalledMoods());
+  const gardenId = useGardenContext((s) => s.garden?.id);
+  const [reload, setReload] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
   useEffect(() => onMoodPackagesChange(() => setMoods(getInstalledMoods())), []);
+  useEffect(
+    () =>
+      getSqliteClient().onChange?.((change) => {
+        if (
+          change.entity === 'crux-lifecycle' ||
+          change.entity === 'garden-membership' ||
+          (change.entity === 'crux' &&
+            change.fields?.some((field) => field === 'fileContent' || field === 'title'))
+        )
+          setReload((value) => value + 1);
+      }),
+    [],
+  );
+  useEffect(() => {
+    let active = true;
+    setMoods(getInstalledMoods());
+    void refreshInstalledMoods(gardenId)
+      .then((packages) => {
+        if (active) {
+          setMoods(packages);
+          setLoadError(null);
+        }
+      })
+      .catch((error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : 'Could not load Moods.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [gardenId, reload]);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [note, setNote] = useState<string | null>(null);
@@ -239,15 +276,29 @@ export default function MoodBrowser() {
     setTimeout(() => setNote(null), 4000);
   };
 
-  const saveCurrent = () => {
+  const saveCurrent = async () => {
     const author = useAppStore.getState().author?.username;
-    const pkg = installMood(captureCurrentMood({ name, author }));
-    setSaving(false);
-    setName('');
-    say(`Saved "${pkg.name}" — theme, background, persona and soundscape.`);
+    const captured = captureCurrentMood({ name, author });
+    const owner = captureGardenId();
+    setBusy('save');
+    try {
+      const pkg = await installMood(captured, { gardenId: owner });
+      setSaving(false);
+      setName('');
+      say(`Saved "${pkg.name}" — theme, background, persona and soundscape.`);
+    } catch (error) {
+      say(error instanceof Error ? error.message : 'Could not save this Mood. Try again.');
+    } finally {
+      setBusy(null);
+    }
   };
 
   const [wornId, setWornId] = useState<string | null>(() => getSetting(SettingsKey.WornMoodId));
+  useEffect(() => {
+    const changed = () => setWornId(getSetting(SettingsKey.WornMoodId));
+    document.addEventListener('mood-worn', changed);
+    return () => document.removeEventListener('mood-worn', changed);
+  }, []);
   const doApply = async (pkg: MoodPackage) => {
     setBusy(pkg.id);
     try {
@@ -278,6 +329,7 @@ export default function MoodBrowser() {
   };
 
   const doImport = async (file: File) => {
+    const owner = captureGardenId();
     setBusy('import');
     try {
       const { putBlob } = await import('@/services/blobs');
@@ -302,7 +354,7 @@ export default function MoodBrowser() {
         pkg = await importMoodPackage(file, putBlob);
       }
       if (!pkg) return say('That file is not a Mood.');
-      installMood(pkg);
+      await installMood(pkg, { gardenId: owner });
       say(`Imported "${pkg.name}". Apply it when you like.`);
     } catch {
       say('Could not import this Mood. The file may be damaged or incomplete. Try another copy.');
@@ -313,6 +365,14 @@ export default function MoodBrowser() {
 
   return (
     <div className="flex flex-col gap-4">
+      {loadError && (
+        <div role="alert" className="text-sm text-error">
+          {loadError}{' '}
+          <button type="button" onClick={() => setReload((value) => value + 1)}>
+            Retry
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-xs text-text-muted flex-1 min-w-[200px]">
           A Mood is everything you're wearing — theme, background, persona, soundscape — as one
@@ -323,7 +383,7 @@ export default function MoodBrowser() {
             className="flex items-center gap-1.5"
             onSubmit={(e) => {
               e.preventDefault();
-              saveCurrent();
+              if (!busy) void saveCurrent();
             }}
           >
             <input
@@ -335,7 +395,7 @@ export default function MoodBrowser() {
               onKeyDown={(e) => e.key === 'Escape' && setSaving(false)}
               className="h-8 w-44 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
             />
-            <Button size="sm" type="submit">
+            <Button size="sm" type="submit" disabled={!!busy}>
               Save
             </Button>
             <Button variant="ghost" size="sm" type="button" onClick={() => setSaving(false)}>
@@ -451,7 +511,14 @@ export default function MoodBrowser() {
               onExport={() => void doExport(pkg)}
               onPublish={() => void doPublish(pkg)}
               canPublish={isAuthenticated}
-              onDelete={() => deleteMood(pkg.id)}
+              onDelete={() => {
+                setBusy(pkg.id);
+                void deleteMood(pkg.id)
+                  .catch((error) =>
+                    say(error instanceof Error ? error.message : 'Could not delete this Mood.'),
+                  )
+                  .finally(() => setBusy(null));
+              }}
               testId={`mood-${pkg.id}`}
             />
           ))}

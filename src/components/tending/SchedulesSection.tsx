@@ -1,3 +1,4 @@
+import { useGardenContext } from '@/stores/gardenContext';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -28,7 +29,11 @@ import { CUE_KINDS } from '@/services/cues';
 import { CUE_GROUPS } from '@/audio/cue-presets';
 import { defaultToolDefinitions } from '@/ai/tools';
 import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
-import { getInstalledMoods, onMoodPackagesChange } from '@/lib/moods/packages';
+import {
+  getInstalledMoods,
+  onMoodPackagesChange,
+  refreshInstalledMoods,
+} from '@/lib/moods/packages';
 import { getSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import {
@@ -305,6 +310,16 @@ export default function SchedulesSection() {
   const [moodsOn, setMoodsOn] = useState(moodSchedulesEnabled);
   const [, bump] = useState(0);
   useEffect(() => onMoodPackagesChange(() => bump((n) => n + 1)), []);
+  const gardenId = useGardenContext((s) => s.garden?.id);
+  useEffect(() => {
+    let active = true;
+    void refreshInstalledMoods(gardenId).catch((error) => {
+      if (active) setError(error instanceof Error ? error.message : 'Could not load Moods.');
+    });
+    return () => {
+      active = false;
+    };
+  }, [gardenId]);
   const moods = allMoods();
 
   // Actions

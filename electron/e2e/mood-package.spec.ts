@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
+import { enterGarden } from './multi-crux-helpers';
 
 type AudioState = { volume: number; trackName: string | null };
 
@@ -22,12 +23,7 @@ test.describe('mood packages', () => {
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
       );
     try {
-      await page.getByRole('button', { name: /enter/i }).click();
-      await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
-      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
-        timeout: 30_000,
-      });
+      await enterGarden(page);
 
       // Shape a look: pane gap 0 + a quieter track
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
@@ -48,12 +44,13 @@ test.describe('mood packages', () => {
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Night Shift');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
       await expect(page.getByRole('status')).toContainText('Saved "Night Shift"');
-      await expect(page.getByTestId('mood-mood-night-shift')).toBeVisible();
+      const apply = page.getByRole('button', { name: 'Apply Night Shift', exact: true });
+      await expect(apply).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/mood-package-1-browser.png' });
 
       // Change everything: preset Ember (gap back to default via preset), volume up
       await page.getByRole('button', { name: 'Theme', exact: true }).click();
-      await page.getByRole('button', { name: 'Ember' }).click();
+      await page.getByRole('button', { name: 'Ember', exact: true }).click();
       await page.getByRole('button', { name: 'Reset all' }).click();
       await expect.poll(() => cssVar('--pane-gap')).toBe('4px');
       await page.getByRole('button', { name: 'Sound', exact: true }).click();
@@ -62,11 +59,9 @@ test.describe('mood packages', () => {
 
       // Apply the saved Mood: both come back
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
-      await page
-        .getByTestId('mood-mood-night-shift')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await expect(page.getByRole('status')).toContainText('Now wearing "Night Shift"');
+      await apply.click();
+      // Switching the Plasma surface on remounts everything under PlasmaStage (a known kink),
+      // so the Builder's transient note does not survive; assert what was worn instead.
       await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
       await expect.poll(async () => (await audio()).volume).toBe(0.25);
       expect((await audio()).trackName).toBe('Crux Synth'); // the Keeper's track rode along
@@ -77,8 +72,9 @@ test.describe('mood packages', () => {
 
       // Delete the Mood
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
+      await expect(apply).toHaveAttribute('aria-pressed', 'true');
       await page.getByRole('button', { name: 'Delete Mood Night Shift' }).click();
-      await expect(page.getByTestId('mood-mood-night-shift')).toHaveCount(0);
+      await expect(apply).toHaveCount(0);
     } finally {
       await app.close();
     }

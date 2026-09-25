@@ -138,7 +138,6 @@ export const useAppStore = create<AppState>((set, get) => ({
             startAgentPermissionListener(),
           );
         }
-        void import('./moodStore').then(({ useMoodStore }) => useMoodStore.getState().loadMoods());
         // Automatic backup (RESILIENCE-PLAN §2a): quiet cruxes and the garden once a day
         void import('@/services/auto-backup').then(({ startAutoBackup }) => startAutoBackup());
         set({ ready: true });

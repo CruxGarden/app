@@ -1,3 +1,5 @@
+import { hasMoodCruxReference } from '@/services/mood-library';
+import { captureGardenId } from '@/stores/gardenContext';
 import JSZip from 'jszip';
 /**
  * Publishing a Mood: the package becomes a crux of kind "mood" in your garden
@@ -117,6 +119,8 @@ export interface PublishMoodDeps {
  * the package with publishedCruxId/publishedAt set (and installs that).
  */
 export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Promise<MoodPackage> {
+  const source = hasMoodCruxReference(pkg) ? pkg : undefined;
+  const gardenId = captureGardenId();
   pkg = structuredClone(pkg);
   // Prepare and verify the complete archive before replacing any existing files.
   const zip = await exportMoodPackage(pkg, deps.readBlob);
@@ -197,8 +201,7 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
     publishedCruxId: published.id,
     publishedAt: (deps.now ?? (() => new Date().toISOString()))(),
   };
-  installMood(stamped);
-  return stamped;
+  return installMood(stamped, { source, gardenId });
 }
 
 /** Fetch a published Mood's package and install it. Tries the published files, then the public API. */
@@ -215,6 +218,7 @@ export async function installMoodFromPublished(
     putBlob: (bytes: Uint8Array) => Promise<string>;
   },
 ): Promise<MoodPackage | null> {
+  const gardenId = captureGardenId();
   // The published copy is the fast path, but whatever answers there is not
   // necessarily the package: without a publish origin configured the URL is
   // relative and the app's own shell answers with index.html; a CDN answers a
@@ -233,8 +237,7 @@ export async function installMoodFromPublished(
   }
   if (!pkg) return null;
   const installed: MoodPackage = { ...pkg, publishedCruxId: pkg.publishedCruxId ?? crux.id };
-  installMood(installed);
-  return installed;
+  return installMood(installed, { gardenId });
 }
 
 export { packageAssets };
