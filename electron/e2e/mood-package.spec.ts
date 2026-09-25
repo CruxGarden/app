@@ -60,8 +60,9 @@ test.describe('mood packages', () => {
       // Apply the saved Mood: both come back
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
       await apply.click();
-      // Switching the Plasma surface on remounts everything under PlasmaStage (a known kink),
-      // so the Builder's transient note does not survive; assert what was worn instead.
+      await expect(page.getByRole('region', { name: 'Garden Mood' })).toContainText(
+        'wears Night Shift',
+      );
       await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
       await expect.poll(async () => (await audio()).volume).toBe(0.25);
       expect((await audio()).trackName).toBe('Crux Synth'); // the Keeper's track rode along
@@ -73,7 +74,15 @@ test.describe('mood packages', () => {
       // Delete the Mood
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
       await expect(apply).toHaveAttribute('aria-pressed', 'true');
-      await page.getByRole('button', { name: 'Delete Mood Night Shift' }).click();
+      // A Garden's chosen Mood cannot disappear under it: choose another first.
+      const remove = page.getByRole('button', { name: 'Delete Mood Night Shift' });
+      await expect(remove).toBeDisabled();
+      await page
+        .getByRole('region', { name: 'Garden Mood' })
+        .getByRole('button', { name: 'Use the Default Mood' })
+        .click();
+      await expect(remove).toBeEnabled();
+      await remove.click();
       await expect(apply).toHaveCount(0);
     } finally {
       await app.close();

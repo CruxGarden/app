@@ -9,10 +9,11 @@ import { SettingsKey } from '@/lib/constants';
 import { useAppStore } from '@/stores/appStore';
 import { BUNDLED_MOODS, SHELVED_MOODS } from '@/lib/moods/bundled-moods';
 import MaterialMoods from './MaterialMoods';
+import GardenMoodLine from './GardenMoodLine';
 import { materialChoice } from '@/lib/moods/material';
 import { GARDEN_DARK } from '@/lib/moods';
+import { chooseMood, onGardenMoodChange } from '@/services/garden-mood';
 import {
-  applyMood,
   captureCurrentMood,
   deleteMood,
   exportMoodPackage,
@@ -174,9 +175,9 @@ function MoodCard({
             <button
               type="button"
               onClick={onDelete}
-              disabled={busy}
+              disabled={busy || worn}
               aria-label={`Delete Mood ${pkg.name}`}
-              title="Delete"
+              title={worn ? 'Worn here — wear another Mood to delete this one' : 'Delete'}
               className={cn(iconBtn, 'hover:text-error')}
             >
               <CloseIcon size={13} />
@@ -297,14 +298,21 @@ export default function MoodBrowser() {
   useEffect(() => {
     const changed = () => setWornId(getSetting(SettingsKey.WornMoodId));
     document.addEventListener('mood-worn', changed);
-    return () => document.removeEventListener('mood-worn', changed);
+    const off = onGardenMoodChange(changed);
+    return () => {
+      document.removeEventListener('mood-worn', changed);
+      off();
+    };
   }, []);
   const doApply = async (pkg: MoodPackage) => {
     setBusy(pkg.id);
     try {
-      await applyMood(pkg);
-      setWornId(pkg.id);
-      say(`Now wearing "${pkg.name}".`);
+      await chooseMood(pkg);
+      setWornId(getSetting(SettingsKey.WornMoodId));
+      // Where Gardens own their Mood, the Garden Mood line already says so.
+      if (!getSqliteClient().gardenMood) say(`Now wearing "${pkg.name}".`);
+    } catch (error) {
+      say(error instanceof Error ? error.message : 'Could not wear this Mood.');
     } finally {
       setBusy(null);
     }
@@ -365,6 +373,7 @@ export default function MoodBrowser() {
 
   return (
     <div className="flex flex-col gap-4">
+      <GardenMoodLine />
       {loadError && (
         <div role="alert" className="text-sm text-error">
           {loadError}{' '}

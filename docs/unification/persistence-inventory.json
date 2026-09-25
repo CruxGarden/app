@@ -389,6 +389,13 @@
       "ledger": "cruxgarden:moodPresetLight"
     },
     {
+      "key": "cruxgarden:moodProjection",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodProjection"
+    },
+    {
       "key": "cruxgarden:moodSchedules",
       "sources": [
         "src/services/schedules.ts"

@@ -7,7 +7,7 @@ import {
   useGardenContext,
   type GardenIdentity,
 } from '@/stores/gardenContext';
-import { gardenAncestors, gardenMembers } from '@/services/garden-navigation';
+import { gardenAncestors, gardenMembers, opensAsWorkspace } from '@/services/garden-navigation';
 import {
   navigationNeighborhood,
   navigationVersionTarget,
@@ -38,7 +38,7 @@ export function useNavigationView(enabled = true): NavigationViewProps & { refre
       revision: revision + refreshRevision,
       neighborhood: navigationNeighborhood,
       versionTarget: navigationVersionTarget,
-      members: gardenMembers,
+      members: async (id) => (await gardenMembers(id)).filter(opensAsWorkspace),
       ancestors: gardenAncestors,
       identity: async (id) => {
         const row = await getSqliteClient().get<GardenIdentity>(

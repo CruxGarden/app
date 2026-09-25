@@ -131,15 +131,8 @@ test.describe('bundled moods', () => {
       await expect
         .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
         .toBe('plasma');
-      const bar = page.getByRole('region', { name: 'Mood Bar' });
-      await expect(bar).toContainText('No track');
       await expect.poll(async () => (await audio()).trackName).toBe('Crux Synth');
-      await page.getByRole('button', { name: /enter/i }).click();
-      await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
-      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
-        timeout: 30_000,
-      });
+      await enterGarden(page);
       // A fresh garden wears Plasma too; Fractal Garden is one Apply away and brings its track
       await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#9ff3e4');
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
@@ -148,7 +141,7 @@ test.describe('bundled moods', () => {
         .getByTestId('bundled-digital-fractal-garden')
         .getByRole('button', { name: 'Apply' })
         .click();
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Close Mood', exact: true }).click();
       await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#5fd2a5');
       await expect
         .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
@@ -161,7 +154,7 @@ test.describe('bundled moods', () => {
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
       // The HyperMoods: the material Moods sit in the picker above, Office on the shelf.
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(36);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(37);
       await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('2px');
       await expect.poll(() => cssVar('--motion-frames')).toBe('4');
@@ -174,7 +167,7 @@ test.describe('bundled moods', () => {
       await page.screenshot({ path: 'e2e/.results/bundled-1-night-city.png' });
 
       // The persona rides along: the chat greeting is Sol's
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Close Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -189,12 +182,9 @@ test.describe('bundled moods', () => {
         .click();
       await expect.poll(async () => (await audio()).trackName).toBe('Crux Synth');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Close Mood', exact: true }).click();
       // A new crux greets with Iris's voice; the fallback face sits on a theme gradient
-      await page.getByRole('button', { name: /^wanderer-/ }).click(); // the username → Home Garden
-      await page.getByRole('button', { name: 'Add Crux' }).click({ timeout: 30_000 });
-      await page.getByRole('button', { name: /^Blank/ }).click();
-      await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await createCrux(page, 'Second');
       await expect(page.getByText('A fractal is a bloom that keeps blooming').first()).toBeVisible({
         timeout: 30_000,
       });

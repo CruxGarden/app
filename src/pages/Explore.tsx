@@ -581,10 +581,10 @@ export default function Explore({
                   canInstall={appReady}
                   onOpen={() => handleNavigate(`/${crux.author_username}/${crux.slug}`)}
                   onInstall={async (apply) => {
-                    const [{ installMoodFromPublished }, { applyMood }, { putBlob }] =
+                    const [{ installMoodFromPublished }, { chooseMood }, { putBlob }] =
                       await Promise.all([
                         import('@/lib/moods/publish-mood'),
-                        import('@/lib/moods/packages'),
+                        import('@/services/garden-mood'),
                         import('@/services/blobs'),
                       ]);
                     const pkg = await installMoodFromPublished(crux, {
@@ -603,7 +603,7 @@ export default function Explore({
                       putBlob,
                     });
                     if (!pkg) throw new Error('No package found');
-                    if (apply) await applyMood(pkg);
+                    if (apply) await chooseMood(pkg);
                   }}
                 />
               ))}

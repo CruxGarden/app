@@ -4,6 +4,9 @@ import type { Crux } from '@/api/types';
 import type { GardenIdentity } from '@/stores/gardenContext';
 
 /** Hydrate only this Garden's bounded API projection; never infer membership. */
+/** Moods live in the Mood panel, not among a Garden's things to open. */
+export const opensAsWorkspace = (crux: Pick<Crux, 'kind'>) => crux.kind !== 'mood';
+
 export async function gardenMembers(gardenId: string): Promise<Crux[]> {
   const db = getSqliteClient();
   if (!db.gardenMembership) throw new Error('Garden navigation is unavailable on this connection.');

@@ -29,7 +29,7 @@ test.describe('mood assets', () => {
       await page
         .locator('input[type="file"][aria-label="Add asset files"]')
         .setInputFiles(join(__dirname, 'fixtures', 'backdrop.png'));
-      await expect(page.getByRole('status')).toContainText('Added 1 file');
+      await expect(page.getByRole('status').filter({ hasText: 'Added 1 file' })).toBeVisible();
       const card = page.locator('[data-testid^="asset-"]').filter({ hasText: 'backdrop.png' });
       await expect(card).toContainText('backdrop.png');
 
@@ -62,7 +62,10 @@ test.describe('mood assets', () => {
       await page.getByRole('button', { name: 'Save current as Mood' }).click();
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Textured');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
-      const mood = page.getByTestId('mood-mood-textured');
+      // Saved Moods are Cruxes: their card is found by name, not a portable package ID.
+      const mood = page
+        .locator('[data-testid^="mood-"]')
+        .filter({ has: page.getByRole('button', { name: 'Apply Textured', exact: true }) });
       await expect(mood).toBeVisible();
       await expect(mood.locator('img')).toHaveAttribute('src', /blob:/);
       await page.screenshot({ path: 'e2e/.results/assets-2-browser.png' });

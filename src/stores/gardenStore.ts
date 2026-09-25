@@ -1,5 +1,5 @@
 import { captureGardenId } from './gardenContext';
-import { gardenMembers } from '@/services/garden-navigation';
+import { gardenMembers, opensAsWorkspace } from '@/services/garden-navigation';
 import { allWorkspaces } from './workspaceRegistry';
 
 import { create } from 'zustand';
@@ -139,7 +139,9 @@ export const useGardenStore = create<GardenState>((set, get) => ({
         console.warn('[gardenStore] trash purge skipped:', err);
       });
       const [data, trashed, thumbnails] = await Promise.all([
-        gardenId ? gardenMembers(gardenId) : cruxService.listAll(),
+        gardenId
+          ? gardenMembers(gardenId).then((rows) => rows.filter(opensAsWorkspace))
+          : cruxService.listAll(),
         cruxService.listTrashed(),
         loadThumbnails(),
       ]);
@@ -180,7 +182,9 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       const { search, sortBy } = get();
       const { crux: cruxService } = getServices();
       const [data, trashed, thumbnails] = await Promise.all([
-        gardenId ? gardenMembers(gardenId) : cruxService.listAll(),
+        gardenId
+          ? gardenMembers(gardenId).then((rows) => rows.filter(opensAsWorkspace))
+          : cruxService.listAll(),
         cruxService.listTrashed(),
         loadThumbnails(),
       ]);

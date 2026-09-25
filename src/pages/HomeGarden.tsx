@@ -30,6 +30,7 @@ import * as cruxesApi from '@/api/cruxes';
 
 export default function HomeGarden() {
   const garden = useGardenContext((s) => s.garden);
+  const isHome = useGardenContext((s) => !s.garden || s.garden.id === s.root?.id);
   const loadError = useGardenStore((s) => s.error);
   const author = useAppStore((s) => s.author);
   const avatarUrl = useAvatarUrl(author);
@@ -177,7 +178,7 @@ export default function HomeGarden() {
                 {garden?.title || (author ? author.username : 'Garden')}
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-sm text-text-muted">Home Garden</p>
+                <p className="text-sm text-text-muted">{isHome ? 'Home Garden' : 'Garden'}</p>
                 <TendingLink />
                 {author && (
                   <IconButton

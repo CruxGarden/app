@@ -111,9 +111,13 @@ test('saving a Mood uses actual content and Garden membership, refuses partial c
         expected: (await api.read(garden.id)).selection,
       });
     }, result);
-    await page.getByRole('button', { name: 'Delete Mood Slow dream', exact: true }).click();
-    await expect(page.getByRole('status')).toContainText('selected by a Garden');
-    await expect(page.getByRole('button', { name: 'Apply Slow dream', exact: true })).toBeVisible();
+    // The Garden now wears it, so it cannot be deleted from under that Garden.
+    await expect(
+      page.getByRole('button', { name: 'Delete Mood Slow dream', exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Apply Slow dream', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
     await page.evaluate(async (id) => {
       const api = window.electronAPI!.sqlite.gardenMood!;
       await api.select({

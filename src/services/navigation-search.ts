@@ -25,7 +25,7 @@ export async function searchNavigation(
   const pattern = `%${term.replace(/[\\%_]/g, '\\$&')}%`;
   const found = await db.all<GardenIdentity>(
     `SELECT c.id, COALESCE(c.title, '') AS title, c.slug, c.kind FROM cruxes c
-     WHERE c.deleted IS NULL AND (c.kind IS NULL OR c.kind != 'snapshot')
+     WHERE c.deleted IS NULL AND (c.kind IS NULL OR c.kind NOT IN ('snapshot', 'mood'))
        AND (c.kind IS NULL OR c.kind != 'tool' OR EXISTS (
          SELECT 1 FROM dimensions d WHERE d.target_id=c.id AND d.type='garden' AND d.kind='membership' AND d.deleted IS NULL))
        AND COALESCE(c.title, '') LIKE ? ESCAPE '\\'

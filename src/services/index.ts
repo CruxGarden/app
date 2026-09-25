@@ -110,6 +110,11 @@ async function doInitServices(backend?: Backend): Promise<Services> {
     const { initGraphChanges } = await import('./graph-changes');
     initGraphChanges();
   }
+  if (getSqliteClient().gardenMood) {
+    // The active Garden's Mood paints the app (ADR 0058, Garden Mood association).
+    const { startGardenMoodProjection } = await import('./garden-mood');
+    startGardenMoodProjection();
+  }
 
   return services;
 }

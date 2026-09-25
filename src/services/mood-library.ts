@@ -19,6 +19,11 @@ function advance(db: ISqliteClient, id: string): number {
   return version;
 }
 const libraries = new WeakMap<ISqliteClient, Map<string, MoodPackage[]>>();
+/** A package's own portable ID, before the Crux identity replaces it. */
+const portable = new WeakMap<MoodPackage, string>();
+/** Built-in Moods a Garden has chosen are kept as quiet backing Cruxes, not library entries. */
+const isBuiltIn = async (id: string) =>
+  !!(await import('@/lib/moods/bundled-moods')).bundledMood(id);
 
 export function nativeMoodLibrary(): boolean {
   return !!getSqliteClient().fileContent;
@@ -60,6 +65,7 @@ async function decode(reference: Reference, bytes: Uint8Array): Promise<MoodPack
   });
   if (!pkg) throw new Error('This Crux does not contain a complete Mood package.');
   // The API identity is authoritative; an opaque package's portable ID is not a graph reference.
+  portable.set(pkg, pkg.id);
   pkg.id = reference.id;
   references.set(pkg, { ...reference, epoch });
   return pkg;
@@ -88,7 +94,7 @@ export async function refreshMoodLibrary(gardenId = captureGardenId()): Promise<
         selected.bytes,
       );
       pkg.name = member.title || pkg.name;
-      packages.push(pkg);
+      if (!(await isBuiltIn(portable.get(pkg)!))) packages.push(pkg);
     }
     after = page.next ?? undefined;
   } while (after);
@@ -111,7 +117,7 @@ export async function saveMoodCrux(
   if (source && pkg.name !== source.name) throw new Error('Save a new Mood to change its name.');
   const captured = structuredClone(pkg);
   const id = reference?.id ?? initialId ?? crypto.randomUUID();
-  captured.id = id;
+  if (!(await isBuiltIn(captured.id))) captured.id = id;
   const head = reference?.head ?? null;
   const archive = await exportMoodPackage(captured, (fp) => ctx.db.blobRead(fp));
   const bytes = new Uint8Array(await archive.arrayBuffer());
@@ -224,6 +230,41 @@ export function retainCurrentMoodPackages(
     retaining = undefined;
   });
   return retaining;
+}
+
+/** Any Mood Crux by identity, wherever it is placed, with its portable package ID. */
+export async function readMoodCrux(
+  id: string,
+): Promise<{ pkg: MoodPackage; portableId: string; revision: number }> {
+  const db = getSqliteClient();
+  if (!db.fileContent) throw new Error('The Mood library is unavailable.');
+  const head = await db.fileContent.head(id);
+  if (!head) throw new Error('This Mood has no saved content.');
+  const file = await db.fileContent.read({ cruxId: id, expected: head, path: 'mood.cruxmood' });
+  if (!file) throw new Error('This Mood is missing its package.');
+  const parents = db.gardenMembership ? await db.gardenMembership.parents(id) : [];
+  const pkg = await decode({ db, gardenId: parents[0]?.id ?? '', id, head }, file.bytes);
+  return { pkg, portableId: portable.get(pkg)!, revision: head.revision };
+}
+
+/** The root Garden's backing Crux for a built-in Mood, created once on first choice. */
+export async function builtInMoodCrux(pkg: MoodPackage): Promise<string> {
+  const ctx = context(useGardenContext.getState().root?.id);
+  let after: string | undefined;
+  do {
+    const page = await ctx.db.gardenMembership!.list(ctx.gardenId, { limit: 100, after });
+    for (const member of page.items) {
+      if (member.kind !== 'mood') continue;
+      const found = await readMoodCrux(member.id).catch(() => null);
+      if (found?.portableId === pkg.id) return member.id;
+    }
+    after = page.next ?? undefined;
+  } while (after);
+  ctx.current();
+  // The app ships the built-in files; the backing Crux only needs to name the Mood.
+  const reference = structuredClone(pkg);
+  delete reference.bundled;
+  return (await saveMoodCrux(reference, undefined, ctx.gardenId)).id;
 }
 
 export const hasMoodCruxReference = (pkg: MoodPackage): boolean => references.has(pkg);

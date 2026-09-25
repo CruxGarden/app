@@ -181,8 +181,8 @@
       "key": "cruxgarden:moodPackages",
       "group": "mood-experience",
       "target": "Garden selection/overrides + reusable Mood content",
-      "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
-      "status": "planned"
+      "preservation": "Retained once into private kind: mood Cruxes in the root Garden (app cbb527db0), then retired; no old-format decoder.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:wornMoodId",
@@ -190,6 +190,13 @@
       "target": "Garden selection/overrides + reusable Mood content",
       "preservation": "Migrate existing global values to local root once; preserve asset fingerprints and explicit overrides; persona policy separate.",
       "status": "planned"
+    },
+    {
+      "key": "cruxgarden:moodProjection",
+      "group": "operational",
+      "target": "installation/device operational state",
+      "preservation": "Records which Garden-resolved Mood this device last painted; never a selection. Exclude from portable content; absent means adopt the currently worn look once.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:moodAssets",

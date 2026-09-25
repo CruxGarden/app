@@ -120,13 +120,11 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
     await page.getByRole('button', { name: 'Moods', exact: true }).click();
     await page.getByRole('button', { name: 'Save current as Mood' }).click();
     await page.getByRole('textbox', { name: 'Mood name' }).fill('Living sound');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.getByTestId('mood-mood-living-sound')).toBeVisible();
+    await page.getByRole('textbox', { name: 'Mood name' }).press('Enter');
+    const living = page.getByRole('button', { name: 'Apply Living sound', exact: true });
+    await expect(living).toBeVisible();
     await call('set_synth', { preset: 'dusk' });
-    await page
-      .getByTestId('mood-mood-living-sound')
-      .getByRole('button', { name: 'Apply Living sound', exact: true })
-      .click();
+    await living.click();
     await expect.poll(async () => (await audio(page)).synth).toEqual(expected);
     await client.close();
     client = undefined;
@@ -146,10 +144,9 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
     await expect(
       sound.getByRole('button', { name: 'Load sound Human atmosphere', exact: true }),
     ).toBeVisible();
-    await second.page.keyboard.press('Escape');
-    await second.page.getByRole('button', { name: 'Play soundscape', exact: true }).click();
+    await sound.getByRole('button', { name: 'Play synth', exact: true }).click();
     await expect.poll(async () => (await audio(second.page)).level).toBeGreaterThan(0.005);
-    await second.page.getByRole('button', { name: 'Pause soundscape', exact: true }).click();
+    await sound.getByRole('button', { name: 'Pause synth', exact: true }).click();
   } finally {
     await second.app.close();
   }

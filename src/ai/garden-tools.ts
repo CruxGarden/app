@@ -275,7 +275,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'wear_mood',
     description:
-      'Wear an available Mood by id (from list_moods): the look, sound and persona of the whole garden change at once. Only when asked, or as part of the garden they described.',
+      'Wear an available Mood by id (from list_moods) in the active Garden: it becomes that Garden’s own Mood, and child Gardens that follow it change too. Look, sound and persona change at once. Only when asked, or as part of the garden they described.',
     input_schema: {
       type: 'object',
       properties: { id: { type: 'string' } },
@@ -1088,19 +1088,30 @@ async function runGardenToolInner(
       const { BUNDLED_MOODS } = await import('@/lib/moods/bundled-moods');
       const { refreshInstalledMoods } = await import('@/lib/moods/packages');
       const saved = await refreshInstalledMoods(gardenId);
-      return [...BUNDLED_MOODS, ...saved].map((m) => `- ${m.id} — ${m.name}`).join('\n');
+      const { readGardenMood } = await import('@/services/garden-mood');
+      const current = await readGardenMood(gardenId).catch(() => null);
+      const lines = [...BUNDLED_MOODS, ...saved].map((m) => `- ${m.id} — ${m.name}`);
+      if (current)
+        lines.unshift(
+          `This Garden wears ${current.source.mode === 'own' ? current.name : 'the Default Mood'}` +
+            (current.mode === 'inherit' && current.source.title
+              ? `, from ${current.source.title}.`
+              : '.'),
+        );
+      return lines.join('\n');
     }
     case 'wear_mood': {
       const owner = useGardenContext.getState().garden;
       const { bundledMood } = await import('@/lib/moods/bundled-moods');
-      const { applyMood, refreshInstalledMoods } = await import('@/lib/moods/packages');
+      const { refreshInstalledMoods } = await import('@/lib/moods/packages');
+      const { chooseMood } = await import('@/services/garden-mood');
       const pkg =
         bundledMood(input.id as string) ??
         (await refreshInstalledMoods(owner?.id)).find((mood) => mood.id === input.id);
       if (!pkg) return `No available Mood "${String(input.id)}". list_moods names them.`;
       if (useGardenContext.getState().garden !== owner)
         return 'The active Garden changed. Choose the Mood again.';
-      await applyMood(pkg);
+      await chooseMood(pkg);
       return `Now wearing "${pkg.name}".`;
     }
     case 'look': {

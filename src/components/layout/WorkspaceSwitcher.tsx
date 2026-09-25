@@ -10,7 +10,7 @@ import { getServices } from '@/services';
 import { FolderIcon } from '@/components/ui/icons';
 import { recentOrder, nextRecent } from '@/lib/workspace-switching';
 import { useGardenContext } from '@/stores/gardenContext';
-import { gardenMembers } from '@/services/garden-navigation';
+import { gardenMembers, opensAsWorkspace } from '@/services/garden-navigation';
 
 const focusByCrux = new Map<string, { selector: string; start?: number; end?: number }>();
 function rememberFocus(id: string | null, target = document.activeElement) {
@@ -114,7 +114,7 @@ export default function WorkspaceSwitcher() {
           if (!cancelled)
             setMembers(
               rows
-                .filter((row) => row.kind !== 'garden')
+                .filter((row) => row.kind !== 'garden' && opensAsWorkspace(row))
                 .map((row) => ({ id: row.id, slug: row.slug, title: row.title || 'Untitled' })),
             );
         })
@@ -539,7 +539,12 @@ export default function WorkspaceSwitcher() {
                             : await getServices().crux.listAll();
                           setAvailable(
                             cruxes
-                              .filter((c) => c.kind !== 'snapshot' && c.kind !== 'garden')
+                              .filter(
+                                (c) =>
+                                  c.kind !== 'snapshot' &&
+                                  c.kind !== 'garden' &&
+                                  opensAsWorkspace(c),
+                              )
                               .map((c) => ({
                                 id: c.id,
                                 title: c.title || 'Untitled',
