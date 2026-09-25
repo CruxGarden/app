@@ -8,9 +8,18 @@ import { storedCrux } from './multi-crux-helpers';
 /** Shared steps of the Glow Garden journey (GAME-CRUXSPACE-PLAN.md §7). */
 
 export async function home(page: Page) {
-  const create = page.getByRole('button', { name: 'Create Cruxspace', exact: true });
+  // Garden Home: the Garden's own members and its Add Crux control.
+  const create = page.getByRole('button', { name: 'Add Crux', exact: true });
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (/\/c\//.test(page.url())) await page.locator('header').getByRole('button').first().click();
+    if (/\/c\//.test(page.url())) {
+      // From a Crux, its Garden is the last step of the Garden location's ancestry.
+      await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+      await page
+        .getByRole('navigation', { name: 'Garden ancestry' })
+        .getByRole('button')
+        .last()
+        .click();
+    }
     if (await create.isVisible({ timeout: 10_000 }).catch(() => false)) return;
     // Diagnostics for a navigation that did not happen (2026-09-20: seen once with seven open cruxes).
     const buttons = await page
@@ -51,11 +60,11 @@ export async function member(page: Page, menu: RegExp, title: string, creationTi
   return { id, folder, title };
 }
 
-/** Open a member from the Cruxspace hub on the Home Garden. */
+/** Open a member from its Garden's Home. */
 export async function open(page: Page, title: string) {
   await home(page);
   await page
-    .getByRole('region', { name: 'Cruxspaces', exact: true })
+    .getByRole('main')
     .getByRole('button', { name: `Open ${title}`, exact: true })
     .click();
   await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });

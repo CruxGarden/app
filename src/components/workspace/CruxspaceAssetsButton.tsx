@@ -16,9 +16,9 @@ export default function CruxspaceAssetsButton() {
         className="text-xs px-2 py-1 rounded-[var(--radius-sm)] hover:bg-accent-muted text-text-muted cursor-pointer"
         onClick={() => setOpen(true)}
       >
-        Cruxspace assets
+        Garden outputs
       </button>
-      <Modal open={open} title="Cruxspace assets" size="xl" onClose={() => setOpen(false)}>
+      <Modal open={open} title="Garden outputs" size="xl" onClose={() => setOpen(false)}>
         <Cruxspaces
           targetId={id}
           runOperation={(operation) =>

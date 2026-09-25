@@ -285,7 +285,7 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
     if (!live.some((c) => c.id === (copy?.cruxId ?? input.targetCruxId)))
       throw new Error('The receiving Crux is no longer available.');
     if (!space.cruxIds.includes(copy?.cruxId ?? input.targetCruxId))
-      throw new Error('The receiving Crux must belong to this Cruxspace.');
+      throw new Error('The receiving Crux must belong to this Garden.');
     await assertCopyWritable(input.targetCruxId);
     const asset = (await listCruxspaceAssets(input.spaceId)).find(
       (a) =>

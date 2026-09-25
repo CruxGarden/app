@@ -1,7 +1,7 @@
 import catalog from '@/data/cruxspace-templates.json';
 import { importCruxspace, type ImportCruxspaceResult } from './cruxspace-package';
-import { deleteCruxspace, updateCruxspace } from './cruxspaces';
 import { getServices } from './index';
+import { deleteCruxspace } from './cruxspaces';
 import { isEmbeddedApp } from './embedded-app';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -35,8 +35,14 @@ export async function startCruxspaceTemplate(options: {
   );
   const imported: ImportCruxspaceResult[] = [];
   try {
-    for (const data of packages) {
-      const result = await importCruxspace({ data, mode: 'clone', onProgress: options.onProgress });
+    // The undertaking is one Garden; beside it, its worked example grows inside it.
+    for (const [index, data] of packages.entries()) {
+      const result = await importCruxspace({
+        data,
+        mode: 'clone',
+        onProgress: options.onProgress,
+        ...(index === 0 ? { name } : { gardenId: imported[0]!.space.id }),
+      });
       imported.push(result);
       if (result.failedArtifacts.length || result.unavailable.length || result.missingTools.length)
         throw new Error(
@@ -47,13 +53,12 @@ export async function startCruxspaceTemplate(options: {
       for (const member of result.members)
         if (isEmbeddedApp(await getServices().crux.findById(member.id)))
           useUIStore.getState().seedCruxLayout(member.id, 27);
-    const first = imported[0]!.space;
-    const space = await updateCruxspace(first.id, { ...first, name });
+    const space = imported[0]!.space;
     return { space, ...(imported[1] ? { exampleSpaceId: imported[1].space.id } : {}) };
   } catch (error) {
     for (const result of imported.reverse()) {
-      await deleteCruxspace(result.space.id);
       for (const member of result.members) await getServices().crux.delete(member.id);
+      await deleteCruxspace(result.space.id);
     }
     throw error;
   }

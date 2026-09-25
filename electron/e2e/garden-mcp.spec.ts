@@ -42,7 +42,8 @@ test('an outside MCP client operates across the garden; built-in collaborators s
     expect(names).toContain('plant_crux');
     expect(names).toContain('call_crux_tool');
     expect(names).not.toContain('answer_approval');
-    await page.keyboard.press('Escape');
+    // Garden panels close with their own control; a later Cmd+, reopens Settings.
+    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const a = /id: (\S+)/.exec(
       await call('plant_crux', { title: 'Outside alpha', template: 'blank' }),
     )![1];
@@ -62,19 +63,17 @@ test('an outside MCP client operates across the garden; built-in collaborators s
       exampleMode: 'start',
     });
     const undertakingId = /id: (\S+)/.exec(undertaking)![1];
-    expect(undertaking).not.toContain('worked example:');
-    const imported = await page.evaluate(async (id) => {
-      const row = (await window.electronAPI!.sqlite.get(
-        'SELECT value FROM settings WHERE key = ?',
-        ['cruxgarden:cruxspace:' + id],
-      )) as { value: string };
-      return JSON.parse(row.value);
-    }, undertakingId);
-    expect(imported.cruxIds).toHaveLength(2);
-    expect(imported.origin).toBeTruthy();
+    expect(undertaking).not.toContain('worked example');
+    // The undertaking is a Garden holding its two Cruxes.
+    const members = await page.evaluate(
+      async (id) =>
+        (await window.electronAPI!.sqlite.gardenMembership!.list(id, { limit: 100 })).items,
+      undertakingId,
+    );
+    expect(members).toHaveLength(2);
     expect(
       await call('call_crux_tool', {
-        cruxId: imported.cruxIds[1],
+        cruxId: members.find((m) => !/notebook/i.test(m.title ?? ''))!.id,
         name: 'read_file',
         input: { path: 'game.json' },
       }),

@@ -1,10 +1,18 @@
-import { useGardenContext, captureGardenId, cruxPath, inGarden } from '@/stores/gardenContext';
+import {
+  useGardenContext,
+  captureGardenId,
+  cruxPath,
+  gardenPath,
+  inGarden,
+} from '@/stores/gardenContext';
 import { getServices } from '@/services';
 import GardenActions from '@/components/garden/GardenActions';
+import GardenBrief from '@/components/garden/GardenBrief';
+import { importGardenPackage } from '@/services/garden-package';
+import { Capability, can } from '@/lib/platform';
 import { useTendingRows } from '@/stores/tendingStore';
 import { startFromFiles, filesFromDataTransfer } from '@/services/file-routing';
 import { importCrux } from '@/services/crux-io';
-import { importCruxspace } from '@/services/cruxspace-package';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import TendingLink from '@/components/tending/TendingLink';
 import { useState, useCallback, useEffect } from 'react';
@@ -73,11 +81,12 @@ export default function HomeGarden() {
           if (window.location.href === origin) navigate(cruxPath(imported, gardenId));
           return;
         }
-        if (single && /\.cruxspace$/i.test(single.name)) {
+        if (single && /\.cruxspace$/i.test(single.name) && gardenId) {
           setDropNotice(`Importing ${single.name}…`);
-          await importCruxspace({ data: single });
+          const id = await importGardenPackage(single, gardenId);
           refresh();
-          setDropNotice(`Imported ${single.name}.`);
+          setDropNotice('');
+          if (window.location.href === origin) navigate(gardenPath(id));
           return;
         }
         const { files, folder } = await filesFromDataTransfer(dt);
@@ -177,6 +186,7 @@ export default function HomeGarden() {
               <h1 className="font-display text-lg font-medium text-text truncate">
                 {garden?.title || (author ? author.username : 'Garden')}
               </h1>
+              {garden && <GardenBrief key={garden.id} gardenId={garden.id} />}
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">{isHome ? 'Home Garden' : 'Garden'}</p>
                 <TendingLink />
@@ -240,11 +250,12 @@ export default function HomeGarden() {
       <RecoverSection />
 
       {garden && <GardenActions key={garden.id} />}
-      <details className="mb-4 text-sm text-text-muted">
-        <summary className="cursor-pointer py-2">Shared gardens & collections</summary>
-        <Gardens />
-        <Cruxspaces />
-      </details>
+      {can(Capability.V2) && (
+        <details className="mb-4 text-sm text-text-muted">
+          <summary className="cursor-pointer py-2">Shared gardens</summary>
+          <Gardens />
+        </details>
+      )}
 
       {/* Content */}
       {cruxList.length === 0 && search.length > 0 ? (
@@ -297,6 +308,9 @@ export default function HomeGarden() {
           tendingCounts={tendingCounts}
         />
       )}
+
+      {/* The Garden's shared work: walkthrough, outputs, history, package */}
+      {garden && <Cruxspaces key={garden.id} gardenId={garden.id} />}
 
       {/* The Trash: deleted cruxes wait here, restorable, until purged */}
       <TrashSection />

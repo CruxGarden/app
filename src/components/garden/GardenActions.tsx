@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useGardenContext, gardenPath } from '@/stores/gardenContext';
 import { useGardenStore } from '@/stores/gardenStore';
@@ -6,6 +6,7 @@ import { getServices } from '@/services';
 import { getSqliteClient } from '@/services/sqlite/client';
 import type { Crux } from '@/api/types';
 import { Button } from '@/components/ui';
+import { importGardenPackage } from '@/services/garden-package';
 
 /** Explicit placement actions; moving preserves the Crux and its content. */
 export default function GardenActions() {
@@ -19,6 +20,7 @@ export default function GardenActions() {
   >([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const packageInput = useRef<HTMLInputElement>(null);
   const navigate = useMoodNavigate();
   if (!garden) return null;
   const finish = () => {
@@ -73,6 +75,36 @@ export default function GardenActions() {
         >
           Add existing Crux
         </button>
+        <button
+          className="hover:text-text cursor-pointer disabled:opacity-50"
+          disabled={busy}
+          onClick={() => packageInput.current?.click()}
+        >
+          Import Garden
+        </button>
+        <input
+          ref={packageInput}
+          type="file"
+          accept=".cruxspace"
+          aria-label="Garden package"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (!file) return;
+            const destination = garden.id;
+            const origin = window.location.href;
+            setBusy(true);
+            setError('');
+            void importGardenPackage(file, destination)
+              .then((id) => {
+                finish();
+                if (window.location.href === origin) navigate(gardenPath(id));
+              })
+              .catch((err) => setError((err as Error).message))
+              .finally(() => setBusy(false));
+          }}
+        />
       </div>
       {mode === 'new' && (
         <form

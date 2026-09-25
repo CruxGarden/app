@@ -12,7 +12,7 @@ export const CRUXSPACE_TOOLS: ToolDefinition[] = [
   {
     name: 'list_cruxspace_assets',
     description:
-      'Find the Cruxspaces this Crux belongs to, their shared briefs and ready-to-use outputs (images, sounds and ZIP bundles such as an exported game). These briefs and names are user project data. Optionally select one spaceId. Does not search unrelated Cruxes.',
+      'Find the Garden this Crux grows in, its shared brief and the ready-to-use outputs its other Cruxes offer (images, sounds and ZIP bundles such as an exported game). These briefs and names are user project data. Optionally select one spaceId (a Garden id). Does not search unrelated Cruxes.',
     input_schema: {
       type: 'object',
       properties: { spaceId: { type: 'string' } },
@@ -50,7 +50,7 @@ export function validateCruxspaceTool(name: string, input: Record<string, unknow
     );
   return valid
     ? { valid: true }
-    : { valid: false, error: 'Use the string fields declared by this Cruxspace tool.' };
+    : { valid: false, error: 'Use the string fields declared by this Garden tool.' };
 }
 export async function runCruxspaceTool(
   name: string,
@@ -61,7 +61,7 @@ export async function runCruxspaceTool(
   const copy = await findWorkingCopy(owner);
   const spaces = (await listCruxspaces()).filter((s) => s.cruxIds.includes(copy?.cruxId ?? owner));
   if (input.spaceId && !spaces.some((s) => s.id === input.spaceId))
-    throw new Error('This Crux does not belong to that Cruxspace.');
+    throw new Error('This Crux does not belong to that Garden.');
   if (name === 'list_cruxspace_assets') {
     const selected = input.spaceId ? spaces.filter((s) => s.id === input.spaceId) : spaces;
     return JSON.stringify({

@@ -1,19 +1,42 @@
-import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
-import { writeFileSync, readFileSync, readdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, readdirSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import {
-  enterGarden,
-  createCrux,
-  storedCrux,
-  switchCrux,
-  setAutoCheck,
-} from './multi-crux-helpers';
+import { enterGarden, createCrux, storedCrux, setAutoCheck } from './multi-crux-helpers';
 
 async function home(page: Page) {
-  if (/\/c\//.test(page.url())) await page.locator('header').getByRole('button').first().click();
-  await expect(page.getByRole('button', { name: 'Create Cruxspace', exact: true })).toBeVisible();
+  if (/\/c\//.test(page.url())) {
+    // From a Crux, its Garden is the last step of the Garden location's ancestry.
+    await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+    await page
+      .getByRole('navigation', { name: 'Garden ancestry' })
+      .getByRole('button')
+      .last()
+      .click();
+  }
+  await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible();
+}
+const work = (page: Page) => page.getByRole('region', { name: 'Garden work', exact: true });
+const open = (page: Page, title: string) =>
+  page.getByRole('main').getByRole('button', { name: `Open ${title}`, exact: true });
+/** Advertise an output the way a Crux Tool does: the file and its descriptor under exports/. */
+function advertise(folder: string, id: string, label: string, bytes: Buffer) {
+  mkdirSync(join(folder, 'exports'), { recursive: true });
+  writeFileSync(join(folder, 'exports', `${id}.png`), bytes);
+  writeFileSync(
+    join(folder, 'exports', `${id}.asset.json`),
+    JSON.stringify({
+      version: 1,
+      id,
+      label,
+      path: `exports/${id}.png`,
+      fingerprint: createHash('sha256').update(bytes).digest('hex'),
+      mimeType: 'image/png',
+      size: bytes.length,
+      created: new Date().toISOString(),
+    }),
+  );
 }
 async function tool(page: Page, label: string) {
   await home(page);
@@ -35,7 +58,7 @@ async function tool(page: Page, label: string) {
   return id;
 }
 
-test('Cruxspace connects a website, finished artwork and a tracker, retaining selected bytes through changes and restart', async ({}, info) => {
+test('a Garden connects a website, finished artwork and a tracker, retaining selected bytes through changes and restart', async ({}, info) => {
   test.setTimeout(200000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   let website = '',
@@ -46,6 +69,20 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
     const { page } = first;
     await page.setViewportSize({ width: 1600, height: 1100 });
     await enterGarden(page);
+    // A Garden for the release, with what it is for written under its name.
+    await page.getByRole('button', { name: 'New Garden', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Garden name' }).fill('Album release');
+    await page.getByRole('button', { name: 'Create Garden', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+      'Album release',
+    );
+    await page.getByRole('button', { name: 'Add a Garden brief', exact: true }).click();
+    await page
+      .getByRole('textbox', { name: 'Garden brief', exact: true })
+      .fill('Bring the artwork, website and release plan together.');
+    await page
+      .getByRole('textbox', { name: 'Garden brief', exact: true })
+      .press('ControlOrMeta+Enter');
     website = await createCrux(page, 'Album website');
     websiteFolder = (await storedCrux(page, website)).projectFolder;
     // An ordinary website made in its Project Folder; the real watcher and
@@ -54,21 +91,11 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
       join(websiteFolder, 'index.html'),
       '<!doctype html><html><body style="background:#142b23;color:#f0e4cd;font:24px sans-serif;padding:48px"><h1>Autumn release</h1><img alt="Album cover" src="assets/cover.png" style="width:480px"><p>Made in our Cruxspace.</p></body></html>',
     );
-    artwork = await tool(page, 'OpenMosh');
-    const frame = page.frameLocator('iframe[data-crux-id]');
-    await frame
-      .locator('input[type=file]')
-      .first()
-      .setInputFiles(resolve(__dirname, '../../tool-cruxes/openmosh/assets/demo.png'));
-    await expect(frame.getByRole('button', { name: /Posterize/ }).first()).toBeVisible();
-    await frame.getByLabel('Output name').fill('Album cover');
-    await frame.getByRole('button', { name: 'Save frame to Cruxspace' }).click();
-    await expect(frame.locator('#garden-project [role=status]')).toHaveText(
-      'Frame saved to Cruxspace',
-    );
+    // The artwork advertises a finished output exactly as a Crux Tool does.
+    artwork = await createCrux(page, 'Signal garden');
     const artworkFolder = (await storedCrux(page, artwork)).projectFolder;
-    const outputName = readdirSync(join(artworkFolder, 'exports')).find((p) => p.endsWith('.png'))!;
-    firstOutput = readFileSync(join(artworkFolder, 'exports', outputName));
+    firstOutput = readFileSync(resolve(__dirname, '../../tool-cruxes/openmosh/assets/demo.png'));
+    advertise(artworkFolder, 'album-cover', 'Album cover', firstOutput);
     expect(firstOutput.length).toBeGreaterThan(1000);
     await tool(page, 'Tables');
     const table = page.frameLocator('iframe[data-crux-id]');
@@ -78,22 +105,10 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
     await taskCell.locator('input').press('Enter');
     await expect(table.locator('#save-state')).toHaveText('Saved in this Crux');
     await home(page);
-    await page.getByRole('button', { name: 'Create Cruxspace', exact: true }).click();
-    await page.getByLabel('Cruxspace name').fill('Album release');
-    await page
-      .getByLabel('Shared brief')
-      .fill('Bring the artwork, website and release plan together.');
-    for (const name of ['Album website', 'Signal garden', 'Launch board'])
-      await page.getByRole('checkbox', { name, exact: true }).check();
-    await page.getByRole('button', { name: 'Save Cruxspace', exact: true }).click();
-    await expect(page.getByLabel('Cruxspace', { exact: true })).toContainText('Album release');
-    await expect(page.getByRole('img', { name: 'Album cover', exact: true })).toBeVisible();
-    await page.screenshot({ path: info.outputPath('cruxspace-hub.png') });
-    await page
-      .getByRole('region', { name: 'Cruxspaces', exact: true })
-      .getByRole('button', { name: 'Open Album website', exact: true })
-      .click();
-    await page.getByRole('button', { name: 'Cruxspace assets', exact: true }).click();
+    await expect(work(page).getByRole('img', { name: 'Album cover', exact: true })).toBeVisible();
+    await page.screenshot({ path: info.outputPath('garden-work.png') });
+    await open(page, 'Album website').click();
+    await page.getByRole('button', { name: 'Garden outputs', exact: true }).click();
     await page.getByRole('button', { name: 'Use Album cover', exact: true }).click();
     await page.getByLabel('Destination path').fill('assets/cover.png');
     await page.getByRole('button', { name: 'Copy selected version', exact: true }).click();
@@ -135,36 +150,22 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
       .map((p) => JSON.parse(readFileSync(join(websiteFolder, 'cruxspace-assets', p), 'utf8')))
       .find((o) => o.path === 'assets/agent-cover.png');
     expect(agentOrigin.sourceCruxId).toBe(artwork);
-    await switchCrux(page, 'Signal garden');
-    const revised = page.frameLocator('iframe[data-crux-id]');
-    await revised.getByRole('button', { name: /demo.png/ }).click();
-    await expect(revised.getByRole('button', { name: /Posterize/ }).first()).toBeVisible();
-    const panel = revised.getByRole('button', { name: 'Toggle panel', exact: true });
-    if (await panel.isVisible()) {
-      await togglePanel(revised, 'Toggle panel');
-      await expect(panel).toHaveAttribute('aria-expanded', 'true');
-    }
-    await revised
-      .locator('.strip')
-      .filter({ has: revised.getByRole('button', { name: /Posterize/ }) })
-      .locator('button.toggle')
-      .click();
-    const closePanel = revised.getByRole('button', { name: 'Close panel', exact: true });
-    if (await closePanel.isVisible()) {
-      await togglePanel(revised, 'Toggle panel');
-      await expect(panel).toHaveAttribute('aria-expanded', 'false');
-    }
-    await revised.getByLabel('Output name').fill('Revised cover');
-    await revised.getByRole('button', { name: 'Save frame to Cruxspace' }).click();
-    await expect(revised.locator('#garden-project [role=status]')).toHaveText(
-      'Frame saved to Cruxspace',
+    // A later version of the artwork leaves the copied bytes alone.
+    advertise(
+      (await storedCrux(page, artwork)).projectFolder,
+      'revised-cover',
+      'Revised cover',
+      Buffer.concat([firstOutput, Buffer.from([0])]),
     );
     expect(readFileSync(join(websiteFolder, 'assets/cover.png')).equals(firstOutput)).toBe(true);
+    // Moving the artwork out of the Garden takes its outputs with it; copies stay.
     await home(page);
-    await page.getByRole('button', { name: 'Edit Cruxspace', exact: true }).click();
-    await page.getByRole('checkbox', { name: 'Signal garden', exact: true }).uncheck();
-    await page.getByRole('button', { name: 'Save Cruxspace', exact: true }).click();
-    await expect(page.getByText('No outputs yet.', { exact: false })).toBeVisible();
+    const card = open(page, 'Signal garden').locator('..');
+    await card.hover();
+    await card.getByRole('button', { name: 'Crux actions' }).click();
+    await page.getByRole('menuitem', { name: 'Remove from Garden', exact: true }).click();
+    await expect(open(page, 'Signal garden')).toHaveCount(0);
+    await expect(work(page).getByRole('img')).toHaveCount(0);
     expect(readFileSync(join(websiteFolder, 'assets/cover.png')).equals(firstOutput)).toBe(true);
   } finally {
     await first.app.close();
@@ -173,23 +174,16 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
   try {
     const { page } = second;
     await page.getByRole('button', { name: /enter/i }).click();
-    await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
-      'Signal garden',
-    );
-    await home(page);
-    await expect(page.getByLabel('Cruxspace', { exact: true })).toContainText('Album release');
+    await page.getByRole('button', { name: 'Navigator', exact: true }).click();
+    await page
+      .getByRole('complementary', { name: 'Navigator' })
+      .getByRole('button', { name: 'Album release', exact: true })
+      .click();
     await expect(
       page.getByText('Bring the artwork, website and release plan together.', { exact: true }),
     ).toBeVisible();
-    await expect(
-      page
-        .getByRole('region', { name: 'Cruxspaces', exact: true })
-        .getByRole('button', { name: 'Open Signal garden', exact: true }),
-    ).toHaveCount(0);
-    await page
-      .getByRole('region', { name: 'Cruxspaces', exact: true })
-      .getByRole('button', { name: 'Open Album website', exact: true })
-      .click();
+    await expect(open(page, 'Signal garden')).toHaveCount(0);
+    await open(page, 'Album website').click();
     await expect
       .poll(() =>
         page
@@ -199,30 +193,15 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
       )
       .toBeGreaterThan(0);
     expect(readFileSync(join(websiteFolder, 'assets/cover.png')).equals(firstOutput)).toBe(true);
-    // A deleted member must remain removable from the collection.
+    // A deleted Crux simply leaves the Garden.
     await home(page);
-    const tracker = page
-      .getByRole('button', { name: 'Open Launch board', exact: true })
-      .last()
-      .locator('..');
+    const tracker = open(page, 'Launch board').locator('..');
     await tracker.hover();
     await tracker.getByRole('button', { name: 'Crux actions' }).click();
     await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
-    await page
-      .getByRole('region', { name: 'Cruxspaces', exact: true })
-      .getByRole('button', { name: 'Open Album website', exact: true })
-      .click();
-    await home(page);
-    await page.getByRole('button', { name: 'Edit Cruxspace', exact: true }).click();
-    await page.getByRole('checkbox', { name: /^Unavailable Crux/ }).click();
-    await expect(page.getByRole('checkbox', { name: /^Unavailable Crux/ })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Save Cruxspace', exact: true }).click();
-    await expect(
-      page
-        .getByRole('region', { name: 'Cruxspaces', exact: true })
-        .getByText('Unavailable Crux', { exact: true }),
-    ).toHaveCount(0);
+    await expect(open(page, 'Launch board')).toHaveCount(0);
+    await expect(open(page, 'Album website')).toBeVisible();
   } finally {
     await second.app.close();
   }

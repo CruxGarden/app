@@ -11,14 +11,21 @@ import catalog from '../../src/data/cruxspace-templates.json';
 const evidence = resolve(__dirname, '../../docs/templates');
 const selected = process.env.CRUX_UNDERTAKINGS?.split(',');
 async function home(page: Page) {
-  if (/\/c\//.test(page.url()))
-    await page.locator('header').first().getByRole('button').first().click();
+  if (/\/c\//.test(page.url())) {
+    // From a Crux, its Garden is the last step of the Garden location's ancestry.
+    await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+    await page
+      .getByRole('navigation', { name: 'Garden ancestry' })
+      .getByRole('button')
+      .last()
+      .click();
+  }
   await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible();
 }
 async function openMember(page: Page, title: string) {
   await home(page);
   await page
-    .getByRole('region', { name: 'Cruxspaces', exact: true })
+    .getByRole('main')
     .getByRole('button', { name: `Open ${title}`, exact: true })
     .click();
   await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
@@ -67,21 +74,31 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
       await expect(page.getByRole('dialog', { name: 'Add Crux', exact: true })).toBeHidden({
         timeout: 180000,
       });
-      const spaces = await page.evaluate(async () =>
-        (
-          (await window.electronAPI!.sqlite.all('SELECT value FROM settings WHERE key LIKE ?', [
-            'cruxgarden:cruxspace:%',
-          ])) as { value: string }[]
-        ).map((r) => JSON.parse(r.value)),
+      // The undertaking is a new Garden; its worked example grows inside it.
+      await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+        entry.name,
       );
-      expect(spaces).toHaveLength(2);
-      const own = spaces.find((s) => s.name === entry.name)!;
-      const example = spaces.find((s) => s.name.includes('worked example'))!;
-      expect(new Set([...own.cruxIds, ...example.cruxIds]).size).toBe(4);
-      expect(own.origin).toBeTruthy();
-      await expect(page.getByRole('combobox', { name: 'Cruxspace', exact: true })).toHaveValue(
-        own.id,
-      );
+      const gardens = await page.evaluate(async () => {
+        const db = window.electronAPI!.sqlite;
+        const rows = (await db.all(
+          "SELECT id, title FROM cruxes WHERE kind = 'garden' AND deleted IS NULL",
+        )) as { id: string; title: string }[];
+        return Promise.all(
+          rows.map(async (row) => ({
+            ...row,
+            parents: (await db.gardenMembership!.parents(row.id)).map((p) => p.id),
+            members: (await db.gardenMembership!.list(row.id, { limit: 100 })).items.map((m) => ({
+              id: m.id,
+              kind: m.kind,
+            })),
+          })),
+        );
+      });
+      const own = gardens.find((g) => g.title === entry.name)!;
+      const example = gardens.find((g) => g.title.includes('worked example'))!;
+      expect(example.parents).toEqual([own.id]);
+      const works = (g: typeof own) => g.members.filter((m) => m.kind !== 'garden');
+      expect(new Set([...works(own), ...works(example)].map((m) => m.id)).size).toBe(4);
 
       // Every undertaking has a usable notebook, editable without a model or key.
       const planningId = await openMember(page, entry.members[0]!);
@@ -210,8 +227,15 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
       }
       await page.screenshot({ path: join(out, 'manual-edit.png') });
       await home(page);
-      await page.getByRole('combobox', { name: 'Cruxspace', exact: true }).selectOption(example.id);
-      await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
+      await page
+        .getByRole('main')
+        .getByRole('button', { name: `Open ${example.title}` })
+        .click();
+      await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+        example.title,
+      );
+      const work = page.getByRole('region', { name: 'Garden work', exact: true });
+      await work.getByRole('button', { name: 'History', exact: true }).click();
       const story = page.getByTestId('cruxspace-story');
       await story.getByRole('button', { name: 'Start walkthrough', exact: true }).click();
       const walk = story.getByRole('status', { name: 'Walkthrough', exact: true });
@@ -226,14 +250,17 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
       expect(steps).toBeGreaterThanOrEqual(6);
       await page.screenshot({ path: join(out, 'walkthrough.png') });
       await story.getByRole('button', { name: 'Back to now', exact: true }).click();
-      await page.getByRole('button', { name: 'Close Cruxspace history', exact: true }).click();
-      await page.getByRole('combobox', { name: 'Cruxspace', exact: true }).selectOption(own.id);
+      await page.getByRole('button', { name: 'Close Garden history', exact: true }).click();
+      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+        entry.name,
+      );
       // The public package import UI round-trips the customized collection in a clean garden.
       const archive = join(first.dir, `${entry.id}.cruxspace`);
       await instance.app.evaluate(({ session }, path) => {
         session.defaultSession.once('will-download', (_event, item) => item.setSavePath(path));
       }, archive);
-      await page.getByRole('button', { name: 'Export Cruxspace', exact: true }).click();
+      await work.getByRole('button', { name: 'Export Garden', exact: true }).click();
       await expect.poll(() => existsSync(archive), { timeout: 180000 }).toBe(true);
       await expect(page.getByText(/Exported .* with 2 member Cruxes/)).toBeVisible({
         timeout: 180000,
@@ -248,9 +275,10 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
       await home(page);
       const persisted = await page.evaluate(
         async (id) =>
-          window.electronAPI!.sqlite.get('SELECT value FROM settings WHERE key = ?', [
-            'cruxgarden:cruxspace:' + id,
-          ]),
+          window.electronAPI!.sqlite.get(
+            "SELECT id FROM cruxes WHERE id = ? AND kind = 'garden' AND deleted IS NULL",
+            [id],
+          ),
         own.id,
       );
       expect(persisted).toBeTruthy();
@@ -261,12 +289,10 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
       instance = await launchApp();
       page = instance.page;
       await enterGarden(page);
-      await page.getByLabel('Cruxspace package', { exact: true }).setInputFiles(archive);
-      await expect(page.getByText(/Imported .* with 2 member Cruxes/)).toBeVisible({
-        timeout: 180000,
-      });
-      await expect(page.getByRole('combobox', { name: 'Cruxspace', exact: true })).toContainText(
+      await page.getByLabel('Garden package', { exact: true }).setInputFiles(archive);
+      await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
         entry.name,
+        { timeout: 180000 },
       );
       const copiedId = await openMember(page, entry.members[0]!);
       const copiedFolder = (await storedCrux(page, copiedId)).projectFolder as string;

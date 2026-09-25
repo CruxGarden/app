@@ -142,8 +142,8 @@ export default function BlenderPane() {
         <section className="space-y-3 rounded-lg border border-border p-4">
           <h3 className="font-medium">Share a saved output</h3>
           <p className="text-sm text-text-muted">
-            Save a PNG render or GLB model here, then make it available to your Cruxspace. Each
-            output records the current saved scene version.
+            Save a PNG render or GLB model here, then make it available to your Garden. Each output
+            records the current saved scene version.
           </p>
           <label className="block text-sm" htmlFor="blender-output">
             Saved Artifact
@@ -180,7 +180,7 @@ export default function BlenderPane() {
                   throw new Error('The selected Artifact changed. Choose its current version.');
                 await registerBlenderOutput(crux.id, pathOf(file), file.fingerprint, label);
                 await refresh();
-                setNotice('Output saved for your Cruxspace.');
+                setNotice('Output saved for your Garden.');
               })
             }
           >

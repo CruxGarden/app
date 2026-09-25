@@ -3,6 +3,7 @@ import type { LocalGraphChange } from '@/lib/platform';
 import { getSqliteClient } from './sqlite/client';
 import { allWorkspaces } from '@/stores/workspaceRegistry';
 import { useGardenStore } from '@/stores/gardenStore';
+import { collectionsChanged } from './cruxspaces';
 
 let unsubscribe: (() => void) | undefined;
 /** Host notices carry identities only. Existing services reread committed state.
@@ -21,6 +22,7 @@ export function initGraphChanges(): void {
 export async function applyGraphChange(change: LocalGraphChange): Promise<void> {
   if (change.entity === 'crux-lifecycle' || change.entity === 'garden-membership') {
     useGardenContext.setState((s) => ({ revision: s.revision + 1 }));
+    collectionsChanged();
     await useGardenStore.getState().refresh();
     return;
   }
@@ -50,6 +52,7 @@ export async function applyGraphChange(change: LocalGraphChange): Promise<void> 
   });
   if (change.entity === 'working-copy' || fields.includes('title'))
     window.dispatchEvent(new Event('crux:tasks-changed'));
+  if (fields.includes('title') || fields.includes('description')) collectionsChanged();
   if (change.entity === 'crux' && !useGardenStore.getState().loading)
     refreshes.push(useGardenStore.getState().refresh());
   await Promise.all(refreshes);

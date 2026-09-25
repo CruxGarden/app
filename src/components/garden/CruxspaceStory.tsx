@@ -197,7 +197,7 @@ export default function CruxspaceStory({
   const when = (iso: string) => (iso ? new Date(iso).toLocaleString() : '');
 
   return createPortal(
-    <Modal open onClose={onClose} size="full" flush aria-label="Cruxspace history">
+    <Modal open onClose={onClose} size="full" flush aria-label="Garden history">
       <section
         ref={dialogRef}
         tabIndex={-1}
@@ -207,7 +207,7 @@ export default function CruxspaceStory({
         <header className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
           <div>
             <p className="text-xs uppercase tracking-widest font-mono text-accent">
-              Cruxspace · history
+              Garden · history
             </p>
             <h2 className="font-display text-xl">{history?.space.name ?? 'Loading…'}</h2>
             <p className="text-xs text-text-muted mt-1">
@@ -233,7 +233,7 @@ export default function CruxspaceStory({
             <button className={action} onClick={() => setFit((n) => n + 1)}>
               Fit graph
             </button>
-            <button className={action} onClick={onClose} aria-label="Close Cruxspace history">
+            <button className={action} onClick={onClose} aria-label="Close Garden history">
               Close
             </button>
           </div>
@@ -293,16 +293,14 @@ export default function CruxspaceStory({
         )}
         <div className="flex flex-1 min-h-0">
           <aside
-            aria-label="Cruxspace story"
+            aria-label="Garden story"
             className="w-[26rem] shrink-0 border-r border-border overflow-y-auto p-4 space-y-5 text-sm"
           >
-            <section aria-label="About this Cruxspace">
+            <section aria-label="About this Garden">
               <h3 className="text-xs uppercase tracking-widest font-display text-text-muted mb-1">
-                What this Cruxspace is for
+                What this Garden is for
               </h3>
-              <p className="whitespace-pre-wrap">
-                {history?.space.brief || 'No brief yet. Edit the Cruxspace to add one.'}
-              </p>
+              <p className="whitespace-pre-wrap">{history?.space.brief || 'No brief yet.'}</p>
             </section>
             <section aria-label="Members">
               <h3 className="text-xs uppercase tracking-widest font-display text-text-muted mb-1">

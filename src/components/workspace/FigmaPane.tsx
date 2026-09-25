@@ -250,8 +250,8 @@ export default function FigmaPane() {
           <h3 className="text-sm font-medium">Bring an asset back</h3>
           <p className="text-sm text-text-muted">
             Ask your collaborator to download a Figma export into this Project Folder, or export it
-            yourself. Import the file below to share it with another member of your Cruxspace. Link
-            the exported frame first so its source is recorded correctly.
+            yourself. Import the file below to share it with another Crux in your Garden. Link the
+            exported frame first so its source is recorded correctly.
           </p>
           <label className="block text-sm" htmlFor="figma-output-label">
             Asset name
@@ -283,7 +283,7 @@ export default function FigmaPane() {
                   project.reference!.url,
                 );
                 await refresh();
-                setNotice(`Imported ${output.label}. It is available in Cruxspace assets.`);
+                setNotice(`Imported ${output.label}. It is available in Garden outputs.`);
               });
             }}
           />

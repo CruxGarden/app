@@ -165,7 +165,7 @@ const FIGMA_CONVENTIONS = [
   '## Files and folder layout',
   '- `figma/project.json` stores the linked Figma file/frame; `brief.md` stores the creative brief.',
   '- Local Artifacts may be uploaded to Figma through its authenticated MCP tools. Download completed exports into this Project Folder so Garden can ingest them.',
-  '- The companion imports exported files as Cruxspace outputs with source provenance. Keep a receipt naming the actual Figma file/frame for agent-downloaded assets.',
+  '- The companion imports exported files as Garden outputs with source provenance. Keep a receipt naming the actual Figma file/frame for agent-downloaded assets.',
   '- Use the installed Figma skills and current MCP tools for native edits. Inspect the current design before each change and preserve intervening manual work.',
   '- This is an external-app companion, not a website. Do not create an index page or install a web toolchain to operate Figma.',
 ].join('\n');
@@ -175,7 +175,7 @@ const FIGMA_PREVIEW = [
   '- Inspect the editable native design and its rendered result in Figma after changes; verify downloaded asset bytes locally.',
   '- Report unavailable tools, authentication failures and refused edits honestly. Opening a link or arranging windows does not grant MCP access.',
   '- Growth preserves the local brief, references, exports and conversation. It does not restore the remote Figma document or its history.',
-  '- Website publishing and site-build checks do not apply to this companion. Reuse outputs in another Cruxspace member when building a site.',
+  '- Website publishing and site-build checks do not apply to this companion. Reuse outputs in another Crux of the same Garden when building a site.',
 ].join('\n');
 
 function renderConventions(site: boolean, model: ContentModel | undefined): string {

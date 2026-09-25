@@ -1,16 +1,13 @@
-import RuntimeExportChoice from './RuntimeExportChoice';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button, Modal } from '@/components/ui';
 import { getServices } from '@/services';
 import type { Crux } from '@/api/types';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
 import {
   CRUXSPACES_CHANGED,
-  createCruxspace,
-  deleteCruxspace,
+  getCruxspace,
   listCruxspaces,
-  updateCruxspace,
   type Cruxspace,
 } from '@/services/cruxspaces';
 import {
@@ -20,16 +17,13 @@ import {
   type CruxspaceAsset,
 } from '@/services/cruxspace-assets';
 import { findWorkingCopy } from '@/services/working-copies';
-import { exportCruxspace, importCruxspace } from '@/services/cruxspace-package';
+import { exportCruxspace } from '@/services/cruxspace-package';
 import {
   CRUXSPACE_MOMENT_CHANGED,
   getCruxspaceMoment,
   setCruxspaceMoment,
 } from '@/services/cruxspace-moment';
 import { startCruxspaceWalk } from '@/stores/cruxspaceWalk';
-import { isEmbeddedApp } from '@/services/embedded-app';
-import { useGardenStore } from '@/stores/gardenStore';
-import { useUIStore } from '@/stores/uiStore';
 
 const CruxspaceStory = lazy(() => import('./CruxspaceStory'));
 const field = 'w-full rounded-[var(--radius-sm)] border border-border bg-bg p-2 text-sm text-text';
@@ -57,11 +51,18 @@ function Thumbnail({ asset }: { asset: CruxspaceAsset }) {
   );
 }
 
-/** Home hub and Workshop picker share discovery, selection and transfer behavior. */
+/**
+ * A Garden's shared work: its walkthrough, the outputs its Cruxes offer each
+ * other, its history and its package. On Garden Home (`gardenId`) it is that
+ * Garden's quiet footer; in a Workshop (`targetId`) it offers the outputs of
+ * the Garden the Crux grows in.
+ */
 export default function Cruxspaces({
+  gardenId,
   targetId,
   runOperation = (operation) => operation(),
 }: {
+  gardenId?: string;
   targetId?: string;
   runOperation?: <T>(operation: () => Promise<T>) => Promise<T>;
 }) {
@@ -72,10 +73,6 @@ export default function Cruxspaces({
   const [assets, setAssets] = useState<CruxspaceAsset[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState<Cruxspace | 'new' | null>(null);
-  const [name, setName] = useState('');
-  const [brief, setBrief] = useState('');
-  const [members, setMembers] = useState<string[]>([]);
   const [using, setUsing] = useState<CruxspaceAsset | null>(null);
   const [receiver, setReceiver] = useState('');
   const [path, setPath] = useState('');
@@ -85,10 +82,6 @@ export default function Cruxspaces({
   const [status, setStatus] = useState('');
   const [story, setStory] = useState(false);
   const [moment, setMoment] = useState(getCruxspaceMoment);
-  const packageInput = useRef<HTMLInputElement>(null);
-  // Arriving from the breadcrumb (`/home?space=<id>`): show that Cruxspace.
-  const [params] = useSearchParams();
-  const wanted = targetId ? null : params.get('space');
   const section = useRef<HTMLElement>(null);
   useEffect(() => {
     startCruxspaceWalk(); // background workspaces follow the walk even when none is on screen
@@ -99,7 +92,7 @@ export default function Cruxspaces({
   const space = spaces.find((s) => s.id === selected);
   const load = useCallback(async () => {
     const [all, live, copy] = await Promise.all([
-      listCruxspaces(),
+      gardenId ? getCruxspace(gardenId).then((g) => [g]) : listCruxspaces(),
       getServices().crux.listAll(),
       targetId ? findWorkingCopy(targetId) : null,
     ]);
@@ -108,15 +101,8 @@ export default function Cruxspaces({
       : all;
     setSpaces(visible);
     setCruxes(live);
-    setSelected((id) => {
-      if (wanted && visible.some((s) => s.id === wanted)) return wanted;
-      return visible.some((s) => s.id === id) ? id : (visible[0]?.id ?? '');
-    });
-  }, [targetId, wanted]);
-  useEffect(() => {
-    if (wanted && spaces.some((s) => s.id === wanted))
-      section.current?.scrollIntoView({ block: 'start' });
-  }, [wanted, spaces]);
+    setSelected((id) => (visible.some((s) => s.id === id) ? id : (visible[0]?.id ?? '')));
+  }, [gardenId, targetId]);
   useEffect(() => {
     const reload = () => void load().catch((e) => setError(e.message));
     reload();
@@ -153,7 +139,7 @@ export default function Cruxspaces({
   const exportPackage = () =>
     action(async () => {
       if (!space) return;
-      setStatus('Packing the Cruxspace…');
+      setStatus(`Packing ${space.name}…`);
       const result = await exportCruxspace({ spaceId: space.id, onProgress: setStatus });
       const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
@@ -169,100 +155,45 @@ export default function Cruxspaces({
           : `Exported ${result.filename} with ${result.manifest.members.length} member Cruxes.`,
       );
     });
-  const importPackage = (file: File) =>
-    action(async () => {
-      setStatus(`Importing ${file.name}…`);
-      const result = await importCruxspace({ data: file, onProgress: setStatus });
-      // Imported members are new to this Garden: the list, and the Workshop for app members.
-      const { crux } = getServices();
-      for (const member of result.members)
-        if (isEmbeddedApp(await crux.findById(member.id)))
-          useUIStore.getState().seedCruxLayout(member.id, 27);
-      await useGardenStore.getState().refresh();
-      await load();
-      setSelected(result.space.id);
-      setStatus(
-        `Imported ${result.space.name} with ${result.members.length} member Cruxes${
-          result.space.origin ? ' as a copy' : ''
-        }.${
-          result.failedArtifacts.length
-            ? ` ${result.failedArtifacts.length} file(s) could not be restored.`
-            : ''
-        }${
-          // The members are here either way; without their tool they open empty,
-          // so the package says what it needs rather than letting you find out.
-          result.missingTools.length
-            ? ` Install ${result.missingTools
-                .map((tool) => tool.name)
-                .join(', ')} to open every member.`
-            : ''
-        }`,
-      );
-    });
-  const edit = (value: Cruxspace | 'new') => {
-    setEditing(value);
-    setError('');
-    setName(value === 'new' ? '' : value.name);
-    setBrief(value === 'new' ? '' : value.brief);
-    setMembers(value === 'new' ? [] : value.cruxIds);
-  };
+  const quiet = 'text-xs text-accent hover:underline cursor-pointer disabled:opacity-50';
+  // Garden Home shows this only once the Garden has Cruxes to share between.
+  if (gardenId && !space?.cruxIds.length) return null;
   return (
     <section
       ref={section}
-      aria-label="Cruxspaces"
-      className="bg-panel border border-border rounded-[var(--radius)] p-4 mb-6 text-text"
+      aria-label={gardenId ? 'Garden work' : 'Garden outputs'}
+      className={
+        gardenId
+          ? 'mt-6 text-text'
+          : 'bg-panel border border-border rounded-[var(--radius)] p-4 mb-6 text-text'
+      }
     >
-      <div className="flex flex-wrap gap-3 items-center justify-between mb-3">
-        <div>
+      {targetId && (
+        <div className="mb-3">
           <h2 className="font-display text-lg">
-            {targetId ? 'Assets from your Cruxspaces' : 'Cruxspaces'}
+            {space ? `Outputs from ${space.name}` : 'Garden outputs'}
           </h2>
           <p className="text-sm text-text-muted">
-            Related Cruxes, a shared brief and ready-to-use outputs.
+            Ready-to-use images, sounds and bundles from the other Cruxes in this Garden.
           </p>
         </div>
-        {!targetId && (
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => edit('new')}>Create Cruxspace</Button>
-            <Button disabled={busy} onClick={() => packageInput.current?.click()}>
-              Import Cruxspace
-            </Button>
-            <input
-              ref={packageInput}
-              type="file"
-              accept=".cruxspace"
-              aria-label="Cruxspace package"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) void importPackage(file);
-              }}
-            />
-          </div>
-        )}
-      </div>
-      {status && !editing && !using && (
+      )}
+      {status && !using && (
         <p role="status" className="text-sm text-text-muted mb-3">
           {status}
         </p>
       )}
-      {error && !editing && !using && (
+      {error && !using && (
         <p role="alert" className="text-error text-sm mb-3">
           {error}
         </p>
       )}
-      {spaces.length > 0 ? (
+      {space ? (
         <>
-          {!targetId && (
-            <div className="mb-3">
-              <RuntimeExportChoice disabled={busy} />
-            </div>
-          )}
-          <div className="flex gap-2 items-center mb-3">
+          {targetId && spaces.length > 1 && (
             <select
-              aria-label="Cruxspace"
-              className={field}
+              aria-label="Garden"
+              className={`${field} mb-3`}
               value={selected}
               onChange={(e) => {
                 setSelected(e.target.value);
@@ -275,24 +206,7 @@ export default function Cruxspaces({
                 </option>
               ))}
             </select>
-            {!targetId && space && <Button onClick={() => edit(space)}>Edit Cruxspace</Button>}
-            {!targetId && space && (
-              <Button disabled={busy} onClick={() => void exportPackage()}>
-                Export Cruxspace
-              </Button>
-            )}
-            {space && <Button onClick={() => setStory(true)}>Cruxspace history</Button>}
-            <Button
-              disabled={busy}
-              onClick={() => {
-                setError('');
-                setRefresh((n) => n + 1);
-              }}
-            >
-              Refresh assets
-            </Button>
-          </div>
-          {space?.brief && <p className="text-sm whitespace-pre-wrap mb-4">{space.brief}</p>}
+          )}
           {moment && moment.spaceId === selected && (
             <p
               role="status"
@@ -301,66 +215,78 @@ export default function Cruxspaces({
             >
               <span>
                 Walking through {moment.spaceName} · step {moment.step} of {moment.steps}:{' '}
-                {moment.title}. Members open read-only at that moment.
+                {moment.title}. Its Cruxes open read-only at that moment.
               </span>
               <Button onClick={() => setCruxspaceMoment(null)}>Back to now</Button>
             </p>
           )}
-          {!targetId && (
-            <div className="flex gap-2 flex-wrap mb-4" aria-label="Member Cruxes">
-              {space?.cruxIds.map((id) => {
-                const crux = cruxes.find((c) => c.id === id);
-                return crux ? (
-                  <Button key={id} onClick={() => navigate(`/c/${id}`)}>
-                    Open {crux.title || 'Untitled'}
-                  </Button>
-                ) : (
-                  <span key={id} className="text-sm text-text-muted">
-                    Unavailable Crux
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          <h3 className="text-sm font-medium mb-2">Available outputs</h3>
-          {assets.length === 0 ? (
-            <p className="text-sm text-text-muted">
-              No outputs yet. Save an image, sound or bundle to the Cruxspace from a member app, for
-              example “Save sheet to Cruxspace” in Piskel.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-              {assets.map((asset) => (
-                <article
-                  key={asset.id}
-                  className="border border-border rounded-[var(--radius-sm)] p-3"
-                >
-                  <Thumbnail asset={asset} />
-                  <h4 className="text-sm font-medium mt-2">{asset.label}</h4>
-                  <p className="text-xs text-text-muted mb-2">
-                    From {asset.sourceTitle} · {new Date(asset.created).toLocaleString()}
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setUsing(asset);
-                      setError('');
-                      setReceiver(targetId ?? '');
-                      setUnpack(false);
-                      setPath(`assets/cruxspace/${asset.id}.${asset.path.split('.').pop()}`);
-                    }}
+          {assets.length > 0 ? (
+            <>
+              <h3 className="text-sm font-medium mb-2">Outputs</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto mb-3">
+                {assets.map((asset) => (
+                  <article
+                    key={asset.id}
+                    className="border border-border rounded-[var(--radius-sm)] p-3"
                   >
-                    Use {asset.label}
-                  </Button>
-                </article>
-              ))}
-            </div>
+                    <Thumbnail asset={asset} />
+                    <h4 className="text-sm font-medium mt-2">{asset.label}</h4>
+                    <p className="text-xs text-text-muted mb-2">
+                      From {asset.sourceTitle} · {new Date(asset.created).toLocaleString()}
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setUsing(asset);
+                        setError('');
+                        setReceiver(targetId ?? '');
+                        setUnpack(false);
+                        setPath(`assets/cruxspace/${asset.id}.${asset.path.split('.').pop()}`);
+                      }}
+                    >
+                      Use {asset.label}
+                    </Button>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : (
+            targetId && (
+              <p className="text-sm text-text-muted mb-3">
+                No outputs yet. Save an image, sound or bundle to the Garden from another Crux, for
+                example “Save sheet to Garden” in Piskel.
+              </p>
+            )
           )}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <button type="button" className={quiet} onClick={() => setStory(true)}>
+              History
+            </button>
+            {gardenId && (
+              <button
+                type="button"
+                className={quiet}
+                disabled={busy}
+                onClick={() => void exportPackage()}
+              >
+                Export Garden
+              </button>
+            )}
+            <button
+              type="button"
+              className={quiet}
+              disabled={busy}
+              onClick={() => {
+                setError('');
+                setRefresh((n) => n + 1);
+              }}
+            >
+              Refresh outputs
+            </button>
+          </div>
         </>
       ) : (
         <p className="text-sm text-text-muted">
-          {targetId
-            ? 'Add this Crux to a Cruxspace in Home Garden to find related outputs.'
-            : 'Create a Cruxspace for a website, its artwork and its plan. Each Crux keeps its own files and history.'}
+          Place this Crux in a Garden with other Cruxes to share their outputs.
         </p>
       )}
       {story && space && (
@@ -385,114 +311,8 @@ export default function Cruxspaces({
         </div>
       )}
       <Modal
-        open={editing !== null}
-        title={editing === 'new' ? 'Create Cruxspace' : 'Edit Cruxspace'}
-        size="lg"
-        onClose={() => {
-          if (!busy) setEditing(null);
-        }}
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void action(async () => {
-              const input = { name, brief, cruxIds: members };
-              const saved =
-                editing === 'new'
-                  ? await createCruxspace(input)
-                  : await updateCruxspace((editing as Cruxspace).id, input);
-              await load();
-              setSelected(saved.id);
-              setEditing(null);
-            });
-          }}
-          className="space-y-4"
-        >
-          <label className="block text-sm">
-            Cruxspace name
-            <input
-              className={field}
-              value={name}
-              maxLength={120}
-              required
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <label className="block text-sm">
-            Shared brief
-            <textarea
-              className={field}
-              rows={3}
-              value={brief}
-              maxLength={8000}
-              onChange={(e) => setBrief(e.target.value)}
-            />
-          </label>
-          <fieldset>
-            <legend className="text-sm mb-2">Member Cruxes</legend>
-            <div className="max-h-52 overflow-y-auto space-y-2">
-              {cruxes.map((c) => (
-                <label key={c.id} className="flex gap-2 items-center text-sm">
-                  <input
-                    type="checkbox"
-                    checked={members.includes(c.id)}
-                    onChange={(e) =>
-                      setMembers((ids) =>
-                        e.target.checked ? [...ids, c.id] : ids.filter((id) => id !== c.id),
-                      )
-                    }
-                  />
-                  {c.title || 'Untitled'}
-                </label>
-              ))}
-              {members
-                .filter((id) => !cruxes.some((c) => c.id === id))
-                .map((id) => (
-                  <label key={id} className="flex gap-2 items-center text-sm text-text-muted">
-                    <input
-                      type="checkbox"
-                      checked
-                      onChange={() => setMembers((ids) => ids.filter((member) => member !== id))}
-                    />
-                    Unavailable Crux ({id.slice(0, 8)}) — uncheck to remove
-                  </label>
-                ))}
-            </div>
-          </fieldset>
-          {error && (
-            <p role="alert" className="text-error text-sm">
-              {error}
-            </p>
-          )}
-          <div className="flex justify-between gap-3">
-            {editing && editing !== 'new' && (
-              <Button
-                type="button"
-                variant="danger"
-                disabled={busy}
-                onClick={() =>
-                  void action(async () => {
-                    await deleteCruxspace(editing.id);
-                    setEditing(null);
-                    await load();
-                  })
-                }
-              >
-                Remove collection
-              </Button>
-            )}
-            <Button type="submit" disabled={busy}>
-              {busy ? 'Saving…' : 'Save Cruxspace'}
-            </Button>
-          </div>
-          <p className="text-xs text-text-muted">
-            Removing a member or collection keeps its Cruxes in your Garden.
-          </p>
-        </form>
-      </Modal>
-      <Modal
         open={using !== null}
-        title="Use Cruxspace asset"
+        title="Use an output"
         layer="top"
         onClose={() => {
           if (!busy) setUsing(null);

@@ -862,7 +862,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
             className="text-sm text-accent cursor-pointer"
             onClick={() => setView('undertakings')}
           >
-            Undertakings — start with a Cruxspace
+            Undertakings — start a Garden
           </button>
           <p className="text-sm text-text-muted">
             Start with an idea or choose a starting point. You can change everything as you go.

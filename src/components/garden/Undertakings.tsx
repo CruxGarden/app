@@ -7,6 +7,7 @@ import {
 } from '@/services/cruxspace-templates';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Button } from '@/components/ui';
+import { gardenPath } from '@/stores/gardenContext';
 
 /** Outcome picker shared by first-garden onboarding and Add Crux. */
 export default function Undertakings({
@@ -39,7 +40,7 @@ export default function Undertakings({
       });
       await useGardenStore.getState().load();
       onStarted();
-      navigate(`/home?space=${encodeURIComponent(result.space.id)}`);
+      navigate(gardenPath(result.space.id));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -53,8 +54,8 @@ export default function Undertakings({
       <div>
         <h2 className="text-lg">What do you want to make?</h2>
         <p className="text-sm text-text-muted mt-2">
-          A Cruxspace gathers your notes and creations around one undertaking. Each starting point
-          includes a worked example. Work on your own or with a collaborator.
+          Each undertaking is a new Garden of notes and creations around one aim, with a worked
+          example to learn from. Work on your own or with a collaborator.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -79,7 +80,7 @@ export default function Undertakings({
       {template && (
         <div className="space-y-4 border-t border-border pt-4">
           <label className="block text-sm">
-            Cruxspace name
+            Garden name
             <input
               className="block mt-1 w-full border border-border rounded p-2 bg-surface-solid"
               value={name}
@@ -106,7 +107,7 @@ export default function Undertakings({
                 checked={mode === 'beside'}
                 onChange={() => setMode('beside')}
               />
-              Start fresh with the worked example beside it
+              Start fresh, with the worked example inside
             </label>
             <label className="flex gap-2">
               <input
@@ -119,8 +120,8 @@ export default function Undertakings({
             </label>
           </fieldset>
           <p className="text-xs text-text-muted">
-            Example: {template.example}. Its recorded Growth can be explored in the Cruxspace
-            Walkthrough.
+            Example: {template.example}. Its recorded Growth can be explored in the Garden’s
+            history.
           </p>
           <Button onClick={() => void start()} disabled={busy || !name.trim()}>
             {busy ? 'Opening…' : 'Start undertaking'}

@@ -118,7 +118,7 @@ export default function NotesSharingSettings() {
       </select>
       <p className="text-xs text-text-muted">
         With a book, the public edition offers the same notes as an EPUB to download, and Save book
-        (EPUB) in the notebook bar keeps a copy as an output for a Cruxspace.
+        (EPUB) in the notebook bar keeps a copy as an output for its Garden.
       </p>
       {!supported && (
         <p className="text-xs text-text-muted">

@@ -85,9 +85,9 @@ export function getToolLabel(tc: ToolCall): string {
     case 'list_cruxes':
       return 'Looked over the garden';
     case 'list_cruxspaces':
-      return 'Listed the Cruxspaces';
+      return 'Listed the Gardens';
     case 'create_cruxspace':
-      return `Gathered a Cruxspace: ${String(tc.input?.name ?? '')}`;
+      return `Grew a Garden: ${String(tc.input?.name ?? '')}`;
     case 'plant_crux':
       return `Planted ${String(tc.input?.title ?? 'a crux')}`;
     case 'run_turn':
@@ -131,7 +131,7 @@ export function getToolLabel(tc: ToolCall): string {
     case 'export_crux':
       return `Exported ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
     case 'export_cruxspace':
-      return 'Exported a Cruxspace';
+      return 'Exported a Garden';
     case 'list_gardens':
       return 'Looked over the gardens';
     case 'find_people':

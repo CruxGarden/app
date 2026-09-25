@@ -1,3 +1,4 @@
+import { getSqliteClient } from '@/services/sqlite/client';
 import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from '@/ai/garden-access';
 import { reportFlowActivity } from '@/lib/moods/flow';
 import { useStore } from 'zustand';
@@ -278,9 +279,6 @@ export function createKeeperStore(gardenId: string) {
               name,
               name === 'plant_crux' && !input.gardenId ? { ...input, gardenId } : input,
             );
-            // A Cruxspace this conversation made is the one its package carries.
-            const made = name === 'create_cruxspace' && /^id: (\S+)$/m.exec(result)?.[1];
-            if (made && targetId) get().tagConversation(targetId, made);
             return result;
           }
           if (name === 'load_skill') return runSkillTool(input);
@@ -410,29 +408,40 @@ export async function shutdownKeepers() {
   await Promise.all([...keepers.values()].map((keeper) => keeper.stopAndFlush()));
 }
 
-/** Existing collection packages bind their conversations to the installation root. */
-function rootKeeper() {
+/**
+ * A collection's own Collaboration travels with it in a `.cruxspace` package:
+ * a Garden's own conversations where Gardens are graph nodes, or the root's
+ * conversations tagged with the collection in Web Mode.
+ */
+const graphGardens = () => !!getSqliteClient().gardenMembership;
+function collectionKeeper(spaceId: string) {
+  if (graphGardens()) return keeperFor(spaceId);
   const id = useGardenContext.getState().root?.id;
   if (!id) throw new Error('The local Garden is not ready.');
   return keeperFor(id);
 }
-export async function keeperConversationsFor(cruxspaceId: string): Promise<KeeperConversation[]> {
+export async function keeperConversationsFor(spaceId: string): Promise<KeeperConversation[]> {
   if (!useGardenContext.getState().root) return [];
-  const store = rootKeeper();
+  const store = collectionKeeper(spaceId);
   await store.getState().load();
   if (!store.getState().loaded) throw new Error(store.getState().error);
-  return store.getState().conversations.filter((c) => c.cruxspaceId === cruxspaceId);
+  const all = store.getState().conversations;
+  return graphGardens() ? all : all.filter((c) => c.cruxspaceId === spaceId);
 }
 export async function adoptKeeperConversations(
   convos: KeeperConversation[],
-  cruxspaceId: string,
+  spaceId: string,
 ): Promise<void> {
-  const store = rootKeeper();
+  const store = collectionKeeper(spaceId);
   await store.getState().load();
   if (!store.getState().loaded) throw new Error(store.getState().error);
   const adopted = convos
     .filter((c) => c && Array.isArray(c.messages))
-    .map((c) => ({ ...c, id: crypto.randomUUID(), cruxspaceId }));
+    .map(({ cruxspaceId: _space, ...c }) => ({
+      ...c,
+      id: crypto.randomUUID(),
+      ...(graphGardens() ? {} : { cruxspaceId: spaceId }),
+    }));
   store.setState({ conversations: [...adopted, ...store.getState().conversations], dirty: true });
   await store.getState().flush();
 }

@@ -7,7 +7,7 @@ import {
   createCruxspace,
   getCruxspace,
   listCruxspaces,
-  updateCruxspace,
+  placeInGarden,
 } from '@/services/cruxspaces';
 import { toolManifest } from '@/services/crux-tools/registry';
 import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
@@ -101,18 +101,19 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'list_cruxes',
     description:
-      'The cruxes in this garden: id, title, kind, template, when last updated, and the Cruxspaces each belongs to. USE WHEN: deciding from what the garden already holds, or before run_turn / plant_crux.',
+      'The cruxes in this garden: id, title, kind, template, when last updated, and the Garden each grows in. USE WHEN: deciding from what the garden already holds, or before run_turn / plant_crux.',
     input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
   {
     name: 'list_cruxspaces',
-    description: 'The Cruxspaces in this garden: id, name, brief, member crux ids.',
+    description:
+      'Gardens that hold Cruxes to work on (collections, formerly Cruxspaces): id, name, brief, member crux ids.',
     input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
   {
     name: 'create_cruxspace',
     description:
-      'Gather cruxes into a Cruxspace with a shared brief (an undertaking: a launch, a class, a project). Returns its id. USE WHEN: the person asks for a project that needs several cruxes.',
+      'Grow a new Garden inside the active one with a shared brief, moving the chosen cruxes into it (an undertaking: a launch, a class, a project). With templateId, starts an undertaking there. Returns its id. USE WHEN: the person asks for a project that needs several cruxes.',
     input_schema: {
       type: 'object',
       properties: {
@@ -144,7 +145,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'plant_crux',
     description:
-      'Create a crux in this garden from a template, with a brief written into it (BRIEF.md and its instructions), optionally into a Cruxspace. Returns the crux id. Templates: "blank", or a tool id such as "notes-app", "kan-app", "astro-homepage" — list_tools is not needed; unknown ids fail with the reason. USE WHEN: the person asks to make something new.',
+      'Create a crux in this garden from a template, with a brief written into it (BRIEF.md and its instructions), optionally into a Garden. Returns the crux id. Templates: "blank", or a tool id such as "notes-app", "kan-app", "astro-homepage" — list_tools is not needed; unknown ids fail with the reason. USE WHEN: the person asks to make something new.',
     input_schema: {
       type: 'object',
       properties: {
@@ -155,7 +156,10 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
         },
         template: { type: 'string', description: 'Default "blank".' },
         brief: { type: 'string', description: 'What this crux is for and what to make first.' },
-        cruxspaceId: { type: 'string', description: 'A Cruxspace to add it to (optional).' },
+        cruxspaceId: {
+          type: 'string',
+          description: 'A Garden (from list_cruxspaces) to grow it in instead (optional).',
+        },
       },
       required: ['title'],
       additionalProperties: false,
@@ -378,7 +382,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'export_cruxspace',
     description:
-      'Export a Cruxspace as a .cruxspace package — every member with its history, the brief, and the Keeper conversations that built it.',
+      'Export a Garden as a .cruxspace package — every Crux in it with its history, the brief, and the Garden’s own Collaboration.',
     input_schema: {
       type: 'object',
       properties: {
@@ -844,7 +848,7 @@ async function runGardenToolInner(
           kind: c.kind ?? null,
           template: (c.meta as Record<string, unknown> | undefined)?.template ?? null,
           updated: c.updated,
-          cruxspaces: spaces.filter((s) => s.cruxIds.includes(c.id)).map((s) => s.name),
+          garden: spaces.find((s) => s.cruxIds.includes(c.id))?.name ?? null,
         }));
       return JSON.stringify({ count: rows.length, cruxes: rows }, null, 1);
     }
@@ -864,14 +868,14 @@ async function runGardenToolInner(
           name: input.name as string,
           exampleMode: input.exampleMode as 'beside' | 'start' | undefined,
         });
-        return `Cruxspace "${result.space.name}" created.\nid: ${result.space.id}\nmembers: ${result.space.cruxIds.join(', ')}${result.exampleSpaceId ? `\nworked example: ${result.exampleSpaceId}` : ''}`;
+        return `Garden "${result.space.name}" grown.\nid: ${result.space.id}\nmembers: ${result.space.cruxIds.join(', ')}${result.exampleSpaceId ? `\nworked example Garden: ${result.exampleSpaceId}` : ''}`;
       }
       const space = await createCruxspace({
         name: input.name as string,
         brief: input.brief as string,
         cruxIds: (input.cruxIds as string[] | undefined) ?? [],
       });
-      return `Cruxspace "${space.name}" created.\nid: ${space.id}\nmembers: ${space.cruxIds.length}`;
+      return `Garden "${space.name}" grown.\nid: ${space.id}\nmembers: ${space.cruxIds.length}`;
     }
     case 'plant_crux': {
       const creationPersona = getPersona();
@@ -909,15 +913,8 @@ async function runGardenToolInner(
         await services.crux.update(crux.id, { meta });
       }
       const spaceId = input.cruxspaceId as string | undefined;
-      if (spaceId) {
-        const s = await getCruxspace(spaceId);
-        await updateCruxspace(spaceId, {
-          name: s.name,
-          brief: s.brief,
-          cruxIds: [...s.cruxIds, crux.id],
-        });
-      }
-      return `Planted "${crux.title}".\nid: ${crux.id}\ntemplate: ${template}${text ? '\nbrief: BRIEF.md' : ''}${spaceId ? `\ncruxspace: ${spaceId}` : ''}`;
+      if (spaceId) await placeInGarden((await getCruxspace(spaceId)).id, crux.id);
+      return `Planted "${crux.title}".\nid: ${crux.id}\ntemplate: ${template}${text ? '\nbrief: BRIEF.md' : ''}${spaceId ? `\ngarden: ${spaceId}` : ''}`;
     }
     case 'run_turn': {
       const { openWorkspace } = await import('@/stores/workspaceRegistry');
@@ -1272,7 +1269,7 @@ async function runGardenToolInner(
         runtime: input.runtime as 'reference' | 'included' | undefined,
       });
       download(result.blob, result.filename);
-      return `Exported the Cruxspace as ${result.filename} to the person's downloads (${result.manifest.members?.length ?? 0} members${result.failed.length ? `; could not include: ${result.failed.join(', ')}` : ''}).`;
+      return `Exported the Garden as ${result.filename} to the person's downloads (${result.manifest.members?.length ?? 0} members${result.failed.length ? `; could not include: ${result.failed.join(', ')}` : ''}).`;
     }
     case 'list_gardens': {
       const { can, Capability } = await import('@/lib/platform');
@@ -1375,7 +1372,7 @@ export const GARDEN_TOOL_GUIDANCE =
   '### The garden\n' +
   'You tend the whole garden, not one crux. To see what it holds, list_cruxes and list_cruxspaces. ' +
   'To make something new, plant_crux with a title, a template and a brief — the brief is what the crux is for and what to make first. ' +
-  'For an undertaking that needs several cruxes, create_cruxspace, then plant each member into it. ' +
+  'For an undertaking that needs several cruxes, create_cruxspace grows a Garden for it; then plant each member into that Garden. ' +
   'To have the work done, run_turn in a crux with a clear message; it waits and reports the reply. ' +
   'Say what you planted and where, by title, so the person can open it. ' +
   'When asked to build or make something, first load_skill("build-something") and follow it: ask, plan, plant, build, finish. ' +

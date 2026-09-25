@@ -4,7 +4,14 @@ import type { KeeperConversation } from '@/stores/keeperStore';
 import { getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { exportCrux, importCrux, type ImportMode } from './crux-io';
-import { getCruxspace, insertCruxspace, type Cruxspace, type CruxspaceOrigin } from './cruxspaces';
+import {
+  collectionsChanged,
+  getCruxspace,
+  insertCruxspace,
+  type Cruxspace,
+  type CruxspaceOrigin,
+} from './cruxspaces';
+import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { listCruxspaceAssets, type AssetOrigin, type CruxOutput } from './cruxspace-assets';
 import { pathOf } from '@/lib/artifact-path';
 import { toolManifest, isToolAvailable } from './crux-tools/registry';
@@ -220,6 +227,10 @@ export async function exportCruxspace(
 
 export interface ImportCruxspaceOptions {
   data: Blob | ArrayBuffer;
+  /** The Garden the package's new Garden grows in (the active one by default). */
+  gardenId?: string;
+  /** A name for the new Garden, instead of the package's. */
+  name?: string;
   /** `restore` keeps the original identities; `clone` makes new ones and records the lineage. */
   mode?: ImportMode;
   onProgress?: (status: string) => void;
@@ -265,11 +276,11 @@ export async function importCruxspace(
       if (await crux.findById(member.id).catch(() => null)) mode = 'clone';
     if (await getCruxspace(manifest.space.id).catch(() => null)) mode = 'clone';
   }
-  if (mode === 'replace') throw new Error('A Cruxspace package is restored or imported as a copy.');
+  if (mode === 'replace') throw new Error('A Garden package is restored or imported as a copy.');
 
   // Resolve every member's tool dependencies before creating the first Crux.
   for (const member of manifest.members) {
-    if (!zip.file(`${member.archive}blobs.json`))
+    if (!zip.file(`${member.archive}blobs.json`) && !(await selfContained(zip, member)))
       throw new Error(`The package is missing the file list for ${member.title}.`);
     const entry = zip.file(`${member.archive}manifest.json`);
     if (!entry) throw new Error(`Missing archive manifest for ${member.title}.`);
@@ -278,36 +289,56 @@ export async function importCruxspace(
     await hydrateArchiveRuntimes(requirements);
   }
 
+  const name = options.name?.trim() || manifest.space.name;
   const imported: ImportCruxspaceResult['members'] = [];
   const failedArtifacts: string[] = [];
   const ids: Record<string, string> = {};
+  // Where there is a Garden graph, a package becomes a Garden and its members
+  // are planted in it as they arrive.
+  let garden: { id: string } | null = null;
+  if (getSqliteClient().gardenMembership) {
+    const parentId = options.gardenId ?? captureGardenId() ?? useGardenContext.getState().root?.id;
+    if (!parentId) throw new Error('Open a Garden to import into.');
+    garden = await crux.create({
+      title: name,
+      description: manifest.space.brief,
+      kind: 'garden',
+      gardenId: parentId,
+    });
+  }
   try {
     for (const member of manifest.members) {
       onProgress?.(`Restoring ${member.title}…`);
       const archive = await memberArchive(zip, member);
-      const result = await importCrux({ data: archive, mode });
+      const result = await importCrux({
+        data: archive,
+        mode,
+        ...(garden ? { gardenId: garden.id } : {}),
+      });
       ids[member.id] = result.cruxId;
       imported.push({ id: result.cruxId, sourceId: member.id, title: result.title });
       failedArtifacts.push(...result.failedArtifacts.map((f) => `${member.title}: ${f}`));
     }
-    onProgress?.('Recording the Cruxspace…');
     const origin: CruxspaceOrigin | undefined =
       mode === 'clone'
         ? { spaceId: manifest.space.id, exportedAt: manifest.exportedAt, members: ids }
         : undefined;
-    const space = await insertCruxspace({
-      id: mode === 'clone' ? crypto.randomUUID() : manifest.space.id,
-      name: manifest.space.name,
-      brief: manifest.space.brief,
-      cruxIds: imported.map((m) => m.id),
-      created: manifest.space.created,
-      origin,
-    });
-    // The garden-level history comes back with it, retagged to the space it now is.
+    const space: Cruxspace = garden
+      ? { ...(await getCruxspace(garden.id)), ...(origin ? { origin } : {}) }
+      : await insertCruxspace({
+          id: mode === 'clone' ? crypto.randomUUID() : manifest.space.id,
+          name,
+          brief: manifest.space.brief,
+          cruxIds: imported.map((m) => m.id),
+          created: manifest.space.created,
+          origin,
+        });
+    // The collection's own Collaboration comes back with it.
     if (manifest.keeper?.length)
       await (
         await import('@/stores/keeperStore')
       ).adoptKeeperConversations(manifest.keeper, space.id);
+    collectionsChanged();
     return {
       space,
       members: imported,
@@ -317,6 +348,7 @@ export async function importCruxspace(
     };
   } catch (err) {
     for (const member of imported) await crux.delete(member.id).catch(() => undefined);
+    if (garden) await crux.delete(garden.id).catch(() => undefined);
     throw err;
   }
 }
@@ -351,18 +383,34 @@ async function readManifest(zip: JSZip): Promise<PackageManifest> {
     ) ||
     !Array.isArray(manifest.unavailable)
   )
-    throw new Error('This package is not a Cruxspace this app understands.');
+    throw new Error('This package is not a Garden this app understands.');
   if (new Set(manifest.members.map((m) => m.id)).size !== manifest.members.length)
     throw new Error('This package lists a member twice.');
   return manifest;
 }
 
 /** Rebuild one member's `.crux` archive from its entries and the shared blobs. */
+/**
+ * A private graph archive member carries its own bytes under `content/` and
+ * shares nothing through `blobs/`, so it needs no file list.
+ */
+async function selfContained(zip: JSZip, member: PackageMember): Promise<boolean> {
+  const entry = zip.file(`${member.archive}manifest.json`);
+  if (!entry || !zip.file(`${member.archive}graph.json`)) return false;
+  try {
+    const envelope = JSON.parse(await entry.async('text')) as { archiveVersion?: unknown };
+    return typeof envelope.archiveVersion === 'number';
+  } catch {
+    return false;
+  }
+}
+
 async function memberArchive(zip: JSZip, member: PackageMember): Promise<Blob> {
   const prefix = member.archive;
   const list = zip.file(`${prefix}blobs.json`);
-  if (!list) throw new Error(`The package is missing the file list for ${member.title}.`);
-  const fingerprints = JSON.parse(await list.async('text')) as unknown;
+  if (!list && !(await selfContained(zip, member)))
+    throw new Error(`The package is missing the file list for ${member.title}.`);
+  const fingerprints = (list ? JSON.parse(await list.async('text')) : []) as unknown;
   if (
     !Array.isArray(fingerprints) ||
     fingerprints.some((fp) => typeof fp !== 'string' || !/^[a-f0-9]{64}$/.test(fp))
