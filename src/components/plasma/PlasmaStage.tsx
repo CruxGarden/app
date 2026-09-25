@@ -21,9 +21,11 @@ import { can, Capability } from '@/lib/platform';
  * a machine that cannot hold a frame at `high` has somewhere to go that is not
  * "off". Off is a different control: the surface style falls back to Glass.
  *
- * It mounts only while the Plasma theme is on: the provider owns a canvas, a
- * render loop and a resize listener, and none of that should exist under
- * Glass or Custom. Surfaces attach themselves through PlasmaSurfaces.
+ * The provider stays mounted under every theme so switching Plasma on or off
+ * never changes the app's ancestry (that remounted everything below the
+ * router). Only the canvas is conditional: the renderer, its loop and its
+ * listeners exist only while a canvas is attached, so Glass and Custom pay
+ * for none of it. Surfaces attach themselves through PlasmaSurfaces.
  */
 /**
  * The workspace packs panes twelve pixels apart. The teaser's ripple (flow
@@ -67,7 +69,6 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
     if (on && optics.flatChrome) html.setAttribute(CHROME_ATTR, 'flat');
     else html.removeAttribute(CHROME_ATTR);
   }, [on, optics.flatChrome]);
-  if (!on) return <>{children}</>;
   const t = PLASMA_TIERS[tier];
   const flowCap = Math.min(t.flow ?? 3, inWorkspace ? WORKSPACE_FLOW : 3);
   const stretchCap = Math.min(t.stretch ?? 3, inWorkspace ? WORKSPACE_STRETCH : 3);
@@ -127,7 +128,7 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
       canvas={false}
     >
       {/* Behind the app's content, above the page background. */}
-      <PlasmaCanvas zIndex={-7} className={GROUND_CLASS} />
+      {on && <PlasmaCanvas zIndex={-7} className={GROUND_CLASS} />}
       {children}
     </PlasmaProvider>
   );
