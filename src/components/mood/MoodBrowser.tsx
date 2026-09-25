@@ -9,7 +9,6 @@ import { SettingsKey } from '@/lib/constants';
 import { useAppStore } from '@/stores/appStore';
 import { BUNDLED_MOODS, SHELVED_MOODS } from '@/lib/moods/bundled-moods';
 import MaterialMoods from './MaterialMoods';
-import GardenMoodLine from './GardenMoodLine';
 import { materialChoice } from '@/lib/moods/material';
 import { GARDEN_DARK } from '@/lib/moods';
 import { chooseMood, onGardenMoodChange } from '@/services/garden-mood';
@@ -373,7 +372,6 @@ export default function MoodBrowser() {
 
   return (
     <div className="flex flex-col gap-4">
-      <GardenMoodLine />
       {loadError && (
         <div role="alert" className="text-sm text-error">
           {loadError}{' '}

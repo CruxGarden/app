@@ -19,6 +19,7 @@ import AppearanceControls from './AppearanceControls';
 import SurfaceThemeControl from './SurfaceThemeControl';
 import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import MoodBrowser from './MoodBrowser';
+import GardenMoodLine from './GardenMoodLine';
 import AssetsTab from './AssetsTab';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
@@ -759,6 +760,9 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
         )}
         {tab === 'moods' && (
           <>
+            <div className="mb-6">
+              <GardenMoodLine />
+            </div>
             <FlowControl />
             <MoodBrowser />
           </>

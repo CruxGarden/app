@@ -17,6 +17,7 @@ import {
   type CruxspaceAsset,
 } from '@/services/cruxspace-assets';
 import { findWorkingCopy } from '@/services/working-copies';
+import { getSqliteClient } from '@/services/sqlite/client';
 import { exportCruxspace } from '@/services/cruxspace-package';
 import {
   CRUXSPACE_MOMENT_CHANGED,
@@ -103,6 +104,19 @@ export default function Cruxspaces({
     setCruxes(live);
     setSelected((id) => (visible.some((s) => s.id === id) ? id : (visible[0]?.id ?? '')));
   }, [gardenId, targetId]);
+  // A member saving a new output shows it here without asking.
+  useEffect(
+    () =>
+      getSqliteClient().onChange?.((change) => {
+        if (
+          change.entity === 'crux' &&
+          change.fields?.includes('fileContent') &&
+          spaces.some((s) => s.cruxIds.includes(change.id ?? ''))
+        )
+          setRefresh((n) => n + 1);
+      }),
+    [spaces],
+  );
   useEffect(() => {
     const reload = () => void load().catch((e) => setError(e.message));
     reload();
@@ -271,17 +285,6 @@ export default function Cruxspaces({
                 Export Garden
               </button>
             )}
-            <button
-              type="button"
-              className={quiet}
-              disabled={busy}
-              onClick={() => {
-                setError('');
-                setRefresh((n) => n + 1);
-              }}
-            >
-              Refresh outputs
-            </button>
           </div>
         </>
       ) : (
