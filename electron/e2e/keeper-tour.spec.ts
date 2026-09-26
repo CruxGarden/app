@@ -1,6 +1,7 @@
+import { enableAi, showPane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
+import { enterGarden, createCrux, addArtifact, goHome } from './multi-crux-helpers';
 
 /**
  * The Keeper operates the workspace (GARDENS-ALL-THE-WAY-OUT: "ask the main
@@ -21,30 +22,19 @@ test('the Keeper gives the tour by using the garden in front of the person', asy
     await page.keyboard.type('<h1>Tour stop</h1>');
     await page.keyboard.press('ControlOrMeta+s');
     // Back home, panes closed: the tour has to open them.
-    await page.locator('header').getByRole('button').first().click();
+    await goHome(page);
     await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
 
     // The console is behind Enable AI Tools (a fresh garden has it off).
-    await page.keyboard.press('ControlOrMeta+,');
-    await page.locator('h2', { hasText: /^AI$/ }).click();
-    await page.getByRole('switch', { name: 'Enable AI Tools' }).click();
-    const key = page.getByPlaceholder('sk-ant-...');
-    await key.fill('sk-ant-e2e-not-a-real-key');
-    await key.press('Enter');
-    await expect(page.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
-    await page.keyboard.press('Escape');
-    const console_ = page.locator('[data-modal-open]', { hasText: 'Console — The Keeper' });
-    // Escape opens the console once nothing else (Settings, a field) holds it.
-    for (let i = 0; i < 6 && !(await console_.isVisible().catch(() => false)); i++) {
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
-    }
-    await expect(console_).toBeVisible({ timeout: 10_000 });
+    await enableAi(page);
+    await showPane(page, 'Console');
+    // The Garden's Collaboration, wherever it is open.
+    const console_ = page.getByTestId('pane-body-console');
     const composer = console_.getByPlaceholder('Send a message...');
     await composer.fill('[garden:tour] Show me how this works.');
     await composer.press('Enter');
 
-    // The first show closes the console and opens the crux.
+    // The first show opens the crux (the Garden's console stays with the Garden).
     await expect(console_).toBeHidden({ timeout: 30_000 });
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
@@ -64,8 +54,7 @@ test('the Keeper gives the tour by using the garden in front of the person', asy
     await page.screenshot({ path: 'e2e/.results/keeper-tour.png' });
 
     // The Keeper's account of it is in the console, work folded.
-    await page.keyboard.press('Escape');
-    await expect(console_).toBeVisible({ timeout: 10_000 });
+    await showPane(page, 'Console');
     await expect(console_.getByText('That was the tour')).toBeVisible({ timeout: 30_000 });
     await expect(console_.getByText('Used 6 tools')).toBeVisible();
   } finally {

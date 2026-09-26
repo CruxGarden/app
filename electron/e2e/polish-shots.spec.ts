@@ -2,7 +2,7 @@ import { hidePane, showPane, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, createCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
 
 /**
  * Screenshots of every major screen, for the UI polish pass. Not assertions of
@@ -129,7 +129,7 @@ test.describe('polish tour', () => {
       await hidePane(page, 'Mood');
 
       // Home Garden with a card, the new crux modal, the delete dialog, the Trash
-      await page.locator('header').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       await shot(page, '23-home-cards');
       await page.getByRole('button', { name: 'Add Crux' }).click();

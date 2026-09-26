@@ -88,3 +88,15 @@ export async function hidePane(page: Page, pane: GardenPane) {
   await press(page, pane);
   await expect(page.getByTestId(`pane-body-${PANE_TYPE[pane]}`)).toHaveCount(0);
 }
+
+/** Settings → AI: turn the collaborator on with a (fake) Anthropic key, then close Settings. */
+export async function enableAi(page: Page) {
+  const settings = await showPane(page, 'Settings');
+  await settings.locator('h2', { hasText: /^AI$/ }).click();
+  await settings.getByRole('switch', { name: 'Enable AI Tools' }).click();
+  const key = settings.getByPlaceholder('sk-ant-...');
+  await key.fill('sk-ant-e2e-not-a-real-key');
+  await key.press('Enter');
+  await expect(settings.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
+  await hidePane(page, 'Settings');
+}

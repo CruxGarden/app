@@ -1,7 +1,7 @@
 import { togglePanel } from './panel-helpers';
 import { test } from '@playwright/test';
 import { launchApp } from './launch';
-import { createCrux, enterGarden } from './multi-crux-helpers';
+import { createCrux, enterGarden, goHome } from './multi-crux-helpers';
 
 /**
  * Evidence, not a gate: a dialog under the Plasma theme, drawn by its own
@@ -79,7 +79,7 @@ test('plasma modal shot', async () => {
     await page.screenshot({ path: `${SHOTS}/plasma-menu-context.png` });
     await page.keyboard.press('Escape');
     // The crux card's actions, raised on the card.
-    await page.locator('header').getByRole('button').first().click();
+    await goHome(page);
     await page.getByRole('button', { name: 'Add Crux' }).waitFor();
     await page.getByRole('button', { name: 'Open Material' }).hover();
     await page.getByRole('button', { name: 'Crux actions' }).first().click();

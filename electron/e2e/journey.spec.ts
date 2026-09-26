@@ -84,14 +84,13 @@ test.describe('acceptance journey (local half)', () => {
 
       // ── Snapshot with a label ─────────────────────────────────────────
       await togglePanel(page, 'Toggle history');
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder(/label/i);
       await label.fill('First post');
       await label.press('Enter');
-      await expect(page.getByText('First post', { exact: true })).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page.getByTestId('pane-body-history').getByText('First post', { exact: true }),
+      ).toBeVisible({ timeout: 30_000 });
       await page.screenshot({ path: 'e2e/.results/journey-3-snapshot.png' });
     } finally {
       await app.close();

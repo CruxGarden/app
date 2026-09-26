@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import DimensionConnections from './DimensionConnections';
 import { useConnectionNavigation } from './useConnectionNavigation';
 import { useNavigationView } from './useNavigationView';
@@ -6,10 +7,13 @@ import { useNavigationView } from './useNavigationView';
 export default function CruxDimensions() {
   const view = useNavigationView();
   const { open, error } = useConnectionNavigation(view);
+  const [empty, setEmpty] = useState(false);
   if (!view.cruxId || !view.gardenId) return null;
+  // Nothing linked beyond its Garden: no strip, just the work.
   return (
     <section
       aria-label="Crux connections"
+      hidden={empty && !error}
       className="shrink-0 max-h-36 overflow-y-auto border-t border-border bg-bg/70 px-3 py-1"
     >
       <div className="flex items-start gap-2 min-w-0">
@@ -26,6 +30,7 @@ export default function CruxDimensions() {
             depth={1}
             open={open}
             compact
+            onEmpty={setEmpty}
           />
         </div>
         <button

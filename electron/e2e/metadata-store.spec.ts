@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -124,7 +125,7 @@ test.describe('metadata and store panes', () => {
       await expect(kind).toHaveText(/^page$/i);
 
       // The Home Garden lists what the garden holds: the card carries the edits
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       const card = page.getByRole('button', { name: 'Open Solar Notes' });
       await expect(card).toBeVisible({ timeout: 15_000 });

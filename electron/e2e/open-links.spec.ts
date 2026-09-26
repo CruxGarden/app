@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -66,9 +67,8 @@ test.describe('links out of the app', () => {
         .poll(opened)
         .toEqual([expect.stringMatching(/^https:\/\/crux\.garden\/tester\//)]);
 
-      // Home Garden banner → Public Garden
-      // The breadcrumb's first segment (the username) is the way home
-      await page.getByRole('banner').getByText('tester', { exact: true }).click();
+      // Garden Home → Public Garden
+      await goHome(page);
       await page.getByRole('button', { name: 'Public Garden' }).click({ timeout: 30_000 });
       await expect.poll(opened).toHaveLength(2);
       expect((await opened())[1]).toBe('https://crux.garden/tester');

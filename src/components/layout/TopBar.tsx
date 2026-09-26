@@ -3,6 +3,9 @@ import GardenLocation from './GardenLocation';
 import NavigationHistory from './NavigationHistory';
 import { useUIStore, useWorkspaceUIStore, type PaneType } from '@/stores/uiStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import TendingLink from '@/components/tending/TendingLink';
+import AlertsBell from '@/components/tending/AlertsBell';
+import TimerChip from '@/components/tending/TimerChip';
 import PanelPicker from './PanelPicker';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
 import IconButton from '@/components/ui/IconButton';
@@ -69,6 +72,11 @@ export default function TopBar() {
           {activeCruxId && <ChevronRightIcon />}
         </span>
         <WorkspaceSwitcher />
+        <div className="hidden xl:block">
+          <TendingLink />
+        </div>
+        <TimerChip />
+        <AlertsBell />
       </nav>
 
       {/* Right: pane toggles + console + user menu */}

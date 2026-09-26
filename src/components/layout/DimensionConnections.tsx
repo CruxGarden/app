@@ -18,12 +18,16 @@ export default function DimensionConnections({
   depth,
   open,
   compact = false,
+  onEmpty,
 }: {
   graph: NavigationViewProps['graph'];
   id: string;
   depth: 0 | 1;
   open: (node: GardenIdentity) => Promise<void>;
+  /** Beside the work: the containing Garden is the breadcrumb's, so it is left out. */
   compact?: boolean;
+  /** Whether there is nothing to show — no links and no error — once read. */
+  onEmpty?: (empty: boolean) => void;
 }) {
   const [result, setResult] = useState<Neighborhood | null>(null);
   const [error, setError] = useState('');
@@ -61,13 +65,18 @@ export default function DimensionConnections({
       cancelled = true;
     };
   }, [graph, id, after, retry]);
+  const shown = (result?.links ?? []).filter(
+    (link) => !(compact && link.group === 'gate' && link.kind === 'membership'),
+  );
+  const empty = !error && !!result && shown.length === 0;
+  useEffect(() => onEmpty?.(empty), [empty, onEmpty]);
   const label = (link: NavigationLink) =>
     link.available ? link.node.title || 'Untitled' : 'Unavailable Crux';
   return (
     <div className={compact ? 'flex flex-wrap items-start gap-x-4 gap-y-1 min-w-0' : undefined}>
       {result &&
         groups.map(([type, title]) => {
-          const links = result.links.filter((link) => link.group === type);
+          const links = shown.filter((link) => link.group === type);
           return links.length ? (
             <section
               key={type}

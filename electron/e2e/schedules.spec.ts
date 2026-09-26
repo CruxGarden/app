@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, switchCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, switchCrux, goHome } from './multi-crux-helpers';
 
 /**
  * Schedules (GARDEN-SCHEDULER-PLAN §2) through the Tending page: a one-off
@@ -21,7 +21,7 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
   try {
     await enterGarden(page);
     await createCrux(page, 'Ferns');
-    await page.locator('header').getByRole('button').first().click();
+    await goHome(page);
     await page.locator('header').getByRole('link', { name: 'Tending' }).click();
     const section = page.getByTestId('schedules');
     await expect(section).toContainText('Nothing scheduled');

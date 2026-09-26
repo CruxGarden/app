@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, enableAi, showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -33,20 +33,8 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
       timeout: 30_000,
     });
 
-    await page.keyboard.press('ControlOrMeta+,');
-    await page.locator('h2', { hasText: /^AI$/ }).click();
-    await page.getByRole('switch', { name: 'Enable AI Tools' }).click();
-    const key = page.getByPlaceholder('sk-ant-...');
-    await key.fill('sk-ant-e2e-not-a-real-key');
-    await key.press('Enter');
-    await expect(page.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
-    await page.keyboard.press('Escape');
-    const console_ = page.locator('[data-modal-open]', { hasText: 'Console — The Keeper' });
-    for (let i = 0; i < 6 && !(await console_.isVisible().catch(() => false)); i++) {
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
-    }
-    await expect(console_).toBeVisible({ timeout: 10_000 });
+    await enableAi(page);
+    const console_ = await showPane(page, 'Console');
     const composer = console_.getByPlaceholder('Send a message...');
     await composer.fill('[garden:operate] Look around and get Tour stop ready.');
     await composer.press('Enter');
@@ -64,13 +52,12 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     await expect
       .poll(async () => (await storedCrux(page, id)).settings?.model, { timeout: 10_000 })
       .toBe('claude-sonnet-5');
-    await page.keyboard.press('Escape');
+    await hidePane(page, 'Console');
     await expect(page.locator('.pane-toolbar-label', { hasText: 'Collaboration' })).toBeVisible();
     await expect(page.getByTestId('pane-body-collaboration')).toContainText('Claude Sonnet 5');
 
-    // The hands, visible while the console is closed: a chip with Stop.
-    await page.keyboard.press('Escape');
-    await expect(console_).toBeVisible({ timeout: 10_000 });
+    // The hands: a chip with Stop.
+    await showPane(page, 'Console');
     await composer.fill('[garden:tour] Again, slowly.');
     await composer.press('Enter');
     const chip = page.getByTestId('keeper-activity');
@@ -79,7 +66,6 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     // Stop: what was done stays in the conversation, marked, for the person to pick up.
     await chip.getByRole('button', { name: 'Stop' }).click();
     await expect(chip).toBeHidden({ timeout: 10_000 });
-    await page.keyboard.press('Escape');
     await expect(console_).toBeVisible({ timeout: 10_000 });
     await expect(console_.getByText('Stopped here by the person')).toBeVisible({ timeout: 10_000 });
   } finally {

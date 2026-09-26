@@ -9,12 +9,14 @@ import {
 import type { MoodSection } from '@/lib/moods/active';
 import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
 import type { PaneType } from '@/stores/uiStore';
+import { useGardenContext } from '@/stores/gardenContext';
+import { renameGarden } from '@/services/garden-navigation';
 
 /**
- * Settings → Names: the garden's title and what its panes are called. Written
- * as theme overrides for both modes (a name is not a colour), so a Mood the
- * person wears later keeps them, and a Mood that sets its own names is a
- * metaphor the person can still overrule here.
+ * Settings → Names: this Garden's name (its own title) and what its panes are
+ * called. Pane names are theme overrides for both modes (a name is not a
+ * colour), so a Mood the person wears later keeps them, and a Mood that sets
+ * its own names is a metaphor the person can still overrule here.
  */
 const SECTIONS: MoodSection[] = ['Dark', 'Light'];
 const PANES = Object.keys(DEFAULT_PANE_LABELS) as PaneType[];
@@ -25,6 +27,8 @@ export default function NamesSettings() {
   useEffect(() => onThemeOverridesChange(() => setTick((t) => t + 1)), []);
   void tick;
   const current = getThemeOverrides('Dark');
+  const garden = useGardenContext((s) => s.garden);
+  const [error, setError] = useState('');
 
   const write = (key: string, value: string) => {
     const v = value.trim();
@@ -41,19 +45,32 @@ export default function NamesSettings() {
     <section className="mb-8" data-testid="names-settings">
       <h2 className="font-display text-sm font-medium text-settings-label mb-1">Names</h2>
       <p className="text-xs text-text-muted mb-4">
-        What this garden calls itself and its panes. Leave a field empty for the usual word.
+        What this Garden is called, and its panes. Leave a pane empty for the usual word.
       </p>
       <label className="flex flex-col gap-1 mb-4">
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">
           Garden title
         </span>
         <Input
+          key={garden?.id}
           aria-label="Garden title"
           placeholder="The Bachelor Pad, Floyd County Police Department…"
-          defaultValue={current.gardenTitle ?? ''}
-          onBlur={(e) => write('gardenTitle', e.target.value)}
+          defaultValue={garden?.title ?? ''}
+          disabled={!garden}
+          onBlur={(e) => {
+            if (!garden || e.target.value.trim() === (garden.title ?? '')) return;
+            setError('');
+            void renameGarden(garden.id, e.target.value).catch((err: unknown) =>
+              setError(err instanceof Error ? err.message : String(err)),
+            );
+          }}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
+        {error && (
+          <span role="alert" className="text-xxs text-error">
+            {error}
+          </span>
+        )}
       </label>
       <div className="grid grid-cols-1 @min-[600px]/settings:grid-cols-2 gap-x-6 gap-y-2">
         {PANES.map((type) => (

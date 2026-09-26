@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { indexedFiles } from './content-helpers';
 import { enterGarden, storedCrux, createCrux, switchCrux } from './multi-crux-helpers';
 
 test('idea → clean preview → entry choice → advanced edits → restart', async () => {
@@ -48,15 +49,8 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     writeFileSync(join(folder, 'notes.md'), '# Notes\nKeep this draft.');
     await expect
       .poll(async () => {
-        const row = (await page.evaluate(
-          async (id) =>
-            window.electronAPI!.sqlite.get(
-              "SELECT COUNT(*) AS count FROM artifacts WHERE resource_id = ? AND path IN ('index.html', 'reading.html', 'notes.md')",
-              [id],
-            ),
-          id,
-        )) as { count: number };
-        return row.count;
+        const files = await indexedFiles(page, id);
+        return ['index.html', 'reading.html', 'notes.md'].filter((path) => files[path]).length;
       })
       .toBe(3);
 
@@ -141,6 +135,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     instance = await launchApp({ dir });
     page = instance.page;
     await page.getByRole('button', { name: /enter/i }).click();
+    await page.getByRole('button', { name: 'Open Reading room', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', id);
     await expect(page.getByTestId('workshop-view')).toHaveAttribute('data-view', 'clean');
     await expect(

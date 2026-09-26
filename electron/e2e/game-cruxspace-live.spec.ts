@@ -1,4 +1,4 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { panelPressed, togglePanel, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -88,8 +88,7 @@ async function addProviderKey(page: Page) {
   await card.getByPlaceholder(PLACEHOLDER[PROVIDER] ?? '...').fill(KEY!);
   await card.getByRole('button', { name: 'Save' }).click();
   await expect(card.getByRole('button', { name: 'Remove' })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+  await hidePane(page, 'Settings');
 }
 
 test('Glow Garden with a real collaborator: plan, board, sprites, sound, game, export, site, done', async () => {

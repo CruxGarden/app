@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useGardenContext } from '@/stores/gardenContext';
 import { onThemeOverridesChange, onThemePreviewChange } from '@/lib/moods/active';
-import { DEFAULT_PANE_LABELS, gardenTitle, paneLabels } from '@/lib/pane-labels';
+import { DEFAULT_PANE_LABELS, paneLabels } from '@/lib/pane-labels';
 import type { PaneType } from '@/stores/uiStore';
 
 /**
@@ -32,21 +32,4 @@ export function usePaneLabels(): Record<PaneType, string> {
         : labels,
     [labels, garden],
   );
-}
-
-export function useGardenTitle(): string {
-  const [title, setTitle] = useState(() => gardenTitle());
-  useEffect(() => {
-    const refresh = () => setTitle(gardenTitle());
-    const later = () => requestAnimationFrame(refresh);
-    const offA = onThemeOverridesChange(later);
-    const offB = onThemePreviewChange(later);
-    document.addEventListener('palette-change', later);
-    return () => {
-      offA();
-      offB();
-      document.removeEventListener('palette-change', later);
-    };
-  }, []);
-  return title;
 }

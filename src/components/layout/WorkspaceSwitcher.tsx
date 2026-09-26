@@ -167,6 +167,8 @@ export default function WorkspaceSwitcher() {
     [entries, members, navigate, picker, cancel],
   );
   const beginSearch = useCallback(() => {
+    // A restore still waiting on the last switch must not take focus from the search.
+    focusGeneration++;
     invoking.current = document.activeElement as HTMLElement;
     rememberFocus(useWorkspaceRegistry.getState().activeId);
     setPicker(false);

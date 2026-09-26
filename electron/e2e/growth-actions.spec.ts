@@ -1,4 +1,5 @@
-import { togglePanel } from './panel-helpers';
+import { goHome } from './multi-crux-helpers';
+import { togglePanel, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,7 +13,7 @@ import { launchApp } from './launch';
  *   label a snapshot → the card carries the label
  *   auto-snapshot frequency → the select changes and survives re-opening the crux
  *   view an earlier snapshot → read-only banner, "Viewing" badge, the editor shows
- *     the old content, the Project Folder is untouched; Back (banner) and
+ *     the old content, the Project Folder is untouched; "Back to current" (banner) and
  *     "Back to current" (pane) both return to the working files
  *   Remove last snapshot → the tip leaves history, files stay
  *   Revert → editor, disk and history agree; "Before revert" is recorded
@@ -125,7 +126,10 @@ test.describe('growth actions (History pane)', () => {
       await page.screenshot({ path: 'e2e/.results/growth-actions-2-viewing.png' });
 
       // Back (banner) → working files
-      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await page
+        .getByRole('region', { name: 'Viewing a snapshot', exact: true })
+        .getByRole('button', { name: 'Back to current', exact: true })
+        .click();
       await expect(banner).toHaveCount(0);
       await expect(monaco).toContainText('one two', { timeout: 30_000 });
       await expect(takeSnapshot).toBeVisible();
@@ -184,8 +188,7 @@ test.describe('growth actions (History pane)', () => {
         url: string;
         token: string;
       };
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+      await hidePane(page, 'Settings');
 
       client = new Client({ name: 'e2e-brancher', version: '1.0.0' });
       await client.connect(
@@ -217,7 +220,7 @@ test.describe('growth actions (History pane)', () => {
       await page.screenshot({ path: 'e2e/.results/growth-actions-4-branched.png' });
 
       // ── Re-open the crux: labels and the frequency setting are persisted ──
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       await page.getByRole('button', { name: /^Open My Crux/ }).click();
       await expect(page.getByRole('tree')).toBeVisible({ timeout: 30_000 });

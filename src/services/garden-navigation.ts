@@ -1,7 +1,7 @@
 import { getSqliteClient } from './sqlite/client';
 import { fromRow } from './sqlite/helpers';
 import type { Crux } from '@/api/types';
-import type { GardenIdentity } from '@/stores/gardenContext';
+import { useGardenContext, type GardenIdentity } from '@/stores/gardenContext';
 
 /** Hydrate only this Garden's bounded API projection; never infer membership. */
 /** Moods live in the Mood panel, not among a Garden's things to open. */
@@ -127,4 +127,18 @@ export async function resolveWorkspaceDestination(
   const garden = await read(selected.id);
   if (garden.kind !== 'garden') throw new Error('The Garden containing this Crux is unavailable.');
   return { status: 'ready', garden, cruxId };
+}
+
+/** A Garden's name is its own title; the breadcrumb and Home read it at once. */
+export async function renameGarden(id: string, title: string): Promise<void> {
+  const next = title.trim().slice(0, 200);
+  if (!next) return;
+  const [{ getServices }, { collectionsChanged }] = await Promise.all([
+    import('./index'),
+    import('./cruxspaces'),
+  ]);
+  await getServices().crux.update(id, { title: next });
+  const named = (g: GardenIdentity | null) => (g?.id === id ? { ...g, title: next } : g);
+  useGardenContext.setState((s) => ({ garden: named(s.garden), root: named(s.root) }));
+  collectionsChanged();
 }

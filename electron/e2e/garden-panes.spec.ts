@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, switchCrux } from './multi-crux-helpers';
@@ -36,9 +36,13 @@ async function ensurePane(page: Page, type: string, toggle: string) {
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
-/** The garden breadcrumb (username) in the TopBar takes you to the Home Garden. */
+/** Garden location → Close crux lands on the Garden's Home; the workspace stays open. */
 async function goHome(page: Page) {
-  await page.locator('header').getByRole('button').first().click();
+  await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Garden location', exact: true })
+    .getByRole('button', { name: 'Close crux', exact: true })
+    .click();
   await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
 }
 
@@ -237,6 +241,8 @@ test.describe('home garden, crux picker, panes, console', () => {
     try {
       const { page } = second;
       await page.getByRole('button', { name: 'Enter', exact: true }).click();
+      // A relaunch opens on Garden Home; the Crux keeps its arrangement.
+      await page.getByRole('button', { name: 'Open Pane Garden', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
         'Pane Garden',
         { timeout: 30_000 },
@@ -292,52 +298,50 @@ test.describe('home garden, crux picker, panes, console', () => {
     const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     try {
       await enterGarden(page);
-      const consoleTitle = page.getByText('Console — The Keeper');
-      // AI tools are off in a fresh garden: no console button, Escape does nothing.
+      const consolePane = page.getByTestId('pane-body-console');
+      // AI tools are off in a fresh garden: no console button, Escape opens nothing.
       await expect(page.getByRole('button', { name: 'Console', exact: true })).toHaveCount(0);
       await page.keyboard.press('Escape');
-      await expect(consoleTitle).toHaveCount(0);
+      await expect(consolePane.getByPlaceholder('Send a message...')).toHaveCount(0);
 
       // Settings → AI: enable, and give the Keeper's provider a key.
-      await page.keyboard.press('ControlOrMeta+,');
-      await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
-      await page.locator('h2', { hasText: /^AI$/ }).click();
-      await page.getByRole('switch', { name: 'Enable AI Tools' }).click();
-      const key = page.getByPlaceholder('sk-ant-...');
+      const settings = await showPane(page, 'Settings');
+      await settings.locator('h2', { hasText: /^AI$/ }).click();
+      await settings.getByRole('switch', { name: 'Enable AI Tools' }).click();
+      const key = settings.getByPlaceholder('sk-ant-...');
       await key.fill('sk-ant-e2e-not-a-real-key');
       await key.press('Enter');
-      await expect(page.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
-      await expect(consoleTitle).toHaveCount(0);
+      await expect(settings.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
+      await hidePane(page, 'Settings');
 
-      // Escape on the Home Garden opens the console
+      // Escape on Garden Home opens the Garden's Collaboration as a pane
       await page.keyboard.press('Escape');
-      await expect(consoleTitle).toBeVisible();
-      const modal = page.locator('[data-modal-open]', { hasText: 'Console — The Keeper' });
-      await modal.getByRole('button', { name: 'Close', exact: true }).click();
-      await expect(consoleTitle).toHaveCount(0);
+      await expect(consolePane).toBeVisible();
+      const console_ = page.getByRole('button', { name: 'Console', exact: true });
+      await expect(console_).toHaveAttribute('aria-pressed', 'true');
+      await console_.click();
+      await expect(consolePane).toHaveCount(0);
 
-      // The TopBar's Keeper button opens it too
-      await page.getByRole('button', { name: 'Console', exact: true }).click();
-      await expect(consoleTitle).toBeVisible();
+      // The TopBar button opens it too
+      await console_.click();
+      await expect(consolePane).toBeVisible();
 
       // Talk to the scripted model; the reply lands in the conversation
-      const input = modal.getByPlaceholder('Send a message...');
+      const input = consolePane.getByPlaceholder('Send a message...');
       await input.fill('Hello Keeper');
       await input.press('Enter');
-      // The prompt shows twice: as the conversation's title in the list and as the bubble
-      await expect(modal.getByText('Hello Keeper', { exact: true })).toHaveCount(2);
-      await expect(modal.getByText('Mock reply: Hello Keeper')).toBeVisible({ timeout: 30_000 });
+      await expect(consolePane.getByText('Mock reply: Hello Keeper')).toBeVisible({
+        timeout: 30_000,
+      });
       await page.screenshot({ path: 'e2e/.results/garden-panes-5-console.png' });
 
-      await modal.getByRole('button', { name: 'Close', exact: true }).click();
-      await expect(consoleTitle).toHaveCount(0);
-      // The conversation is kept: reopen and it is still there
-      await page.keyboard.press('Escape');
-      await expect(modal.getByText('Mock reply: Hello Keeper')).toBeVisible();
-      await modal.getByRole('button', { name: 'Close', exact: true }).click();
-      await expect(consoleTitle).toHaveCount(0);
+      // The conversation is kept: close, reopen and it is still there
+      await console_.click();
+      await expect(consolePane).toHaveCount(0);
+      await console_.click();
+      await expect(consolePane.getByText('Mock reply: Hello Keeper')).toBeVisible();
+      await console_.click();
+      await expect(consolePane).toHaveCount(0);
     } finally {
       await app.close();
     }

@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -33,10 +34,7 @@ test.describe('preset screenshots', () => {
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
       await togglePanel(page, 'Toggle history');
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('cells interlinked');
       await label.press('Enter');
@@ -54,7 +52,7 @@ test.describe('preset screenshots', () => {
       await input.fill('Do you like our owl?');
       await page.waitForTimeout(800);
       await shot('2-workspace');
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 30_000 });
       await page.waitForTimeout(800);
       await shot('3-home');

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getServices } from '@/services';
+import { Button } from '@/components/ui';
 import { gardenPath } from '@/stores/gardenContext';
 import TendingDestination from '@/components/workspace/TendingDestination';
 import { copyIdentity, findWorkingCopy } from '@/services/working-copies';
@@ -60,28 +61,39 @@ export default function CruxBuilder() {
   const openError = error ?? workspace?.error;
   if (openError)
     return (
-      <div role="alert" className="p-8">
-        <h1>Could not open this Crux</h1>
-        <p>{openError}</p>
-        <button
-          onClick={async () => {
-            if (!id) return;
-            try {
-              await closeWorkspace(id, { stop: true, documents: 'discard' });
-              setRetry((n) => n + 1);
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          }}
-        >
-          Retry
-        </button>
-        <Link to="/home">Back to your garden</Link>
+      <div role="alert" className="h-full flex items-center justify-center px-4">
+        <div className="max-w-md text-center">
+          <h1 className="font-display text-lg font-medium text-text">Could not open this Crux</h1>
+          <p className="text-sm text-text-muted mt-1 mb-6">{openError}</p>
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                if (!id) return;
+                try {
+                  await closeWorkspace(id, { stop: true, documents: 'discard' });
+                  setRetry((n) => n + 1);
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              Retry
+            </Button>
+            <Link to="/home">
+              <Button size="sm">Back to your garden</Button>
+            </Link>
+          </div>
+        </div>
       </div>
     );
   if (!workspace || workspace.phase !== 'ready')
     return (
-      <div role="status" className="p-8">
+      <div
+        role="status"
+        className="h-full flex items-center justify-center text-sm text-text-muted"
+      >
         Opening Crux…
       </div>
     );

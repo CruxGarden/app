@@ -1,18 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { fileText } from './content-helpers';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 
-for (const [backend, fault] of [
-  ['legacy', 'disk failure'],
-  ['legacy', 'missing content'],
-  ['api', 'disk failure'],
-  ['api', 'missing content'],
-] as const) {
-  const env = { CRUX_API_OWNER: backend === 'api' ? '1' : '0' };
-  test(`${backend} Garden restore preserves existing work on ${fault} and retries cleanly across restart`, async () => {
-    let instance = await launchApp({ env });
+for (const fault of ['disk failure', 'missing content'] as const) {
+  test(`Garden restore preserves existing work on ${fault} and retries cleanly across restart`, async () => {
+    let instance = await launchApp();
     const dir = instance.dir;
     const archive = join(dir, 'recovery.garden');
     const incomplete = join(dir, 'incomplete.garden');
@@ -78,20 +73,7 @@ for (const [backend, fault] of [
       await page.keyboard.type('Current work must survive');
       await page.keyboard.press('ControlOrMeta+s');
 
-      const content = (id: string, filename: string) =>
-        page.evaluate(
-          async ({ id, filename }) => {
-            const row = (await window.electronAPI!.sqlite.get(
-              'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-              [id, filename],
-            )) as { fingerprint: string } | undefined;
-            if (!row) return null;
-            return new TextDecoder().decode(
-              await window.electronAPI!.sqlite.blobRead(row.fingerprint),
-            );
-          },
-          { id, filename },
-        );
+      const content = (id: string, filename: string) => fileText(page, id, filename);
       await expect.poll(() => content(existing, 'keep.txt')).toBe('Current work must survive');
 
       if (fault === 'disk failure')
@@ -140,10 +122,11 @@ for (const [backend, fault] of [
         )
         .toBe(existing);
       await instance.app.close();
-      instance = await launchApp({ dir, env });
+      instance = await launchApp({ dir });
       page = instance.page;
       await page.getByRole('button', { name: /enter/i }).click();
       expect(await content(existing, 'keep.txt')).toBe('Current work must survive');
+      await page.getByRole('button', { name: 'Open Keep after failure', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
         'Keep after failure',
       );
@@ -169,7 +152,7 @@ for (const [backend, fault] of [
       await expect.poll(() => content(original, 'original.txt')).toBe('Original exported content');
       await expect.poll(() => content(existing, 'keep.txt')).toBeNull();
       await instance.app.close();
-      instance = await launchApp({ dir, env });
+      instance = await launchApp({ dir });
       page = instance.page;
       await page.getByRole('button', { name: /enter/i }).click();
       expect(await content(original, 'original.txt')).toBe('Original exported content');

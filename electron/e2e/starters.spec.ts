@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -78,7 +79,7 @@ test.describe('starter cruxes', () => {
 
       // ── Media ──
       // The breadcrumb's first button is the garden name → /home (there is no button named "Home")
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
       await page.getByRole('button', { name: 'Add Crux' }).click();

@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { test, expect, chromium, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import {
@@ -205,7 +206,7 @@ test.describe('starter templates render through astro dev', () => {
 
       // ── Media ──
       // Navigate within the app so Feed remains open while Media starts.
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Media/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();

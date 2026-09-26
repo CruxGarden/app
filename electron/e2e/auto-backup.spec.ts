@@ -78,10 +78,7 @@ test.describe('automatic backup (mocked API, mock AI)', () => {
       await page.keyboard.type('more');
       await page.keyboard.press('ControlOrMeta+s');
       await togglePanel(page, 'Toggle history');
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('over');
       await label.press('Enter');

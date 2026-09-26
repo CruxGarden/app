@@ -2,7 +2,7 @@ import { showPane, togglePanel } from './panel-helpers';
 import { test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { launchApp } from './launch';
-import { createCrux } from './multi-crux-helpers';
+import { createCrux, goHome } from './multi-crux-helpers';
 
 /**
  * Every page of the app under the Plasma theme, as evidence rather than as a
@@ -59,7 +59,7 @@ test('plasma across every page', async () => {
     for (const name of ['Field notes', 'Tide charts', 'Lantern']) {
       await createCrux(page, name);
       await page.waitForTimeout(1500);
-      await page.locator('header').getByRole('button').first().click();
+      await goHome(page);
       await page.waitForTimeout(1200);
     }
     await shot('03-home-garden-cards');

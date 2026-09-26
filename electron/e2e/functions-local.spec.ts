@@ -4,6 +4,7 @@ import { test, expect } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { indexedFiles } from './content-helpers';
 import { enterGarden, createCrux } from './multi-crux-helpers';
 
 /**
@@ -78,17 +79,7 @@ export default async function hello(req, ctx) {
 }`;
     writeFileSync(join(folder, 'functions', 'hello.js'), hello);
     await expect
-      .poll(async () => {
-        const row = (await page.evaluate(
-          async (id) =>
-            window.electronAPI!.sqlite.get(
-              "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'functions/hello.js'",
-              [id],
-            ),
-          cruxId,
-        )) as { fingerprint: string };
-        return row?.fingerprint;
-      })
+      .poll(async () => (await indexedFiles(page, cruxId))['functions/hello.js'])
       .toBe(createHash('sha256').update(hello).digest('hex'));
 
     // Run from the Share pane: the local runner answers.

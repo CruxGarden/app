@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, goHome } from './multi-crux-helpers';
 import { member, exportCruxspacePackage } from './game-cruxspace-helpers';
 import type { AgentPermissionRequest } from '../src/bridge';
 
@@ -33,7 +33,7 @@ test('author the persistent Psychedelic Garden through its real tools', async ()
     const create = page.getByRole('button', { name: 'Create Cruxspace', exact: true });
     for (let attempt = 0; attempt < 4; attempt++) {
       if (await create.isVisible()) return;
-      await page.locator('header').getByRole('button').first().click();
+      await goHome(page);
       if (
         await create.waitFor({ state: 'visible', timeout: 5000 }).then(
           () => true,

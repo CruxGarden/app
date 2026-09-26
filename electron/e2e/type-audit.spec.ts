@@ -1,7 +1,7 @@
 import { togglePanel } from './panel-helpers';
 import { test } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, createCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
 
 /** Type audit: dump the distinct font-size / family / weight combos on key screens. */
 test('type audit', async () => {
@@ -72,7 +72,7 @@ test('type audit', async () => {
     await page.waitForTimeout(300);
     await audit('settings');
     await page.keyboard.press('Escape');
-    await page.locator('header').getByRole('button').first().click();
+    await goHome(page);
     await page.getByText('Home Garden', { exact: true }).waitFor();
     await audit('home');
   } finally {

@@ -1,3 +1,4 @@
+import { captureGardenId } from '@/stores/gardenContext';
 /**
  * Recover — cruxes the account has that this machine does not (RESILIENCE-PLAN
  * §2c): after a restore, on a new device, after a local delete. Two kinds:
@@ -108,7 +109,9 @@ export async function recoverPublishedCrux(
   const arts = await publicApi.getArtifacts(username, remote.slug);
   const meta = (remote.meta ?? {}) as Record<string, unknown>;
   const isSite = remote.kind === 'site' || meta.template === 'astro' || !!meta.site;
+  const gardenId = captureGardenId();
   const created = await cruxService.create({
+    ...(gardenId ? { gardenId } : {}),
     id: remote.id,
     slug: remote.slug,
     title: remote.title || 'Recovered crux',

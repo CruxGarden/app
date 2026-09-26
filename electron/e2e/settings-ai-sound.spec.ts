@@ -1,3 +1,4 @@
+import { hidePane, showPane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -111,8 +112,7 @@ test.describe('settings AI, mood sound & persona', () => {
       }
 
       // ── The hint survives closing and reopening Settings ─────────────────
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+      await hidePane(page, 'Settings');
       await page.keyboard.press('ControlOrMeta+,');
       await page.locator('h2', { hasText: /^AI$/ }).click();
       await expect(anthropic.getByText('sk-ant-...abcd')).toBeVisible();
@@ -129,8 +129,7 @@ test.describe('settings AI, mood sound & persona', () => {
       await aiSwitch.click();
       await expect(aiSwitch).toHaveAttribute('aria-checked', 'false');
       await expect(page.getByRole('link', { name: 'Anthropic' })).toHaveCount(0);
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+      await hidePane(page, 'Settings');
       await page.keyboard.press('ControlOrMeta+,');
       await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
       await page.locator('h2', { hasText: /^AI$/ }).click();
@@ -149,8 +148,9 @@ test.describe('settings AI, mood sound & persona', () => {
       );
     try {
       await plantGarden(page);
-      await page.keyboard.press('ControlOrMeta+m');
-      await page.getByRole('button', { name: 'Sound', exact: true }).click();
+      await (await showPane(page, 'Mood'))
+        .getByRole('button', { name: 'Sound', exact: true })
+        .click();
       const synth = page.getByRole('region', { name: 'Crux Synth', exact: true });
       await expect(synth).toBeVisible();
       expect((await state()).playing).toBe(false);
@@ -176,8 +176,7 @@ test.describe('settings AI, mood sound & persona', () => {
     try {
       await plantGarden(page);
 
-      await page.keyboard.press('ControlOrMeta+m');
-      await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Persona', exact: true }).click();
       const name = page.getByPlaceholder('Persona name');
       await expect(name).toHaveValue('Vel');
@@ -197,8 +196,7 @@ test.describe('settings AI, mood sound & persona', () => {
       await expect(page.getByRole('button', { name: 'Revert to Default' })).toBeVisible();
       await page.waitForTimeout(400); // persona saves per change
       await page.screenshot({ path: 'e2e/.results/settings-ai-4-persona.png' });
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Mood' })).toHaveCount(0);
+      await hidePane(page, 'Mood');
 
       // ── A new crux opens with the persona's greeting, under its name ────
       await page.getByRole('button', { name: 'Add Crux' }).click();
@@ -216,7 +214,7 @@ test.describe('settings AI, mood sound & persona', () => {
       await page.screenshot({ path: 'e2e/.results/settings-ai-5-greeting.png' });
 
       // ── The edits persist in the Persona tab ─────────────────────────────
-      await page.keyboard.press('ControlOrMeta+m');
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Persona', exact: true }).click();
       await expect(page.getByPlaceholder('Persona name')).toHaveValue('Fern');
       await expect(page.getByPlaceholder('A greeting shown when the console opens')).toHaveValue(

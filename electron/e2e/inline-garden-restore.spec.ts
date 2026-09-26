@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { fileText } from './content-helpers';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 
@@ -18,15 +19,7 @@ for (const format of ['raw', 'old-container'] as const) {
       await page.locator('.monaco-editor').click();
       await page.keyboard.type('Current work remains');
       await page.keyboard.press('ControlOrMeta+s');
-      const content = () =>
-        page.evaluate(async (id) => {
-          const db = window.electronAPI!.sqlite;
-          const row = (await db.get(
-            'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-            [id, 'keep.txt'],
-          )) as { fingerprint: string } | undefined;
-          return row ? new TextDecoder().decode(await db.blobRead(row.fingerprint)) : null;
-        }, id);
+      const content = () => fileText(page, id, 'keep.txt');
       await expect.poll(content).toBe('Current work remains');
       const bytes = await page.evaluate(async () =>
         Array.from(new Uint8Array(await window.electronAPI!.sqlite.export())),

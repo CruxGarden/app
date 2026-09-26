@@ -73,6 +73,8 @@ export default function SnapshotBanner() {
 
   return (
     <motion.div
+      role="region"
+      aria-label="Viewing a snapshot"
       data-motion-role="toast"
       initial={toast.initial}
       animate={toast.animate}
@@ -140,7 +142,7 @@ export default function SnapshotBanner() {
             'bg-snapshot-banner-button text-bg hover:bg-snapshot-banner-button-hover transition-colors motion-press cursor-pointer',
           )}
         >
-          Back
+          Back to current
         </button>
       </div>
     </motion.div>

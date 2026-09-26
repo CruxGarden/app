@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Button } from '@/components/ui';
+import { getServices } from '@/services';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
 import * as cruxesApi from '@/api/cruxes';
@@ -36,14 +37,18 @@ export default function RecoverSection() {
       return;
     }
     try {
-      setRows(await listCloudOnlyCruxes(new Set([...allCruxes, ...trashed].map((c) => c.id))));
+      // On this machine means anywhere in it, not only the Garden being viewed.
+      const { crux } = getServices();
+      const [local, bin] = await Promise.all([crux.listAll(), crux.listTrashed()]);
+      setRows(await listCloudOnlyCruxes(new Set([...local, ...bin].map((c) => c.id))));
     } catch {
       setRows(null); // the account could not be read; the section simply stays away
     }
-  }, [isAuthenticated, allCruxes, trashed]);
+  }, [isAuthenticated]);
+  // Re-read whenever this machine's Cruxes change.
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, allCruxes, trashed]);
 
   const run = async (row: CloudOnlyCrux, action: 'restore' | 'recover' | 'unshare') => {
     setBusy(`${row.id}:${action}`);

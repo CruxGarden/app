@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { togglePanel, expectPanelBarReady } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -193,7 +194,7 @@ test.describe('recover (mocked API)', () => {
       await expect(page).toHaveURL(new RegExp(`/c/${id}`));
 
       // back home: Unshare the orphan
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       const orphan = page.getByTestId('recover-orphan-site');
       await expect(orphan).toBeVisible({ timeout: 15_000 });
       await orphan.getByRole('button', { name: 'Unshare' }).click();

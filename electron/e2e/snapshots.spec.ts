@@ -52,14 +52,13 @@ test.describe('snapshots & revert', () => {
       // Snapshot "v1"
       await togglePanel(page, 'Toggle history');
       const snapshotWithLabel = async (label: string) => {
-        await page
-          .getByRole('button', { name: /snapshot/i })
-          .first()
-          .click();
+        await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
         const input = page.getByPlaceholder('Label (optional)');
         await input.fill(label);
         await input.press('Enter');
-        await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 30_000 });
+        await expect(
+          page.getByTestId('pane-body-history').getByText(label, { exact: true }),
+        ).toBeVisible({ timeout: 30_000 });
       };
       await snapshotWithLabel('v1');
 
@@ -79,7 +78,9 @@ test.describe('snapshots & revert', () => {
       await expect(removeDialog).toContainText(/Remove "v2"/);
       await removeDialog.getByRole('button', { name: 'Remove' }).click();
       await expect(page.getByText('v2', { exact: true })).toHaveCount(0);
-      await expect(page.getByText('v1', { exact: true })).toBeVisible();
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
+      ).toBeVisible();
       await expect.poll(fileOnDisk).toBe('version one and version two');
       await expect(monaco).toContainText('version two');
       // …and take it again so the rest of the journey has its v2
@@ -117,7 +118,9 @@ test.describe('snapshots & revert', () => {
       if (!(await page.getByText('Before revert', { exact: true }).isVisible())) {
         await togglePanel(page, 'Toggle history');
       }
-      await expect(page.getByText('v1', { exact: true })).toBeVisible();
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
+      ).toBeVisible();
       await expect(page.getByText('v2', { exact: true })).toBeVisible();
       await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
       const storage = await page.evaluate(async () => {

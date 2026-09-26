@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
@@ -19,7 +20,7 @@ test.describe('ui survey', () => {
     const shot = (name: string) => page.screenshot({ path: `e2e/.results/survey-${name}.png` });
     const goHome = async () => {
       // The breadcrumb's first button is the garden name → /home
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 30_000 });
     };
     const createBlank = async (title?: string) => {
@@ -58,14 +59,13 @@ test.describe('ui survey', () => {
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2500);
       await togglePane(page, /^Toggle history$/i);
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('first light');
       await label.press('Enter');
-      await expect(page.getByText('first light', { exact: true })).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page.getByTestId('pane-body-history').getByText('first light', { exact: true }),
+      ).toBeVisible({ timeout: 30_000 });
       await togglePane(page, /^Toggle history$/i);
       await shot('workspace');
 

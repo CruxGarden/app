@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
+import { enableAi, showPane, hidePane } from './panel-helpers';
 
 /**
  * The garden-level conversation (MAKING-IT-POSSIBLE step 6): from the Keeper's
@@ -13,21 +14,8 @@ test('the Keeper plants a crux from the console', async () => {
   try {
     await enterGarden(page);
     // The console is behind Enable AI Tools (a fresh garden has it off).
-    await page.keyboard.press('ControlOrMeta+,');
-    await page.locator('h2', { hasText: /^AI$/ }).click();
-    await page.getByRole('switch', { name: 'Enable AI Tools' }).click();
-    const key = page.getByPlaceholder('sk-ant-...');
-    await key.fill('sk-ant-e2e-not-a-real-key');
-    await key.press('Enter');
-    await expect(page.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
-    await page.keyboard.press('Escape');
-    const console_ = page.locator('[data-modal-open]', { hasText: 'Console — The Keeper' });
-    // Escape opens the console once nothing else (Settings, a field) holds it.
-    for (let i = 0; i < 6 && !(await console_.isVisible().catch(() => false)); i++) {
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
-    }
-    await expect(console_).toBeVisible({ timeout: 10_000 });
+    await enableAi(page);
+    const console_ = await showPane(page, 'Console');
     const composer = console_.getByPlaceholder('Send a message...');
     await composer.fill('[garden:plant] Plant a notes crux for the field study.');
     await composer.press('Enter');
@@ -36,7 +24,7 @@ test('the Keeper plants a crux from the console', async () => {
     });
     await expect(console_.getByTestId('tool-call')).toContainText('Planted Field notes');
     await page.screenshot({ path: 'e2e/.results/keeper-plants.png' });
-    await page.keyboard.press('Escape');
+    await hidePane(page, 'Console');
     await expect(page.getByText('Field notes', { exact: true })).toBeVisible({ timeout: 30_000 });
   } finally {
     await app.close();

@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { hidePane, showPane, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
@@ -37,14 +38,13 @@ test.describe('wild theme', () => {
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
       await togglePanel(page, 'Toggle history');
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('too much');
       await label.press('Enter');
-      await expect(page.getByText('too much', { exact: true })).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page.getByTestId('pane-body-history').getByText('too much', { exact: true }),
+      ).toBeVisible({ timeout: 30_000 });
 
       // The Mood pane → Theme → Import the theme
       const mood = await showPane(page, 'Mood');
@@ -75,7 +75,7 @@ test.describe('wild theme', () => {
       await page.waitForTimeout(800);
       await shot('3-workspace-more');
 
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 30_000 });
       await page.waitForTimeout(800);
       await shot('4-home');

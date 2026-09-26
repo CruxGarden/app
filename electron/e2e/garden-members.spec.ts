@@ -1,7 +1,7 @@
 import { togglePanel } from './panel-helpers';
 import { test, expect, request, type APIRequestContext } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, goHome } from './multi-crux-helpers';
 import {
   LOCAL_API,
   LOCAL_API_LOG,
@@ -164,7 +164,7 @@ test('a garden with people: plant, share, invite from the directory, accept, sha
       expect.objectContaining({ title: 'Seed swap list', authorUsername: b.username }),
     ]);
     // The owner's Home lists it, with their role.
-    await page.locator('header').getByRole('button').first().click();
+    await goHome(page);
     const gardens = page.getByTestId('gardens-section');
     await expect(gardens).toBeVisible({ timeout: 30_000 });
     await expect(gardens.getByTestId(`garden-${gardenId}`)).toContainText('owner');

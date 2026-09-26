@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { hidePane } from './panel-helpers';
 
 /**
  * Names (Daniel, 2026-09-20): the garden's title and its panes' words are the
- * garden's to choose — Settings → Names writes them, the top bar and every
+ * garden's to choose — Settings → Names renames the Garden and names the panes; the top bar and every
  * pane header read them, and the journeys' own selectors (Toggle collaboration)
  * keep the default words.
  */
@@ -22,7 +23,7 @@ test('a garden names itself and its panes', async () => {
     await names.getByLabel('Name for Collaboration').press('Enter');
     await names.getByLabel('Name for Artifacts').fill('Case files');
     await names.getByLabel('Name for Artifacts').press('Enter');
-    await page.keyboard.press('Escape');
+    await hidePane(page, 'Settings');
 
     // The top bar carries the title; the pane headers carry the words;
     // the toggles keep their accessible names and show the new word as a tooltip.
@@ -39,7 +40,7 @@ test('a garden names itself and its panes', async () => {
     await page.keyboard.press('ControlOrMeta+,');
     await names.getByLabel('Name for Collaboration').fill('');
     await names.getByLabel('Name for Collaboration').press('Enter');
-    await page.keyboard.press('Escape');
+    await hidePane(page, 'Settings');
     await expect(page.locator('.pane-toolbar-label', { hasText: 'Collaboration' })).toBeVisible();
   } finally {
     await app.close();

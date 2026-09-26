@@ -6,6 +6,17 @@ export async function enterGarden(page: Page) {
   await page.getByRole('button', { name: 'Welcome' }).click();
   await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
 }
+/** From a Crux, Garden location → Close crux lands on its Garden's Home (the workspace stays open). */
+export async function goHome(page: Page) {
+  if (/\/c\//.test(page.url())) {
+    await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Garden location', exact: true })
+      .getByRole('button', { name: 'Close crux', exact: true })
+      .click();
+  }
+  await expect(page.getByTestId('pane-body-home')).toBeVisible({ timeout: 15_000 });
+}
 export async function createCrux(page: Page, title: string) {
   // The garden breadcrumb remains reachable while existing workspaces stay open.
   if (/\/c\//.test(page.url())) {

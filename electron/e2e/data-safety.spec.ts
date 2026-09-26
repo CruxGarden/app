@@ -1,3 +1,4 @@
+import { goHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -79,14 +80,11 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .catch(() => false))
       )
         await togglePanel(page, 'Toggle history');
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
-      const label = page.getByPlaceholder('Label (optional)');
-      await label.fill('v1');
-      await label.press('Enter');
-      await expect(page.getByText('v1', { exact: true })).toBeVisible({ timeout: 30_000 });
+      const history = page.getByTestId('pane-body-history');
+      await history.getByRole('button', { name: 'Mark version', exact: true }).click();
+      await history.getByPlaceholder('Label (optional)').fill('v1');
+      await history.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(history.getByText('v1', { exact: true })).toBeVisible({ timeout: 30_000 });
 
       await armBlobCapture(page);
 
@@ -121,7 +119,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
       await page.keyboard.press('Escape');
 
       // ── Import the .crux as a copy: a second crux with the same file ──
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       await page.getByRole('button', { name: 'Add Crux' }).click();
       const [chooser] = await Promise.all([
@@ -134,7 +132,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
       });
       await ensurePane(page, 'artifacts', 'Toggle artifacts');
       await expect(page.getByRole('tree').getByText('index.html')).toBeVisible({ timeout: 30_000 });
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByRole('button', { name: /^Open My Crux/ })).toHaveCount(2, {
         timeout: 15_000,
       });

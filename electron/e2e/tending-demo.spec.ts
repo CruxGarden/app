@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, goHome } from './multi-crux-helpers';
 
 async function pane(page: Page, name: string, toggle: string) {
   if (!(await page.getByTestId(`pane-body-${name}`).isVisible())) await togglePanel(page, toggle);
@@ -66,7 +66,7 @@ test('Glasshouse is created without a key, exports all Tasks, and imports as an 
     // A delivery artifact in scratch; copying into demos/ is an explicit release step.
     writeFileSync('/private/tmp/glasshouse.crux', Buffer.from(encoded, 'base64'));
 
-    await page.getByRole('banner').getByRole('button').first().click();
+    await goHome(page);
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser'),

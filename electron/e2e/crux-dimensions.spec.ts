@@ -13,12 +13,14 @@ test('inline dimensions navigate without opening Navigator and retain versions a
     const main = await createCrux(page, 'Tide pool');
     const source = page.url();
     const links = page.getByRole('region', { name: 'Crux connections', exact: true });
-    await expect(links.getByRole('region', { name: 'Gates', exact: true })).toContainText(
-      'My Garden',
-      { timeout: 3000 },
-    );
+    // Its Garden is the breadcrumb's; with nothing else linked there is no strip.
+    await expect(links).toBeHidden();
     await expect(page.getByRole('complementary', { name: 'Navigator' })).toHaveCount(0);
-    await links.getByRole('button', { name: 'My Garden', exact: true }).click();
+    await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Garden location', exact: true })
+      .getByRole('button', { name: 'Close crux', exact: true })
+      .click();
     await page.getByRole('button', { name: 'New Garden', exact: true }).click();
     await page.getByRole('textbox', { name: 'Garden name' }).fill('References');
     await page.getByRole('button', { name: 'Create Garden', exact: true }).click();

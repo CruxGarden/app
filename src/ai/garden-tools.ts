@@ -255,7 +255,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'set_names',
     description:
-      "Name the garden and its panes — the metaphor the person works inside (a title like 'Floyd County Police Department'; Collaboration as 'Interview room', Artifacts as 'Case files'). An empty string clears a name. Only when asked, or as part of building the garden they described.",
+      "Name the current Garden and its panes — the metaphor the person works inside (a title like 'Floyd County Police Department' renames the Garden; Collaboration as 'Interview room', Artifacts as 'Case files'). An empty pane name restores the usual word. Only when asked, or as part of building the garden they described.",
     input_schema: {
       type: 'object',
       properties: {
@@ -1061,7 +1061,13 @@ async function runGardenToolInner(
       const { applyActiveMood, getThemeOverrides, setThemeOverrides } =
         await import('@/lib/moods/active');
       const changes: Record<string, string> = {};
-      if (typeof input.title === 'string') changes.gardenTitle = input.title.trim();
+      const said: string[] = [];
+      const garden = useGardenContext.getState().garden;
+      if (typeof input.title === 'string' && input.title.trim() && garden) {
+        const { renameGarden } = await import('@/services/garden-navigation');
+        await renameGarden(garden.id, input.title);
+        said.push(`Garden "${input.title.trim()}"`);
+      }
       for (const [pane, name] of Object.entries((input.panes ?? {}) as Record<string, string>))
         changes[`paneLabel${pane[0]!.toUpperCase()}${pane.slice(1)}`] = name.trim();
       for (const section of ['Dark', 'Light'] as const) {
@@ -1073,11 +1079,8 @@ async function runGardenToolInner(
         setThemeOverrides(section, next);
       }
       applyActiveMood();
-      const said = Object.entries(changes).map(([k, v]) =>
-        k === 'gardenTitle'
-          ? `title ${v ? `"${v}"` : 'cleared'}`
-          : `${k.replace(/^paneLabel/, '')} ${v ? `→ "${v}"` : 'back to its usual word'}`,
-      );
+      for (const [k, v] of Object.entries(changes))
+        said.push(`${k.replace(/^paneLabel/, '')} ${v ? `→ "${v}"` : 'back to its usual word'}`);
       return `Named: ${said.join('; ')}.`;
     }
     case 'list_moods': {

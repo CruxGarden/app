@@ -1,3 +1,4 @@
+import { hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,8 +36,7 @@ async function openSettings(page: Page) {
 }
 
 async function closeSettings(page: Page) {
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+  await hidePane(page, 'Settings');
 }
 
 /** What the mock model has been sent as system prompts so far (see ai/mock-model.ts). */

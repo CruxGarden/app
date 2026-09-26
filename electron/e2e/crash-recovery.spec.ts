@@ -1,20 +1,13 @@
 import { togglePanel } from './panel-helpers';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { writeFileSync, unlinkSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
+import { indexedFiles } from './content-helpers';
 
 const fingerprint = (text: string) => createHash('sha256').update(text).digest('hex');
-const indexedFiles = (page: Page, id: string) =>
-  page.evaluate(async (id) => {
-    const rows = (await window.electronAPI!.sqlite.all(
-      "SELECT path, fingerprint FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
-      [id],
-    )) as { path: string; fingerprint: string }[];
-    return Object.fromEntries(rows.map((row) => [row.path, row.fingerprint]));
-  }, id);
 
 test('after a process crash, offline file changes enter the index and the next Growth snapshot', async () => {
   const first = await launchApp();
@@ -49,6 +42,8 @@ test('after a process crash, offline file changes enter the index and the next G
   const second = await launchApp({ dir: first.dir });
   try {
     await second.page.getByRole('button', { name: 'Enter', exact: true }).click();
+    // Entering lands on Garden Home; the Crux opens from its card.
+    await second.page.getByRole('button', { name: 'Open Crash recovery', exact: true }).click();
     await expect(second.page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
       'Crash recovery',
     );
@@ -73,17 +68,17 @@ test('after a process crash, offline file changes enter the index and the next G
     await history.getByPlaceholder('Label (optional)').fill('Recovered disk state');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(history.getByText('Recovered disk state', { exact: true })).toBeVisible();
-    const snapshotFiles = (await second.page.evaluate(
-      async (id) =>
-        window.electronAPI!.sqlite.all(
-          `SELECT a.path, a.fingerprint FROM artifacts a JOIN dimensions d ON a.resource_id = d.target_id
-       WHERE d.source_id = ? AND d.type = 'growth' AND d.target_id =
-       (SELECT target_id FROM dimensions WHERE source_id = ? AND type = 'growth' ORDER BY weight DESC LIMIT 1)`,
-          [id, id],
-        ),
-      id,
-    )) as { path: string; fingerprint: string }[];
-    const snapshot = Object.fromEntries(snapshotFiles.map((row) => [row.path, row.fingerprint]));
+    const snapshotId = (
+      (await second.page.evaluate(
+        (id) =>
+          window.electronAPI!.sqlite.get(
+            "SELECT target_id AS id FROM dimensions WHERE source_id = ? AND type = 'growth' ORDER BY weight DESC LIMIT 1",
+            [id],
+          ),
+        id,
+      )) as { id: string }
+    ).id;
+    const snapshot = await indexedFiles(second.page, snapshotId);
     expect(snapshot).toMatchObject(expected);
     expect(snapshot['removed.txt']).toBeUndefined();
     await second.page.screenshot({ path: 'e2e/.results/crash-recovery.png' });

@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
@@ -84,8 +84,7 @@ async function enableAgentHost(page: Page, gardenRoot: string): Promise<McpConfi
   await expect(snippet).toContainText('"mcpServers"');
   await page.screenshot({ path: 'e2e/.results/mcp-1-settings.png' });
 
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+  await hidePane(page, 'Settings');
   return config;
 }
 
@@ -309,8 +308,7 @@ test.describe('Agent Host (MCP server per crux)', () => {
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await expect(page.getByText(/Connected/).first()).toBeVisible({ timeout: 30_000 });
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+      await hidePane(page, 'Settings');
 
       const config = await enableAgentHost(page, gardenRoot);
       client = await connect(config, 'e2e-publisher');
