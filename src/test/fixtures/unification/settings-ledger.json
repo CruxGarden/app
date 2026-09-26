@@ -556,6 +556,13 @@
       "status": "planned"
     },
     {
+      "key": "cruxgarden:weatherError",
+      "group": "additional",
+      "target": "Garden service configuration",
+      "preservation": "Capture endpoint and privacy policy; not automatic public content.",
+      "status": "planned"
+    },
+    {
       "key": "cruxgarden:cruxspace-moment",
       "group": "additional",
       "target": "Garden history view",

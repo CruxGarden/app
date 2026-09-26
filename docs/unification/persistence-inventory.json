@@ -607,6 +607,13 @@
       "ledger": "cruxgarden:weather"
     },
     {
+      "key": "cruxgarden:weatherError",
+      "sources": [
+        "src/services/weather.ts"
+      ],
+      "ledger": "cruxgarden:weatherError"
+    },
+    {
       "key": "cruxgarden:weatherUrl",
       "sources": [
         "src/services/weather.ts"

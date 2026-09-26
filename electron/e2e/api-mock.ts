@@ -410,7 +410,11 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     }
     if (path === '/auth/code' && method === 'POST') return send(200, { message: 'sent' });
     if (path === '/auth/login' && method === 'POST') {
-      state.loginEmail = String(bodyJson().email ?? 'tester@example.com');
+      const body = bodyJson();
+      // The one code that works is 123456; anything else is a wrong or expired code.
+      if (body.code !== undefined && String(body.code) !== '123456')
+        return send(401, { statusCode: 401, message: 'Invalid or expired code' });
+      state.loginEmail = String(body.email ?? 'tester@example.com');
       return send(200, { accessToken: 'test-access', refreshToken: 'test-refresh' });
     }
     if (path === '/auth/profile' && method === 'GET') {
@@ -436,7 +440,9 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       });
     }
     if (path === '/auth/logout') return send(200, {});
-    if (path === '/authors/check-username') return send(200, { available: true });
+    // 'taken' is the one username someone else already has.
+    if (path === '/authors/check-username')
+      return send(200, { available: parsedUrl.searchParams.get('username') !== 'taken' });
     if (path.startsWith('/authors/') && method === 'PATCH')
       return send(200, { ...AUTHOR, ...bodyJson() });
     if (path.startsWith('/authors/') && path.endsWith('/avatar')) return send(200, AUTHOR);

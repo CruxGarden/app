@@ -360,7 +360,7 @@ export interface TranscodeOutput {
   mimeType: string;
 }
 
-/** Find media: a fetch made by the main process (no page origin, no CORS), https only, size-capped. */
+/** A fetch made by the main process (no page origin, no CORS): https anywhere, http on the local network only, size-capped. Find media and a weather station of one's own use it. */
 export interface MediaBridge {
   fetch(
     url: string,

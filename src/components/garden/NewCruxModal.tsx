@@ -1,4 +1,5 @@
 import { captureGardenId, cruxPath, inGarden } from '@/stores/gardenContext';
+import { plainError } from '@/lib/error-text';
 import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
 import { isEmbeddedApp } from '@/services/embedded-app';
@@ -514,7 +515,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
       } catch (err) {
         console.error('Import failed:', err);
         void alertDialog(
-          `Failed to import .crux file: ${err instanceof Error ? err.message : 'Make sure it is a valid export.'}`,
+          `Failed to import .crux file: ${plainError(err, 'Make sure it is a valid export.')}`,
           'Import failed',
         );
       } finally {
@@ -553,7 +554,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         onClose();
         if (window.location.href === origin) navigate(inGarden(`/c/${cruxId}`, gardenId));
       } catch (err) {
-        setCreateError(err instanceof Error ? err.message : 'Could not start from that file.');
+        setCreateError(plainError(err, 'Could not start from that file.'));
         setCreating(false);
       }
     },

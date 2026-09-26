@@ -463,6 +463,16 @@ const fromGarden = (
     return listener(event, ...args);
   });
 
+/** localhost, loopback, RFC 1918 ranges and .local names: the person's own machines. */
+function isPrivateHost(host: string): boolean {
+  const h = host.replace(/^\[|\]$/g, '').toLowerCase();
+  if (h === 'localhost' || h === '::1' || h.endsWith('.local')) return true;
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h);
+  if (!m) return false;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
+}
+
 async function setupIpc() {
   registerBrowserPanel(() => mainWindow);
   // The actual local API is the sole desktop database owner.
@@ -1703,8 +1713,14 @@ async function setupIpc() {
       throw new Error('Not a URL.');
     }
     const base = process.env.CRUX_MEDIA_API;
-    if (target.protocol !== 'https:' && !(base && url.startsWith(base)))
-      throw new Error('Only https sources are fetched.');
+    // https anywhere; plain http only to this machine or the local network (a
+    // weather station of one's own), never file: and never the app's scheme.
+    if (
+      target.protocol !== 'https:' &&
+      !(base && url.startsWith(base)) &&
+      !(target.protocol === 'http:' && isPrivateHost(target.hostname))
+    )
+      throw new Error('Only https sources are fetched (http only on this machine or your network).');
     const cap = Math.min(options?.maxBytes ?? 64_000_000, 512_000_000);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 90_000);

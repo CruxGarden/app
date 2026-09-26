@@ -6,6 +6,7 @@
  * Nothing is fetched until a schedule asks, and nothing is built in.
  */
 import { getSetting, setSetting } from './settings';
+import { plainError } from '@/lib/error-text';
 import { emitGardenEvent } from './garden-events';
 
 export const LOCATION_KEY = 'cruxgarden:location';
@@ -84,6 +85,11 @@ export function getWeather(): Weather | null {
  * ignored. The source is fetched only while a weather schedule is on.
  */
 export const WEATHER_URL_KEY = 'cruxgarden:weatherUrl';
+/** Why the last look at the weather failed, or empty. Shown beside the endpoint. */
+export const WEATHER_ERROR_KEY = 'cruxgarden:weatherError';
+export function getWeatherError(): string {
+  return (getSetting(WEATHER_ERROR_KEY) as string | null) ?? '';
+}
 
 export function getWeatherUrl(): string {
   return (getSetting(WEATHER_URL_KEY) as string | null) ?? '';
@@ -91,6 +97,7 @@ export function getWeatherUrl(): string {
 export function setWeatherUrl(url: string) {
   setSetting(WEATHER_URL_KEY, url.trim());
   setSetting(WEATHER_KEY, '');
+  setSetting(WEATHER_ERROR_KEY, '');
   if (url.trim() && getLocation()) void pollWeather();
 }
 
@@ -127,6 +134,14 @@ const own: WeatherSource = {
     const url = new URL(base);
     url.searchParams.set('lat', String(loc.lat));
     url.searchParams.set('lon', String(loc.lon));
+    // On desktop the main process asks: a station on the local network answers
+    // without CORS headers; the page's own fetch could not read it.
+    const native = typeof window !== 'undefined' ? window.electronAPI?.media : undefined;
+    if (native) {
+      const res = await native.fetch(url.toString(), { maxBytes: 64_000 });
+      if (!res.ok) throw new Error(`Weather source: ${res.status}`);
+      return parseWeatherAnswer(JSON.parse(new TextDecoder().decode(res.bytes)));
+    }
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`Weather source: ${res.status}`);
     return parseWeatherAnswer(await res.json());
@@ -167,8 +182,10 @@ export async function pollWeather(now = new Date()): Promise<Weather | null> {
     w = { ...(await source.current(loc)), at: now.toISOString() };
   } catch (err) {
     console.warn('[weather] poll failed', err);
+    setSetting(WEATHER_ERROR_KEY, plainError(err, 'The weather source did not answer.'));
     return null;
   }
+  setSetting(WEATHER_ERROR_KEY, '');
   const before = getWeather();
   setSetting(WEATHER_KEY, JSON.stringify(w));
   if (!before || before.kind !== w.kind) {

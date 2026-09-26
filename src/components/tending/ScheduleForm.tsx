@@ -9,7 +9,7 @@ import { CUE_GROUPS } from '@/audio/cue-presets';
 import { defaultToolDefinitions } from '@/ai/tools';
 import { allMoods } from './schedule-moods';
 import { onMoodPackagesChange, refreshInstalledMoods } from '@/lib/moods/packages';
-import { getSetting } from '@/services/settings';
+import { getSetting, onSettingChange } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import {
   WEATHER_KINDS,
@@ -22,6 +22,9 @@ import {
   setWeatherUrl,
   type Location,
   type WeatherKind,
+  WEATHER_KEY,
+  WEATHER_ERROR_KEY,
+  getWeatherError,
 } from '@/services/weather';
 import { SUN_PHASES, sunTimes, type SunPhase } from '@/services/sun';
 
@@ -131,7 +134,16 @@ function LocationRow({ children }: { children?: ReactNode }) {
 /** The person's own weather endpoint — nothing is built in. */
 function WeatherSourceRow() {
   const [url, setUrl] = useState(getWeatherUrl);
+  const [, bump] = useState(0);
+  useEffect(
+    () =>
+      onSettingChange((key) => {
+        if (key === WEATHER_KEY || key === WEATHER_ERROR_KEY) bump((n) => n + 1);
+      }),
+    [],
+  );
   const weather = getWeather();
+  const problem = getWeatherError();
   return (
     <div className="flex flex-col gap-1.5" data-testid="weather-source">
       <div className="flex flex-wrap items-center gap-2">
@@ -144,6 +156,11 @@ function WeatherSourceRow() {
           fieldSize="sm" className={'w-80 font-mono'}
         />
         {weather && <span className="text-text-muted">{describeWeather(weather)}</span>}
+        {problem && (
+          <span role="alert" className="text-error" data-testid="weather-error">
+            {problem}
+          </span>
+        )}
       </div>
       <span className="text-2xs text-text-muted">
         Yours to run: it is asked <code>?lat=&lon=</code> every quarter hour while a weather

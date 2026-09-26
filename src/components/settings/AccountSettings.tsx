@@ -112,7 +112,7 @@ export default function AccountSettings() {
   };
 
   return (
-    <SettingsSection title="Account">
+    <SettingsSection title="Account" testId="account-settings">
 
       {/* Avatar */}
       <div className="mb-4">
