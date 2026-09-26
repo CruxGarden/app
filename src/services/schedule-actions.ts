@@ -27,7 +27,8 @@ export interface ActionRuntime {
   tool(cruxId: string, tool: string, input: Record<string, unknown>): Promise<string>;
   cruxTitle(cruxId: string): string;
   /** Wear a Mood by id; resolves to its name, or null when there is no such Mood. */
-  wearMood(moodId: string): Promise<string | null>;
+  /** Dress the schedule's Garden (the Garden in front when it has none). */
+  wearMood(moodId: string, gardenId?: string): Promise<string | null>;
   /** Call a published Crux's function through the API; resolves to a one-line account of the answer. */
   fn(cruxId: string, name: string, input: Record<string, unknown>): Promise<string>;
 }
@@ -75,13 +76,15 @@ let runtime: ActionRuntime = {
     if (r.status >= 400) throw new Error(`${r.status}: ${body}`);
     return `${r.status} ${body}`;
   },
-  async wearMood(moodId) {
+  async wearMood(moodId, gardenId) {
     const { bundledMood } = await import('@/lib/moods/bundled-moods');
     const { refreshInstalledMoods } = await import('@/lib/moods/packages');
-    const { chooseMood } = await import('@/services/garden-mood');
+    const { chooseMood, wearInGarden } = await import('@/services/garden-mood');
+    const { getSqliteClient } = await import('@/services/sqlite/client');
     const pkg = bundledMood(moodId) ?? (await refreshInstalledMoods()).find((m) => m.id === moodId);
     if (!pkg) return null;
-    await chooseMood(pkg);
+    if (gardenId && getSqliteClient().gardenMood) await wearInGarden(pkg, gardenId);
+    else await chooseMood(pkg);
     return pkg.name;
   },
 };
@@ -137,7 +140,7 @@ async function runOne(s: Schedule, a: Action, index: number, ctx: FiringContext)
       return;
     }
     case 'mood': {
-      const name = await runtime.wearMood(a.moodId);
+      const name = await runtime.wearMood(a.moodId, s.gardenId);
       if (name === null)
         raiseAlert({
           key,

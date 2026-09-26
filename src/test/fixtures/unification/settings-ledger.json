@@ -292,44 +292,44 @@
     {
       "key": "cruxgarden:persona",
       "group": "collaboration",
-      "target": "Garden-owned state; transcript ownership explicit",
-      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
-      "status": "planned"
+      "target": "Garden Mood projection",
+      "preservation": "The Persona is part of the worn Mood; the active Garden’s resolved Mood projects it, and edits are overrides of that Mood like theme tokens.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:memory",
       "group": "collaboration",
-      "target": "Garden-owned state; transcript ownership explicit",
-      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
-      "status": "planned"
+      "target": "installation/person",
+      "preservation": "Garden Memory is about the person across every Garden and Crux; it stays one installation-level file (mirrored as memory.md at the Garden Root).",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:aiEnabled",
       "group": "collaboration",
-      "target": "Garden-owned state; transcript ownership explicit",
-      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
-      "status": "planned"
+      "target": "installation preference",
+      "preservation": "Whether the collaborator is on is an installation choice tied to provider keys; Gardens do not override credentials or model permissions (decision register).",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:defaultModel",
       "group": "collaboration",
-      "target": "Garden-owned state; transcript ownership explicit",
-      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
-      "status": "planned"
+      "target": "installation preference",
+      "preservation": "The default model for new Cruxes is an installation choice tied to provider keys; each Crux and each Garden Collaboration keeps its own chosen model.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:keeper-model",
       "group": "collaboration",
-      "target": "Garden-owned state; transcript ownership explicit",
-      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
-      "status": "planned"
+      "target": "Garden Crux metadata",
+      "preservation": "The Garden Collaboration’s model lives in meta.gardenCollaboration; the old global key is not read.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:keeper-conversations",
       "group": "collaboration",
-      "target": "Garden-owned state; transcript ownership explicit",
-      "preservation": "Untagged conversations/memory stay at local root; tagged conversations move with their Garden IDs; preserve persona until policy settled.",
-      "status": "planned"
+      "target": "Garden Crux metadata",
+      "preservation": "Each Garden’s conversations live in meta.gardenCollaboration on the Garden Crux; the old global key is not read.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:layout:global",
@@ -523,16 +523,16 @@
     {
       "key": "cruxgarden:alerts",
       "group": "additional",
-      "target": "Garden event inbox",
-      "preservation": "Preserve owner/target, seen/snoozed state; do not replay events.",
-      "status": "planned"
+      "target": "installation event inbox",
+      "preservation": "One Alerts inbox for the person across Gardens; each alert names its Crux and Garden target.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:schedules",
       "group": "additional",
       "target": "Garden rules + operational execution state",
-      "preservation": "Separate definitions from captured action targets and occurrence state; no duplicate timers.",
-      "status": "planned"
+      "preservation": "Each schedule records its owning Garden (gardenId); Tending shows the Garden in front’s, a Mood’s schedules belong to the Garden wearing it, and a mood action dresses the owning Garden. Definitions and run state still share one installation list.",
+      "status": "implemented"
     },
     {
       "key": "cruxgarden:moodSchedules",

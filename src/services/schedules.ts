@@ -12,6 +12,10 @@
  * bar in docked mode — and reconciles on launch: something that came due
  * while the app was closed fires once and says so, never a silent skip.
  * Kept in a Garden setting so a `.garden` export carries the schedules.
+ *
+ * Each schedule belongs to a Garden (`gardenId`): Tending shows the Garden's
+ * own, a Mood's schedules belong to the Garden wearing it, and "wear a Mood"
+ * dresses the Garden that owns the schedule. One ticker runs them all.
  */
 import { create } from 'zustand';
 import { getSetting, setSetting } from './settings';
@@ -25,6 +29,7 @@ import {
 import { runScheduleActions } from './schedule-actions';
 import { getLocation, watchWeather, type WeatherKind } from './weather';
 import { nextSun, type SunPhase } from './sun';
+import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 
 export const SCHEDULES_KEY = 'cruxgarden:schedules';
 /** The master switch for the schedules a Mood brings along. */
@@ -84,6 +89,8 @@ export interface Schedule {
   id: string;
   title: string;
   enabled: boolean;
+  /** The Garden it belongs to; absent means the root Garden. */
+  gardenId?: string;
   /** For `timer`: its clock. */
   timer?: TimerState;
   /** A schedule a Mood brought along; it goes when the Mood goes. */
@@ -119,6 +126,17 @@ export const useSchedules = create<{ schedules: Schedule[]; ready: boolean }>(()
 
 function persist(schedules: Schedule[]) {
   setSetting(SCHEDULES_KEY, JSON.stringify(schedules));
+}
+
+/** The Garden in front, or the root before any is chosen. */
+function currentOwner(): string | undefined {
+  return captureGardenId() ?? useGardenContext.getState().root?.id;
+}
+
+/** Whether a schedule belongs to this Garden (unowned ones are the root's). */
+export function ownedBy(s: Schedule, gardenId: string | undefined): boolean {
+  const root = useGardenContext.getState().root?.id;
+  return (s.gardenId ?? root) === (gardenId ?? root);
 }
 
 const EVENTS: GardenEventName[] = [
@@ -248,6 +266,7 @@ function upgrade(v: unknown, now = new Date()): Schedule | null {
     id: s.id,
     title: s.title,
     enabled: s.enabled,
+    ...(typeof s.gardenId === 'string' ? { gardenId: s.gardenId } : {}),
     trigger: s.trigger,
     actions,
     ...(s.source === 'mood' && typeof s.moodId === 'string'
@@ -313,6 +332,8 @@ export interface ScheduleInput {
   enabled?: boolean;
   /** A Mood's schedule keeps the id its package gave it. */
   id?: string;
+  /** The Garden it belongs to; the Garden in front when omitted. */
+  gardenId?: string;
   source?: 'mood';
   moodId?: string;
 }
@@ -325,6 +346,7 @@ function makeSchedule(input: ScheduleInput, now: Date): Schedule {
     id: input.id ?? crypto.randomUUID(),
     title: input.title.trim() || 'Schedule',
     enabled: input.enabled ?? true,
+    ...((input.gardenId ?? currentOwner()) ? { gardenId: input.gardenId ?? currentOwner() } : {}),
     trigger: input.trigger,
     actions,
     ...(input.source === 'mood' && input.moodId ? { source: 'mood', moodId: input.moodId } : {}),
@@ -359,10 +381,16 @@ export type MoodSchedule = Pick<Schedule, 'id' | 'title' | 'trigger' | 'actions'
  * on/off of any the person already had by the same id. A cron the Mood set
  * for 07:00 does not fire the moment the Mood is worn — it starts from now.
  */
-export function syncMoodSchedules(moodId: string, list: MoodSchedule[], now = new Date()) {
+export function syncMoodSchedules(
+  moodId: string,
+  list: MoodSchedule[],
+  now = new Date(),
+  gardenId = currentOwner(),
+) {
   const current = useSchedules.getState().schedules;
-  const kept = current.filter((s) => s.source !== 'mood');
-  const before = new Map(current.filter((s) => s.source === 'mood').map((s) => [s.id, s]));
+  const theirs = (s: Schedule) => s.source === 'mood' && ownedBy(s, gardenId);
+  const kept = current.filter((s) => !theirs(s));
+  const before = new Map(current.filter(theirs).map((s) => [s.id, s]));
   const mine = list.flatMap((m) => {
     try {
       const prior = before.get(m.id);
@@ -373,6 +401,7 @@ export function syncMoodSchedules(moodId: string, list: MoodSchedule[], now = ne
             enabled: prior && prior.moodId === moodId ? prior.enabled : (m.enabled ?? true),
             source: 'mood',
             moodId,
+            gardenId,
           },
           now,
         ),
@@ -386,11 +415,13 @@ export function syncMoodSchedules(moodId: string, list: MoodSchedule[], now = ne
   persist(next);
 }
 
-/** The schedules that belong to the worn Mood, in package form. */
-export function moodSchedules(moodId?: string): MoodSchedule[] {
+/** The schedules that belong to the Garden's worn Mood, in package form. */
+export function moodSchedules(moodId?: string, gardenId = currentOwner()): MoodSchedule[] {
   return useSchedules
     .getState()
-    .schedules.filter((s) => s.source === 'mood' && (!moodId || s.moodId === moodId))
+    .schedules.filter(
+      (s) => s.source === 'mood' && ownedBy(s, gardenId) && (!moodId || s.moodId === moodId),
+    )
     .map(({ id, title, trigger, actions, enabled }) => ({ id, title, trigger, actions, enabled }));
 }
 
@@ -504,6 +535,8 @@ export function tickSchedules(now = new Date()): Firing[] {
         : { ...s, enabled: false, next: undefined, lastFired: now.toISOString() };
     }
     if (tr.kind === 'untouched') {
+      // The Cruxes read here are the Garden in front's; a nudge watches its own Garden.
+      if (!ownedBy(s, captureGardenId())) return s;
       const firedMap = { ...(s.fired ?? {}) };
       let touched = false;
       for (const c of cruxes) {

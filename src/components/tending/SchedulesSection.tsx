@@ -1,5 +1,5 @@
 import { useGardenContext } from '@/stores/gardenContext';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGardenStore } from '@/stores/gardenStore';
@@ -9,6 +9,7 @@ import {
   describeTrigger,
   formatRemaining,
   moodSchedulesEnabled,
+  ownedBy,
   pauseTimer,
   removeSchedule,
   resetTimer,
@@ -285,7 +286,10 @@ const TOOL_NAMES = () =>
     .sort();
 
 export default function SchedulesSection() {
-  const schedules = useSchedules((s) => s.schedules);
+  const all = useSchedules((s) => s.schedules);
+  // The Garden in front's own schedules.
+  const gardenId = useGardenContext((s) => s.garden?.id);
+  const schedules = useMemo(() => all.filter((s) => ownedBy(s, gardenId)), [all, gardenId]);
   const cruxes = useGardenStore((s) => s.allCruxes);
   const cruxTitle = (id?: string) => cruxes.find((c) => c.id === id)?.title ?? 'a Crux';
   const [adding, setAdding] = useState(false);
@@ -310,7 +314,6 @@ export default function SchedulesSection() {
   const [moodsOn, setMoodsOn] = useState(moodSchedulesEnabled);
   const [, bump] = useState(0);
   useEffect(() => onMoodPackagesChange(() => bump((n) => n + 1)), []);
-  const gardenId = useGardenContext((s) => s.garden?.id);
   useEffect(() => {
     let active = true;
     void refreshInstalledMoods(gardenId).catch((error) => {

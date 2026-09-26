@@ -23,7 +23,9 @@ import {
   timerRemaining,
   useSchedules,
   describeTrigger,
+  ownedBy,
 } from './schedules';
+import { useGardenContext } from '@/stores/gardenContext';
 import { setActionRuntime } from './schedule-actions';
 import { ALERTS_KEY, initAlerts, openAlerts, useAlerts } from './alerts';
 import { setSetting, getSetting } from './settings';
@@ -472,5 +474,64 @@ describe('schedules (GARDEN-SCHEDULER-PLAN)', () => {
     expect(fired.map((f) => f.reason)).toEqual([expect.stringMatching(/^Sunset at /)]);
     expect(useSchedules.getState().schedules[0]!.next!.slice(0, 10)).toBe('2026-09-20');
     setSetting('cruxgarden:location', '');
+  });
+});
+
+describe('schedules belong to a Garden', () => {
+  const worn: { moodId: string; gardenId?: string }[] = [];
+  beforeEach(() => {
+    setSetting(SCHEDULES_KEY, '[]');
+    initSchedules(T0);
+    worn.length = 0;
+    setActionRuntime({
+      wearMood: async (moodId, gardenId) => {
+        worn.push({ moodId, gardenId });
+        return moodId;
+      },
+    });
+    useGardenContext.setState({
+      root: { id: 'root', slug: 'root' },
+      garden: { id: 'studio', slug: 'studio' },
+    });
+  });
+
+  it('a new schedule belongs to the Garden in front; unowned ones are the root’s', () => {
+    const s = addSchedule(
+      { title: 'Stretch', trigger: { kind: 'every', minutes: 60 }, actions: [{ kind: 'alert' }] },
+      T0,
+    );
+    expect(s.gardenId).toBe('studio');
+    expect(ownedBy(s, 'studio')).toBe(true);
+    expect(ownedBy({ ...s, gardenId: undefined }, 'root')).toBe(true);
+    expect(ownedBy(s, 'root')).toBe(false);
+  });
+
+  it('a Mood’s schedules replace only that Garden’s', () => {
+    const dawn = {
+      id: 'dawn',
+      title: 'Dawn',
+      trigger: { kind: 'every', minutes: 60 } as const,
+      actions: [{ kind: 'alert' } as const],
+    };
+    syncMoodSchedules('ember', [dawn], T0, 'studio');
+    syncMoodSchedules('last-light', [{ ...dawn, id: 'dusk', title: 'Dusk' }], T0, 'root');
+    syncMoodSchedules('plasma', [], T0, 'studio');
+    expect(moodSchedules(undefined, 'studio')).toEqual([]);
+    expect(moodSchedules(undefined, 'root').map((m) => m.title)).toEqual(['Dusk']);
+  });
+
+  it('wearing a Mood on schedule dresses the schedule’s own Garden', async () => {
+    addSchedule(
+      {
+        title: 'Evening',
+        gardenId: 'root',
+        trigger: { kind: 'at', when: T0.toISOString() },
+        actions: [{ kind: 'mood', moodId: 'last-light' }],
+      },
+      T0,
+    );
+    tickSchedules(at(MIN));
+    await flush();
+    expect(worn).toEqual([{ moodId: 'last-light', gardenId: 'root' }]);
   });
 });
