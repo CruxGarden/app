@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { confirmDialog } from '@/stores/dialogStore';
 import SettingsSection from './SettingsSection';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -137,7 +138,24 @@ export default function MemorySettings() {
           <Button variant="secondary" size="sm" onClick={save} disabled={!dirty}>
             Save
           </Button>
-          <Button variant="danger" size="sm" onClick={() => clearMemory()} disabled={empty}>
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={empty}
+            onClick={async () => {
+              // Forgetting everything is not a slip of the hand.
+              if (
+                await confirmDialog({
+                  title: 'Clear memory',
+                  message:
+                    'Forget everything the collaborator remembers about you and your garden? Your projects are untouched.',
+                  confirmLabel: 'Clear',
+                  danger: true,
+                })
+              )
+                clearMemory();
+            }}
+          >
             Clear
           </Button>
         </div>

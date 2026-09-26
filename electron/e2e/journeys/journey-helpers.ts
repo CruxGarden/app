@@ -61,3 +61,13 @@ export async function goToGarden(page: Page, name: string) {
   await nav.getByRole('button', { name, exact: true }).click();
   await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(name);
 }
+
+/** Close an open Crux workspace from the switcher, saving what it holds. */
+export async function closeWorkspace(page: Page, title: string) {
+  await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
+  await page.getByRole('button', { name: `Close ${title} workspace` }).click();
+  const dialog = page.getByRole('dialog', { name: 'Close workspace' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Save and close', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+}

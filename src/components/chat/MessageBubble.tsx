@@ -160,6 +160,7 @@ export default function MessageBubble({
     return (
       <div
         className="flex gap-2 items-end justify-end motion-enter-bubble"
+        data-role="user"
         {...(fromCheck ? { 'data-testid': 'check-message' } : {})}
       >
         <div className="max-w-[82%] min-w-0">

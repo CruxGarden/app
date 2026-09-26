@@ -12,6 +12,20 @@ import type { Crux } from '@/api/types';
 export async function latestChangeByCrux(cruxes: Crux[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   for (const c of cruxes) out.set(c.id, new Date(c.updated).getTime() || 0);
+  // The rows themselves: a content transaction bumps `updated` under the store's copy.
+  try {
+    const ids = cruxes.map((c) => c.id);
+    const rows = await getSqliteClient().all<{ id: string; updated: string }>(
+      `SELECT id, updated FROM cruxes WHERE id IN (${ids.map(() => '?').join(',')})`,
+      ids,
+    );
+    for (const r of rows) {
+      const t = new Date(r.updated).getTime() || 0;
+      if (t > (out.get(r.id) ?? 0)) out.set(r.id, t);
+    }
+  } catch {
+    /* the store's copies will have to do */
+  }
   if (getSqliteClient().fileContent) return out;
   try {
     const rows = await getSqliteClient().all<{ resource_id: string; updated: string }>(

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { pullCrux, useSyncPull, IDLE_PULL } from '@/services/sync-pull';
-import { backupCrux, backupOf } from '@/services/backup';
+import { backupCrux, backupOf, contentRevision } from '@/services/backup';
 import { cruxesChangedSince } from '@/services/drift';
 import { isAutoBackupOn, autoBackupPause, AUTO_BACKUP_CHANGED } from '@/services/auto-backup';
 import * as syncApi from '@/api/sync';
@@ -136,8 +136,12 @@ export default function SyncPane() {
     // Scenario 6: never quietly overwrite work done here since the last push
     const local = backupOf(crux);
     const behind = local ? Math.max(0, growthCount - local.growthCount) : null;
+    // Desktop keeps file edits in Edit history, not on the Crux row: the
+    // revision the push saw against the revision now.
+    const revisionNow = await contentRevision(crux.id);
     const editedSince = local
-      ? (await cruxesChangedSince([crux], local.at, 1_000)).length > 0
+      ? (await cruxesChangedSince([crux], local.at, 1_000)).length > 0 ||
+        (revisionNow !== undefined && revisionNow > (local.contentRevision ?? 0))
       : true;
     const changedHere = local === null || (behind ?? 0) > 0 || editedSince;
     if (

@@ -283,7 +283,11 @@ function MetaField({
     <EditableField
       label={label}
       value={value}
-      onSave={(v) => onUpdate({ [label.toLowerCase()]: v })}
+      onSave={(v) => {
+        // A Crux always has a slug: blank means "leave it".
+        if (label === 'Slug' && !v.trim()) return;
+        onUpdate({ [label.toLowerCase()]: v });
+      }}
       multiline={multiline}
     />
   );

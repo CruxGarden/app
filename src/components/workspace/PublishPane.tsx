@@ -503,7 +503,12 @@ export default function PublishPane() {
             <div className="flex flex-col gap-0.5">
               <Toggle
                 checked={!!crux.discoverable}
-                onChange={(on) => updateCrux({ discoverable: on })}
+                onChange={(on) => {
+                  void updateCrux({ discoverable: on });
+                  // A shared Crux tells the listing now, not at the next update.
+                  if (isPublished && isAuthenticated)
+                    void cruxesApi.update(crux.id, { discoverable: on }).catch(() => {});
+                }}
                 label="Discoverable"
               />
               <span className="text-xxs text-text-muted">
