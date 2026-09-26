@@ -41,9 +41,11 @@ export default function TopBar() {
   // The bar mirrors the visible workspace plus pinned panels; the rest live in
   // the picker. Navigator, Explore, Mood and the Garden's Collaboration have their own buttons.
   const pinned = usePinned(scope);
-  const enabledPanes = paneOrder.filter(
-    (p) => (paneVisibility[p] || pinned.includes(p)) && !OWN_BUTTON.has(p),
-  );
+  // Open panes in their arrangement's order, then pinned ones that are closed.
+  const enabledPanes = [
+    ...paneOrder.filter((p) => paneVisibility[p]),
+    ...pinned.filter((p) => !paneVisibility[p]),
+  ].filter((p) => !OWN_BUTTON.has(p));
 
   const desktopChrome = can(Capability.DesktopChrome);
 

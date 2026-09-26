@@ -68,3 +68,15 @@ it('shares the Tasks rail only once the rest is crowded', () => {
   expect(height(tree, 'tasks')).toBe(1);
   expect(getMosaicLeaves(tree)).toContain('store');
 });
+
+it('a new pane never squeezes another below its least width', () => {
+  const ui = createUIStore('crux-e');
+  for (const pane of ['tasks', 'collaboration', 'workshop', 'history', 'publish'] as const)
+    ui.getState().setPaneVisible(pane, true);
+  // Every open pane keeps at least its share of a typical workspace.
+  const tree = ui.getState().mosaicLayout;
+  const px = (pane: PaneType) => share(tree, pane) * 1400;
+  expect(px('collaboration')).toBeGreaterThanOrEqual(260);
+  expect(px('publish')).toBeGreaterThanOrEqual(270);
+  expect(px('workshop')).toBeGreaterThanOrEqual(280);
+});

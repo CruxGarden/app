@@ -40,15 +40,32 @@ export function addPaneToMosaic<T extends string>(
   tree: MosaicNode<T> | null,
   pane: T,
   keep: ReadonlySet<T> = new Set(),
+  /** Least width each pane reads in, as a fraction of the workspace (0–1). */
+  minWidth: (pane: T) => number = () => 0,
 ): MosaicNode<T> {
   if (tree === null) return pane;
-  let largest: { pane: T; area: number; width: number; height: number } | undefined;
+  let largest: { pane: T; area: number; width: number; height: number; fits: boolean } | undefined;
   let exists = false;
   const visit = (node: MosaicNode<T>, width: number, height: number) => {
     if (typeof node === 'string') {
       exists ||= node === pane;
-      const area = keep.has(node) ? (width * height) / 2 : width * height;
-      if (!largest || area > largest.area) largest = { pane: node, area, width, height };
+      // A tile is split side by side when both halves keep their least width;
+      // otherwise it is stacked. Prefer a tile that fits, then the widest, then
+      // the largest. A rail counts at half.
+      const scale = keep.has(node) ? 0.5 : 1;
+      const share = width / WIDTH;
+      // Room to spare beyond the least width: the frame's gutters and controls
+      // need it, and a tile at exactly its least width reads as squeezed.
+      const fits = share / 2 >= minWidth(node) * 1.25 && share / 2 >= minWidth(pane) * 1.25;
+      const area = width * height * scale;
+      const better =
+        !largest ||
+        (fits && !largest.fits) ||
+        (fits === largest.fits &&
+          (width * scale > largest.width * (keep.has(largest.pane) ? 0.5 : 1) + 1e-9 ||
+            (Math.abs(width * scale - largest.width * (keep.has(largest.pane) ? 0.5 : 1)) < 1e-9 &&
+              area > largest.area)));
+      if (better) largest = { pane: node, area, width, height, fits };
       return;
     }
     const ratio = (node.splitPercentage ?? 50) / 100;
@@ -63,7 +80,7 @@ export function addPaneToMosaic<T extends string>(
     if (typeof node === 'string')
       return node === target.pane
         ? {
-            direction: target.width >= target.height ? 'row' : 'column',
+            direction: target.fits && target.width >= target.height ? 'row' : 'column',
             first: node,
             second: pane,
             splitPercentage: 50,

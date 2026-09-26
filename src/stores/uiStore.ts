@@ -306,6 +306,37 @@ const scopeOrder = (scope: WorkspaceScope) =>
 const scopeDefaults = (scope: WorkspaceScope) =>
   scope === 'garden' ? GARDEN_VISIBILITY : DEFAULT_VISIBILITY;
 
+/**
+ * The least width each pane makes sense in. Below it the pane says so instead
+ * of squeezing its controls (the Share pane set the pattern); each has its own
+ * number — a file tree lives in less than a conversation does.
+ */
+export const PANE_MIN_WIDTH: Record<PaneType, number> = {
+  tasks: 110,
+  collaboration: 260,
+  artifacts: 160,
+  workshop: 280,
+  details: 220,
+  history: 200,
+  export: 200,
+  sync: 200,
+  publish: 270,
+  store: 280,
+  media: 300,
+  mood: 360,
+  synth: 300,
+  browser: 200,
+  settings: 360,
+  explore: 360,
+  home: 360,
+  console: 260,
+  navigator: 170,
+  tending: 320,
+};
+
+/** A typical workspace width, to turn least widths into fractions for placement. */
+const TYPICAL_WORKSPACE_PX = 1400;
+
 /** Garden-wide panes open as a full-height column on the right, beside the work. */
 const RAILS: ReadonlySet<PaneType> = new Set<PaneType>(['tasks', 'navigator']);
 const SIDE_PANES = new Set<PaneType>(['mood', 'settings', 'explore', 'console']);
@@ -355,7 +386,7 @@ function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<
     };
     return side(tree, 1);
   }
-  return addPaneToMosaic(tree, pane, RAILS);
+  return addPaneToMosaic(tree, pane, RAILS, (p) => PANE_MIN_WIDTH[p] / TYPICAL_WORKSPACE_PX);
 }
 
 // ── Mosaic layout helpers ────────────────────────────────

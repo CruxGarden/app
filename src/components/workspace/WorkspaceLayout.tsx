@@ -24,7 +24,7 @@ import type { MosaicBranch, MosaicNode } from 'react-mosaic-component';
 import { PaneEmpty } from './pane-ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import { Spinner } from '@/components/ui';
-import { useWorkspaceUIStore as useUIStore, type PaneType } from '@/stores/uiStore';
+import { PANE_MIN_WIDTH, useWorkspaceUIStore as useUIStore, type PaneType } from '@/stores/uiStore';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
 import { useFunctionsProxy } from '@/hooks/useFunctionsProxy';
 import { useMediaProxy } from '@/hooks/useMediaProxy';
@@ -140,33 +140,6 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
 // (Monaco, chat, file tree) when only mosaic split percentages change
-/**
- * The least width each pane makes sense in. Below it the pane says so instead
- * of squeezing its controls (the Share pane set the pattern); each has its own
- * number — a file tree lives in less than a conversation does.
- */
-const PANE_MIN_WIDTH: Record<PaneType, number> = {
-  tasks: 110,
-  collaboration: 260,
-  artifacts: 160,
-  workshop: 280,
-  details: 220,
-  history: 200,
-  export: 200,
-  sync: 200,
-  publish: 270,
-  store: 280,
-  media: 300,
-  mood: 360,
-  synth: 300,
-  browser: 200,
-  settings: 360,
-  explore: 360,
-  home: 360,
-  console: 260,
-  navigator: 170,
-  tending: 320,
-};
 
 /** A pane is a named region; Crux Synth's own section already carries that name. */
 const paneRegion = (paneType: PaneType, label: string) =>
