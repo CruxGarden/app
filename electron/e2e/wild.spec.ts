@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { hidePane, showPane, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
@@ -46,10 +46,9 @@ test.describe('wild theme', () => {
       await label.press('Enter');
       await expect(page.getByText('too much', { exact: true })).toBeVisible({ timeout: 30_000 });
 
-      // Mood modal → Mood Builder → Import the theme
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
+      // The Mood pane → Theme → Import the theme
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
       await page
         .locator('input[type="file"][accept*="json"]')
         .setInputFiles(join(__dirname, 'fixtures', 'wild-theme.json'));
@@ -64,7 +63,7 @@ test.describe('wild theme', () => {
       await shot('1-mood-builder');
 
       // Wear it
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
       await expect(page.getByRole('tree')).toBeVisible({ timeout: 30_000 });
       await togglePanel(page, 'Toggle share');
       await page.waitForTimeout(800);

@@ -31,7 +31,7 @@ import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 
 /**
- * The Theme tab of the Mood Builder: every palette token, grouped, editable,
+ * The Theme tab of the Mood pane: every palette token, grouped, editable,
  * applied live. Edits are stored per mode as overrides on top of the active
  * preset (lib/moods/active.ts) — picking another preset keeps them.
  */

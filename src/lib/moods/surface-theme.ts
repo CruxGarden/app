@@ -8,7 +8,7 @@
  *           plus PlasmaStage and usePlasmaSurface.
  *   Glass   translucent, blurred CSS glass with a sheen (styles/glass.css).
  *   Custom  the Mood as designed: its own surfaceStyle token decides, and the
- *           Mood Builder can change every pane colour and glass token.
+ *           Mood pane can change every pane colour and glass token.
  *
  * The resolved style lands on <html data-surface-style>. The Mood keeps its
  * accent, text, fonts and shapes in every case; the theme takes its surfaces.

@@ -28,7 +28,7 @@ import { GARDEN_DARK } from './garden-dark';
  * A bare `'tokenKey'` string literal is NOT consumption (it matched generic
  * words like 'title' or 'link'), and neither is a mention inside a comment.
  *
- * A token nothing reads is a lie in the Mood Builder and in set_theme.
+ * A token nothing reads is a lie in the Mood pane and in set_theme.
  */
 
 const SRC = join(__dirname, '..', '..');

@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { hidePane, showPane, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -119,14 +119,14 @@ test.describe('polish tour', () => {
       await shot(page, '19-settings-plan');
       await page.keyboard.press('Escape');
 
-      // Mood bar + Mood Builder
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      // The Mood pane
+      const mood = await showPane(page, 'Mood');
       await shot(page, '20-mood-bar');
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
       await shot(page, '21-mood-builder');
-      await page.getByRole('button', { name: 'Persona', exact: true }).click();
+      await mood.getByRole('button', { name: 'Persona', exact: true }).click();
       await shot(page, '22-mood-persona');
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
 
       // Home Garden with a card, the new crux modal, the delete dialog, the Trash
       await page.locator('header').getByRole('button').first().click();

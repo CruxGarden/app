@@ -9,7 +9,7 @@ import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
  *   the agent *indicates* things — an accent pulse while a build runs, a pane
  *   tinted while it works there — without ever touching what the user chose.
  *   Cleared with `reset: true` or on reload.
- * - persist: writes theme overrides exactly as the Mood Builder does. Only
+ * - persist: writes theme overrides exactly as the Mood pane does. Only
  *   for when the user asked for a lasting change.
  *
  * Not crux-bound and not file-mutating: the Keeper gets these too, and a
@@ -140,7 +140,7 @@ export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
       'Change workspace theme tokens (colors, radii, the gutter between panes, per-pane surfaces). ' +
       'mode "preview" (default) layers the change on top of the user\'s saved theme without saving it — use this to INDICATE state ' +
       '(tint the pane you are working in, pulse the accent while a build runs) and clear it afterwards with reset: true. ' +
-      'mode "persist" saves the change as the user\'s theme, exactly like the Mood Builder — only when they asked for a lasting change. ' +
+      'mode "persist" saves the change as the user\'s theme, exactly like the Mood pane — only when they asked for a lasting change. ' +
       'Token names are camelCase palette keys (e.g. accent, paneGap, paneWorkshopBody, paneCollaborationRadius); get_theme lists them. ' +
       'Values are CSS: hex colors, lengths ("0px", "1.5rem"), var() references, or — for pane border/body tokens — gradients.',
     input_schema: {
@@ -293,7 +293,7 @@ async function toolGetTheme(input: Record<string, unknown>): Promise<string> {
     return (
       `${header}\n## Assets (${list.length})\nUse an asset as a token value with asset:<fingerprint> — textures (workspaceTexture, pane*Texture), or set_background {path}.\n\n` +
       (list.map((a) => `- ${a.name} (${a.kind}, ${a.type}) → asset:${a.fingerprint}`).join('\n') ||
-        'none — the user adds files in Mood Builder → Assets')
+        'none — the user adds files in the Mood pane → Theme → Files')
     );
   }
   if (!wanted) {
@@ -378,7 +378,7 @@ function toolSetTheme(input: Record<string, unknown>): string {
     } else {
       setThemeOverrides(section, { ...saved, ...tokens });
       applyActiveMood(section);
-      summary = `Saved ${Object.keys(tokens).length} token${Object.keys(tokens).length === 1 ? '' : 's'} to the ${section} theme (visible in the Mood Builder).`;
+      summary = `Saved ${Object.keys(tokens).length} token${Object.keys(tokens).length === 1 ? '' : 's'} to the ${section} theme (visible in the Mood pane).`;
     }
   }
   const notes = [

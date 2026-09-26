@@ -1,7 +1,7 @@
 /**
  * The active Mood's palette = the chosen preset for the current mode, with the
  * user's custom theme tokens layered on top. This is the one place that
- * composition lives; themeStore, the boot path, and the Mood Builder all call
+ * composition lives; themeStore, the boot path, and the Mood pane all call
  * applyActiveMood() instead of applying presets by hand.
  */
 import { applyMoodPalette, GARDEN_DARK, type MoodPalette } from './index';

@@ -1,5 +1,5 @@
 /**
- * How the Mood Builder presents the palette: every GARDEN_DARK key belongs to
+ * How the Mood pane presents the palette: every GARDEN_DARK key belongs to
  * exactly one group, has a kind (which control edits it) and a short label.
  * Pure data + string functions — no DOM, no React.
  */
@@ -11,7 +11,7 @@ export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text' | 'asset
 
 /**
  * Tokens whose value is one of a fixed set of names (a border style, an enter
- * animation, an icon set). The Mood Builder renders a select; set_theme refuses
+ * animation, an icon set). The Mood pane renders a select; set_theme refuses
  * anything else. Register a token here when you add one — keep the sections.
  */
 // ── motion ──

@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
@@ -21,8 +22,7 @@ test.describe('mood assets', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await showPane(page, 'Mood');
       // Files live at the foot of the Theme section, under the tokens
       await page.getByRole('button', { name: 'Theme', exact: true }).click();
 
@@ -71,7 +71,7 @@ test.describe('mood assets', () => {
       await page.screenshot({ path: 'e2e/.results/assets-2-browser.png' });
 
       // Back in the workspace the Workshop pane wears the texture
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();

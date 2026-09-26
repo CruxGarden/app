@@ -504,7 +504,7 @@ export default function MoodBrowser() {
         <div className="rounded-[var(--radius)] border border-dashed border-border/70 p-8 text-center">
           <p className="text-sm text-heading">No saved Moods yet</p>
           <p className="text-xs text-text-muted mt-1">
-            Shape the app in the Mood Builder, then save what you're wearing. Or import a .cruxmood
+            Shape the app in Theme, Background, Sound and Persona, then save what you're wearing. Or import a .cruxmood
             someone sent you.
           </p>
         </div>

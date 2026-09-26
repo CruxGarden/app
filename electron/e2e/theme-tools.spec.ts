@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -42,14 +43,14 @@ test.describe('theme tools (mock AI)', () => {
       expect(accent).toBe('#ff2d95');
       await page.screenshot({ path: 'e2e/.results/theme-tools-1-painted.png' });
 
-      // Preview, not a saved theme: the Mood Builder offers to clear it
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      // Preview, not a saved theme: the Mood pane offers to clear it
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
       await expect(page.getByText(/AI preview: 4 tokens/)).toBeVisible();
       await expect(page.getByText(/\b0 custom\b|custom/)).toHaveCount(0);
       await page.getByRole('button', { name: /AI preview/ }).click();
       await expect(page.getByText(/AI preview/)).toHaveCount(0);
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
       await expect(collab.locator('.mosaic-window-body').first()).toHaveCSS(
         'background-color',
         before,

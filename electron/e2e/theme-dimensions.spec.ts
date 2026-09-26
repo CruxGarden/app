@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -30,10 +31,9 @@ test.describe('theme dimensions', () => {
       const label = page.locator('.mosaic-window.pane-collaboration .pane-toolbar-label').first();
       await expect(label).toHaveCSS('text-transform', 'uppercase');
 
-      // Mood → Builder → Theme
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
+      // The Mood pane → Theme
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
 
       // Typography: scale 1.25 → root font 20px
       await page.getByRole('button', { name: 'Typography' }).click();

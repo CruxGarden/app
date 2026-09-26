@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { showPane, togglePanel } from './panel-helpers';
 import { test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { launchApp } from './launch';
@@ -116,9 +116,10 @@ test('plasma across every page', async () => {
     await shot('10-explore', 3000);
     await go('/tending');
     await shot('11-tending', 2500);
-    await go('/mood');
+    await go('/home');
+    await showPane(page, 'Mood');
     await shot('12-mood-builder', 2500);
-    for (const tab of ['Moods', 'Background', 'Sound', 'Persona']) {
+    for (const tab of ['Theme', 'Background', 'Sound', 'Persona']) {
       if (await click(page, tab, true)) await shot(`12-mood-builder-${tab.toLowerCase()}`, 900);
     }
     await go('/plans');

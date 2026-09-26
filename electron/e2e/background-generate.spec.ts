@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -13,9 +14,7 @@ test.describe('background: describe a backdrop (UI)', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Background', exact: true }).first().click();
       const box = page.getByRole('textbox', { name: 'Backdrop description' });
       await expect(box).toBeVisible();

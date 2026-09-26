@@ -336,7 +336,7 @@
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
 
-  /* ── V3: Overlay badges + toggle (Mood Builder-editable) ── */
+  /* ── V3: Overlay badges + toggle (editable in the Mood pane) ── */
   --color-overlay-badge: var(--overlay-badge);
   --color-overlay-badge-text: var(--overlay-badge-text);
   --color-toggle: var(--toggle);

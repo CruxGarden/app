@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useUIStore } from '@/stores/uiStore';
+import { useUIStore, type MoodTab } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK } from '@/lib/moods';
 import { MOOD_PRESETS, type MoodPresetDef } from '@/lib/moods/presets';
@@ -461,21 +460,19 @@ function BackgroundTabContent({
 /**
  * A Mood is four things — Theme, Background, Sound, Persona — plus the
  * library of Moods to wear. Each tab edits the ACTIVE Mood live; "Save current
- * as Mood" under Moods captures it. The modal shows the same five tabs so a
- * quick tweak is always one keystroke away; the Mood Builder page is the same
- * editor with room to breathe.
+ * as Mood" under Moods captures it. It lives in the Mood pane; anything
+ * that wants a particular section asks through `openMood(tab)`.
  */
-type Tab = 'moods' | 'theme' | 'background' | 'sound' | 'persona';
+type Tab = MoodTab;
 
-interface MoodEditorProps {
-  initialTab?: Tab;
-  /** The modal: the same sections, plus a way into the full Mood Builder page. */
-  compact?: boolean;
-}
-
-export default function MoodEditor({ initialTab = 'moods', compact = false }: MoodEditorProps) {
-  const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>(initialTab);
+export default function MoodEditor() {
+  const [tab, setTab] = useState<Tab>(() => useUIStore.getState().moodTab ?? 'moods');
+  const requested = useUIStore((s) => s.moodTab);
+  useEffect(() => {
+    if (!requested) return;
+    setTab(requested);
+    useUIStore.setState({ moodTab: null });
+  }, [requested]);
   const [userPresets, setUserPresets] = useState<UserPreset[]>(() => getUserPresets());
   useEffect(() => onUserPresetsChange(() => setUserPresets(getUserPresets())), []);
   const [activeDarkId, setActiveDarkId] = useState(
@@ -630,21 +627,6 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
         <div className="flex-1" />
         <SurfaceThemeControl />
         <MotionIntensityControl />
-        {compact && (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                useUIStore.getState().setMoodPanelOpen(false);
-                navigate('/mood?tab=theme');
-              }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body whitespace-nowrap shrink-0 rounded-[var(--radius-sm)] border border-border bg-surface text-text hover:border-accent hover:text-accent transition-colors cursor-pointer"
-            >
-              Open Mood Builder
-              <span aria-hidden>→</span>
-            </button>
-          </>
-        )}
       </div>
 
       {/* Active tab content */}
@@ -724,26 +706,18 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
                 </div>
               );
             })}
-            {compact ? (
-              <p className="text-xxs text-text-muted">
-                More appearance options are in the Mood Builder.
-              </p>
-            ) : (
-              <>
-                <div>
-                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
-                    Tokens
-                  </div>
-                  <ThemeTokensTab />
-                </div>
-                <div>
-                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
-                    Files
-                  </div>
-                  <AssetsTab />
-                </div>
-              </>
-            )}
+            <div>
+              <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+                Tokens
+              </div>
+              <ThemeTokensTab />
+            </div>
+            <div>
+              <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+                Files
+              </div>
+              <AssetsTab />
+            </div>
           </div>
         )}
         {tab === 'background' && (

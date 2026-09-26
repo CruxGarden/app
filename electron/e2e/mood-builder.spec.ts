@@ -1,9 +1,9 @@
-import { togglePanel } from './panel-helpers';
+import { hidePane, showPane, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
 /**
- * Mood Builder → Theme: a layout token (pane gap) and a per-pane surface token
+ * The Mood pane → Theme: a layout token (pane gap) and a per-pane surface token
  * (Workshop body) edited in the token editor reach the real workspace chrome,
  * and survive a restart of the app (they are stored per mode and re-applied
  * at boot on top of the preset).
@@ -33,14 +33,11 @@ test.describe('mood builder', () => {
       // The Default Mood (Plasma) sets a 14px pane gap
       await expect(tile).toHaveCSS('margin-left', '14px');
 
-      // Mood modal → Open Mood Builder → lands on the Theme tab. Glass off first: the
-      // checks below read a pane's own colour, not its tint through the glass.
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
-      await page.getByRole('combobox', { name: 'Surface theme' }).selectOption('custom');
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Mood', exact: true })).toHaveCount(0);
+      // The Mood pane → Theme. Glass off first: the checks below read a
+      // pane's own colour, not its tint through the glass.
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('combobox', { name: 'Surface theme' }).selectOption('custom');
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
 
       // Shape & layout: gutters can be zeroed completely
       await page.getByRole('button', { name: 'Shape & layout' }).click();
@@ -73,7 +70,7 @@ test.describe('mood builder', () => {
       await page.screenshot({ path: 'e2e/.results/mood-1-theme-tab.png' });
 
       // Back in the workspace: the chrome reflects every edit
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
       await expect(tile).toHaveCSS('margin-left', '0px');
       await expect(page.locator('.mosaic-root')).toHaveCSS('left', '0px');

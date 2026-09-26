@@ -383,7 +383,7 @@ export const GARDEN_DARK = {
   // content sits on inside it. The plate exists because plasma is the quietest
   // material there will be — a busier one (wood grain, stone) needs a calmer
   // plate, and that is a value here rather than a redesign. Both are the
-  // person's to set, in the Mood Builder.
+  // person's to set, in the Mood pane.
   // The landing page's material is the base for every Mood that wears the
   // plasma surface (Daniel, 2026-09-19: "all the plasma should be like that"):
   // the tint does the panel's work, so there is no plate inside a pane and no

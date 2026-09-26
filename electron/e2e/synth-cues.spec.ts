@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
@@ -14,10 +15,8 @@ test('a cue is a preset from the bank, or one of your own', async () => {
   try {
     await enterGarden(page);
     const goSound = async () => {
-      await page.evaluate(() => {
-        window.history.pushState({}, '', '/mood?tab=sound');
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      });
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('button', { name: 'Sound', exact: true }).click();
       await expect(
         page.getByRole('combobox', { name: 'Cue for Snapshot taken', exact: true }),
       ).toBeVisible();
@@ -45,11 +44,7 @@ test('a cue is a preset from the bank, or one of your own', async () => {
     await expect(snapshot.locator('option[value="__own"]')).toHaveText('Two drops (yours)');
 
     // It is the Mood's now: leave and come back.
-    await page.evaluate(() => {
-      window.history.pushState({}, '', '/home');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
-    await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
+    await hidePane(page, 'Mood');
     await goSound();
     await expect(
       page.getByRole('combobox', { name: 'Cue for Snapshot taken', exact: true }),

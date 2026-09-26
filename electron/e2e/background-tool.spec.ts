@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
@@ -52,8 +53,7 @@ test.describe('background tool (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/background-1-set.png' });
 
       // The Background tab agrees and can clear it
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Background', exact: true }).first().click();
       await page.screenshot({ path: 'e2e/.results/background-2-mood-tab.png' });
     } finally {

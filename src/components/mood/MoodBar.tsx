@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { useAudioStore } from '@/stores/audioStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -17,8 +16,7 @@ import { PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/
  * collapsed state persists. Every part is a Mood token (moodBar*), so a theme
  * can restyle it.
  *
- * On the public website (crux.garden) there is no Mood modal and no /mood
- * route: the level button scrolls to the landing page's Moods section and the
+ * On the public website (crux.garden) there is no Mood pane: the level button scrolls to the landing page's Moods section and the
  * settings button is not shown.
  */
 
@@ -83,7 +81,6 @@ export default function MoodBar({
   /** On the Gateway: no garden yet, so no Mood modal and no sound settings — just the player. */
   gateway?: boolean;
 }) {
-  const navigate = useNavigate();
   const publicSite = isPublicSite();
   const { track, enabled, playing, volume, init, toggle, setVolume } = useAudioStore(
     useShallow((s) => ({
@@ -189,7 +186,7 @@ export default function MoodBar({
           {!publicSite && !gateway && (
             <button
               type="button"
-              onClick={() => navigate('/mood?tab=sound')}
+              onClick={() => useUIStore.getState().openMood('sound')}
               title="Sound"
               aria-label="Open sound settings"
               className="w-5 h-5 rounded-[var(--mood-bar-radius)] text-mood-bar-text-muted hover:text-mood-bar-accent flex items-center justify-center cursor-pointer shrink-0"

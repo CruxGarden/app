@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -33,20 +34,19 @@ test.describe('settings & mood', () => {
       await expect(mood).toHaveCount(0);
       await expect(page.getByText('Console — The Keeper')).toHaveCount(0);
 
-      // ── Persona lives in the Mood Builder: rename, leave, come back ──────
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await page.getByRole('button', { name: 'Persona', exact: true }).click();
+      // ── Persona lives in the Mood pane: rename, close, come back ──────
+      await (await showPane(page, 'Mood'))
+        .getByRole('button', { name: 'Persona', exact: true })
+        .click();
       const personaName = page.getByPlaceholder('Persona name');
       await personaName.fill('The Gardener');
       await page.waitForTimeout(400); // persona saves per change
-      await page.getByRole('button', { name: 'Done' }).click();
-      await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await page.getByRole('button', { name: 'Persona', exact: true }).click();
+      await hidePane(page, 'Mood');
+      await (await showPane(page, 'Mood'))
+        .getByRole('button', { name: 'Persona', exact: true })
+        .click();
       await expect(page.getByPlaceholder('Persona name')).toHaveValue('The Gardener');
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
 
       // ── Settings via the account menu ────────────────────────────────────
       await page.getByRole('button', { name: 'Account menu' }).click();

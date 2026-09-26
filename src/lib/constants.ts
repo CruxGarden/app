@@ -53,7 +53,7 @@ export enum SettingsKey {
   /** Custom theme token overrides layered on the active preset, per mode (JSON) */
   MoodThemeDark = 'cruxgarden:moodThemeDark',
   MoodThemeLight = 'cruxgarden:moodThemeLight',
-  /** Presets the user saved from the Mood Builder (JSON array) */
+  /** Presets the user saved from the Mood pane (JSON array) */
   MoodUserPresets = 'cruxgarden:moodUserPresets',
 
   // Sound — the Mood's track (see audio/track.ts)

@@ -11,7 +11,7 @@ import {
 /**
  * The surface theme (ADR 0043): Plasma and Glass are whole looks that take
  * over every primary surface; Custom leaves the Mood as designed, which is
- * where the Mood Builder's pane colours and glass tokens apply.
+ * where the Mood pane's colours and glass tokens apply.
  */
 export default function SurfaceThemeControl({ className }: { className?: string }) {
   const [value, setValue] = useState<SurfaceTheme>(() => surfaceTheme());

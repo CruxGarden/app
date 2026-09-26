@@ -33,6 +33,8 @@ export interface AgentApproval {
 
 // ── Pane Types ──────────────────────────────────────────
 
+export type MoodTab = 'moods' | 'theme' | 'background' | 'sound' | 'persona';
+
 export type PaneType =
   | 'tasks'
   | 'history'
@@ -168,9 +170,11 @@ export interface UIState {
   exploreKind: string | null;
   openExplore: (kind?: string | null) => void;
 
-  // Mood modal (quick presets/background/persona; opens the Mood Builder page)
   setMoodPanelOpen: (open: boolean) => void;
   toggleMoodPanel: () => void;
+  /** Section the Mood pane shows next (e.g. 'sound'); consumed by the pane. */
+  moodTab: MoodTab | null;
+  openMood: (tab?: MoodTab) => void;
   /** Pixels the Mood Bar reserves at the bottom of <main> so it never covers pane controls. */
   dockReserve: number;
   setDockReserve: (px: number) => void;
@@ -781,6 +785,11 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     },
     setMoodPanelOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('mood', open),
     toggleMoodPanel: () => currentWorkspaceUI().getState().togglePane('mood'),
+    moodTab: null,
+    openMood: (tab) => {
+      useUIStore.setState({ moodTab: tab ?? null });
+      currentWorkspaceUI().getState().setPaneVisible('mood', true);
+    },
     dockReserve: 0,
     setDockReserve: (px) => set((s) => (s.dockReserve === px ? s : { dockReserve: px })),
 
