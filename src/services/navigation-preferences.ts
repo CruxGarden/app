@@ -3,9 +3,9 @@ import { getSqliteClient } from './sqlite/client';
 import { setSettingDurably } from './settings';
 import { useGardenContext } from '@/stores/gardenContext';
 
-export type NavigationView = 'tree' | 'neighborhood';
+export type NavigationView = 'tree' | 'neighborhood' | 'graph';
 export const isNavigationView = (value: unknown): value is NavigationView =>
-  value === 'tree' || value === 'neighborhood';
+  value === 'tree' || value === 'neighborhood' || value === 'graph';
 interface UserNavigation {
   version: 1;
   defaultView?: NavigationView;

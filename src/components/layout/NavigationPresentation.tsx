@@ -12,6 +12,7 @@ import {
 import type { NavigationViewProps } from './navigation-view';
 import NavigationTree from './NavigationTree';
 import NavigationNeighborhood from './NavigationNeighborhood';
+import NavigationGraph from './NavigationGraph';
 
 export default function NavigationPresentation(
   props: NavigationViewProps & { refresh: () => void },
@@ -83,6 +84,7 @@ export default function NavigationPresentation(
     <>
       <option value="tree">Tree</option>
       <option value="neighborhood">Neighborhood</option>
+      <option value="graph">Graph</option>
     </>
   );
   return (
@@ -199,6 +201,8 @@ export default function NavigationPresentation(
             </p>
             <NavigationTree {...props} />
           </>
+        ) : view === 'graph' ? (
+          <NavigationGraph {...props} />
         ) : (
           <NavigationNeighborhood {...props} />
         )}

@@ -71,7 +71,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           enum: ['inspect', 'garden', 'choose', 'default', 'always', 'reset'],
         },
-        view: { type: 'string', enum: ['tree', 'neighborhood', 'inherit'] },
+        view: { type: 'string', enum: ['tree', 'neighborhood', 'graph', 'inherit'] },
         enabled: { type: 'boolean' },
       },
       required: ['gardenId', 'action'],
@@ -490,9 +490,12 @@ export function validateGardenTool(
         return { valid: false, error: 'enabled is required' };
       if (
         ['garden', 'choose', 'default'].includes(String(input.action)) &&
-        !['tree', 'neighborhood', ...(input.action === 'garden' ? ['inherit'] : [])].includes(
-          String(input.view),
-        )
+        ![
+          'tree',
+          'neighborhood',
+          'graph',
+          ...(input.action === 'garden' ? ['inherit'] : []),
+        ].includes(String(input.view))
       )
         return { valid: false, error: 'Choose a supported navigation view' };
       return { valid: true };
@@ -784,7 +787,7 @@ async function runGardenToolInner(
       if (owner.kind !== 'garden' || owner.deleted) throw new Error('This Garden is unavailable.');
       const { readNavigationPreferences, saveGardenNavigation, saveUserNavigation } =
         await import('@/services/navigation-preferences');
-      const view = input.view as 'tree' | 'neighborhood';
+      const view = input.view as 'tree' | 'neighborhood' | 'graph';
       if (input.action === 'garden')
         await saveGardenNavigation(gardenId, input.view === 'inherit' ? null : view);
       if (input.action === 'choose') await saveUserNavigation(authorId, { gardenId, view });
