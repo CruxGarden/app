@@ -13,6 +13,7 @@ import UserMenu from '@/components/auth/UserMenu';
 import { cn } from '@/lib/cn';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import KeeperActivity from '@/components/keeper/KeeperActivity';
+import MoodBar from '@/components/mood/MoodBar';
 import { SearchIcon, MoodIcon, ChevronRightIcon, PlusCircleIcon } from '@/components/ui/icons';
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
@@ -135,6 +136,9 @@ export default function TopBar() {
             <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
           </>
         )}
+        <div className="hidden xl:block">
+          <MoodBar className="mr-1" />
+        </div>
         <IconButton
           label="Explore"
           size="sm"
