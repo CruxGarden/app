@@ -1,4 +1,5 @@
 import { useKeeperStore } from '@/stores/keeperStore';
+import { useGardenContext } from '@/stores/gardenContext';
 import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
 import { ConsoleAvatar } from './Console';
 import { cn } from '@/lib/cn';
@@ -10,6 +11,12 @@ import { cn } from '@/lib/cn';
  * top bar says what it is doing, with Stop. Clicking it opens the console.
  */
 export default function KeeperActivity() {
+  // The chip belongs to the Garden in front; before one is chosen there is nothing to show.
+  const gardenId = useGardenContext((s) => s.garden?.id);
+  return gardenId ? <Activity /> : null;
+}
+
+function Activity() {
   const streaming = useKeeperStore((s) => s.streaming);
   const working = useKeeperStore((s) => s.working);
   const stop = useKeeperStore((s) => s.stop);

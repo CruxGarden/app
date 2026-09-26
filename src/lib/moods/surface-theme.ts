@@ -5,7 +5,7 @@
  *   Plasma  every primary surface is drawn by one shared WebGL material
  *           (@cruxgarden/plasma-ui): panels fuse on contact, refract what is
  *           behind them, and float over a procedural field. styles/plasma.css
- *           plus PlasmaStage and usePlasmaSurface.
+ *           plus PlasmaStage.
  *   Glass   translucent, blurred CSS glass with a sheen (styles/glass.css).
  *   Custom  the Mood as designed: its own surfaceStyle token decides, and the
  *           Mood pane can change every pane colour and glass token.

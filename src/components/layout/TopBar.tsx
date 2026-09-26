@@ -12,6 +12,7 @@ import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
 import { cn } from '@/lib/cn';
 import { ConsoleAvatar } from '@/components/keeper/Console';
+import KeeperActivity from '@/components/keeper/KeeperActivity';
 import { SearchIcon, MoodIcon, ChevronRightIcon, PlusCircleIcon } from '@/components/ui/icons';
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
@@ -155,6 +156,7 @@ export default function TopBar() {
         {aiEnabled && (
           <>
             <div className="w-px h-5 bg-toolbar-divider mx-1" />
+            <KeeperActivity />
             <div className="relative group/btn flex items-center">
               <button
                 onClick={() => togglePane('console')}

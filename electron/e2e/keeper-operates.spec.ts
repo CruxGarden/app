@@ -66,7 +66,8 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     // Stop: what was done stays in the conversation, marked, for the person to pick up.
     await chip.getByRole('button', { name: 'Stop' }).click();
     await expect(chip).toBeHidden({ timeout: 10_000 });
-    await expect(console_).toBeVisible({ timeout: 10_000 });
+    // The tour moved into a Crux; the Garden's Collaboration opens there too.
+    await showPane(page, 'Console');
     await expect(console_.getByText('Stopped here by the person')).toBeVisible({ timeout: 10_000 });
   } finally {
     console.log(trail.join('\n'));
