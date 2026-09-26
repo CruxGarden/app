@@ -531,7 +531,7 @@
       "key": "cruxgarden:schedules",
       "group": "additional",
       "target": "Garden rules + operational execution state",
-      "preservation": "Each schedule records its owning Garden (gardenId); Tending shows the Garden in front’s, a Mood’s schedules belong to the Garden wearing it, and a mood action dresses the owning Garden. Definitions and run state still share one installation list.",
+      "preservation": "Each Garden keeps its own schedules’ definitions in meta.gardenSchedules on the Garden Crux (they travel with the Garden and stay out of publications); this installation list keeps when they run, what fired and timer clocks. Tending shows the Garden in front’s; a Mood’s schedules belong to the Garden wearing it and come from the Mood.",
       "status": "implemented"
     },
     {

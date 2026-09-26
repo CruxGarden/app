@@ -30,6 +30,13 @@ import { runScheduleActions } from './schedule-actions';
 import { getLocation, watchWeather, type WeatherKind } from './weather';
 import { nextSun, type SunPhase } from './sun';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
+import {
+  definitionOf,
+  gardenIds,
+  readGardenSchedules,
+  writeGardenSchedules,
+  type ScheduleDefinition,
+} from './garden-schedules';
 
 export const SCHEDULES_KEY = 'cruxgarden:schedules';
 /** The master switch for the schedules a Mood brings along. */
@@ -126,6 +133,95 @@ export const useSchedules = create<{ schedules: Schedule[]; ready: boolean }>(()
 
 function persist(schedules: Schedule[]) {
   setSetting(SCHEDULES_KEY, JSON.stringify(schedules));
+  syncToGardens(schedules);
+}
+
+// ── The Garden's own copy ───────────────────────────────────────────────────
+// Where Gardens are Cruxes, each Garden keeps its own schedules' definitions
+// (garden-schedules.ts); this list keeps when they next run and what fired.
+
+let gardensOwnSchedules = false;
+/** What each Garden was last written or read with, so unchanged Gardens are not rewritten. */
+const written = new Map<string, string>();
+let writing: Promise<void> = Promise.resolve();
+
+function definitions(schedules: Schedule[]): Map<string, ScheduleDefinition[]> {
+  const root = useGardenContext.getState().root?.id;
+  const groups = new Map<string, ScheduleDefinition[]>();
+  for (const s of schedules) {
+    const g = s.gardenId ?? root;
+    if (s.source === 'mood' || !g) continue;
+    groups.set(g, [...(groups.get(g) ?? []), definitionOf(s)]);
+  }
+  return groups;
+}
+
+function syncToGardens(schedules: Schedule[]) {
+  if (!gardensOwnSchedules) return;
+  const groups = definitions(schedules);
+  // A Garden whose last schedule went away keeps an empty list.
+  for (const g of written.keys()) if (!groups.has(g)) groups.set(g, []);
+  for (const [g, defs] of groups) {
+    const json = JSON.stringify(defs);
+    if (written.get(g) === json) continue;
+    written.set(g, json);
+    writing = writing
+      .then(() => writeGardenSchedules(g, defs))
+      .catch((error) => console.error('[schedules] could not save to the Garden', error));
+  }
+}
+
+/**
+ * Take in what the Gardens hold: definitions edited or imported elsewhere
+ * replace this device's copies (keeping when they run), schedules of Gardens
+ * that are gone are dropped, and a Garden without a copy yet receives one.
+ */
+export async function reconcileGardenSchedules(now = new Date()): Promise<void> {
+  const { getSqliteClient } = await import('./sqlite/client');
+  if (!getSqliteClient().gardenMembership) return;
+  gardensOwnSchedules = true;
+  const [byGarden, ids] = await Promise.all([readGardenSchedules(), gardenIds()]);
+  const root = useGardenContext.getState().root?.id;
+  const next: Schedule[] = [];
+  const placed = new Set<string>();
+  for (const s of useSchedules.getState().schedules) {
+    const g = s.gardenId ?? root;
+    if (g && ids.size && !ids.has(g)) continue; // its Garden is gone
+    const defs = g && s.source !== 'mood' ? byGarden.get(g) : undefined;
+    if (!defs) {
+      next.push(s);
+      placed.add(s.id);
+      continue;
+    }
+    const def = defs.find((d) => d.id === s.id);
+    if (!def) continue; // removed where the Garden was edited
+    const actions = def.actions.filter(isAction);
+    const retimed = JSON.stringify(def.trigger) !== JSON.stringify(s.trigger);
+    next.push(
+      retimed && isTrigger(def.trigger) && actions.length
+        ? { ...makeSchedule({ ...def, actions, gardenId: g }, now), lastFired: s.lastFired }
+        : {
+            ...s,
+            title: def.title,
+            enabled: def.enabled,
+            actions: actions.length ? actions : s.actions,
+          },
+    );
+    placed.add(s.id);
+  }
+  for (const [g, defs] of byGarden) {
+    for (const d of defs) {
+      if (placed.has(d.id)) continue;
+      try {
+        next.push(makeSchedule({ ...d, gardenId: g }, now));
+      } catch {
+        /* a definition this build cannot run stays in the Garden, unused here */
+      }
+    }
+    written.set(g, JSON.stringify(defs));
+  }
+  useSchedules.setState({ schedules: next });
+  persist(next);
 }
 
 /** The Garden in front, or the root before any is chosen. */
@@ -758,8 +854,23 @@ export const TIMER_PRESETS: { id: string; label: string; phases: TimerPhase[]; r
 let timer: ReturnType<typeof setInterval> | null = null;
 let offEvents: (() => void) | null = null;
 /** Start the ticker: reconcile at once (a launch after time away), then every half minute. */
+let offGardens: (() => void) | undefined;
 export function startScheduler(): () => void {
   if (!useSchedules.getState().ready) initSchedules();
+  const reconcile = () =>
+    void reconcileGardenSchedules().catch((error) =>
+      console.error('[schedules] could not read the Gardens', error),
+    );
+  reconcile();
+  void import('./sqlite/client').then(({ getSqliteClient }) => {
+    offGardens ??= getSqliteClient().onChange?.((change) => {
+      if (
+        change.entity === 'crux-lifecycle' ||
+        (change.entity === 'crux' && (change.metaKeys ?? []).includes('gardenSchedules'))
+      )
+        reconcile();
+    });
+  });
   tickSchedules();
   if (!timer) timer = setInterval(() => tickSchedules(), TICK_MS);
   if (runningTimers().length) ensureTimerTicker();
@@ -776,6 +887,8 @@ export function startScheduler(): () => void {
     offEvents = null;
     offWeather?.();
     offWeather = null;
+    offGardens?.();
+    offGardens = undefined;
     watchWeather(false);
   };
 }

@@ -1,3 +1,4 @@
+import { openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, switchCrux, goHome } from './multi-crux-helpers';
@@ -101,14 +102,12 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
     await add();
     await expect(section.getByTestId('schedule')).toHaveCount(4);
     await expect(page.getByTestId('alerts-count')).toHaveCount(0);
-    // Take a snapshot in Ferns: the mock turn writes a file and snapshots.
+    // Mark a version in Ferns: a deliberate snapshot (routine saves are Edit history).
     await switchCrux(page, 'Ferns');
-    const input = page.getByPlaceholder('Send a message...');
-    await input.fill('Please write hello');
-    await input.press('Enter');
-    await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible({
-      timeout: 30_000,
-    });
+    const history = await openPanel(page, 'history', 'Toggle history');
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
+    await history.getByPlaceholder('Label (optional)').fill('First light');
+    await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByTestId('alerts-count')).toHaveText('1', { timeout: 30_000 });
     await bell.click();
     await expect(menu.getByTestId('alert')).toContainText('Snapshot taken');
@@ -123,6 +122,20 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
       .getByRole('button', { name: /^Tending/ })
       .click();
     await expect(page.getByTestId('schedules').getByTestId('schedule')).toHaveCount(4);
+    // The definitions live on the Garden Crux, so they travel with the Garden.
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          const rows = (await window.electronAPI!.sqlite.all(
+            "SELECT meta FROM cruxes WHERE kind = 'garden' AND deleted IS NULL",
+          )) as { meta: string }[];
+          return rows.reduce(
+            (n, r) => n + (JSON.parse(r.meta || '{}').gardenSchedules?.schedules?.length ?? 0),
+            0,
+          );
+        }),
+      )
+      .toBe(4);
     await page.getByRole('button', { name: 'Remove schedule Still growing?' }).click();
     await expect(page.getByTestId('schedules').getByTestId('schedule')).toHaveCount(3);
   } finally {

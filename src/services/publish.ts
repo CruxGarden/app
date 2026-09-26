@@ -225,6 +225,7 @@ export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<s
   const publicMeta = portableMeta(crux.meta);
   // Garden Collaboration is private workspace state, never a public making-of transcript.
   delete publicMeta.gardenCollaboration;
+  delete publicMeta.gardenSchedules;
   return {
     title: crux.title,
     slug: crux.slug,
