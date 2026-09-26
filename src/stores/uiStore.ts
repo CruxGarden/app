@@ -3,7 +3,8 @@ import { deferNotebookAction } from '@/services/notebook-lifecycle';
 import { leaveSurface } from '@/components/plasma/leave';
 import { create, useStore } from 'zustand';
 import { useContext } from 'react';
-import { WorkspaceContext, workspaceSelection } from './workspaceSelection';
+import { WorkspaceContext, gardenWorkspace, workspaceSelection } from './workspaceSelection';
+import type { StoreApi } from 'zustand';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import type { MosaicNode } from 'react-mosaic-component';
@@ -48,7 +49,10 @@ export type PaneType =
   | 'synth'
   | 'browser'
   | 'settings'
-  | 'explore';
+  | 'explore'
+  | 'home'
+  | 'console'
+  | 'navigator';
 
 /** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
 export const PANE_COLORS: Record<PaneType, string> = {
@@ -68,6 +72,9 @@ export const PANE_COLORS: Record<PaneType, string> = {
   browser: 'var(--pane-browser)',
   settings: 'var(--pane-settings)',
   explore: 'var(--pane-explore)',
+  home: 'var(--pane-workshop)',
+  console: 'var(--pane-collaboration)',
+  navigator: 'var(--pane-artifacts)',
 };
 
 export type EditorViewMode = 'source' | 'preview' | 'form';
@@ -140,10 +147,8 @@ export interface UIState {
   setAiEnabled: (enabled: boolean) => void;
 
   // Console
-  consoleOpen: boolean;
 
   // Settings modal
-  settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
 
   // Agent approvals (ADR 0013): an external agent asked for something that
@@ -158,14 +163,12 @@ export interface UIState {
   resolveAgentApproval: (id: string, approved: boolean) => void;
 
   // Explore modal
-  exploreOpen: boolean;
   setExploreOpen: (open: boolean) => void;
   /** Kind filter Explore opens with (e.g. 'mood'); consumed on mount */
   exploreKind: string | null;
   openExplore: (kind?: string | null) => void;
 
   // Mood modal (quick presets/background/persona; opens the Mood Builder page)
-  moodPanelOpen: boolean;
   setMoodPanelOpen: (open: boolean) => void;
   toggleMoodPanel: () => void;
   /** Pixels the Mood Bar reserves at the bottom of <main> so it never covers pane controls. */
@@ -176,6 +179,8 @@ export interface UIState {
 
   /** Start a new Crux with Collaboration beside its clean preview. */
   seedCruxLayout: (cruxId: string, collaborationPercent?: number) => void;
+  /** Which panes this workspace offers: a Crux's, or a Garden Home's. */
+  workspaceScope: WorkspaceScope;
   setActiveCrux: (id: string | null) => void;
   togglePane: (pane: PaneType) => void;
   setPaneVisible: (pane: PaneType, visible: boolean) => void;
@@ -223,9 +228,12 @@ function nameFromPath(path: string): string {
   return segments[segments.length - 1] || path;
 }
 
+/** The panes a Crux workspace offers. */
 export const DEFAULT_PANE_ORDER: PaneType[] = [
+  'navigator',
   'tasks',
   'collaboration',
+  'console',
   'artifacts',
   'workshop',
   'details',
@@ -259,7 +267,84 @@ const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   browser: false,
   settings: false,
   explore: false,
+  home: false,
+  console: false,
+  navigator: false,
 };
+
+/** The panes a Garden Home workspace offers: its Home, the Garden's Collaboration, and the Garden-wide panels. */
+export const GARDEN_PANE_ORDER: PaneType[] = [
+  'navigator',
+  'home',
+  'console',
+  'mood',
+  'synth',
+  'browser',
+  'settings',
+  'explore',
+];
+const GARDEN_VISIBILITY: Record<PaneType, boolean> = {
+  ...DEFAULT_VISIBILITY,
+  tasks: false,
+  collaboration: false,
+  home: true,
+};
+export type WorkspaceScope = 'crux' | 'garden';
+const scopeOrder = (scope: WorkspaceScope) =>
+  scope === 'garden' ? GARDEN_PANE_ORDER : DEFAULT_PANE_ORDER;
+const scopeDefaults = (scope: WorkspaceScope) =>
+  scope === 'garden' ? GARDEN_VISIBILITY : DEFAULT_VISIBILITY;
+
+/** Garden-wide panes open as a full-height column on the right, beside the work. */
+const SIDE_PANES = new Set<PaneType>(['mood', 'settings', 'explore', 'console']);
+/**
+ * Where a newly opened pane goes: the Navigator docks left, Garden-wide panes
+ * dock right, anything else shares the largest tile. All stay resizable.
+ */
+function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<PaneType> {
+  if (tree === null) return pane;
+  if (getMosaicLeaves(tree).includes(pane)) return tree;
+  const sideOnly = (node: MosaicNode<PaneType>) =>
+    getMosaicLeaves(node).every((leaf) => SIDE_PANES.has(leaf));
+  if (pane === 'navigator') {
+    // Dock beside the work, inside any right-hand column, at a fifth of the width.
+    const dock = (node: MosaicNode<PaneType>, share: number): MosaicNode<PaneType> =>
+      typeof node !== 'string' && node.direction === 'row' && sideOnly(node.second)
+        ? { ...node, first: dock(node.first, (share * (node.splitPercentage ?? 50)) / 100) }
+        : {
+            direction: 'row',
+            first: 'navigator',
+            second: node,
+            splitPercentage: Math.min(45, 20 / share),
+          };
+    return dock(tree, 1);
+  }
+  if (SIDE_PANES.has(pane)) {
+    // Garden-wide panes share one right-hand column, about a third wide, stacked.
+    const side = (node: MosaicNode<PaneType>, share: number): MosaicNode<PaneType> => {
+      if (typeof node !== 'string' && node.direction === 'row') {
+        if (node.first === 'navigator')
+          return {
+            ...node,
+            second: side(node.second, (share * (100 - (node.splitPercentage ?? 50))) / 100),
+          };
+        if (sideOnly(node.second))
+          return {
+            ...node,
+            second: { direction: 'column', first: node.second, second: pane, splitPercentage: 50 },
+          };
+      }
+      return {
+        direction: 'row',
+        first: node,
+        second: pane,
+        splitPercentage: 100 - Math.min(60, 32 / share),
+      };
+    };
+    return side(tree, 1);
+  }
+  return addPaneToMosaic(tree, pane);
+}
 
 // ── Mosaic layout helpers ────────────────────────────────
 
@@ -309,6 +394,7 @@ const GLOBAL_LAYOUT_KEY = SettingsKey.GlobalLayout;
 // layout, the Tasks pane open by default because that is where tasks are
 // made and managed; closing it there is the person's choice.
 const cruxLayoutKey = (id: string) => `cruxgarden:layout:${id}`;
+export const gardenLayoutKey = (id: string) => `cruxgarden:garden-layout:${id}`;
 const editorTabsKey = (id: string) => `cruxgarden:editor-tabs:${id}`;
 const folderStateKey = (id: string) => `cruxgarden:folder-state:${id}`;
 
@@ -398,8 +484,10 @@ interface ValidatedLayout {
 }
 
 /** Validate and migrate a persisted layout to match current PaneType values */
-function validateLayout(layout: PersistedLayout): ValidatedLayout {
-  const allPanes = new Set<PaneType>(DEFAULT_PANE_ORDER);
+function validateLayout(layout: PersistedLayout, scope: WorkspaceScope = 'crux'): ValidatedLayout {
+  const order = scopeOrder(scope);
+  const defaults = scopeDefaults(scope);
+  const allPanes = new Set<PaneType>(order);
 
   // Rename old pane types in order
   const renamedOrder = layout.paneOrder.map((p) => RENAME_MAP[p] ?? p) as PaneType[];
@@ -413,7 +501,7 @@ function validateLayout(layout: PersistedLayout): ValidatedLayout {
   const validOrder = renamedOrder.filter((p) => allPanes.has(p));
 
   // Append any missing panes at the end
-  for (const pane of DEFAULT_PANE_ORDER) {
+  for (const pane of order) {
     if (!validOrder.includes(pane)) {
       validOrder.push(pane);
     }
@@ -421,8 +509,10 @@ function validateLayout(layout: PersistedLayout): ValidatedLayout {
 
   // Build visibility with defaults for missing entries
   const validVisibility = {} as Record<PaneType, boolean>;
-  for (const pane of DEFAULT_PANE_ORDER) {
-    validVisibility[pane] = renamedVisibility[pane] ?? DEFAULT_VISIBILITY[pane];
+  for (const pane of DEFAULT_PANE_ORDER.concat(GARDEN_PANE_ORDER)) {
+    validVisibility[pane] = allPanes.has(pane)
+      ? (renamedVisibility[pane] ?? defaults[pane])
+      : false;
   }
 
   // Restore or build mosaic layout
@@ -445,8 +535,7 @@ function validateLayout(layout: PersistedLayout): ValidatedLayout {
     // existed) joins the tree where a fresh one would put it.
     const leaves = new Set(getMosaicLeaves(mosaicLayout));
     for (const pane of validOrder)
-      if (validVisibility[pane] && !leaves.has(pane))
-        mosaicLayout = addPaneToMosaic(mosaicLayout, pane);
+      if (validVisibility[pane] && !leaves.has(pane)) mosaicLayout = addPane(mosaicLayout, pane);
   }
 
   return { paneOrder: validOrder, paneVisibility: validVisibility, mosaicLayout };
@@ -472,7 +561,19 @@ function saveLayout(
   setSetting(key, JSON.stringify(layout));
 }
 
-export function createUIStore(cruxId?: string) {
+export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
+  const order = scopeOrder(scope);
+  // A Garden's own arrangement never shares a key with a Crux workspace of the same id.
+  const layoutKey = (id: string) => (scope === 'garden' ? gardenLayoutKey(id) : cruxLayoutKey(id));
+  const defaults = scopeDefaults(scope);
+  const fresh = (): ValidatedLayout => {
+    const visiblePanes = order.filter((p) => defaults[p]);
+    return {
+      paneOrder: [...order],
+      paneVisibility: { ...defaults },
+      mosaicLayout: buildMosaicTree(visiblePanes),
+    };
+  };
   const agentApprovalResolvers = new Map<string, (approved: boolean) => void>();
   /** Debounced layout persistence — avoids writes on every resize frame */
   let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -486,12 +587,13 @@ export function createUIStore(cruxId?: string) {
         paneVisibility: s.paneVisibility,
         mosaicLayout: s.mosaicLayout,
       };
-      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+      saveLayout(s.activeCruxId ? layoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
     }, 300);
   }
 
   /** Load global layout, migrating from old Zustand persist key if needed */
   function getInitialLayout(): ValidatedLayout {
+    if (scope === 'garden') return fresh();
     const global = loadLayout(GLOBAL_LAYOUT_KEY);
     if (global) return validateLayout(global);
 
@@ -523,8 +625,9 @@ export function createUIStore(cruxId?: string) {
 
   /** Resolve layout for a crux: crux-specific → global → defaults */
   function resolveLayout(cruxId: string): ValidatedLayout {
-    const cruxLayout = loadLayout(cruxLayoutKey(cruxId));
-    if (cruxLayout) return validateLayout(cruxLayout);
+    const cruxLayout = loadLayout(layoutKey(cruxId));
+    if (cruxLayout) return validateLayout(cruxLayout, scope);
+    if (scope === 'garden') return fresh();
 
     const globalLayout = loadLayout(GLOBAL_LAYOUT_KEY);
     if (globalLayout) return validateLayout(globalLayout);
@@ -551,6 +654,7 @@ export function createUIStore(cruxId?: string) {
   // ── Store ───────────────────────────────────────────────
 
   const store = create<UIState>()((set, get) => ({
+    workspaceScope: scope,
     composerHistoryIndex: -1,
     composerHistoryDraft: '',
     composerDraft: cruxId ? (getSetting(`cruxgarden:composer:${cruxId}`) ?? '') : '',
@@ -568,7 +672,7 @@ export function createUIStore(cruxId?: string) {
       if (_saveTimer) {
         clearTimeout(_saveTimer);
         const s = get();
-        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, {
+        saveLayout(s.activeCruxId ? layoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, {
           paneOrder: s.paneOrder,
           paneVisibility: s.paneVisibility,
           mosaicLayout: s.mosaicLayout,
@@ -601,12 +705,11 @@ export function createUIStore(cruxId?: string) {
     activeFileOperation: null,
     folderOpenState: {},
     contextMenu: { ...DEFAULT_CONTEXT_MENU },
-    mobileActivePane: 'collaboration' as PaneType,
+    mobileActivePane: (scope === 'garden' ? 'home' : 'collaboration') as PaneType,
     aiEnabled: false,
     setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
-    consoleOpen: false,
-    settingsOpen: false,
-    setSettingsOpen: (open) => set({ settingsOpen: open }),
+    // Garden-wide panels are panes of the workspace on screen (Daniel, 2026-09-25).
+    setSettingsOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('settings', open),
     pendingAgentApprovals: [],
     requestAgentApproval: (req, signal) =>
       new Promise<boolean>((resolve) => {
@@ -635,10 +738,12 @@ export function createUIStore(cruxId?: string) {
       agentApprovalResolvers.delete(id);
       resolve(approved);
     },
-    exploreOpen: false,
-    setExploreOpen: (open) => set({ exploreOpen: open }),
+    setExploreOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('explore', open),
     exploreKind: null,
-    openExplore: (kind = null) => set({ exploreOpen: true, exploreKind: kind }),
+    openExplore: (kind = null) => {
+      useUIStore.setState({ exploreKind: kind });
+      currentWorkspaceUI().getState().setPaneVisible('explore', true);
+    },
 
     // ── Layout actions ──
 
@@ -653,7 +758,7 @@ export function createUIStore(cruxId?: string) {
       // beside the rest, dragged wherever it is wanted or closed.
       visibility.tasks = DEFAULT_VISIBILITY.tasks;
       setSetting(
-        cruxLayoutKey(cruxId),
+        layoutKey(cruxId),
         JSON.stringify({
           paneOrder: DEFAULT_PANE_ORDER,
           paneVisibility: visibility,
@@ -674,9 +779,8 @@ export function createUIStore(cruxId?: string) {
         }),
       );
     },
-    moodPanelOpen: false,
-    setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
-    toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
+    setMoodPanelOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('mood', open),
+    toggleMoodPanel: () => currentWorkspaceUI().getState().togglePane('mood'),
     dockReserve: 0,
     setDockReserve: (px) => set((s) => (s.dockReserve === px ? s : { dockReserve: px })),
 
@@ -745,6 +849,7 @@ export function createUIStore(cruxId?: string) {
     },
 
     togglePane: (pane) => {
+      if (!order.includes(pane)) return;
       if (deferNotebookAction(get().activeCruxId, () => get().togglePane(pane))) return;
       const apply = () => {
         const prev = get();
@@ -754,7 +859,7 @@ export function createUIStore(cruxId?: string) {
         // Update mosaic tree: add or remove the pane
         let newMosaic: MosaicNode<PaneType> | null;
         if (!wasVisible) {
-          newMosaic = addPaneToMosaic(prev.mosaicLayout, pane);
+          newMosaic = addPane(prev.mosaicLayout, pane);
         } else {
           newMosaic = prev.mosaicLayout ? removePaneFromMosaic(prev.mosaicLayout, pane) : null;
         }
@@ -762,14 +867,20 @@ export function createUIStore(cruxId?: string) {
         // Derive pane order from the mosaic tree leaves
         const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
 
-        set({ paneVisibility: newVisibility, paneOrder: newOrder, mosaicLayout: newMosaic });
+        set({
+          paneVisibility: newVisibility,
+          paneOrder: newOrder,
+          mosaicLayout: newMosaic,
+          // Opening a pane shows it, including in the one-pane narrow layout.
+          ...(!wasVisible ? { mobileActivePane: pane } : {}),
+        });
         const s = get();
         const layout = {
           paneOrder: s.paneOrder,
           paneVisibility: s.paneVisibility,
           mosaicLayout: s.mosaicLayout,
         };
-        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+        saveLayout(s.activeCruxId ? layoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
       };
       // A pane closing under Plasma fades its contents first, then leaves.
       if (get().paneVisibility[pane]) leaveSurface(`.mosaic-window.pane-${pane}`, apply);
@@ -777,12 +888,13 @@ export function createUIStore(cruxId?: string) {
     },
 
     setPaneVisible: (pane, visible) => {
+      if (!order.includes(pane)) return;
       if (deferNotebookAction(get().activeCruxId, () => get().setPaneVisible(pane, visible)))
         return;
       const prev = get();
       let newMosaic = prev.mosaicLayout;
       if (visible && !prev.paneVisibility[pane]) {
-        newMosaic = addPaneToMosaic(newMosaic, pane);
+        newMosaic = addPane(newMosaic, pane);
       } else if (!visible && prev.paneVisibility[pane]) {
         newMosaic = newMosaic ? removePaneFromMosaic(newMosaic, pane) : null;
       }
@@ -791,6 +903,7 @@ export function createUIStore(cruxId?: string) {
         paneVisibility: { ...prev.paneVisibility, [pane]: visible },
         mosaicLayout: newMosaic,
         paneOrder: newOrder,
+        ...(visible ? { mobileActivePane: pane } : {}),
       });
       const s = get();
       const layout = {
@@ -798,7 +911,7 @@ export function createUIStore(cruxId?: string) {
         paneVisibility: s.paneVisibility,
         mosaicLayout: s.mosaicLayout,
       };
-      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+      saveLayout(s.activeCruxId ? layoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
     },
 
     reorderPanes: (newOrder) => {
@@ -809,7 +922,7 @@ export function createUIStore(cruxId?: string) {
         paneVisibility: s.paneVisibility,
         mosaicLayout: s.mosaicLayout,
       };
-      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+      saveLayout(s.activeCruxId ? layoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
     },
 
     setMosaicLayout: (newLayout, options) => {
@@ -838,7 +951,7 @@ export function createUIStore(cruxId?: string) {
         if (_saveTimer) clearTimeout(_saveTimer);
         _saveTimer = null;
         const s = get();
-        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, {
+        saveLayout(s.activeCruxId ? layoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, {
           paneOrder: s.paneOrder,
           paneVisibility: s.paneVisibility,
           mosaicLayout: s.mosaicLayout,
@@ -975,8 +1088,8 @@ export function createUIStore(cruxId?: string) {
 
     // ── Keeper Console ──
 
-    setConsoleOpen: (open) => set({ consoleOpen: open }),
-    toggleConsole: () => set((s) => ({ consoleOpen: !s.consoleOpen })),
+    setConsoleOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('console', open),
+    toggleConsole: () => currentWorkspaceUI().getState().togglePane('console'),
   }));
 
   if (cruxId) store.getState().setActiveCrux(cruxId);
@@ -988,7 +1101,13 @@ export const useUIStore = createUIStore();
 export function useWorkspaceUIStoreApi() {
   const context = useContext(WorkspaceContext);
   const selected = useStore(workspaceSelection, (s) => s.active);
-  return (context ?? selected)?.ui ?? useUIStore;
+  const garden = useStore(gardenWorkspace, (s) => s.ui);
+  // Garden Home on screen wins over a Crux workspace restored in the background.
+  return context?.ui ?? garden ?? selected?.ui ?? useUIStore;
+}
+/** The workspace on screen — a Crux's, else the Garden Home's — for controls outside React. */
+export function currentWorkspaceUI(): StoreApi<UIState> {
+  return gardenWorkspace.getState().ui ?? workspaceSelection.getState().active?.ui ?? useUIStore;
 }
 export function useWorkspaceUIStore<T>(selector: (state: UIState) => T): T {
   return useStore(useWorkspaceUIStoreApi(), selector);

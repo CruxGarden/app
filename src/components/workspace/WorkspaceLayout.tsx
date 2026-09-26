@@ -8,7 +8,15 @@ import { useNotebookProxy } from '@/hooks/useNotebookProxy';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { copyIdentity } from '@/services/working-copies';
 import { useCruxStoreApi } from '@/stores/cruxStore';
-import { lazy, memo, Suspense, useCallback, type CSSProperties, useEffect } from 'react';
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  type ComponentType,
+  type CSSProperties,
+  useEffect,
+} from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-component';
@@ -26,6 +34,9 @@ import { useRunnerProxy } from '@/hooks/useRunnerProxy';
 import { useIsDesktopLayout } from '@/hooks/useMediaQuery';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
+const HomePane = lazy(() => import('./HomePane'));
+const ConsolePane = lazy(() => import('./ConsolePane'));
+const NavigatorPane = lazy(() => import('./NavigatorPane'));
 const ChatPane = lazy(() => import('./ChatPane'));
 const ArtifactsPane = lazy(() => import('./ArtifactsPane'));
 const EditorPane = lazy(() => import('./EditorPane'));
@@ -58,6 +69,9 @@ import {
   SlidersIcon,
   GlobeIcon,
   TagIcon,
+  HomeIcon,
+  SproutIcon,
+  PlusCircleIcon,
 } from '@/components/ui/icons';
 import { useCruxStore } from '@/stores/cruxStore';
 import { Capability, can } from '@/lib/platform';
@@ -117,6 +131,9 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   browser: BrowserPane,
   settings: SettingsPane,
   explore: ExplorePane,
+  home: HomePane,
+  console: ConsolePane,
+  navigator: NavigatorPane,
 };
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
@@ -138,12 +155,19 @@ const PANE_MIN_WIDTH: Record<PaneType, number> = {
   publish: 270,
   store: 280,
   media: 300,
-  mood: 420,
+  mood: 360,
   synth: 300,
   browser: 200,
-  settings: 420,
-  explore: 420,
+  settings: 360,
+  explore: 360,
+  home: 360,
+  console: 260,
+  navigator: 170,
 };
+
+/** A pane is a named region; Crux Synth's own section already carries that name. */
+const paneRegion = (paneType: PaneType, label: string) =>
+  paneType === 'synth' ? {} : { role: 'region', 'aria-label': label };
 
 const MemoizedPaneContent = memo(function MemoizedPaneContent({
   paneType,
@@ -175,7 +199,12 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
   // material's arrival for the same frames.
   const formed = useSurfaceFormed(ref);
   return (
-    <div ref={ref} className="h-full min-h-0 flex flex-col" data-testid={`pane-body-${paneType}`}>
+    <div
+      ref={ref}
+      className="h-full min-h-0 flex flex-col"
+      data-testid={`pane-body-${paneType}`}
+      {...paneRegion(paneType, labels[paneType])}
+    >
       {!formed ? null : copy && ['publish', 'sync', 'details', 'export'].includes(paneType) ? (
         <PaneEmpty
           title="Available in Main"
@@ -229,12 +258,137 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
   browser: <GlobeIcon size={14} strokeWidth={2} />,
   settings: <SlidersIcon size={14} strokeWidth={2} />,
   explore: <SearchIcon size={14} strokeWidth={2} />,
+  home: <HomeIcon size={14} strokeWidth={2} />,
+  console: <SproutIcon size={14} strokeWidth={2} />,
+  navigator: <PlusCircleIcon size={14} strokeWidth={2} />,
 };
+
+/**
+ * The tiles of a workspace — a Crux's or a Garden's: headers, close, resize and
+ * rearrange. `Body` decides what a tile shows (the pane, or why not yet).
+ */
+export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType }> }) {
+  const labels = usePaneLabels();
+  const mosaicLayout = useUIStore((s) => s.mosaicLayout);
+  const setMosaicLayout = useUIStore((s) => s.setMosaicLayout);
+  const setPaneVisible = useUIStore((s) => s.setPaneVisible);
+  const mobileActivePane = useUIStore((s) => s.mobileActivePane);
+  const isDesktopLayout = useIsDesktopLayout();
+  const handleChange = useCallback(
+    (newNode: MosaicNode<PaneType> | null) => {
+      setMosaicLayout(newNode);
+    },
+    [setMosaicLayout],
+  );
+
+  // Render each tile with custom toolbar containing icon + label + close
+  const renderTile = useCallback(
+    (paneType: PaneType, path: MosaicBranch[]) => {
+      // Pane header tokens — read directly from CSS vars set by the mood palette
+      const prefix = PANE_VAR_PREFIX[paneType];
+
+      return (
+        <MosaicWindow<PaneType>
+          path={path}
+          title={labels[paneType]}
+          className={`pane-${paneType} motion-enter-pane`}
+          renderToolbar={() => (
+            <div
+              className="pane-toolbar"
+              style={
+                {
+                  // Painted by shape.css (so paneHeaderShape can restyle the
+                  // header); passed as properties so a header token may be a gradient.
+                  '--pane-header-bg': `var(${prefix}-header)`,
+                  '--pane-header-border-color': `var(${prefix}-header-border)`,
+                } as CSSProperties
+              }
+            >
+              <div
+                className="flex items-center gap-2"
+                style={{ color: `var(${prefix}-header-text)` }}
+              >
+                <span className="pane-toolbar-icon" style={{ color: `var(${prefix}-header-icon)` }}>
+                  {PANE_ICONS[paneType]}
+                </span>
+                <span className="pane-toolbar-label">{labels[paneType]}</span>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPaneVisible(paneType, false);
+                }}
+                className="pane-toolbar-close p-1 hover:opacity-80 transition-opacity cursor-pointer"
+                style={{ color: `var(${prefix}-header-close)` }}
+                title={`Close ${labels[paneType]}`}
+              >
+                <CloseIcon size={12} />
+              </button>
+            </div>
+          )}
+        >
+          <Body paneType={paneType} />
+        </MosaicWindow>
+      );
+    },
+    [setPaneVisible, labels, Body],
+  );
+
+  // Exactly one layout is mounted. Rendering both and hiding one with CSS
+  // double-mounted every pane: two chat trees (two useChat loops, two
+  // auto-snapshot policies), duplicate DOM, and 2× re-renders per streamed token.
+  return isDesktopLayout ? (
+    <div className="h-full min-h-0">
+      {mosaicLayout ? (
+        <MosaicWithoutDragDropContext<PaneType>
+          renderTile={renderTile}
+          value={mosaicLayout}
+          onChange={handleChange}
+          resize={{ minimumPaneSizePercentage: 5 }}
+          className="crux-mosaic-theme"
+        />
+      ) : null}
+    </div>
+  ) : (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-1 min-h-0 group/pane">
+        <Suspense fallback={null}>
+          <MobilePane pane={mobileActivePane} />
+        </Suspense>
+      </div>
+      <MobilePaneSwitcher />
+    </div>
+  );
+}
+
+/** A Garden workspace tile: no Crux to wait for, only room to show the pane. */
+export function GardenPaneBody({ paneType }: { paneType: PaneType }) {
+  const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
+  const labels = usePaneLabels();
+  const formed = useSurfaceFormed(ref);
+  return (
+    <div
+      ref={ref}
+      className="h-full min-h-0 flex flex-col"
+      data-testid={`pane-body-${paneType}`}
+      {...paneRegion(paneType, labels[paneType])}
+    >
+      {!formed ? null : isTooNarrow ? (
+        <PaneEmpty
+          title="Widen the pane"
+          description={`${labels[paneType]} needs a little more room to show its contents.`}
+          className="h-full"
+        />
+      ) : (
+        <MemoizedPaneContent paneType={paneType} />
+      )}
+    </div>
+  );
+}
 
 // ── Main layout ─────────────────────────────────────────
 
 export default function WorkspaceLayout() {
-  const labels = usePaneLabels();
   // The builder is open: the material calms its ripple while it is (PlasmaStage).
   useEffect(() => {
     document.documentElement.setAttribute(WORKSPACE_ATTR, '');
@@ -242,12 +396,8 @@ export default function WorkspaceLayout() {
   }, []);
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
-  const mosaicLayout = useUIStore((s) => s.mosaicLayout);
-  const setMosaicLayout = useUIStore((s) => s.setMosaicLayout);
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
   const paneVisibility = useUIStore((s) => s.paneVisibility);
-  const mobileActivePane = useUIStore((s) => s.mobileActivePane);
-  const isDesktopLayout = useIsDesktopLayout();
   const openFile = useUIStore((s) => s.openFile);
   const artifacts = useCruxStore((s) => s.artifacts);
   const crux = useCruxStore((s) => s.crux);
@@ -383,66 +533,6 @@ export default function WorkspaceLayout() {
     if (!paneVisibility.workshop) setPaneVisible('workshop', true);
   };
 
-  const handleChange = useCallback(
-    (newNode: MosaicNode<PaneType> | null) => {
-      setMosaicLayout(newNode);
-    },
-    [setMosaicLayout],
-  );
-
-  // Render each tile with custom toolbar containing icon + label + close
-  const renderTile = useCallback(
-    (paneType: PaneType, path: MosaicBranch[]) => {
-      // Pane header tokens — read directly from CSS vars set by the mood palette
-      const prefix = PANE_VAR_PREFIX[paneType];
-
-      return (
-        <MosaicWindow<PaneType>
-          path={path}
-          title={labels[paneType]}
-          className={`pane-${paneType} motion-enter-pane`}
-          renderToolbar={() => (
-            <div
-              className="pane-toolbar"
-              style={
-                {
-                  // Painted by shape.css (so paneHeaderShape can restyle the
-                  // header); passed as properties so a header token may be a gradient.
-                  '--pane-header-bg': `var(${prefix}-header)`,
-                  '--pane-header-border-color': `var(${prefix}-header-border)`,
-                } as CSSProperties
-              }
-            >
-              <div
-                className="flex items-center gap-2"
-                style={{ color: `var(${prefix}-header-text)` }}
-              >
-                <span className="pane-toolbar-icon" style={{ color: `var(${prefix}-header-icon)` }}>
-                  {PANE_ICONS[paneType]}
-                </span>
-                <span className="pane-toolbar-label">{labels[paneType]}</span>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPaneVisible(paneType, false);
-                }}
-                className="pane-toolbar-close p-1 hover:opacity-80 transition-opacity cursor-pointer"
-                style={{ color: `var(${prefix}-header-close)` }}
-                title={`Close ${labels[paneType]}`}
-              >
-                <CloseIcon size={12} />
-              </button>
-            </div>
-          )}
-        >
-          <PaneBody paneType={paneType} />
-        </MosaicWindow>
-      );
-    },
-    [setPaneVisible, labels],
-  );
-
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex h-full min-h-0 flex-col">
@@ -452,28 +542,7 @@ export default function WorkspaceLayout() {
           double-mounted every pane: two chat trees (two useChat loops, two
           auto-snapshot policies), duplicate DOM, and 2× re-renders per
           streamed token. */}
-          {isDesktopLayout ? (
-            <div className="h-full min-h-0">
-              {mosaicLayout ? (
-                <MosaicWithoutDragDropContext<PaneType>
-                  renderTile={renderTile}
-                  value={mosaicLayout}
-                  onChange={handleChange}
-                  resize={{ minimumPaneSizePercentage: 5 }}
-                  className="crux-mosaic-theme"
-                />
-              ) : null}
-            </div>
-          ) : (
-            <div className="flex flex-col h-full min-h-0">
-              <div className="flex-1 min-h-0 group/pane">
-                <Suspense fallback={null}>
-                  <MobilePane pane={mobileActivePane} />
-                </Suspense>
-              </div>
-              <MobilePaneSwitcher />
-            </div>
-          )}
+          <PaneMosaic Body={PaneBody} />
         </div>
       </div>
       {/* Context menu overlay */}

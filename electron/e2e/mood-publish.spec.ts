@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { showPane, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -48,7 +48,7 @@ test.describe('publish + discover moods (mocked API)', () => {
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
 
       // Save the current look as a Mood and publish it
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Save current as Mood' }).click();
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Sea Glass');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -72,8 +72,7 @@ test.describe('publish + discover moods (mocked API)', () => {
       expect((moodCrux!.meta as Record<string, unknown>).mood).toMatchObject({ section: 'Dark' });
 
       // Explore → Moods shows it with a swatch; Install pulls the package from the API
-      await page.getByRole('button', { name: 'Close Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Explore', exact: true }).click();
+      await showPane(page, 'Explore');
       await page
         .getByRole('region', { name: 'Explore', exact: true })
         .getByRole('button', { name: 'Moods', exact: true })

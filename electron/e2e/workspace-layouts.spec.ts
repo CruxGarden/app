@@ -68,7 +68,13 @@ test('saved layouts are shared by UI and outside agents, reusable across Cruxes 
     await call({ action: 'apply', name: 'Cramped' });
     await page.keyboard.press('ControlOrMeta+,');
     await settings.getByRole('button', { name: 'Arrange open panels', exact: true }).click();
-    await expect.poll(async () => (await call({ action: 'list' })).current).toEqual(arranged);
+    // Settings is a pane of this workspace now, so it is arranged too; the UI and the agent
+    // agree: arranging again changes nothing.
+    await expect
+      .poll(async () => (await call({ action: 'list' })).current)
+      .toMatchObject({ splitPercentage: expect.closeTo(66.67, 1) });
+    const byUi = (await call({ action: 'list' })).current;
+    expect((await call({ action: 'arrange' })).current).toEqual(byUi);
     expect((await call({ action: 'list' })).layouts).toContainEqual({
       name: 'Cramped',
       layout: cramped,
@@ -89,6 +95,11 @@ test('saved layouts are shared by UI and outside agents, reusable across Cruxes 
   const second = await launchApp({ dir });
   try {
     await second.page.getByRole('button', { name: 'Enter', exact: true }).click();
+    // Entry lands on the Garden's Home; open the Crux from there.
+    await second.page
+      .getByRole('main')
+      .getByRole('button', { name: 'Open Writing', exact: true })
+      .click();
     await expect(second.page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
       'Writing',
     );

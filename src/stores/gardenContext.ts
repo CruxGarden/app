@@ -11,6 +11,9 @@ export const useGardenContext = create<{
   root: GardenIdentity | null;
   garden: GardenIdentity | null;
   navigatorOpen: boolean;
+  /** The Navigator's search text; it outlives the pane remounting at a new width. */
+  navigatorQuery: string;
+  setNavigatorQuery: (query: string) => void;
   revision: number;
   searchRequest: { token: number; closeOnExit: boolean; returnFocus: HTMLElement | null } | null;
   requestSearch: () => void;
@@ -22,6 +25,8 @@ export const useGardenContext = create<{
   root: null,
   garden: null,
   navigatorOpen: false,
+  navigatorQuery: '',
+  setNavigatorQuery: (navigatorQuery) => set({ navigatorQuery }),
   revision: 0,
   searchRequest: null,
   requestSearch: () =>

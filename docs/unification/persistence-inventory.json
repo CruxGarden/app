@@ -231,6 +231,13 @@
       "ledger": "cruxgarden:folder-state:"
     },
     {
+      "key": "cruxgarden:garden-layout:",
+      "sources": [
+        "src/stores/uiStore.ts"
+      ],
+      "ledger": "cruxgarden:garden-layout:"
+    },
+    {
       "key": "cruxgarden:graph-import:",
       "sources": [
         "src/services/sqlite/content-reference-sql.ts"

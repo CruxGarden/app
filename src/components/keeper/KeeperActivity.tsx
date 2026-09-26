@@ -1,5 +1,5 @@
 import { useKeeperStore } from '@/stores/keeperStore';
-import { useUIStore } from '@/stores/uiStore';
+import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
 import { ConsoleAvatar } from './Console';
 import { cn } from '@/lib/cn';
 
@@ -13,7 +13,7 @@ export default function KeeperActivity() {
   const streaming = useKeeperStore((s) => s.streaming);
   const working = useKeeperStore((s) => s.working);
   const stop = useKeeperStore((s) => s.stop);
-  const consoleOpen = useUIStore((s) => s.consoleOpen);
+  const consoleOpen = useWorkspaceUIStore((s) => s.paneVisibility.console);
   if (!streaming || consoleOpen) return null;
   return (
     <div

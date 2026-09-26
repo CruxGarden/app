@@ -13,7 +13,7 @@ const Landing = lazy(() => import('@/pages/Landing'));
 const BillingReturn = lazy(() => import('@/pages/BillingReturn'));
 const Plans = lazy(() => import('@/pages/Plans'));
 const Tending = lazy(() => import('@/pages/Tending'));
-const HomeGarden = lazy(() => import('@/pages/HomeGarden'));
+const GardenWorkspace = lazy(() => import('@/components/workspace/GardenWorkspace'));
 const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
 const MoodBuilder = lazy(() => import('@/pages/MoodBuilder'));
 const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
@@ -117,7 +117,7 @@ const router = createBrowserRouter(
           path: '/home',
           element: (
             <ErrorBoundary>
-              <HomeGarden />
+              <GardenWorkspace />
             </ErrorBoundary>
           ),
         },

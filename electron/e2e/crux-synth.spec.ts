@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
+import { hidePane, showPane } from './panel-helpers';
 import { enterGarden, createCrux } from './multi-crux-helpers';
 import type { SynthPatch } from '../../src/audio/synth-patch';
 
@@ -40,8 +41,8 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
       expect(result.isError, text).not.toBe(true);
       return JSON.parse(text);
     };
-    await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await hidePane(page, 'Settings');
+    await showPane(page, 'Mood');
     await page.getByRole('button', { name: 'Sound', exact: true }).click();
     const synth = page.getByRole('region', { name: 'Crux Synth', exact: true });
     await expect(synth).toBeVisible();
@@ -116,7 +117,7 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
       }),
     ).toBe(true);
     await page.screenshot({ path: 'e2e/.results/crux-synth-controls.png' });
-    await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+    await showPane(page, 'Mood');
     await page.getByRole('button', { name: 'Moods', exact: true }).click();
     await page.getByRole('button', { name: 'Save current as Mood' }).click();
     await page.getByRole('textbox', { name: 'Mood name' }).fill('Living sound');
@@ -137,7 +138,7 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
     await second.page.getByRole('button', { name: 'Enter', exact: true }).click();
     await expect.poll(async () => (await audio(second.page)).synth).toEqual(expected!);
     expect((await audio(second.page)).playing).toBe(false);
-    await second.page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(second.page, 'Mood');
     await second.page.getByRole('button', { name: 'Sound', exact: true }).click();
     const sound = second.page.getByRole('region', { name: 'Crux Synth', exact: true });
     await sound.locator('summary').click();

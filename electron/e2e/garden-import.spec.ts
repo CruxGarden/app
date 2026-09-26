@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
+import { showPane } from './panel-helpers';
 import { enterGarden } from './multi-crux-helpers';
 
 test('imported Garden graphs open Home and preserve nested members and private conversations through restart', async () => {
@@ -185,7 +186,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     await page.locator('h2', { hasText: /^AI$/ }).click();
     await page.getByRole('switch', { name: 'Enable AI Tools' }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
-    await page.getByRole('button', { name: 'Console', exact: true }).click();
+    await showPane(page, 'Console');
     await expect(
       page.getByRole('region', { name: 'Fieldwork · Collaboration', exact: true }),
     ).toContainText('Private field observations');
@@ -199,7 +200,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     await expect(
       page.getByRole('button', { name: 'Open Observations', exact: true }),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Console', exact: true }).click();
+    await showPane(page, 'Console');
     await expect(
       page.getByRole('region', { name: 'Fieldwork · Collaboration', exact: true }),
     ).toContainText('Private field observations');

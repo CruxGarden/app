@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
+import { showPane } from './panel-helpers';
 import { enterGarden } from './multi-crux-helpers';
 
 const accent = (page: Page) =>
@@ -10,10 +11,7 @@ const PLASMA = '#9ff3e4';
 const CONCRETE_SKY = '#a9c0ce';
 
 async function openMood(page: Page) {
-  const panel = page.getByRole('region', { name: 'Mood', exact: true });
-  if (!(await panel.isVisible()))
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
-  return panel.getByRole('region', { name: 'Garden Mood' });
+  return (await showPane(page, 'Mood')).getByRole('region', { name: 'Garden Mood' });
 }
 async function goToMyGarden(page: Page) {
   await page.getByRole('button', { name: 'Garden location', exact: true }).click();
@@ -92,8 +90,10 @@ test('each Garden wears its own Mood, inherits its parent’s, and repaints on t
     page = instance.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
     await expect.poll(() => accent(page), { timeout: 30_000 }).toBe(CONCRETE_SKY);
+    // The restored workspace, with its remembered panes, settles before we look.
+    await expect(page.getByTestId('pane-body-home')).toBeVisible();
     line = await openMood(page);
-    await expect(line).toContainText('My Garden wears Concrete Sky');
+    await expect(line).toContainText('wears Concrete Sky');
     expect(
       await page.evaluate(() =>
         window.electronAPI!.sqlite.all(

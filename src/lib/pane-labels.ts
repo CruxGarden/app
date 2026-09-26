@@ -29,6 +29,9 @@ export const DEFAULT_PANE_LABELS: Record<PaneType, string> = {
   browser: 'WWW',
   settings: 'Settings',
   explore: 'Explore',
+  home: 'Home',
+  console: 'Garden Collaboration',
+  navigator: 'Navigator',
 };
 
 /** The CSS variable each pane's name is read from (literal, so coverage can see it). */
@@ -49,6 +52,9 @@ const PANE_LABEL_VARS: Record<PaneType, string> = {
   browser: '--pane-label-browser',
   settings: '--pane-label-settings',
   explore: '--pane-label-explore',
+  home: '--pane-label-home',
+  console: '--pane-label-console',
+  navigator: '--pane-label-navigator',
 };
 
 function readVar(name: string): string {

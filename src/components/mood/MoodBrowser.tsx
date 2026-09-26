@@ -194,6 +194,8 @@ const HYPER_MOODS = BUNDLED_MOODS.filter((m) => m.id !== 'plasma' && !materialCh
 export default function MoodBrowser() {
   const [moods, setMoods] = useState<MoodPackage[]>(() => getInstalledMoods());
   const gardenId = useGardenContext((s) => s.garden?.id);
+  // A new root (startup, profile replacement) starts a new library epoch.
+  const root = useGardenContext((s) => s.root);
   const [reload, setReload] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   useEffect(() => onMoodPackagesChange(() => setMoods(getInstalledMoods())), []);
@@ -226,7 +228,7 @@ export default function MoodBrowser() {
     return () => {
       active = false;
     };
-  }, [gardenId, reload]);
+  }, [gardenId, root, reload]);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [note, setNote] = useState<string | null>(null);

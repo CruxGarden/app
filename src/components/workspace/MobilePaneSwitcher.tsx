@@ -1,5 +1,11 @@
 import { cn } from '@/lib/cn';
-import { useWorkspaceUIStore as useUIStore, PANE_COLORS, type PaneType } from '@/stores/uiStore';
+import {
+  useWorkspaceUIStore as useUIStore,
+  PANE_COLORS,
+  DEFAULT_PANE_ORDER,
+  GARDEN_PANE_ORDER,
+  type PaneType,
+} from '@/stores/uiStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   ChatIcon,
@@ -16,6 +22,9 @@ import {
   GlobeIcon,
   UploadIcon,
   ActivityIcon,
+  HomeIcon,
+  SproutIcon,
+  PlusCircleIcon,
 } from '@/components/ui/icons';
 
 const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
@@ -68,19 +77,23 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
     label: 'Find media',
     icon: <SearchIcon size={16} />,
   },
+  home: { label: 'Home', icon: <HomeIcon size={16} /> },
+  console: { label: 'Garden', icon: <SproutIcon size={16} /> },
+  navigator: { label: 'Navigate', icon: <PlusCircleIcon size={16} /> },
 };
 
 export default function MobilePaneSwitcher() {
-  const { mobileActivePane, setMobileActivePane } = useUIStore(
+  const { mobileActivePane, setMobileActivePane, scope } = useUIStore(
     useShallow((s) => ({
       mobileActivePane: s.mobileActivePane,
       setMobileActivePane: s.setMobileActivePane,
+      scope: s.workspaceScope,
     })),
   );
 
   return (
     <div className="flex items-center h-12 min-w-0 overflow-x-auto border-t border-border bg-surface-solid shrink-0">
-      {(Object.keys(PANE_ICONS) as PaneType[]).map((pane) => {
+      {(scope === 'garden' ? GARDEN_PANE_ORDER : DEFAULT_PANE_ORDER).map((pane) => {
         const { label, icon } = PANE_ICONS[pane];
         const isActive = mobileActivePane === pane;
 

@@ -105,6 +105,8 @@ test('Neighborhood follows real dimensions across Gardens, reveals a second hop 
     await page.getByRole('button', { name: 'Close Growth graph', exact: true }).click();
     await expect.poll(() => new URL(page.url()).searchParams.get('growth')).toBeNull();
     await page.setViewportSize({ width: 480, height: 720 });
+    // One pane at a time when narrow: Growth was opened last, so switch back to the Navigator.
+    await page.getByRole('button', { name: 'Navigate', exact: true }).click();
     await expect.poll(() => nav.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     // Wait for Plasma's actual resized canvas, not a transient old frame.
     await expect

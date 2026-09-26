@@ -5,6 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
+import { hidePane, showPane } from './panel-helpers';
 import { enterGarden } from './multi-crux-helpers';
 
 test('saving a Mood uses actual content and Garden membership, refuses partial creation, and survives Copy and restart', async () => {
@@ -14,14 +15,14 @@ test('saving a Mood uses actual content and Garden membership, refuses partial c
   try {
     let page = instance.page;
     await enterGarden(page);
-    await page.getByRole('button', { name: 'Navigator', exact: true }).click();
+    await showPane(page, 'Navigator');
     await page.getByRole('button', { name: 'New Garden', exact: true }).click();
     await page.getByRole('textbox', { name: 'Garden name' }).fill('Sound studio');
     await page.getByRole('button', { name: 'Create Garden', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Sound studio',
     );
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await page.getByRole('button', { name: 'Save current as Mood' }).click();
     await page.getByRole('textbox', { name: 'Mood name' }).fill('Slow dream');
     await page.evaluate(() =>
@@ -90,7 +91,7 @@ test('saving a Mood uses actual content and Garden membership, refuses partial c
       .getByRole('navigation', { name: 'Garden ancestry' })
       .getByRole('button', { name: 'My Garden', exact: true })
       .click();
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await expect(page.getByRole('button', { name: 'Apply Slow dream', exact: true })).toHaveCount(
       0,
     );
@@ -98,9 +99,15 @@ test('saving a Mood uses actual content and Garden membership, refuses partial c
     instance = await launchApp({ dir });
     page = instance.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.getByRole('button', { name: 'Navigator', exact: true }).click();
-    await page.getByRole('button', { name: 'Sound studio', exact: true }).click();
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Navigator');
+    await page
+      .getByRole('complementary', { name: 'Navigator' })
+      .getByRole('button', { name: 'Sound studio', exact: true })
+      .click();
+    await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+      'Sound studio',
+    );
+    await showPane(page, 'Mood');
     await expect(page.getByRole('button', { name: 'Apply Slow dream', exact: true })).toBeVisible();
     await page.evaluate(async ({ garden, mood }) => {
       const api = window.electronAPI!.sqlite.gardenMood!;
@@ -166,7 +173,7 @@ test('current saved packages move once with retry, and an outside agent lists an
   try {
     let page = instance.page;
     await enterGarden(page);
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await page.getByRole('button', { name: 'Save current as Mood' }).click();
     await page.getByRole('textbox', { name: 'Mood name' }).fill('Seed sound');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -193,6 +200,8 @@ test('current saved packages move once with retry, and an outside agent lists an
         ['cruxgarden:moodPackages', value],
       );
     }, previous);
+    // Panes are remembered: close Mood so the library first loads after the refusal is armed.
+    await hidePane(page, 'Mood');
     await instance.app.close();
     instance = await launchApp({ dir });
     page = instance.page;
@@ -202,7 +211,7 @@ test('current saved packages move once with retry, and an outside agent lists an
         "CREATE TRIGGER refuse_retirement BEFORE INSERT ON settings WHEN NEW.key = 'cruxgarden:moodPackages' AND NEW.value = '' BEGIN SELECT RAISE(ABORT, 'Retirement refused'); END",
       ),
     );
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await expect(page.getByRole('alert')).toContainText('Retirement refused');
     const retained = (await page.evaluate(() =>
       window.electronAPI!.sqlite.all(
@@ -237,7 +246,7 @@ test('current saved packages move once with retry, and an outside agent lists an
         ),
       ),
     ).toEqual({ value: '' });
-    await page.getByRole('button', { name: 'Close Mood', exact: true }).click();
+    await hidePane(page, 'Mood');
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
     const path = join(dir, 'userData', 'garden-agent-host', '.crux', 'mcp.json');
@@ -252,7 +261,7 @@ test('current saved packages move once with retry, and an outside agent lists an
     const listed = await client.callTool({ name: 'list_moods', arguments: {} });
     expect(listed.isError).not.toBe(true);
     expect(JSON.stringify(listed.content)).toContain(`${retained[0]!.id} — Retained sound`);
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     const worn = await client.callTool({ name: 'wear_mood', arguments: { id: retained[0]!.id } });
     expect(worn.isError).not.toBe(true);
     expect(JSON.stringify(worn.content)).toContain('Retained sound');
@@ -264,7 +273,7 @@ test('current saved packages move once with retry, and an outside agent lists an
     instance = await launchApp({ dir });
     page = instance.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await expect(
       page.getByRole('button', { name: 'Apply Retained sound', exact: true }),
     ).toBeVisible();

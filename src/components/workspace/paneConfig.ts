@@ -14,6 +14,9 @@ import {
   MoodIcon,
   SlidersIcon,
   GlobeIcon,
+  HomeIcon,
+  SproutIcon,
+  PlusCircleIcon,
 } from '@/components/ui/icons';
 
 /** CSS variable prefixes for each pane (used for pane-specific theming) */
@@ -34,6 +37,9 @@ export const PANE_VAR_PREFIX: Record<PaneType, string> = {
   browser: '--pane-browser',
   settings: '--pane-settings',
   explore: '--pane-explore',
+  home: '--pane-workshop',
+  console: '--pane-collaboration',
+  navigator: '--pane-artifacts',
 };
 
 /** Button config for pane toggle buttons in the TopBar */
@@ -54,4 +60,7 @@ export const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] =
   { type: 'browser', icon: GlobeIcon, label: 'WWW' },
   { type: 'settings', icon: SlidersIcon, label: 'Settings' },
   { type: 'explore', icon: SearchIcon, label: 'Explore' },
+  { type: 'home', icon: HomeIcon, label: 'Home' },
+  { type: 'console', icon: SproutIcon, label: 'Garden Collaboration' },
+  { type: 'navigator', icon: PlusCircleIcon, label: 'Navigator' },
 ];

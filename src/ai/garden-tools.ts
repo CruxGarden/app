@@ -1113,7 +1113,7 @@ async function runGardenToolInner(
     }
     case 'look': {
       const { useWorkspaceRegistry, getWorkspace } = await import('@/stores/workspaceRegistry');
-      const { useUIStore } = await import('@/stores/uiStore');
+      const { currentWorkspaceUI } = await import('@/stores/uiStore');
       const { customNames } = await import('@/lib/pane-labels');
       const path = location.pathname;
       const page =
@@ -1135,7 +1135,9 @@ async function runGardenToolInner(
             .map(([k, v]) => `${k} → "${v}"`)
             .join(', ')}`,
         );
-      lines.push(`console: ${useUIStore.getState().consoleOpen ? 'open' : 'closed'}`);
+      lines.push(
+        `console: ${currentWorkspaceUI().getState().paneVisibility.console ? 'open' : 'closed'}`,
+      );
       const active = useWorkspaceRegistry.getState().mru[0];
       const w = active ? getWorkspace(active) : null;
       if (w && page === 'a crux') {

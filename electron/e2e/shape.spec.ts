@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
+import { hidePane, showPane } from './panel-helpers';
 
 async function openWorkspace(page: Page) {
   await page.getByRole('button', { name: /enter/i }).click();
@@ -12,9 +13,9 @@ async function openWorkspace(page: Page) {
 }
 
 async function applyMood(page: Page, id: string) {
-  await page.getByRole('button', { name: 'Mood', exact: true }).click();
+  await showPane(page, 'Mood');
   await page.getByTestId(`bundled-${id}`).getByRole('button', { name: 'Apply' }).click();
-  await page.keyboard.press('Escape');
+  await hidePane(page, 'Mood');
   await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
   await page.getByRole('button', { name: 'Mood', exact: true }).hover();
 }

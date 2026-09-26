@@ -6,6 +6,7 @@ import JSZip from 'jszip';
 import type { DownloadItem, Event } from 'electron';
 import type { SynthPatch } from '../../src/audio/synth-patch';
 import { launchApp } from './launch';
+import { showPane } from './panel-helpers';
 import { enterGarden } from './multi-crux-helpers';
 
 const audio = (page: Page) =>
@@ -24,7 +25,7 @@ test('a custom Synth preset travels in a Mood to a clean garden, survives restar
   let expected: SynthPatch;
   try {
     await enterGarden(first.page);
-    await first.page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(first.page, 'Mood');
     await first.page.getByRole('button', { name: 'Sound', exact: true }).click();
     const synth = first.page.getByRole('region', { name: 'Crux Synth', exact: true });
     await synth.getByRole('combobox', { name: 'Synth preset', exact: true }).selectOption('dusk');
@@ -67,7 +68,8 @@ test('a custom Synth preset travels in a Mood to a clean garden, survives restar
   try {
     let page = second.page;
     await enterGarden(page);
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
+
     await page.getByLabel('Import a Mood file', { exact: true }).setInputFiles(archive);
     await expect(page.getByRole('status')).toContainText('Imported "Shared atmosphere"');
     await page.getByRole('button', { name: 'Apply Shared atmosphere', exact: true }).click();
@@ -77,7 +79,7 @@ test('a custom Synth preset travels in a Mood to a clean garden, survives restar
     second = await launchApp({ dir, sound: true });
     page = second.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await page.getByRole('button', { name: 'Sound', exact: true }).click();
     const synth = page.getByRole('region', { name: 'Crux Synth', exact: true });
     await synth.locator('summary').click();
@@ -100,7 +102,7 @@ test('a damaged Mood import reports failure and leaves the current sound intact'
   try {
     await enterGarden(page);
     const before = (await audio(page)).synth;
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     const damaged = join(dir, 'damaged.cruxmood');
     writeFileSync(damaged, 'incomplete ZIP');
     await page.getByLabel('Import a Mood file', { exact: true }).setInputFiles(damaged);
@@ -147,7 +149,7 @@ test('a damaged Mood import reports failure and leaves the current sound intact'
     await instance.app.close();
     instance = await launchApp({ dir });
     await instance.page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await instance.page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(instance.page, 'Mood');
     await expect(
       instance.page.getByRole('button', { name: 'Apply Recovered sound', exact: true }),
     ).toBeVisible();

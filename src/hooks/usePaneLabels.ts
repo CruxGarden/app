@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useGardenContext } from '@/stores/gardenContext';
 import { onThemeOverridesChange, onThemePreviewChange } from '@/lib/moods/active';
-import { gardenTitle, paneLabels } from '@/lib/pane-labels';
+import { DEFAULT_PANE_LABELS, gardenTitle, paneLabels } from '@/lib/pane-labels';
 import type { PaneType } from '@/stores/uiStore';
 
 /**
@@ -22,7 +23,15 @@ export function usePaneLabels(): Record<PaneType, string> {
       document.removeEventListener('palette-change', later);
     };
   }, []);
-  return labels;
+  // The Garden's own Collaboration says whose it is, beside a Crux's.
+  const garden = useGardenContext((s) => s.garden?.title);
+  return useMemo(
+    () =>
+      labels.console === DEFAULT_PANE_LABELS.console
+        ? { ...labels, console: `${garden || 'Garden'} · Collaboration` }
+        : labels,
+    [labels, garden],
+  );
 }
 
 export function useGardenTitle(): string {

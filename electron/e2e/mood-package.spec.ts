@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
+import { showPane } from './panel-helpers';
 import { enterGarden } from './multi-crux-helpers';
 
 type AudioState = { volume: number; trackName: string | null };
@@ -26,8 +27,7 @@ test.describe('mood packages', () => {
       await enterGarden(page);
 
       // Shape a look: pane gap 0 + a quieter track
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Theme', exact: true }).click();
       await page.getByRole('button', { name: 'Shape & layout' }).click();
       const gap = page.getByRole('textbox', { name: 'Pane gap value' });

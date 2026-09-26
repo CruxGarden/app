@@ -3,25 +3,21 @@ import {
   resolveWorkspaceDestination,
   type WorkspaceDestination,
 } from '@/services/garden-navigation';
-import GardenNavigator from './GardenNavigator';
 import TendingNotifications from '@/components/tending/TendingNotifications';
 import { startTendingCatalog } from '@/stores/tendingStore';
 import WorkspaceLifecycle from './WorkspaceLifecycle';
 import { restoreWorkspaceList } from '@/stores/workspaceRegistry';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TopBar from './TopBar';
 import { DialogHost } from '@/components/ui';
-import { useUIStore } from '@/stores/uiStore';
+import { currentWorkspaceUI, useUIStore } from '@/stores/uiStore';
+import { startNavigatorPane } from '@/services/navigator-pane';
 import { useAppStore } from '@/stores/appStore';
 import { dismissSplash } from '@/lib/splash';
 import { startSignals } from '@/lib/moods/signals';
 import { Capability, can } from '@/lib/platform';
 
-const Console = lazy(() => import('@/components/keeper/Console'));
-const Settings = lazy(() => import('@/pages/Settings'));
-const Explore = lazy(() => import('@/pages/Explore'));
-const Mood = lazy(() => import('@/components/mood/Mood'));
 import MoodTextureLayers from './MoodTextureLayers';
 import { MotionConfig } from 'motion/react';
 
@@ -31,12 +27,7 @@ export default function Shell() {
   const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
   const [initError, setInitError] = useState<string | null>(null);
   const aiEnabled = useUIStore((s) => s.aiEnabled);
-  const consoleOpen = useUIStore((s) => s.consoleOpen);
-  const setConsoleOpen = useUIStore((s) => s.setConsoleOpen);
-  const settingsOpen = useUIStore((s) => s.settingsOpen);
-  const exploreOpen = useUIStore((s) => s.exploreOpen);
   const rootGarden = useGardenContext((s) => s.root);
-  const activeGarden = useGardenContext((s) => s.garden);
   const gardenId = new URLSearchParams(location.search).get('garden') ?? rootGarden?.id;
   const routeCruxId = /^\/c\/([^/]+)$/.exec(location.pathname)?.[1] ?? null;
   const revision = useGardenContext((s) => s.revision);
@@ -102,7 +93,8 @@ export default function Shell() {
     locationRetry,
     navigate,
   ]);
-  const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
+  // The Navigator is a pane that follows you from workspace to workspace.
+  useEffect(() => startNavigatorPane(), []);
 
   useEffect(() => {
     if (!servicesReady) return;
@@ -154,8 +146,13 @@ export default function Shell() {
         !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
       // Escape → open console (when AI enabled, console not open, not typing)
-      if (e.key === 'Escape' && !consoleOpen && aiEnabled && !editing) {
-        setConsoleOpen(true);
+      if (
+        e.key === 'Escape' &&
+        aiEnabled &&
+        !editing &&
+        !currentWorkspaceUI().getState().paneVisibility.console
+      ) {
+        currentWorkspaceUI().getState().setPaneVisible('console', true);
         return;
       }
 
@@ -177,7 +174,7 @@ export default function Shell() {
       // Cmd+, → toggle settings
       if (meta && e.key === ',') {
         e.preventDefault();
-        useUIStore.getState().setSettingsOpen(!useUIStore.getState().settingsOpen);
+        currentWorkspaceUI().getState().togglePane('settings');
         return;
       }
     };
@@ -190,7 +187,7 @@ export default function Shell() {
       window.removeEventListener('keydown', handler);
       offCommand?.();
     };
-  }, [consoleOpen, setConsoleOpen, aiEnabled]);
+  }, [aiEnabled]);
 
   return (
     // Motion never applies its own reduced-motion rule: the person's motion intensity (ADR 0041)
@@ -207,7 +204,6 @@ export default function Shell() {
 
         {/* Main */}
         <div className="flex flex-1 min-h-0 overflow-x-auto">
-          {servicesReady && <GardenNavigator />}
           <main className="relative flex-1 min-w-0 min-h-0 overflow-y-auto">
             {initError || resolved?.error ? (
               <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
@@ -224,12 +220,14 @@ export default function Shell() {
                       Retry location
                     </button>
                   )}
-                  <button
-                    className="text-accent cursor-pointer"
-                    onClick={() => useGardenContext.getState().setNavigatorOpen(true)}
-                  >
-                    Open Navigator
-                  </button>
+                  {rootGarden && (
+                    <button
+                      className="text-accent cursor-pointer"
+                      onClick={() => void navigate(gardenPath(rootGarden.id))}
+                    >
+                      Open {rootGarden.title || 'My Garden'}
+                    </button>
+                  )}
                 </div>
               </div>
             ) : resolved?.value?.status === 'choose' ? (
@@ -277,73 +275,11 @@ export default function Shell() {
               </p>
             )}
           </main>
-          {servicesReady && activeGarden && aiEnabled && consoleOpen && (
-            <GardenPanel
-              title={`${activeGarden.title || 'Garden'} · Collaboration`}
-              onClose={() => setConsoleOpen(false)}
-            >
-              <Console key={activeGarden.id} />
-            </GardenPanel>
-          )}
-          {moodPanelOpen && (
-            <GardenPanel title="Mood" onClose={() => useUIStore.getState().setMoodPanelOpen(false)}>
-              <Mood compact />
-            </GardenPanel>
-          )}
-          {settingsOpen && (
-            <GardenPanel
-              title="Settings"
-              onClose={() => useUIStore.getState().setSettingsOpen(false)}
-            >
-              <Settings />
-            </GardenPanel>
-          )}
-          {exploreOpen && (
-            <GardenPanel
-              title="Explore"
-              onClose={() => useUIStore.getState().setExploreOpen(false)}
-            >
-              <Explore onNavigate={() => useUIStore.getState().setExploreOpen(false)} />
-            </GardenPanel>
-          )}
         </div>
 
         {/* App confirm/alert dialogs (replaces window.confirm/alert) */}
         <DialogHost />
       </div>
     </MotionConfig>
-  );
-}
-
-function GardenPanel({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      aria-label={title}
-      className="w-[min(32rem,45vw)] min-w-64 shrink-0 border-l border-border bg-panel flex flex-col min-h-0 text-text"
-    >
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-display font-medium">{title}</h2>
-        <button
-          aria-label={`Close ${title}`}
-          onClick={onClose}
-          className="px-2 text-text-muted hover:text-text cursor-pointer"
-        >
-          ×
-        </button>
-      </header>
-      <div className="flex-1 min-h-0 overflow-auto">
-        <Suspense fallback={<p className="p-4 text-sm text-text-muted">Opening {title}…</p>}>
-          {children}
-        </Suspense>
-      </div>
-    </section>
   );
 }

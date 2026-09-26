@@ -17,7 +17,8 @@ export default function NavigationSearch({
   const request = useGardenContext((s) => s.searchRequest);
   const input = useRef<HTMLInputElement>(null);
   const region = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState('');
+  const query = useGardenContext((s) => s.navigatorQuery);
+  const setQuery = useGardenContext((s) => s.setNavigatorQuery);
   useEffect(() => {
     if (request) {
       input.current?.focus();

@@ -5,6 +5,8 @@ import {
   useWorkspaceUIStoreApi,
   useUIStore,
   DEFAULT_PANE_ORDER,
+  GARDEN_PANE_ORDER,
+  type PaneType,
 } from '@/stores/uiStore';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
 import { PANE_BUTTONS, PANE_VAR_PREFIX } from '@/components/workspace/paneConfig';
@@ -12,9 +14,20 @@ import { PlusCircleIcon } from '@/components/ui/icons';
 import { arrangeWorkspacePanels } from '@/services/workspace-layouts';
 
 /** Discovery for closed panels. Opening uses the same workspace operation as agents. */
+const GARDEN_WIDE = new Set<PaneType>([
+  'navigator',
+  'console',
+  'mood',
+  'synth',
+  'browser',
+  'settings',
+  'explore',
+]);
+
 export default function PanelPicker() {
   const ui = useWorkspaceUIStoreApi();
   const activeCruxId = useWorkspaceUIStore((s) => s.activeCruxId);
+  const scope = useWorkspaceUIStore((s) => s.workspaceScope);
   const visibility = useWorkspaceUIStore((s) => s.paneVisibility);
   const labels = usePaneLabels();
   const [open, setOpen] = useState(false);
@@ -69,7 +82,17 @@ export default function PanelPicker() {
     setOpen(false);
     trigger.current?.focus();
   };
-  const available = (activeCruxId ? DEFAULT_PANE_ORDER : [])
+  // This workspace's own panes first, then the Garden-wide ones.
+  const available = (
+    scope === 'garden'
+      ? GARDEN_PANE_ORDER
+      : activeCruxId
+        ? [
+            ...DEFAULT_PANE_ORDER.filter((p) => !GARDEN_WIDE.has(p)),
+            ...DEFAULT_PANE_ORDER.filter((p) => GARDEN_WIDE.has(p)),
+          ]
+        : []
+  )
     .filter((pane) => !visibility[pane])
     .filter((pane) => {
       const config = PANE_BUTTONS.find((b) => b.type === pane)!;
@@ -139,25 +162,6 @@ export default function PanelPicker() {
               onChange={(e) => setQuery(e.target.value)}
               className="w-full px-2 py-2 mb-1 text-sm bg-input text-input-text border border-input-border rounded-input"
             />
-            {[
-              ['Mood', () => useUIStore.getState().setMoodPanelOpen(true)],
-              ['Explore', () => useUIStore.getState().setExploreOpen(true)],
-              ['Settings', () => useUIStore.getState().setSettingsOpen(true)],
-              ['Console', () => useUIStore.getState().setConsoleOpen(true)],
-            ]
-              .filter(([label]) => String(label).toLowerCase().includes(query.toLowerCase()))
-              .map(([label, action]) => (
-                <button
-                  key={String(label)}
-                  className="w-full text-left text-sm px-2 py-2 hover:bg-dropdown-item-hover rounded-[var(--radius-sm)] cursor-pointer"
-                  onClick={() => {
-                    (action as () => void)();
-                    finish();
-                  }}
-                >
-                  {String(label)}
-                </button>
-              ))}
             {available.map((pane) => {
               const config = PANE_BUTTONS.find((b) => b.type === pane)!;
               const Icon = config.icon;

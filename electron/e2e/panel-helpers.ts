@@ -32,3 +32,59 @@ export async function expectPanelBarReady(page: Page) {
     timeout: 30_000,
   });
 }
+
+type GardenPane = 'Mood' | 'Explore' | 'Settings' | 'Console' | 'Navigator';
+const PANE_TYPE: Record<GardenPane, string> = {
+  Mood: 'mood',
+  Explore: 'explore',
+  Settings: 'settings',
+  Console: 'console',
+  Navigator: 'navigator',
+};
+const paneLocator = (page: Page, pane: GardenPane) =>
+  pane === 'Navigator'
+    ? page.getByRole('complementary', { name: 'Navigator', exact: true })
+    : pane === 'Console'
+      ? page.getByRole('region', { name: /· Collaboration$/ })
+      : page.getByRole('region', { name: pane, exact: true });
+/**
+ * In the layout already, even while its surface is still forming. Waits for
+ * the workspace to render first, so a restored pane is never mistaken for a
+ * closed one (pressing its button would then close it).
+ */
+const inLayout = async (page: Page, pane: GardenPane) => {
+  await page.locator('[data-testid^="pane-body-"]').first().waitFor();
+  return (await page.getByTestId(`pane-body-${PANE_TYPE[pane]}`).count()) > 0;
+};
+const press = (page: Page, pane: GardenPane) =>
+  pane === 'Settings'
+    ? page.keyboard.press('ControlOrMeta+,')
+    : page.getByRole('button', { name: pane, exact: true }).click();
+
+/**
+ * Panes are remembered per workspace: open one only if it is not already in
+ * the layout. A press during a Garden transition can land on the workspace
+ * being left, so check again (pressing only ever opens here).
+ */
+export async function showPane(page: Page, pane: GardenPane) {
+  const region = paneLocator(page, pane).first();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!(await inLayout(page, pane))) await press(page, pane);
+    if (
+      await region.waitFor({ state: 'visible', timeout: 5000 }).then(
+        () => true,
+        () => false,
+      )
+    )
+      return region;
+  }
+  await region.waitFor({ state: 'visible' });
+  return region;
+}
+
+/** Close a pane if it is open. */
+export async function hidePane(page: Page, pane: GardenPane) {
+  if (!(await inLayout(page, pane))) return;
+  await press(page, pane);
+  await expect(page.getByTestId(`pane-body-${PANE_TYPE[pane]}`)).toHaveCount(0);
+}

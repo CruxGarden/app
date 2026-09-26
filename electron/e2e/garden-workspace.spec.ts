@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
+import { showPane } from './panel-helpers';
 import { enterGarden, createCrux } from './multi-crux-helpers';
 
 test('Garden Home, recursive Navigator, Crux moves and outside agents use the same graph', async () => {
@@ -110,11 +111,15 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
         .getByRole('dialog', { name: 'Garden location', exact: true })
         .getByRole('button', { name: 'Close crux', exact: true })
         .click();
+      // Closing the Crux lands on its Garden's Home; let that workspace settle.
+      await expect(page.getByTestId('pane-body-home')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
+        'Observatory',
+      );
     }
 
     // Supporting surfaces are panels; Home and Navigator remain interactive.
-    await page.keyboard.press('ControlOrMeta+,');
-    const settings = page.getByRole('region', { name: 'Settings', exact: true });
+    const settings = await showPane(page, 'Settings');
     await expect(settings).toBeVisible();
     await expect(nav).toBeVisible();
     await settings

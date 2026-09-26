@@ -1,7 +1,7 @@
 import { useGardenContext } from '@/stores/gardenContext';
 import GardenLocation from './GardenLocation';
 import NavigationHistory from './NavigationHistory';
-import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
+import { useUIStore, useWorkspaceUIStore, type PaneType } from '@/stores/uiStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import PanelPicker from './PanelPicker';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
@@ -13,6 +13,8 @@ import { SearchIcon, MoodIcon, ChevronRightIcon, PlusCircleIcon } from '@/compon
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
 import { useShallow } from 'zustand/react/shallow';
+
+const OWN_BUTTON = new Set<PaneType>(['navigator', 'explore', 'mood', 'console']);
 
 export default function TopBar() {
   const { paneOrder, paneVisibility, togglePane, activeCruxId } = useWorkspaceUIStore(
@@ -30,7 +32,8 @@ export default function TopBar() {
   const aiEnabled = useUIStore((s) => s.aiEnabled);
 
   // The bar mirrors the visible workspace; closed panels live in the picker.
-  const enabledPanes = paneOrder.filter((p) => paneVisibility[p]);
+  // Navigator, Explore, Mood and the Garden's Collaboration have their own buttons.
+  const enabledPanes = paneOrder.filter((p) => paneVisibility[p] && !OWN_BUTTON.has(p));
 
   const desktopChrome = can(Capability.DesktopChrome);
 
@@ -73,7 +76,7 @@ export default function TopBar() {
         className="flex flex-wrap min-w-0 items-center gap-1"
         style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
       >
-        {activeCruxId && (
+        {enabledPanes.length > 0 && (
           <>
             {/* The builder's lane header — the pane toggles — sits in the same
                 flat pill as the sound chip (Daniel, 2026-09-20). */}
@@ -126,7 +129,8 @@ export default function TopBar() {
         <IconButton
           label="Explore"
           size="sm"
-          onClick={() => useUIStore.getState().setExploreOpen(true)}
+          active={paneVisibility.explore}
+          onClick={() => togglePane('explore')}
           tooltip={{ label: 'Explore' }}
         >
           <SearchIcon />
@@ -134,7 +138,8 @@ export default function TopBar() {
         <IconButton
           label="Mood"
           size="sm"
-          onClick={() => useUIStore.getState().toggleMoodPanel()}
+          active={paneVisibility.mood}
+          onClick={() => togglePane('mood')}
           tooltip={{ label: 'Mood', shortcut: 'M' }}
         >
           <MoodIcon />
@@ -144,11 +149,13 @@ export default function TopBar() {
             <div className="w-px h-5 bg-toolbar-divider mx-1" />
             <div className="relative group/btn flex items-center">
               <button
-                onClick={() => useUIStore.getState().toggleConsole()}
+                onClick={() => togglePane('console')}
                 aria-label="Console"
+                aria-pressed={paneVisibility.console}
                 className={cn(
                   'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
-                  'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
+                  'ring-1 hover:ring-accent/40 transition-shadow cursor-pointer',
+                  paneVisibility.console ? 'ring-accent/60' : 'ring-text-muted/20',
                 )}
               >
                 <ConsoleAvatar className="w-6 h-6" />

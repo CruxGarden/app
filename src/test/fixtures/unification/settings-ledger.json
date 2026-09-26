@@ -444,6 +444,13 @@
       "status": "planned"
     },
     {
+      "prefix": "cruxgarden:garden-layout:",
+      "group": "dynamic",
+      "target": "workspace presentation",
+      "preservation": "A Garden workspace's own pane arrangement (Home and Garden-wide panes), per Garden; device presentation state, never a selection.",
+      "status": "implemented"
+    },
+    {
       "prefix": "cruxgarden:editor-tabs:",
       "group": "dynamic",
       "target": "Crux local presentation",
