@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { SectionLabel } from '@/components/ui';
 import type { CruxSummary as CruxSummaryType } from '@/api/types';
 
 interface CruxSummaryProps {
@@ -9,9 +10,9 @@ interface CruxSummaryProps {
 function SummaryField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2">
-      <span className="text-accent font-mono text-xxs uppercase tracking-wider shrink-0 w-16 pt-0.5">
+      <SectionLabel tone="accent" className="shrink-0 w-16 pt-0.5">
         {label}
-      </span>
+      </SectionLabel>
       <span className="text-text-muted text-sm leading-relaxed">{value}</span>
     </div>
   );

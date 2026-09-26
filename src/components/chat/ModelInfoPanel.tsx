@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { SectionLabel } from '@/components/ui';
 import { getModelInfo, PROVIDERS, getProviderForModel } from '@/ai/providers';
 import { defaultToolDefinitions } from '@/ai/tools';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -161,7 +162,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Capabilities */}
           <div className="space-y-1.5">
-            <div className="text-text-muted text-2xs uppercase tracking-wider">Capabilities</div>
+            <SectionLabel as="div" tone="muted">Capabilities</SectionLabel>
             <div className="flex gap-1.5 flex-wrap">
               {provider.capabilities.map((cap) => (
                 <span key={cap} className="px-2 py-0.5 bg-accent-muted rounded text-text text-xxs">
@@ -173,9 +174,9 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Tools grid */}
           <div className="space-y-1.5">
-            <div className="text-text-muted text-2xs uppercase tracking-wider">
+            <SectionLabel as="div" tone="muted">
               Tools ({defaultToolDefinitions().length})
-            </div>
+            </SectionLabel>
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
               {defaultToolDefinitions()
                 .filter(

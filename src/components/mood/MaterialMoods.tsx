@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SectionLabel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { bundledMood } from '@/lib/moods/bundled-moods';
 import type { MoodPackage } from '@/lib/moods/packages';
@@ -126,7 +127,7 @@ function Seg({
 }) {
   return (
     <div className="flex items-center gap-2" data-testid={testId}>
-      <span className="text-xxs font-mono uppercase tracking-wider text-caption w-16">{label}</span>
+      <SectionLabel className="w-16">{label}</SectionLabel>
       <div className="inline-flex rounded-[var(--radius-sm)] border border-border overflow-hidden">
         {options.map((o) => (
           <button
@@ -205,7 +206,7 @@ export default function MaterialMoods({
   return (
     <section className="flex flex-col gap-3" data-testid="material-moods">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-xxs font-display uppercase tracking-wider text-caption">Material</h3>
+        <SectionLabel as="h3">Material</SectionLabel>
         <span className="text-2xs text-text-muted text-right">
           A material, a hue, a mode — {worn ? 'wearing it now' : 'click to wear one'}.
         </span>
@@ -231,7 +232,7 @@ export default function MaterialMoods({
         testId="material-mode"
       />
       <div className="flex items-center gap-2" data-testid="material-hue">
-        <span className="text-xxs font-mono uppercase tracking-wider text-caption w-16">Hue</span>
+        <SectionLabel className="w-16">Hue</SectionLabel>
         <div className="flex flex-wrap gap-2">
           {HUES.map((h) => {
             const sw = swatch(h.id, mode);

@@ -8,7 +8,7 @@ import { getServices } from '@/services';
 import { cn } from '@/lib/cn';
 import { publicCruxUrl } from '@/lib/public-url';
 import { parseFrontmatter, slugify, globToRegex } from '@/lib/frontmatter';
-import { Modal, Input, Button } from '@/components/ui';
+import { Modal, Input, Button, Select, Textarea, SectionLabel } from '@/components/ui';
 import type { ContentModel, ContentCollection, BuilderAction } from '@/templates';
 import type { Artifact } from '@/api/types';
 import { alertDialog } from '@/stores/dialogStore';
@@ -216,9 +216,9 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
 
   return (
     <section>
-      <h2 className="text-xs font-display uppercase tracking-wider text-text-muted mb-3">
+      <SectionLabel as="h2" tone="muted" className="mb-3">
         {collection.name} · {items.length}
-      </h2>
+      </SectionLabel>
       {sorted.length === 0 ? (
         <p className="text-xs text-text-muted">
           Nothing here yet — create your first {collection.singular.toLowerCase()} above.
@@ -322,9 +322,9 @@ function ShelfSection({ path }: { path: string }) {
   const openFile = useUIStore((s) => s.openFile);
   return (
     <section data-testid="shelf-section">
-      <h2 className="text-xs font-display uppercase tracking-wider text-text-muted mb-1">
+      <SectionLabel as="h2" tone="muted" className="mb-1">
         Shelf{shelf ? ` · ${shelf.entries.length}` : ''}
-      </h2>
+      </SectionLabel>
       {shelf && (
         <p className="text-xs text-text-muted mb-3">
           <span className="text-text">{shelf.title}</span> — {shelf.question}
@@ -367,8 +367,6 @@ function ShelfSection({ path }: { path: string }) {
   );
 }
 
-const fieldClass =
-  'w-full px-3 py-2 text-sm rounded-[var(--radius-sm)] bg-surface border border-border text-text focus:outline-none focus:border-accent';
 
 const EMPTY_ENTRY = {
   name: '',
@@ -456,10 +454,10 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
             placeholder="Aliases, comma-separated (variants, spellings, titles)"
           />
           <div className="flex gap-2">
-            <select
+            <Select
               value={form.kind}
               onChange={set('kind')}
-              className={fieldClass}
+              fieldSize="sm"
               aria-label="Kind"
             >
               {HIDDEN_KINDS.map((k) => (
@@ -467,31 +465,31 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
                   {k}
                 </option>
               ))}
-            </select>
+            </Select>
             <Input value={form.era} onChange={set('era')} placeholder="Era — c. 355–415" />
           </div>
-          <textarea
+          <Textarea
             value={form.voiceNote}
             onChange={set('voiceNote')}
             placeholder="Voice note — one line: temperament, and how they deflect"
             rows={2}
-            className={fieldClass}
+            fieldSize="sm"
           />
-          <select
+          <Select
             value={form.provenance}
             onChange={set('provenance')}
-            className={fieldClass}
+            fieldSize="sm"
             aria-label="Provenance"
           >
             <option value="sourced">sourced — facts can be checked against the pages below</option>
             <option value="unsourced">unsourced — spoken from what is commonly told</option>
-          </select>
-          <textarea
+          </Select>
+          <Textarea
             value={form.sources}
             onChange={set('sources')}
             placeholder="Sources — one URL per line"
             rows={2}
-            className={fieldClass}
+            fieldSize="sm"
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>

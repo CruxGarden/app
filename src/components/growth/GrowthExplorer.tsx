@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGrowthGraphView } from './useGrowthGraphView';
 import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
-import { Modal } from '@/components/ui';
+import { Modal, SectionLabel } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { loadGrowthGraph, type GrowthGraph } from '@/services/growth-graph';
 import { TASKS_CHANGED } from '@/services/working-copies';
@@ -138,9 +138,9 @@ export default function GrowthExplorer({
       >
         <header className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
           <div>
-            <p className="text-xs uppercase tracking-widest font-mono text-accent">
+            <SectionLabel as="p" tone="accent">
               Growth · Whole Crux
-            </p>
+            </SectionLabel>
             <h2 className="font-display text-xl">{graph?.title ?? 'Your creation’s history'}</h2>
             <p className="text-xs text-text-muted mt-1">
               {graph

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { downloadBlob } from '@/lib/download';
 import { useNavigate } from 'react-router-dom';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, Input, Select } from '@/components/ui';
 import { getServices } from '@/services';
 import type { Crux } from '@/api/types';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -28,7 +28,6 @@ import {
 import { startCruxspaceWalk } from '@/stores/cruxspaceWalk';
 
 const CruxspaceStory = lazy(() => import('./CruxspaceStory'));
-const field = 'w-full rounded-[var(--radius-sm)] border border-border bg-bg p-2 text-sm text-text';
 function Thumbnail({ asset }: { asset: CruxspaceAsset }) {
   const url = useBlobUrl(asset.fingerprint, asset.mimeType);
   const kind = outputKind(asset.mimeType);
@@ -199,9 +198,9 @@ export default function Cruxspaces({
       {space ? (
         <>
           {targetId && spaces.length > 1 && (
-            <select
+            <Select
               aria-label="Garden"
-              className={`${field} mb-3`}
+              fieldSize="sm" className="mb-3"
               value={selected}
               onChange={(e) => {
                 setSelected(e.target.value);
@@ -213,7 +212,7 @@ export default function Cruxspaces({
                   {s.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
           {moment && moment.spaceId === selected && (
             <p
@@ -341,9 +340,9 @@ export default function Cruxspaces({
           {!targetId && (
             <label className="block text-sm">
               Receiving Crux
-              <select
+              <Select
                 required
-                className={field}
+                fieldSize="sm"
                 value={receiver}
                 onChange={(e) => setReceiver(e.target.value)}
               >
@@ -355,7 +354,7 @@ export default function Cruxspaces({
                       {c.title || 'Untitled'}
                     </option>
                   ))}
-              </select>
+              </Select>
             </label>
           )}
           {using && outputKind(using.mimeType) === 'bundle' && (
@@ -377,9 +376,9 @@ export default function Cruxspaces({
           )}
           <label className="block text-sm">
             {unpack ? 'Destination folder' : 'Destination path'}
-            <input
+            <Input
               required
-              className={field}
+              fieldSize="sm"
               value={path}
               onChange={(e) => setPath(e.target.value)}
             />

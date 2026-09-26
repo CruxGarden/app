@@ -3,7 +3,7 @@ import { getSqliteClient } from '@/services/sqlite/client';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useState, useRef, useEffect } from 'react';
 import type { Dimension, CruxSummary as CruxSummaryType } from '@/api/types';
-import { LoadingPanel } from '@/components/ui';
+import { LoadingPanel, SegmentedControl } from '@/components/ui';
 import { useCruxStore } from '@/stores/cruxStore';
 import { confirmDialog, alertDialog } from '@/stores/dialogStore';
 import CruxSummary from './CruxSummary';
@@ -119,25 +119,15 @@ export default function GrowthTimeline({
   return (
     <div className="flex flex-col h-full">
       {crux && getSqliteClient().fileContent && (
-        <div
-          className="flex gap-3 px-3 py-2 border-b border-border text-xs"
-          aria-label="History views"
-        >
-          <button
-            className="cursor-pointer px-2 py-1 rounded-[var(--radius-sm)] aria-pressed:bg-accent/15 aria-pressed:text-accent"
-            aria-pressed={view === 'growth'}
-            onClick={() => setView('growth')}
-          >
-            Growth
-          </button>
-          <button
-            className="cursor-pointer px-2 py-1 rounded-[var(--radius-sm)] aria-pressed:bg-accent/15 aria-pressed:text-accent"
-            aria-pressed={view === 'history'}
-            onClick={() => setView('history')}
-          >
-            Edit history
-          </button>
-        </div>
+        <SegmentedControl
+          label="History views"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'growth', label: 'Growth' },
+            { value: 'history', label: 'Edit history' },
+          ]}
+        />
       )}
       <div className="flex-1 overflow-y-auto min-h-0">
         {view === 'history' && crux ? (

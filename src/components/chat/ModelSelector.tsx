@@ -1,4 +1,5 @@
 import { includedUsage } from '@/api/inference';
+import { SectionLabel } from '@/components/ui';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useAuthStore } from '@/stores/authStore';
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
@@ -226,10 +227,10 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                     {(() => {
                       const Icon = PROVIDER_ICONS[group.providerId];
                       return (
-                        <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                        <SectionLabel as="div" tone="muted" className="px-3 py-1 flex items-center gap-1.5">
                           {Icon && <Icon size={10} />}
                           {group.provider}
-                        </div>
+                        </SectionLabel>
                       );
                     })()}
                     {group.models.map((model) => (
@@ -262,13 +263,13 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                       key={agentGroup.providerId}
                       data-testid={`model-group-${agentGroup.providerId}`}
                     >
-                      <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                      <SectionLabel as="div" tone="muted" className="px-3 py-1 flex items-center gap-1.5">
                         {(() => {
                           const Icon = PROVIDER_ICONS[agentGroup.providerId];
                           return Icon ? <Icon size={10} /> : null;
                         })()}
                         Your agent
-                      </div>
+                      </SectionLabel>
                       {agentGroup.models.map((model) => (
                         <button
                           key={model.id}
@@ -304,9 +305,9 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                 {/* Local inference (desktop, running servers only) */}
                 {localEndpoints.map((endpoint) => (
                   <div key={endpoint.id}>
-                    <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider">
+                    <SectionLabel as="div" tone="muted" className="px-3 py-1">
                       {endpoint.name} · local
-                    </div>
+                    </SectionLabel>
                     {sortLocalModels(endpoint.models).map((name) => {
                       const id = `${endpoint.id}/${name}`;
                       return (

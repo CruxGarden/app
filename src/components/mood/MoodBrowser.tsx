@@ -3,7 +3,7 @@ import { downloadBlob } from '@/lib/download';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { Button, SectionLabel } from '@/components/ui';
 import { ExportIcon, ShareIcon, CloseIcon } from '@/components/ui/icons';
 import { getSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -449,9 +449,9 @@ export default function MoodBrowser() {
       {/* HyperMoods: the rooms with their own render, track, cues and effects. */}
       <section className="flex flex-col gap-2" data-testid="bundled-moods">
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-xxs font-display uppercase tracking-wider text-caption">
+          <SectionLabel as="h3">
             HyperMoods
-          </h3>
+          </SectionLabel>
           <span className="text-2xs text-text-muted text-right">
             {HYPER_MOODS.length} rooms — a render, a sound and a voice, made as one. Click one to
             wear it.
@@ -493,7 +493,7 @@ export default function MoodBrowser() {
       </details>
 
       <section className="flex flex-col gap-2">
-        <h3 className="text-xxs font-display uppercase tracking-wider text-caption mt-3">Yours</h3>
+        <SectionLabel as="h3" className="mt-3">Yours</SectionLabel>
       </section>
 
       {moods.length === 0 ? (

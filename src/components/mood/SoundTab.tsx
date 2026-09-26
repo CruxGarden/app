@@ -1,7 +1,7 @@
 import SynthControls from './SynthControls';
 import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { Button } from '@/components/ui';
+import { Button, SectionLabel } from '@/components/ui';
 import { useAudioStore } from '@/stores/audioStore';
 import {
   CUE_EVENTS,
@@ -34,9 +34,9 @@ export default function SoundTab() {
       <SynthControls />
       {/* Cues */}
       <section className="flex flex-col gap-2">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted">
+        <SectionLabel as="div" tone="muted">
           Cues — short sounds on events
-        </div>
+        </SectionLabel>
         <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1.5 items-center">
           {CUE_EVENTS.map((ev) => (
             <div key={ev.id} className="contents">

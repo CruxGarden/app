@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
+import { SectionLabel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import type { Crux, CruxSummary, CruxKind, CruxVisibility, ChatMessage } from '@/api/types';
@@ -35,7 +36,7 @@ const KIND_LABELS: Record<string, string> = {
 export function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">{label}</span>
+      <SectionLabel tone="muted">{label}</SectionLabel>
       <div className="text-xs font-mono text-text">{children}</div>
     </div>
   );
@@ -429,9 +430,9 @@ export default function MetadataContent({
         <>
           <div className="divider" />
           <div className="flex flex-col gap-2">
-            <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
+            <SectionLabel tone="muted">
               AI Summary
-            </span>
+            </SectionLabel>
             {summary.purpose && (
               <FieldRow label="Purpose">
                 <span className="whitespace-pre-wrap">{summary.purpose}</span>

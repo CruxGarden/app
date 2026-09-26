@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useGrowthGraphView } from '@/components/growth/useGrowthGraphView';
 import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
 import { useNavigate } from 'react-router-dom';
-import { Modal } from '@/components/ui';
+import { Modal, SectionLabel } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import GrowthInspector from '@/components/growth/GrowthInspector';
 import { laneColor } from '@/components/growth/graph-style';
@@ -178,9 +178,9 @@ export default function CruxspaceStory({
       >
         <header className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
           <div>
-            <p className="text-xs uppercase tracking-widest font-mono text-accent">
+            <SectionLabel as="p" tone="accent">
               Garden · history
-            </p>
+            </SectionLabel>
             <h2 className="font-display text-xl">{history?.space.name ?? 'Loading…'}</h2>
             <p className="text-xs text-text-muted mt-1">
               {history
@@ -269,15 +269,15 @@ export default function CruxspaceStory({
             className="w-[26rem] shrink-0 border-r border-border overflow-y-auto p-4 space-y-5 text-sm"
           >
             <section aria-label="About this Garden">
-              <h3 className="text-xs uppercase tracking-widest font-display text-text-muted mb-1">
+              <SectionLabel as="h3" tone="muted" className="mb-1">
                 What this Garden is for
-              </h3>
+              </SectionLabel>
               <p className="whitespace-pre-wrap">{history?.space.brief || 'No brief yet.'}</p>
             </section>
             <section aria-label="Members">
-              <h3 className="text-xs uppercase tracking-widest font-display text-text-muted mb-1">
+              <SectionLabel as="h3" tone="muted" className="mb-1">
                 Members and their part
-              </h3>
+              </SectionLabel>
               <ul className="space-y-1">
                 {history?.members.map((m, i) => (
                   <li key={m.id} className="flex items-start gap-2">
@@ -307,9 +307,9 @@ export default function CruxspaceStory({
             </section>
             <section aria-label="Milestones">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <h3 className="text-xs uppercase tracking-widest font-display text-text-muted">
+                <SectionLabel as="h3" tone="muted">
                   Milestones, in order
-                </h3>
+                </SectionLabel>
                 {!walking && history && history.milestones.length > 0 && (
                   <button className={action} onClick={() => goTo(history.milestones[0]!)}>
                     Start walkthrough

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { SectionLabel } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK } from '@/lib/moods';
@@ -261,9 +262,9 @@ export default function MoodEditor() {
             <AppearanceControls />
             {userPresets.length > 0 && (
               <div className="mb-4">
-                <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+                <SectionLabel as="div" tone="muted" className="mb-2">
                   Yours
-                </div>
+                </SectionLabel>
                 <div className="grid grid-cols-5 gap-2">
                   {userPresets.map((preset) => {
                     const active =
@@ -304,9 +305,9 @@ export default function MoodEditor() {
               if (sectionPresets.length === 0) return null;
               return (
                 <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
-                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+                  <SectionLabel as="div" tone="muted" className="mb-2">
                     {section}
-                  </div>
+                  </SectionLabel>
                   <div className="grid grid-cols-5 gap-2">
                     {sectionPresets.map((preset) => (
                       <button
@@ -332,15 +333,15 @@ export default function MoodEditor() {
               );
             })}
             <div>
-              <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+              <SectionLabel as="div" tone="muted" className="mb-2">
                 Tokens
-              </div>
+              </SectionLabel>
               <ThemeTokensTab />
             </div>
             <div>
-              <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+              <SectionLabel as="div" tone="muted" className="mb-2">
                 Files
-              </div>
+              </SectionLabel>
               <AssetsTab />
             </div>
           </div>

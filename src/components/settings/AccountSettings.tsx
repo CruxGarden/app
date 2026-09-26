@@ -3,7 +3,7 @@ import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { authors as authorsApi } from '@/api';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, SectionLabel } from '@/components/ui';
 import { apiBaseUrl, apiUrlIsLaunched, normalizeApiUrl, DEFAULT_API_URL } from '@/api/client';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -254,7 +254,7 @@ function ApiAddress() {
   };
   return (
     <div className="mt-4" data-testid="api-address">
-      <p className="text-xs font-mono uppercase tracking-wider text-text-muted mb-1">API address</p>
+      <SectionLabel as="p" tone="muted" className="mb-1">API address</SectionLabel>
       {launched ? (
         <p className="text-xs text-text-muted">
           Pinned for this launch: <span className="font-mono text-text">{current}</span>

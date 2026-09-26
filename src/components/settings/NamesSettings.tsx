@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import SettingsSection from './SettingsSection';
-import { Input } from '@/components/ui';
+import { Input, SectionLabel } from '@/components/ui';
 import {
   applyActiveMood,
   getThemeOverrides,
@@ -49,9 +49,9 @@ export default function NamesSettings() {
       description="What this Garden is called, and its panes. Leave a pane empty for the usual word."
     >
       <label className="flex flex-col gap-1 mb-4">
-        <span className="text-xs font-mono uppercase tracking-wider text-text-muted">
+        <SectionLabel tone="muted">
           Garden title
-        </span>
+        </SectionLabel>
         <Input
           key={garden?.id}
           aria-label="Garden title"

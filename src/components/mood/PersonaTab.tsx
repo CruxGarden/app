@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { SectionLabel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import { getPersona, savePersona, DEFAULT_PERSONA, type PersonaSettings } from './mood-helpers';
@@ -85,9 +86,9 @@ export function PersonaTab() {
     <div className="flex flex-col gap-4 h-full">
       {/* Thumbnails */}
       <div className="shrink-0">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+        <SectionLabel as="div" tone="muted" className="mb-2">
           Avatar
-        </div>
+        </SectionLabel>
         <div className="flex items-start gap-4">
           <div className="flex flex-col items-center gap-1">
             <button
@@ -125,9 +126,9 @@ export function PersonaTab() {
 
       {/* Name */}
       <div className="shrink-0">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5">
+        <SectionLabel as="div" tone="muted" className="mb-1.5">
           Name
-        </div>
+        </SectionLabel>
         <input
           type="text"
           value={persona.name}
@@ -140,9 +141,9 @@ export function PersonaTab() {
 
       {/* Greeting */}
       <div className="shrink-0">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5">
+        <SectionLabel as="div" tone="muted" className="mb-1.5">
           Greeting
-        </div>
+        </SectionLabel>
         <input
           type="text"
           value={persona.greeting}
@@ -155,9 +156,9 @@ export function PersonaTab() {
 
       {/* System Prompt */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5 shrink-0">
+        <SectionLabel as="div" tone="muted" className="mb-1.5 shrink-0">
           System Prompt
-        </div>
+        </SectionLabel>
         <textarea
           value={persona.systemPrompt}
           onChange={(e) => update({ systemPrompt: e.target.value })}

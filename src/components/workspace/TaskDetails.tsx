@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, SectionLabel } from '@/components/ui';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useTendingRows } from '@/stores/tendingStore';
 import { tendingLabel } from '@/services/tending-state';
@@ -111,9 +111,9 @@ export default function TaskDetails() {
 
   return (
     <section className="task-details flex flex-col gap-3 text-sm" data-testid="task-details">
-      <h3 className="text-xs font-display uppercase tracking-wider text-text-muted">
+      <SectionLabel as="h3" tone="muted">
         {isTask ? 'This task' : 'Main'}
-      </h3>
+      </SectionLabel>
       <label className="flex flex-col gap-1">
         <span className="text-xs text-text-muted">Name</span>
         <Input

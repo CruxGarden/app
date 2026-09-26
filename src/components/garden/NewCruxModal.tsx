@@ -11,7 +11,7 @@ import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
-import { Modal, Button, PlasmaButton } from '@/components/ui';
+import { Modal, Button, PlasmaButton, SectionLabel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { FIVE_WS_NAME, FIVE_WS_TEMPLATE_ID, FIVE_WS_TAGLINE } from '@/templates';
 import { applyTemplateToCrux } from '@/services/crux-create';
@@ -658,12 +658,10 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           <p className="text-sm text-text-muted">
             Start with an idea or choose a starting point. You can change everything as you go.
           </p>
-          <label
-            htmlFor="new-crux-idea"
-            className="block text-xs font-mono text-text-muted uppercase tracking-wider pt-3 mb-2"
-          >
+          <SectionLabel 
+            htmlFor="new-crux-idea" as="label" tone="muted" className="pt-3 mb-2">
             Your idea <span className="normal-case tracking-normal">(optional)</span>
-          </label>
+          </SectionLabel>
           <textarea
             id="new-crux-idea"
             value={idea}
@@ -679,12 +677,10 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         </div>
         {/* Name */}
         <div className="shrink-0">
-          <label
-            htmlFor="new-crux-name"
-            className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2"
-          >
+          <SectionLabel 
+            htmlFor="new-crux-name" as="label" tone="muted" className="mb-2">
             Name
-          </label>
+          </SectionLabel>
           <input
             id="new-crux-name"
             type="text"
@@ -704,9 +700,9 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
 
         {/* Template selector — scrollable */}
         <div className="flex-1 min-h-0 flex flex-col">
-          <label className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2 shrink-0">
+          <SectionLabel as="label" tone="muted" className="mb-2 shrink-0">
             Starting point
-          </label>
+          </SectionLabel>
           <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
             <div className="flex flex-col">
               {TEMPLATES.filter(

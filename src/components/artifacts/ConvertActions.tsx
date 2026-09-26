@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { SectionLabel } from '@/components/ui';
 import type { Artifact } from '@/api/types';
 import { basename, parentPath, pathOf } from '@/lib/artifact-path';
 import {
@@ -389,7 +390,7 @@ export default function ConvertActions({ artifact }: { artifact: Artifact }) {
 
   return (
     <div className="flex flex-col gap-1" data-testid="convert-actions">
-      <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">Convert</span>
+      <SectionLabel tone="muted">Convert</SectionLabel>
       <div className="flex flex-wrap gap-1">
         {actions.map((a) => (
           <button

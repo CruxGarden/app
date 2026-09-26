@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { cn } from '@/lib/cn';
+import { Input, Select, Textarea } from '@/components/ui';
 import type { FormField, FormSchema, RepeaterFormField } from '@/templates';
 
 interface TemplateFormProps {
@@ -69,14 +69,14 @@ function FieldRenderer({
       return (
         <label className="block">
           <span className={labelClass}>{field.label}</span>
-          <input
+          <Input
             type={field.type === 'number' ? 'number' : 'text'}
             value={String(value ?? '')}
             placeholder={field.placeholder}
             onChange={(e) =>
               onChange(field.type === 'number' ? Number(e.target.value) : e.target.value)
             }
-            className={inputClass}
+            fieldSize="sm"
           />
         </label>
       );
@@ -85,12 +85,12 @@ function FieldRenderer({
       return (
         <label className="block">
           <span className={labelClass}>{field.label}</span>
-          <textarea
+          <Textarea
             value={String(value ?? '')}
             placeholder={field.placeholder}
             rows={3}
             onChange={(e) => onChange(e.target.value)}
-            className={cn(inputClass, 'resize-y')}
+            fieldSize="sm" className={'resize-y'}
           />
         </label>
       );
@@ -113,12 +113,12 @@ function FieldRenderer({
       return (
         <label className="block">
           <span className={labelClass}>{field.label}</span>
-          <input
+          <Input
             type="text"
             value={String(value ?? '')}
             placeholder={field.placeholder || 'Image URL'}
             onChange={(e) => onChange(e.target.value)}
-            className={inputClass}
+            fieldSize="sm"
           />
         </label>
       );
@@ -127,10 +127,10 @@ function FieldRenderer({
       return (
         <label className="block">
           <span className={labelClass}>{field.label}</span>
-          <select
+          <Select
             value={String(value ?? '')}
             onChange={(e) => onChange(e.target.value)}
-            className={inputClass}
+            fieldSize="sm"
           >
             {'options' in field &&
               field.options.map((opt) => (
@@ -138,7 +138,7 @@ function FieldRenderer({
                   {opt.label}
                 </option>
               ))}
-          </select>
+          </Select>
         </label>
       );
 
@@ -282,8 +282,3 @@ function RepeaterField({
 
 const labelClass = 'block text-xs font-mono text-text-muted mb-1';
 
-const inputClass = cn(
-  'w-full px-2 py-1.5 text-sm font-mono rounded-[var(--radius-sm)]',
-  'bg-surface-solid border border-border text-text placeholder:text-text-muted/50',
-  'focus:outline-none focus:border-input-border-active transition-colors',
-);

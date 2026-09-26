@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { Toggle } from '@/components/ui';
 import { readFlowSettings } from '@/lib/moods/flow';
 import {
   applyActiveMood,
@@ -36,17 +37,12 @@ export default function FlowControl() {
             light up. When you pause, they gently settle.
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={settings.enabled}
-          aria-labelledby={`${id}-title`}
-          aria-describedby={`${id}-description`}
-          onClick={() => change({ flowEnabled: settings.enabled ? 'off' : 'on' })}
-          className="shrink-0 rounded-[var(--radius-sm)] border border-border px-3 py-1 text-xs text-text bg-surface cursor-pointer hover:border-accent"
-        >
-          {settings.enabled ? 'On' : 'Off'}
-        </button>
+        <Toggle
+          checked={settings.enabled}
+          onChange={(on) => change({ flowEnabled: on ? 'on' : 'off' })}
+          labelledBy={`${id}-title`}
+          describedBy={`${id}-description`}
+        />
       </div>
       <div className={settings.enabled ? '' : 'opacity-50'}>
         <label htmlFor={`${id}-sensitivity`} className="text-xs text-text-muted">

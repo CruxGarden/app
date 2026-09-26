@@ -3,7 +3,7 @@ import { type MoodTab } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 import { BgType } from '@/lib/types';
 import { getResolvedMode } from './mood-helpers';
-import { Button } from '@/components/ui';
+import { Button, SectionLabel } from '@/components/ui';
 
 /** The Mood pane's Background tab: bloom, drift, flow, blank or an image of your own. */
 export function BackgroundTabContent({
@@ -45,7 +45,7 @@ export function BackgroundTabContent({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted">Animated</div>
+        <SectionLabel as="div" tone="muted">Animated</SectionLabel>
         <div className="grid grid-cols-2 gap-2">
           {animatedOptions.map(({ value, label, description, darkOnly }) => {
             const disabled = darkOnly && isLight;
@@ -72,7 +72,7 @@ export function BackgroundTabContent({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted">Image</div>
+        <SectionLabel as="div" tone="muted">Image</SectionLabel>
         <button
           onClick={() => {
             onChangeBgType(BgType.Image);
@@ -107,9 +107,9 @@ export function BackgroundTabContent({
             if (bgPrompt.trim() && !bgGenerating) onBgGenerate(bgPrompt.trim());
           }}
         >
-          <label className="text-2xs font-mono uppercase tracking-wider text-caption">
+          <SectionLabel as="label">
             Describe a backdrop
-          </label>
+          </SectionLabel>
           <div className="flex gap-2">
             <input
               value={bgPrompt}

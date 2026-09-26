@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui';
+import { Button, SectionLabel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   CUE_MAX_SECONDS,
@@ -120,7 +120,7 @@ export default function CueEditor({
 
   const field = (label: string, input: React.ReactNode, hint?: string): React.ReactNode => (
     <label className="flex flex-col gap-1 min-w-0">
-      <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">{label}</span>
+      <SectionLabel tone="muted">{label}</SectionLabel>
       {input}
       {hint && <span className="text-3xs text-text-muted">{hint}</span>}
     </label>
@@ -170,9 +170,9 @@ export default function CueEditor({
     );
   const group = (title: string, children: React.ReactNode) => (
     <fieldset className="min-w-0">
-      <legend className="text-2xs font-mono uppercase tracking-wider text-accent mb-1.5">
+      <SectionLabel as="legend" tone="accent" className="mb-1.5">
         {title}
-      </legend>
+      </SectionLabel>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2">{children}</div>
     </fieldset>
   );
@@ -210,7 +210,7 @@ export default function CueEditor({
       />
 
       <fieldset className="min-w-0">
-        <legend className="text-2xs font-mono uppercase tracking-wider text-accent mb-1.5 flex items-center gap-2">
+        <SectionLabel as="legend" tone="accent" className="mb-1.5 flex items-center gap-2">
           Voice
           <span className="inline-flex gap-1" role="tablist" aria-label="Voices">
             {value.voices.map((_, i) => (
@@ -247,7 +247,7 @@ export default function CueEditor({
               </button>
             )}
           </span>
-        </legend>
+        </SectionLabel>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2">
           {select(
             'Wave',

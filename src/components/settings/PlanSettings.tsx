@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
-import { Button } from '@/components/ui';
+import { Button, SegmentedControl } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
 import * as billingApi from '@/api/billing';
@@ -256,21 +256,17 @@ export default function PlanSettings() {
 
       {catalog && me && (
         <>
-          <div className="flex items-center justify-end gap-1 text-xxs font-mono text-text-muted mb-2">
-            {(['month', 'year'] as const).map((iv) => (
-              <button
-                key={iv}
-                type="button"
-                onClick={() => setInterval_(iv)}
-                aria-pressed={interval === iv}
-                className={cn(
-                  'px-2 py-0.5 rounded-[var(--radius-sm)] cursor-pointer',
-                  interval === iv ? 'text-text bg-surface' : 'hover:text-text',
-                )}
-              >
-                {iv === 'month' ? 'Monthly' : 'Yearly'}
-              </button>
-            ))}
+          <div className="flex justify-end mb-2">
+            <SegmentedControl
+              label="Billing interval"
+              size="xs"
+              value={interval}
+              onChange={setInterval_}
+              options={[
+                { value: 'month', label: 'Monthly' },
+                { value: 'year', label: 'Yearly' },
+              ]}
+            />
           </div>
           <div className="grid gap-2 @min-[560px]/settings:grid-cols-3">
             {catalog.plans.map(({ plan, prices }) => {

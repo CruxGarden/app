@@ -271,6 +271,8 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
                 </span>
                 <span className="pane-toolbar-label">{labels[paneType]}</span>
               </div>
+              {/* Home is the Garden's anchor: it stays. */}
+              {paneType !== 'home' && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -282,6 +284,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
               >
                 <CloseIcon size={12} />
               </button>
+              )}
             </div>
           )}
         >

@@ -16,7 +16,6 @@ import { useTendingRows } from '@/stores/tendingStore';
 import { startFromFiles, filesFromDataTransfer } from '@/services/file-routing';
 import { importCrux } from '@/services/crux-io';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
-import TendingLink from '@/components/tending/TendingLink';
 import { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
@@ -32,8 +31,7 @@ import Cruxspaces from '@/components/garden/Cruxspaces';
 import Gardens from '@/components/garden/Gardens';
 import { TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
 import { openGardenPage } from '@/lib/public-url';
-import { IconButton, Button, PlasmaButton, Spinner, Panel } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import { IconButton, Button, PlasmaButton, Spinner, Panel, SegmentedControl } from '@/components/ui';
 import { GlobeIcon, PlusCircleIcon } from '@/components/ui/icons';
 import { useAuthStore } from '@/stores/authStore';
 import * as cruxesApi from '@/api/cruxes';
@@ -201,7 +199,6 @@ export default function HomeGarden() {
               {garden && <GardenBrief key={garden.id} gardenId={garden.id} />}
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">{isHome ? 'Home Garden' : 'Garden'}</p>
-                <TendingLink />
                 {author && (
                   <IconButton
                     label="Public Garden"
@@ -234,27 +231,16 @@ export default function HomeGarden() {
           <div className="flex-1">
             <GardenSearch value={search} onChange={setSearch} />
           </div>
-          {/* Sort: a segmented control, one piece with the search field */}
-          <div
-            aria-label="Sort by"
-            className="flex items-center h-9 p-0.5 rounded-[var(--radius-sm)] bg-surface border border-border shrink-0"
-          >
-            {(['created', 'updated'] as const).map((field) => (
-              <button
-                key={field}
-                aria-pressed={sortBy === field}
-                onClick={() => setSortBy(field)}
-                className={cn(
-                  'h-full px-3 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-colors cursor-pointer',
-                  sortBy === field
-                    ? 'bg-panel text-text shadow-card'
-                    : 'text-text-muted hover:text-text',
-                )}
-              >
-                {field === 'created' ? 'Created' : 'Updated'}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            label="Sort by"
+            value={sortBy}
+            onChange={setSortBy}
+            options={[
+              { value: 'created', label: 'Created' },
+              { value: 'updated', label: 'Updated' },
+            ]}
+            className="h-9 shrink-0"
+          />
         </div>
       </Panel>
 

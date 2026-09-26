@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import * as syncApi from '@/api/sync';
 import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
-import { Spinner, Button, Toggle } from '@/components/ui';
+import { Spinner, Button, Toggle, SectionLabel } from '@/components/ui';
 import {
   isAutoBackupOn,
   setAutoBackup,
@@ -231,9 +231,9 @@ export default function SyncSettings() {
           </div>
 
           {/* Garden backup */}
-          <h3 className="text-2xs font-display text-caption mb-2 uppercase tracking-wider">
+          <SectionLabel as="h3" className="mb-2">
             Garden Backup
-          </h3>
+          </SectionLabel>
 
           {gardenStatus && (
             <p className="text-xs text-text-muted mb-3">
@@ -287,9 +287,9 @@ export default function SyncSettings() {
 
           {/* Synced cruxes */}
           <div className="border-t border-border my-4" />
-          <h3 className="text-2xs font-display text-caption mb-2 uppercase tracking-wider">
+          <SectionLabel as="h3" className="mb-2">
             Synced Cruxes
-          </h3>
+          </SectionLabel>
 
           {loading ? (
             <div className="flex items-center gap-2 text-xs text-text-muted">

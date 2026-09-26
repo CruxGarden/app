@@ -1,7 +1,6 @@
 import type { Crux } from '@/api/types';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Button } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import { Button, Input, Select, Textarea } from '@/components/ui';
 import { TIMER_PRESETS, addSchedule, type Action, type TimerPhase, type Trigger } from '@/services/schedules';
 import { cronError, describeCron } from '@/services/cron';
 import { GARDEN_EVENTS, type GardenEventName } from '@/services/garden-events';
@@ -93,28 +92,28 @@ function LocationRow({ children }: { children?: ReactNode }) {
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <Input
             aria-label="Place name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name (optional)"
-            className={cn(field, 'w-36')}
+            fieldSize="sm" className={'w-36'}
           />
-          <input
+          <Input
             aria-label="Latitude"
             value={lat}
             onChange={(e) => setLat(e.target.value)}
             placeholder="Latitude"
             inputMode="decimal"
-            className={cn(field, 'w-24')}
+            fieldSize="sm" className={'w-24'}
           />
-          <input
+          <Input
             aria-label="Longitude"
             value={lon}
             onChange={(e) => setLon(e.target.value)}
             placeholder="Longitude"
             inputMode="decimal"
-            className={cn(field, 'w-24')}
+            fieldSize="sm" className={'w-24'}
           />
           <Button size="sm" variant="secondary" onClick={typed} disabled={!lat || !lon}>
             Set
@@ -136,13 +135,13 @@ function WeatherSourceRow() {
   return (
     <div className="flex flex-col gap-1.5" data-testid="weather-source">
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <Input
           aria-label="Weather endpoint"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onBlur={() => setWeatherUrl(url)}
           placeholder="https://your-station.local/weather"
-          className={cn(field, 'w-80 font-mono')}
+          fieldSize="sm" className={'w-80 font-mono'}
         />
         {weather && <span className="text-text-muted">{describeWeather(weather)}</span>}
       </div>
@@ -178,8 +177,6 @@ function inAnHourLocal(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const field =
-  'h-8 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xs text-text';
 
 const TOOL_NAMES = () =>
   defaultToolDefinitions()
@@ -299,14 +296,14 @@ export default function ScheduleForm({
   };
 
   const cruxSelect = (id: string, value: string, set: (v: string) => void, anyLabel: string) => (
-    <select id={id} value={value} onChange={(e) => set(e.target.value)} className={field}>
+    <Select id={id} value={value} onChange={(e) => set(e.target.value)} fieldSize="sm">
       {anyLabel && <option value="">{anyLabel}</option>}
       {cruxes.map((c) => (
         <option key={c.id} value={c.id}>
           {c.title}
         </option>
       ))}
-    </select>
+    </Select>
   );
 
   return (
@@ -322,22 +319,22 @@ export default function ScheduleForm({
         <label htmlFor="schedule-title" className="text-text-muted">
           Title
         </label>
-        <input
+        <Input
           id="schedule-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Water the ferns"
-          className={field}
+          fieldSize="sm"
           autoFocus
         />
         <label htmlFor="schedule-kind" className="text-text-muted">
           When
         </label>
-        <select
+        <Select
           id="schedule-kind"
           value={kind}
           onChange={(e) => setKind(e.target.value as Trigger['kind'])}
-          className={field}
+          fieldSize="sm"
         >
           <option value="at">At a time (once)</option>
           <option value="every">Every N minutes</option>
@@ -347,18 +344,18 @@ export default function ScheduleForm({
           <option value="sun">At dawn, sunrise, sunset or dusk</option>
           <option value="weather">When the weather turns</option>
           <option value="untouched">When a Crux sits untouched</option>
-        </select>
+        </Select>
         {kind === 'at' && (
           <>
             <label htmlFor="schedule-when" className="text-text-muted">
               Time
             </label>
-            <input
+            <Input
               id="schedule-when"
               type="datetime-local"
               value={when}
               onChange={(e) => setWhen(e.target.value)}
-              className={field}
+              fieldSize="sm"
             />
           </>
         )}
@@ -368,7 +365,7 @@ export default function ScheduleForm({
               Every
             </label>
             <div className="flex items-center gap-2">
-              <input
+              <Input
                 id="schedule-minutes"
                 type="number"
                 min={1}
@@ -377,7 +374,7 @@ export default function ScheduleForm({
                 onChange={(e) =>
                   setMinutes(Math.max(1, Math.min(10080, Number(e.target.value) || 1)))
                 }
-                className={`${field} w-24`}
+                fieldSize="sm" className="w-24"
               />
               <span className="text-text-muted">minutes</span>
             </div>
@@ -389,12 +386,12 @@ export default function ScheduleForm({
               Cron
             </label>
             <div className="flex flex-col gap-1">
-              <input
+              <Input
                 id="schedule-cron"
                 value={expr}
                 onChange={(e) => setExpr(e.target.value)}
                 placeholder="0 9 * * mon-fri"
-                className={`${field} font-mono`}
+                fieldSize="sm" className="font-mono"
               />
               <span className="text-2xs text-text-muted" data-testid="cron-reading">
                 {cronError(expr) ??
@@ -408,18 +405,18 @@ export default function ScheduleForm({
             <label htmlFor="schedule-event" className="text-text-muted">
               Event
             </label>
-            <select
+            <Select
               id="schedule-event"
               value={event}
               onChange={(e) => setEvent(e.target.value as GardenEventName)}
-              className={field}
+              fieldSize="sm"
             >
               {GARDEN_EVENTS.map((ev) => (
                 <option key={ev.id} value={ev.id}>
                   {ev.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </>
         )}
         {kind === 'untouched' && (
@@ -428,7 +425,7 @@ export default function ScheduleForm({
               After
             </label>
             <div className="flex items-center gap-2">
-              <input
+              <Input
                 id="schedule-days"
                 type="number"
                 min={0}
@@ -437,7 +434,7 @@ export default function ScheduleForm({
                 onChange={(e) =>
                   setDays(Math.max(0, Math.min(365, Number(e.target.value) || 0)))
                 }
-                className={`${field} w-20`}
+                fieldSize="sm" className="w-20"
               />
               <span className="text-text-muted">days untouched</span>
             </div>
@@ -448,7 +445,7 @@ export default function ScheduleForm({
             <label htmlFor="schedule-timer-preset" className="text-text-muted">
               Preset
             </label>
-            <select
+            <Select
               id="schedule-timer-preset"
               defaultValue={TIMER_PRESETS[0]!.id}
               onChange={(e) => {
@@ -458,25 +455,25 @@ export default function ScheduleForm({
                   setRounds(p.rounds);
                 }
               }}
-              className={field}
+              fieldSize="sm"
             >
               {TIMER_PRESETS.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className="text-text-muted">Phases</span>
             <div className="flex flex-col gap-1.5" data-testid="timer-phases">
               {phases.map((p, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <input
+                  <Input
                     aria-label={`Phase ${i + 1} name`}
                     value={p.label}
                     onChange={(e) => setPhase(i, { label: e.target.value })}
-                    className={cn(field, 'w-32')}
+                    fieldSize="sm" className={'w-32'}
                   />
-                  <input
+                  <Input
                     aria-label={`Phase ${i + 1} minutes`}
                     type="number"
                     min={1}
@@ -487,7 +484,7 @@ export default function ScheduleForm({
                         minutes: Math.max(1, Math.min(1440, Number(e.target.value) || 1)),
                       })
                     }
-                    className={cn(field, 'w-20')}
+                    fieldSize="sm" className={'w-20'}
                   />
                   <span className="text-text-muted">min</span>
                   <button
@@ -515,7 +512,7 @@ export default function ScheduleForm({
               Rounds
             </label>
             <div className="flex items-center gap-2">
-              <input
+              <Input
                 id="schedule-rounds"
                 type="number"
                 min={0}
@@ -524,18 +521,18 @@ export default function ScheduleForm({
                 onChange={(e) =>
                   setRounds(Math.max(0, Math.min(99, Number(e.target.value) || 0)))
                 }
-                className={`${field} w-20`}
+                fieldSize="sm" className="w-20"
               />
               <span className="text-text-muted">0 repeats until you stop it</span>
             </div>
             <label htmlFor="schedule-start-on" className="text-text-muted">
               Starts
             </label>
-            <select
+            <Select
               id="schedule-start-on"
               value={startOn}
               onChange={(e) => setStartOn(e.target.value as GardenEventName | '')}
-              className={field}
+              fieldSize="sm"
             >
               <option value="">When you press Start</option>
               {GARDEN_EVENTS.map((ev) => (
@@ -543,7 +540,7 @@ export default function ScheduleForm({
                   Itself, when {ev.label.charAt(0).toLowerCase() + ev.label.slice(1)}
                 </option>
               ))}
-            </select>
+            </Select>
           </>
         )}
         {kind === 'weather' && (
@@ -551,18 +548,18 @@ export default function ScheduleForm({
             <label htmlFor="schedule-weather" className="text-text-muted">
               Turns
             </label>
-            <select
+            <Select
               id="schedule-weather"
               value={condition}
               onChange={(e) => setCondition(e.target.value as WeatherKind | 'any')}
-              className={field}
+              fieldSize="sm"
             >
               {WEATHER_KINDS.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className="text-text-muted">Source</span>
             <WeatherSourceRow />
             <span className="text-text-muted">Place</span>
@@ -574,18 +571,18 @@ export default function ScheduleForm({
             <label htmlFor="schedule-sun" className="text-text-muted">
               Moment
             </label>
-            <select
+            <Select
               id="schedule-sun"
               value={sunPhase}
               onChange={(e) => setSunPhase(e.target.value as SunPhase)}
-              className={field}
+              fieldSize="sm"
             >
               {SUN_PHASES.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className="text-text-muted">Place</span>
             <LocationRow>
               <SunToday />
@@ -626,21 +623,21 @@ export default function ScheduleForm({
             <span className="text-text pt-1.5 w-24">{ACTION_LABEL[a.kind]}</span>
             <div className="flex flex-col gap-1.5">
               {a.kind === 'alert' && (
-                <input
+                <Input
                   aria-label={`Alert note ${i + 1}`}
                   value={a.body ?? ''}
                   onChange={(e) => setAction(i, { ...a, body: e.target.value })}
                   placeholder="A note with the alert (optional)"
-                  className={field}
+                  fieldSize="sm"
                 />
               )}
               {a.kind === 'cue' && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <select
+                  <Select
                     aria-label={`Cue ${i + 1}`}
                     value={typeof a.cue === 'string' ? a.cue : ''}
                     onChange={(e) => setAction(i, { ...a, cue: e.target.value })}
-                    className={field}
+                    fieldSize="sm"
                   >
                     {CUE_GROUPS.map((g) => (
                       <optgroup key={g.id} label={g.label}>
@@ -651,9 +648,9 @@ export default function ScheduleForm({
                         ))}
                       </optgroup>
                     ))}
-                  </select>
+                  </Select>
                   <label className="flex items-center gap-1 text-text-muted">
-                    <input
+                    <Input
                       aria-label={`Cue times ${i + 1}`}
                       type="number"
                       min={1}
@@ -665,7 +662,7 @@ export default function ScheduleForm({
                           times: Math.max(1, Math.min(10, Number(e.target.value) || 1)),
                         })
                       }
-                      className={`${field} w-16`}
+                      fieldSize="sm" className="w-16"
                     />
                     times
                   </label>
@@ -677,18 +674,18 @@ export default function ScheduleForm({
                 </span>
               )}
               {a.kind === 'mood' && (
-                <select
+                <Select
                   aria-label={`Mood ${i + 1}`}
                   value={a.moodId}
                   onChange={(e) => setAction(i, { ...a, moodId: e.target.value })}
-                  className={field}
+                  fieldSize="sm"
                 >
                   {moods.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               )}
               {a.kind === 'prompt' && (
                 <>
@@ -698,13 +695,13 @@ export default function ScheduleForm({
                     (v) => setAction(i, { ...a, cruxId: v }),
                     '',
                   )}
-                  <textarea
+                  <Textarea
                     aria-label={`Prompt ${i + 1}`}
                     value={a.prompt}
                     onChange={(e) => setAction(i, { ...a, prompt: e.target.value })}
                     placeholder="Summarise this week's changes into NOTES.md"
                     rows={2}
-                    className={cn(field, 'h-auto py-1.5')}
+                    fieldSize="sm" className={'h-auto py-1.5'}
                   />
                 </>
               )}
@@ -716,14 +713,14 @@ export default function ScheduleForm({
                     (v) => setAction(i, { ...a, cruxId: v }),
                     '',
                   )}
-                  <input
+                  <Input
                     aria-label={`Function ${i + 1}`}
                     value={a.name}
                     onChange={(e) => setAction(i, { ...a, name: e.target.value })}
                     placeholder="the handler's name — functions/<name>.js"
-                    className={`${field} font-mono`}
+                    fieldSize="sm" className="font-mono"
                   />
-                  <textarea
+                  <Textarea
                     aria-label={`Function input ${i + 1}`}
                     defaultValue={JSON.stringify(a.input)}
                     onBlur={(e) => {
@@ -739,7 +736,7 @@ export default function ScheduleForm({
                       }
                     }}
                     rows={2}
-                    className={cn(field, 'h-auto py-1.5 font-mono')}
+                    fieldSize="sm" className={'h-auto py-1.5 font-mono'}
                   />
                 </>
               )}
@@ -751,19 +748,19 @@ export default function ScheduleForm({
                     (v) => setAction(i, { ...a, cruxId: v }),
                     '',
                   )}
-                  <select
+                  <Select
                     aria-label={`Tool ${i + 1}`}
                     value={a.tool}
                     onChange={(e) => setAction(i, { ...a, tool: e.target.value })}
-                    className={`${field} font-mono`}
+                    fieldSize="sm" className="font-mono"
                   >
                     {TOOL_NAMES().map((n) => (
                       <option key={n} value={n}>
                         {n}
                       </option>
                     ))}
-                  </select>
-                  <textarea
+                  </Select>
+                  <Textarea
                     aria-label={`Tool input ${i + 1}`}
                     defaultValue={JSON.stringify(a.input)}
                     onBlur={(e) => {
@@ -779,7 +776,7 @@ export default function ScheduleForm({
                       }
                     }}
                     rows={2}
-                    className={cn(field, 'h-auto py-1.5 font-mono')}
+                    fieldSize="sm" className={'h-auto py-1.5 font-mono'}
                   />
                 </>
               )}

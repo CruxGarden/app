@@ -5,9 +5,19 @@ interface ToggleProps {
   onChange: (checked: boolean) => void;
   label?: string;
   disabled?: boolean;
+  /** Ids of the title and description elsewhere on the page, when the switch has no label of its own. */
+  labelledBy?: string;
+  describedBy?: string;
 }
 
-export default function Toggle({ checked, onChange, label, disabled }: ToggleProps) {
+export default function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled,
+  labelledBy,
+  describedBy,
+}: ToggleProps) {
   return (
     <label
       className={cn(
@@ -18,6 +28,8 @@ export default function Toggle({ checked, onChange, label, disabled }: TogglePro
       <button
         role="switch"
         aria-checked={checked}
+        aria-labelledby={labelledBy}
+        aria-describedby={describedBy}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(

@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { Spinner } from '@/components/ui';
+import { Spinner, SectionLabel } from '@/components/ui';
 
 /**
  * The shared vocabulary of the small workspace panes (Sync, Share, Export,
@@ -70,7 +70,7 @@ export function PaneSection({
     >
       {(label || aside) && (
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-2xs font-mono uppercase tracking-wider text-caption">{label}</span>
+          <SectionLabel>{label}</SectionLabel>
           {aside && <span className="text-xxs font-mono text-text-muted">{aside}</span>}
         </div>
       )}

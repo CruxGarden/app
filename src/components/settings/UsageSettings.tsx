@@ -1,4 +1,5 @@
 import IncludedUsagePanel from './IncludedUsagePanel';
+import { SectionLabel } from '@/components/ui';
 import SettingsSection from './SettingsSection';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
@@ -106,7 +107,7 @@ export default function UsageSettings() {
             />
           </div>
           <div data-testid="sync-usage" className="flex flex-col gap-1 text-xxs">
-            <div className="text-caption font-mono uppercase tracking-wider text-2xs">Sync</div>
+            <SectionLabel as="div">Sync</SectionLabel>
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-text">Garden backup</span>
               <span className="font-mono text-text-muted">
