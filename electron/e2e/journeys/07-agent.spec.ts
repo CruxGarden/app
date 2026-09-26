@@ -13,7 +13,7 @@ test('the Garden’s collaborator plants a Crux', async () => {
     const composer = console_.getByPlaceholder('Send a message...');
     await composer.fill('[garden:plant] Plant a notes crux for the field study.');
     await composer.press('Enter');
-    await expect(console_.getByText('Planted Field notes with its brief.')).toBeVisible({
+    await expect(console_.getByText('Planted Field notes with its brief.').first()).toBeVisible({
       timeout: 60_000,
     });
     await hidePane(page, 'Console');
