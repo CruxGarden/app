@@ -1,3 +1,4 @@
+import { cn } from '@/lib/cn';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '@/stores/appStore';
@@ -193,7 +194,7 @@ export default function NavigationPresentation(
           )}
         </div>
       </details>
-      <div className="overflow-y-auto flex-1 px-2 pb-4">
+      <div className={cn('overflow-y-auto flex-1 px-2 pb-4', view === 'graph' && 'flex flex-col')}>
         {view === 'tree' ? (
           <>
             <p className="px-2 pt-3 pb-2 text-xxs tracking-widest uppercase text-text-muted">

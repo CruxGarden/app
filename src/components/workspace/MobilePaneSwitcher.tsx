@@ -101,6 +101,9 @@ export default function MobilePaneSwitcher() {
         return (
           <button
             key={pane}
+            type="button"
+            aria-label={label}
+            aria-pressed={isActive}
             onClick={() => setMobileActivePane(pane)}
             style={isActive ? { color: PANE_COLORS[pane] } : undefined}
             className={cn(

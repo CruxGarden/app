@@ -97,10 +97,12 @@ export default function NavigationGraph(props: NavigationViewProps) {
   }, []);
 
   const layoutKey = data?.nodes.map((n) => n.id).join('|') ?? '';
+  // Fit once the simulation has spread the nodes, and again on resize.
   useEffect(() => {
-    const timer = requestAnimationFrame(() => ref.current?.zoomToFit(300, 40));
-    return () => cancelAnimationFrame(timer);
-  }, [layoutKey, size.width, size.height]);
+    if (!data) return;
+    const timers = [400, 1200].map((ms) => setTimeout(() => ref.current?.zoomToFit(300, 30), ms));
+    return () => timers.forEach(clearTimeout);
+  }, [layoutKey, size.width, size.height, data]);
 
   const accent = useMemo(
     () =>
@@ -119,7 +121,9 @@ export default function NavigationGraph(props: NavigationViewProps) {
       ref={frame}
       role="region"
       aria-label="Graph"
-      className="relative h-full min-h-[280px] w-full overflow-hidden rounded-lg"
+      // The Navigator scrolls; the map takes the room the view has, never less than a card.
+      className="relative w-full overflow-hidden rounded-lg"
+      style={{ height: 'clamp(320px, 60%, 520px)' }}
     >
       {error && (
         <p role="alert" className="p-2 text-xs text-error">
