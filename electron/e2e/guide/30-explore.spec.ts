@@ -74,6 +74,7 @@ test.describe('guide 30 · Explore', () => {
       await enterGarden(page);
       const explore = await showPane(page, 'Explore');
       await expect(explore.getByRole('link', { name: 'Rainy Garden Notes' })).toBeVisible();
+      await explore.getByRole('tab', { name: 'Cruxes' }).click();
       await explore.getByRole('button', { name: 'Notes', exact: true }).click();
       await expect(explore.getByRole('button', { name: 'Notes', exact: true })).toHaveAttribute(
         'aria-pressed',
@@ -90,6 +91,55 @@ test.describe('guide 30 · Explore', () => {
       await explore.getByRole('button', { name: 'Everything', exact: true }).click();
       await expect(explore.getByRole('link', { name: 'Rainy Garden Notes' })).toBeVisible();
       await expect(explore.getByRole('link', { name: 'Sunny Recipes' })).toBeVisible();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test('EXPLORE-T1 — tags are the way in: shown on arrival, one click filters, chips clear; People, Tools and Moods are tabs', async () => {
+    const api = await startMockApi();
+    seed(api);
+    api.state.cruxes['33333333-3333-4333-8333-333333333333'] = {
+      ...api.state.cruxes['11111111-1111-4111-8111-111111111111']!,
+      id: '33333333-3333-4333-8333-333333333333',
+      slug: 'evening-mood',
+      title: 'Evening Mood',
+      kind: 'mood',
+      meta: { tags: ['ambient'], publishedAt: '2026-09-02T00:00:00.000Z' },
+    };
+    const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
+    try {
+      await enterGarden(page);
+      const explore = await showPane(page, 'Explore');
+      // Tags on arrival, most used first.
+      const tags = explore.getByTestId('explore-tags');
+      await expect(tags).toBeVisible();
+      await expect(tags.getByRole('button', { name: /^#ambient/ })).toBeVisible();
+      await expect(tags.getByRole('button').first()).toHaveText(/#ambient/);
+      // One click filters; the chip says so and clears it.
+      await tags.getByRole('button', { name: /^#rain/ }).click();
+      await expect(explore.getByRole('link', { name: 'Sunny Recipes' })).toHaveCount(0);
+      await expect(explore.getByRole('link', { name: 'Rainy Garden Notes' })).toBeVisible();
+      await explore.getByRole('button', { name: 'Remove tag filter rain' }).click();
+      await expect(explore.getByRole('link', { name: 'Sunny Recipes' })).toBeVisible();
+      // All shows Moods as their own group; the Moods tab shows only them.
+      await expect(explore.getByRole('region', { name: 'Moods' })).toContainText('Evening Mood');
+      await explore.getByRole('tab', { name: 'Moods' }).click();
+      await expect(explore.getByText('Evening Mood')).toBeVisible();
+      await expect(explore.getByRole('link', { name: 'Sunny Recipes' })).toHaveCount(0);
+      // People: a search finds the author.
+      await explore.getByRole('tab', { name: 'People' }).click();
+      await explore.getByLabel('Search Explore').fill('tester');
+      await expect(explore.getByText('@tester')).toBeVisible({ timeout: 30_000 });
+      // A tag on a card is a filter too.
+      await explore.getByRole('tab', { name: 'All' }).click();
+      await explore.getByLabel('Search Explore').fill('');
+      await explore
+        .getByRole('link', { name: 'Sunny Recipes' })
+        .getByRole('button', { name: '#food' })
+        .click();
+      await expect(explore.getByRole('button', { name: 'Remove tag filter food' })).toBeVisible();
+      await expect(explore.getByRole('link', { name: 'Rainy Garden Notes' })).toHaveCount(0);
     } finally {
       await app.close();
     }

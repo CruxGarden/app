@@ -75,7 +75,7 @@ test.describe('publish + discover moods (mocked API)', () => {
       await showPane(page, 'Explore');
       await page
         .getByRole('region', { name: 'Explore', exact: true })
-        .getByRole('button', { name: 'Moods', exact: true })
+        .getByRole('tab', { name: 'Moods', exact: true })
         .click();
       const card = page.getByTestId(`explore-mood-${moodCrux!.id as string}`);
       await expect(card).toBeVisible({ timeout: 30_000 });

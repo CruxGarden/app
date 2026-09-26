@@ -46,7 +46,7 @@ describe('parseExploreParams', () => {
     );
     expect(p).toEqual({
       q: 'garden',
-      type: 'authors',
+      type: 'people',
       sort: 'alpha',
       kind: 'page',
       tags: ['a', 'b'],
@@ -58,7 +58,7 @@ describe('parseExploreParams', () => {
     const p = parseExploreParams(new URLSearchParams('type=x&sort=foo&kind=nope&page=-1&tag='));
     expect(p).toEqual({
       q: '',
-      type: 'cruxes',
+      type: 'all',
       sort: undefined,
       kind: '',
       tags: [],

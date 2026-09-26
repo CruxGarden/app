@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { SectionLabel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
@@ -167,10 +168,13 @@ function TagInput({
   tags,
   onChange,
   readOnly,
+  tagLink,
 }: {
   tags: string[];
   onChange: (tags: string[]) => void;
   readOnly?: boolean;
+  /** Where a tag leads when the field is read-only (the public page → Explore). */
+  tagLink?: (tag: string) => string;
 }) {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -212,7 +216,13 @@ function TagInput({
               'bg-accent/15 text-accent',
             )}
           >
-            {tag}
+            {readOnly && tagLink ? (
+              <Link to={tagLink(tag)} className="hover:underline" title={`Explore #${tag}`}>
+                {tag}
+              </Link>
+            ) : (
+              tag
+            )}
             {!readOnly && (
               <button
                 onClick={() => removeTag(tag)}
@@ -252,6 +262,8 @@ interface MetadataContentProps {
   authorName?: string;
   messages?: ChatMessage[];
   readOnly?: boolean;
+  /** Read-only tags become links (the public page sends them to Explore). */
+  tagLink?: (tag: string) => string;
   onUpdate?: (fields: Record<string, unknown>) => void;
 }
 
@@ -299,6 +311,7 @@ export default function MetadataContent({
   authorName,
   messages,
   readOnly,
+  tagLink,
   onUpdate,
 }: MetadataContentProps) {
   const collaborators = useMemo(() => {
@@ -345,6 +358,7 @@ export default function MetadataContent({
           tags={(crux.meta?.tags as string[]) || []}
           onChange={(tags) => onUpdate?.({ meta: { tags } })}
           readOnly={readOnly}
+          tagLink={tagLink}
         />
       </div>
 
@@ -434,9 +448,7 @@ export default function MetadataContent({
         <>
           <div className="divider" />
           <div className="flex flex-col gap-2">
-            <SectionLabel tone="muted">
-              AI Summary
-            </SectionLabel>
+            <SectionLabel tone="muted">AI Summary</SectionLabel>
             {summary.purpose && (
               <FieldRow label="Purpose">
                 <span className="whitespace-pre-wrap">{summary.purpose}</span>

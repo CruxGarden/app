@@ -191,8 +191,32 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     });
 
     // ── Explore (public) ──
-    if (path === '/explore/tags') return send(200, { data: [] });
+    if (path === '/explore/tags') {
+      // The tags people used, most-used first, optionally for one kind.
+      const kind = parsedUrl.searchParams.get('kind');
+      const counts = new Map<string, number>();
+      for (const c of Object.values(state.cruxes)) {
+        if (c.visibility !== 'public' || c.discoverable === false) continue;
+        if (kind && c.kind !== kind) continue;
+        const tags = (c.meta as { tags?: string[] } | undefined)?.tags ?? [];
+        for (const t of tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+      }
+      const data = [...counts]
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      return send(200, { data });
+    }
     if (path === '/explore' && method === 'GET') {
+      // People: the one author this mock knows, when the term fits.
+      if (parsedUrl.searchParams.get('type') === 'authors') {
+        const term = (parsedUrl.searchParams.get('q') ?? '').toLowerCase().replace(/^@/, '');
+        const hit =
+          !term ||
+          AUTHOR.username.toLowerCase().includes(term) ||
+          String(AUTHOR.display_name ?? '').toLowerCase().includes(term);
+        res.setHeader('Pagination', JSON.stringify({ currentPage: 1, lastPage: 1 }));
+        return send(200, hit ? [AUTHOR] : []);
+      }
       const kind = parsedUrl.searchParams.get('kind');
       let q = parsedUrl.searchParams.get('q')?.toLowerCase() ?? '';
       let author = parsedUrl.searchParams.get('author')?.toLowerCase() ?? '';

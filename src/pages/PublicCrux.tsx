@@ -130,9 +130,7 @@ export default function PublicCrux() {
         {metadataOpen && crux && (
           <div className="w-full sm:w-[300px] sm:max-w-[40%] shrink-0 border-l border-border bg-bg overflow-hidden flex flex-col">
             <div className="flex items-center px-3 h-8 border-b border-border shrink-0">
-              <SectionLabel tone="muted">
-                Metadata
-              </SectionLabel>
+              <SectionLabel tone="muted">Metadata</SectionLabel>
             </div>
             <MetadataContent
               crux={crux}
@@ -140,6 +138,7 @@ export default function PublicCrux() {
               authorName={username}
               messages={crux.meta?.messages}
               readOnly
+              tagLink={(tag) => `/explore?tag=${encodeURIComponent(tag)}`}
             />
           </div>
         )}
