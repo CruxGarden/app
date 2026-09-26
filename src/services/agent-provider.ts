@@ -33,17 +33,6 @@ export async function agentStatus(force = false, provider = 'claude-code'): Prom
   return a.status(force, provider);
 }
 
-let statusCache: AgentStatus | null = null;
-/** Cached status for synchronous UI decisions; refreshes in the background. */
-export function agentStatusCached(): AgentStatus | null {
-  void agentStatus().then((s) => {
-    statusCache = s;
-  });
-  return statusCache;
-}
-
-export const AGENT_NAME = 'Claude Code';
-
 /**
  * One long-lived subscription for every turn's events, routed by run id.
  * A callback handed across the context bridge per turn is held weakly on the

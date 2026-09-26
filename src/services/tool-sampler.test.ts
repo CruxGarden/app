@@ -12,7 +12,7 @@ import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 import { registerAppTools } from './embedded-app-tool-registry';
 import { createToolExecutor, defaultToolDefinitions, didMutate } from '@/ai/tools';
 import { starter, applyCommand } from '../../tool-cruxes/shared/model.js';
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
   'preserves %s documents through scoped commands, conflicts, Growth and archive roundtrip',
   async (type) => {

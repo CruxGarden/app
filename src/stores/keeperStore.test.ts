@@ -25,7 +25,7 @@ async function garden(title: string) {
 describe('Garden conversation lifetimes', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    await initServices('local');
+    await initServices();
   });
 
   it('captures the conversation and creation destination before key lookup while another Garden is opened', async () => {

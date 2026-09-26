@@ -1,4 +1,5 @@
-import { openGardenPage, publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
+import { publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
+import { Avatar, Panel } from '@/components/ui';
 import { SearchIcon, CloseIcon } from '@/components/ui/icons';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -43,25 +44,12 @@ const KIND_LABEL: Record<string, string> = {
   mood: 'Mood',
 };
 
+/** A listed author's picture: the API's URL, or a data URL it stored. */
 function resolveAvatarUrl(meta?: Record<string, unknown>): string | null {
   const url = meta?.avatarUrl || meta?.avatar_url;
   if (!url || typeof url !== 'string') return null;
   if (url.startsWith('data:')) return url;
   return `${apiBaseUrl()}${url}`;
-}
-
-function Avatar({ url, size = 'sm' }: { url: string | null; size?: 'sm' | 'md' }) {
-  const dim = size === 'md' ? 'w-10 h-10' : 'w-6 h-6';
-  return (
-    <div
-      className={cn(
-        dim,
-        'rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center shrink-0 bg-surface ring-1 ring-text-muted/20',
-      )}
-    >
-      {url && <img src={url} alt="" className="w-full h-full object-cover" />}
-    </div>
-  );
 }
 
 /** The published site's cover (shipped as _crux/cover.jpg); hidden when the publish predates covers. */
@@ -79,7 +67,7 @@ function CoverThumb({ cruxId }: { cruxId: string }) {
   );
 }
 
-/* ── Explore (reusable in page and modal) ─────────────── */
+/* ── Explore (the pane and the public page) ─────────────── */
 
 /** The filter state Explore exposes — the public page mirrors it into the URL. */
 export interface ExploreState {
@@ -93,11 +81,9 @@ export interface ExploreState {
 }
 
 export default function Explore({
-  onNavigate,
   initial,
   onStateChange,
 }: {
-  onNavigate?: () => void;
   initial?: Partial<ExploreState>;
   onStateChange?: (state: ExploreState) => void;
 }) {
@@ -222,18 +208,7 @@ export default function Explore({
     setPage(1);
   }, []);
 
-  // Open in new tab when used in a modal, navigate inline for the public page
-  const handleNavigate = useCallback(
-    (path: string) => {
-      if (onNavigate) {
-        void openGardenPage(path);
-        onNavigate(); // close the modal — it was never called before
-      } else {
-        navigate(path);
-      }
-    },
-    [navigate, onNavigate],
-  );
+  const handleNavigate = useCallback((path: string) => navigate(path), [navigate]);
 
   const hasFilters =
     q ||
@@ -260,7 +235,7 @@ export default function Explore({
         className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0 motion-enter-card"
       >
         <CoverThumb cruxId={crux.id} />
-        <Avatar url={avatarUrl} />
+        <Avatar url={avatarUrl} className="ring-1 ring-text-muted/20" fallbackClassName="bg-surface" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
@@ -318,7 +293,7 @@ export default function Explore({
         onClick={() => handleNavigate(`/${author.username}`)}
         className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0 motion-enter-card"
       >
-        <Avatar url={avatarUrl} size="md" />
+        <Avatar url={avatarUrl} size="md" className="ring-1 ring-text-muted/20" fallbackClassName="bg-surface" />
         <div className="flex-1 min-w-0">
           <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
             {author.display_name || author.username}
@@ -350,7 +325,7 @@ export default function Explore({
       }
     >
       {/* Search + filters */}
-      <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
+      <Panel padding="sm" className="sm:p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           {hasFilters && (
             <button
@@ -529,11 +504,11 @@ export default function Explore({
             ))}
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* Tag cloud */}
       {resultType === 'cruxes' && tags.length > 0 && (
-        <div className="bg-panel border border-border rounded-[var(--radius)] p-4 mb-6">
+        <Panel padding="sm" className="mb-6">
           <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
               <button
@@ -551,16 +526,16 @@ export default function Explore({
               </button>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* Results */}
       {loading ? (
-        <div className="bg-panel border border-border rounded-[var(--radius)] flex items-center justify-center py-16">
+        <Panel padding="md" className="flex items-center justify-center py-16">
           <p className="text-text-muted text-sm font-mono">Loading...</p>
-        </div>
+        </Panel>
       ) : results.length === 0 ? (
-        <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center py-10">
+        <Panel padding="md" className="flex flex-col items-center py-10">
           <p className="text-text-muted text-sm mb-3">
             {hasFilters ? 'No results match your search' : 'Nothing here yet'}
           </p>
@@ -569,7 +544,7 @@ export default function Explore({
               Clear filters
             </Button>
           )}
-        </div>
+        </Panel>
       ) : (
         <>
           {resultType === 'cruxes' && kind === 'mood' && (

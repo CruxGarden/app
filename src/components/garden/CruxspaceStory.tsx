@@ -1,11 +1,11 @@
-import { createPortal } from 'react-dom';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useGrowthGraphView } from '@/components/growth/useGrowthGraphView';
+import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import GrowthInspector from '@/components/growth/GrowthInspector';
 import { laneColor } from '@/components/growth/graph-style';
-import { compactGrowthGraph, growthAncestry } from '@/services/growth-graph';
 import {
   loadCruxspaceHistory,
   type CruxspaceHistory,
@@ -24,7 +24,7 @@ const action =
   'rounded px-3 py-1.5 text-xs border border-border hover:border-accent cursor-pointer disabled:opacity-50';
 
 /**
- * The story of a Cruxspace (G10): what it is for, who its members are, every
+ * The story of a Garden (G10): what it is for, who its members are, every
  * milestone across them in one list and one graph, and a walkthrough that
  * puts every member at a chosen moment.
  */
@@ -43,13 +43,13 @@ export default function CruxspaceStory({
   const [fit, setFit] = useState(0);
   const [query, setQuery] = useState('');
   const [everything, setEverything] = useState(false);
-  const [size, setSize] = useState({ width: 0, height: 0 });
   const [moment, setMoment] = useState(getCruxspaceMoment);
   const [notice, setNotice] = useState('');
   const [reverting, setReverting] = useState(false);
   const [reload, setReload] = useState(0);
-  const [reducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const reducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLDivElement>(null);
+  const size = useElementSize(canvasRef, [history]);
   const dialogRef = useRef<HTMLElement>(null);
   const select = useCallback((id: string) => setSelectedId(id || null), []);
 
@@ -77,39 +77,11 @@ export default function CruxspaceStory({
     return () => window.removeEventListener(CRUXSPACE_MOMENT_CHANGED, update);
   }, []);
   useEffect(() => {
-    const element = canvasRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry)
-        setSize({
-          width: Math.floor(entry.contentRect.width),
-          height: Math.floor(entry.contentRect.height),
-        });
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [history]);
-  useEffect(() => {
     dialogRef.current?.focus();
   }, [history]);
 
   const graph = history?.graph ?? null;
-  const display = useMemo(
-    () =>
-      graph
-        ? compactGrowthGraph(
-            graph,
-            new Set(expanded ? graph.lanes.map((l) => l.id) : []),
-            selectedId,
-          )
-        : null,
-    [graph, expanded, selectedId],
-  );
-  const ancestry = useMemo(
-    () => (graph && selectedId ? growthAncestry(graph, selectedId) : new Set<string>()),
-    [graph, selectedId],
-  );
-  const selected = graph?.nodes.find((n) => n.id === selectedId) ?? null;
+  const { display, ancestry, selected } = useGrowthGraphView(graph, expanded, selectedId);
   const milestones = useMemo(() => {
     const all = (everything ? history?.checkpoints : history?.milestones) ?? [];
     const q = query.trim().toLowerCase();
@@ -196,7 +168,7 @@ export default function CruxspaceStory({
   };
   const when = (iso: string) => (iso ? new Date(iso).toLocaleString() : '');
 
-  return createPortal(
+  return (
     <Modal open onClose={onClose} size="full" flush aria-label="Garden history">
       <section
         ref={dialogRef}
@@ -405,14 +377,14 @@ export default function CruxspaceStory({
               {display && size.width > 0 && (
                 <ErrorBoundary
                   fallback={
-                    <p role="status" className="p-6 text-[#e1eee5]">
+                    <p role="status" className="p-6">
                       The graph could not be drawn here.
                     </p>
                   }
                 >
                   <Suspense
                     fallback={
-                      <p role="status" className="p-6 text-[#e1eee5]">
+                      <p role="status" className="p-6">
                         Drawing the graph…
                       </p>
                     }
@@ -438,7 +410,7 @@ export default function CruxspaceStory({
                   {graph.lanes.map((lane, i) => (
                     <li
                       key={lane.id}
-                      className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5 text-[#e1eee5]"
+                      className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5"
                     >
                       <span
                         aria-hidden
@@ -448,7 +420,7 @@ export default function CruxspaceStory({
                       {lane.title}
                     </li>
                   ))}
-                  <li className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5 text-[#e1eee5]">
+                  <li className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5">
                     <span
                       aria-hidden
                       className="h-0 w-4 border-t-2 border-dashed border-[#df94ab]"
@@ -488,8 +460,7 @@ export default function CruxspaceStory({
           </div>
         </div>
       </section>
-    </Modal>,
-    document.body,
+    </Modal>
   );
 }
 

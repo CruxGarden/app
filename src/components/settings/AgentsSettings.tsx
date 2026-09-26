@@ -1,6 +1,7 @@
 import { GARDEN_HOST_ID } from '@/ai/garden-access';
+import SettingsSection from './SettingsSection';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Panel, Button, Toggle } from '@/components/ui';
+import { Button, Toggle } from '@/components/ui';
 import { Capability, can } from '@/lib/platform';
 import type { AgentHostServer } from '@/lib/platform';
 import type { Crux } from '@/api/types';
@@ -55,15 +56,15 @@ export default function AgentsSettings() {
   if (!available) return null;
 
   return (
-    <Panel padding="md" data-testid="agents-settings">
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="font-display text-sm font-medium text-accent">Agents</h2>
-        <span className="text-xxs font-mono text-text-muted">
+    <SettingsSection
+      title="Agents"
+      testId="agents-settings"
+      aside={<span className="text-xxs font-mono text-text-muted">
           {servers.length === 0
             ? 'no servers running'
             : `${servers.length} server${servers.length === 1 ? '' : 's'} running`}
-        </span>
-      </div>
+        </span>}
+    >
 
       <div className="flex flex-col gap-3 text-xs">
         <p className="text-text-muted">
@@ -157,7 +158,7 @@ export default function AgentsSettings() {
           </ul>
         )}
       </div>
-    </Panel>
+    </SettingsSection>
   );
 }
 

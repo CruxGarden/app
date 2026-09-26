@@ -1,4 +1,5 @@
 import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
+import { downloadBlob } from '@/lib/download';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK, getVar } from '@/lib/moods';
@@ -412,12 +413,7 @@ export default function ThemeTokensTab() {
     const name = preset ? `${preset.name}${total ? ' (edited)' : ''}` : 'Garden Dark';
     const file = toThemeFile({ name, section, overrides: fullLook(), author });
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood.json`);
   };
 
   /** Import: a named theme file becomes a preset under Yours; a bare map becomes edits. */

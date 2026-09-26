@@ -1,3 +1,4 @@
+import { NO_INPUT, onlyKeys } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 /** Signal (MIDI sequencer) App Tools: read the song, name it, write notes into a track, save MIDI or a WAV render as an output. */
 export const SIGNAL_TOOLS: AppToolDefinition[] = [
@@ -5,7 +6,7 @@ export const SIGNAL_TOOLS: AppToolDefinition[] = [
     name: 'inspect_song',
     description:
       'Read the open song: its name, tempo, time signature, ticks per quarter note (timebase), length in ticks and measures, and its tracks (number, name, channel, program, note count, whether it is the rhythm track).',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -83,15 +84,14 @@ const isName = (v: unknown, max: number) =>
   typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 export function signalCommand(name: string, input: Record<string, unknown>) {
   const keys = Object.keys(input);
-  const only = (allowed: string[]) => keys.every((k) => allowed.includes(k));
   if (name === 'inspect_song' && !keys.length) return { op: 'inspect' };
   if (name === 'set_song_name') {
-    if (!only(['name']) || !isName(input.name, 200)) throw new Error('Name the song (up to 200 characters).');
+    if (!onlyKeys(input, ['name']) || !isName(input.name, 200)) throw new Error('Name the song (up to 200 characters).');
     return { op: 'set-name', name: (input.name as string).trim() };
   }
   if (name === 'set_track_notes') {
     if (
-      !only(['track', 'notes', 'name', 'program', 'tempo', 'rhythm', 'replace']) ||
+      !onlyKeys(input, ['track', 'notes', 'name', 'program', 'tempo', 'rhythm', 'replace']) ||
       !Number.isInteger(input.track) ||
       (input.track as number) < 1 ||
       !Array.isArray(input.notes) ||
@@ -126,7 +126,7 @@ export function signalCommand(name: string, input: Record<string, unknown>) {
     return { op: 'set-notes', ...input };
   }
   if (name === 'save_song_midi' || name === 'save_song_audio') {
-    if (!only(['name']) || (input.name !== undefined && !isName(input.name, 120)))
+    if (!onlyKeys(input, ['name']) || (input.name !== undefined && !isName(input.name, 120)))
       throw new Error('Choose an output name up to 120 characters.');
     return {
       op: 'save-output',

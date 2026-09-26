@@ -1,3 +1,4 @@
+import { toArrayBuffer } from '@/lib/bytes';
 import {
   archiveRuntimeMode,
   referenceArchiveRuntimes,
@@ -37,10 +38,6 @@ export interface GardenImportResult {
 }
 
 // ── Helpers ─────────────────────────────────────────────
-
-async function toArrayBuffer(data: Blob | ArrayBuffer): Promise<ArrayBuffer> {
-  return data instanceof Blob ? data.arrayBuffer() : data;
-}
 
 // ── Wipe ────────────────────────────────────────────────
 

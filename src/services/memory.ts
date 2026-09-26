@@ -158,10 +158,6 @@ async function mirror(): Promise<{ api: ProjectBridge; root: string } | null> {
   return gardenRootCache ? { api, root: gardenRootCache } : null;
 }
 
-/** Forget the cached root (the person chose a new Garden Root). */
-export function resetMemoryMirror(): void {
-  gardenRootCache = undefined;
-}
 
 async function writeMirror(text: string): Promise<void> {
   try {

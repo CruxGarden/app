@@ -5,7 +5,7 @@ import { notebookSession } from './notebook';
 import { moqiraPath } from './embedded-app';
 import { exportCrux, importCrux } from './crux-io';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it.each([
   '../project.json',
   '/project.json',

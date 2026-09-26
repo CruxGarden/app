@@ -1,3 +1,4 @@
+import type { ValidationResult } from './validation-result';
 import { THEME_TOOL_DEFINITIONS, isThemeTool, createThemeToolExecutor } from './theme-tools';
 import type { ToolResultContent } from '@/services/types';
 /** Shared discovery for garden operations (ADR 0054). Narrow hosts never get these tools. */
@@ -69,13 +70,13 @@ export function gardenOperatingTools(): ToolDefinition[] {
     ...CRUX_ACCESS_TOOLS,
   ];
 }
-export function validateGardenAccess(name: string, input: Record<string, unknown>) {
+export function validateGardenAccess(name: string, input: Record<string, unknown>): ValidationResult {
   if (name === 'list_garden_tools') return { valid: true };
   if (name !== 'call_garden_tool' || typeof input.name !== 'string' || !object(input.input))
     return { valid: false, error: 'name and an input object are required' };
   return validateGardenOperation(input.name, input.input);
 }
-export function validateGardenOperation(name: string, input: Record<string, unknown>) {
+export function validateGardenOperation(name: string, input: Record<string, unknown>): ValidationResult {
   if (!gardenOperatingTools().some((t) => t.name === name))
     return { valid: false, error: `Unknown garden tool: ${name}` };
   if (name === 'list_crux_tools' || name === 'call_crux_tool') {

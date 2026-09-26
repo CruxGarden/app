@@ -74,7 +74,7 @@ describe('unification preservation baseline', () => {
       name: 'My quiet room',
       space: 0.81,
     });
-    await initServices('local');
+    await initServices();
     const tool = installedTool(frozen.manifest.id)!;
     expect(tool).toMatchObject({
       cruxId: toolFunctionIds.tool,

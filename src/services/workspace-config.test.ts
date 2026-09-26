@@ -7,7 +7,7 @@ import {
   parseEnv,
   localComposeFor,
 } from './workspace-config';
-import type { WorkspaceService } from './workspace';
+import type { WorkspaceService } from './workspace-stack';
 
 /**
  * The Runner's configuration rules (ADR 0053). Two things decide whether a

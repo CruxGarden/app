@@ -85,17 +85,6 @@ export function folderApproved(folder: string): boolean {
   return approvals().some((approved) => at === approved || at.startsWith(approved + path.sep));
 }
 
-export function forgetFolder(folder: string): void {
-  const at = path.resolve(folder);
-  fs.writeFileSync(
-    approvalsFile(),
-    JSON.stringify(
-      approvals().filter((approved) => approved !== at),
-      null,
-      2,
-    ),
-  );
-}
 
 /** What a folder offers: its scripts, and whether it is ready to run. */
 export function readProject(folder: string): ProjectInfo | null {

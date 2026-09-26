@@ -16,7 +16,7 @@ describe('Garden Export / Import', () => {
   let svc: Services;
 
   beforeEach(async () => {
-    svc = await initServices('local');
+    svc = await initServices();
   });
   afterEach(() => vi.restoreAllMocks());
 

@@ -38,7 +38,6 @@ import { buildPromptParts, buildWorkspaceContext, CONTEXT_BLOCK_OPEN } from './s
 import { estimateTokens, fitToContextWindow, evictedTranscript, compactionNote } from './context';
 import { getModelInfo, getProviderForModel, resolveModel } from './providers';
 import { isAiMock } from '@/lib/platform';
-import { getMockLanguageModel } from './mock-model';
 
 /** Events yielded by the conversation engine */
 export type ConversationEvent =
@@ -87,9 +86,21 @@ export interface ConversationOptions {
  * Build an AI SDK language model for a (model, BYOK apiKey) pair.
  * Retired model IDs resolve to their successors.
  */
+let mockModel: LanguageModel | undefined;
+/**
+ * e2e: load the scripted model (ai/mock-model.ts) once at startup, so the
+ * production bundle carries none of it and `languageModelFor` stays synchronous.
+ */
+export async function primeMockModel(): Promise<void> {
+  if (isAiMock() && !mockModel)
+    mockModel = (await import('./mock-model')).getMockLanguageModel();
+}
+
 export function languageModelFor(model: string, apiKey: string): LanguageModel {
-  // e2e: a scripted model stands in for every provider (see ai/mock-model.ts).
-  if (isAiMock()) return getMockLanguageModel();
+  if (isAiMock()) {
+    if (!mockModel) throw new Error('The scripted model was not primed at startup.');
+    return mockModel;
+  }
   const id = resolveModel(model);
   const provider = getProviderForModel(id);
   if (id === INCLUDED_MODEL)

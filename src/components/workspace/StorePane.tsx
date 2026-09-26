@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { downloadBlob } from '@/lib/download';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices, isServicesReady } from '@/services';
 import { formatBytes } from '@/lib/format';
@@ -121,12 +122,7 @@ export default function StorePane() {
             })),
           );
       const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = storeExportFilename(crux.title, live);
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadBlob(blob, storeExportFilename(crux.title, live));
       return true;
     } catch (err) {
       await alertDialog((err as Error)?.message || 'Export failed', 'Could not export the store');

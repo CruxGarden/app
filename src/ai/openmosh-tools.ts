@@ -1,10 +1,11 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const OPENMOSH_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_openmosh',
     description:
       'Inspect the actual open OpenMosh editor, its effect instances and available parameter constraints. Requires imported or reopened media. Slideshow inspection returns its configuration. Read before editing.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

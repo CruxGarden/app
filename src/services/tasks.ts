@@ -755,9 +755,6 @@ export async function archiveTask(id: string, archived: boolean): Promise<void> 
     announceTasksChanged();
   });
 }
-export function mainIdFor(crux: Crux): string {
-  return copyIdentity(crux)?.cruxId ?? crux.id;
-}
 
 /** Release the candidate's runtime resources; retained files remain recoverable. */
 async function releaseTaskReviewCore(id: string): Promise<void> {

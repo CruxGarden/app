@@ -88,10 +88,6 @@ export function isToolAvailable(id: string): boolean {
   return !toolManifest(id) || available.has(id) || isToolInstalled(id);
 }
 
-/** In the build itself, as opposed to installed into this garden. */
-export function isToolBundled(id: string): boolean {
-  return available.has(id);
-}
 
 /**
  * Installed into this garden as a Template Crux (services/crux-tools/installed.ts

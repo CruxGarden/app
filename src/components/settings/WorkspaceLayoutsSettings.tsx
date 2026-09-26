@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SettingsSection from './SettingsSection';
 import { useWorkspaceUIStoreApi, useWorkspaceUIStore } from '@/stores/uiStore';
 import { Button, Input } from '@/components/ui';
 import {
@@ -19,14 +20,10 @@ export default function WorkspaceLayoutsSettings() {
   const [busy, setBusy] = useState(false);
   useEffect(() => onWorkspaceLayoutsChange(() => setLayouts(listWorkspaceLayouts())), []);
   return (
-    <section className="mb-8" aria-label="Workspace layouts">
-      <h2 className="font-display text-sm font-medium text-settings-label mb-1">
-        Workspace layouts
-      </h2>
-      <p className="text-xs text-text-muted mb-3">
-        Save an arrangement of panels and reuse it in the Crux you’re working on. Your files, drafts
-        and collaborators stay where they are.
-      </p>
+    <SettingsSection
+      title="Workspace layouts"
+      description="Save an arrangement of panels and reuse it in the Crux you’re working on. Your files, drafts and collaborators stay where they are."
+    >
       <Button
         size="sm"
         className="mb-3"
@@ -116,6 +113,6 @@ export default function WorkspaceLayoutsSettings() {
           Arrange your panels, then save your first workspace layout.
         </p>
       )}
-    </section>
+    </SettingsSection>
   );
 }

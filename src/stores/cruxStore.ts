@@ -1,4 +1,5 @@
 import { captureGardenId } from './gardenContext';
+import { uniqueSlug } from '@/lib/slug';
 import { flushNotebook } from '@/services/notebook-lifecycle';
 import { assertCopyWritable, copyIdentity } from '@/services/working-copies';
 import { create, useStore, type StoreApi } from 'zustand';
@@ -29,6 +30,9 @@ import {
   recoveredRestore,
   requireSafetySnapshot,
   defaultGrowthHostDeps,
+  listGrowths,
+  SAFETY_LABEL_RESTORE,
+  SAFETY_LABEL_BRANCH,
 } from '@/services/growth';
 import {
   publishPipeline,
@@ -220,6 +224,17 @@ function rebindEditorTabs(ui: StoreApi<UIState>, artifacts: Artifact[]): void {
   if (activeMatch) ui.getState().setActiveTab(activeMatch.id);
 }
 
+/** Leaving a snapshot view: the fields that say "showing the present". */
+const CLOSED_SNAPSHOT_VIEW = {
+  viewingSnapshotId: null,
+  viewingSnapshotIndex: null,
+  workspaceArtifacts: null,
+  workspaceMessages: null,
+  workspaceSegmentStart: null,
+  snapshotMessageCount: null,
+  snapshotEntryFile: null,
+} as const;
+
 export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
   // Waiters on in-flight delete approvals (AI tool blocked on the user).
   // Module-level: promises don't belong in serialized store state. Keyed by
@@ -260,13 +275,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     growthCount: 0,
     artifactsVersion: 0,
     isCreatingGrowth: false,
-    viewingSnapshotId: null,
-    viewingSnapshotIndex: null,
-    workspaceArtifacts: null,
-    workspaceMessages: null,
-    workspaceSegmentStart: null,
-    snapshotMessageCount: null,
-    snapshotEntryFile: null,
+    ...CLOSED_SNAPSHOT_VIEW,
     pendingDeletes: [],
     folderMissing: false,
     publishPhase: null,
@@ -311,9 +320,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       // but themes are currently global — don't override the user's active theme on load.
 
       // Load growth dimensions first so we can reconstruct the full conversation
-      const { dimension } = getServices();
-      const growthDimensions = await dimension.findBySourceAndType(id, 'growth');
-      const sortedGrowths = growthDimensions.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+      const sortedGrowths = await listGrowths(id);
 
       // Reconstruct full conversation from snapshot chain + workspace segment.
       // Branch-aware: walk parentCruxId from the tip backwards to build the
@@ -424,13 +431,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     createCrux: async (title?: string, gardenId = captureGardenId(), persona = getPersona()) => {
       const { crux: cruxService } = getServices();
 
-      const slug =
-        (title || 'untitled')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '') +
-        '-' +
-        Date.now().toString(36);
+      const slug = uniqueSlug(title || 'untitled');
 
       // The greeting is spoken by the current persona: stamp it and record the
       // persona snapshot so the bubble is labelled correctly (and stays so if
@@ -696,13 +697,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         growths: [],
         growthCount: 0,
         isCreatingGrowth: false,
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
-        snapshotEntryFile: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         pendingDeletes: [],
       });
     },
@@ -948,10 +943,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     loadGrowths: async () => {
       const { crux } = get();
       if (!crux) return;
-      const { dimension } = getServices();
-      const dimensions = await dimension.findBySourceAndType(crux.id, 'growth');
-      const sorted = dimensions.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
-      set({ growths: sorted });
+      set({ growths: await listGrowths(crux.id) });
     },
 
     addGrowth: (growth: Dimension) => {
@@ -1158,14 +1150,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         : null;
 
       set({
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         artifacts: workspaceArtifacts ?? [],
-
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
         snapshotEntryFile: null,
       });
       rebindEditorTabs(ui, workspaceArtifacts ?? []);
@@ -1208,13 +1194,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           );
         }
         set({
-          viewingSnapshotId: null,
-          viewingSnapshotIndex: null,
-          workspaceArtifacts: null,
-          workspaceMessages: null,
-          workspaceSegmentStart: null,
-          snapshotMessageCount: null,
-          snapshotEntryFile: null,
+          ...CLOSED_SNAPSHOT_VIEW,
         });
         await get().loadCrux(crux.id);
         rebindEditorTabs(ui, get().artifacts);
@@ -1223,9 +1203,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const { artifact, crux: cruxService } = getServices();
 
       const restoredSnapshot = await cruxService.findById(snapshotId);
-      // Auto-snapshot current state as a safety net before reverting
+      // A safety snapshot of the current state before reverting
       await requireSafetySnapshot(() =>
-        get().createSnapshot({ label: 'Before revert', silent: true }),
+        get().createSnapshot({ label: SAFETY_LABEL_RESTORE, silent: true }),
       );
 
       // Only the files that differ move (Growth module, single impl).
@@ -1244,14 +1224,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const newWorkspaceArtifacts = await artifact.findByResource('crux', crux.id);
 
       set({
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         artifacts: newWorkspaceArtifacts,
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
-        snapshotEntryFile: null,
         messages: priorMessages,
         messageSegmentStart: priorMessages.length,
       });
@@ -1301,13 +1275,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           );
         }
         set({
-          viewingSnapshotId: null,
-          viewingSnapshotIndex: null,
-          workspaceArtifacts: null,
-          workspaceMessages: null,
-          workspaceSegmentStart: null,
-          snapshotMessageCount: null,
-          snapshotEntryFile: null,
+          ...CLOSED_SNAPSHOT_VIEW,
         });
         await get().loadCrux(crux.id);
         rebindEditorTabs(ui, get().artifacts);
@@ -1315,9 +1283,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       }
       const { artifact, crux: cruxService } = getServices();
 
-      // Auto-snapshot current state first
+      // A safety snapshot of the current state first
       await requireSafetySnapshot(() =>
-        get().createSnapshot({ label: 'Before branch', silent: true }),
+        get().createSnapshot({ label: SAFETY_LABEL_BRANCH, silent: true }),
       );
 
       // Only the files that differ move (Growth module, single impl).
@@ -1357,14 +1325,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       };
 
       set({
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         artifacts: newWorkspaceArtifacts,
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
-        snapshotEntryFile: null,
         messages: [...snapshotMessages, branchMessage],
         messageSegmentStart: snapshotMessages.length,
         crux: { ...crux, meta },

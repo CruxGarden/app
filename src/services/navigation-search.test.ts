@@ -4,7 +4,7 @@ import { getSqliteClient } from './sqlite/client';
 import { searchNavigation } from './navigation-search';
 import type { CruxKind } from '@/api/types';
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
   await getSqliteClient().run('ALTER TABLE dimensions ADD COLUMN deleted TEXT');
 });
 const node = (title: string, kind?: CruxKind) => getServices().crux.create({ title, kind });

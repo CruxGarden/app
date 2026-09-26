@@ -497,13 +497,3 @@ export async function syncAgentsMd(
   }
 }
 
-/**
- * Service-backed convenience for UI hooks: call after the persona or a
- * crux's instructions are saved so the folder's guide follows.
- */
-export async function refreshAgentsMd(cruxId: string): Promise<boolean> {
-  const { getServices } = await import('./index');
-  const { crux: cruxService } = getServices();
-  const crux = await cruxService.findById(cruxId);
-  return syncAgentsMd(crux, null);
-}

@@ -1,9 +1,10 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const WICK_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_wick',
     description: 'Inspect the open Wick Editor project: name, frame rate, size, background colour, frames, layers and assets.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

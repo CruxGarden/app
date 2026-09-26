@@ -3,7 +3,7 @@ import { initServices, getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { defaultGrowthHostDeps, headlessGrowthHost } from './growth';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 afterEach(() => vi.restoreAllMocks());
 
 async function scenario() {

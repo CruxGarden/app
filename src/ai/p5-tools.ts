@@ -1,10 +1,11 @@
+import { NO_INPUT, exactKeys } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const P5_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_sketch',
     description:
       'Read the running sketch: its name, seed, canvas size, frames drawn, whether it is running or paused. The drawing code itself is sketch.js (read it with read_file).',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -34,7 +35,7 @@ export const P5_TOOLS: AppToolDefinition[] = [
     name: 'restart_sketch',
     description:
       'Restart the sketch from its source (after editing sketch.js, or to draw again with the same seed).',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -62,13 +63,11 @@ export const P5_TOOLS: AppToolDefinition[] = [
   },
 ];
 export function p5Command(name: string, input: Record<string, unknown>) {
-  const only = (keys: string[]) =>
-    Object.keys(input).every((k) => keys.includes(k)) && keys.every((k) => k in input);
   if (name === 'inspect_sketch' && !Object.keys(input).length) return { op: 'inspect' };
   if (name === 'restart_sketch' && !Object.keys(input).length) return { op: 'restart' };
   if (name === 'set_sketch_name') {
     if (
-      !only(['name']) ||
+      !exactKeys(input, ['name']) ||
       typeof input.name !== 'string' ||
       !input.name.trim() ||
       input.name.length > 200
@@ -78,7 +77,7 @@ export function p5Command(name: string, input: Record<string, unknown>) {
   }
   if (name === 'set_sketch_seed') {
     if (
-      !only(['seed']) ||
+      !exactKeys(input, ['seed']) ||
       !Number.isInteger(input.seed) ||
       (input.seed as number) < 0 ||
       (input.seed as number) > 999999999
@@ -87,13 +86,13 @@ export function p5Command(name: string, input: Record<string, unknown>) {
     return { op: 'set-seed', seed: input.seed };
   }
   if (name === 'pause_sketch') {
-    if (!only(['paused']) || typeof input.paused !== 'boolean')
+    if (!exactKeys(input, ['paused']) || typeof input.paused !== 'boolean')
       throw new Error('Say whether to pause (true) or resume (false).');
     return { op: input.paused ? 'pause' : 'resume' };
   }
   if (name === 'save_sketch_frame') {
     if (
-      !only(['name']) ||
+      !exactKeys(input, ['name']) ||
       typeof input.name !== 'string' ||
       !input.name.trim() ||
       input.name.length > 120

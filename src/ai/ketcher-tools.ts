@@ -1,9 +1,10 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const KETCHER_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_ketcher',
     description: 'Read native molecule, atom and bond counts, reaction status and SMILES.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

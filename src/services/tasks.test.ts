@@ -30,7 +30,7 @@ import {
 import { getSqliteClient } from './sqlite/client';
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 afterEach(async () => {
   vi.restoreAllMocks();

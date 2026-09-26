@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { Avatar } from '@/components/ui';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
@@ -50,17 +51,13 @@ export default function UserMenu() {
         aria-label="Account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className={cn(
-          'w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center overflow-hidden',
-          !avatarUrl && 'bg-profile-button text-profile-button-icon text-2xs font-body font-bold',
-          'ring-1 ring-profile-button-border hover:ring-profile-button-hover transition-shadow cursor-pointer',
-        )}
+        className="rounded-[var(--radius-sm)] ring-1 ring-profile-button-border hover:ring-profile-button-hover transition-shadow cursor-pointer"
       >
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-        ) : (
-          initial
-        )}
+        <Avatar
+          url={avatarUrl}
+          initial={initial}
+          fallbackClassName="bg-profile-button text-profile-button-icon"
+        />
       </button>
 
       {open ? (

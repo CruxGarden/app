@@ -11,7 +11,7 @@ const content = readFileSync(
   new URL('../../cardinal-crux/music/instrument.json', import.meta.url),
   'utf8',
 );
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it.each(['../instrument.json', 'runtime/CardinalMini.js', 'starter.vcv', 'notebook/Welcome.md'])(
   'restricts the instrument bridge: %s',
   (path) => expect(() => cardinalPath(path)).toThrow(),

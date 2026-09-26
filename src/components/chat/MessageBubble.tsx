@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Avatar } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { getPersona } from '@/services/persona';
+import { getPersona, onPersonaChange, PERSONA_CHANGED } from '@/services/persona';
 import type { ChatMessage } from '@/api/types';
 import ToolCallRows from './ToolCallRows';
 import { getModelShortName } from '@/ai/providers';
@@ -69,7 +70,7 @@ function currentPersonaName(): string {
   return personaNameCache;
 }
 if (typeof window !== 'undefined') {
-  window.addEventListener('crux:persona-changed', () => {
+  window.addEventListener(PERSONA_CHANGED, () => {
     personaNameCache = null;
   });
 }
@@ -78,8 +79,7 @@ function usePersonaName(): string {
   const [name, setName] = useState(currentPersonaName);
   useEffect(() => {
     const refresh = () => setName(currentPersonaName());
-    window.addEventListener('crux:persona-changed', refresh);
-    return () => window.removeEventListener('crux:persona-changed', refresh);
+    return onPersonaChange(refresh);
   }, []);
   return name;
 }
@@ -123,14 +123,12 @@ function UserAvatar({
   const initial = authorSnapshot?.username?.charAt(0)?.toUpperCase() || fallbackInitial;
 
   return (
-    <div
-      className={cn(
-        'w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center ring-1 ring-border',
-        !avatarUrl && 'bg-chat-user-bubble text-chat-user-bubble-text text-2xs font-body font-bold',
-      )}
-    >
-      {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initial}
-    </div>
+    <Avatar
+      url={avatarUrl}
+      initial={initial}
+      className="ring-1 ring-border"
+      fallbackClassName="bg-chat-user-bubble text-chat-user-bubble-text"
+    />
   );
 }
 

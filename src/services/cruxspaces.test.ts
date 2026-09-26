@@ -25,7 +25,7 @@ const png = () =>
     { type: 'image/png' },
   );
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 
 it('restores imported image and origin together through Growth', async () => {
   const { crux, artifact } = getServices();

@@ -3,7 +3,7 @@ import { initServices, getServices } from '@/services';
 import { createCruxStore } from './cruxStore';
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 it('refreshes committed details without replacing the live conversation or selected history', async () => {
   const crux = await getServices().crux.create({ title: 'Before', meta: { notes: 'Before' } });

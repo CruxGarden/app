@@ -1,4 +1,4 @@
-import type { WorkspaceService } from '@/services/workspace';
+import type { WorkspaceService } from '@/services/workspace-stack';
 
 /**
  * The workspace's configuration (ADR 0053): ports and addresses.

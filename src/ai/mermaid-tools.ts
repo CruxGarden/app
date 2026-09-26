@@ -1,9 +1,10 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const MERMAID_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_mermaid',
     description: 'Read the open Mermaid Live Editor source and configuration.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

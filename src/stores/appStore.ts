@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useAuthStore } from './authStore';
 import * as authorsApi from '@/api/authors';
 import type { Author } from '@/api/types';
-import { Capability, can } from '@/lib/platform';
+import { Capability, can, isAiMock } from '@/lib/platform';
 
 // Lazy import to avoid pulling SQLite worker into public pages
 async function lazyGetServices() {
@@ -128,6 +128,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           ]);
         applySavedMoodSettings();
         useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
+        // e2e: the scripted model (CRUX_AI_MOCK) loads here and nowhere else.
+        if (isAiMock()) await (await import('@/ai/engine')).primeMockModel();
         // Desktop Mode: answer the per-crux MCP servers' forwarded tool calls (ADR 0013).
         if (can(Capability.AgentHost)) {
           void import('@/services/agent-host').then(({ startAgentHostListener }) =>

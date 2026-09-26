@@ -28,7 +28,7 @@ function deferred() {
   return { promise, resolve };
 }
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 afterEach(async () => {
   vi.restoreAllMocks();

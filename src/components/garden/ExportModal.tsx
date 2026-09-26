@@ -1,4 +1,5 @@
 import RuntimeExportChoice from './RuntimeExportChoice';
+import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
@@ -7,17 +8,6 @@ import Modal from '@/components/ui/Modal';
 import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
 import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/api/types';
-
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 interface ExportModalProps {
   open: boolean;
@@ -52,7 +42,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         summary: crux.meta?.summary || null,
         onProgress: setProgress,
       });
-      triggerDownload(result.blob, result.filename);
+      downloadBlob(result.blob, result.filename);
       setProgress(
         result.failed.length > 0
           ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`
@@ -75,7 +65,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         artifacts,
         onProgress: setProgress,
       });
-      triggerDownload(result.blob, result.filename);
+      downloadBlob(result.blob, result.filename);
       setProgress(
         result.failed.length > 0
           ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`

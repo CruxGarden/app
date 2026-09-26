@@ -5,7 +5,7 @@ import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
-import { Button } from '@/components/ui';
+import { Button, Panel } from '@/components/ui';
 import CruxBloom from '@/components/brand/CruxBloom';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
@@ -111,7 +111,7 @@ export default function PublicGarden() {
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
         {/* Header + Search panel */}
-        <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
+        <Panel padding="sm" className="sm:p-5 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20 bg-surface">
               {avatarUrl && <img src={avatarUrl} alt="" className="w-full h-full object-cover" />}
@@ -149,11 +149,11 @@ export default function PublicGarden() {
               </button>
             </div>
           </div>
-        </div>
+        </Panel>
 
         {/* Content */}
         {filteredCruxes.length === 0 ? (
-          <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center py-10">
+          <Panel padding="md" className="flex flex-col items-center py-10">
             <p className="text-text-muted text-sm mb-3">
               {search ? 'No cruxes match your search' : 'No published cruxes yet'}
             </p>
@@ -162,7 +162,7 @@ export default function PublicGarden() {
                 Clear search
               </Button>
             )}
-          </div>
+          </Panel>
         ) : (
           <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} hideMenu />
         )}

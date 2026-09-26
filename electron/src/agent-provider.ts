@@ -91,7 +91,7 @@ export function agentPath(): string {
 }
 
 /** Find the person's Claude Code binary. `CRUX_CLAUDE_PATH` wins; then the usual homes. */
-export function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string | null {
+function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string | null {
   const override = env.CRUX_CLAUDE_PATH;
   if (override && fs.existsSync(override)) return override;
   const home = os.homedir();

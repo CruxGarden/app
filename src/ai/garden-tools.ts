@@ -1,3 +1,5 @@
+import { NO_INPUT } from './app-tool-schema';
+import { str as sharedStr, type ValidationResult } from './validation-result';
 import { getPersona } from '@/services/persona';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useGardenContext, gardenPath, cruxPath } from '@/stores/gardenContext';
@@ -10,7 +12,7 @@ import {
   placeInGarden,
 } from '@/services/cruxspaces';
 import { toolManifest } from '@/services/crux-tools/registry';
-import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
+import { DEFAULT_PANE_LABELS, PANE_TYPES } from '@/components/workspace/paneConfig';
 import { DEFAULT_PANE_ORDER, GARDEN_PANE_ORDER, type PaneType } from '@/stores/uiStore';
 import { pathOf } from '@/lib/artifact-path';
 
@@ -22,7 +24,7 @@ import { pathOf } from '@/lib/artifact-path';
  * hub, the picker, the Collaboration and Explore — as tools.
  */
 const SHOW_WHAT = ['home', 'crux', 'pane', 'file', 'settings', 'explore'] as const;
-const PANES = Object.keys(DEFAULT_PANE_LABELS) as PaneType[];
+const PANES = PANE_TYPES;
 
 export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -102,13 +104,13 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'list_cruxes',
     description:
       'The cruxes in this garden: id, title, kind, template, when last updated, and the Garden each grows in. USE WHEN: deciding from what the garden already holds, or before run_turn / plant_crux.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'list_cruxspaces',
     description:
       'Gardens that hold Cruxes to work on (collections, formerly Cruxspaces): id, name, brief, member crux ids.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'create_cruxspace',
@@ -274,7 +276,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'list_moods',
     description:
       'The built-in and saved Moods available in the active Garden: id, name, one line each.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'wear_mood',
@@ -291,13 +293,13 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'look',
     description:
       "What the person is looking at right now: the page, the open crux, which panes are open, the file in the Workshop, a snapshot view, a running turn, approvals waiting, and the garden's names. Call it before show so you change only what needs changing.",
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'list_templates',
     description:
       'The templates plant_crux accepts: id, name, one line, and whether it needs the desktop app. Installed Crux Tools appear here too.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'choose_collaborator',
@@ -397,7 +399,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'list_gardens',
     description:
       'The gardens with people that the person owns or belongs to, and invitations waiting on them — read from the API. A garden is a shared crux (the Garden template) whose Store holds its members.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'find_people',
@@ -442,16 +444,15 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
-export const GARDEN_TOOL_NAMES = new Set(GARDEN_TOOL_DEFINITIONS.map((t) => t.name));
+const GARDEN_TOOL_NAMES = new Set(GARDEN_TOOL_DEFINITIONS.map((t) => t.name));
 export const isGardenTool = (name: string) => GARDEN_TOOL_NAMES.has(name);
 
-const str = (v: unknown, max = 8000) =>
-  typeof v === 'string' && v.trim() && v.length <= max ? v.trim() : null;
+const str = (v: unknown, max = 8000) => sharedStr(v, max);
 
 export function validateGardenTool(
   name: string,
   input: Record<string, unknown>,
-): { valid: boolean; error?: string } {
+): ValidationResult {
   if (
     (name === 'export_crux' || name === 'export_cruxspace') &&
     input.runtime !== undefined &&

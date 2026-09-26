@@ -10,7 +10,7 @@ import type {
   GrowthContentRestore,
   EditCheckpointCapture,
 } from '@cruxgarden/local-api';
-import { lookupProjectCrux, type NativeStorage } from './native-storage';
+import { lookupProjectCrux } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
 import { INSTALLATION_COMMANDS, type InstallationCommand } from './bridge';
@@ -33,6 +33,7 @@ const { SecretStore } = require('./secrets');
 const { DesktopConfig, ProjectFolders } = require('./projects');
 const { ProjectWatcher } = require('./watcher');
 const { PreviewServer } = require('./preview-server');
+const { isInside } = require('./paths');
 const { Toolchain } = require('./toolchain');
 const { DevServerManager } = require('./dev-server');
 const { AppLog } = require('./log');
@@ -122,7 +123,7 @@ ipcMain.on('workspace:close-response', (event: any, approved: boolean) => {
     quitting = false;
   }
 });
-let db: NativeStorage;
+let db: import('./sqlite-api').SqliteApi;
 let watcher: any = null;
 let previewServer: any = null;
 let devServers: any = null;
@@ -444,68 +445,81 @@ function createWindow() {
 
 // ── SQLite IPC handlers ──────────────────────────────────────
 
+/**
+ * Register a handler only the app's own main frame may invoke: the Garden's
+ * database, secrets, history, archives and window placement are never open to
+ * an embedded page or a preview.
+ */
+const fromGarden = (
+  channel: string,
+  listener: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown,
+) =>
+  ipcMain.handle(channel, (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => {
+    if (
+      event.sender !== mainWindow?.webContents ||
+      event.senderFrame !== mainWindow?.webContents.mainFrame
+    )
+      throw new Error(`${channel} is only available to Crux Garden`);
+    return listener(event, ...args);
+  });
+
 async function setupIpc() {
   registerBrowserPanel(() => mainWindow);
   // The actual local API is the sole desktop database owner.
   const localDb = await SqliteApi.open(getDbPath(), getBlobDir());
   db = localDb;
-  db.onChange?.((change) => {
+  db.onChange((change) => {
     if (mainWindow && !mainWindow.webContents.isDestroyed())
       mainWindow.webContents.send('sqlite:changed', change);
   });
 
   const fileContent = () => {
-    if (!db.fileContent) throw new Error('API file content commands are unavailable');
     return db.fileContent;
   };
-  ipcMain.handle('content:finish-projection', (_e: unknown, id: string) =>
+  fromGarden('content:finish-projection', (_e: unknown, id: string) =>
     fileContent().finishProjection(id),
   );
-  ipcMain.handle('content:head', (_e: unknown, id: string) => fileContent().head(id));
-  ipcMain.handle('content:list', (_e: unknown, input: FileContentSelection) =>
+  fromGarden('content:head', (_e: unknown, id: string) => fileContent().head(id));
+  fromGarden('content:list', (_e: unknown, input: FileContentSelection) =>
     fileContent().list(input),
   );
-  ipcMain.handle('content:read', (_e: unknown, input: FileContentRead) =>
+  fromGarden('content:read', (_e: unknown, input: FileContentRead) =>
     fileContent().read(input),
   );
-  ipcMain.handle('content:lookup', (_e: unknown, input: FileContentRead) =>
+  fromGarden('content:lookup', (_e: unknown, input: FileContentRead) =>
     fileContent().lookup(input),
   );
-  ipcMain.handle('content:edit', (_e: unknown, input: FileContentEdit) =>
+  fromGarden('content:edit', (_e: unknown, input: FileContentEdit) =>
     fileContent().edit(input),
   );
-  ipcMain.handle('content:restore', (_e: unknown, input: GrowthContentRestore) =>
+  fromGarden('content:restore', (_e: unknown, input: GrowthContentRestore) =>
     fileContent().restore(input),
   );
-  ipcMain.handle('content:snapshot', (_e: unknown, input: GrowthSnapshotCreate) =>
+  fromGarden('content:snapshot', (_e: unknown, input: GrowthSnapshotCreate) =>
     fileContent().snapshot(input),
   );
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:merge-crux-meta',
     (_e: any, id: string, patch: Record<string, unknown>) => {
-      if (!db.mergeCruxMeta) throw new Error('Owned metadata commands are unavailable');
       return db.mergeCruxMeta(id, patch);
     },
   );
 
-  ipcMain.handle('sqlite:update-crux', (_e: any, id: string, patch: LocalCruxUpdate) => {
-    if (!db.updateCrux) throw new Error('Owned Crux commands are unavailable');
+  fromGarden('sqlite:update-crux', (_e: any, id: string, patch: LocalCruxUpdate) => {
     return db.updateCrux(id, patch);
   });
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:update-working-copy-meta',
     (_e: any, id: string, patch: Record<string, unknown>, title?: string) => {
-      if (!db.updateWorkingCopyMeta) throw new Error('Owned Task commands are unavailable');
       return db.updateWorkingCopyMeta(id, patch, title);
     },
   );
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:prepare-working-copy-folder',
     (_e: unknown, id: string, revision: number) => {
-      if (!db.prepareWorkingCopyFolder) throw new Error('Owned Task setup is unavailable');
       return db.prepareWorkingCopyFolder(id, revision, (copyId, current) => {
         const folder =
           current && projects.folderExists(current)
@@ -516,47 +530,40 @@ async function setupIpc() {
       });
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'sqlite:finish-working-copy-setup',
     (_e: unknown, id: string, revision: number, phase: 'ready' | 'failed') => {
-      if (!db.finishWorkingCopySetup) throw new Error('Owned Task setup is unavailable');
       return db.finishWorkingCopySetup(id, revision, phase);
     },
   );
 
-  ipcMain.handle('sqlite:working-copy-base', (_e: unknown, id: string) => {
-    if (!db.workingCopyBase) throw new Error('Task starting-state inspection is unavailable');
+  fromGarden('sqlite:working-copy-base', (_e: unknown, id: string) => {
     return db.workingCopyBase(id);
   });
-  ipcMain.handle('sqlite:create-working-copy', (_e: unknown, input: LocalWorkingCopyCreate) => {
-    if (!db.createWorkingCopy) throw new Error('Owned Task creation is unavailable');
+  fromGarden('sqlite:create-working-copy', (_e: unknown, input: LocalWorkingCopyCreate) => {
     return db.createWorkingCopy(input);
   });
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:save-task-review',
     (_e: unknown, reviewData: string, expectedData?: string) => {
-      if (!db.saveTaskReview) throw new Error('Owned Task review commands are unavailable');
       return db.saveTaskReview(reviewData, expectedData);
     },
   );
 
-  ipcMain.handle('sqlite:begin-task-merge', (_e: unknown, id: string, reviewData: string) => {
-    if (!db.beginTaskMerge) throw new Error('Owned Task merge commands are unavailable');
+  fromGarden('sqlite:begin-task-merge', (_e: unknown, id: string, reviewData: string) => {
     return db.beginTaskMerge(id, reviewData);
   });
 
-  ipcMain.handle('sqlite:release-task-review', (_e: unknown, id: string) => {
-    if (!db.releaseTaskReview) throw new Error('Owned Task review commands are unavailable');
+  fromGarden('sqlite:release-task-review', (_e: unknown, id: string) => {
     return db.releaseTaskReview(id);
   });
 
-  ipcMain.handle('sqlite:complete-task-merge', (_e: unknown, id: string) => {
-    if (!db.completeTaskMerge) throw new Error('Owned Task merge commands are unavailable');
+  fromGarden('sqlite:complete-task-merge', (_e: unknown, id: string) => {
     return db.completeTaskMerge(id);
   });
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:set-working-copy-archived',
     (_e: unknown, id: string, archived: boolean, revision: number) => {
       if (!db.setWorkingCopyArchived)
@@ -565,22 +572,16 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.handle('sqlite:set-crux-trashed', (_e: unknown, id: string, trashed: boolean) => {
-    if (!db.setCruxTrashed) throw new Error('Owned Crux lifecycle commands are unavailable');
+  fromGarden('sqlite:set-crux-trashed', (_e: unknown, id: string, trashed: boolean) => {
     return db.setCruxTrashed(id, trashed);
   });
-  ipcMain.handle('sqlite:delete-crux', (_e: unknown, id: string) => {
-    if (!db.deleteCrux) throw new Error('Owned Crux lifecycle commands are unavailable');
+  fromGarden('sqlite:delete-crux', (_e: unknown, id: string) => {
     return db.deleteCrux(id);
   });
 
   // Raw SQL is a read path for the app and a fixture path for isolated test
   // profiles. Every write the app makes is a named command of the API owner.
   const testProfile = !!process.env.CRUX_USER_DATA;
-  const rawCaller = (event: Electron.IpcMainInvokeEvent) => {
-    if (event.senderFrame !== mainWindow?.webContents.mainFrame)
-      throw new Error('The Garden database is only available to Crux Garden');
-  };
   const readOnly = (sql: string) => {
     if (testProfile) return;
     const statement = sql.replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/, '');
@@ -592,68 +593,65 @@ async function setupIpc() {
     )
       throw new Error('Only reads are open here; changes go through named commands.');
   };
-  ipcMain.handle(
+  fromGarden(
     'sqlite:run',
     (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
-      rawCaller(event);
       if (!testProfile) throw new Error('Raw SQL writes are closed; use a named command.');
       return db.run(sql, params);
     },
   );
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:get',
     (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
-      rawCaller(event);
       readOnly(sql);
       return db.get(sql, params);
     },
   );
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:all',
     (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
-      rawCaller(event);
       readOnly(sql);
       return db.all(sql, params);
     },
   );
 
-  ipcMain.handle('sqlite:export', () => {
+  fromGarden('sqlite:export', () => {
     return db.export();
   });
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:inspect-import',
     (_e: unknown, data: ArrayBuffer, availableFingerprints?: string[]) =>
       db.inspectImport(data, availableFingerprints),
   );
-  ipcMain.handle('sqlite:import', (_e: any, data: ArrayBuffer) => {
+  fromGarden('sqlite:import', (_e: any, data: ArrayBuffer) => {
     return db.import(data);
   });
 
-  ipcMain.handle('sqlite:close', () => {
+  fromGarden('sqlite:close', () => {
     return db.close();
   });
 
   // Blob storage
-  ipcMain.handle('sqlite:blob-write', (_e: any, fingerprint: string, data: Uint8Array) => {
+  fromGarden('sqlite:blob-write', (_e: any, fingerprint: string, data: Uint8Array) => {
     return db.blobWrite(fingerprint, data);
   });
 
-  ipcMain.handle('sqlite:blob-read', (_e: any, fingerprint: string) => {
+  fromGarden('sqlite:blob-read', (_e: any, fingerprint: string) => {
     return db.blobRead(fingerprint);
   });
 
-  ipcMain.handle('sqlite:blob-delete', (_e: any, fingerprint: string) => {
+  fromGarden('sqlite:blob-delete', (_e: any, fingerprint: string) => {
     return db.blobDelete(fingerprint);
   });
 
-  ipcMain.handle('sqlite:blob-exists', (_e: any, fingerprint: string) => {
+  fromGarden('sqlite:blob-exists', (_e: any, fingerprint: string) => {
     return db.blobExists(fingerprint);
   });
 
-  ipcMain.handle('sqlite:blob-wipe-all', () => {
+  fromGarden('sqlite:blob-wipe-all', () => {
     return db.blobWipeAll();
   });
 
@@ -661,10 +659,10 @@ async function setupIpc() {
   const secrets = new SecretStore(app.getPath('userData'));
   selfTestHooks.secrets = secrets;
 
-  ipcMain.handle('secrets:available', () => secrets.available());
-  ipcMain.handle('secrets:get', (_e: any, key: string) => secrets.get(key));
-  ipcMain.handle('secrets:set', (_e: any, key: string, value: string) => secrets.set(key, value));
-  ipcMain.handle('secrets:delete', (_e: any, key: string) => secrets.delete(key));
+  fromGarden('secrets:available', () => secrets.available());
+  fromGarden('secrets:get', (_e: any, key: string) => secrets.get(key));
+  fromGarden('secrets:set', (_e: any, key: string, value: string) => secrets.set(key, value));
+  fromGarden('secrets:delete', (_e: any, key: string) => secrets.delete(key));
 
   // ── Local inference (Ollama / LM Studio, Phase A4) ──────────
   const { detectLocalAi } = require('./localai');
@@ -713,43 +711,28 @@ async function setupIpc() {
       systemPreferences,
       'blender',
     );
-    const trustedFigmaCaller = (event: any) => {
-      if (
-        event.sender !== mainWindow?.webContents ||
-        event.senderFrame !== mainWindow?.webContents.mainFrame
-      )
-        throw new Error('Window placement is only available from Garden.');
-    };
-    ipcMain.handle('blender:open', (event: any) => {
-      trustedFigmaCaller(event);
+    fromGarden('blender:open', (_event: any) => {
       return blenderDesktop.open();
     });
-    ipcMain.handle('blender:status', (event: any) => {
-      trustedFigmaCaller(event);
+    fromGarden('blender:status', (_event: any) => {
       return blenderDesktop.status();
     });
-    ipcMain.handle('blender:arrange', (event: any, side: 'left' | 'right') => {
-      trustedFigmaCaller(event);
+    fromGarden('blender:arrange', (event: any, side: 'left' | 'right') => {
       return blenderDesktop.arrange(side);
     });
-    ipcMain.handle('blender:restore', (event: any) => {
-      trustedFigmaCaller(event);
+    fromGarden('blender:restore', (_event: any) => {
       return blenderDesktop.restore();
     });
-    ipcMain.handle('figma:open', (event: any) => {
-      trustedFigmaCaller(event);
+    fromGarden('figma:open', (_event: any) => {
       return figmaDesktop.open();
     });
-    ipcMain.handle('figma:status', (event: any) => {
-      trustedFigmaCaller(event);
+    fromGarden('figma:status', (_event: any) => {
       return figmaDesktop.status();
     });
-    ipcMain.handle('figma:arrange', (event: any, side: 'left' | 'right') => {
-      trustedFigmaCaller(event);
+    fromGarden('figma:arrange', (event: any, side: 'left' | 'right') => {
       return figmaDesktop.arrange(side);
     });
-    ipcMain.handle('figma:restore', (event: any) => {
-      trustedFigmaCaller(event);
+    fromGarden('figma:restore', (_event: any) => {
       return figmaDesktop.restore();
     });
   }
@@ -807,105 +790,77 @@ async function setupIpc() {
     debugLog(`Watcher bootstrap failed: ${err?.message}`);
   }
 
-  const archiveCaller = (event: Electron.IpcMainInvokeEvent) => {
-    if (
-      event.sender !== mainWindow?.webContents ||
-      event.senderFrame !== mainWindow?.webContents.mainFrame
-    )
-      throw new Error('Private archives are only available from Garden');
-  };
-  const gardenCaller = (event: Electron.IpcMainInvokeEvent) => {
-    if (
-      event.sender !== mainWindow?.webContents ||
-      event.senderFrame !== mainWindow?.webContents.mainFrame
-    )
-      throw new Error('Garden membership is only available from Garden');
-  };
-  ipcMain.handle('history:list', (event: Electron.IpcMainInvokeEvent, id: string) => {
-    gardenCaller(event);
+  fromGarden('history:list', (event: Electron.IpcMainInvokeEvent, id: string) => {
     return localDb.fileContent.history(id);
   });
-  ipcMain.handle(
+  fromGarden(
     'history:capture',
     (event: Electron.IpcMainInvokeEvent, input: EditCheckpointCapture) => {
-      gardenCaller(event);
       return localDb.fileContent.checkpoint(input);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'history:inspect',
     (event: Electron.IpcMainInvokeEvent, id: string, checkpointId: string) => {
-      gardenCaller(event);
       return localDb.fileContent.inspectCheckpoint(id, checkpointId);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'history:restore',
     (
       event: Electron.IpcMainInvokeEvent,
       input: FileContentSelection & { checkpointId: string },
     ) => {
-      gardenCaller(event);
       return localDb.fileContent.restoreCheckpoint(input);
     },
   );
-  ipcMain.handle('garden:enter-local', (event: Electron.IpcMainInvokeEvent) => {
-    gardenCaller(event);
+  fromGarden('garden:enter-local', (_event: Electron.IpcMainInvokeEvent) => {
     return localDb.enterLocalGarden();
   });
-  ipcMain.handle('garden-mood:read', (event: Electron.IpcMainInvokeEvent, id: string) => {
-    gardenCaller(event);
+  fromGarden('garden-mood:read', (event: Electron.IpcMainInvokeEvent, id: string) => {
     return localDb.gardenMood.read(id);
   });
-  ipcMain.handle('garden-mood:resolve', (event: Electron.IpcMainInvokeEvent, id: string) => {
-    gardenCaller(event);
+  fromGarden('garden-mood:resolve', (event: Electron.IpcMainInvokeEvent, id: string) => {
     return localDb.gardenMood.resolve(id);
   });
-  ipcMain.handle(
+  fromGarden(
     'garden-mood:select',
     (
       event: Electron.IpcMainInvokeEvent,
       input: Parameters<import('./bridge').GardenMoodBridge['select']>[0],
     ) => {
-      gardenCaller(event);
       return localDb.gardenMood.select(input);
     },
   );
   ipcMain.handle(
     'installation',
     (event: Electron.IpcMainInvokeEvent, name: InstallationCommand, ...args: unknown[]) => {
-      gardenCaller(event);
       if (!(INSTALLATION_COMMANDS as readonly string[]).includes(name))
         throw new Error('Unknown installation command');
       return (localDb.installation[name] as (...a: unknown[]) => unknown)(...args);
     },
   );
-  ipcMain.handle('settings:list', (event: Electron.IpcMainInvokeEvent) => {
-    gardenCaller(event);
+  fromGarden('settings:list', (_event: Electron.IpcMainInvokeEvent) => {
     return localDb.settings.list();
   });
-  ipcMain.handle(
+  fromGarden(
     'settings:put',
     (event: Electron.IpcMainInvokeEvent, key: string, value: string) => {
-      gardenCaller(event);
       return localDb.settings.put(key, value);
     },
   );
-  ipcMain.handle('settings:remove', (event: Electron.IpcMainInvokeEvent, key: string) => {
-    gardenCaller(event);
+  fromGarden('settings:remove', (event: Electron.IpcMainInvokeEvent, key: string) => {
     return localDb.settings.remove(key);
   });
   ipcMain.handle(
     'garden-membership:add',
     (event: Electron.IpcMainInvokeEvent, input: { gardenId: string; memberId: string }) => {
-      gardenCaller(event);
       return localDb.gardenMembership.add(input);
     },
   );
   ipcMain.handle(
     'garden-membership:parents',
     (event: Electron.IpcMainInvokeEvent, memberId: string) => {
-      gardenCaller(event);
       return localDb.gardenMembership.parents(memberId);
     },
   );
@@ -915,14 +870,12 @@ async function setupIpc() {
       event: Electron.IpcMainInvokeEvent,
       input: { gardenId: string; memberId: string; expectedParents: string[] },
     ) => {
-      gardenCaller(event);
       return localDb.gardenMembership.move(input);
     },
   );
   ipcMain.handle(
     'garden-membership:remove',
     (event: Electron.IpcMainInvokeEvent, gardenId: string, memberId: string) => {
-      gardenCaller(event);
       return localDb.gardenMembership.remove(gardenId, memberId);
     },
   );
@@ -933,36 +886,31 @@ async function setupIpc() {
       gardenId: string,
       options?: { limit?: number; after?: string },
     ) => {
-      gardenCaller(event);
       return localDb.gardenMembership.list(gardenId, options);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'archive:replacement-token',
     (event: Electron.IpcMainInvokeEvent, selection: GraphSelection) => {
-      archiveCaller(event);
       return localDb.privateArchiveReplacementToken(selection);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'archive:export',
     (event: Electron.IpcMainInvokeEvent, selection: GraphSelection) => {
-      archiveCaller(event);
       return localDb.exportPrivateArchive(selection);
     },
   );
-  ipcMain.handle('archive:inspect', (event: Electron.IpcMainInvokeEvent, bytes: Uint8Array) => {
-    archiveCaller(event);
+  fromGarden('archive:inspect', (event: Electron.IpcMainInvokeEvent, bytes: Uint8Array) => {
     return localDb.inspectPrivateArchive(bytes);
   });
-  ipcMain.handle(
+  fromGarden(
     'archive:import',
     async (
       event: Electron.IpcMainInvokeEvent,
       bytes: Uint8Array,
       input: Omit<PrivateGraphImport, 'graph'>,
     ) => {
-      archiveCaller(event);
       const result = await localDb.importPrivateArchive(bytes, input);
       // Watch only committed registrations; failed preparation never becomes a writer.
       for (const id of Object.values(result.ids)) {
@@ -984,11 +932,9 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.handle(
+  fromGarden(
     'sqlite:create-crux',
     (event: Electron.IpcMainInvokeEvent, input: LocalCruxCreate) => {
-      gardenCaller(event);
-      if (!db.createCrux) throw new Error('Owned Crux creation is unavailable');
       return db.createCrux(input, (slug) => {
         const folder = projects.createFolder(slug);
         watcher.watch(folder);
@@ -1111,6 +1057,11 @@ async function setupIpc() {
   // Servers live here; every tool call is forwarded to the renderer, which
   // runs the same executor the built-in collaborator uses.
   const lookupCrux = (cruxId: string) => lookupProjectCrux(db, cruxId);
+  const requireCruxFolder = async (cruxId: string) => {
+    const crux = await lookupCrux(cruxId);
+    if (!crux) throw new Error('This crux has no Project Folder');
+    return crux;
+  };
   // ── Native tools (MAKING-THE-AD-PARITY gap 13) ──────────────────────
   // Run a media binary inside a crux's Project Folder: ffmpeg, ffprobe or
   // ImageMagick, each resolved per platform (media-binaries.ts). The working
@@ -1143,8 +1094,7 @@ async function setupIpc() {
     ) => {
       const { mediaToolPath } = require('./media-binaries') as typeof import('./media-binaries');
       const { printHtmlToPdf } = require('./print-pdf') as typeof import('./print-pdf');
-      const crux = await lookupCrux(opts.cruxId);
-      if (!crux) throw new Error('This crux has no Project Folder');
+      const crux = await requireCruxFolder(opts.cruxId);
       const folder = path.resolve(crux.folder);
       const source = String(opts.path ?? '');
       if (!source || source.startsWith('/') || source.includes('..'))
@@ -1308,8 +1258,7 @@ async function setupIpc() {
 
   ipcMain.handle('containers:inspect', async (_e: any, opts: { cruxId: string; file?: string }) => {
     const { inspectCompose } = require('./containers') as typeof import('./containers');
-    const crux = await lookupCrux(opts.cruxId);
-    if (!crux) throw new Error('This crux has no Project Folder');
+    const crux = await requireCruxFolder(opts.cruxId);
     return inspectCompose(path.resolve(crux.folder), opts.file);
   });
 
@@ -1318,8 +1267,7 @@ async function setupIpc() {
     async (_e: any, opts: { cruxId: string; profiles?: string[] }) => {
       const { composeConfig, portsInUse, readOverride } =
         require('./containers') as typeof import('./containers');
-      const crux = await lookupCrux(opts.cruxId);
-      if (!crux) throw new Error('This crux has no Project Folder');
+      const crux = await requireCruxFolder(opts.cruxId);
       const folder = path.resolve(crux.folder);
       const resolution = await composeConfig(folder, opts.profiles ?? []);
       const wanted = resolution.services.flatMap((service) =>
@@ -1339,8 +1287,7 @@ async function setupIpc() {
   /** This machine's own files for a Crux, which never travel with it. */
   ipcMain.handle('containers:local', async (_e: any, opts: { cruxId: string; file: string }) => {
     const { readLocal } = require('./containers') as typeof import('./containers');
-    const crux = await lookupCrux(opts.cruxId);
-    if (!crux) throw new Error('This crux has no Project Folder');
+    const crux = await requireCruxFolder(opts.cruxId);
     return readLocal(path.resolve(crux.folder), String(opts.file ?? ''));
   });
 
@@ -1348,8 +1295,7 @@ async function setupIpc() {
     'containers:write-local',
     async (_e: any, opts: { cruxId: string; file: string; text: string }) => {
       const { writeLocal } = require('./containers') as typeof import('./containers');
-      const crux = await lookupCrux(opts.cruxId);
-      if (!crux) throw new Error('This crux has no Project Folder');
+      const crux = await requireCruxFolder(opts.cruxId);
       writeLocal(path.resolve(crux.folder), String(opts.file ?? ''), String(opts.text ?? ''));
       return true;
     },
@@ -1359,8 +1305,7 @@ async function setupIpc() {
     'containers:override',
     async (_e: any, opts: { cruxId: string; wishes: unknown }) => {
       const { writeOverride } = require('./containers') as typeof import('./containers');
-      const crux = await lookupCrux(opts.cruxId);
-      if (!crux) throw new Error('This crux has no Project Folder');
+      const crux = await requireCruxFolder(opts.cruxId);
       const wishes = Array.isArray(opts.wishes)
         ? (opts.wishes as { service?: unknown }[]).filter(
             (wish) => typeof wish?.service === 'string' && /^[\w.-]{1,64}$/.test(wish.service),
@@ -1404,8 +1349,7 @@ async function setupIpc() {
         require('./containers') as typeof import('./containers');
       const verb = opts?.verb as (typeof COMPOSE_VERBS)[number];
       if (!COMPOSE_VERBS.includes(verb)) throw new Error(`Not allowed: ${opts?.verb}`);
-      const crux = await lookupCrux(opts.cruxId);
-      if (!crux) throw new Error('This crux has no Project Folder');
+      const crux = await requireCruxFolder(opts.cruxId);
       return runCompose({ ...opts, verb, folder: path.resolve(crux.folder) }, (line) => {
         if (!e.sender.isDestroyed())
           e.sender.send('containers:output', { cruxId: opts.cruxId, verb, line });
@@ -1445,8 +1389,7 @@ async function setupIpc() {
                 ? 'Typst is not on this machine. Install it (brew install typst, or typst.app) and look again.'
                 : `${tool} is not available on this machine`,
         );
-      const crux = await lookupCrux(opts.cruxId);
-      if (!crux) throw new Error('This crux has no Project Folder');
+      const crux = await requireCruxFolder(opts.cruxId);
       const folder = path.resolve(crux.folder);
       const args = (opts.args ?? []).map((a) => String(a));
       for (const a of args) {
@@ -1455,8 +1398,7 @@ async function setupIpc() {
           throw new Error(`Protocols are not allowed: ${a}`);
         if (path.isAbsolute(a)) throw new Error(`Use paths relative to the crux folder: ${a}`);
         if (a.includes('/') || a.includes('\\') || /\.[a-z0-9]{1,5}$/i.test(a)) {
-          const resolved = path.resolve(folder, a);
-          if (resolved !== folder && !resolved.startsWith(folder + path.sep))
+          if (!isInside(folder, path.resolve(folder, a)))
             throw new Error(`Path outside the crux folder: ${a}`);
         }
       }
@@ -1569,14 +1511,13 @@ async function setupIpc() {
         height?: number;
       },
     ) => {
-      const crux = await lookupCrux(opts.cruxId);
-      if (!crux) throw new Error('This crux has no Project Folder');
+      const crux = await requireCruxFolder(opts.cruxId);
       const folder = path.resolve(crux.folder);
       const sub = (opts.subdir ?? 'frames').replace(/\\/g, '/');
       if (path.isAbsolute(sub) || sub.split('/').some((p) => p === '..' || p === ''))
         throw new Error(`Use a folder name inside the crux: ${sub}`);
       const dir = path.resolve(folder, sub);
-      if (!dir.startsWith(folder + path.sep))
+      if (!isInside(folder, dir) || dir === folder)
         throw new Error('Frames must land inside the crux folder');
       const { recordPreviewUrl } = require('./record') as typeof import('./record');
       return recordPreviewUrl(
@@ -1932,7 +1873,7 @@ function registerAppProtocol() {
     }
 
     let filePath = path.resolve(root, '.' + decodeURIComponent(rawPath));
-    if (filePath !== root && !filePath.startsWith(root + path.sep)) {
+    if (!isInside(root, filePath)) {
       return new Response('Forbidden', { status: 403 });
     }
 

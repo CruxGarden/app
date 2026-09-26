@@ -27,9 +27,9 @@ function loadSchema(): string {
 }
 
 /**
- * Native SQLite backend using better-sqlite3.
- * Runs in Electron's main process. Matches the ISqliteClient interface
- * from the web app so the renderer can swap seamlessly.
+ * Native SQLite backend using better-sqlite3, in Electron's main process.
+ * Test fixtures only: the e2e specs seed and inspect a Garden with it. The
+ * app's own database is owned by the local API runtime (SqliteApi).
  */
 export class SqliteNative extends NativeBlobStore implements NativeStorage {
   private db: any;

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
+import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { authors as authorsApi } from '@/api';
-import { Panel, Button, Input } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { apiBaseUrl, apiUrlIsLaunched, normalizeApiUrl, DEFAULT_API_URL } from '@/api/client';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -111,8 +112,7 @@ export default function AccountSettings() {
   };
 
   return (
-    <Panel padding="md">
-      <h2 className="font-display text-sm font-medium text-settings-label mb-4">Account</h2>
+    <SettingsSection title="Account">
 
       {/* Avatar */}
       <div className="mb-4">
@@ -207,7 +207,7 @@ export default function AccountSettings() {
       </h3>
       <ConnectAccount description="Connect to your crux.garden account to enable sync and sharing." />
       <ApiAddress />
-    </Panel>
+    </SettingsSection>
   );
 }
 

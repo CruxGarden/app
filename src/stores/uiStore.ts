@@ -1,6 +1,7 @@
 import { buildMosaicTree, addPaneToMosaic } from '@/lib/mosaic-layout';
 import { deferNotebookAction } from '@/services/notebook-lifecycle';
-import { leaveSurface } from '@/components/plasma/leave';
+import { leaveSurface } from '@/lib/plasma-leave';
+import { PANE_MIN_WIDTH, type PaneType } from '@/components/workspace/paneConfig';
 import { create, useStore } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, gardenWorkspace, workspaceSelection } from './workspaceSelection';
@@ -35,51 +36,8 @@ export interface AgentApproval {
 
 export type MoodTab = 'moods' | 'theme' | 'background' | 'sound' | 'persona';
 
-export type PaneType =
-  | 'tasks'
-  | 'history'
-  | 'collaboration'
-  | 'artifacts'
-  | 'workshop'
-  | 'details'
-  | 'sync'
-  | 'publish'
-  | 'export'
-  | 'store'
-  | 'media'
-  | 'mood'
-  | 'synth'
-  | 'browser'
-  | 'settings'
-  | 'explore'
-  | 'home'
-  | 'console'
-  | 'navigator'
-  | 'tending';
-
-/** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
-export const PANE_COLORS: Record<PaneType, string> = {
-  tasks: 'var(--pane-tasks)',
-  collaboration: 'var(--pane-collaboration)',
-  artifacts: 'var(--pane-artifacts)',
-  workshop: 'var(--pane-workshop)',
-  details: 'var(--pane-details)',
-  history: 'var(--pane-history)',
-  export: 'var(--pane-export)',
-  sync: 'var(--pane-sync)',
-  publish: 'var(--pane-publish)',
-  store: 'var(--pane-store)',
-  media: 'var(--pane-media)',
-  mood: 'var(--pane-mood)',
-  synth: 'var(--pane-synth)',
-  browser: 'var(--pane-browser)',
-  settings: 'var(--pane-settings)',
-  explore: 'var(--pane-explore)',
-  home: 'var(--pane-workshop)',
-  console: 'var(--pane-collaboration)',
-  navigator: 'var(--pane-artifacts)',
-  tending: 'var(--pane-tasks)',
-};
+export type { PaneType } from '@/components/workspace/paneConfig';
+export { PANE_COLORS, PANE_MIN_WIDTH } from '@/components/workspace/paneConfig';
 
 export type EditorViewMode = 'source' | 'preview' | 'form';
 
@@ -150,9 +108,7 @@ export interface UIState {
   aiEnabled: boolean;
   setAiEnabled: (enabled: boolean) => void;
 
-  // Console
-
-  // Settings modal
+  // ── Garden-wide pane shortcuts (act on whichever workspace is in front) ──
   setSettingsOpen: (open: boolean) => void;
 
   // Agent approvals (ADR 0013): an external agent asked for something that
@@ -166,22 +122,17 @@ export interface UIState {
   ) => Promise<boolean>;
   resolveAgentApproval: (id: string, approved: boolean) => void;
 
-  // Explore modal
   setExploreOpen: (open: boolean) => void;
   /** Kind filter Explore opens with (e.g. 'mood'); consumed on mount */
   exploreKind: string | null;
   openExplore: (kind?: string | null) => void;
 
-  setMoodPanelOpen: (open: boolean) => void;
-  toggleMoodPanel: () => void;
+  toggleMoodPane: () => void;
   /** Section the Mood pane shows next (e.g. 'sound'); consumed by the pane. */
   moodTab: MoodTab | null;
   openMood: (tab?: MoodTab) => void;
   /** Tending opens as a pane of whichever workspace is in front. */
   openTending: () => void;
-  /** Pixels the Mood Bar reserves at the bottom of <main> so it never covers pane controls. */
-  dockReserve: number;
-  setDockReserve: (px: number) => void;
 
   // ── Layout actions ──
 
@@ -222,11 +173,7 @@ export interface UIState {
   // ── Mobile ──
   setMobileActivePane: (pane: PaneType) => void;
 
-  // ── Keeper Console ──
   setConsoleOpen: (open: boolean) => void;
-  toggleConsole: () => void;
-
-  // ── Mood Editor ──
 }
 
 // ── Helpers ─────────────────────────────────────────────
@@ -305,34 +252,6 @@ const scopeOrder = (scope: WorkspaceScope) =>
   scope === 'garden' ? GARDEN_PANE_ORDER : DEFAULT_PANE_ORDER;
 const scopeDefaults = (scope: WorkspaceScope) =>
   scope === 'garden' ? GARDEN_VISIBILITY : DEFAULT_VISIBILITY;
-
-/**
- * The least width each pane makes sense in. Below it the pane says so instead
- * of squeezing its controls (the Share pane set the pattern); each has its own
- * number — a file tree lives in less than a conversation does.
- */
-export const PANE_MIN_WIDTH: Record<PaneType, number> = {
-  tasks: 110,
-  collaboration: 260,
-  artifacts: 160,
-  workshop: 280,
-  details: 220,
-  history: 200,
-  export: 200,
-  sync: 200,
-  publish: 270,
-  store: 280,
-  media: 300,
-  mood: 360,
-  synth: 300,
-  browser: 200,
-  settings: 360,
-  explore: 360,
-  home: 360,
-  console: 260,
-  navigator: 170,
-  tending: 320,
-};
 
 /** A typical workspace width, to turn least widths into fractions for placement. */
 const TYPICAL_WORKSPACE_PX = 1400;
@@ -488,24 +407,6 @@ function saveFolderState(cruxId: string, state: Record<string, boolean>) {
   setSetting(folderStateKey(cruxId), JSON.stringify(state));
 }
 
-/** Map old pane type names to current names */
-const RENAME_MAP: Record<string, PaneType> = {
-  navigation: 'history',
-  chat: 'collaboration',
-  editor: 'workshop',
-  metadata: 'details',
-};
-
-/** Rename pane types in a mosaic tree */
-function renameMosaicPanes(node: MosaicNode<string>): MosaicNode<string> {
-  if (typeof node === 'string') return RENAME_MAP[node] ?? node;
-  return {
-    ...node,
-    first: renameMosaicPanes(node.first),
-    second: renameMosaicPanes(node.second),
-  };
-}
-
 /** Remove unknown pane types from a mosaic tree */
 function filterMosaicPanes(
   node: MosaicNode<string>,
@@ -532,16 +433,9 @@ function validateLayout(layout: PersistedLayout, scope: WorkspaceScope = 'crux')
   const defaults = scopeDefaults(scope);
   const allPanes = new Set<PaneType>(order);
 
-  // Rename old pane types in order
-  const renamedOrder = layout.paneOrder.map((p) => RENAME_MAP[p] ?? p) as PaneType[];
-  // Rename old pane types in visibility
-  const renamedVisibility: Record<string, boolean> = {};
-  for (const [key, value] of Object.entries(layout.paneVisibility)) {
-    renamedVisibility[RENAME_MAP[key] ?? key] = value;
-  }
-
   // Keep only known panes, preserving user order
-  const validOrder = renamedOrder.filter((p) => allPanes.has(p));
+  const validOrder = (layout.paneOrder as PaneType[]).filter((p) => allPanes.has(p));
+  const savedVisibility: Record<string, boolean> = layout.paneVisibility;
 
   // Append any missing panes at the end
   for (const pane of order) {
@@ -554,17 +448,16 @@ function validateLayout(layout: PersistedLayout, scope: WorkspaceScope = 'crux')
   const validVisibility = {} as Record<PaneType, boolean>;
   for (const pane of DEFAULT_PANE_ORDER.concat(GARDEN_PANE_ORDER)) {
     validVisibility[pane] = allPanes.has(pane)
-      ? (renamedVisibility[pane] ?? defaults[pane])
+      ? (savedVisibility[pane] ?? defaults[pane])
       : false;
   }
 
   // Restore or build mosaic layout
   let mosaicLayout: MosaicNode<PaneType> | null = null;
   if (layout.mosaicLayout) {
-    // Migrate saved mosaic tree: rename panes, remove unknown ones
-    const renamed = renameMosaicPanes(layout.mosaicLayout);
+    // A saved tree may name panes that no longer exist: drop them.
     mosaicLayout = filterMosaicPanes(
-      renamed,
+      layout.mosaicLayout,
       allPanes as Set<string>,
     ) as MosaicNode<PaneType> | null;
   }
@@ -822,16 +715,13 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
         }),
       );
     },
-    setMoodPanelOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('mood', open),
-    toggleMoodPanel: () => currentWorkspaceUI().getState().togglePane('mood'),
+    toggleMoodPane: () => currentWorkspaceUI().getState().togglePane('mood'),
     moodTab: null,
     openMood: (tab) => {
       useUIStore.setState({ moodTab: tab ?? null });
       currentWorkspaceUI().getState().setPaneVisible('mood', true);
     },
     openTending: () => currentWorkspaceUI().getState().setPaneVisible('tending', true),
-    dockReserve: 0,
-    setDockReserve: (px) => set((s) => (s.dockReserve === px ? s : { dockReserve: px })),
 
     setActiveCrux: (id) => {
       // Flush any pending debounced scroll save
@@ -1138,7 +1028,6 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     // ── Keeper Console ──
 
     setConsoleOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('console', open),
-    toggleConsole: () => currentWorkspaceUI().getState().togglePane('console'),
   }));
 
   if (cruxId) store.getState().setActiveCrux(cruxId);
@@ -1160,7 +1049,4 @@ export function currentWorkspaceUI(): StoreApi<UIState> {
 }
 export function useWorkspaceUIStore<T>(selector: (state: UIState) => T): T {
   return useStore(useWorkspaceUIStoreApi(), selector);
-}
-export function cancelPendingAgentApprovals(): void {
-  useUIStore.getState().cancelApprovals();
 }

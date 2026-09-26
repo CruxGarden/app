@@ -5,10 +5,8 @@ import { MEMORY_NOTE_MAX, MEMORY_SECTIONS, normalizeSection } from '@/services/m
 import { validateDelegateInput } from './delegate-tool';
 import { validateCruxspaceTool } from './cruxspace-tools';
 
-export interface ValidationResult {
-  valid: boolean;
-  error?: string;
-}
+import type { ValidationResult } from './validation-result';
+export type { ValidationResult } from './validation-result';
 
 /**
  * Validate tool inputs before execution.
@@ -53,27 +51,7 @@ export function validateToolInput(
     case 'rename_file':
       return validateRenameFile(input);
     case 'edit_history':
-      if (
-        input.includeConversation !== undefined &&
-        (input.action !== 'restore' || typeof input.includeConversation !== 'boolean')
-      )
-        return { valid: false, error: 'Only restore accepts includeConversation, as a boolean.' };
-      if (
-        input.reason !== undefined &&
-        (input.action !== 'capture' || !['autosave', 'safety'].includes(String(input.reason)))
-      )
-        return { valid: false, error: 'Only capture accepts a reason: autosave or safety.' };
-      if (!['list', 'inspect', 'capture', 'restore'].includes(String(input.action)))
-        return { valid: false, error: 'Choose list, inspect, capture or restore.' };
-      if (
-        ['inspect', 'restore'].includes(String(input.action)) &&
-        (typeof input.checkpointId !== 'string' || !input.checkpointId.trim())
-      )
-        return {
-          valid: false,
-          error: 'checkpointId is required. List retained edit history first.',
-        };
-      return { valid: true };
+      return validateEditHistory(input);
     case 'snapshot':
       return validateOptionalLabel(input);
     case 'list_snapshots':
@@ -88,24 +66,18 @@ export function validateToolInput(
       return validateRemember(input);
     case 'load_skill':
       return validateLoadSkill(input);
-    case 'delegate': {
-      const parsed = validateDelegateInput(input);
-      return parsed.valid ? { valid: true } : { valid: false, error: parsed.error };
-    }
+    case 'delegate':
+      // Parsed again by the executor, which needs the normalized tasks.
+      return validateDelegateInput(input);
     case 'run_ffmpeg':
     case 'run_magick':
     case 'run_pandoc':
       return validateRunFfmpeg(input);
     case 'probe_media':
-      return typeof input.path === 'string' && input.path.trim()
-        ? { valid: true }
-        : { valid: false, error: 'path is required' };
+    case 'make_pdf':
+      return validatePathOnly(input);
     case 'media_tools':
       return { valid: true };
-    case 'make_pdf':
-      return typeof input.path === 'string' && input.path.trim()
-        ? { valid: true }
-        : { valid: false, error: 'path is required' };
     case 'link_status':
     case 'link_stop':
       return { valid: true };
@@ -451,5 +423,29 @@ function validateCapture(input: Record<string, unknown>): ValidationResult {
     if (v !== undefined && (typeof v !== 'number' || v < lo || v > hi))
       return { valid: false, error: `${k} must be a number from ${lo} to ${hi}` };
   }
+  return { valid: true };
+}
+
+function validateEditHistory(input: Record<string, unknown>): ValidationResult {
+  if (
+    input.includeConversation !== undefined &&
+    (input.action !== 'restore' || typeof input.includeConversation !== 'boolean')
+  )
+    return { valid: false, error: 'Only restore accepts includeConversation, as a boolean.' };
+  if (
+    input.reason !== undefined &&
+    (input.action !== 'capture' || !['autosave', 'safety'].includes(String(input.reason)))
+  )
+    return { valid: false, error: 'Only capture accepts a reason: autosave or safety.' };
+  if (!['list', 'inspect', 'capture', 'restore'].includes(String(input.action)))
+    return { valid: false, error: 'Choose list, inspect, capture or restore.' };
+  if (
+    ['inspect', 'restore'].includes(String(input.action)) &&
+    (typeof input.checkpointId !== 'string' || !input.checkpointId.trim())
+  )
+    return {
+      valid: false,
+      error: 'checkpointId is required. List retained edit history first.',
+    };
   return { valid: true };
 }

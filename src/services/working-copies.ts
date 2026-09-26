@@ -47,6 +47,23 @@ export async function findWorkingCopy(id: string): Promise<WorkingCopy | null> {
   const row = await getSqliteClient().get('SELECT * FROM working_copies WHERE id = ?', [id]);
   return row ? copyFromRow(row) : null;
 }
+/** Every open Task copy on this device, oldest first. */
+export async function listTaskCopies(): Promise<WorkingCopy[]> {
+  const rows = await getSqliteClient().all(
+    "SELECT * FROM working_copies WHERE role = 'task' ORDER BY created, id",
+  );
+  return rows.map(copyFromRow);
+}
+
+/** The saved metadata of a content owner — a Crux, or a Working Copy with the same id shape. */
+export async function ownerMeta(id: string): Promise<Record<string, unknown> | null> {
+  const row = await getSqliteClient().get<{ meta: string | null }>(
+    'SELECT meta FROM cruxes WHERE id = ? UNION ALL SELECT meta FROM working_copies WHERE id = ?',
+    [id, id],
+  );
+  return row ? (JSON.parse(row.meta || '{}') as Record<string, unknown>) : null;
+}
+
 export async function listWorkingCopies(cruxId: string): Promise<WorkingCopy[]> {
   const rows = await getSqliteClient().all(
     "SELECT * FROM working_copies WHERE crux_id = ? AND role = 'task' ORDER BY created, id",

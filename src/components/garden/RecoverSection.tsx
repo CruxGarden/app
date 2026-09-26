@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { useGardenStore } from '@/stores/gardenStore';
-import { Button } from '@/components/ui';
+import { Button, Panel } from '@/components/ui';
 import { getServices } from '@/services';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
@@ -82,8 +82,10 @@ export default function RecoverSection() {
 
   if (!rows || rows.length === 0) return null;
   return (
-    <section
-      className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6"
+    <Panel
+      as="section"
+      padding="sm"
+      className="sm:p-5 mb-6"
       data-testid="recover-section"
       aria-label="In your account, not on this machine"
     >
@@ -146,6 +148,6 @@ export default function RecoverSection() {
           {error}
         </p>
       )}
-    </section>
+    </Panel>
   );
 }

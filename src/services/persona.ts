@@ -44,6 +44,13 @@ export const DEFAULT_PERSONA: PersonaSettings = {
 };
 
 /** Read saved persona (returns defaults for any missing fields). */
+/** The Persona changed (name, greeting, prompt, faces). */
+export const PERSONA_CHANGED = 'crux:persona-changed';
+export function onPersonaChange(listener: () => void): () => void {
+  window.addEventListener(PERSONA_CHANGED, listener);
+  return () => window.removeEventListener(PERSONA_CHANGED, listener);
+}
+
 export function getPersona(): PersonaSettings {
   try {
     const raw = getSetting(SettingsKey.Persona);
@@ -60,7 +67,7 @@ export function getPersona(): PersonaSettings {
 /** Save persona to settings (SQLite + cache). */
 export function savePersona(persona: PersonaSettings) {
   setSetting(SettingsKey.Persona, JSON.stringify(persona));
-  window.dispatchEvent(new Event('crux:persona-changed'));
+  window.dispatchEvent(new Event(PERSONA_CHANGED));
 }
 
 /**

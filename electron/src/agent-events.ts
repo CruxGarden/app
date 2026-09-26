@@ -23,7 +23,7 @@ export type AgentEvent =
   | { type: 'result'; costUsd: number; durationMs: number; numTurns: number; isError: boolean };
 
 /** Claude Code tools whose success means files in the Project Folder changed. */
-export const AGENT_MUTATING_TOOLS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash'];
+const AGENT_MUTATING_TOOLS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash'];
 
 export interface MapperState {
   toolNames: Map<string, string>;

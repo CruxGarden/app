@@ -89,7 +89,7 @@ describe('Project Folder write-through (ADR 0001)', () => {
   });
 
   it('restores into a fresh folder even when the exporting folder still exists', async () => {
-    await initServices('local');
+    await initServices();
     const crux = await cruxService.create({ title: 'Restore me', type: 'workspace' });
     const old = crux.meta!.projectFolder as string;
     await artifactService.create({
@@ -109,7 +109,7 @@ describe('Project Folder write-through (ADR 0001)', () => {
   });
 
   it('restores manifest content and preserves its file mode without inventing Artifact rows', async () => {
-    await initServices('local');
+    await initServices();
     const crux = await cruxService.create({ title: 'Manifest restore', type: 'workspace' });
     const snapshot = await cruxService.create({
       title: 'Snapshot',

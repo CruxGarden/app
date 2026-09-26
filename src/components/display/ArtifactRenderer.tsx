@@ -1,4 +1,5 @@
 import { apiBaseUrl } from '@/api/client';
+import { useObjectUrl } from '@/hooks/useBlobUrl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { publicApi } from '@/api';
@@ -298,29 +299,18 @@ function ImageRenderer({
   artifact: Artifact;
   downloadBlob: DownloadBlobFn;
 }) {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const path = pathOf(artifact) || artifact.id;
-
-  useEffect(() => {
-    let cancelled = false;
-    let url: string | null = null;
-    setObjectUrl(null);
-    setFailed(false);
-    downloadBlob(artifact.id)
-      .then((blob) => {
-        if (cancelled) return; // a late blob for a previous artifact must not leak a URL
-        url = URL.createObjectURL(blob);
-        setObjectUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
+  const objectUrl = useObjectUrl(
+    () => {
+      setFailed(false);
+      return downloadBlob(artifact.id).catch((error: unknown) => {
+        setFailed(true);
+        throw error;
       });
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [artifact.id, downloadBlob]);
+    },
+    [artifact.id, downloadBlob],
+  );
 
   if (failed) {
     return (

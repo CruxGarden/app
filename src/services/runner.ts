@@ -1,9 +1,9 @@
 import {
   closureFor,
   discoverWorkspace,
-  type Workspace,
+  type WorkspaceStack,
   type WorkspaceService,
-} from '@/services/workspace';
+} from '@/services/workspace-stack';
 import {
   compose,
   composeRunner,
@@ -158,7 +158,7 @@ async function hostEnvironment(cruxId: string): Promise<Record<string, string>> 
 }
 
 /** The services to act on: what was asked for, plus everything it needs. */
-function planFor(workspace: Workspace, names: string[]): WorkspaceService[] {
+function planFor(workspace: WorkspaceStack, names: string[]): WorkspaceService[] {
   const wanted = closureFor(workspace.services, names);
   const byName = new Map(workspace.services.map((s) => [s.name, s]));
   return wanted.map((name) => byName.get(name)!).filter(Boolean);

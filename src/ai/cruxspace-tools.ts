@@ -1,3 +1,4 @@
+import type { ValidationResult } from './validation-result';
 import type { ToolDefinition } from './tools';
 import { listCruxspaces } from '@/services/cruxspaces';
 import {
@@ -40,7 +41,7 @@ export const CRUXSPACE_TOOLS: ToolDefinition[] = [
     },
   },
 ];
-export function validateCruxspaceTool(name: string, input: Record<string, unknown>) {
+export function validateCruxspaceTool(name: string, input: Record<string, unknown>): ValidationResult {
   const tool = CRUXSPACE_TOOLS.find((t) => t.name === name)!;
   const valid =
     tool.input_schema.required.every((key) => typeof input[key] === 'string' && !!input[key]) &&

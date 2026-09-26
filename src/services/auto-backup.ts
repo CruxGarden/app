@@ -126,7 +126,6 @@ export const AUTO_BACKUP_CHANGED = 'crux:auto-backup-changed';
 // ── Wiring ──────────────────────────────────────────────────────────────────
 
 let scheduler: AutoBackupScheduler | null = null;
-let hourly: ReturnType<typeof setInterval> | null = null;
 
 /** Idempotent; called from bootstrap. Returns the scheduler for tests. */
 export async function startAutoBackup(): Promise<AutoBackupScheduler> {
@@ -225,13 +224,7 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
   watch();
   useWorkspaceRegistry.subscribe(watch);
   void s.tickGarden();
-  hourly = setInterval(() => void s.tickGarden(), 60 * 60_000);
+  setInterval(() => void s.tickGarden(), 60 * 60_000);
   return s;
 }
 
-export function stopAutoBackup(): void {
-  scheduler?.stop();
-  scheduler = null;
-  if (hourly) clearInterval(hourly);
-  hourly = null;
-}

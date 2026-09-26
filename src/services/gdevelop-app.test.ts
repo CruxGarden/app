@@ -5,7 +5,7 @@ import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { GDEVELOP_TOOLS } from '@/ai/gdevelop-tools';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it('retains native scenes, events and original-media components through Growth and portable Crux archives', async () => {
   const services = getServices();
   const crux = await services.crux.create({

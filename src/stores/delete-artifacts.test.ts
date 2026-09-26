@@ -3,7 +3,7 @@ import { getServices, initServices } from '@/services';
 import { createCruxStore } from './cruxStore';
 import { createUIStore } from './uiStore';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 afterEach(() => vi.restoreAllMocks());
 
 async function workspace() {

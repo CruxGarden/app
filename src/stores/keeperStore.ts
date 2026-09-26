@@ -1,4 +1,4 @@
-import { getSqliteClient } from '@/services/sqlite/client';
+import { hasGardenGraph } from '@/services/garden-navigation';
 import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from '@/ai/garden-access';
 import { reportFlowActivity } from '@/lib/moods/flow';
 import { useStore } from 'zustand';
@@ -28,7 +28,7 @@ import {
 } from '@/ai/garden-tools';
 import { SKILL_TOOL_DEFINITIONS, runSkillTool } from '@/ai/skills';
 import { isAiMock } from '@/lib/platform';
-import { getPersona } from '@/components/mood/mood-helpers';
+import { getPersona } from '@/services/persona';
 
 /**
  * The Keeper's conversations and the Keeper's turn, owned outside the console
@@ -413,7 +413,7 @@ export async function shutdownKeepers() {
  * a Garden's own conversations where Gardens are graph nodes, or the root's
  * conversations tagged with the collection in Web Mode.
  */
-const graphGardens = () => !!getSqliteClient().gardenMembership;
+const graphGardens = hasGardenGraph;
 function collectionKeeper(spaceId: string) {
   if (graphGardens()) return keeperFor(spaceId);
   const id = useGardenContext.getState().root?.id;

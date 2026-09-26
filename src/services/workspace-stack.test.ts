@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeServices, closureFor, kindOf, type WorkspaceService } from './workspace';
+import { mergeServices, closureFor, kindOf, type WorkspaceService } from './workspace-stack';
 import type { ComposeService } from './containers';
 
 /**

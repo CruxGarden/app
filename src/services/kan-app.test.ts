@@ -7,7 +7,7 @@ import { exportCrux, importCrux } from './crux-io';
 import { nativeAppType } from './embedded-app';
 import { kanCommand } from '@/ai/kan-tools';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it('keeps original bytes and native records portable while rejecting stale and cross-Crux access', async () => {
   const services = getServices();
   const crux = await services.crux.create({

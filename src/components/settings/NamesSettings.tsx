@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SettingsSection from './SettingsSection';
 import { Input } from '@/components/ui';
 import {
   applyActiveMood,
@@ -7,7 +8,7 @@ import {
   setThemeOverrides,
 } from '@/lib/moods/active';
 import type { MoodSection } from '@/lib/moods/active';
-import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
+import { DEFAULT_PANE_LABELS, PANE_TYPES } from '@/components/workspace/paneConfig';
 import type { PaneType } from '@/stores/uiStore';
 import { useGardenContext } from '@/stores/gardenContext';
 import { renameGarden } from '@/services/garden-navigation';
@@ -19,7 +20,7 @@ import { renameGarden } from '@/services/garden-navigation';
  * its own names is a metaphor the person can still overrule here.
  */
 const SECTIONS: MoodSection[] = ['Dark', 'Light'];
-const PANES = Object.keys(DEFAULT_PANE_LABELS) as PaneType[];
+const PANES = PANE_TYPES;
 const tokenFor = (type: PaneType) => `paneLabel${type[0]!.toUpperCase()}${type.slice(1)}`;
 
 export default function NamesSettings() {
@@ -42,11 +43,11 @@ export default function NamesSettings() {
   };
 
   return (
-    <section className="mb-8" data-testid="names-settings">
-      <h2 className="font-display text-sm font-medium text-settings-label mb-1">Names</h2>
-      <p className="text-xs text-text-muted mb-4">
-        What this Garden is called, and its panes. Leave a pane empty for the usual word.
-      </p>
+    <SettingsSection
+      title="Names"
+      testId="names-settings"
+      description="What this Garden is called, and its panes. Leave a pane empty for the usual word."
+    >
       <label className="flex flex-col gap-1 mb-4">
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">
           Garden title
@@ -89,6 +90,6 @@ export default function NamesSettings() {
           </label>
         ))}
       </div>
-    </section>
+    </SettingsSection>
   );
 }

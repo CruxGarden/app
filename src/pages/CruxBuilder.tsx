@@ -106,7 +106,7 @@ export default function CruxBuilder() {
 function Builder() {
   const crux = useCruxStore((s) => s.crux);
   const [search, setSearch] = useSearchParams();
-  // `?growth=<checkpoint>`: arrive from the Cruxspace history at one checkpoint.
+  // `?growth=<checkpoint>`: arrive from the Garden history at one checkpoint.
   const growthId = search.get('growth');
   const ownerId = crux && (copyIdentity(crux)?.cruxId ?? crux.id);
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { parseFigmaReference } from '../../electron/src/figma-reference';
+import { announceExternalChange } from './ingestion';
 import { getServices } from './index';
-import { getCruxspace } from './cruxspaces';
+import { getCruxspace, cruxspaceMembers } from './cruxspaces';
 import { hashContent } from './sqlite/helpers';
 import { pathOf } from '@/lib/artifact-path';
 import { assertCopyWritable, findWorkingCopy, serializeCopy } from './working-copies';
@@ -154,7 +155,7 @@ function validPath(path: string) {
 async function checkpoint(owner: string) {
   await flushIngestion();
   if (typeof window !== 'undefined')
-    window.dispatchEvent(new CustomEvent('crux:external-change', { detail: { cruxId: owner } }));
+    announceExternalChange(owner);
   await captureEditCheckpoint(owner);
 }
 
@@ -211,9 +212,8 @@ export async function saveCruxOutput(
 
 export async function listCruxspaceAssets(spaceId: string): Promise<CruxspaceAsset[]> {
   await flushIngestion();
-  const space = await getCruxspace(spaceId);
-  const { crux, artifact } = getServices();
-  const live = new Map((await crux.listAll()).map((c) => [c.id, c]));
+  const { space, live } = await cruxspaceMembers(spaceId);
+  const { artifact } = getServices();
   const assets: CruxspaceAsset[] = [];
   for (const id of space.cruxIds) {
     const source = live.get(id);

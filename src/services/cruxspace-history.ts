@@ -1,5 +1,5 @@
 import { getServices } from './index';
-import { getCruxspace, type Cruxspace } from './cruxspaces';
+import { type Cruxspace, cruxspaceMembers } from './cruxspaces';
 import { listCruxspaceAssets, type AssetOrigin, type CruxspaceAsset } from './cruxspace-assets';
 import {
   loadGrowthGraph,
@@ -66,9 +66,8 @@ export interface CruxspaceHistory {
 
 export async function loadCruxspaceHistory(spaceId: string): Promise<CruxspaceHistory> {
   await flushIngestion();
-  const space = await getCruxspace(spaceId);
-  const { crux, artifact } = getServices();
-  const live = new Map((await crux.listAll()).map((c) => [c.id, c]));
+  const { space, live } = await cruxspaceMembers(spaceId);
+  const { artifact } = getServices();
   const assets = await listCruxspaceAssets(spaceId);
   const lanes: GrowthLane[] = [];
   const nodes: GrowthNode[] = [];

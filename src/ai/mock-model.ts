@@ -2809,8 +2809,8 @@ function growthScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> 
 // overwrite a file it has not read) and closes with text. It "thinks" between rounds — long before step 2 — so a test can
 // type, stop, or relaunch mid-step while the job card shows the steps advance.
 
-export const PLAN_STEPS = ['Lay the foundation', 'Raise the walls', 'Put on the roof'];
-export const planStepFile = (n: number) => `step-${n}.txt`;
+const PLAN_STEPS = ['Lay the foundation', 'Raise the walls', 'Put on the roof'];
+const planStepFile = (n: number) => `step-${n}.txt`;
 /** Think time before each round's write (ms): step 2 is the slow one, step 3 long enough to watch. */
 const PLAN_THINK_MS = [0, 5000, 2500];
 
@@ -2900,7 +2900,7 @@ function planScript(
 // every system prompt this mock has received, in order, so a test can assert
 // that a NEW crux's first turn carries the remembered line.
 
-export const REMEMBER_NOTE = 'prefers British spelling';
+const REMEMBER_NOTE = 'prefers British spelling';
 
 function memoryScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
   if (!/\bremember\b/i.test(lastUserText(prompt))) return null;
@@ -2937,7 +2937,7 @@ if (typeof window !== 'undefined') {
 // inspection text itself (which reply it quotes), not from call counting, so
 // a later manual "Check it" on the fixed page passes too.
 
-export const LANDING_PATH = 'index.html';
+const LANDING_PATH = 'index.html';
 export const LANDING_MISSING = 'Heading missing';
 export const LANDING_DONE_REPLY = 'Done — the landing page is ready.';
 export const LANDING_FIXED_REPLY = 'Fixed — added the heading.';
@@ -3026,10 +3026,10 @@ function generateText(prompt: LanguageModelV4Prompt): string {
 // makes every worker think ~4s before its first write, so a test can Stop
 // mid-run. After the delegate result the model closes with text.
 
-export const SUB_TITLES = ['Alpha', 'Beta', 'Gamma'];
-export const subFile = (title: string) => `${title.toLowerCase()}.md`;
-export const SHARED_FILE = 'notes.md';
-export const subNotes = (title: string) => `notes from ${title}\n`;
+const SUB_TITLES = ['Alpha', 'Beta', 'Gamma'];
+const subFile = (title: string) => `${title.toLowerCase()}.md`;
+const SHARED_FILE = 'notes.md';
+const subNotes = (title: string) => `notes from ${title}\n`;
 const SUB_THINK_MS = 4000;
 
 function delegateScript(
@@ -3091,7 +3091,7 @@ export const FIVE_WS_OPENING =
   'You took your time. Sit, if you must — the chair has held worse than you.';
 
 /** In-voice lines with nothing identifying in them. Kept free of common name words. */
-export const FIVE_WS_LINES: readonly string[] = [
+const FIVE_WS_LINES: readonly string[] = [
   'You ask that as though the answer were owed to you. It is not.',
   'I have been asked better questions by worse people, and answered none of them.',
   'Spelling was never the part of me anyone remembered.',

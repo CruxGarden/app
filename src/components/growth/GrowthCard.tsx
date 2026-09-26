@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useObjectUrl } from '@/hooks/useBlobUrl';
 import { appChangesLabel } from '@/services/app-changes';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
@@ -169,38 +170,20 @@ function usePreview(growth: Dimension): PreviewInfo | null {
   return stored || discovered;
 }
 
-/** Hook to load thumbnail blob URL from a snapshot's thumb.png */
+/** The snapshot's thumbnail, if it kept one. */
 function useThumbnail(growth: Dimension): string | null {
   const thumbnailId = growth.meta?.thumbnailId as string | undefined;
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!thumbnailId) return;
-    let cancelled = false;
-    let objectUrl: string | null = null;
-
-    (async () => {
-      try {
-        const { artifact } = getServices();
-        const files = await artifact.findByResource('crux', growth.targetId);
-        const file = files.find((item) => item.id === thumbnailId);
-        if (!file) return;
-        const blob = await artifact.downloadBlob(file);
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        setUrl(objectUrl);
-      } catch {
-        // ignore — thumbnail not available
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [thumbnailId, growth.targetId]);
-
-  return url;
+  return useObjectUrl(
+    thumbnailId
+      ? async () => {
+          const { artifact } = getServices();
+          const files = await artifact.findByResource('crux', growth.targetId);
+          const file = files.find((item) => item.id === thumbnailId);
+          return file ? artifact.downloadBlob(file) : null;
+        }
+      : null,
+    [thumbnailId, growth.targetId],
+  );
 }
 
 /** Stand-in for a snapshot without a screenshot: just its number. */

@@ -20,7 +20,7 @@ const png = () =>
     { type: 'image/png' },
   );
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 
 it('keeps transfers distinct from deliberate versions and never classifies versions by their label', async () => {
   const { crux, artifact } = getServices();

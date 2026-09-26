@@ -10,6 +10,7 @@
  * paths are asked of that base instead.
  */
 import { Capability, can } from '@/lib/platform';
+import { slugify } from '@/lib/slug';
 import { getServices } from './index';
 import { hashContent } from './sqlite/helpers';
 
@@ -144,7 +145,7 @@ export async function searchMedia(kind: MediaKind, query: string, page = 1): Pro
   return fromOpenverse(data.results, kind);
 }
 
-const safe = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'media';
+const safe = (s: string) => slugify(s, 'media', 60);
 export const defaultFolder = (kind: MediaKind) => (kind === 'image' ? 'images' : kind === 'audio' ? 'audio' : 'media');
 export const originPath = async (path: string) => `media-origins/${await hashContent(path)}.json`;
 

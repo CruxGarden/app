@@ -10,7 +10,7 @@ import {
 
 describe('shared garden operating authority', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
   });
   it('lets a built-in collaborator discover the actual operating schemas', async () => {
     const execute = createToolExecutor('a');

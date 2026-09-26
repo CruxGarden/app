@@ -9,7 +9,7 @@ import { createTendingDemo } from './create';
 import { checkout, accessibility } from './content';
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 afterEach(async () => {
   for (const w of allWorkspaces()) await closeWorkspace(w.id, { stop: true, documents: 'discard' });

@@ -4,7 +4,7 @@ import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it('retains native network components through Growth and portable Crux archives', async () => {
   const services = getServices();
   const crux = await services.crux.create({

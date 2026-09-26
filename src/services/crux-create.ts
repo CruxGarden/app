@@ -19,8 +19,7 @@ import { syncAgentsMd } from './agents-md';
 /**
  * "New crux from a template" as one operation — file creation, the desktop
  * scaffold script, and the meta stamping (greeting, AI context, Builder
- * inputs). This used to be a 90-line transaction inside NewCruxModal, which
- * meant the use case had no owner and no test, and its failures vanished.
+ * inputs), owned and tested here rather than in the dialog.
  *
  * The caller creates the bare crux first (the workspace store owns that, so
  * the UI is consistent) and hands it in.

@@ -1,4 +1,6 @@
 import { flushNotebook } from '@/services/notebook-lifecycle';
+import { markTurnSeen, seenTurn } from '@/services/tending-state';
+import { EXTERNAL_CHANGE } from '@/services/ingestion';
 import { tendingState, tendingLabel, type TendingState } from '@/services/tending-state';
 import { copyIdentity, findWorkingCopy } from '@/services/working-copies';
 import { maintainNotesManifest } from '@/services/notes-manifest';
@@ -89,7 +91,7 @@ export function workspaceTending(w: Workspace): TendingState {
     streaming: s.isStreaming,
     settling: s.turnSettling,
     queued: s.turnQueue.length,
-    seenTurnId: w.seenTurnId ?? getSetting(`cruxgarden:tending-seen:${w.id}`),
+    seenTurnId: w.seenTurnId ?? seenTurn(w.id),
     folderMissing: s.folderMissing,
     requests: [
       ...s.pendingDeletes.map((d) => ({
@@ -117,7 +119,7 @@ function summarize(w: Workspace) {
     w.seenTurnId !== s.turnJob.id
   ) {
     w.seenTurnId = s.turnJob.id;
-    setSetting(`cruxgarden:tending-seen:${w.id}`, s.turnJob.id);
+    markTurnSeen(w.id, s.turnJob.id);
   }
   const tending = workspaceTending(w);
   const next = {
@@ -336,7 +338,7 @@ export async function restoreWorkspaceList(): Promise<string | null> {
   return saved.active && ids.includes(saved.active) ? saved.active : null;
 }
 if (typeof window !== 'undefined') {
-  window.addEventListener('crux:external-change', (e) => {
+  window.addEventListener(EXTERNAL_CHANGE, (e) => {
     const w = sessions.get((e as CustomEvent<{ cruxId: string }>).detail.cruxId);
     void w?.data.getState().refreshArtifacts().catch(console.error);
   });

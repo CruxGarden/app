@@ -67,13 +67,6 @@ export async function installMediaTool(tool: MediaToolName): Promise<MediaInstal
   return api.install({ tool });
 }
 
-/** Lines and progress from an install in flight. */
-export function onMediaInstallProgress(
-  callback: (event: { tool: MediaToolName; fraction?: number; line?: string }) => void,
-): () => void {
-  const api = typeof window !== 'undefined' ? window.electronAPI?.native : undefined;
-  return api?.onInstallProgress ? api.onInstallProgress(callback) : () => {};
-}
 
 /**
  * A document to PDF.

@@ -123,7 +123,7 @@ test.describe('home garden, crux picker, panes, console', () => {
       await page.getByRole('menuitem', { name: 'Delete' }).click();
       await expect(page.getByText('Delete Crux')).toBeVisible();
       await page.getByRole('button', { name: 'Delete', exact: true }).click();
-      await expect(page.getByRole('alert')).toContainText('Close this Crux workspace');
+      await expect(page.getByRole('alertdialog')).toContainText('Close this Crux workspace');
       await page.keyboard.press('Escape');
       await expect(page.getByText('Delete Crux')).toHaveCount(0);
 

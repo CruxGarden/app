@@ -6,7 +6,7 @@ import { exportCrux, importCrux } from './crux-io';
 import { nativeAppType } from './embedded-app';
 import { playcanvasEditorCommand } from '@/ai/playcanvas-editor-tools';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it('preserves empty source files, fingerprinted scene components and ownership through export', async () => {
   const services = getServices();
   const crux = await services.crux.create({

@@ -40,9 +40,9 @@ import type {
  */
 
 export const GARDEN_HOST_ID = '@garden';
-export const MCP_PATH = '/mcp';
-export const MCP_CONFIG_DIR = '.crux';
-export const MCP_CONFIG_FILE = 'mcp.json';
+const MCP_PATH = '/mcp';
+const MCP_CONFIG_DIR = '.crux';
+const MCP_CONFIG_FILE = 'mcp.json';
 
 /** What `.crux/mcp.json` holds — the one file an agent needs to connect. */
 export interface McpConfigFile {

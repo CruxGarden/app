@@ -1,16 +1,12 @@
-import { createPortal } from 'react-dom';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useGrowthGraphView } from './useGrowthGraphView';
+import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
 import { Modal } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import {
-  compactGrowthGraph,
-  growthAncestry,
-  loadGrowthGraph,
-  type GrowthGraph,
-} from '@/services/growth-graph';
+import { loadGrowthGraph, type GrowthGraph } from '@/services/growth-graph';
 import { TASKS_CHANGED } from '@/services/working-copies';
 import GrowthInspector from './GrowthInspector';
-import { laneColor } from './graph-style';
+import { GRAPH_BG, GRAPH_TEXT, laneColor } from './graph-style';
 
 const Canvas2D = lazy(() => import('./GrowthGraphCanvas'));
 const Canvas3D = lazy(() => import('./GrowthGraph3D'));
@@ -24,7 +20,7 @@ export default function GrowthExplorer({
 }: {
   cruxId: string;
   onClose: () => void;
-  /** A checkpoint to open on, for example from the Cruxspace history. */
+  /** A checkpoint to open on, for example from the Garden history. */
   initialSelectedId?: string | null;
 }) {
   const [graph, setGraph] = useState<GrowthGraph | null>(null);
@@ -36,21 +32,13 @@ export default function GrowthExplorer({
   const [query, setQuery] = useState('');
   const [laneFilter, setLaneFilter] = useState('');
   const [listLimit, setListLimit] = useState(60);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const [reducedMotion, setReducedMotion] = useState(
-    () => matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
+  const reducedMotion = useReducedMotion();
   const [refresh, setRefresh] = useState(0);
   const dialogRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const size = useElementSize(canvasRef);
   const select = useCallback((id: string) => setSelectedId(id || null), []);
 
-  useEffect(() => {
-    const media = matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setReducedMotion(media.matches);
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
   useEffect(() => {
     let live = true;
     let loading = false;
@@ -89,19 +77,6 @@ export default function GrowthExplorer({
     };
   }, [cruxId, refresh]);
   useEffect(() => {
-    const element = canvasRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry)
-        setSize({
-          width: Math.floor(entry.contentRect.width),
-          height: Math.floor(entry.contentRect.height),
-        });
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();
     return () => {
@@ -109,22 +84,7 @@ export default function GrowthExplorer({
     };
   }, []);
 
-  const display = useMemo(
-    () =>
-      graph
-        ? compactGrowthGraph(
-            graph,
-            new Set(expanded ? graph.lanes.map((l) => l.id) : []),
-            selectedId,
-          )
-        : null,
-    [graph, expanded, selectedId],
-  );
-  const ancestry = useMemo(
-    () => (graph && selectedId ? growthAncestry(graph, selectedId) : new Set<string>()),
-    [graph, selectedId],
-  );
-  const selected = graph?.nodes.find((n) => n.id === selectedId);
+  const { display, ancestry, selected } = useGrowthGraphView(graph, expanded, selectedId);
   const listed = useMemo(() => {
     if (!graph) return [];
     const titles = new Map(graph.lanes.map((l) => [l.id, l.title]));
@@ -147,7 +107,8 @@ export default function GrowthExplorer({
     reducedMotion,
   };
 
-  return createPortal(
+  // Modal renders at <body> itself.
+  return (
     <Modal open onClose={onClose} size="full" flush aria-label="Whole Crux Growth">
       <section
         ref={dialogRef}
@@ -247,14 +208,15 @@ export default function GrowthExplorer({
             </div>
             <div
               ref={canvasRef}
-              className="flex-1 min-h-0 relative overflow-hidden bg-[#101c19]"
+              className="flex-1 min-h-0 relative overflow-hidden"
+              style={{ backgroundColor: GRAPH_BG, color: GRAPH_TEXT }}
               data-testid={`growth-canvas-${mode}`}
             >
               {canvasProps &&
                 size.width > 0 &&
                 size.height > 0 &&
                 (canvasProps.graph.nodes.length > 1500 ? (
-                  <p className="p-6 text-[#e1eee5]">
+                  <p className="p-6">
                     This view has over 1,500 visible checkpoints. Compact the graph or use the
                     checkpoint browser to explore its saved history.
                   </p>
@@ -262,7 +224,7 @@ export default function GrowthExplorer({
                   <ErrorBoundary
                     key={mode}
                     fallback={
-                      <div className="p-6 text-[#e1eee5] space-y-3">
+                      <div className="p-6 space-y-3">
                         <p>
                           The graph renderer is unavailable. All saved history is still accessible
                           in the checkpoint browser.
@@ -275,7 +237,7 @@ export default function GrowthExplorer({
                   >
                     <Suspense
                       fallback={
-                        <p role="status" className="p-6 text-[#e1eee5]">
+                        <p role="status" className="p-6">
                           Opening {mode === '3d' ? '3D' : '2D'} Growth…
                         </p>
                       }
@@ -391,7 +353,6 @@ export default function GrowthExplorer({
           </aside>
         </div>
       </section>
-    </Modal>,
-    document.body,
+    </Modal>
   );
 }

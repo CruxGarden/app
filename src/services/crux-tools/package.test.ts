@@ -43,7 +43,7 @@ async function published(blob: Blob) {
 
 describe('single-entity tool packages', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
   });
   afterEach(() => vi.restoreAllMocks());
 

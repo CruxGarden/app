@@ -10,7 +10,7 @@ import {
 import { assertCopyWritable } from '@/services/working-copies';
 import { getServices } from '@/services';
 import type { ToolResultContent } from '@/services/types';
-import { validateToolInput } from './validation';
+import { validateToolInput, type ValidationResult } from './validation';
 import { formatToolError } from './errors';
 import { guessMimeType, isBinaryMime, isImageMime } from '@/lib/mime';
 import { checkSiteBuild, SiteBuildError } from '@/services/site';
@@ -419,7 +419,7 @@ export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
  * A Crux's own stack, through Docker Compose. The compose file is an ordinary
  * Artifact — read and edit it with read_file and write_file — and these run it.
  */
-export const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
+const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'compose_ps',
     description:
@@ -509,7 +509,7 @@ export const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
  * A Runner Crux: the board for a Cruxspace used as a development workspace.
  * It conducts the Stack and Project Cruxes beside it (ADR 0053).
  */
-export const RUNNER_TOOL_DEFINITIONS: ToolDefinition[] = [
+const RUNNER_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'workspace_status',
     description:
@@ -558,7 +558,7 @@ export const RUNNER_TOOL_DEFINITIONS: ToolDefinition[] = [
  * A Link Crux: a project hooked into Crux Garden. The folder and the script are
  * in `link.json`; the person chooses the folder, and only they can.
  */
-export const LINK_TOOL_DEFINITIONS: ToolDefinition[] = [
+const LINK_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'link_status',
     description:
@@ -605,7 +605,7 @@ export const LINK_TOOL_DEFINITIONS: ToolDefinition[] = [
 ];
 
 /** The preview as an image or a video, from the shell's own capture window (step 5). */
-export const CAPTURE_TOOL_DEFINITIONS: ToolDefinition[] = [
+const CAPTURE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'capture_preview',
     description:
@@ -660,7 +660,7 @@ export const CAPTURE_TOOL_DEFINITIONS: ToolDefinition[] = [
 ];
 
 /** The guestbook block (V1-GAPS-PLAN §2.8) for any site Crux. */
-export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
+const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
   name: 'add_guestbook',
   description:
     "Add a guestbook to this site: visitors of the shared site leave a note (name and message) after signing in by email; the notes live in this Crux's own Crux Store. " +
@@ -719,7 +719,7 @@ export function defaultToolDefinitions(cruxId?: string, gardenAccess = true): To
  * IS its history), no theme or soundscape (the Mood is not the task), and no
  * delegate (no fan-out from a fan-out).
  */
-export const SUBAGENT_TOOL_NAMES = [
+const SUBAGENT_TOOL_NAMES = [
   'write_file',
   'edit_file',
   'read_file',
@@ -819,12 +819,10 @@ export function createToolExecutor(
     }
     // Validate inputs before execution
     const appTool = appToolFor(cruxId, toolName);
-    const validation = isAppToolName(toolName)
-      ? { valid: true, error: undefined }
+    const validation: ValidationResult = isAppToolName(toolName)
+      ? { valid: true }
       : validateToolInput(toolName, input);
-    if (!validation.valid) {
-      return formatToolError(toolName, validation.error!);
-    }
+    if (!validation.valid) return formatToolError(toolName, validation.error);
 
     // Scope (B5): a worker may read anything, but only change what it was given.
     const outside = appTool
@@ -982,7 +980,7 @@ export function createToolExecutor(
           }
           case 'workspace_status': {
             const { workspaceStatus } = await import('@/services/runner');
-            const { discoverWorkspace } = await import('@/services/workspace');
+            const { discoverWorkspace } = await import('@/services/workspace-stack');
             const [status, workspace] = await Promise.all([
               workspaceStatus(cruxId),
               discoverWorkspace(cruxId),
@@ -1004,7 +1002,7 @@ export function createToolExecutor(
           case 'workspace_start':
           case 'workspace_stop': {
             const { startWorkspace, stopWorkspace } = await import('@/services/runner');
-            const { discoverWorkspace } = await import('@/services/workspace');
+            const { discoverWorkspace } = await import('@/services/workspace-stack');
             const asked = (input as { names?: string[] }).names;
             const names =
               asked && asked.length

@@ -10,7 +10,7 @@ import { PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/
 
 /**
  * The Mood Bar, a control in the top bar: the Mood's track — play/pause,
- * volume, what's playing — and a way into the Mood modal and the Sound
+ * volume, what's playing — and a way into the Mood pane and the Sound
  * section. Collapsed it is one small button with live level bars; expanded it
  * shows the track name, play/pause, volume and the sound settings. The
  * collapsed state persists. Every part is a Mood token (moodBar*), so a theme
@@ -78,7 +78,7 @@ export default function MoodBar({
   gateway = false,
 }: {
   className?: string;
-  /** On the Gateway: no garden yet, so no Mood modal and no sound settings — just the player. */
+  /** On the Gateway: no garden yet, so no Mood pane and no sound settings — just the player. */
   gateway?: boolean;
 }) {
   const publicSite = isPublicSite();
@@ -109,7 +109,7 @@ export default function MoodBar({
       document.getElementById('mood')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    useUIStore.getState().toggleMoodPanel();
+    useUIStore.getState().toggleMoodPane();
   }, [publicSite, gateway]);
 
   const setCollapsedPersist = useCallback((c: boolean) => {

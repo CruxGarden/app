@@ -1,4 +1,5 @@
 import { captureEditCheckpoint } from './edit-history';
+import { listGrowths } from './growth';
 import { useGardenContext } from '@/stores/gardenContext';
 import { reportFlowActivity } from '@/lib/moods/flow';
 import {
@@ -500,7 +501,7 @@ async function readResource(
   const json = (value: unknown): McpResourceResult => ({
     contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(value, null, 2) }],
   });
-  const { artifact, dimension } = getServices();
+  const { artifact } = getServices();
 
   switch (uri) {
     case 'crux://files': {
@@ -512,10 +513,7 @@ async function readResource(
       return json({ cruxId, files });
     }
     case 'crux://growth': {
-      const growths = await dimension.findBySourceAndType(cruxId, 'growth');
-      const timeline = growths
-        .sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0))
-        .map((g) => ({
+      const timeline = (await listGrowths(cruxId)).map((g) => ({
           id: g.id,
           snapshotCruxId: g.targetId,
           label: (g.meta?.label as string | undefined) ?? null,

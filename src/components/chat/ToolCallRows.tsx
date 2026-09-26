@@ -180,7 +180,7 @@ const VERBS: Record<string, Verb> = {
 };
 
 /** "Created 2 files · Ran 1 command" — what a group of calls amounts to. */
-export function summarizeToolCalls(calls: ToolCall[]): string {
+function summarizeToolCalls(calls: ToolCall[]): string {
   const counts = new Map<Verb, number>();
   for (const tc of calls) {
     const verb = VERBS[tc.name] ?? 'used';
@@ -214,7 +214,7 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-export function ToolCallItem({ tc }: { tc: ToolCall }) {
+function ToolCallItem({ tc }: { tc: ToolCall }) {
   const [expanded, setExpanded] = useState(false);
   const label = getToolLabel(tc);
   const hasResult = !!tc.result;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
-import { Panel, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
 import * as billingApi from '@/api/billing';
@@ -191,10 +192,10 @@ export default function PlanSettings() {
     });
 
   return (
-    <Panel data-testid="plan-settings">
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="font-display text-base font-medium text-heading">Plan</h2>
-        {me && (
+    <SettingsSection
+      title="Plan"
+      testId="plan-settings"
+      aside={me && (
           <span className="text-xxs font-mono text-text-muted" data-testid="plan-status">
             {me.plan.name}
             {me.status === 'trialing' && me.trialEndsAt
@@ -208,7 +209,7 @@ export default function PlanSettings() {
             {me.status === 'past_due' ? ' · payment failed' : ''}
           </span>
         )}
-      </div>
+    >
       {me?.provider === 'simulation' && (
         <div className="text-xs text-text-muted mb-3" data-testid="billing-simulation">
           <p>Billing simulation — no payments. Prices and subscription changes are examples.</p>
@@ -363,6 +364,6 @@ export default function PlanSettings() {
           </div>
         </>
       )}
-    </Panel>
+    </SettingsSection>
   );
 }

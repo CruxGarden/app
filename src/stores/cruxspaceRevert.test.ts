@@ -6,7 +6,7 @@ import { createTask } from '@/services/tasks';
 import { getCruxspaceMoment, setCruxspaceMoment } from '@/services/cruxspace-moment';
 import { planCruxspaceRevert, revertCruxspaceTo } from './cruxspaceRevert';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 
 async function page(cruxId: string, html: string) {
   const { artifact } = getServices();

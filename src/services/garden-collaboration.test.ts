@@ -5,7 +5,7 @@ import { cruxUpsertFields } from './publish';
 
 describe('Garden-owned Collaboration', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
   });
 
   it('keeps each Garden history on its owner and excludes it from public publication', async () => {

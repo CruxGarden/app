@@ -47,7 +47,7 @@ export interface WorkspaceMember {
   template: string | null;
 }
 
-export interface Workspace {
+export interface WorkspaceStack {
   cruxspaceId: string | null;
   name: string;
   members: WorkspaceMember[];
@@ -194,7 +194,7 @@ async function linkRecord(cruxId: string): Promise<ProjectRecord> {
  * Every failure is a note rather than an exception: a workspace with one
  * unreadable member is still worth showing.
  */
-export async function discoverWorkspace(cruxId: string): Promise<Workspace> {
+export async function discoverWorkspace(cruxId: string): Promise<WorkspaceStack> {
   const notes: string[] = [];
   const space = await spaceFor(cruxId);
   if (!space)

@@ -1,12 +1,13 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 const STYLES = ['liberty', 'bright', 'positron', 'dark'];
 export const MAPS_TOOLS: AppToolDefinition[] = [
-  { name: 'inspect_map', description: 'Read the open map: its name, basemap, view, and its places, routes and areas (id, kind, title, notes, colour, coordinates).', input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false }, writes: [] },
+  { name: 'inspect_map', description: 'Read the open map: its name, basemap, view, and its places, routes and areas (id, kind, title, notes, colour, coordinates).', input_schema: NO_INPUT, writes: [] },
   { name: 'set_map_name', description: 'Name the map and save it in Garden.', input_schema: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 200 } }, required: ['name'], additionalProperties: false }, writes: ['data/project.json'] },
   { name: 'set_map_style', description: 'Choose the basemap: liberty, bright, positron or dark.', input_schema: { type: 'object', properties: { style: { type: 'string', enum: STYLES } }, required: ['style'], additionalProperties: false }, writes: ['data/project.json'] },
   { name: 'add_map_place', description: 'Add a place (a point) at a longitude and latitude with a title, optional notes and colour; saves the map.', input_schema: { type: 'object', properties: { title: { type: 'string', minLength: 1, maxLength: 200 }, lng: { type: 'number', minimum: -180, maximum: 180 }, lat: { type: 'number', minimum: -90, maximum: 90 }, notes: { type: 'string', maxLength: 2000 }, color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } }, required: ['title', 'lng', 'lat'], additionalProperties: false }, writes: ['data/project.json'] },
   { name: 'remove_map_place', description: 'Remove a place, route or area by its id (from inspect_map) and save the map.', input_schema: { type: 'object', properties: { id: { type: 'string', minLength: 1, maxLength: 64 } }, required: ['id'], additionalProperties: false }, writes: ['data/project.json'] },
-  { name: 'fit_map', description: 'Move the view to show every place, route and area, and save the view.', input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false }, writes: ['data/project.json'] },
+  { name: 'fit_map', description: 'Move the view to show every place, route and area, and save the view.', input_schema: NO_INPUT, writes: ['data/project.json'] },
   { name: 'save_map_image', description: 'Save the map as it looks now as a named PNG output of this Crux (exports/), for a site or a notebook.', input_schema: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 120 } }, required: ['name'], additionalProperties: false }, writes: ['data/project.json', 'exports/'] },
 ];
 export function mapsCommand(name: string, input: Record<string, unknown>) {

@@ -1,3 +1,4 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 /** Tigrana Notes App Tools: read the notebook, bring a Word document in, hand a note out as one. */
 export const NOTES_TOOLS: AppToolDefinition[] = [
@@ -5,7 +6,7 @@ export const NOTES_TOOLS: AppToolDefinition[] = [
     name: 'inspect_notebook',
     description:
       'List the notes in this Tigrana notebook (paths and titles), the note that is open, and the public edition choices.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -24,7 +25,7 @@ export const NOTES_TOOLS: AppToolDefinition[] = [
     name: 'save_notebook_book',
     description:
       'Build the book edition — the notes chosen for the public edition as an EPUB — and save it as a named output of this Crux (exports/). The notebook must have “Web pages and an EPUB book” chosen under its sharing settings and at least one public note.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: ['exports/', 'dist/'],
     timeoutMs: 10 * 60_000,
   },

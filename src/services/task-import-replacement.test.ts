@@ -14,7 +14,7 @@ import {
   openWorkspace,
 } from '@/stores/workspaceRegistry';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 afterEach(async () => {
   vi.restoreAllMocks();
   for (const workspace of allWorkspaces())

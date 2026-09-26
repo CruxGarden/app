@@ -13,7 +13,7 @@ const cancelPendingDeletes = () => useCruxStore.getState().cancelPendingDeletes(
 import { initServices, getServices } from '@/services';
 
 async function seedCrux() {
-  await initServices('local');
+  await initServices();
   const { crux } = getServices();
   const created = await crux.create({ title: 'Delete Test' });
   useCruxStore.setState({ crux: created, artifacts: [], pendingDeletes: [] });

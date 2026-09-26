@@ -25,7 +25,7 @@ describe('.crux format conformance (CRUX-FORMAT.md)', () => {
   let svc: Services;
 
   beforeEach(async () => {
-    svc = await initServices('local');
+    svc = await initServices();
   });
 
   /** A workspace with 2 files, and optionally snapshots that share content. */

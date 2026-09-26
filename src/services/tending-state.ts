@@ -1,3 +1,4 @@
+import { getSetting, setSetting } from './settings';
 import type { TurnJob } from './turn-jobs';
 
 /** Observation only. A result, an unanswered decision and a check are independent. */
@@ -192,4 +193,13 @@ export function targetMatches(target: TendingTarget, current: TendingState): boo
 }
 export function attentionCount(states: TendingState[]): number {
   return new Set(states.filter((s) => s.attention.length).map((s) => s.copyId)).size;
+}
+
+/** The last turn of a Crux the person has looked at; Tending marks the newer ones. */
+const seenKey = (cruxId: string) => `cruxgarden:tending-seen:${cruxId}`;
+export function seenTurn(cruxId: string): string | null {
+  return getSetting(seenKey(cruxId));
+}
+export function markTurnSeen(cruxId: string, turnId: string): void {
+  setSetting(seenKey(cruxId), turnId);
 }

@@ -24,13 +24,6 @@
       "status": "planned"
     },
     {
-      "key": "cruxgarden:backend",
-      "group": "identity-and-connection",
-      "target": "installation/account",
-      "preservation": "Retain local author/home identity and connection bindings; never infer containment or export credentials.",
-      "status": "planned"
-    },
-    {
       "key": "cruxgarden:apiUrl",
       "group": "identity-and-connection",
       "target": "installation/account",
@@ -293,7 +286,7 @@
       "key": "cruxgarden:persona",
       "group": "collaboration",
       "target": "Garden Mood projection",
-      "preservation": "The Persona is part of the worn Mood; the active Garden’s resolved Mood projects it, and edits are overrides of that Mood like theme tokens.",
+      "preservation": "The Persona is part of the worn Mood; the active Garden\u2019s resolved Mood projects it, and edits are overrides of that Mood like theme tokens.",
       "status": "implemented"
     },
     {
@@ -321,14 +314,14 @@
       "key": "cruxgarden:keeper-model",
       "group": "collaboration",
       "target": "Garden Crux metadata",
-      "preservation": "The Garden Collaboration’s model lives in meta.gardenCollaboration; the old global key is not read.",
+      "preservation": "The Garden Collaboration\u2019s model lives in meta.gardenCollaboration; the old global key is not read.",
       "status": "implemented"
     },
     {
       "key": "cruxgarden:keeper-conversations",
       "group": "collaboration",
       "target": "Garden Crux metadata",
-      "preservation": "Each Garden’s conversations live in meta.gardenCollaboration on the Garden Crux; the old global key is not read.",
+      "preservation": "Each Garden\u2019s conversations live in meta.gardenCollaboration on the Garden Crux; the old global key is not read.",
       "status": "implemented"
     },
     {
@@ -531,7 +524,7 @@
       "key": "cruxgarden:schedules",
       "group": "additional",
       "target": "Garden rules + operational execution state",
-      "preservation": "Each Garden keeps its own schedules’ definitions in meta.gardenSchedules on the Garden Crux (they travel with the Garden and stay out of publications); this installation list keeps when they run, what fired and timer clocks. Tending shows the Garden in front’s; a Mood’s schedules belong to the Garden wearing it and come from the Mood.",
+      "preservation": "Each Garden keeps its own schedules\u2019 definitions in meta.gardenSchedules on the Garden Crux (they travel with the Garden and stay out of publications); this installation list keeps when they run, what fired and timer clocks. Tending shows the Garden in front\u2019s; a Mood\u2019s schedules belong to the Garden wearing it and come from the Mood.",
       "status": "implemented"
     },
     {

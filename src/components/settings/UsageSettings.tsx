@@ -1,7 +1,7 @@
 import IncludedUsagePanel from './IncludedUsagePanel';
+import SettingsSection from './SettingsSection';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { Panel } from '@/components/ui';
 import { formatBytes } from '@/lib/format';
 import * as usageApi from '@/api/usage';
 import { useGardenStore } from '@/stores/gardenStore';
@@ -60,15 +60,15 @@ export default function UsageSettings() {
     c.title || cruxes.find((x) => x.id === c.cruxId)?.title || c.cruxId.slice(0, 8);
 
   return (
-    <Panel data-testid="usage-settings">
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="font-display text-base font-medium text-heading">Usage</h2>
-        {usage && (
+    <SettingsSection
+      title="Usage"
+      testId="usage-settings"
+      aside={usage && (
           <span className="text-xxs font-mono text-text-muted">
             {day(usage.period.start)} → {day(usage.period.end)} · {usage.plan.name} plan
           </span>
         )}
-      </div>
+    >
       <IncludedUsagePanel />
       {error && <p className="text-xs text-text-muted">{error}</p>}
       {usage && (
@@ -215,6 +215,6 @@ export default function UsageSettings() {
           </p>
         </div>
       )}
-    </Panel>
+    </SettingsSection>
   );
 }

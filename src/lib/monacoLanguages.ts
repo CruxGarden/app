@@ -58,9 +58,3 @@ const PREVIEWABLE_EXTS = new Set(['html', 'htm', 'svg', 'md', 'mdx', 'astro']);
 export function isPreviewable(filename: string): boolean {
   return PREVIEWABLE_EXTS.has(getExtension(filename));
 }
-
-const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico']);
-
-export function isImageFile(filename: string): boolean {
-  return IMAGE_EXTS.has(getExtension(filename));
-}

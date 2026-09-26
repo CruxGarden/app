@@ -18,7 +18,7 @@ describe('Export / Import', () => {
   let svc: Services;
 
   beforeEach(async () => {
-    svc = await initServices('local');
+    svc = await initServices();
   });
 
   describe('basic round-trip', () => {

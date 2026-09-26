@@ -66,10 +66,6 @@ export async function typstFont(typstBinary: string): Promise<string | null> {
   return fontCache;
 }
 
-export function clearTypstFontCache(): void {
-  fontCache = undefined;
-}
-
 export interface PrintOptions {
   /** Paper size: anything Chromium names, e.g. A4 or Letter. */
   pageSize?: string;

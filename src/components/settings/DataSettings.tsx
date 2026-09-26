@@ -1,9 +1,11 @@
 import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
+import SettingsSection from './SettingsSection';
+import { downloadBlob } from '@/lib/download';
 import { archiveRuntimeMode } from '@/services/archive-runtimes';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
-import { Panel, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { choiceDialog } from '@/stores/dialogStore';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
@@ -17,7 +19,6 @@ const RECENT_EXPORT_MS = 10 * 60 * 1000;
 let lastGardenExportAt = 0;
 
 export default function DataSettings() {
-  const [collapsed, setCollapsed] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [wiping, setWiping] = useState(false);
@@ -46,14 +47,7 @@ export default function DataSettings() {
         runtime: selfContained ? 'included' : archiveRuntimeMode(),
       });
 
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(result.blob, result.filename);
 
       setStatus('Export complete');
       lastGardenExportAt = selfContained || archiveRuntimeMode() === 'included' ? Date.now() : 0;
@@ -138,32 +132,8 @@ export default function DataSettings() {
   const busy = exporting || importing || wiping;
 
   return (
-    <Panel padding="md">
-      <button
-        onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center gap-2 w-full cursor-pointer group"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={cn(
-            'text-text-muted transition-transform',
-            collapsed ? '-rotate-90' : 'rotate-0',
-          )}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-        <h2 className="font-display text-sm font-medium text-accent">Garden</h2>
-      </button>
-
-      {!collapsed && (
-        <div className="mt-5">
+    <SettingsSection title="Garden" collapsible>
+        <div>
           <p className="text-xs text-text-muted mb-4">
             Export or import your entire garden — all cruxes, files, conversations, and settings.
           </p>
@@ -260,7 +230,6 @@ export default function DataSettings() {
           {status && <p className="text-xs font-mono text-text-muted mt-2">{status}</p>}
           {error && <p className="text-xs font-mono text-error mt-2">{error}</p>}
         </div>
-      )}
-    </Panel>
+    </SettingsSection>
   );
 }

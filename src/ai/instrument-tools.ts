@@ -1,3 +1,4 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { ToolDefinition } from './tools';
 type InstrumentCommand =
   | { op: 'inspect' }
@@ -9,7 +10,7 @@ export const INSTRUMENT_TOOLS: ToolDefinition[] = [
     name: 'inspect_instrument',
     description:
       'Inspect the open Cardinal instrument: control IDs, normalized values, missing mappings, available presets, playback and save state. Read this before changing controls or selecting a preset. Requires the current instrument open in Workshop.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'set_instrument_controls',
@@ -41,8 +42,6 @@ export const INSTRUMENT_TOOLS: ToolDefinition[] = [
     },
   },
 ];
-export const isInstrumentTool = (name: string) =>
-  INSTRUMENT_TOOLS.some((tool) => tool.name === name);
 export function instrumentCommand(name: string, input: Record<string, unknown>): InstrumentCommand {
   if (name === 'inspect_instrument' && Object.keys(input).length === 0) return { op: 'inspect' };
   if (

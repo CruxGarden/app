@@ -46,7 +46,7 @@ export function useRunnerProxy(cruxId: string | null) {
       try {
         switch (type) {
           case 'crux:runner:workspace': {
-            const { discoverWorkspace } = await import('@/services/workspace');
+            const { discoverWorkspace } = await import('@/services/workspace-stack');
             answer(await track(discoverWorkspace(cruxId!)));
             break;
           }
@@ -115,7 +115,7 @@ export function useRunnerProxy(cruxId: string | null) {
     let live = true;
     void (async () => {
       const { markRunnerCrux } = await import('@/services/runner');
-      const { kindOf } = await import('@/services/workspace');
+      const { kindOf } = await import('@/services/workspace-stack');
       try {
         const crux = await getServices().crux.findById(cruxId);
         if (live) markRunnerCrux(cruxId, kindOf(crux).kind === 'runner');

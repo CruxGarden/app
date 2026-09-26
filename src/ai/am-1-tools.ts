@@ -1,3 +1,4 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 const KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 export const AM1_TOOLS: AppToolDefinition[] = [
@@ -5,7 +6,7 @@ export const AM1_TOOLS: AppToolDefinition[] = [
     name: 'inspect_am1',
     description:
       'Inspect the AM-1 session: the patch name, key, scale, tempo, circuit (mk1/mk2), whether it is running, the three parts, the saved patches and the kept files.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

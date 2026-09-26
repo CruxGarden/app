@@ -1,6 +1,7 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const RECORDER_TOOLS: AppToolDefinition[] = [
-  { name: 'inspect_recordings', description: 'List the recordings kept in this Crux (label, path, type, size, when) and the Crux’s name. Recording itself starts and stops by hand.', input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false }, writes: [] },
+  { name: 'inspect_recordings', description: 'List the recordings kept in this Crux (label, path, type, size, when) and the Crux’s name. Recording itself starts and stops by hand.', input_schema: NO_INPUT, writes: [] },
   { name: 'set_recorder_name', description: 'Name this recordings Crux and save it in Garden.', input_schema: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 200 } }, required: ['name'], additionalProperties: false }, writes: ['data/project.json'] },
 ];
 export function recorderCommand(name: string, input: Record<string, unknown>) {

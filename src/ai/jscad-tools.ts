@@ -1,3 +1,4 @@
+import { NO_INPUT, onlyKeys } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 /** JSCAD App Tools: read the model, name it, replace its source, save an export as an output. */
 export const JSCAD_TOOLS: AppToolDefinition[] = [
@@ -5,7 +6,7 @@ export const JSCAD_TOOLS: AppToolDefinition[] = [
     name: 'inspect_model',
     description:
       'Read the open model: its name, the JSCAD source (first 4 000 characters; read data/project.json for all of it), the current error if the source does not evaluate, whether it is still processing, and the export formats available for it.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -51,22 +52,21 @@ export const JSCAD_TOOLS: AppToolDefinition[] = [
 ];
 export function jscadCommand(name: string, input: Record<string, unknown>) {
   const keys = Object.keys(input);
-  const only = (allowed: string[]) => keys.every((k) => allowed.includes(k));
   if (name === 'inspect_model' && !keys.length) return { op: 'inspect' };
   if (name === 'set_model_name') {
-    if (!only(['name']) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 200)
+    if (!onlyKeys(input, ['name']) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 200)
       throw new Error('Name the model (up to 200 characters).');
     return { op: 'set-name', name: input.name.trim() };
   }
   if (name === 'set_model_source') {
-    if (!only(['source']) || typeof input.source !== 'string' || !input.source.trim() || input.source.length > 400000)
+    if (!onlyKeys(input, ['source']) || typeof input.source !== 'string' || !input.source.trim() || input.source.length > 400000)
       throw new Error('Give the whole JSCAD source (up to 400 000 characters).');
     if (!/\bmain\b/.test(input.source)) throw new Error('JSCAD source needs a main function.');
     return { op: 'set-source', source: input.source };
   }
   if (name === 'save_model') {
     if (
-      !only(['format', 'name']) ||
+      !onlyKeys(input, ['format', 'name']) ||
       (input.format !== undefined && !['stl', '3mf', 'obj', 'amf', 'x3d', 'svg', 'dxf'].includes(input.format as string)) ||
       (input.name !== undefined && (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 120))
     )

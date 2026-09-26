@@ -17,6 +17,7 @@
  * from the app root; the pure parts (decay, smoothing, clamping) are tested.
  */
 import { useAudioStore } from '@/stores/audioStore';
+import { EXTERNAL_CHANGE } from '@/services/ingestion';
 import { useWorkspaceRegistry } from '@/stores/workspaceRegistry';
 import { onGardenEvent } from '@/services/garden-events';
 import { Capability, can } from '@/lib/platform';
@@ -218,7 +219,7 @@ export function startSignals(): () => void {
   document.addEventListener('pointerup', onPointer, true);
   document.addEventListener('pointermove', onDrag, true);
   window.addEventListener('resize', onResize);
-  window.addEventListener('crux:external-change', onExternalEdit);
+  window.addEventListener(EXTERNAL_CHANGE, onExternalEdit);
   const unFlow = onFlowActivity(happened);
   const unGarden = onGardenEvent((event) => {
     if (event.name === 'toolDone') happened('tool');
@@ -271,7 +272,7 @@ export function startSignals(): () => void {
     document.removeEventListener('pointerup', onPointer, true);
     document.removeEventListener('pointermove', onDrag, true);
     window.removeEventListener('resize', onResize);
-    window.removeEventListener('crux:external-change', onExternalEdit);
+    window.removeEventListener(EXTERNAL_CHANGE, onExternalEdit);
     document.removeEventListener('palette-change', configureFlow);
     motionObserver.disconnect();
     unFlow();

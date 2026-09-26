@@ -71,9 +71,7 @@ export const DELEGATE_TOOL_DEFINITION: ToolDefinition = {
   },
 };
 
-export type DelegateValidation =
-  | { valid: true; tasks: DelegateTaskInput[] }
-  | { valid: false; error: string };
+export type DelegateValidation = { valid: true; tasks: DelegateTaskInput[] } | { valid: false; error: string };
 
 /** Validate and normalize a `delegate` call. Pure. */
 export function validateDelegateInput(input: Record<string, unknown>): DelegateValidation {

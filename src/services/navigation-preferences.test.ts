@@ -7,7 +7,7 @@ import {
   saveUserNavigation,
 } from './navigation-preferences';
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
   await getSqliteClient().run('ALTER TABLE dimensions ADD COLUMN deleted TEXT');
 });
 const garden = (title: string) => getServices().crux.create({ title, kind: 'garden' });

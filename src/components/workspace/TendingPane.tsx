@@ -1,4 +1,4 @@
-import Tending from '@/pages/Tending';
+import Tending from '@/components/tending/Tending';
 
 /** What is growing and what needs you, across the Garden, beside whatever else is open. */
 export default function TendingPane() {

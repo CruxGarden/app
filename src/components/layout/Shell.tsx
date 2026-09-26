@@ -164,10 +164,10 @@ export default function Shell() {
         return;
       }
 
-      // Cmd+M → toggle the Mood modal
+      // Cmd+M → toggle the Mood pane
       if (meta && e.key === 'm') {
         e.preventDefault();
-        useUIStore.getState().toggleMoodPanel();
+        useUIStore.getState().toggleMoodPane();
         return;
       }
 

@@ -1,4 +1,6 @@
 import { exportPrivateCrux, importPrivateCrux, privateArchiveBytes } from './private-crux-archive';
+import { toArrayBuffer } from '@/lib/bytes';
+import { uniqueSlug } from '@/lib/slug';
 import {
   archiveRuntimeMode,
   referenceArchiveRuntimes,
@@ -114,10 +116,6 @@ interface ExportedDimension {
 }
 
 // ── Helpers ─────────────────────────────────────────────
-
-async function toArrayBuffer(data: Blob | ArrayBuffer): Promise<ArrayBuffer> {
-  return data instanceof Blob ? data.arrayBuffer() : data;
-}
 
 /**
  * Meta keys that describe *this installation's* relationship to a crux, not
@@ -583,12 +581,7 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
   const slug =
     useOriginalIds && cruxData.slug
       ? cruxData.slug
-      : title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '') +
-        '-' +
-        Date.now().toString(36);
+      : uniqueSlug(title);
 
   // ── Collect unique fingerprints ────────────────────
   const allFingerprints = new Set<string>();

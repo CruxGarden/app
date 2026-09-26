@@ -9,7 +9,7 @@ import {
   type PaneType,
 } from '@/stores/uiStore';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
-import { PANE_BUTTONS, PANE_VAR_PREFIX } from '@/components/workspace/paneConfig';
+import { PANES } from '@/components/workspace/paneConfig';
 import { PlusCircleIcon } from '@/components/ui/icons';
 import { arrangeWorkspacePanels } from '@/services/workspace-layouts';
 import { togglePin, usePinned } from '@/stores/pins';
@@ -122,8 +122,9 @@ export default function PanelPicker() {
   )
     .filter((pane) => !OWN_BUTTON.has(pane) || !visibility[pane])
     .filter((pane) => {
-      const config = PANE_BUTTONS.find((b) => b.type === pane)!;
-      return `${labels[pane]} ${config.label}`.toLowerCase().includes(query.trim().toLowerCase());
+      return `${labels[pane]} ${PANES[pane].label}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase());
     });
   return (
     <div ref={root} className="relative shrink-0">
@@ -190,16 +191,14 @@ export default function PanelPicker() {
               className="w-full px-2 py-2 mb-1 text-sm bg-input text-input-text border border-input-border rounded-input"
             />
             {available.map((pane) => {
-              const config = PANE_BUTTONS.find((b) => b.type === pane)!;
-              const Icon = config.icon;
-              const prefix = PANE_VAR_PREFIX[pane];
+              const { icon: Icon, label, prefix } = PANES[pane];
               const isOpen = !!visibility[pane];
               const isPinned = pinned.includes(pane);
               return (
                 <div key={pane} className="flex items-center gap-1">
                   <button
                     type="button"
-                    aria-label={`Toggle ${config.label.toLowerCase()}`}
+                    aria-label={`Toggle ${label.toLowerCase()}`}
                     aria-pressed={isOpen}
                     className="flex-1 min-w-0 flex items-center gap-2 text-left text-sm px-2 py-2 rounded-[var(--radius-sm)] hover:bg-dropdown-item-hover focus:bg-dropdown-item-hover cursor-pointer"
                     onClick={() => {

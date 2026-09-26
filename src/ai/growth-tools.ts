@@ -24,7 +24,7 @@ import {
   RESTORE_RECOVERED_MESSAGE,
 } from '@/services/growth';
 
-export const GROWTH_TOOL_NAMES = [
+const GROWTH_TOOL_NAMES = [
   'edit_history',
   'snapshot',
   'list_snapshots',
@@ -262,7 +262,7 @@ function describeSnapshotLine(info: SnapshotInfo): string {
 
 const MAX_LISTED = 40;
 
-export function describeDiff(d: SnapshotDiff): string {
+function describeDiff(d: SnapshotDiff): string {
   const lines: string[] = [];
   const section = (
     title: string,

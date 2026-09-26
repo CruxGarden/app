@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGardenStore, TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
-import { Button } from '@/components/ui';
+import { Button, Panel } from '@/components/ui';
 import { confirmDialog } from '@/stores/dialogStore';
 import { formatDateTime } from '@/lib/format';
 
@@ -53,8 +53,10 @@ export default function TrashSection() {
   };
 
   return (
-    <section
-      className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mt-6"
+    <Panel
+      as="section"
+      padding="sm"
+      className="sm:p-5 mt-6"
       data-testid="trash-section"
       aria-label="Recently deleted"
     >
@@ -105,6 +107,6 @@ export default function TrashSection() {
           {error}
         </p>
       )}
-    </section>
+    </Panel>
   );
 }

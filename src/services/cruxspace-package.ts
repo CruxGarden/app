@@ -1,16 +1,13 @@
 import { archiveRuntimeMode, hydrateArchiveRuntimes, type RuntimeMode } from './archive-runtimes';
+import { listGrowths } from './growth';
+import { hasGardenGraph } from './garden-navigation';
+import { slugify } from '@/lib/slug';
 import JSZip from 'jszip';
 import type { KeeperConversation } from '@/stores/keeperStore';
 import { getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { exportCrux, importCrux, type ImportMode } from './crux-io';
-import {
-  collectionsChanged,
-  getCruxspace,
-  insertCruxspace,
-  type Cruxspace,
-  type CruxspaceOrigin,
-} from './cruxspaces';
+import { collectionsChanged, getCruxspace, insertCruxspace, type Cruxspace, type CruxspaceOrigin, cruxspaceMembers } from './cruxspaces';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { listCruxspaceAssets, type AssetOrigin, type CruxOutput } from './cruxspace-assets';
 import { pathOf } from '@/lib/artifact-path';
@@ -108,9 +105,8 @@ export async function exportCruxspace(
   options: ExportCruxspaceOptions,
 ): Promise<ExportCruxspaceResult> {
   const { spaceId, onProgress } = options;
-  const space = await getCruxspace(spaceId);
-  const { crux, artifact, dimension } = getServices();
-  const live = new Map((await crux.listAll()).map((c) => [c.id, c]));
+  const { space, live } = await cruxspaceMembers(spaceId);
+  const { artifact } = getServices();
   const assets = await listCruxspaceAssets(spaceId);
   const zip = new JSZip();
   const blobs = new Set<string>();
@@ -154,9 +150,7 @@ export async function exportCruxspace(
     }
     zip.file(`members/${id}/blobs.json`, JSON.stringify(referenced));
 
-    const growths = (await dimension.findBySourceAndType(id, 'growth').catch(() => [])).sort(
-      (a, b) => (a.weight ?? 0) - (b.weight ?? 0),
-    );
+    const growths = await listGrowths(id).catch(() => []);
     const files = await artifact.findByResource('crux', id);
     for (const sidecar of files.filter((f) =>
       /^cruxspace-assets\/[a-f0-9]{64}\.json$/.test(pathOf(f)),
@@ -217,11 +211,7 @@ export async function exportCruxspace(
   onProgress?.('Writing the package…');
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  const slug =
-    space.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'cruxspace';
+  const slug = slugify(space.name, 'cruxspace');
   return { blob, filename: `${slug}-${stamp}.cruxspace`, manifest, failed };
 }
 
@@ -296,7 +286,7 @@ export async function importCruxspace(
   // Where there is a Garden graph, a package becomes a Garden and its members
   // are planted in it as they arrive.
   let garden: { id: string } | null = null;
-  if (getSqliteClient().gardenMembership) {
+  if (hasGardenGraph()) {
     const parentId = options.gardenId ?? captureGardenId() ?? useGardenContext.getState().root?.id;
     if (!parentId) throw new Error('Open a Garden to import into.');
     garden = await crux.create({

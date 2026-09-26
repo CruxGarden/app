@@ -9,7 +9,7 @@ import { applyTemplateToCrux } from './crux-create';
 
 describe('applyTemplateToCrux', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
   });
   afterEach(() => vi.unstubAllGlobals());
 

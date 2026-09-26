@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Panel, Button, Toggle } from '@/components/ui';
+import SettingsSection from './SettingsSection';
+import { Button, Toggle } from '@/components/ui';
 import { Capability, can } from '@/lib/platform';
 import type { DesktopInfo, UpdateState } from '@/lib/platform';
 import {
@@ -75,16 +76,16 @@ export default function DesktopSettings() {
   })();
 
   return (
-    <Panel padding="md" data-testid="desktop-settings">
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="font-display text-sm font-medium text-accent">Desktop</h2>
-        {info && (
+    <SettingsSection
+      title="Desktop"
+      testId="desktop-settings"
+      aside={info && (
           <span className="text-xxs font-mono text-text-muted">
             v{info.version} · {info.platform}-{info.arch}
             {info.packaged ? '' : ' · dev'}
           </span>
         )}
-      </div>
+    >
 
       <div className="flex flex-col gap-3 text-xs">
         <div className="flex items-center justify-between gap-3">
@@ -177,6 +178,6 @@ export default function DesktopSettings() {
           </Button>
         </div>
       </div>
-    </Panel>
+    </SettingsSection>
   );
 }

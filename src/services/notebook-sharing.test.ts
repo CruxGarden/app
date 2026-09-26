@@ -8,7 +8,7 @@ import { createTask } from './tasks';
 import { exportCrux, importCrux } from './crux-io';
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 async function fixture() {
   const store = createCruxStore();

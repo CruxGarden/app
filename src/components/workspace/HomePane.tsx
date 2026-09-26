@@ -1,4 +1,4 @@
-import HomeGarden from '@/pages/HomeGarden';
+import HomeGarden from '@/components/garden/HomeGarden';
 
 /** A Garden's Home, as a pane of the Garden's own workspace. */
 export default function HomePane() {

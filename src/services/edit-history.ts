@@ -1,4 +1,5 @@
 import { getSqliteClient } from './sqlite/client';
+import { ownerMeta } from './working-copies';
 import { settleIngestion } from './ingestion';
 import { flushNotebook } from './notebook-lifecycle';
 import { getWorkspace } from '@/stores/workspaceRegistry';
@@ -58,12 +59,9 @@ export async function restoreEditCheckpoint(
   let context: { expectedMeta: Record<string, unknown> } | undefined;
   if (includeConversation) {
     await workspace?.data.getState().saveMeta();
-    const row = await getSqliteClient().get<{ meta: string | null }>(
-      'SELECT meta FROM cruxes WHERE id = ? UNION ALL SELECT meta FROM working_copies WHERE id = ?',
-      [cruxId, cruxId],
-    );
-    if (!row) throw new Error('This workspace is no longer available.');
-    context = { expectedMeta: JSON.parse(row.meta || '{}') };
+    const expectedMeta = await ownerMeta(cruxId);
+    if (!expectedMeta) throw new Error('This workspace is no longer available.');
+    context = { expectedMeta };
   }
   const result = await content.restoreCheckpoint({
     cruxId,

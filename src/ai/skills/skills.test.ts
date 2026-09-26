@@ -172,7 +172,7 @@ describe('skills registry (B6)', () => {
       expect(validateToolInput('load_skill', { name: 'blog' })).toEqual({ valid: true });
       expect(validateToolInput('load_skill', {}).valid).toBe(false);
       const unknown = validateToolInput('load_skill', { name: 'cooking' });
-      expect(unknown.valid).toBe(false);
+      if (unknown.valid) throw new Error('expected a refusal');
       expect(unknown.error).toContain('Unknown skill "cooking"');
       expect(unknown.error).toContain('mood-design');
     });

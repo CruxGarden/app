@@ -55,7 +55,7 @@ for (const count of sizes)
       }
     }
     try {
-      const services = await initServices('local');
+      const services = await initServices();
       const crux = await services.crux.create({ title: `Storage ${count}`, type: 'workspace' });
       await measure('create-artifacts', async () => {
         for (let i = 0; i < count; i++)

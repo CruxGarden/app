@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { downloadBlob } from '@/lib/download';
 import { Button, Input, Toggle } from '@/components/ui';
 import {
   DEFAULT_METRICS_PATH,
@@ -72,14 +73,10 @@ export default function AgentMetricsSection() {
         setStatus(`Appended to ${shortenHomePath(written)}`);
         return;
       }
-      const url = URL.createObjectURL(new Blob([entry], { type: 'text/plain' }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = relPath.replace(/^.*\//, '') || DEFAULT_METRICS_PATH;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(
+        new Blob([entry], { type: 'text/plain' }),
+        relPath.replace(/^.*\//, '') || DEFAULT_METRICS_PATH,
+      );
       setStatus('Downloaded');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The report could not be saved.');

@@ -384,11 +384,6 @@ export function continueJobForFix(job: TurnJob, problems: string[]): TurnJob {
   };
 }
 
-/** Attach the verdict to the Growth snapshot it was recorded on. */
-export function withCheckSnapshot(job: TurnJob, snapshotId: string): TurnJob {
-  if (!job.check) return job;
-  return { ...job, check: { ...job.check, snapshotId } };
-}
 
 /** The Growth dimension meta entry a verified snapshot carries. */
 export interface SnapshotVerification {

@@ -1,10 +1,11 @@
+import { NO_INPUT, exactKeys } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const GLSL_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_shader',
     description:
       'Read the open shader: its name, source length and line count, the uniforms it declares, the canvas size and whether it compiles. Read the source itself from data/project.json with read_file.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -44,12 +45,10 @@ export const GLSL_TOOLS: AppToolDefinition[] = [
   },
 ];
 export function glslCommand(name: string, input: Record<string, unknown>) {
-  const only = (keys: string[]) =>
-    Object.keys(input).every((k) => keys.includes(k)) && keys.every((k) => k in input);
   if (name === 'inspect_shader' && !Object.keys(input).length) return { op: 'inspect' };
   if (name === 'set_shader_name') {
     if (
-      !only(['name']) ||
+      !exactKeys(input, ['name']) ||
       typeof input.name !== 'string' ||
       !input.name.trim() ||
       input.name.length > 200
@@ -59,7 +58,7 @@ export function glslCommand(name: string, input: Record<string, unknown>) {
   }
   if (name === 'set_shader_source') {
     if (
-      !only(['source']) ||
+      !exactKeys(input, ['source']) ||
       typeof input.source !== 'string' ||
       !input.source.trim() ||
       input.source.length > 200000
@@ -71,7 +70,7 @@ export function glslCommand(name: string, input: Record<string, unknown>) {
   }
   if (name === 'save_shader_frame') {
     if (
-      !only(['name']) ||
+      !exactKeys(input, ['name']) ||
       typeof input.name !== 'string' ||
       !input.name.trim() ||
       input.name.length > 120

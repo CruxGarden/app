@@ -9,7 +9,7 @@ let services: Services;
 const original = 'Original portrait bytes';
 
 beforeEach(async () => {
-  services = await initServices('local');
+  services = await initServices();
   useAuthStore.setState({ isAuthenticated: false });
   const author = await services.author.create({ username: 'portrait', displayName: 'Portrait' });
   const fingerprint = await putBlob(new TextEncoder().encode(original));

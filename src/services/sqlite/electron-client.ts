@@ -8,9 +8,6 @@ import type { SqliteBridge } from '@/lib/platform';
  * is backend-agnostic.
  */
 
-export function isElectron(): boolean {
-  return typeof window !== 'undefined' && !!window.electronAPI?.sqlite;
-}
 
 /** A read: SELECT or WITH, naming no statement that changes anything. */
 export function assertRead(sql: string): void {

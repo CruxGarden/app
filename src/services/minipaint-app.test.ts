@@ -5,7 +5,7 @@ import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it('preserves native miniPaint layers and raster bytes in Growth and complete Crux archives', async () => {
   const services = getServices();
   const crux = await services.crux.create({

@@ -3,18 +3,9 @@
  * Store. One place for the three writes that must agree (setting, CSS var,
  * mood store) — the Background tab and the AI's set_background both use it.
  */
-import { getSetting, setSetting } from './settings';
+import { setSetting } from './settings';
 import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
 import { BgType } from '@/lib/types';
-
-export const BACKGROUND_TYPES: BgType[] = [BgType.Bloom, BgType.Drift, BgType.Flow, BgType.Blank];
-
-export function currentBackgroundType(): BgType {
-  const saved = getSetting(SettingsKey.BackgroundType) as string | null;
-  return (Object.values(BgType) as string[]).includes(saved ?? '')
-    ? (saved as BgType)
-    : BgType.Bloom;
-}
 
 async function applyToStore(patch: { backgroundUrl: string | null }) {
   const { useMoodStore } = await import('@/stores/moodStore');

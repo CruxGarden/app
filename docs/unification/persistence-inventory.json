@@ -108,13 +108,6 @@
       "ledger": "cruxgarden:autoBackupPaused"
     },
     {
-      "key": "cruxgarden:backend",
-      "sources": [
-        "src/lib/constants.ts"
-      ],
-      "ledger": "cruxgarden:backend"
-    },
-    {
       "key": "cruxgarden:backgroundBlockSize",
       "sources": [
         "src/lib/constants.ts"
@@ -574,8 +567,7 @@
     {
       "key": "cruxgarden:tending-seen:",
       "sources": [
-        "src/stores/tendingStore.ts",
-        "src/stores/workspaceRegistry.ts"
+        "src/services/tending-state.ts"
       ],
       "ledger": "cruxgarden:tending-seen:"
     },

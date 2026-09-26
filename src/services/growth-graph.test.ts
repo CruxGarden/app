@@ -26,7 +26,7 @@ import {
 } from './growth-graph';
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 afterEach(async () => {
   vi.restoreAllMocks();

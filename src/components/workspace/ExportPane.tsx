@@ -1,4 +1,5 @@
 import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
+import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useMemo } from 'react';
 import { isEmbeddedApp, isCardinal, samplerType } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -77,15 +78,7 @@ export default function ExportPane() {
         onProgress: setProgress,
       });
 
-      // Trigger download
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(result.blob, result.filename);
 
       if (result.failed.length > 0) {
         setProgress(
@@ -115,14 +108,7 @@ export default function ExportPane() {
         onProgress: setProgress,
       });
 
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(result.blob, result.filename);
 
       if (result.failed.length > 0) {
         setProgress(

@@ -35,7 +35,7 @@ function readAppearance() {
   };
 }
 
-/** Everyday appearance choices. The same Mood tokens are available to agents and the full Builder. */
+/** Everyday appearance choices. The same Mood tokens are available to agents and the Theme tab. */
 export default function AppearanceControls() {
   const [appearance, setAppearance] = useState(readAppearance);
   const id = useId();

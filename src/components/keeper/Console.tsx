@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { onPersonaChange } from '@/services/persona';
+import { Avatar } from '@/components/ui';
 import { getModelShortName } from '@/ai/providers';
 import { Reply, PersonPill, StatusLine } from '@/components/chat/Reply';
 import ComposerPill from '@/components/chat/ComposerPill';
@@ -27,8 +29,7 @@ export function ConsoleAvatar({
   const [, forceUpdate] = useState(0);
   useEffect(() => {
     const handler = () => forceUpdate((n) => n + 1);
-    window.addEventListener('crux:persona-changed', handler);
-    return () => window.removeEventListener('crux:persona-changed', handler);
+    return onPersonaChange(handler);
   }, []);
   const persona = getPersona();
   // One avatar; a light-mode copy from before 2026-09-07 still shows if that is all there is
@@ -50,22 +51,15 @@ function UserAvatar() {
   const avatarUrl = useAvatarUrl(author);
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
 
-  return (
-    <div className="w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center bg-accent-muted">
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-      ) : (
-        <span className="text-2xs font-body font-bold text-accent">{initial}</span>
-      )}
-    </div>
-  );
+  return <Avatar url={avatarUrl} initial={initial} />;
 }
 
 export default function Console() {
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
-  // Read persona on mount (Modal only mounts content when open)
+  // The pane stays mounted: follow the Mood's Persona tab as it changes.
   useEffect(() => {
-    setPersona(getPersona());
+    const refresh = () => setPersona(getPersona());
+    return onPersonaChange(refresh);
   }, []);
 
   const loaded = useKeeperStore((s) => s.loaded);

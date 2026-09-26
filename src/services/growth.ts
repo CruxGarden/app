@@ -12,6 +12,8 @@
  */
 
 import type { RegisterArtifactInput } from './types';
+import { ownerMeta } from './working-copies';
+import { announceExternalChange } from './ingestion';
 import type { ArtifactReference } from './artifact.service';
 import type { SqliteBridge } from '@/lib/platform';
 import type { Artifact, ChatMessage, Crux, Dimension } from '@/api/types';
@@ -397,12 +399,8 @@ export async function restoreManifestWorkspace(
   const files = await deps.artifact.findByResource('crux', state.crux.id);
   const targetHead = await api.head(snapshotId);
   if (!targetHead) throw new Error('This snapshot has no retained file content.');
-  const { getSqliteClient } = await import('./sqlite/client');
-  const row = await getSqliteClient().get<{ meta: string | null }>(
-    'SELECT meta FROM cruxes WHERE id = ? UNION ALL SELECT meta FROM working_copies WHERE id = ?',
-    [state.crux.id, state.crux.id],
-  );
-  if (!row) throw new Error('Content owner not found.');
+  const expectedMeta = await ownerMeta(state.crux.id);
+  if (!expectedMeta) throw new Error('Content owner not found.');
   const messages =
     branchLabel === undefined
       ? []
@@ -417,7 +415,7 @@ export async function restoreManifestWorkspace(
     api.restore({
       safety: { cruxId: state.crux.id, expected: head },
       target: { cruxId: snapshotId, expected: targetHead },
-      workspace: { expectedMeta: JSON.parse(row.meta || '{}'), messages },
+      workspace: { expectedMeta, messages },
     }),
   );
   await api.finishProjection(state.crux.id);
@@ -675,6 +673,12 @@ export interface SnapshotInfo {
   /** Manifest fingerprint of the captured files (null for legacy snapshots). */
   fingerprint: string | null;
   requestedBy: string | null;
+}
+
+/** A Crux's Growth snapshots in timeline order. */
+export async function listGrowths(cruxId: string): Promise<Dimension[]> {
+  const { getServices } = await import('./index');
+  return sortGrowths(await getServices().dimension.findBySourceAndType(cruxId, 'growth'));
 }
 
 export const sortGrowths = (growths: Dimension[]): Dimension[] =>
@@ -988,7 +992,7 @@ function announceGrowthChange(cruxId: string, kind: 'snapshot' | 'restore' | 'br
   window.dispatchEvent(new CustomEvent(GROWTH_CHANGED_EVENT, { detail: { cruxId, kind } }));
   if (kind !== 'snapshot') {
     // Files changed under the open workspace (if any) — same signal ingestion uses
-    window.dispatchEvent(new CustomEvent('crux:external-change', { detail: { cruxId } }));
+    announceExternalChange(cruxId);
   }
 }
 

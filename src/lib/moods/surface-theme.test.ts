@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveSurfaceStyle, normalizeSurfaceTheme } from './liquid-glass';
+import { resolveSurfaceStyle, normalizeSurfaceTheme } from './surface-theme';
 
 describe('resolveSurfaceStyle', () => {
   it("on and off override the Mood; system follows the Mood's surfaceStyle", () => {

@@ -1,3 +1,4 @@
+import { str as sharedStr } from './validation-result';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 import { GDEVELOP_SCENE_TOOLS, gdevelopSceneCommand } from './gdevelop-scene-tools';
 import { GDEVELOP_OBJECT_TOOLS, gdevelopObjectCommand } from './gdevelop-object-tools';
@@ -222,8 +223,7 @@ export const GDEVELOP_TOOLS: AppToolDefinition[] = [
     writes: ['data/project.json', 'exports/'],
   },
 ];
-const str = (value: unknown, max: number) =>
-  typeof value === 'string' && value.trim() && value.length <= max;
+const str = (value: unknown, max: number) => !!sharedStr(value, max);
 const instructions = (value: unknown, allowInverted: boolean) =>
   value === undefined ||
   (Array.isArray(value) &&

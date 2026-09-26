@@ -1,6 +1,6 @@
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
-import { applyActiveMood, activePresetId } from '@/lib/moods/active';
+import { applyActiveMood } from '@/lib/moods/active';
 import { useMoodStore } from '@/stores/moodStore';
 
 // Persona identity lives in the service layer (services/persona) — the AI core
@@ -19,10 +19,6 @@ export function getResolvedMode(): 'Dark' | 'Light' {
   return document.documentElement.classList.contains('light') ? 'Light' : 'Dark';
 }
 
-/** Get the active preset ID for the current mode */
-export function getActiveMoodId(): string {
-  return activePresetId(getResolvedMode());
-}
 
 /**
  * Apply saved mood preset for the current mode.

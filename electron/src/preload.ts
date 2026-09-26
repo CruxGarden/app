@@ -28,13 +28,16 @@ import type {
  * app/src/lib/platform.ts); this file implements it. The renderer detects
  * `window.electronAPI` to know it's running in Electron.
  */
+/** Listen on a main→renderer channel; the return value stops listening. */
+function subscribe(channel: string, callback: (...args: any[]) => void): () => void {
+  const handler = (_event: unknown, ...args: unknown[]) => callback(...args);
+  ipcRenderer.on(channel, handler);
+  return () => ipcRenderer.removeListener(channel, handler);
+}
+
 const api: ElectronBridge = {
   browser: {
-    onFocusAddress: (callback) => {
-      const handler = (_event: unknown, id: string) => callback(id);
-      ipcRenderer.on('browser:focus-address', handler);
-      return () => ipcRenderer.removeListener('browser:focus-address', handler);
-    },
+    onFocusAddress: (callback) => subscribe('browser:focus-address', callback),
     action: (id, action, url) => ipcRenderer.invoke('browser:action', id, action, url),
     bounds: (id, bounds) => ipcRenderer.invoke('browser:bounds', id, bounds),
     onChange: (callback) => {
@@ -173,12 +176,7 @@ const api: ElectronBridge = {
   },
 
   desktop: {
-    onCreativeActivity: (callback) => {
-      const handler = (_event: unknown, kind: 'writing' | 'interaction' | 'arranging') =>
-        callback(kind);
-      ipcRenderer.on('desktop:creative-activity', handler);
-      return () => ipcRenderer.removeListener('desktop:creative-activity', handler);
-    },
+    onCreativeActivity: (callback) => subscribe('desktop:creative-activity', callback),
     onWorkspaceCommand: (callback) => {
       const handler = (_event: unknown, command: import('./bridge').WorkspaceCommand) =>
         callback(command);
@@ -213,11 +211,7 @@ const api: ElectronBridge = {
     install: () => ipcRenderer.invoke('updates:install') as Promise<void>,
     setAutoCheck: (on: boolean) =>
       ipcRenderer.invoke('updates:set-auto', on) as Promise<UpdateState>,
-    onChange: (cb: (state: UpdateState) => void) => {
-      const handler = (_e: unknown, state: UpdateState) => cb(state);
-      ipcRenderer.on('updates:changed', handler);
-      return () => ipcRenderer.removeListener('updates:changed', handler);
-    },
+    onChange: (cb: (state: UpdateState) => void) => subscribe('updates:changed', cb),
   },
 
   project: {
@@ -252,11 +246,7 @@ const api: ElectronBridge = {
     unwatch: (folder: string) => ipcRenderer.invoke('project:unwatch', folder) as Promise<void>,
     flush: (folder?: string) =>
       ipcRenderer.invoke('project:flush', folder) as Promise<ChangeBatch[]>,
-    onChanged: (callback: (batch: ChangeBatch) => void) => {
-      const handler = (_event: unknown, batch: unknown) => callback(batch as ChangeBatch);
-      ipcRenderer.on('project:changed', handler);
-      return () => ipcRenderer.removeListener('project:changed', handler);
-    },
+    onChanged: (callback: (batch: ChangeBatch) => void) => subscribe('project:changed', callback),
   },
 
   preview: {
@@ -384,24 +374,8 @@ const api: ElectronBridge = {
         fraction?: number;
         line?: string;
       }) => void,
-    ) => {
-      const handler = (
-        _e: unknown,
-        event: {
-          tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
-          fraction?: number;
-          line?: string;
-        },
-      ) => callback(event);
-      ipcRenderer.on('native:install-progress', handler);
-      return () => ipcRenderer.removeListener('native:install-progress', handler);
-    },
-    onProgress: (callback: (event: { cruxId: string; tool: string; progress: number }) => void) => {
-      const handler = (_e: unknown, event: { cruxId: string; tool: string; progress: number }) =>
-        callback(event);
-      ipcRenderer.on('native:progress', handler);
-      return () => ipcRenderer.removeListener('native:progress', handler);
-    },
+    ) => subscribe('native:install-progress', callback),
+    onProgress: (callback: (event: { cruxId: string; tool: string; progress: number }) => void) => subscribe('native:progress', callback),
   },
   projectRunner: {
     choose: () => ipcRenderer.invoke('project:choose'),
@@ -485,12 +459,7 @@ const api: ElectronBridge = {
       timeoutMs?: number;
     }) =>
       ipcRenderer.invoke('containers:compose', opts) as Promise<{ code: number; output: string }>,
-    onOutput: (callback: (event: { cruxId: string; verb: string; line: string }) => void) => {
-      const handler = (_e: unknown, event: { cruxId: string; verb: string; line: string }) =>
-        callback(event);
-      ipcRenderer.on('containers:output', handler);
-      return () => ipcRenderer.removeListener('containers:output', handler);
-    },
+    onOutput: (callback: (event: { cruxId: string; verb: string; line: string }) => void) => subscribe('containers:output', callback),
   },
   media: {
     fetch: (url: string, options?: { maxBytes?: number }) =>
@@ -507,11 +476,7 @@ const api: ElectronBridge = {
       ipcRenderer.invoke('ffmpeg:transcode', opts) as Promise<
         Array<{ name: string; data: Uint8Array; mimeType: string }>
       >,
-    onProgress: (callback: (progress: number) => void) => {
-      const handler = (_event: unknown, progress: number) => callback(progress);
-      ipcRenderer.on('ffmpeg:progress', handler);
-      return () => ipcRenderer.removeListener('ffmpeg:progress', handler);
-    },
+    onProgress: (callback: (progress: number) => void) => subscribe('ffmpeg:progress', callback),
   },
   // Agent Host (ADR 0013): per-crux MCP servers in main; tool calls run here.
   agentHost: {
@@ -521,11 +486,7 @@ const api: ElectronBridge = {
     disable: (cruxId: string) => ipcRenderer.invoke('agent-host:disable', cruxId) as Promise<void>,
     regenerate: (cruxId: string) =>
       ipcRenderer.invoke('agent-host:regenerate', cruxId) as Promise<AgentHostServer>,
-    onChanged: (cb: (servers: AgentHostServer[]) => void) => {
-      const handler = (_e: unknown, servers: unknown) => cb(servers as AgentHostServer[]);
-      ipcRenderer.on('agent-host:changed', handler);
-      return () => ipcRenderer.removeListener('agent-host:changed', handler);
-    },
+    onChanged: (cb: (servers: AgentHostServer[]) => void) => subscribe('agent-host:changed', cb),
     onRequest: (cb: (request: AgentHostRequest) => void) => {
       const handler = (_e: unknown, request: unknown) => cb(request as AgentHostRequest);
       ipcRenderer.on('agent-host:request', handler);
@@ -538,11 +499,7 @@ const api: ElectronBridge = {
     respond: (response: AgentHostResponse) => ipcRenderer.send('agent-host:response', response),
   },
   agent: {
-    onToolRequest: (cb: (request: AgentToolRequest) => void) => {
-      const handler = (_e: unknown, request: AgentToolRequest) => cb(request);
-      ipcRenderer.on('agent:tool-request', handler);
-      return () => ipcRenderer.removeListener('agent:tool-request', handler);
-    },
+    onToolRequest: (cb: (request: AgentToolRequest) => void) => subscribe('agent:tool-request', cb),
     respondTool: (requestId: string, result: AgentToolResult) =>
       ipcRenderer.send('agent:tool-response', { requestId, result }),
     status: (force?: boolean, provider?: string) =>
@@ -559,11 +516,7 @@ const api: ElectronBridge = {
       ipcRenderer.on('agent:event', handler);
       return () => ipcRenderer.removeListener('agent:event', handler);
     },
-    onPermission: (cb: (request: AgentPermissionRequest) => void) => {
-      const handler = (_e: unknown, request: unknown) => cb(request as AgentPermissionRequest);
-      ipcRenderer.on('agent:permission', handler);
-      return () => ipcRenderer.removeListener('agent:permission', handler);
-    },
+    onPermission: (cb: (request: AgentPermissionRequest) => void) => subscribe('agent:permission', cb),
   },
   // The address of the API this garden meets (ADR 0049): CRUX_API_URL at
   // launch pins it — the e2e suite's mock API, or a deliberate override;

@@ -7,10 +7,10 @@ import { cn } from '@/lib/cn';
  * and the Keeper's console share it; each supplies its own textarea props and
  * any extra buttons (Steer, Queue).
  */
-export const composerRound =
+const composerRound =
   'w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed';
 
-export function SendIcon() {
+function SendIcon() {
   return (
     <svg
       width="16"
@@ -28,7 +28,7 @@ export function SendIcon() {
   );
 }
 
-export function StopIcon() {
+function StopIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <rect x="5" y="5" width="14" height="14" rx="2" />

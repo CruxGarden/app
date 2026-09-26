@@ -109,8 +109,8 @@ export function onThemePreviewChange(fn: () => void): () => void {
 export function composeMoodPalette(section: MoodSection = resolvedSection()): Partial<MoodPalette> {
   return {
     ...(activePreset(section)?.overrides ?? {}),
-    // Older saved Moods also open panels immediately; an explicit Builder
-    // override can still opt into the material's entrance animation.
+    // Older saved Moods also open panels immediately; a saved theme token
+    // can still opt into the material's entrance animation.
     plasmaFormIn: 'off',
     ...getThemeOverrides(section),
     ...preview,

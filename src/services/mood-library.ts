@@ -1,4 +1,5 @@
 import type { MoodPackage } from '@/lib/moods/packages';
+import { slugify } from '@/lib/slug';
 import { exportMoodPackage, importMoodPackage } from '@/lib/moods/packages';
 import { getSqliteClient, type ISqliteClient } from './sqlite/client';
 import { getLocalIdentity } from './sqlite/identity';
@@ -144,11 +145,7 @@ export async function saveMoodCrux(
     await ctx.db.createCrux!({
       id,
       gardenId: ctx.gardenId,
-      slug:
-        captured.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '') || 'mood',
+      slug: slugify(captured.name, 'mood'),
       title: captured.name,
       kind: 'mood',
       ...identity,

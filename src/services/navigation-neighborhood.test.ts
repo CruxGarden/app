@@ -5,7 +5,7 @@ import { getSqliteClient } from './sqlite/client';
 import { navigationNeighborhood, navigationVersionTarget } from './navigation-neighborhood';
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
   // The shared unit harness uses the parked web schema; desktop API Dimensions
   // already have tombstones. Mirror that column for these read projections.
   await getSqliteClient().run('ALTER TABLE dimensions ADD COLUMN deleted TEXT');

@@ -1,3 +1,4 @@
+import { NO_INPUT } from './app-tool-schema';
 import { BROWSER_TOOL, runBrowserTool } from './browser-tools';
 import { WORKSPACE_LAYOUT_TOOL, runWorkspaceLayouts } from './layout-tools';
 import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
@@ -30,7 +31,7 @@ import { groupTokens, tokenKind, tokenLabel, tokenChoices } from '@/lib/moods/to
 import type { ToolDefinition } from './tools';
 import type { ToolResultContent } from '@/services/types';
 
-export const THEME_TOOL_NAMES = [
+const THEME_TOOL_NAMES = [
   'workspace_layouts',
   'browser',
   'get_synth',
@@ -49,7 +50,7 @@ export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'get_synth',
     description:
       'Read Crux Synth, its four tracks and available presets. These are the same controls in Mood → Sound. Read before making sounds.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'set_synth',
@@ -86,7 +87,7 @@ export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
     description:
       'List the Sound Cue presets the Mood can play on events (reply, tool finished, snapshot, shared, failed), grouped by register (classic, garden, 8-bit, office, plasma, bare), and what each event plays now. ' +
       'USE WHEN: before set_cue, or when the person asks what the app sounds like.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
   },
   {
     name: 'set_cue',

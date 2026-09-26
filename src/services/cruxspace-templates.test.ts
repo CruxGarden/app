@@ -5,7 +5,7 @@ import { exportCruxspace } from './cruxspace-package';
 import { startCruxspaceTemplate } from './cruxspace-templates';
 import { growthHostFor } from './growth';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 afterEach(() => vi.unstubAllGlobals());
 async function packageBytes() {
   const crux = await getServices().crux.create({

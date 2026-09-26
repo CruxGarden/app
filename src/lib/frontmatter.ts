@@ -49,17 +49,7 @@ export function serializeFrontmatter(data: Record<string, string>, body: string)
 }
 
 /** 'My First Post!' → 'my-first-post' */
-export function slugify(title: string): string {
-  return (
-    title
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 64) || 'untitled'
-  );
-}
+export { slugify } from './slug';
 
 /** Interpolate a content-model recipe string: {slug}, {title}, {today}. */
 export function interpolate(

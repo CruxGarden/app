@@ -623,7 +623,7 @@ describe('workspaceGrowthHost (over the store actions)', () => {
 describe('restoreFilesCore (diff-based)', () => {
   it('moves only the rows that differ, and writes every path the snapshot asserts', async () => {
     const { initServices, getServices } = await import('./index');
-    await initServices('local');
+    await initServices();
     const { crux, artifact } = getServices();
     const { growthHostFor, restoreFilesCore, defaultGrowthHostDeps } = await import('./growth');
     const c = await crux.create({ title: 'Diff', type: 'workspace' });

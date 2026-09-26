@@ -1,5 +1,6 @@
+import { str as sharedStr, type ValidationResult } from './validation-result';
 import type { ToolDefinition } from './tools';
-import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
+import { DEFAULT_PANE_LABELS, PANE_TYPES } from '@/components/workspace/paneConfig';
 import { pathOf } from '@/lib/artifact-path';
 import type { PaneType } from '@/stores/uiStore';
 import { getServices } from '@/services';
@@ -12,7 +13,7 @@ import { getServices } from '@/services';
  * person watches; `test_function` runs one of the crux's functions here,
  * against the local Store, the way Run and Emit do.
  */
-const PANES = Object.keys(DEFAULT_PANE_LABELS) as PaneType[];
+const PANES = PANE_TYPES;
 
 export const WORKSPACE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -49,15 +50,12 @@ export const WORKSPACE_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
-export const WORKSPACE_TOOL_NAMES = new Set(WORKSPACE_TOOL_DEFINITIONS.map((t) => t.name));
-
-const str = (v: unknown, max = 400) =>
-  typeof v === 'string' && v.trim() && v.length <= max ? v.trim() : null;
+const str = (v: unknown, max = 400) => sharedStr(v, max);
 
 export function validateWorkspaceTool(
   name: string,
   input: Record<string, unknown>,
-): { valid: boolean; error?: string } {
+): ValidationResult {
   switch (name) {
     case 'show':
       if (input.what !== 'pane' && input.what !== 'file')

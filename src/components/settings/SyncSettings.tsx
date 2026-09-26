@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
+import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import * as syncApi from '@/api/sync';
 import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
-import { Panel, Spinner, Button, Toggle } from '@/components/ui';
+import { Spinner, Button, Toggle } from '@/components/ui';
 import {
   isAutoBackupOn,
   setAutoBackup,
@@ -13,21 +14,6 @@ import {
 } from '@/services/auto-backup';
 import { cn } from '@/lib/cn';
 
-const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={cn('text-text-muted', collapsed ? '-rotate-90' : 'rotate-0')}
-  >
-    <polyline points="6 9 12 15 18 9" />
-  </svg>
-);
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
@@ -55,7 +41,6 @@ export default function SyncSettings() {
     return () => window.removeEventListener(AUTO_BACKUP_CHANGED, sync);
   }, []);
   const [syncedCruxes, setSyncedCruxes] = useState<SyncedCrux[]>([]);
-  const [collapsed, setCollapsed] = useState(true);
   const [loading, setLoading] = useState(true);
   const [pushing, setPushing] = useState(false);
   const [pulling, setPulling] = useState(false);
@@ -209,17 +194,8 @@ export default function SyncSettings() {
   const busy = pushing || pulling || deletingGarden;
 
   return (
-    <Panel padding="md">
-      <button
-        onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center gap-2 w-full cursor-pointer group"
-      >
-        <ChevronIcon collapsed={collapsed} />
-        <h2 className="font-display text-sm font-medium text-accent">Sync</h2>
-      </button>
-
-      {!collapsed && (
-        <div className="mt-5">
+    <SettingsSection title="Sync" collapsible>
+        <div>
           {/* Automatic backup */}
           <div
             className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-border"
@@ -348,7 +324,6 @@ export default function SyncSettings() {
           {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
           {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
         </div>
-      )}
-    </Panel>
+    </SettingsSection>
   );
 }

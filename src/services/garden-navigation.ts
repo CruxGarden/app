@@ -142,3 +142,8 @@ export async function renameGarden(id: string, title: string): Promise<void> {
   useGardenContext.setState((s) => ({ garden: named(s.garden), root: named(s.root) }));
   collectionsChanged();
 }
+
+/** Whether this connection owns a Garden graph (desktop); Web Mode has none. */
+export function hasGardenGraph(): boolean {
+  return !!getSqliteClient().gardenMembership;
+}

@@ -33,7 +33,7 @@ interface ModalProps {
   subtitle?: string;
   /**
    * Stacking layer. App-level confirm/alert/choice dialogs (DialogHost) use
-   * 'top' so they sit above whatever modal asked the question — Settings,
+   * 'top' so they sit above whatever modal asked the question — an export,
    * a pull, a delete — and stay clickable.
    */
   layer?: 'base' | 'top';
@@ -97,7 +97,7 @@ export default function Modal({
 
   // Rendered at <body>: a dialog inside a glass surface would otherwise be trapped by the
   // panel's backdrop-filter, which makes that panel the containing block of `fixed` children
-  // (the Create Cruxspace dialog was clipped to the Cruxspaces section's height, ADR 0043).
+  // (a Garden's New Garden dialog was clipped to its section's height, ADR 0043).
   if (typeof document === 'undefined') return null;
   return createPortal(
     <AnimatePresence>

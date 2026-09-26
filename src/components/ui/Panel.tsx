@@ -4,6 +4,8 @@ import { cn } from '@/lib/cn';
 /** `ref` is an ordinary prop (React 19) so callers can reach the panel element. */
 interface PanelProps extends ComponentProps<'div'> {
   padding?: 'sm' | 'md' | 'lg' | 'none';
+  /** A landmark element instead of a div (a `section` with an aria-label). */
+  as?: 'div' | 'section' | 'article';
 }
 
 const paddings = {
@@ -13,9 +15,15 @@ const paddings = {
   lg: 'p-8',
 };
 
-export default function Panel({ padding = 'md', className, children, ...props }: PanelProps) {
+export default function Panel({
+  padding = 'md',
+  as: Tag = 'div',
+  className,
+  children,
+  ...props
+}: PanelProps) {
   return (
-    <div
+    <Tag
       className={cn(
         'bg-panel text-panel-text',
         'border border-panel-border rounded-[var(--radius)]',
@@ -26,6 +34,6 @@ export default function Panel({ padding = 'md', className, children, ...props }:
       {...props}
     >
       {children}
-    </div>
+    </Tag>
   );
 }

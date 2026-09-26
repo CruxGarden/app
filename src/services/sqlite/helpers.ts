@@ -1,4 +1,5 @@
 import type { Artifact } from '../types';
+import { slugify } from '@/lib/slug';
 
 // ── Case conversion ──────────────────────────────────
 
@@ -54,14 +55,7 @@ export function toArtifact(row: Record<string, unknown>): Artifact {
 // ── Slug generation ──────────────────────────────────
 
 export function generateSlug(title?: string): string {
-  if (!title) return crypto.randomUUID().slice(0, 8);
-  return (
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 64) || crypto.randomUUID().slice(0, 8)
-  );
+  return title ? slugify(title, crypto.randomUUID().slice(0, 8)) : crypto.randomUUID().slice(0, 8);
 }
 
 // ── MIME type detection ──────────────────────────────

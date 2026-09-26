@@ -133,7 +133,7 @@ describe('write scope (B5)', () => {
   const cruxId = 'test-crux';
 
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     const services = (await import('@/services')).getServices();
     await services.crux.create({ title: 'Test' });
   });
@@ -241,7 +241,7 @@ describe('createToolExecutor', () => {
   const cruxId = 'test-crux';
 
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     // Create the crux so the executor has something to work with
     const services = (await import('@/services')).getServices();
     await services.crux.create({ title: 'Test' });
@@ -708,7 +708,7 @@ describe('growth tools', () => {
   let cruxId: string;
 
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     const services = (await import('@/services')).getServices();
     const crux = await services.crux.create({
       title: 'Growth',
@@ -911,7 +911,7 @@ describe('growth tools', () => {
 
 describe('remember and load_skill (B6)', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     const { clearMemory } = await import('@/services/memory');
     await clearMemory();
   });

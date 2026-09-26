@@ -18,6 +18,7 @@
  * dresses the Garden that owns the schedule. One ticker runs them all.
  */
 import { create } from 'zustand';
+import { hasGardenGraph } from './garden-navigation';
 import { getSetting, setSetting } from './settings';
 import { cronError, nextCron } from './cron';
 import {
@@ -177,8 +178,7 @@ function syncToGardens(schedules: Schedule[]) {
  * that are gone are dropped, and a Garden without a copy yet receives one.
  */
 export async function reconcileGardenSchedules(now = new Date()): Promise<void> {
-  const { getSqliteClient } = await import('./sqlite/client');
-  if (!getSqliteClient().gardenMembership) return;
+  if (!hasGardenGraph()) return;
   gardensOwnSchedules = true;
   const [byGarden, ids] = await Promise.all([readGardenSchedules(), gardenIds()]);
   const root = useGardenContext.getState().root?.id;

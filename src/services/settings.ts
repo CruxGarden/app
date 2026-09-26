@@ -212,10 +212,6 @@ export async function initSettings(): Promise<void> {
   ready = true;
 }
 
-/** Whether the settings cache has been populated from SQLite. */
-export function isSettingsReady(): boolean {
-  return ready;
-}
 
 /** Clear the in-memory cache and remove all cruxgarden: keys from localStorage. */
 export function clearAllSettings(): void {

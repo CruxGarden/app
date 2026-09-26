@@ -5,7 +5,7 @@ import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { publishPipeline } from './publish';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it('preserves native OpenMosh sessions and original media through Growth and a complete Crux round trip', async () => {
   const services = getServices();
   const crux = await services.crux.create({

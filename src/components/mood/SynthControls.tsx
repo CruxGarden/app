@@ -230,7 +230,7 @@ export default function SynthControls() {
           ))}
         </ul>
         <p className="mt-3 text-text-muted">
-          Presets stay with this Mood. Save the Mood in the Builder, then export or share it to
+          Presets stay with this Mood. Save the Mood, then export or share it to
           bring your sounds with it. Reusing a name replaces that preset.
         </p>
       </details>

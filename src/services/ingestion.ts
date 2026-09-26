@@ -18,6 +18,13 @@ import { guessMimeType, hashContent } from './sqlite/helpers';
 import { getServices } from './index';
 import { selectCruxFiles, type SelectedFiles } from './file-content';
 
+/** Files under a Crux changed from outside the app (the watcher, a tool, a restore). */
+export const EXTERNAL_CHANGE = 'crux:external-change';
+export function announceExternalChange(cruxId: string): void {
+  if (typeof window !== 'undefined')
+    window.dispatchEvent(new CustomEvent(EXTERNAL_CHANGE, { detail: { cruxId } }));
+}
+
 function bridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
   return window.electronAPI?.project ?? null;
@@ -191,7 +198,7 @@ export async function reconcileProjectFile(folder: string, relPath: string): Pro
 
 /** Notify interested UI (Artifacts panel, workshop) that a crux's files changed. */
 function announceChange(cruxId: string): void {
-  window.dispatchEvent(new CustomEvent('crux:external-change', { detail: { cruxId } }));
+  announceExternalChange(cruxId);
 }
 
 /** Notify that a Project Folder disappeared (never cascades to deletion). */

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Panel, Button } from '@/components/ui';
+import SettingsSection from './SettingsSection';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
 import { getGardenRoot, shortenHomePath } from '@/services/desktop';
@@ -65,16 +66,16 @@ export default function MemorySettings() {
   const empty = isMemoryEmpty(text);
 
   return (
-    <Panel padding="md" data-testid="memory-settings">
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="font-display text-sm font-medium text-accent">Memory</h2>
-        <span className="text-xxs font-mono text-text-muted" data-testid="memory-status">
+    <SettingsSection
+      title="Memory"
+      testId="memory-settings"
+      aside={<span className="text-xxs font-mono text-text-muted" data-testid="memory-status">
           {status ||
             (empty
               ? 'nothing remembered'
               : `${entries.length} line${entries.length === 1 ? '' : 's'}`)}
-        </span>
-      </div>
+        </span>}
+    >
 
       <div className="flex flex-col gap-3 text-xs">
         <p className="text-text-muted">
@@ -141,6 +142,6 @@ export default function MemorySettings() {
           </Button>
         </div>
       </div>
-    </Panel>
+    </SettingsSection>
   );
 }

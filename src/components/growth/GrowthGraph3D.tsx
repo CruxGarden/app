@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d';
 import { layoutGrowthGraph, type GrowthLink } from '@/services/growth-graph';
-import {
-  endpointId,
-  laneColor,
-  safeGraphLabel,
-  type GraphCanvasProps,
-  type RenderNode,
-} from './graph-style';
+import { endpointId, laneColor, safeGraphLabel, type GraphCanvasProps, type RenderNode, GRAPH_BG } from './graph-style';
 
 export default function GrowthGraph3D({
   graph,
@@ -69,7 +63,7 @@ export default function GrowthGraph3D({
       graphData={data}
       width={width}
       height={height}
-      backgroundColor="#101c19"
+      backgroundColor={GRAPH_BG}
       showNavInfo={false}
       cooldownTicks={0}
       enableNodeDrag={false}

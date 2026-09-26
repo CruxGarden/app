@@ -1,4 +1,4 @@
-import type { PaneType } from '@/stores/uiStore';
+import { DEFAULT_PANE_LABELS, PANES, type PaneType } from '@/components/workspace/paneConfig';
 
 /**
  * The names of things, as the garden chooses them (Daniel, 2026-09-20: "you
@@ -12,52 +12,7 @@ import type { PaneType } from '@/stores/uiStore';
  * Test selectors keep the default words (`Toggle collaboration`), because a
  * metaphor is for the person, not the journeys.
  */
-export const DEFAULT_PANE_LABELS: Record<PaneType, string> = {
-  tasks: 'Tasks',
-  history: 'History',
-  collaboration: 'Collaboration',
-  artifacts: 'Artifacts',
-  workshop: 'Workshop',
-  details: 'Metadata',
-  export: 'Export',
-  sync: 'Sync',
-  publish: 'Share',
-  store: 'Store',
-  media: 'Find media',
-  mood: 'Mood',
-  synth: 'Crux Synth',
-  browser: 'WWW',
-  settings: 'Settings',
-  explore: 'Explore',
-  home: 'Home',
-  console: 'Garden Collaboration',
-  navigator: 'Navigator',
-  tending: 'Tending',
-};
-
-/** The CSS variable each pane's name is read from (literal, so coverage can see it). */
-const PANE_LABEL_VARS: Record<PaneType, string> = {
-  tasks: '--pane-label-tasks',
-  history: '--pane-label-history',
-  collaboration: '--pane-label-collaboration',
-  artifacts: '--pane-label-artifacts',
-  workshop: '--pane-label-workshop',
-  details: '--pane-label-details',
-  export: '--pane-label-export',
-  sync: '--pane-label-sync',
-  publish: '--pane-label-publish',
-  store: '--pane-label-store',
-  media: '--pane-label-media',
-  mood: '--pane-label-mood',
-  synth: '--pane-label-synth',
-  browser: '--pane-label-browser',
-  settings: '--pane-label-settings',
-  explore: '--pane-label-explore',
-  home: '--pane-label-home',
-  console: '--pane-label-console',
-  navigator: '--pane-label-navigator',
-  tending: '--pane-label-tending',
-};
+export { DEFAULT_PANE_LABELS } from '@/components/workspace/paneConfig';
 
 function readVar(name: string): string {
   if (typeof document === 'undefined') return '';
@@ -80,7 +35,7 @@ export function paneLabelFrom(type: PaneType, raw: string | null | undefined): s
 
 /** The pane's name in this garden, or its default. */
 export function paneLabel(type: PaneType): string {
-  return paneLabelFrom(type, readVar(PANE_LABEL_VARS[type]));
+  return paneLabelFrom(type, readVar(PANES[type].labelVar));
 }
 
 /** The garden's own title, if it has one ("" → show the username). */

@@ -9,7 +9,7 @@ import { type AgentRuntime, type AgentRuntimeDeps, GARDEN_TOOL_SPECS } from './a
 import { CodexConnection } from './codex-connection';
 import { mapCodexNotification, newCodexState } from './codex-events';
 
-export function findCodexBinary(): string | null {
+function findCodexBinary(): string | null {
   const exe = process.platform === 'win32' ? 'codex.exe' : 'codex';
   const override = process.env.CRUX_CODEX_PATH;
   if (override) return fs.existsSync(override) ? override : null;

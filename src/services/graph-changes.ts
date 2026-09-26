@@ -1,4 +1,5 @@
 import { useGardenContext } from '@/stores/gardenContext';
+import { announceTasksChanged } from './working-copies';
 import type { LocalGraphChange } from '@/lib/platform';
 import { getSqliteClient } from './sqlite/client';
 import { allWorkspaces } from '@/stores/workspaceRegistry';
@@ -51,7 +52,7 @@ export async function applyGraphChange(change: LocalGraphChange): Promise<void> 
       .refreshDetails(w.id === change.id ? fields : ['title'], w.id === change.id ? keys : []);
   });
   if (change.entity === 'working-copy' || fields.includes('title'))
-    window.dispatchEvent(new Event('crux:tasks-changed'));
+    announceTasksChanged();
   if (fields.includes('title') || fields.includes('description')) collectionsChanged();
   if (change.entity === 'crux' && !useGardenStore.getState().loading)
     refreshes.push(useGardenStore.getState().refresh());

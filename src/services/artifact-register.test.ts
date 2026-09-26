@@ -2,7 +2,7 @@ import { beforeEach, expect, it } from 'vitest';
 import { getServices, initServices } from './index';
 import { indexedTaskManifest, indexTaskManifest } from './task-files';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 
 /** Task Working Copies index blobs the store already holds instead of re-reading them (GAME-CRUXSPACE-PLAN.md §9 #7). */
 it('registers an existing blob by fingerprint and refuses unknown blobs or duplicate paths', async () => {

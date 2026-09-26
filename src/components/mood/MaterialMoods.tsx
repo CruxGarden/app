@@ -24,7 +24,7 @@ import {
  * much simpler controls specific to them"): three choices — the material,
  * the hue, the mode — wear the matching bundled Mood on the spot, and each
  * material has two plain switches. Everything deeper stays in the Mood
- * Builder, with the HyperMoods.
+ * pane's Theme tab, with the HyperMoods.
  */
 /** The plain switches each material offers, as token overrides on the worn Mood. */
 const SWITCHES: Record<

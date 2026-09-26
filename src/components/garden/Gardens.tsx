@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { myGardens, acceptInvitation, type MyGarden } from '@/api/gardens';
-import { Button } from '@/components/ui';
+import { Button, Panel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
 
@@ -50,8 +50,10 @@ export default function Gardens() {
   };
 
   return (
-    <section
-      className="bg-panel border border-border rounded-[var(--radius)] p-4 mb-4"
+    <Panel
+      as="section"
+      padding="sm"
+      className="mb-4"
       data-testid="gardens-section"
     >
       <div className="flex items-baseline justify-between gap-3 mb-2">
@@ -92,6 +94,6 @@ export default function Gardens() {
         })}
       </ul>
       {error && <p className="text-xxs text-error mt-2">{error}</p>}
-    </section>
+    </Panel>
   );
 }

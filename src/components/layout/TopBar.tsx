@@ -15,7 +15,7 @@ import { ConsoleAvatar } from '@/components/keeper/Console';
 import KeeperActivity from '@/components/keeper/KeeperActivity';
 import MoodBar from '@/components/mood/MoodBar';
 import { SearchIcon, MoodIcon, ChevronRightIcon, PlusCircleIcon } from '@/components/ui/icons';
-import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
+import { PANES } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
 import { useShallow } from 'zustand/react/shallow';
 import { usePinned } from '@/stores/pins';
@@ -104,14 +104,12 @@ export default function TopBar() {
               {/* Enabled panes — in paneOrder */}
               <div className="flex flex-wrap items-center gap-1" aria-label="Open panels">
                 {enabledPanes.map((paneType) => {
-                  const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
-                  const Icon = config.icon;
-                  const prefix = PANE_VAR_PREFIX[paneType];
+                  const { icon: Icon, label, prefix } = PANES[paneType];
                   const open = paneVisibility[paneType];
                   return (
                     <IconButton
                       key={paneType}
-                      label={`Toggle ${config.label.toLowerCase()}`}
+                      label={`Toggle ${label.toLowerCase()}`}
                       size="sm"
                       onClick={(e) => {
                         // Keep keyboard focus in the bar if this button disappears.

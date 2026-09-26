@@ -91,7 +91,7 @@ ${s.cover ? `<img class="cover" src="${esc(s.cover)}" alt="">` : ''}<h1>${esc(pk
 <div class="muted">A Crux Garden Mood${pkg.author ? ` by ${esc(pkg.author)}` : ''} · ${esc(s.section)}${s.track ? ` · plays “${esc(s.track)}”` : ' · quiet'}</div>
 <div class="panes">${panes}</div>
 <a class="btn" href="mood.cruxmood" download>Download mood.cruxmood</a>
-<p class="how">In Crux Garden, open Explore → Moods and press Install, or import the file from the Mood modal.</p>
+<p class="how">In Crux Garden, open Explore → Moods and press Install, or import the file in the Mood pane.</p>
 </main></body></html>`;
 }
 

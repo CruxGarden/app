@@ -29,7 +29,7 @@ const png = () =>
 
 beforeEach(async () => {
   useGardenContext.setState({ root: null, garden: null });
-  await initServices('local');
+  await initServices();
 });
 
 async function makeSpace() {

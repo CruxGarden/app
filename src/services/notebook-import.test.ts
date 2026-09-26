@@ -14,7 +14,7 @@ const files = [
   { path: 'Folder/.tigrana/folder.json', content: '{"id":"a-tigrana-folder"}' },
 ];
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 async function fixture() {
   const store = createCruxStore();

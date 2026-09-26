@@ -16,6 +16,7 @@ import {
   type ComponentType,
   type CSSProperties,
   useEffect,
+  type ReactNode,
 } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -53,27 +54,10 @@ const BrowserPane = lazy(() => import('./BrowserPane'));
 const SettingsPane = lazy(() => import('./SettingsPane'));
 const ExplorePane = lazy(() => import('./ExplorePane'));
 import { PANE_VAR_PREFIX } from './paneConfig';
+import PaneIcon from './PaneIcon';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
-import {
-  ActivityIcon,
-  ChatIcon,
-  CloseIcon,
-  CodeIcon,
-  ExportIcon,
-  FolderIcon,
-  RefreshIcon,
-  RepeatIcon,
-  StoreIcon,
-  SearchIcon,
-  MoodIcon,
-  SlidersIcon,
-  GlobeIcon,
-  TagIcon,
-  HomeIcon,
-  SproutIcon,
-  PlusCircleIcon,
-} from '@/components/ui/icons';
+import { CloseIcon } from '@/components/ui/icons';
 import { useCruxStore } from '@/stores/cruxStore';
 import { Capability, can } from '@/lib/platform';
 import { useAppStore } from '@/stores/appStore';
@@ -161,19 +145,26 @@ const MemoizedPaneContent = memo(function MemoizedPaneContent({
 });
 
 /**
- * What sits inside a tile: the pane, once the crux has loaded and the tile is
- * wide enough — otherwise a word about why not. Empty frames with nothing in
- * them read as broken (Daniel, 2026-09-07: a slow first open after a restart).
+ * What sits inside a tile: the pane, once the tile is wide enough and (in a
+ * Crux workspace) the crux has loaded — otherwise a word about why not. Empty
+ * frames with nothing in them read as broken (Daniel, 2026-09-07: a slow first
+ * open after a restart).
  */
-function PaneBody({ paneType }: { paneType: PaneType }) {
-  const loaded = useCruxStore((s) => !!s.crux);
-  const copy = useCruxStore((s) => copyIdentity(s.crux));
+function PaneFrame({
+  paneType,
+  gate,
+}: {
+  paneType: PaneType;
+  /** Why the pane cannot show yet, if it cannot; null when it can. */
+  gate?: (labels: Record<PaneType, string>) => ReactNode;
+}) {
   const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
   const labels = usePaneLabels();
   // Under Plasma the pane's contents mount once its surface has formed, so
   // Monaco, an app's iframe or a long conversation do not compete with the
   // material's arrival for the same frames.
   const formed = useSurfaceFormed(ref);
+  const gated = formed ? gate?.(labels) : null;
   return (
     <div
       ref={ref}
@@ -181,18 +172,8 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
       data-testid={`pane-body-${paneType}`}
       {...paneRegion(paneType, labels[paneType])}
     >
-      {!formed ? null : copy && ['publish', 'sync', 'details', 'export'].includes(paneType) ? (
-        <PaneEmpty
-          title="Available in Main"
-          description="Open Main to manage the Crux’s details, publishing and complete backup."
-        />
-      ) : !loaded ? (
-        <PaneEmpty
-          icon={<Spinner size={16} />}
-          title="Opening…"
-          description={`${labels[paneType]} appears as soon as the crux has loaded.`}
-          className="h-full"
-        />
+      {!formed ? null : gated ? (
+        gated
       ) : isTooNarrow ? (
         <PaneEmpty
           title="Widen the pane"
@@ -206,6 +187,30 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
   );
 }
 
+/** A Crux workspace tile: waits for the crux, and keeps Main-only panes out of a Working Copy. */
+function PaneBody({ paneType }: { paneType: PaneType }) {
+  const loaded = useCruxStore((s) => !!s.crux);
+  const copy = useCruxStore((s) => copyIdentity(s.crux));
+  const gate = useCallback(
+    (labels: Record<PaneType, string>) =>
+      copy && ['publish', 'sync', 'details', 'export'].includes(paneType) ? (
+        <PaneEmpty
+          title="Available in Main"
+          description="Open Main to manage the Crux’s details, publishing and complete backup."
+        />
+      ) : !loaded ? (
+        <PaneEmpty
+          icon={<Spinner size={16} />}
+          title="Opening…"
+          description={`${labels[paneType]} appears as soon as the crux has loaded.`}
+          className="h-full"
+        />
+      ) : null,
+    [copy, loaded, paneType],
+  );
+  return <PaneFrame paneType={paneType} gate={gate} />;
+}
+
 // Title case here; the Mood decides the rendered case (--pane-header-label-case,
 // uppercase by default), so a theme can ask for "Collaboration" or "collaboration".
 
@@ -215,30 +220,6 @@ function MobilePane({ pane }: { pane: PaneType }) {
 }
 
 // ── Pane icons ───────────────────────────────────────────
-
-// Header glyphs come from the icon module so the Mood's iconSet (line | filled | pixel) applies.
-const PANE_ICONS: Record<PaneType, React.ReactNode> = {
-  tasks: <RepeatIcon size={14} strokeWidth={2} />,
-  history: <ActivityIcon size={14} strokeWidth={2} />,
-  collaboration: <ChatIcon size={14} strokeWidth={2} />,
-  artifacts: <FolderIcon size={14} strokeWidth={2} />,
-  workshop: <CodeIcon size={14} strokeWidth={2} />,
-  details: <TagIcon size={14} strokeWidth={2} />,
-  sync: <RefreshIcon size={14} strokeWidth={2} />,
-  publish: <RepeatIcon size={14} strokeWidth={2} />,
-  export: <ExportIcon size={14} strokeWidth={2} />,
-  store: <StoreIcon size={14} strokeWidth={2} />,
-  media: <SearchIcon size={14} strokeWidth={2} />,
-  mood: <MoodIcon size={14} strokeWidth={2} />,
-  synth: <SlidersIcon size={14} strokeWidth={2} />,
-  browser: <GlobeIcon size={14} strokeWidth={2} />,
-  settings: <SlidersIcon size={14} strokeWidth={2} />,
-  explore: <SearchIcon size={14} strokeWidth={2} />,
-  home: <HomeIcon size={14} strokeWidth={2} />,
-  console: <SproutIcon size={14} strokeWidth={2} />,
-  navigator: <PlusCircleIcon size={14} strokeWidth={2} />,
-  tending: <ActivityIcon size={14} strokeWidth={2} />,
-};
 
 /**
  * The tiles of a workspace — a Crux's or a Garden's: headers, close, resize and
@@ -286,7 +267,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
                 style={{ color: `var(${prefix}-header-text)` }}
               >
                 <span className="pane-toolbar-icon" style={{ color: `var(${prefix}-header-icon)` }}>
-                  {PANE_ICONS[paneType]}
+                  <PaneIcon type={paneType} size={14} strokeWidth={2} />
                 </span>
                 <span className="pane-toolbar-label">{labels[paneType]}</span>
               </div>
@@ -340,27 +321,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
 
 /** A Garden workspace tile: no Crux to wait for, only room to show the pane. */
 export function GardenPaneBody({ paneType }: { paneType: PaneType }) {
-  const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
-  const labels = usePaneLabels();
-  const formed = useSurfaceFormed(ref);
-  return (
-    <div
-      ref={ref}
-      className="h-full min-h-0 flex flex-col"
-      data-testid={`pane-body-${paneType}`}
-      {...paneRegion(paneType, labels[paneType])}
-    >
-      {!formed ? null : isTooNarrow ? (
-        <PaneEmpty
-          title="Widen the pane"
-          description={`${labels[paneType]} needs a little more room to show its contents.`}
-          className="h-full"
-        />
-      ) : (
-        <MemoizedPaneContent paneType={paneType} />
-      )}
-    </div>
-  );
+  return <PaneFrame paneType={paneType} />;
 }
 
 // ── Main layout ─────────────────────────────────────────

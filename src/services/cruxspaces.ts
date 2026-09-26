@@ -1,4 +1,6 @@
 import { getSqliteClient } from './sqlite/client';
+import type { Crux } from '@/api/types';
+import { hasGardenGraph } from './garden-navigation';
 import { getServices } from './index';
 import { gardenMembers } from './garden-navigation';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
@@ -30,7 +32,7 @@ export interface CruxspaceOrigin {
 export type CruxspaceInput = Pick<Cruxspace, 'name' | 'brief' | 'cruxIds'>;
 const PREFIX = 'cruxgarden:cruxspace:';
 /** Desktop connections own a Garden graph; elsewhere collections stay settings records. */
-const graph = () => !!getSqliteClient().gardenMembership;
+const graph = hasGardenGraph;
 export const CRUXSPACES_CHANGED = 'cruxspaces:changed';
 export function collectionsChanged() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(CRUXSPACES_CHANGED));
@@ -231,4 +233,13 @@ async function updateRecord(id: string, input: CruxspaceInput): Promise<Cruxspac
 async function deleteRecord(id: string): Promise<void> {
   await getSqliteClient().run('DELETE FROM settings WHERE key = ?', [PREFIX + id]);
   collectionsChanged();
+}
+
+/** A Garden's shared work and the Cruxes still on this device that make it up (by id). */
+export async function cruxspaceMembers(
+  spaceId: string,
+): Promise<{ space: Cruxspace; live: Map<string, Crux> }> {
+  const space = await getCruxspace(spaceId);
+  const live = new Map((await getServices().crux.listAll()).map((c) => [c.id, c]));
+  return { space, live };
 }

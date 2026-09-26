@@ -71,7 +71,7 @@ describe('Ingestion (external edits → history)', () => {
       addEventListener: () => {},
       removeEventListener: () => {},
     };
-    await initServices('local');
+    await initServices();
     initIngestion();
   });
 

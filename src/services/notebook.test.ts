@@ -6,7 +6,7 @@ import { createTask, prepareTaskReview, verifyTaskReview, applyTaskReview } from
 import { exportCrux, importCrux } from './crux-io';
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 async function fixture(id?: string) {
   const store = createCruxStore();

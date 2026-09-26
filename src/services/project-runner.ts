@@ -1,4 +1,3 @@
-import { Capability, can } from '@/lib/platform';
 import type { ProjectInfo, ProjectState } from '../../electron/src/bridge';
 
 /**
@@ -14,9 +13,6 @@ import type { ProjectInfo, ProjectState } from '../../electron/src/bridge';
  */
 export type { ProjectInfo, ProjectState };
 
-export function projectRunnerAvailable(): boolean {
-  return can(Capability.ProjectRunner);
-}
 
 function api() {
   const found = typeof window !== 'undefined' ? window.electronAPI?.projectRunner : undefined;

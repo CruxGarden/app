@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { downloadBlob } from '@/lib/download';
 import { useNavigate } from 'react-router-dom';
 import { Button, Modal } from '@/components/ui';
 import { getServices } from '@/services';
@@ -155,14 +156,7 @@ export default function Cruxspaces({
       if (!space) return;
       setStatus(`Packing ${space.name}…`);
       const result = await exportCruxspace({ spaceId: space.id, onProgress: setStatus });
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(result.blob, result.filename);
       setStatus(
         result.failed.length
           ? `Exported ${result.filename}; ${result.failed.length} item(s) could not be included.`

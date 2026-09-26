@@ -24,7 +24,7 @@ const png = () =>
     ],
     { type: 'image/png' },
   );
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it.each([
   'javascript:alert(1)',
   'https://figma.com.attacker.test/design/Abcdef',

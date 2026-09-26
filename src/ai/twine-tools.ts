@@ -1,10 +1,11 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const TWINE_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_twine',
     description:
       'List native stories with their IDs, titles, passage counts, formats and the first 100 passages (text previews up to 2,000 characters).',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

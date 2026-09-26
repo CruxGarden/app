@@ -33,7 +33,7 @@ afterEach(async () => {
 });
 
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
   fixture.available = true;
   fixture.code = 'const editor = "original";';
   rememberRuntimeMode('reference');

@@ -23,9 +23,9 @@ import type {
  * (`const api: ElectronBridge = …`), and the renderer consumes it via
  * `app/src/lib/platform.ts`, which re-exports these types and declares
  * `window.electronAPI`. Adding or changing a bridge method here is the only
- * way to change the contract; hand-copied partial interfaces are gone.
- *
- * Types only — no runtime code.
+ * way to change the contract. The one runtime value here is
+ * `INSTALLATION_COMMANDS`, the allow-list main checks; the sandboxed preload
+ * repeats it by hand and a test keeps the two equal.
  */
 
 export type { LocalGraphChange } from '@cruxgarden/local-api';
@@ -367,7 +367,6 @@ export interface MediaBridge {
     options?: { maxBytes?: number },
   ): Promise<{ ok: boolean; status: number; mimeType: string; bytes: Uint8Array }>;
 }
-/** Native tools (MAKING-THE-AD-PARITY gap 13): a bundled binary run inside a crux folder. */
 /** The media binaries a garden can run inside a crux folder. */
 export type MediaToolName = 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
 export interface MediaToolInfo {

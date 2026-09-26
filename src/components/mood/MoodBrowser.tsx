@@ -1,4 +1,5 @@
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
+import { downloadBlob } from '@/lib/download';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
@@ -324,12 +325,7 @@ export default function MoodBrowser() {
     try {
       const { readBlob } = await import('@/services/blobs');
       const blob = await exportMoodPackage(pkg, readBlob);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${pkg.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood`;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${pkg.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood`);
     } catch (error) {
       say(error instanceof Error ? error.message : 'Could not export this Mood.');
     } finally {

@@ -2,13 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d';
 import { moodTimeline, revealAlpha, setPieceAllowed } from '@/lib/set-piece';
 import { layoutGrowthGraph, type GrowthLink } from '@/services/growth-graph';
-import {
-  endpointId,
-  laneColor,
-  safeGraphLabel,
-  type GraphCanvasProps,
-  type RenderNode,
-} from './graph-style';
+import { endpointId, laneColor, safeGraphLabel, type GraphCanvasProps, type RenderNode, GRAPH_BG, GRAPH_TEXT } from './graph-style';
 
 export default function GrowthGraphCanvas({
   graph,
@@ -68,7 +62,7 @@ export default function GrowthGraphCanvas({
         graphData={data}
         width={width}
         height={height}
-        backgroundColor="#101c19"
+        backgroundColor={GRAPH_BG}
         cooldownTicks={0}
         autoPauseRedraw
         enableNodeDrag={false}
@@ -100,7 +94,7 @@ export default function GrowthGraphCanvas({
           ctx.font = `${fontSize}px "Inter", sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-          ctx.fillStyle = '#e1eee5';
+          ctx.fillStyle = GRAPH_TEXT;
           const label = n.title.length > 30 ? `${n.title.slice(0, 29)}…` : n.title;
           ctx.fillText(label, n.x, n.y + radius + 5);
           ctx.globalAlpha = 1;

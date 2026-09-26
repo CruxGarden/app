@@ -1,6 +1,6 @@
 import type { GrowthNode } from '@/services/growth-graph';
 
-export const laneColors = ['#8ecb94', '#73bfc9', '#dfb56f', '#b4a0df', '#df94ab', '#a9c76d'];
+const laneColors = ['#8ecb94', '#73bfc9', '#dfb56f', '#b4a0df', '#df94ab', '#a9c76d'];
 export const laneColor = (lane: number) => laneColors[lane % laneColors.length]!;
 export function safeGraphLabel(text: string) {
   // The library interprets tooltip strings as HTML. Task names are ordinary untrusted text.
@@ -38,3 +38,7 @@ export interface GraphCanvasProps {
   fit: number;
   reducedMotion: boolean;
 }
+
+/** The graph canvas is always dark: the lanes' colours are chosen against it. */
+export const GRAPH_BG = '#101c19';
+export const GRAPH_TEXT = '#e1eee5';
