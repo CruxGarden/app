@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useGardenContext } from '@/stores/gardenContext';
 import { getSqliteClient } from '@/services/sqlite/client';
 import {
+  keepLookForGarden,
+  lookEdited,
   onGardenMoodChange,
   readGardenMood,
   setGardenMoodMode,
@@ -89,5 +91,42 @@ export default function GardenMoodLine() {
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * Shown while the look was changed here: keep it as this Garden's own Mood,
+ * or leave it — the Garden's Mood paints again when you come back.
+ */
+export function KeepLook() {
+  const garden = useGardenContext((s) => s.garden);
+  const [edited, setEdited] = useState(lookEdited);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => onGardenMoodChange(() => setEdited(lookEdited())), []);
+  if (!garden || !edited || !getSqliteClient().gardenMood) return null;
+  const keep = () => {
+    setBusy(true);
+    setError(null);
+    keepLookForGarden(garden.id)
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <p
+      role="status"
+      className="flex flex-wrap items-baseline gap-x-2 text-xs text-text-muted mb-3 shrink-0"
+    >
+      <span>Changed here — kept only while you stay.</span>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={keep}
+        className="text-accent hover:underline cursor-pointer disabled:opacity-50"
+      >
+        Keep for {garden.title || 'this Garden'}
+      </button>
+      {error && <span className="text-error">{error}</span>}
+    </p>
   );
 }

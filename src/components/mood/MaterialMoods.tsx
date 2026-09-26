@@ -204,9 +204,9 @@ export default function MaterialMoods({
 
   return (
     <section className="flex flex-col gap-3" data-testid="material-moods">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-xxs font-display uppercase tracking-wider text-caption">Material</h3>
-        <span className="text-2xs text-text-muted">
+        <span className="text-2xs text-text-muted text-right">
           A material, a hue, a mode — {worn ? 'wearing it now' : 'click to wear one'}.
         </span>
       </div>

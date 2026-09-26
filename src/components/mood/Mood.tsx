@@ -18,7 +18,7 @@ import AppearanceControls from './AppearanceControls';
 import SurfaceThemeControl from './SurfaceThemeControl';
 import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import MoodBrowser from './MoodBrowser';
-import GardenMoodLine from './GardenMoodLine';
+import GardenMoodLine, { KeepLook } from './GardenMoodLine';
 import AssetsTab from './AssetsTab';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
@@ -629,6 +629,7 @@ export default function MoodEditor() {
         <MotionIntensityControl />
       </div>
 
+      <KeepLook />
       {/* Active tab content */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto pr-3">
         {tab === 'theme' && (

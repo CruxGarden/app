@@ -1,5 +1,5 @@
 import type { MoodPackage } from '@/lib/moods/packages';
-import { getSetting, setSetting } from '@/services/settings';
+import { getSetting, onSettingChange, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { getSqliteClient } from './sqlite/client';
@@ -114,6 +114,69 @@ export function onGardenMoodChange(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
+/** What a Mood paints. A change to any of these, other than painting, is an edit here. */
+const LOOK_KEYS = new Set<string>([
+  SettingsKey.Theme,
+  SettingsKey.Tint,
+  SettingsKey.BackgroundType,
+  SettingsKey.BackgroundImage,
+  SettingsKey.BackgroundBlockSize,
+  SettingsKey.MoodPresetDark,
+  SettingsKey.MoodPresetLight,
+  SettingsKey.MoodThemeDark,
+  SettingsKey.MoodThemeLight,
+  SettingsKey.SynthPatch,
+  SettingsKey.SynthPresetBanks,
+  SettingsKey.SoundTrack,
+  SettingsKey.MoodAssets,
+  SettingsKey.ResonanceCues,
+  SettingsKey.Persona,
+]);
+let painting_ = 0;
+let edited = false;
+/** The Garden whose Mood was painted last. */
+let paintedFor: string | undefined;
+/** Whether the look was changed here since the Garden's Mood was painted. */
+export function lookEdited(): boolean {
+  return edited;
+}
+function setEdited(next: boolean) {
+  if (edited === next) return;
+  edited = next;
+  listeners.forEach((fn) => fn());
+}
+onSettingChange((key) => {
+  if (painting_ === 0 && LOOK_KEYS.has(key)) setEdited(true);
+});
+async function paint(pkg: MoodPackage) {
+  const { applyMood } = await import('@/lib/moods/packages');
+  painting_++;
+  try {
+    await applyMood(pkg);
+  } finally {
+    painting_--;
+  }
+}
+
+/**
+ * Keep what was changed here as this Garden's own Mood: the current look is
+ * saved as a Mood of the Garden and worn by it, so it returns with the Garden.
+ */
+export async function keepLookForGarden(gardenId = captureGardenId()): Promise<void> {
+  if (!gardenId) throw new Error('Open a Garden first.');
+  const [{ captureCurrentMood, installMood }, { useAppStore }, mood] = await Promise.all([
+    import('@/lib/moods/packages'),
+    import('@/stores/appStore'),
+    readGardenMood(gardenId),
+  ]);
+  const place = useGardenContext.getState().garden?.title || 'this Garden';
+  const author = useAppStore.getState().author?.username;
+  const captured = captureCurrentMood({ name: `${mood?.name ?? 'Mood'} · ${place}`, author });
+  const saved = await installMood(captured, { gardenId });
+  await wearInGarden(saved, gardenId);
+  setEdited(false);
+}
+
 let painting: Promise<void> = Promise.resolve();
 /** Paint the active Garden's Mood. Serialized; a later Garden always paints last. */
 export function projectActiveGarden(): Promise<void> {
@@ -129,13 +192,14 @@ async function project(): Promise<void> {
   // The Garden changed while this was reading; its own projection is queued.
   if (captureGardenId() !== gardenId) return;
   const last = getSetting(SettingsKey.MoodProjection);
-  if (last !== t.key) {
+  // An edit belongs to the Garden it was made in: another Garden paints its own Mood.
+  const leftEdit = edited && paintedFor !== gardenId;
+  paintedFor = gardenId;
+  if (last !== t.key || leftEdit) {
     // Already wearing it (a fresh garden's Default Mood): record, do not repaint.
-    if (last || getSetting(SettingsKey.WornMoodId) !== t.wornId) {
-      const { applyMood } = await import('@/lib/moods/packages');
-      await applyMood(t.pkg);
-    }
+    if (leftEdit || last || getSetting(SettingsKey.WornMoodId) !== t.wornId) await paint(t.pkg);
     setSetting(SettingsKey.MoodProjection, t.key);
+    setEdited(false);
   }
   listeners.forEach((fn) => fn());
 }

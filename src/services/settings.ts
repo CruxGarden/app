@@ -59,6 +59,16 @@ const SYNC_KEYS: Set<string> = new Set([
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
+const changeListeners = new Set<(key: string) => void>();
+/** Hear which setting changed (value writes and removals, not secrets). */
+export function onSettingChange(fn: (key: string) => void): () => void {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
+function changed(key: string) {
+  for (const fn of changeListeners) fn(key);
+}
+
 /** Read a setting synchronously from the in-memory cache. */
 export function getSetting(key: string): string | null {
   // Cache is authoritative once a value is present (covers pre-init writes)
@@ -80,7 +90,9 @@ export function setSetting(key: string, value: string): void {
     return;
   }
 
+  const before = cache.get(key);
   cache.set(key, value);
+  if (before !== value) changed(key);
 
   // Sync fallback for pre-init reads
   if (SYNC_KEYS.has(key) && typeof localStorage !== 'undefined') {
@@ -122,7 +134,8 @@ export async function setSettingDurably(key: string, value: string): Promise<voi
 
 /** Remove a setting from cache + SQLite + localStorage. */
 export function removeSetting(key: string): void {
-  cache.delete(key);
+  const had = cache.delete(key);
+  if (had) changed(key);
 
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(key);

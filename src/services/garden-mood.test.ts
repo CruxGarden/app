@@ -5,6 +5,7 @@ const mock = vi.hoisted(() => ({
     onChange: vi.fn(),
   },
   settings: new Map<string, string>(),
+  settingListeners: new Set<(key: string) => void>(),
   apply: vi.fn(),
   read: vi.fn(),
   backing: vi.fn(),
@@ -12,7 +13,14 @@ const mock = vi.hoisted(() => ({
 vi.mock('./sqlite/client', () => ({ getSqliteClient: () => mock.db }));
 vi.mock('@/services/settings', () => ({
   getSetting: (key: string) => mock.settings.get(key) ?? null,
-  setSetting: (key: string, value: string) => mock.settings.set(key, value),
+  setSetting: (key: string, value: string) => {
+    mock.settings.set(key, value);
+    mock.settingListeners.forEach((fn) => fn(key));
+  },
+  onSettingChange: (fn: (key: string) => void) => {
+    mock.settingListeners.add(fn);
+    return () => mock.settingListeners.delete(fn);
+  },
 }));
 vi.mock('@/lib/moods/packages', () => ({ applyMood: mock.apply }));
 vi.mock('@/lib/moods/bundled-moods', () => ({
@@ -22,7 +30,9 @@ vi.mock('@/lib/moods/bundled-moods', () => ({
 vi.mock('./mood-library', () => ({ readMoodCrux: mock.read, builtInMoodCrux: mock.backing }));
 import { useGardenContext } from '@/stores/gardenContext';
 import { SettingsKey } from '@/lib/constants';
+import { setSetting } from '@/services/settings';
 import {
+  lookEdited,
   projectActiveGarden,
   readGardenMood,
   setGardenMoodMode,
@@ -156,4 +166,21 @@ it('describes where the look comes from', async () => {
     name: 'Dusk',
     isRoot: false,
   });
+});
+
+it('a change to the look here is an edit; painting the Garden’s Mood is not', async () => {
+  mock.db.gardenMood.resolve.mockResolvedValue(own('dusk-id'));
+  mock.apply.mockImplementation(async () =>
+    setSetting(SettingsKey.MoodThemeDark, '{"accent":"#123"}'),
+  );
+  await projectActiveGarden();
+  expect(mock.apply).toHaveBeenCalled();
+  expect(lookEdited()).toBe(false);
+  setSetting(SettingsKey.MoodThemeDark, '{"accent":"#456"}');
+  expect(lookEdited()).toBe(true);
+  // Unrelated settings do not count.
+  mock.db.gardenMood.resolve.mockResolvedValue(own('other-id'));
+  useGardenContext.getState().select({ id: 'studio', slug: 'studio', title: 'Studio' });
+  await projectActiveGarden();
+  expect(lookEdited()).toBe(false);
 });
