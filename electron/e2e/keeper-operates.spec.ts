@@ -38,10 +38,10 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     const composer = console_.getByPlaceholder('Send a message...');
     await composer.fill('[garden:operate] Look around and get Tour stop ready.');
     await composer.press('Enter');
-    await expect(console_.getByText('chose Claude Sonnet 5 for Tour stop')).toBeVisible({
+    await expect(console_.getByText('chose Claude Sonnet 5 for Tour stop').first()).toBeVisible({
       timeout: 60_000,
     });
-    await expect(console_.getByText('Used 6 tools')).toBeVisible();
+    await expect(console_.getByText('Used 6 tools').first()).toBeVisible();
 
     // The crux's collaborator changed, and the export was handed over.
     const log = trail.join('\n');

@@ -3,8 +3,8 @@ import {
   enableTendingNotifications,
 } from '@/services/tending-notifications';
 import { getModelShortName, resolveModel } from '@/ai/providers';
-import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTendingCatalog, useTendingRows, type TendingRow } from '@/stores/tendingStore';
 import {
   attentionCount,
@@ -33,7 +33,6 @@ export default function Tending() {
   const notifications = useTendingNotifications();
   const { loading, error: loadError } = useTendingCatalog();
   const navigate = useNavigate();
-  const heading = useRef<HTMLHeadingElement>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('current');
   const [error, setError] = useState('');
@@ -41,7 +40,6 @@ export default function Tending() {
   const [demoProgress, setDemoProgress] = useState('');
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
-    heading.current?.focus();
     const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
   }, []);
@@ -104,24 +102,9 @@ export default function Tending() {
   }
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs text-text-muted mb-1">Your garden at work</p>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="text-xl font-display text-heading outline-none"
-          >
-            Tending
-          </h1>
-          <p className="text-sm text-text-muted mt-2">
-            See what is growing, what needs you, and what is ready to review.
-          </p>
-        </div>
-        <Link to="/home" className="text-sm text-accent hover:underline shrink-0">
-          Home Garden
-        </Link>
-      </div>
+      <p className="text-sm text-text-muted">
+        What is growing, what needs you, and what is ready to review.
+      </p>
       {can(Capability.ProjectFolder) && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Button

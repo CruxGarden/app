@@ -114,9 +114,9 @@ test('plasma across every page', async () => {
     // ── Pages ────────────────────────────────────────────────────────────
     await go('/explore');
     await shot('10-explore', 3000);
-    await go('/tending');
-    await shot('11-tending', 2500);
     await go('/home');
+    await showPane(page, 'Tending');
+    await shot('11-tending', 2500);
     await showPane(page, 'Mood');
     await shot('12-mood-builder', 2500);
     for (const tab of ['Theme', 'Background', 'Sound', 'Persona']) {

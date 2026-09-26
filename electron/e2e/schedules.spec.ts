@@ -22,7 +22,10 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
     await enterGarden(page);
     await createCrux(page, 'Ferns');
     await goHome(page);
-    await page.locator('header').getByRole('link', { name: 'Tending' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: /^Tending/ })
+      .click();
     const section = page.getByTestId('schedules');
     await expect(section).toContainText('Nothing scheduled');
     const openForm = () => section.getByRole('button', { name: 'Schedule…' }).click();
@@ -115,7 +118,10 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
     await app.close();
     ({ app, page } = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } }));
     await page.getByRole('button', { name: /enter/i }).click();
-    await page.locator('header').getByRole('link', { name: 'Tending' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: /^Tending/ })
+      .click();
     await expect(page.getByTestId('schedules').getByTestId('schedule')).toHaveCount(4);
     await page.getByRole('button', { name: 'Remove schedule Still growing?' }).click();
     await expect(page.getByTestId('schedules').getByTestId('schedule')).toHaveCount(3);

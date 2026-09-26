@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { useUIStore } from '@/stores/uiStore';
 import { useTendingRows } from '@/stores/tendingStore';
 import { attentionCount } from '@/services/tending-state';
 
@@ -8,9 +8,10 @@ export default function TendingLink({ cruxId }: { cruxId?: string }) {
   const count = attentionCount(states);
   if (cruxId && !count) return null;
   return (
-    <Link
-      to="/tending"
-      className="text-xs text-accent px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
+    <button
+      type="button"
+      onClick={() => useUIStore.getState().openTending()}
+      className="cursor-pointer text-xs text-accent px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
       aria-label={
         cruxId ? `${count} need tending` : `Tending${count ? `, ${count} need tending` : ''}`
       }
@@ -27,6 +28,6 @@ export default function TendingLink({ cruxId }: { cruxId?: string }) {
           )}
         </>
       )}
-    </Link>
+    </button>
   );
 }

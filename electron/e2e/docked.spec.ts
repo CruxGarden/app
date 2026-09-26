@@ -31,7 +31,10 @@ test('closing the window in docked mode keeps the garden running', async () => {
     await page.keyboard.press('Escape');
 
     // A schedule for a minute from now, so something has to happen while hidden.
-    await page.locator('header').getByRole('link', { name: 'Tending' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: /^Tending/ })
+      .click();
     await page.getByTestId('schedules').getByRole('button', { name: 'Schedule…' }).click();
     await page.getByLabel('Title', { exact: true }).fill('While hidden');
     await page.getByLabel('When', { exact: true }).selectOption('every');

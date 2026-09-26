@@ -11,7 +11,7 @@ import {
 } from '@/services/cruxspaces';
 import { toolManifest } from '@/services/crux-tools/registry';
 import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
-import type { PaneType } from '@/stores/uiStore';
+import { DEFAULT_PANE_ORDER, GARDEN_PANE_ORDER, type PaneType } from '@/stores/uiStore';
 import { pathOf } from '@/lib/artifact-path';
 
 /**
@@ -208,7 +208,7 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'show',
     description:
-      'Bring something into view so the person watches you work: the home garden, a crux (its workspace opens), a pane in the open crux (opened or closed), a file (opens in the Workshop), Settings, or Explore. The console closes so they can see. Name a crux by id or title.',
+      'Bring something into view so the person watches you work: the home garden, a crux (its workspace opens), a pane in the workspace in front (opened or closed; Tending, Mood, Settings and the Garden panes open anywhere), a file (opens in the Workshop), Settings, or Explore. The console closes so they can see. Name a crux by id or title.',
     input_schema: {
       type: 'object',
       properties: {
@@ -975,15 +975,16 @@ async function runGardenToolInner(
         return 'Showing Settings.';
       }
       if (what === 'pane') {
-        // Every open workspace has its own layout store (ADR 0018); the pane
-        // change goes to the workspace the person is looking at.
-        const { useWorkspaceRegistry, openWorkspace } = await import('@/stores/workspaceRegistry');
-        const active = useWorkspaceRegistry.getState().mru[0];
-        if (!active || !/\/c\//.test(location.pathname))
-          return 'No crux is open. show a crux first.';
+        // Every workspace has its own layout store (ADR 0018); the pane change
+        // goes to the one the person is looking at — a Crux's or the Garden's.
+        const { currentWorkspaceUI } = await import('@/stores/uiStore');
         const pane = input.pane as PaneType;
         const visible = input.visible !== false;
-        (await openWorkspace(active)).ui.getState().setPaneVisible(pane, visible);
+        const ui = currentWorkspaceUI().getState();
+        const offered = ui.workspaceScope === 'garden' ? GARDEN_PANE_ORDER : DEFAULT_PANE_ORDER;
+        if (!offered.includes(pane))
+          return `The ${DEFAULT_PANE_LABELS[pane]} pane belongs to a Crux. show a crux first.`;
+        ui.setPaneVisible(pane, visible);
         return `${visible ? 'Opened' : 'Closed'} the ${DEFAULT_PANE_LABELS[pane]} pane.`;
       }
       const crux = await resolveCrux(input);
@@ -1126,9 +1127,7 @@ async function runGardenToolInner(
             ? 'a crux'
             : path.startsWith('/explore')
               ? 'Explore'
-              : path.startsWith('/tending')
-                ? 'Tending'
-                : path;
+              : path;
       const lines = [`page: ${page}`];
       const names = customNames();
       if (names?.title) lines.push(`garden title: ${names.title}`);

@@ -12,7 +12,6 @@ const Gateway = lazy(() => import('@/pages/Gateway'));
 const Landing = lazy(() => import('@/pages/Landing'));
 const BillingReturn = lazy(() => import('@/pages/BillingReturn'));
 const Plans = lazy(() => import('@/pages/Plans'));
-const Tending = lazy(() => import('@/pages/Tending'));
 const GardenWorkspace = lazy(() => import('@/components/workspace/GardenWorkspace'));
 const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
 const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
@@ -97,20 +96,11 @@ const router = createBrowserRouter(
       ? [
           { path: '/home', element: <Navigate to="/" replace /> },
           { path: '/c/:id', element: <Navigate to="/" replace /> },
-          { path: '/tending', element: <Navigate to="/" replace /> },
         ]
       : []),
     {
       element: <Shell />,
       children: [
-        {
-          path: '/tending',
-          element: (
-            <ErrorBoundary>
-              <Tending />
-            </ErrorBoundary>
-          ),
-        },
         {
           path: '/home',
           element: (
@@ -145,8 +135,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       {!homepage && <AnimatedBackground />}
-      {/* Above the router, not inside Shell. Only three routes are Shell's
-          children — /home, /c/:id, /tending — so a material mounted
+      {/* Above the router, not inside Shell. Only two routes are Shell's
+          children — /home and /c/:id — so a material mounted
           there left the Gateway, Explore, Plans, the public pages and the
           404 flat. The Gateway is the first screen anyone ever sees. */}
       <PlasmaStage>

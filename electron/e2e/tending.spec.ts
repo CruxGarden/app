@@ -36,9 +36,9 @@ async function task(page: Page, title: string) {
 async function tend(page: Page) {
   await page
     .locator('header')
-    .getByRole('link', { name: /^Tending/ })
+    .getByRole('button', { name: /^Tending/ })
     .click();
-  await expect(page.getByRole('heading', { name: 'Tending', exact: true })).toBeFocused();
+  await expect(page.getByTestId('pane-body-tending')).toBeVisible();
 }
 async function say(page: Page, text: string) {
   const input = page.getByPlaceholder('Send a message...');
@@ -202,7 +202,7 @@ test('Tending routes Claude Code permissions and refuses a stale desktop notific
         window as unknown as { tendingNotices: { onclick: () => void }[] }
       ).tendingNotices[0]!.onclick(),
     );
-    await expect(page.getByRole('heading', { name: 'Tending', exact: true })).toBeVisible();
+    await expect(page.getByTestId('pane-body-tending')).toBeVisible();
     await expect(row.getByText('Needs approval', { exact: true })).toBeVisible();
     await row.getByRole('button', { name: 'Answer Main', exact: true }).click();
     await expect(page.getByTestId('agent-approvals')).toBeVisible();

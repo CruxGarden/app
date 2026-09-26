@@ -1,3 +1,4 @@
+import { showPane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
@@ -132,9 +133,10 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
 
     // A control that borrows a panel class keeps its paint.
     await page.evaluate(() => {
-      window.history.pushState({}, '', '/tending');
+      window.history.pushState({}, '', '/home');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
+    await showPane(page, 'Tending');
     const search = page.getByLabel('Search Tending');
     await expect(search).toBeVisible();
     expect(await bg('input[aria-label="Search Tending"]')).not.toMatchObject({ bg: transparent });

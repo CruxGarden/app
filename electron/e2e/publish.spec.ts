@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -70,7 +70,7 @@ test.describe('publish (mocked API)', () => {
       await page.screenshot({ path: 'e2e/.results/publish-1-published.png' });
 
       // Store pane → Live: the published crux's store, as visitors left it
-      await togglePanel(page, 'Toggle store');
+      await openPanel(page, 'store', 'Toggle store');
       await page.getByTestId('store-source-live').click();
       const liveStore = page.getByTestId('store-live');
       await expect(page.getByTestId('store-export')).toBeEnabled();

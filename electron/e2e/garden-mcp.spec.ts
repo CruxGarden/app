@@ -98,7 +98,7 @@ test('an outside MCP client operates across the garden; built-in collaborators s
       'Outside alpha',
     );
     // A real built-in Collaboration loop uses the shared discovery/executor.
-    await page.getByPlaceholder('Send a message...').fill('[garden:plant]');
+    await page.getByPlaceholder('Send a message...').fill('[garden:companion]');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(
       page.getByText('Done — planted a companion Crux from this Collaboration.'),

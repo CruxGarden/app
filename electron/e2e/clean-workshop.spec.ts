@@ -29,7 +29,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     );
     await expect(page.getByText('Your creation will appear here', { exact: true })).toBeVisible();
     await expect(page.getByTestId('pane-body-artifacts')).not.toBeVisible();
-    await expect(page.getByRole('banner').getByRole('link', { name: /^Tending/ })).toBeVisible();
+    await expect(page.getByRole('banner').getByRole('button', { name: /^Tending/ })).toBeVisible();
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const { projectFolder: folder } = await storedCrux(page, id);
     expect(

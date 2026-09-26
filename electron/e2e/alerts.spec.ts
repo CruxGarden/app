@@ -54,7 +54,9 @@ test('a pending decision is an alert; answering it resolves the alert', async ()
     await page.getByTestId('alerts-bell').click();
     // Open goes to the decision, or to Tending when the run did not survive the restart.
     await page.getByTestId('alerts-menu').getByRole('button', { name: 'Open' }).click();
-    await expect(page).toHaveURL(/\/(c\/|tending)/);
+    await expect(
+      page.getByTestId('pane-body-tending').or(page.locator('[data-workspace-id]')),
+    ).toBeVisible();
 
     // Done clears it for good.
     await page.getByTestId('alerts-bell').click();

@@ -7,13 +7,15 @@ export async function togglePanel(
   options?: Parameters<Locator['click']>[0],
 ) {
   const button = page.getByRole('button', { name: label, exact: true });
-  if (!(await button.isVisible())) {
-    await page.getByRole('button', { name: 'Add panel', exact: true }).click();
-    await page
-      .getByRole('textbox', { name: 'Find a panel', exact: true })
-      .fill(label.replace(/^Toggle /, ''));
-  }
-  await button.click(options);
+  if (await button.isVisible()) return button.click(options);
+  // From the picker, click inside it: the pane may open meanwhile, and its
+  // same-named bar button would close it again.
+  await page.getByRole('button', { name: 'Add panel', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Add panel' });
+  await picker
+    .getByRole('textbox', { name: 'Find a panel', exact: true })
+    .fill(label.replace(/^Toggle /, ''));
+  await picker.getByRole('button', { name: label, exact: true }).click(options);
 }
 
 /** Read the bar, without opening a discovery surface or changing the workspace. */
@@ -33,13 +35,14 @@ export async function expectPanelBarReady(page: Page) {
   });
 }
 
-type GardenPane = 'Mood' | 'Explore' | 'Settings' | 'Console' | 'Navigator';
+type GardenPane = 'Mood' | 'Explore' | 'Settings' | 'Console' | 'Navigator' | 'Tending';
 const PANE_TYPE: Record<GardenPane, string> = {
   Mood: 'mood',
   Explore: 'explore',
   Settings: 'settings',
   Console: 'console',
   Navigator: 'navigator',
+  Tending: 'tending',
 };
 const paneLocator = (page: Page, pane: GardenPane) =>
   pane === 'Navigator'
@@ -59,7 +62,12 @@ const inLayout = async (page: Page, pane: GardenPane) => {
 const press = (page: Page, pane: GardenPane) =>
   pane === 'Settings'
     ? page.keyboard.press('ControlOrMeta+,')
-    : page.getByRole('button', { name: pane, exact: true }).click();
+    : pane === 'Tending'
+      ? page
+          .locator('header')
+          .getByRole('button', { name: /^Tending/ })
+          .click()
+      : page.getByRole('button', { name: pane, exact: true }).click();
 
 /**
  * Panes are remembered per workspace: open one only if it is not already in
@@ -99,4 +107,17 @@ export async function enableAi(page: Page) {
   await key.press('Enter');
   await expect(settings.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
   await hidePane(page, 'Settings');
+}
+
+/** Open a Crux pane if it is not in the layout already; never toggles an open one shut. */
+export async function openPanel(page: Page, type: string, label: string) {
+  const body = page.getByTestId(`pane-body-${type}`);
+  // The bar lists open panels only, and it knows before the pane's body mounts.
+  const inBar = await page
+    .locator('header')
+    .getByRole('button', { name: label, exact: true })
+    .count();
+  if (!inBar && !(await body.count())) await togglePanel(page, label);
+  await expect(body).toBeVisible({ timeout: 30_000 });
+  return body;
 }

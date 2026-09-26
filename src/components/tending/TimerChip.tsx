@@ -1,5 +1,5 @@
+import { useUIStore } from '@/stores/uiStore';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import {
   formatRemaining,
@@ -18,7 +18,6 @@ export default function TimerChip() {
   const schedules = useSchedules((s) => s.schedules);
   const running = runningTimers(schedules);
   const [now, setNow] = useState(() => Date.now());
-  const navigate = useNavigate();
   useEffect(() => {
     if (!running.length) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -40,7 +39,7 @@ export default function TimerChip() {
             )}
           >
             <button
-              onClick={() => navigate('/tending')}
+              onClick={() => useUIStore.getState().openTending()}
               className="cursor-pointer hover:underline"
               title={s.title}
             >

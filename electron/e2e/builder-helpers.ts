@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { openPanel } from './panel-helpers';
 import { expect, type Page } from '@playwright/test';
 
 /**
@@ -9,16 +9,14 @@ import { expect, type Page } from '@playwright/test';
  */
 export async function openBuilder(page: Page) {
   const edit = page.getByRole('button', { name: 'Edit content', exact: true });
-  const workshop = page.getByTestId('workshop-view');
   const deadline = Date.now() + 60_000;
-  let toggled = false;
+  let opened = false;
   while (Date.now() < deadline) {
     if (await edit.isVisible().catch(() => false)) break;
-    if (!toggled && !(await workshop.isVisible().catch(() => false))) {
+    if (!opened) {
       await page.waitForTimeout(1500);
-      if (await workshop.isVisible().catch(() => false)) continue;
-      await togglePanel(page, 'Toggle workshop');
-      toggled = true;
+      await openPanel(page, 'workshop', 'Toggle workshop');
+      opened = true;
     }
     await page.waitForTimeout(300);
   }

@@ -164,13 +164,11 @@ test.describe('home garden, crux picker, panes, console', () => {
 
       await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
       const dialog = page.getByRole('dialog', { name: 'Switch Crux workspace' });
-      // Only the open Crux is listed until we ask for the whole garden
+      // The Garden's closed Cruxes are listed too, marked "not open"; search narrows them.
       await expect(dialog.getByRole('button', { name: /^Alpha Bloom / })).toBeVisible();
-      await expect(dialog.getByRole('button', { name: /^Beta Fern / })).toHaveCount(0);
-      await dialog.getByRole('button', { name: 'Open another Crux…' }).click();
-      const find = dialog.getByRole('textbox', { name: 'Find a Crux in your garden' });
+      await expect(dialog.getByRole('button', { name: /^Beta Fern / })).toContainText('not open');
+      const find = dialog.getByRole('textbox', { name: 'Find a Crux in My Garden' });
       await expect(find).toBeFocused();
-      await expect(dialog.getByRole('button', { name: /^Beta Fern / })).toBeVisible();
       await find.fill('beta');
       await expect(dialog.getByRole('button', { name: /^Alpha Bloom / })).toHaveCount(0);
       await find.fill('nothing here');
@@ -330,7 +328,7 @@ test.describe('home garden, crux picker, panes, console', () => {
       const input = consolePane.getByPlaceholder('Send a message...');
       await input.fill('Hello Keeper');
       await input.press('Enter');
-      await expect(consolePane.getByText('Mock reply: Hello Keeper')).toBeVisible({
+      await expect(consolePane.getByText('Mock reply: Hello Keeper').first()).toBeVisible({
         timeout: 30_000,
       });
       await page.screenshot({ path: 'e2e/.results/garden-panes-5-console.png' });
@@ -339,7 +337,7 @@ test.describe('home garden, crux picker, panes, console', () => {
       await console_.click();
       await expect(consolePane).toHaveCount(0);
       await console_.click();
-      await expect(consolePane.getByText('Mock reply: Hello Keeper')).toBeVisible();
+      await expect(consolePane.getByText('Mock reply: Hello Keeper').first()).toBeVisible();
       await console_.click();
       await expect(consolePane).toHaveCount(0);
     } finally {

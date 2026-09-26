@@ -80,6 +80,7 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
   home: { label: 'Home', icon: <HomeIcon size={16} /> },
   console: { label: 'Garden', icon: <SproutIcon size={16} /> },
   navigator: { label: 'Navigate', icon: <PlusCircleIcon size={16} /> },
+  tending: { label: 'Tending', icon: <ActivityIcon size={16} /> },
 };
 
 export default function MobilePaneSwitcher() {

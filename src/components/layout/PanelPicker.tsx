@@ -17,6 +17,7 @@ import { arrangeWorkspacePanels } from '@/services/workspace-layouts';
 const GARDEN_WIDE = new Set<PaneType>([
   'navigator',
   'console',
+  'tending',
   'mood',
   'synth',
   'browser',

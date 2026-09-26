@@ -31,10 +31,15 @@ export function buildMosaicTree<T extends string>(
   };
 }
 
-/** Share the largest tile rather than repeatedly shrinking the entire workspace. */
+/**
+ * Share the largest tile rather than repeatedly shrinking the entire workspace.
+ * Rails (`keep`, e.g. Tasks or the Navigator) are narrow by design: they count
+ * at half their area, so they are shared only once the rest is crowded.
+ */
 export function addPaneToMosaic<T extends string>(
   tree: MosaicNode<T> | null,
   pane: T,
+  keep: ReadonlySet<T> = new Set(),
 ): MosaicNode<T> {
   if (tree === null) return pane;
   let largest: { pane: T; area: number; width: number; height: number } | undefined;
@@ -42,8 +47,8 @@ export function addPaneToMosaic<T extends string>(
   const visit = (node: MosaicNode<T>, width: number, height: number) => {
     if (typeof node === 'string') {
       exists ||= node === pane;
-      if (!largest || width * height > largest.area)
-        largest = { pane: node, area: width * height, width, height };
+      const area = keep.has(node) ? (width * height) / 2 : width * height;
+      if (!largest || area > largest.area) largest = { pane: node, area, width, height };
       return;
     }
     const ratio = (node.splitPercentage ?? 50) / 100;

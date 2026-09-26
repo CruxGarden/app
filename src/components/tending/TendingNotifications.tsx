@@ -1,6 +1,7 @@
+import { useUIStore } from '@/stores/uiStore';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTendingRows } from '@/stores/tendingStore';
+import { useTendingCatalog, useTendingRows } from '@/stores/tendingStore';
 import {
   createAttentionDelivery,
   initTendingNotifications,
@@ -38,7 +39,10 @@ export default function TendingNotifications() {
     emitGardenEvent('launch');
     return stop;
   }, []);
+  const loading = useTendingCatalog((s) => s.loading);
   useEffect(() => {
+    // Until the catalog is read, an empty list says nothing about what is pending.
+    if (loading) return;
     // Every open Tending alert whose decision is no longer pending is done.
     const live = new Set<string>();
     for (const row of rows)
@@ -75,13 +79,13 @@ export default function TendingNotifications() {
             validateTendingTarget(notice.target);
             navigate(tendingPath(notice.target), { state: { tending: notice.target } });
           } catch {
-            navigate('/tending');
+            useUIStore.getState().openTending();
           }
         };
       } catch {
         /* In-app attention remains available when the OS refuses delivery. */
       }
     }
-  }, [rows, enabled, navigate]);
+  }, [rows, loading, enabled, navigate]);
   return null;
 }

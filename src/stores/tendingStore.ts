@@ -1,3 +1,4 @@
+import { opensAsWorkspace } from '@/services/garden-navigation';
 import { getSetting } from '@/services/settings';
 import { create } from 'zustand';
 import { useMemo } from 'react';
@@ -49,8 +50,9 @@ export function startTendingCatalog(): () => void {
       ]);
       if (disposed || ticket !== generation) return;
       const copies = raw.map((row) => fromRow<WorkingCopy>(row));
+      // Gardens and Moods are places and looks, not work that needs tending.
       const rows = cruxes
-        .filter((c) => c.kind !== 'snapshot')
+        .filter((c) => c.kind !== 'snapshot' && c.kind !== 'garden' && opensAsWorkspace(c))
         .flatMap((c): TendingRow[] => {
           const cruxTitle = c.title || 'Untitled';
           return [

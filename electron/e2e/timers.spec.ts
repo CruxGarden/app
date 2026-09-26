@@ -1,3 +1,4 @@
+import { showPane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
@@ -15,7 +16,10 @@ test('a pomodoro counts down in the TopBar, chains a second timer, and a Mood br
   const { app, page } = await launchApp();
   try {
     await enterGarden(page);
-    await page.locator('header').getByRole('link', { name: 'Tending' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: /^Tending/ })
+      .click();
     const section = page.getByTestId('schedules');
     const openForm = () => section.getByRole('button', { name: 'Schedule…' }).click();
     const add = () => page.getByRole('button', { name: 'Add', exact: true }).click();
@@ -77,10 +81,13 @@ test('a pomodoro counts down in the TopBar, chains a second timer, and a Mood br
     await expect(page.getByTestId('timer-chip')).toHaveCount(0);
 
     // 5. Wearing Ember Horizon brings its dusk schedule; Last Light replaces it with dawn.
-    await page.locator('header').getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await page.getByTestId('bundled-ember-horizon').getByRole('button', { name: 'Apply' }).click();
     await page.keyboard.press('Escape');
-    await page.locator('header').getByRole('link', { name: 'Tending' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: /^Tending/ })
+      .click();
     const dusk = section.getByTestId('schedule').filter({ hasText: 'Dusk: wear Last Light' });
     await expect(dusk).toHaveAttribute('data-source', 'mood');
     await expect(dusk).toContainText('Wear Last Light');
@@ -92,10 +99,13 @@ test('a pomodoro counts down in the TopBar, chains a second timer, and a Mood br
     await expect(moodSwitch).toHaveAttribute('aria-checked', 'false');
     await moodSwitch.click();
 
-    await page.locator('header').getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await page.getByTestId('bundled-last-light').getByRole('button', { name: 'Apply' }).click();
     await page.keyboard.press('Escape');
-    await page.locator('header').getByRole('link', { name: 'Tending' }).click();
+    await page
+      .locator('header')
+      .getByRole('button', { name: /^Tending/ })
+      .click();
     await expect(dusk).toHaveCount(0);
     await expect(
       section.getByTestId('schedule').filter({ hasText: 'Dawn: wear Ember Horizon' }),

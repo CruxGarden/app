@@ -1,3 +1,4 @@
+import { useUIStore } from '@/stores/uiStore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
@@ -58,7 +59,7 @@ export default function AlertsBell() {
       validateTendingTarget(a.target);
       navigate(tendingPath(a.target), { state: { tending: a.target } });
     } catch {
-      navigate('/tending');
+      useUIStore.getState().openTending();
     }
   };
   const inHour = () => new Date(Date.now() + 60 * 60_000).toISOString();

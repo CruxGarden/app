@@ -39,3 +39,32 @@ it('opening a pane brings it forward in the one-pane narrow layout', () => {
   ui.getState().togglePane('navigator');
   expect(ui.getState().mobileActivePane).toBe('navigator');
 });
+
+it('shares the Tasks rail only once the rest is crowded', () => {
+  const ui = createUIStore('crux-d');
+  for (const pane of ['tasks', 'collaboration', 'workshop'] as const)
+    ui.getState().setPaneVisible(pane, true);
+  // A new Crux: the Tasks rail beside Collaboration and the Workshop.
+  ui.setState({
+    mosaicLayout: {
+      direction: 'row',
+      first: 'tasks',
+      second: { direction: 'row', first: 'collaboration', second: 'workshop' },
+      splitPercentage: 20,
+    },
+  });
+  for (const pane of ['artifacts', 'publish', 'store'] as const)
+    ui.getState().setPaneVisible(pane, true);
+  // The tile's height as a fraction of the workspace: the rail keeps all of it.
+  const height = (node: MosaicNode<PaneType> | null, pane: PaneType, of = 1): number => {
+    if (node === null) return 0;
+    if (typeof node === 'string') return node === pane ? of : 0;
+    const split = (node.splitPercentage ?? 50) / 100;
+    if (node.direction === 'row')
+      return height(node.first, pane, of) + height(node.second, pane, of);
+    return height(node.first, pane, of * split) + height(node.second, pane, of * (1 - split));
+  };
+  const tree = ui.getState().mosaicLayout;
+  expect(height(tree, 'tasks')).toBe(1);
+  expect(getMosaicLeaves(tree)).toContain('store');
+});

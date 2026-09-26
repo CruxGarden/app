@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { searchMedia, addMedia, defaultFolder, type MediaItem, type MediaKind } from '@/services/media-finder';
+import {
+  searchMedia,
+  addMedia,
+  defaultFolder,
+  type MediaItem,
+  type MediaKind,
+} from '@/services/media-finder';
 import { PaneEmpty, PaneNote, PaneToolbar } from './pane-ui';
 import { cn } from '@/lib/cn';
 
@@ -55,7 +61,8 @@ export default function MediaPane() {
     }
   };
 
-  if (!crux) return <PaneEmpty title="No Crux open" description="Open a Crux to bring media into it." />;
+  if (!crux)
+    return <PaneEmpty title="No Crux open" description="Open a Crux to bring media into it." />;
   return (
     <div className="flex flex-col h-full min-h-0">
       <PaneToolbar>
@@ -65,7 +72,12 @@ export default function MediaPane() {
               key={k.kind}
               role="tab"
               aria-selected={kind === k.kind}
-              className={cn('px-2 py-1 text-xs rounded-[var(--radius-sm)] border', kind === k.kind ? 'bg-accent/20 border-accent text-text' : 'border-border text-text-muted')}
+              className={cn(
+                'px-2 py-1 text-xs rounded-[var(--radius-sm)] border',
+                kind === k.kind
+                  ? 'bg-accent/20 border-accent text-text'
+                  : 'border-border text-text-muted',
+              )}
               onClick={() => {
                 setKind(k.kind);
                 setItems(null);
@@ -85,12 +97,22 @@ export default function MediaPane() {
       >
         <input
           aria-label="Search media"
-          placeholder={kind === 'image' ? 'Search images…' : kind === 'audio' ? 'Search sounds…' : 'Search video…'}
+          placeholder={
+            kind === 'image'
+              ? 'Search images…'
+              : kind === 'audio'
+                ? 'Search sounds…'
+                : 'Search video…'
+          }
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1 px-2 h-8 text-sm rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text"
         />
-        <button type="submit" disabled={busy === 'search' || !query.trim()} className="px-3 h-8 text-sm rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20">
+        <button
+          type="submit"
+          disabled={busy === 'search' || !query.trim()}
+          className="px-3 h-8 text-sm rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20"
+        >
           {busy === 'search' ? 'Searching…' : 'Search'}
         </button>
       </form>
@@ -117,18 +139,32 @@ export default function MediaPane() {
       <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
         {items === null && !busy && (
           <PaneNote tone="muted">
-            Openly licensed work from Openverse (images and sounds) and Wikimedia Commons (video). Each file arrives with its license, author and source kept beside it; check the license before you publish.
+            Openly licensed work from Openverse (images and sounds) and Wikimedia Commons (video).
+            Each file arrives with its license, author and source kept beside it; check the license
+            before you publish.
           </PaneNote>
         )}
-        {items && !items.length && <PaneNote tone="muted">Nothing found. Try other words.</PaneNote>}
+        {items && !items.length && (
+          <PaneNote tone="muted">Nothing found. Try other words.</PaneNote>
+        )}
         {items && items.length > 0 && (
           <ul aria-label="Media results" className="flex flex-col gap-2">
             {items.map((item) => (
-              <li key={`${item.provider}:${item.id}`} className="flex gap-3 p-2 rounded-[var(--radius-sm)] border border-border bg-surface">
+              <li
+                key={`${item.provider}:${item.id}`}
+                className="flex gap-3 p-2 rounded-[var(--radius-sm)] border border-border bg-surface"
+              >
                 {item.thumbnail ? (
-                  <img src={item.thumbnail} alt="" className="w-16 h-16 object-cover rounded-[var(--radius-sm)] shrink-0 bg-surface-solid" />
+                  <img
+                    src={item.thumbnail}
+                    alt=""
+                    className="w-16 h-16 object-cover rounded-[var(--radius-sm)] shrink-0 bg-surface-solid"
+                  />
                 ) : (
-                  <div className="w-16 h-16 rounded-[var(--radius-sm)] shrink-0 bg-surface-solid" aria-hidden="true" />
+                  <div
+                    className="w-16 h-16 rounded-[var(--radius-sm)] shrink-0 bg-surface-solid"
+                    aria-hidden="true"
+                  />
                 )}
                 <div className="flex-1 min-w-0 text-xs">
                   <p className="font-medium text-text truncate">{item.title}</p>
@@ -146,7 +182,12 @@ export default function MediaPane() {
                     >
                       {busy === item.id ? 'Adding…' : `Use ${item.title}`}
                     </button>
-                    <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="px-2 py-0.5 text-text-muted hover:text-text">
+                    <a
+                      href={item.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-0.5 text-text-muted hover:text-text"
+                    >
                       Source ↗
                     </a>
                   </div>

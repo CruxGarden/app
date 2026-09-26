@@ -32,6 +32,7 @@ export const DEFAULT_PANE_LABELS: Record<PaneType, string> = {
   home: 'Home',
   console: 'Garden Collaboration',
   navigator: 'Navigator',
+  tending: 'Tending',
 };
 
 /** The CSS variable each pane's name is read from (literal, so coverage can see it). */
@@ -55,6 +56,7 @@ const PANE_LABEL_VARS: Record<PaneType, string> = {
   home: '--pane-label-home',
   console: '--pane-label-console',
   navigator: '--pane-label-navigator',
+  tending: '--pane-label-tending',
 };
 
 function readVar(name: string): string {

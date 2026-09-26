@@ -40,6 +40,7 @@ export const PANE_VAR_PREFIX: Record<PaneType, string> = {
   home: '--pane-workshop',
   console: '--pane-collaboration',
   navigator: '--pane-artifacts',
+  tending: '--pane-tasks',
 };
 
 /** Button config for pane toggle buttons in the TopBar */
@@ -63,4 +64,5 @@ export const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] =
   { type: 'home', icon: HomeIcon, label: 'Home' },
   { type: 'console', icon: SproutIcon, label: 'Garden Collaboration' },
   { type: 'navigator', icon: PlusCircleIcon, label: 'Navigator' },
+  { type: 'tending', icon: ActivityIcon, label: 'Tending' },
 ];

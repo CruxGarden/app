@@ -106,7 +106,7 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return textStream('Done — created in the original Garden.');
         }
-        if (lastUserText(prompt).includes('[garden:plant]')) {
+        if (lastUserText(prompt).includes('[garden:companion]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (rounds.length === 0) return toolCallStream('list_garden_tools', {});
           if (rounds.length === 1)

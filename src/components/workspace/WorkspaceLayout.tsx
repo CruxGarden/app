@@ -37,6 +37,7 @@ const HistoryPane = lazy(() => import('./HistoryPane'));
 const HomePane = lazy(() => import('./HomePane'));
 const ConsolePane = lazy(() => import('./ConsolePane'));
 const NavigatorPane = lazy(() => import('./NavigatorPane'));
+const TendingPane = lazy(() => import('./TendingPane'));
 const ChatPane = lazy(() => import('./ChatPane'));
 const ArtifactsPane = lazy(() => import('./ArtifactsPane'));
 const EditorPane = lazy(() => import('./EditorPane'));
@@ -134,6 +135,7 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   home: HomePane,
   console: ConsolePane,
   navigator: NavigatorPane,
+  tending: TendingPane,
 };
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
@@ -163,6 +165,7 @@ const PANE_MIN_WIDTH: Record<PaneType, number> = {
   home: 360,
   console: 260,
   navigator: 170,
+  tending: 320,
 };
 
 /** A pane is a named region; Crux Synth's own section already carries that name. */
@@ -261,6 +264,7 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
   home: <HomeIcon size={14} strokeWidth={2} />,
   console: <SproutIcon size={14} strokeWidth={2} />,
   navigator: <PlusCircleIcon size={14} strokeWidth={2} />,
+  tending: <ActivityIcon size={14} strokeWidth={2} />,
 };
 
 /**

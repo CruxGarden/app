@@ -54,7 +54,8 @@ export type PaneType =
   | 'explore'
   | 'home'
   | 'console'
-  | 'navigator';
+  | 'navigator'
+  | 'tending';
 
 /** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
 export const PANE_COLORS: Record<PaneType, string> = {
@@ -77,6 +78,7 @@ export const PANE_COLORS: Record<PaneType, string> = {
   home: 'var(--pane-workshop)',
   console: 'var(--pane-collaboration)',
   navigator: 'var(--pane-artifacts)',
+  tending: 'var(--pane-tasks)',
 };
 
 export type EditorViewMode = 'source' | 'preview' | 'form';
@@ -175,6 +177,8 @@ export interface UIState {
   /** Section the Mood pane shows next (e.g. 'sound'); consumed by the pane. */
   moodTab: MoodTab | null;
   openMood: (tab?: MoodTab) => void;
+  /** Tending opens as a pane of whichever workspace is in front. */
+  openTending: () => void;
   /** Pixels the Mood Bar reserves at the bottom of <main> so it never covers pane controls. */
   dockReserve: number;
   setDockReserve: (px: number) => void;
@@ -252,6 +256,7 @@ export const DEFAULT_PANE_ORDER: PaneType[] = [
   'browser',
   'settings',
   'explore',
+  'tending',
 ];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   // Tasks is a pane like any other (Daniel, 2026-09-19): on by default.
@@ -274,6 +279,7 @@ const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   home: false,
   console: false,
   navigator: false,
+  tending: false,
 };
 
 /** The panes a Garden Home workspace offers: its Home, the Garden's Collaboration, and the Garden-wide panels. */
@@ -281,6 +287,7 @@ export const GARDEN_PANE_ORDER: PaneType[] = [
   'navigator',
   'home',
   'console',
+  'tending',
   'mood',
   'synth',
   'browser',
@@ -300,6 +307,7 @@ const scopeDefaults = (scope: WorkspaceScope) =>
   scope === 'garden' ? GARDEN_VISIBILITY : DEFAULT_VISIBILITY;
 
 /** Garden-wide panes open as a full-height column on the right, beside the work. */
+const RAILS: ReadonlySet<PaneType> = new Set<PaneType>(['tasks', 'navigator']);
 const SIDE_PANES = new Set<PaneType>(['mood', 'settings', 'explore', 'console']);
 /**
  * Where a newly opened pane goes: the Navigator docks left, Garden-wide panes
@@ -347,7 +355,7 @@ function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<
     };
     return side(tree, 1);
   }
-  return addPaneToMosaic(tree, pane);
+  return addPaneToMosaic(tree, pane, RAILS);
 }
 
 // ── Mosaic layout helpers ────────────────────────────────
@@ -790,6 +798,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
       useUIStore.setState({ moodTab: tab ?? null });
       currentWorkspaceUI().getState().setPaneVisible('mood', true);
     },
+    openTending: () => currentWorkspaceUI().getState().setPaneVisible('tending', true),
     dockReserve: 0,
     setDockReserve: (px) => set((s) => (s.dockReserve === px ? s : { dockReserve: px })),
 

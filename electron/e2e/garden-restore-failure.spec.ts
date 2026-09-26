@@ -142,12 +142,7 @@ for (const fault of ['disk failure', 'missing content'] as const) {
         await expect(page.getByRole('dialog')).toHaveCount(0);
       }
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
-      await page.getByRole('button', { name: 'Account menu' }).click();
-      await page.getByRole('button', { name: /^Settings/ }).click();
-      await page
-        .getByRole('dialog', { name: 'Settings', exact: true })
-        .getByRole('button', { name: 'Garden', exact: true })
-        .click();
+      await openData();
       await importArchive();
       await expect.poll(() => content(original, 'original.txt')).toBe('Original exported content');
       await expect.poll(() => content(existing, 'keep.txt')).toBeNull();

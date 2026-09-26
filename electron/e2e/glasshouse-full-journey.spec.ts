@@ -128,7 +128,7 @@ test('Glasshouse grows through two reviews, publishes combined Main, and carries
     await enterGarden(page);
     await page
       .getByRole('banner')
-      .getByRole('link', { name: /^Tending/ })
+      .getByRole('button', { name: /^Tending/ })
       .click();
     await page.getByRole('button', { name: 'Create demo Crux', exact: true }).click();
     await expect(page.getByText('Glasshouse is ready.', { exact: false })).toBeVisible({

@@ -1,7 +1,8 @@
 import { goHome } from './multi-crux-helpers';
-import { togglePanel } from './panel-helpers';
+import { togglePanel, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
+import { indexedFiles } from './content-helpers';
 
 /**
  * Starter cruxes: the Feed and Media templates create, the Builder shows their
@@ -48,7 +49,7 @@ test.describe('starter cruxes', () => {
       await page.getByRole('button', { name: /Astro Feed/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Edit content', exact: true }).click();
-      await togglePanel(page, 'Toggle artifacts');
+      await openPanel(page, 'artifacts', 'Toggle artifacts');
       await expect(page.getByRole('button', { name: /new post/i })).toBeVisible({
         timeout: 30_000,
       });
@@ -86,7 +87,7 @@ test.describe('starter cruxes', () => {
       await page.getByRole('button', { name: /Astro Media/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Edit content', exact: true }).click();
-      await togglePanel(page, 'Toggle artifacts');
+      await openPanel(page, 'artifacts', 'Toggle artifacts');
       // WorkspaceLayout mounts exactly one layout (mosaic or mobile), so the Builder is in the
       // DOM once; anchor the names because the starter's sample item ("Your first track goes
       // here… Add media") also contains the words.
@@ -136,7 +137,7 @@ test.describe('starter cruxes', () => {
       await page.getByRole('button', { name: /^5Ws/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Edit content', exact: true }).click();
-      await togglePanel(page, 'Toggle artifacts');
+      await openPanel(page, 'artifacts', 'Toggle artifacts');
 
       // The Builder: the two game actions, the Rounds collection, and the Shelf itself
       await expect(page.getByRole('button', { name: /Add to shelf$/ })).toBeVisible({
@@ -176,11 +177,11 @@ test.describe('starter cruxes', () => {
       await page.screenshot({ path: 'e2e/.results/starters-4-5ws-play-source.png' });
 
       // The files are real: shelf.json at the root, the sample round under rounds/
-      const tree = page.getByRole('tree');
-      await expect(tree.getByText('shelf.json', { exact: true })).toBeVisible();
-      // Two folders are named rounds now that src/pages/ is expanded (play.astro sits there): the root one is first
-      await tree.getByText('rounds', { exact: true }).first().click();
-      await expect(tree.getByText('2026-09-05-1.md')).toBeVisible({ timeout: 15_000 });
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const files = await indexedFiles(page, id);
+      expect(Object.keys(files)).toEqual(
+        expect.arrayContaining(['shelf.json', 'rounds/2026-09-05-1.md']),
+      );
       await page.screenshot({ path: 'e2e/.results/starters-4-5ws-shelf-added.png' });
     } finally {
       await app.close();
