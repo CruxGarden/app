@@ -98,8 +98,39 @@ export interface PrivateArchiveBridge {
   ): ReturnType<LocalGraphRuntime['importPrivateGraph']>;
 }
 
+/** The installation's settings, through named API commands. */
+export interface SettingsBridge {
+  list(): Promise<{ key: string; value: string }[]>;
+  put(key: string, value: string): Promise<void>;
+  remove(key: string): Promise<void>;
+}
+
+/** Named installation commands: the writes the app used to send as SQL. */
+export const INSTALLATION_COMMANDS = [
+  'createAuthor',
+  'updateAuthor',
+  'rekeyLocalAuthor',
+  'createDimension',
+  'updateDimension',
+  'deleteDimension',
+  'storeSet',
+  'storeDelete',
+  'storeClear',
+  'wipeGarden',
+  'sanitizeImportedGarden',
+  'setWorkingCopyFolder',
+] as const;
+export type InstallationCommand = (typeof INSTALLATION_COMMANDS)[number];
+export type InstallationBridge = {
+  [K in InstallationCommand]: (
+    ...args: Parameters<LocalGraphRuntime[K]>
+  ) => ReturnType<LocalGraphRuntime[K]>;
+};
+
 export interface SqliteBridge {
   enterLocalGarden?(): ReturnType<LocalGraphRuntime['enterLocalGarden']>;
+  settings?: SettingsBridge;
+  installation?: InstallationBridge;
   gardenMembership?: GardenMembershipBridge;
   gardenMood?: GardenMoodBridge;
   fileContent?: FileContentBridge;

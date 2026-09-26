@@ -118,13 +118,7 @@ export function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string |
       if (!dir) continue;
       const shim = path.join(dir, 'claude.cmd');
       if (!fs.existsSync(shim)) continue;
-      const entry = path.join(
-        dir,
-        'node_modules',
-        '@anthropic-ai',
-        'claude-code',
-        'cli.js',
-      );
+      const entry = path.join(dir, 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js');
       if (fs.existsSync(entry)) return entry;
     }
   }

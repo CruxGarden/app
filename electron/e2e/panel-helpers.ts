@@ -6,8 +6,15 @@ export async function togglePanel(
   label: string,
   options?: Parameters<Locator['click']>[0],
 ) {
-  const button = page.getByRole('button', { name: label, exact: true });
-  if (await button.isVisible()) return button.click(options);
+  const button = page.locator('header').getByRole('button', { name: label, exact: true });
+  // A panel that is opening shows its square a moment later.
+  if (
+    await button.waitFor({ state: 'visible', timeout: 1500 }).then(
+      () => true,
+      () => false,
+    )
+  )
+    return button.click(options);
   // From the picker, click inside it: the pane may open meanwhile, and its
   // same-named bar button would close it again.
   await page.getByRole('button', { name: 'Add panel', exact: true }).click();

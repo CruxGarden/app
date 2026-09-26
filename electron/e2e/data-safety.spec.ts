@@ -1,5 +1,5 @@
 import { goHome } from './multi-crux-helpers';
-import { togglePanel } from './panel-helpers';
+import { togglePanel, showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -47,6 +47,14 @@ async function lastBlob(page: Page): Promise<Buffer> {
     return btoa(s);
   });
   return Buffer.from(b64, 'base64');
+}
+
+/** Settings → Garden, as a pane: open it and expand the Garden section once. */
+async function openGardenSettings(page: Page) {
+  const settings = await showPane(page, 'Settings');
+  if (!(await settings.getByRole('button', { name: 'Wipe garden' }).isVisible()))
+    await settings.locator('h2', { hasText: /^Garden$/ }).click();
+  return settings;
 }
 
 test.describe('data safety: export, import, wipe, restore', () => {
@@ -104,19 +112,14 @@ test.describe('data safety: export, import, wipe, restore', () => {
       writeFileSync(cruxFile, await lastBlob(page));
 
       // ── Export the garden (.garden) ──
-      await page.keyboard.press('ControlOrMeta+,');
-      await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-      await page.locator('h2', { hasText: /^Garden$/ }).click();
-      await page
-        .getByRole('dialog', { name: 'Settings', exact: true })
-        .getByRole('radio', { name: /^Include tools/ })
-        .check();
-      await page.getByRole('button', { name: 'Export garden' }).click();
-      await expect(page.getByText('Export complete')).toBeVisible({ timeout: 60_000 });
+      const settings = await showPane(page, 'Settings');
+      await settings.locator('h2', { hasText: /^Garden$/ }).click();
+      await settings.getByRole('button', { name: 'Export garden' }).click();
+      await expect(settings.getByText('Export complete')).toBeVisible({ timeout: 60_000 });
       await expect.poll(blobs, { timeout: 30_000 }).toBe(2);
       const gardenFile = join(dir, 'garden.garden');
       writeFileSync(gardenFile, await lastBlob(page));
-      await page.keyboard.press('Escape');
+      await hidePane(page, 'Settings');
 
       // ── Import the .crux as a copy: a second crux with the same file ──
       await goHome(page);
@@ -138,11 +141,11 @@ test.describe('data safety: export, import, wipe, restore', () => {
       });
 
       // ── Wipe the garden: refused while workspaces are open (ADR 0018), then typed confirmation ──
-      await page.keyboard.press('ControlOrMeta+,');
-      await page.locator('h2', { hasText: /^Garden$/ }).click();
+      await openGardenSettings(page);
       await expect(page.getByRole('button', { name: 'Wipe garden' })).toBeDisabled();
       await page.getByPlaceholder('delete me').fill('delete me');
       await page.getByRole('button', { name: 'Wipe garden' }).click();
+      await page.getByRole('button', { name: 'Wipe without a copy', exact: true }).click();
       await expect(page.getByText(/Close all open Crux workspaces/)).toBeVisible({
         timeout: 15_000,
       });
@@ -169,10 +172,10 @@ test.describe('data safety: export, import, wipe, restore', () => {
           await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
       }
       await page.keyboard.press('Escape');
-      await page.keyboard.press('ControlOrMeta+,');
-      await page.locator('h2', { hasText: /^Garden$/ }).click();
+      await openGardenSettings(page);
       await page.getByPlaceholder('delete me').fill('delete me');
       await page.getByRole('button', { name: 'Wipe garden' }).click();
+      await page.getByRole('button', { name: 'Wipe without a copy', exact: true }).click();
       await expect(page.getByRole('button', { name: /enter/i })).toBeVisible({ timeout: 60_000 });
 
       // ── Restore from the .garden file: the crux is back, with its file ──
@@ -199,7 +202,9 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .catch(() => false))
       )
         await togglePanel(page, 'Toggle history');
-      await expect(page.getByText('v1', { exact: true })).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
+      ).toBeVisible({ timeout: 30_000 });
     } finally {
       await app.close();
     }

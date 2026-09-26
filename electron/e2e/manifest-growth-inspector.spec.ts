@@ -4,6 +4,11 @@ import { createCrux, enterGarden } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 
 async function openGraph(page: Page) {
+  // Entering lands on Garden Home; the Crux opens from its card.
+  const card = page.getByRole('button', { name: 'Open Version-bound history', exact: true });
+  const workspace = page.locator('[data-workspace-id]');
+  await card.or(workspace).first().waitFor({ timeout: 30_000 });
+  if (!(await workspace.isVisible())) await card.click();
   await expect(page.locator('[data-workspace-id]')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
     'Version-bound history',

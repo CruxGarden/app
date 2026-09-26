@@ -1,5 +1,5 @@
 import { goHome } from './multi-crux-helpers';
-import { togglePanel } from './panel-helpers';
+import { togglePanel, openPanel } from './panel-helpers';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -142,7 +142,7 @@ test.describe('metadata and store panes', () => {
       await expect(page.locator('[data-testid^="pane-body-"]').first()).toBeVisible({
         timeout: 30_000,
       });
-      await ensurePane(page, 'details', 'Toggle metadata');
+      await openPanel(page, 'details', 'Toggle metadata');
       await expect(metaRow(page, 'Title')).toContainText('Solar Notes');
       await expect(metaRow(page, 'Description')).toContainText('A field guide to the garden.');
       await expect(tagChip(metaRow(page, 'Tags'), 'notes')).toBeVisible();

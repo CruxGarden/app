@@ -23,8 +23,15 @@ export async function captureEditCheckpoint(
   if (!content) return null;
   await settleIngestion();
   const head = await content.head(cruxId);
-  return head ? content.checkpoint({ cruxId, expected: head, reason }) : null;
+  if (!head) return null;
+  const checkpoint = await content.checkpoint({ cruxId, expected: head, reason });
+  if (checkpoint && typeof window !== 'undefined')
+    window.dispatchEvent(new CustomEvent(EDIT_CHECKPOINT_EVENT, { detail: { cruxId } }));
+  return checkpoint;
 }
+
+/** A Crux's files were checkpointed in Edit history (automatic backup listens). */
+export const EDIT_CHECKPOINT_EVENT = 'crux:edit-checkpoint';
 
 /** Both UI and agents restore through this path, including unsaved edits and disk recovery. */
 export async function restoreEditCheckpoint(

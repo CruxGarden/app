@@ -18,6 +18,14 @@ async function reconcileAuthorId(
     const db = (await import('@/services/sqlite/client')).getSqliteClient();
     const newId = apiAuthor.id;
 
+    // Desktop: every reference and the installation's record change together.
+    if (db.installation) {
+      await db.installation.rekeyLocalAuthor({ oldId, newId, accountId });
+      (await import('@/services/settings')).setSetting(SettingsKey.LocalAuthorId, newId);
+      const { getServices: gs } = await import('@/services');
+      return gs().author.findById(newId);
+    }
+
     await db.run('UPDATE cruxes SET author_id = ? WHERE author_id = ?', [newId, oldId]);
     await db.run('UPDATE artifacts SET author_id = ? WHERE author_id = ?', [newId, oldId]);
     await db.run('UPDATE dimensions SET author_id = ? WHERE author_id = ?', [newId, oldId]);
@@ -302,5 +310,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     useAppStore.setState({ author: profile.author ?? null });
     return profile;
   },
-
 }));

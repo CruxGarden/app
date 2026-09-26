@@ -157,10 +157,16 @@ export async function ensureLocalAuthor(): Promise<import('./types').Author> {
   }
 
   const shortId = crypto.randomUUID().slice(0, 8);
-  const author = await services!.author.create({
-    username: `wanderer-${shortId}`,
-    displayName: 'Wanderer',
-  });
+  const input = { username: `wanderer-${shortId}`, displayName: 'Wanderer' };
+  // Desktop: the author and the installation's record of it land together.
+  if (db.installation) {
+    const { SqliteAuthorService } = await import('./sqlite/author.service');
+    const created = await new SqliteAuthorService().create({ ...input, local: true });
+    // The command recorded it in the database; keep the settings cache in step.
+    (await import('./settings')).setSetting(SettingsKey.LocalAuthorId, created.id);
+    return created;
+  }
+  const author = await services!.author.create(input);
   await db.run(
     `INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorId}', ?)`,
     [author.id],

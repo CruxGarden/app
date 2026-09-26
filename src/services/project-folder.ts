@@ -163,7 +163,9 @@ export async function rehomeProjectFolders(
   for (const copy of copies) {
     if (copy.project_folder && (await api.folderExists(copy.project_folder))) continue;
     const folder = await api.createFolder(`task-${copy.id}`);
-    await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, copy.id]);
+    if (db.installation) await db.installation.setWorkingCopyFolder(copy.id, folder);
+    else
+      await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, copy.id]);
     await projectAllArtifacts(copy.id);
     rehomed++;
   }

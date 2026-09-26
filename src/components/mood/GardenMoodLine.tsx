@@ -114,7 +114,7 @@ export function KeepLook() {
   };
   return (
     <p
-      role="status"
+      data-testid="keep-look"
       className="flex flex-wrap items-baseline gap-x-2 text-xs text-text-muted mb-3 shrink-0"
     >
       <span>Changed here — kept only while you stay.</span>

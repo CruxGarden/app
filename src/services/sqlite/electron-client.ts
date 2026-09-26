@@ -12,6 +12,18 @@ export function isElectron(): boolean {
   return typeof window !== 'undefined' && !!window.electronAPI?.sqlite;
 }
 
+/** A read: SELECT or WITH, naming no statement that changes anything. */
+export function assertRead(sql: string): void {
+  const statement = sql.replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/, '');
+  if (
+    !/^(SELECT|WITH)\b/i.test(statement) ||
+    /\b(INSERT|UPDATE|DELETE|REPLACE|DROP|ALTER|CREATE|ATTACH|DETACH|VACUUM|REINDEX)\b/i.test(
+      statement,
+    )
+  )
+    throw new Error('Only reads are open here; changes go through named commands.');
+}
+
 export class ElectronSqliteClient implements ISqliteClient {
   private get api(): SqliteBridge {
     if (!window.electronAPI?.sqlite) {
@@ -24,15 +36,20 @@ export class ElectronSqliteClient implements ISqliteClient {
     // No-op — the main process initializes the database on startup
   }
 
-  async run(sql: string, params?: unknown[]): Promise<{ changes: number }> {
-    return this.api.run(sql, params);
+  /** On desktop every change is a named command of the API owner; raw SQL only reads. */
+  async run(sql: string): Promise<{ changes: number }> {
+    throw new Error(
+      `Raw SQL writes are closed on desktop; use a named command. (${sql.slice(0, 40)}…)`,
+    );
   }
 
   async get<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T | undefined> {
+    assertRead(sql);
     return this.api.get(sql, params) as Promise<T | undefined>;
   }
 
   async all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
+    assertRead(sql);
     return this.api.all(sql, params) as Promise<T[]>;
   }
 
@@ -44,6 +61,12 @@ export class ElectronSqliteClient implements ISqliteClient {
     return this.api.gardenMood;
   }
 
+  get installation(): SqliteBridge['installation'] {
+    return this.api.installation;
+  }
+  get settings(): SqliteBridge['settings'] {
+    return this.api.settings;
+  }
   get gardenMembership(): SqliteBridge['gardenMembership'] {
     return this.api.gardenMembership;
   }

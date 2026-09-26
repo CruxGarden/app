@@ -21,6 +21,15 @@ export interface BackupRecord {
   /** growthCount when the backup was taken — the "behind" arithmetic */
   growthCount: number;
   size: number;
+  /** The file content revision it captured (desktop): later edits are not in it. */
+  contentRevision?: number;
+}
+
+/** The Crux's current file content revision, where the API keeps one. */
+export async function contentRevision(cruxId: string): Promise<number | undefined> {
+  const { getSqliteClient } = await import('./sqlite/client');
+  const head = await getSqliteClient().fileContent?.head(cruxId);
+  return head ? (head as { revision: number }).revision : undefined;
 }
 
 export function backupOf(crux: Crux | null | undefined): BackupRecord | null {
@@ -55,6 +64,8 @@ export async function backupCrux(
   }
   const author = useAppStore.getState().author;
   const messages = s.messages.slice(s.messageSegmentStart);
+  // Captured before exporting: an edit made meanwhile is newer than this backup.
+  const revision = await contentRevision(crux.id);
   onProgress?.('Exporting crux...');
   const result = await exportCrux({
     cruxId: crux.id,
@@ -73,6 +84,7 @@ export async function backupCrux(
     at: entry.updatedAt,
     growthCount: data.getState().growthCount,
     size: entry.size,
+    ...(revision !== undefined ? { contentRevision: revision } : {}),
   };
   await data.getState().updateCrux({ meta: { backup: record } });
   onProgress?.('Backed up');

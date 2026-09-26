@@ -168,13 +168,16 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
     backupCrux: async (cruxId) => {
       const w = getWorkspace(cruxId);
       if (!w) return; // closed since; the daily garden backup has it
-      const { backupOf, snapshotsBehind } = await import('@/services/backup');
+      const { backupOf, snapshotsBehind, contentRevision } = await import('@/services/backup');
       const st = w.data.getState();
       const { listWorkingCopies } = await import('./working-copies');
+      const record = backupOf(st.crux);
       if (
         !(await listWorkingCopies(w.cruxId)).length &&
-        backupOf(st.crux) &&
-        snapshotsBehind(st.crux, st.growthCount) === 0
+        record &&
+        snapshotsBehind(st.crux, st.growthCount) === 0 &&
+        (record.contentRevision === undefined ||
+          record.contentRevision === (await contentRevision(w.cruxId)))
       )
         return;
       await backupCrux(w.data);
@@ -194,6 +197,12 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
   window.addEventListener(GROWTH_CHANGED_EVENT, (e) => {
     const d = (e as CustomEvent<{ cruxId: string; kind: string }>).detail;
     if (d?.kind === 'snapshot' && d.cruxId) s.cruxChanged(d.cruxId);
+  });
+  // Routine edits (a turn's files, a save) land in Edit history, not Growth.
+  const { EDIT_CHECKPOINT_EVENT } = await import('./edit-history');
+  window.addEventListener(EDIT_CHECKPOINT_EVENT, (e) => {
+    const id = (e as CustomEvent<{ cruxId: string }>).detail?.cruxId;
+    if (id) s.cruxChanged(id);
   });
   const watched = new Set<string>();
   const watch = () => {

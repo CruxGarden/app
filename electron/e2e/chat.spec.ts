@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,7 +20,7 @@ async function showArtifacts(page: import('@playwright/test').Page) {
 test.describe('collaboration (mock AI)', () => {
   test.setTimeout(120_000);
 
-  test('a chat turn writes a file, replies, and snapshots', async () => {
+  test('a chat turn writes a file, replies, and keeps a recovery point', async () => {
     const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     const gardenRoot = join(dir, 'garden');
     const onDisk = (rel: string) => {
@@ -59,10 +59,12 @@ test.describe('collaboration (mock AI)', () => {
       });
       await page.screenshot({ path: 'e2e/.results/chat-1-turn.png' });
 
-      // Auto-snapshot (default: every AI turn that mutated files)
-      await togglePanel(page, 'Toggle history');
-      await expect(page.getByText('#1', { exact: true })).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText('hello.txt', { exact: true })).toHaveCount(2); // tree + snapshot card
+      // The turn's files are kept as a recovery point in Edit history (Growth stays deliberate)
+      const history = await openPanel(page, 'history', 'Toggle history');
+      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await expect(
+        history.getByRole('button', { name: 'Inspect recovery point 1', exact: true }),
+      ).toBeVisible({ timeout: 30_000 });
       await page.screenshot({ path: 'e2e/.results/chat-2-snapshot.png' });
     } finally {
       await app.close();

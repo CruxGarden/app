@@ -102,6 +102,12 @@ export class SqliteStoreService implements IStoreService {
     // Public keys are the crux's one row (visitor_id NULL); protected is per visitor
     const vid = mode === 'protected' ? (visitorId ?? null) : null;
 
+    // Desktop: one named command upserts atomically.
+    if (db.installation) {
+      await db.installation.storeSet({ cruxId, key, visitorId: vid, value: serialized, mode });
+      return;
+    }
+
     if (vid) {
       // Protected key — upsert on (crux_id, visitor_id, key)
       const existing = await db.get(
@@ -175,6 +181,7 @@ export class SqliteStoreService implements IStoreService {
   async delete(cruxId: string, key: string, visitorId?: string | null): Promise<void> {
     await assertCopyWritable(cruxId);
     const db = getSqliteClient();
+    if (db.installation) return db.installation.storeDelete({ cruxId, key, visitorId });
     if (visitorId) {
       await db.run('DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id = ?', [
         cruxId,
@@ -198,6 +205,7 @@ export class SqliteStoreService implements IStoreService {
   async clear(cruxId: string): Promise<void> {
     await assertCopyWritable(cruxId);
     const db = getSqliteClient();
+    if (db.installation) return db.installation.storeClear(cruxId);
     await db.run('DELETE FROM store WHERE crux_id = ?', [cruxId]);
   }
 }

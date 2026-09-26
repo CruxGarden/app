@@ -13,6 +13,21 @@ import { getSqliteClient } from './sqlite/client';
 import { SettingsKey, isSecretSettingKey } from '@/lib/constants';
 
 const cache = new Map<string, string>();
+
+/** Where settings persist: named API commands on desktop, the worker's table in Web Mode. */
+function table() {
+  const db = getSqliteClient();
+  if (db.settings) return db.settings;
+  return {
+    list: () => db.all<{ key: string; value: string }>('SELECT key, value FROM settings'),
+    put: async (key: string, value: string) => {
+      await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
+    },
+    remove: async (key: string) => {
+      await db.run('DELETE FROM settings WHERE key = ?', [key]);
+    },
+  };
+}
 let ready = false;
 let writes: Promise<void> = Promise.resolve();
 let writeFailure: unknown;
@@ -101,12 +116,8 @@ export function setSetting(key: string, value: string): void {
 
   // Async persist to SQLite (fire-and-forget)
   if (ready) {
-    const db = getSqliteClient();
     writes = writes
-      .then(() =>
-        db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]),
-      )
-      .then(() => {})
+      .then(() => table().put(key, value))
       .catch((error) => {
         writeFailure = error;
       });
@@ -118,10 +129,7 @@ export function setSetting(key: string, value: string): void {
  */
 export async function setSettingDurably(key: string, value: string): Promise<void> {
   if (!ready || isSecretSettingKey(key)) throw new Error('This setting cannot be persisted here.');
-  const db = getSqliteClient();
-  const operation = writes.then(() =>
-    db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]),
-  );
+  const operation = writes.then(() => table().put(key, value));
   writes = operation
     .then(() => {})
     .catch((error) => {
@@ -142,8 +150,11 @@ export function removeSetting(key: string): void {
   }
 
   if (ready) {
-    const db = getSqliteClient();
-    db.run('DELETE FROM settings WHERE key = ?', [key]).catch(() => {});
+    writes = writes
+      .then(() => table().remove(key))
+      .catch((error) => {
+        writeFailure = error;
+      });
   }
 }
 
@@ -151,34 +162,12 @@ export function removeSetting(key: string): void {
 
 /** Load all settings from SQLite and migrate localStorage values. */
 export async function initSettings(): Promise<void> {
-  const db = getSqliteClient();
+  const store = table();
 
-  // 1. Load existing SQLite settings into cache
-  const rows = await db.all<{ key: string; value: string }>('SELECT key, value FROM settings');
-  for (const row of rows) {
-    cache.set(row.key, row.value);
-  }
+  // 1. Load existing settings into cache
+  for (const row of await store.list()) cache.set(row.key, row.value);
 
-  // 2. Migrate unprefixed SQLite keys → cruxgarden: prefixed (one-time)
-  // Secrets are deliberately absent — they are purged from SQLite below.
-  const LEGACY_KEY_MAP: [string, string][] = [
-    ['local:authorId', SettingsKey.LocalAuthorIdLegacy],
-    ['local:homeId', SettingsKey.LocalHomeId],
-    ['backend', SettingsKey.Backend],
-    ['localAuthorId', SettingsKey.LocalAuthorId],
-    ['defaultModel', SettingsKey.DefaultModel],
-  ];
-  for (const [oldKey, newKey] of LEGACY_KEY_MAP) {
-    if (cache.has(oldKey) && !cache.has(newKey)) {
-      const value = cache.get(oldKey)!;
-      cache.set(newKey, value);
-      await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [newKey, value]);
-      await db.run('DELETE FROM settings WHERE key = ?', [oldKey]);
-      cache.delete(oldKey);
-    }
-  }
-
-  // 3. Purge secrets from SQLite. API keys were historically swept into the
+  // 2. Purge secrets from SQLite. API keys were historically swept into the
   // settings table (and thus into every garden backup via db.export()) —
   // lift them back to localStorage, then delete the rows so no export
   // surface can ever contain them.
@@ -192,10 +181,10 @@ export async function initSettings(): Promise<void> {
       }
     }
     cache.delete(key);
-    await db.run('DELETE FROM settings WHERE key = ?', [key]);
+    await store.remove(key);
   }
 
-  // 4. Migrate localStorage → SQLite (one-time: only if key isn't already in SQLite)
+  // 3. Migrate localStorage → SQLite (one-time: only if key isn't already in SQLite)
   if (typeof localStorage !== 'undefined') {
     const toMigrate: [string, string][] = [];
 
@@ -217,9 +206,7 @@ export async function initSettings(): Promise<void> {
     }
 
     // Batch write migrated values
-    for (const [key, value] of toMigrate) {
-      await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
-    }
+    for (const [key, value] of toMigrate) await store.put(key, value);
   }
 
   ready = true;

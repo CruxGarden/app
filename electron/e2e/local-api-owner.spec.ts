@@ -199,7 +199,7 @@ test('the packaged API creates its own fresh schema and preserves membership thr
         await runtime.close();
       }
     });
-    expect(ids.version).toBe(5);
+    expect(ids.version).toBe(7);
     await launch.app.close();
     launch = await launchApp({ dir });
     const restored = await launch.app.evaluate(async ({ app }, ids) => {

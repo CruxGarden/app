@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -98,7 +98,11 @@ test.describe('snapshots & revert', () => {
       await expect(monaco).toContainText('version one', { timeout: 30_000 });
       await expect(monaco).not.toContainText('version two');
       await expect.poll(fileOnDisk).toBe('version one');
-      await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
+      // What was there before is kept as a safety copy in Edit history.
+      const historyPane = page.getByTestId('pane-body-history');
+      await historyPane.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await expect(historyPane.getByText('Safety copy').first()).toBeVisible({ timeout: 30_000 });
+      await historyPane.getByRole('button', { name: 'Growth', exact: true }).click();
       await page.screenshot({ path: 'e2e/.results/snapshots-2-reverted.png' });
 
       // Leave and come back: the reconstructed conversation/history must be
@@ -115,14 +119,13 @@ test.describe('snapshots & revert', () => {
       await expect(reopened).toBeVisible({ timeout: 30_000 });
       await expect(reopened).toContainText('version one');
       await expect(reopened).not.toContainText('version two');
-      if (!(await page.getByText('Before revert', { exact: true }).isVisible())) {
-        await togglePanel(page, 'Toggle history');
-      }
+      await openPanel(page, 'history', 'Toggle history');
       await expect(
         page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
       ).toBeVisible();
-      await expect(page.getByText('v2', { exact: true })).toBeVisible();
-      await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v2', { exact: true }),
+      ).toBeVisible();
       const storage = await page.evaluate(async () => {
         const db = window.electronAPI!.sqlite;
         return {
@@ -131,7 +134,7 @@ test.describe('snapshots & revert', () => {
         };
       });
       expect(storage.files).toEqual([]);
-      expect(storage.heads.length).toBeGreaterThanOrEqual(4);
+      expect(storage.heads.length).toBeGreaterThanOrEqual(3);
     } finally {
       await app.close();
     }

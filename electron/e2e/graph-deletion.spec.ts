@@ -109,6 +109,15 @@ test('purging a linked Crux preserves shared work and history after restart', as
         );
       return { a, b, member, own, shared, fingerprint };
     });
+    // Home lists the root Garden's members: place the fixture's Gardens there.
+    const root = new URL(first.page.url()).searchParams.get('garden')!;
+    await first.page.evaluate(
+      async ({ root, ids }) => {
+        for (const memberId of ids)
+          await window.electronAPI!.sqlite.gardenMembership!.add({ gardenId: root, memberId });
+      },
+      { root, ids: [fixture.a, fixture.b] },
+    );
     await first.page.reload();
     const card = first.page
       .getByRole('button', { name: 'Open Discarded Garden', exact: true })

@@ -5,6 +5,8 @@ import { ElectronSqliteClient } from './electron-client';
 
 export interface ISqliteClient {
   enterLocalGarden?: SqliteBridge['enterLocalGarden'];
+  settings?: SqliteBridge['settings'];
+  installation?: SqliteBridge['installation'];
   gardenMembership?: SqliteBridge['gardenMembership'];
   gardenMood?: SqliteBridge['gardenMood'];
   fileContent?: SqliteBridge['fileContent'];

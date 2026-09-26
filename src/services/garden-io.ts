@@ -60,14 +60,17 @@ export async function wipeGarden(onProgress?: (status: string) => void): Promise
   const db = getSqliteClient();
 
   onProgress?.('Deleting all data...');
-  if (
-    await db.get(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'file_content_heads'",
+  if (db.installation) {
+    // Desktop: every record goes in one transaction, or none does.
+    await db.installation.wipeGarden();
+  } else {
+    if (
+      await db.get(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'file_content_heads'",
+      )
     )
-  )
-    await db.run('DELETE FROM file_content_heads');
-  for (const table of ALL_TABLES) {
-    await db.run(`DELETE FROM ${table}`);
+      await db.run('DELETE FROM file_content_heads');
+    for (const table of ALL_TABLES) await db.run(`DELETE FROM ${table}`);
   }
 
   onProgress?.('Removing all files...');
@@ -261,27 +264,32 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
   try {
     onProgress?.('Importing database...');
     await db.import(sqliteData);
-    // Provider sessions belong to the exporting installation, including Main's.
-    await db.run(`UPDATE cruxes SET meta = json_remove(meta,
+    if (db.installation) {
+      // Desktop: another machine's sessions, folders and live reviews go at once.
+      await db.installation.sanitizeImportedGarden();
+    } else {
+      // Provider sessions belong to the exporting installation, including Main's.
+      await db.run(`UPDATE cruxes SET meta = json_remove(meta,
     '$.settings.agentSessionId', '$.settings.agentSessions', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue')
     WHERE meta IS NOT NULL`);
 
-    // A restored task always gets a fresh directory and provider session.
-    const { portableMeta } = await import('./task-archive');
-    const copies = await db.all<{ id: string; meta: string }>(
-      'SELECT id, meta FROM working_copies',
-    );
-    for (const copy of copies)
-      await db.run('UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?', [
-        JSON.stringify(portableMeta(copy.meta)),
-        copy.id,
-      ]);
-    // Reviews cannot carry a live preview across installations. Keep the JSON
-    // journal consistent with its indexed phase, including restored data.
-    await db.run(`UPDATE task_merges SET phase = 'cancelled',
+      // A restored task always gets a fresh directory and provider session.
+      const { portableMeta } = await import('./task-archive');
+      const copies = await db.all<{ id: string; meta: string }>(
+        'SELECT id, meta FROM working_copies',
+      );
+      for (const copy of copies)
+        await db.run('UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?', [
+          JSON.stringify(portableMeta(copy.meta)),
+          copy.id,
+        ]);
+      // Reviews cannot carry a live preview across installations. Keep the JSON
+      // journal consistent with its indexed phase, including restored data.
+      await db.run(`UPDATE task_merges SET phase = 'cancelled',
       data = CASE WHEN json_valid(data) AND json_type(data) = 'object'
         THEN json_remove(json_set(data, '$.phase', 'cancelled'), '$.previewUrl') ELSE data END
       WHERE phase = 'review' OR (phase = 'cancelled' AND json_extract(data, '$.phase') = 'review')`);
+    }
   } catch (error) {
     onProgress?.('Import failed — restoring previous data...');
     try {

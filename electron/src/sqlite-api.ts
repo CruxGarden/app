@@ -17,7 +17,14 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { NativeBlobStore } from './native-blobs';
 import type { NativeStorage } from './native-storage';
-import type { FileContentBridge, GardenMembershipBridge, GardenMoodBridge } from './bridge';
+import type {
+  FileContentBridge,
+  GardenMembershipBridge,
+  GardenMoodBridge,
+  SettingsBridge,
+  InstallationBridge,
+} from './bridge';
+import { INSTALLATION_COMMANDS } from './bridge';
 
 /** Desktop bridge to the actual API owner. No second SQL connection or fallback. */
 export class SqliteApi implements NativeStorage {
@@ -134,6 +141,31 @@ export class SqliteApi implements NativeStorage {
       throw new Error('Set up the local Garden identity before changing its contents.');
     return { authorId: identity.authorId, homeId: identity.homeId, generation };
   }
+
+  readonly settings: SettingsBridge = {
+    list: () => {
+      this.assertAvailable();
+      return this.owner.listSettings();
+    },
+    put: (key, value) => {
+      this.assertAvailable();
+      return this.owner.putSetting(key, value);
+    },
+    remove: (key) => {
+      this.assertAvailable();
+      return this.owner.removeSetting(key);
+    },
+  };
+
+  readonly installation = Object.fromEntries(
+    INSTALLATION_COMMANDS.map((name) => [
+      name,
+      (...args: unknown[]) => {
+        this.assertAvailable();
+        return (this.owner[name] as (...a: unknown[]) => unknown).apply(this.owner, args);
+      },
+    ]),
+  ) as InstallationBridge;
 
   readonly gardenMood: GardenMoodBridge = {
     read: (id) => {

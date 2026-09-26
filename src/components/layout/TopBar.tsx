@@ -18,6 +18,7 @@ import { SearchIcon, MoodIcon, ChevronRightIcon, PlusCircleIcon } from '@/compon
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
 import { useShallow } from 'zustand/react/shallow';
+import { usePinned } from '@/stores/pins';
 
 const OWN_BUTTON = new Set<PaneType>(['navigator', 'explore', 'mood', 'console']);
 
@@ -37,9 +38,12 @@ export default function TopBar() {
   const paneLabels = usePaneLabels();
   const aiEnabled = useUIStore((s) => s.aiEnabled);
 
-  // The bar mirrors the visible workspace; closed panels live in the picker.
-  // Navigator, Explore, Mood and the Garden's Collaboration have their own buttons.
-  const enabledPanes = paneOrder.filter((p) => paneVisibility[p] && !OWN_BUTTON.has(p));
+  // The bar mirrors the visible workspace plus pinned panels; the rest live in
+  // the picker. Navigator, Explore, Mood and the Garden's Collaboration have their own buttons.
+  const pinned = usePinned(scope);
+  const enabledPanes = paneOrder.filter(
+    (p) => (paneVisibility[p] || pinned.includes(p)) && !OWN_BUTTON.has(p),
+  );
 
   const desktopChrome = can(Capability.DesktopChrome);
 
@@ -101,26 +105,30 @@ export default function TopBar() {
                   const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
                   const Icon = config.icon;
                   const prefix = PANE_VAR_PREFIX[paneType];
+                  const open = paneVisibility[paneType];
                   return (
                     <IconButton
                       key={paneType}
                       label={`Toggle ${config.label.toLowerCase()}`}
                       size="sm"
                       onClick={(e) => {
-                        // Keep keyboard focus in the bar after this button disappears.
-                        e.currentTarget
-                          .closest('header')
-                          ?.querySelector<HTMLButtonElement>('[aria-label="Add panel"]')
-                          ?.focus();
+                        // Keep keyboard focus in the bar if this button disappears.
+                        if (open && !pinned.includes(paneType))
+                          e.currentTarget
+                            .closest('header')
+                            ?.querySelector<HTMLButtonElement>('[aria-label="Add panel"]')
+                            ?.focus();
                         togglePane(paneType);
                       }}
-                      active
+                      active={open}
                       className="pane-toggle"
                       style={
                         {
-                          color: `var(${prefix}-button-icon-active)`,
-                          backgroundColor: `var(${prefix}-button-active)`,
-                          borderColor: `var(${prefix}-button-border-active)`,
+                          color: open
+                            ? `var(${prefix}-button-icon-active)`
+                            : `var(${prefix}-button-icon)`,
+                          backgroundColor: open ? `var(${prefix}-button-active)` : undefined,
+                          borderColor: open ? `var(${prefix}-button-border-active)` : undefined,
                           '--pt-hover': `var(${prefix}-button-hover)`,
                           '--pt-hover-icon': `var(${prefix}-button-icon-hover)`,
                           '--pt-hover-border': `var(${prefix}-button-border-hover)`,

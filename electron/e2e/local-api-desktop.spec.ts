@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
+import { fileText } from './content-helpers';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 
 test('the desktop UI saves and reopens work through the sole API database owner', async () => {
@@ -34,19 +35,13 @@ test('the desktop UI saves and reopens work through the sole API database owner'
     await launch.page.locator('.monaco-editor').click();
     await launch.page.keyboard.type('Saved through the actual API');
     await launch.page.keyboard.press('ControlOrMeta+s');
-    const read = () =>
-      launch.page.evaluate(async (id) => {
-        const db = window.electronAPI!.sqlite;
-        const row = (await db.get(
-          'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-          [id, 'owner.txt'],
-        )) as { fingerprint: string } | undefined;
-        return row ? new TextDecoder().decode(await db.blobRead(row.fingerprint)) : null;
-      }, id);
+    const read = () => fileText(launch.page, id, 'owner.txt');
     await expect.poll(read).toBe('Saved through the actual API');
     await launch.app.close();
     launch = await launchApp({ dir });
     await launch.page.getByRole('button', { name: /enter/i }).click();
+    // Entering lands on Garden Home; the Crux opens from its card.
+    await launch.page.getByRole('button', { name: 'Open API-owned work', exact: true }).click();
     await expect(launch.page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
       'API-owned work',
     );
@@ -55,7 +50,7 @@ test('the desktop UI saves and reopens work through the sole API database owner'
       await launch.page.evaluate(() =>
         window.electronAPI!.sqlite.get('SELECT version FROM schema_version'),
       ),
-    ).toEqual({ version: 5 });
+    ).toEqual({ version: 7 });
   } finally {
     await launch.app.close();
   }

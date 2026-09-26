@@ -19,6 +19,7 @@ import type {
   AgentStartOptions,
   AgentPermissionRequest,
   AgentEvent,
+  InstallationBridge,
 } from './bridge';
 
 /**
@@ -61,6 +62,32 @@ const api: ElectronBridge = {
     : {}),
   sqlite: {
     enterLocalGarden: () => ipcRenderer.invoke('garden:enter-local'),
+    installation: Object.fromEntries(
+      // Kept inline: a sandboxed preload cannot load local modules. Main checks
+      // every name against the shared list in bridge.ts.
+      [
+        'createAuthor',
+        'updateAuthor',
+        'rekeyLocalAuthor',
+        'createDimension',
+        'updateDimension',
+        'deleteDimension',
+        'storeSet',
+        'storeDelete',
+        'storeClear',
+        'wipeGarden',
+        'sanitizeImportedGarden',
+        'setWorkingCopyFolder',
+      ].map((name) => [
+        name,
+        (...args: unknown[]) => ipcRenderer.invoke('installation', name, ...args),
+      ]),
+    ) as InstallationBridge,
+    settings: {
+      list: () => ipcRenderer.invoke('settings:list'),
+      put: (key, value) => ipcRenderer.invoke('settings:put', key, value),
+      remove: (key) => ipcRenderer.invoke('settings:remove', key),
+    },
     gardenMood: {
       read: (id) => ipcRenderer.invoke('garden-mood:read', id),
       resolve: (id) => ipcRenderer.invoke('garden-mood:resolve', id),

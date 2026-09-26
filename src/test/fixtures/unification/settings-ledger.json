@@ -624,6 +624,13 @@
       "target": "installation/account",
       "preservation": "Per-profile navigation defaults and per-Garden personal choices. Kept in profile backups, excluded from portable Garden graph content. Garden author intent lives in its own typed metadata.",
       "status": "implemented"
+    },
+    {
+      "key": "cruxgarden:pins",
+      "group": "layouts",
+      "target": "device presentation",
+      "preservation": "Which panels keep a top-bar square while closed, one set for Crux workspaces and one for Garden Home; presentation only, never Garden content or exported.",
+      "status": "implemented"
     }
   ]
 }

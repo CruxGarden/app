@@ -474,6 +474,13 @@
       "ledger": "cruxgarden:persona"
     },
     {
+      "key": "cruxgarden:pins",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:pins"
+    },
+    {
       "key": "cruxgarden:publicMoodId",
       "sources": [
         "src/lib/constants.ts"
@@ -715,32 +722,7 @@
     {
       "file": "src/services/settings.ts",
       "method": "db.run",
-      "statement": "'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'"
-    },
-    {
-      "file": "src/services/settings.ts",
-      "method": "db.run",
       "statement": "'DELETE FROM settings WHERE key = ?'"
-    },
-    {
-      "file": "src/services/settings.ts",
-      "method": "db.run",
-      "statement": "'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'"
-    },
-    {
-      "file": "src/services/settings.ts",
-      "method": "db.run",
-      "statement": "'DELETE FROM settings WHERE key = ?'"
-    },
-    {
-      "file": "src/services/settings.ts",
-      "method": "db.run",
-      "statement": "'DELETE FROM settings WHERE key = ?'"
-    },
-    {
-      "file": "src/services/settings.ts",
-      "method": "db.run",
-      "statement": "'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'"
     },
     {
       "file": "src/services/sqlite/artifact.service.ts",
@@ -809,7 +791,7 @@
     },
     {
       "file": "src/services/sqlite/dimension.service.ts",
-      "method": "getSqliteClient().run",
+      "method": "db.run",
       "statement": "'DELETE FROM dimensions WHERE id = ?'"
     },
     {

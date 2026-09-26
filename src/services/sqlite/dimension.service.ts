@@ -33,6 +33,20 @@ export class SqliteDimensionService implements IDimensionService {
 
   async create(input: CreateDimensionInput): Promise<Dimension> {
     const identity = await getLocalIdentity();
+    const db = getSqliteClient();
+    if (db.installation) {
+      const { id } = await db.installation.createDimension({
+        sourceId: input.sourceId,
+        targetId: input.targetId,
+        type: input.type,
+        kind: input.kind ?? null,
+        weight: input.weight ?? null,
+        homeId: identity.homeId,
+        note: input.note ?? null,
+        meta: input.meta || {},
+      });
+      return this.findById(id);
+    }
     const now = new Date().toISOString();
     const dim: Dimension = {
       id: crypto.randomUUID(),
@@ -53,6 +67,16 @@ export class SqliteDimensionService implements IDimensionService {
   }
 
   async update(id: string, updates: UpdateDimensionInput): Promise<Dimension> {
+    const db = getSqliteClient();
+    if (db.installation) {
+      await db.installation.updateDimension(id, {
+        ...(updates.kind !== undefined ? { kind: updates.kind } : {}),
+        ...(updates.weight !== undefined ? { weight: updates.weight } : {}),
+        ...(updates.note !== undefined ? { note: updates.note } : {}),
+        ...(updates.meta !== undefined ? { meta: updates.meta } : {}),
+      });
+      return this.findById(id);
+    }
     const changes: Record<string, unknown> = { updated: new Date().toISOString() };
     if (updates.kind !== undefined) changes.kind = updates.kind;
     if (updates.weight !== undefined) changes.weight = updates.weight;
@@ -67,6 +91,8 @@ export class SqliteDimensionService implements IDimensionService {
   }
 
   async delete(id: string): Promise<void> {
-    await getSqliteClient().run('DELETE FROM dimensions WHERE id = ?', [id]);
+    const db = getSqliteClient();
+    if (db.installation) return db.installation.deleteDimension(id);
+    await db.run('DELETE FROM dimensions WHERE id = ?', [id]);
   }
 }

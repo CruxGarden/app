@@ -12,6 +12,31 @@ import { usePaneLabels } from '@/hooks/usePaneLabels';
 import { PANE_BUTTONS, PANE_VAR_PREFIX } from '@/components/workspace/paneConfig';
 import { PlusCircleIcon } from '@/components/ui/icons';
 import { arrangeWorkspacePanels } from '@/services/workspace-layouts';
+import { togglePin, usePinned } from '@/stores/pins';
+import { cn } from '@/lib/cn';
+
+/** Panes with their own top-bar button: listed only when closed, never pinned. */
+const OWN_BUTTON = new Set<PaneType>(['navigator', 'explore', 'mood', 'console']);
+
+function PinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 17v5" />
+      <path d="M9 10.76V6h6v4.76a2 2 0 0 0 .6 1.43L18 14.6V16H6v-1.4l2.4-2.41a2 2 0 0 0 .6-1.43Z" />
+      <path d="M8 2h8" />
+    </svg>
+  );
+}
 
 /** Discovery for closed panels. Opening uses the same workspace operation as agents. */
 const GARDEN_WIDE = new Set<PaneType>([
@@ -31,6 +56,7 @@ export default function PanelPicker() {
   const scope = useWorkspaceUIStore((s) => s.workspaceScope);
   const visibility = useWorkspaceUIStore((s) => s.paneVisibility);
   const labels = usePaneLabels();
+  const pinned = usePinned(scope);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
@@ -94,7 +120,7 @@ export default function PanelPicker() {
           ]
         : []
   )
-    .filter((pane) => !visibility[pane])
+    .filter((pane) => !OWN_BUTTON.has(pane) || !visibility[pane])
     .filter((pane) => {
       const config = PANE_BUTTONS.find((b) => b.type === pane)!;
       return `${labels[pane]} ${config.label}`.toLowerCase().includes(query.trim().toLowerCase());
@@ -167,28 +193,54 @@ export default function PanelPicker() {
               const config = PANE_BUTTONS.find((b) => b.type === pane)!;
               const Icon = config.icon;
               const prefix = PANE_VAR_PREFIX[pane];
+              const isOpen = !!visibility[pane];
+              const isPinned = pinned.includes(pane);
               return (
-                <button
-                  key={pane}
-                  type="button"
-                  aria-label={`Toggle ${config.label.toLowerCase()}`}
-                  aria-pressed={false}
-                  className="w-full flex items-center gap-2 text-left text-sm px-2 py-2 rounded-[var(--radius-sm)] hover:bg-dropdown-item-hover focus:bg-dropdown-item-hover cursor-pointer"
-                  onClick={() => {
-                    ui.getState().setPaneVisible(pane, true);
-                    finish();
-                  }}
-                >
-                  <span style={{ color: `var(${prefix}-button-icon)` }}>
-                    <Icon />
-                  </span>
-                  <span className="min-w-0 truncate">{labels[pane]}</span>
-                </button>
+                <div key={pane} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    aria-label={`Toggle ${config.label.toLowerCase()}`}
+                    aria-pressed={isOpen}
+                    className="flex-1 min-w-0 flex items-center gap-2 text-left text-sm px-2 py-2 rounded-[var(--radius-sm)] hover:bg-dropdown-item-hover focus:bg-dropdown-item-hover cursor-pointer"
+                    onClick={() => {
+                      ui.getState().setPaneVisible(pane, !isOpen);
+                      if (!isOpen) finish();
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: isOpen
+                          ? `var(${prefix}-button-icon-active)`
+                          : `var(${prefix}-button-icon)`,
+                      }}
+                    >
+                      <Icon />
+                    </span>
+                    <span className={cn('min-w-0 truncate', !isOpen && 'text-text-muted')}>
+                      {labels[pane]}
+                    </span>
+                  </button>
+                  {!OWN_BUTTON.has(pane) && (
+                    <button
+                      type="button"
+                      aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${labels[pane]}`}
+                      aria-pressed={isPinned}
+                      title={isPinned ? 'Unpin from the bar' : 'Keep in the bar'}
+                      className={cn(
+                        'shrink-0 w-7 h-7 flex items-center justify-center rounded-[var(--radius-sm)] hover:bg-dropdown-item-hover cursor-pointer',
+                        isPinned ? 'text-accent' : 'text-text-muted opacity-60 hover:opacity-100',
+                      )}
+                      onClick={() => togglePin(scope, pane)}
+                    >
+                      <PinIcon filled={isPinned} />
+                    </button>
+                  )}
+                </div>
               );
             })}
             {!available.length && (
               <p role="status" className="text-xs text-text-muted p-2">
-                {query ? 'No matching panels' : 'All panels are open'}
+                No matching panels
               </p>
             )}
             <div className="border-t border-dropdown-border mt-1 pt-1">

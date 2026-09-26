@@ -88,6 +88,8 @@ export enum SettingsKey {
   WornMoodId = 'cruxgarden:wornMoodId',
   /** Which Garden-resolved Mood this device last painted (a projection record, never a selection) */
   MoodProjection = 'cruxgarden:moodProjection',
+  /** Panels whose top-bar square stays while closed, per workspace kind (device presentation). */
+  PanelPins = 'cruxgarden:pins',
   /** The bundled Mood the public website wears (localStorage; The Keeper until the visitor picks another) */
   PublicMoodId = 'cruxgarden:publicMoodId',
   /** Index of files the user brought into their Mood (bytes in the Blob Store) */

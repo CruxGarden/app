@@ -1,5 +1,5 @@
 import { goHome } from './multi-crux-helpers';
-import { togglePanel, expectPanelBarReady } from './panel-helpers';
+import { togglePanel, expectPanelBarReady, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -90,7 +90,7 @@ test.describe('recover (mocked API)', () => {
       await page.getByRole('button', { name: 'Open My Crux' }).click();
       const tree = page.getByRole('tree');
       await expectPanelBarReady(page);
-      if (!(await tree.isVisible().catch(() => false))) await togglePanel(page, 'Toggle artifacts');
+      await openPanel(page, 'artifacts', 'Toggle artifacts');
       await expect(tree.getByText('index.html')).toBeVisible({ timeout: 30_000 });
       // the archive was taken after the publish: the Share pane knows it is live
       const sharePane = page.getByTestId('pane-body-publish');

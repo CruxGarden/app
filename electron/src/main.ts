@@ -13,6 +13,7 @@ import type {
 import { lookupProjectCrux, type NativeStorage } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
+import { INSTALLATION_COMMANDS, type InstallationCommand } from './bridge';
 const {
   app,
   BrowserWindow,
@@ -573,17 +574,50 @@ async function setupIpc() {
     return db.deleteCrux(id);
   });
 
-  ipcMain.handle('sqlite:run', (_e: any, sql: string, params?: unknown[]) => {
-    return db.run(sql, params);
-  });
+  // Raw SQL is a read path for the app and a fixture path for isolated test
+  // profiles. Every write the app makes is a named command of the API owner.
+  const testProfile = !!process.env.CRUX_USER_DATA;
+  const rawCaller = (event: Electron.IpcMainInvokeEvent) => {
+    if (event.senderFrame !== mainWindow?.webContents.mainFrame)
+      throw new Error('The Garden database is only available to Crux Garden');
+  };
+  const readOnly = (sql: string) => {
+    if (testProfile) return;
+    const statement = sql.replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/, '');
+    if (
+      !/^(SELECT|WITH)\b/i.test(statement) ||
+      /\b(INSERT|UPDATE|DELETE|REPLACE|DROP|ALTER|CREATE|ATTACH|DETACH|VACUUM|REINDEX)\b/i.test(
+        statement,
+      )
+    )
+      throw new Error('Only reads are open here; changes go through named commands.');
+  };
+  ipcMain.handle(
+    'sqlite:run',
+    (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
+      rawCaller(event);
+      if (!testProfile) throw new Error('Raw SQL writes are closed; use a named command.');
+      return db.run(sql, params);
+    },
+  );
 
-  ipcMain.handle('sqlite:get', (_e: any, sql: string, params?: unknown[]) => {
-    return db.get(sql, params);
-  });
+  ipcMain.handle(
+    'sqlite:get',
+    (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
+      rawCaller(event);
+      readOnly(sql);
+      return db.get(sql, params);
+    },
+  );
 
-  ipcMain.handle('sqlite:all', (_e: any, sql: string, params?: unknown[]) => {
-    return db.all(sql, params);
-  });
+  ipcMain.handle(
+    'sqlite:all',
+    (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
+      rawCaller(event);
+      readOnly(sql);
+      return db.all(sql, params);
+    },
+  );
 
   ipcMain.handle('sqlite:export', () => {
     return db.export();
@@ -837,6 +871,30 @@ async function setupIpc() {
       return localDb.gardenMood.select(input);
     },
   );
+  ipcMain.handle(
+    'installation',
+    (event: Electron.IpcMainInvokeEvent, name: InstallationCommand, ...args: unknown[]) => {
+      gardenCaller(event);
+      if (!(INSTALLATION_COMMANDS as readonly string[]).includes(name))
+        throw new Error('Unknown installation command');
+      return (localDb.installation[name] as (...a: unknown[]) => unknown)(...args);
+    },
+  );
+  ipcMain.handle('settings:list', (event: Electron.IpcMainInvokeEvent) => {
+    gardenCaller(event);
+    return localDb.settings.list();
+  });
+  ipcMain.handle(
+    'settings:put',
+    (event: Electron.IpcMainInvokeEvent, key: string, value: string) => {
+      gardenCaller(event);
+      return localDb.settings.put(key, value);
+    },
+  );
+  ipcMain.handle('settings:remove', (event: Electron.IpcMainInvokeEvent, key: string) => {
+    gardenCaller(event);
+    return localDb.settings.remove(key);
+  });
   ipcMain.handle(
     'garden-membership:add',
     (event: Electron.IpcMainInvokeEvent, input: { gardenId: string; memberId: string }) => {
