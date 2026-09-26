@@ -64,7 +64,7 @@ test.describe('polish tour', () => {
       await shot(page, '05-settings-ai');
       await page.locator('h2', { hasText: /^Garden$/ }).click();
       await shot(page, '06-settings-garden');
-      await page.keyboard.press('Escape');
+      await hidePane(page, 'Settings');
 
       // Share pane → connect → publish (with the backup prompt)
       await ensurePane(page, 'publish', 'Toggle share');

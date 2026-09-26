@@ -22,12 +22,13 @@ import { useShallow } from 'zustand/react/shallow';
 const OWN_BUTTON = new Set<PaneType>(['navigator', 'explore', 'mood', 'console']);
 
 export default function TopBar() {
-  const { paneOrder, paneVisibility, togglePane, activeCruxId } = useWorkspaceUIStore(
+  const { paneOrder, paneVisibility, togglePane, activeCruxId, scope } = useWorkspaceUIStore(
     useShallow((s) => ({
       paneOrder: s.paneOrder,
       paneVisibility: s.paneVisibility,
       togglePane: s.togglePane,
       activeCruxId: s.activeCruxId,
+      scope: s.workspaceScope,
     })),
   );
   const garden = useGardenContext((s) => s.garden);
@@ -71,7 +72,7 @@ export default function TopBar() {
         <NavigationHistory />
         <GardenLocation />
         <span className="text-toolbar-text-muted shrink-0">
-          {activeCruxId && <ChevronRightIcon />}
+          {scope === 'crux' && activeCruxId && <ChevronRightIcon />}
         </span>
         <WorkspaceSwitcher />
         <div className="hidden xl:block">

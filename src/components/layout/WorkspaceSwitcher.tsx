@@ -8,6 +8,7 @@ import { useWorkspaceRegistry, openWorkspace, closeWorkspace } from '@/stores/wo
 import { useDialogStore } from '@/stores/dialogStore';
 import { getServices } from '@/services';
 import { FolderIcon } from '@/components/ui/icons';
+import { Button, Input } from '@/components/ui';
 import { recentOrder, nextRecent } from '@/lib/workspace-switching';
 import { useGardenContext } from '@/stores/gardenContext';
 import { gardenMembers, opensAsWorkspace } from '@/services/garden-navigation';
@@ -389,23 +390,31 @@ export default function WorkspaceSwitcher() {
             >
               {closing ? (
                 <>
-                  <h2 style={{ fontFamily: 'var(--dialog-title-font)' }}>
+                  <h2
+                    className="text-sm font-medium text-text"
+                    style={{ fontFamily: 'var(--dialog-title-font)' }}
+                  >
                     Close {entries.find((e) => e.id === closing)?.title}?
                   </h2>
-                  <p className="text-xs my-3">
+                  <p className="text-xs text-text-muted my-3">
                     Running work will stop. Queued prompts and Growth remain available when you
                     reopen. Save or discard unsaved Artifact edits before closing.
                   </p>
-                  <div className="flex gap-3">
-                    <button disabled={busy} onClick={cancel}>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button variant="ghost" size="sm" disabled={busy} onClick={cancel}>
                       Cancel
-                    </button>
-                    <button disabled={busy} onClick={() => void close('discard')}>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void close('discard')}
+                    >
                       Discard edits and close
-                    </button>
-                    <button disabled={busy} onClick={() => void close('save')}>
+                    </Button>
+                    <Button size="sm" disabled={busy} onClick={() => void close('save')}>
                       Save and close
-                    </button>
+                    </Button>
                   </div>
                 </>
               ) : renaming ? (
@@ -424,11 +433,12 @@ export default function WorkspaceSwitcher() {
                     }
                   }}
                 >
-                  <label>
+                  <label className="flex flex-col gap-1 text-xs text-text-muted">
                     {copyIdentity(getWorkspace(renaming)?.data.getState().crux)
                       ? 'Task name'
                       : 'Crux title'}
-                    <input
+                    <Input
+                      autoFocus
                       aria-label={
                         copyIdentity(getWorkspace(renaming)?.data.getState().crux)
                           ? 'Task name'
@@ -436,15 +446,16 @@ export default function WorkspaceSwitcher() {
                       }
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="block border p-2 w-full"
                     />
                   </label>
-                  <button type="button" onClick={cancel}>
-                    Cancel
-                  </button>
-                  <button disabled={busy} type="submit">
-                    Rename
-                  </button>
+                  <div className="flex justify-end gap-2 mt-3">
+                    <Button type="button" variant="ghost" size="sm" onClick={cancel}>
+                      Cancel
+                    </Button>
+                    <Button disabled={busy} type="submit" size="sm">
+                      Rename
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <>
