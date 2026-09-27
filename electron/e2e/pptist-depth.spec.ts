@@ -86,6 +86,11 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
       selection.selectAllChildren(element);
       selection.collapseToEnd();
     });
+    // ProseMirror adopts a DOM selection on the next selectionchange: let it,
+    // then make the end certain with the keyboard, as a person would.
+    await page.waitForTimeout(150);
+    await page.keyboard.press('ControlOrMeta+ArrowDown');
+    await page.keyboard.press('End');
     await body.press('Enter');
     await page.keyboard.type('Bring envelopes.');
     await save();
@@ -151,15 +156,29 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
       selection.selectAllChildren(element);
       selection.collapseToEnd();
     });
+    // ProseMirror adopts a DOM selection on the next selectionchange: let it,
+    // then make the end certain with the keyboard, as a person would.
+    await page.waitForTimeout(150);
+    await page.keyboard.press('ControlOrMeta+ArrowDown');
+    await page.keyboard.press('End');
     await page.keyboard.type(' Keep a few for next year.');
     await save();
     expect(JSON.stringify(doc().project.slides)).toContain('Keep a few for next year.');
+    // PPTist records a text edit as one history step when the editor lets go:
+    // step out to the slide list, then come back for the second edit.
+    await frame().locator('.thumbnail-item').first().locator('.label').click();
+    await page.waitForTimeout(500);
     await importedBody.click();
     await importedBody.evaluate((element) => {
       const selection = window.getSelection()!;
       selection.selectAllChildren(element);
       selection.collapseToEnd();
     });
+    // ProseMirror adopts a DOM selection on the next selectionchange: let it,
+    // then make the end certain with the keyboard, as a person would.
+    await page.waitForTimeout(150);
+    await page.keyboard.press('ControlOrMeta+ArrowDown');
+    await page.keyboard.press('End');
     await page.keyboard.type(' Extra draft.');
     await frame().locator('.canvas-tool .handler-item').nth(0).click();
     await expect(importedBody).not.toContainText('Extra draft.');

@@ -225,9 +225,31 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       'NEWER_MAIN_CHAPTER',
     );
     expect(readFileSync(join(vault, 'Outline.md'), 'utf8')).toBe(original);
-    const growth = await checkpointMeta(page, main);
-    expect(growth.some((m) => m.appChanges?.content > 0)).toBe(true);
-    expect(growth.some((m) => m.appChanges?.app > 0)).toBe(true);
+    // Import, review and merge create no automatic Growth (ADR 0058, 2026-09-24):
+    // versions are marked deliberately. Main keeps the Task's Collaboration as a
+    // merge summary, and its files stay recoverable through edit history.
+    expect(await checkpointMeta(page, main)).toEqual([]);
+    const mainMeta = (await page.evaluate(
+      async (id) =>
+        JSON.parse(
+          (
+            (await window.electronAPI!.sqlite.get('SELECT meta FROM cruxes WHERE id = ?', [
+              id,
+            ])) as { meta: string }
+          ).meta,
+        ),
+      main,
+    )) as { messages?: { taskMergeId?: string; content?: string }[] };
+    expect(
+      mainMeta.messages?.some(
+        (m) => !!m.taskMergeId && !!m.content?.startsWith('Merged task: Customize app'),
+      ),
+    ).toBe(true);
+    const history = (await page.evaluate(
+      (id) => window.electronAPI!.sqlite.fileContent!.history(id),
+      main,
+    )) as { checkpoints: unknown[] };
+    expect(history.checkpoints.length).toBeGreaterThan(0);
     await page
       .getByTestId('workshop-view')
       .getByRole('button', { name: 'Use app', exact: true })
@@ -236,18 +258,6 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     await openNote('Imported/Novel', 'Outline');
     await expect(frame().locator('.tiptap').first()).toContainText('First chapter');
     await page.screenshot({ path: join(evidence, 'customized-notebook.png') });
-    await togglePanel(page, 'Toggle history');
-    await expect(
-      page.getByTestId('growth-app-changes').filter({ hasText: 'Content changed' }).first(),
-    ).toBeVisible();
-    await page.getByRole('button').filter({ hasText: 'Imported notebook: Novel' }).first().click();
-    await page.getByRole('button', { name: 'Revert', exact: true }).click();
-    await expect(page.getByRole('dialog')).toContainText(
-      'Restore the app code and all its content',
-    );
-    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('button', { name: 'Back', exact: true }).click();
-    await togglePanel(page, 'Toggle history');
     await page
       .getByTestId('workshop-view')
       .getByRole('button', { name: 'Share selected content', exact: true })
@@ -273,7 +283,7 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
         });
       }).toPass({ timeout: 60000 });
     });
-    await expect(page.getByText(/Complete editable Crux: includes app code/)).toBeVisible();
+    await expect(page.getByText(/Complete editable Crux: includes your app changes/)).toBeVisible();
     await page.screenshot({ path: join(evidence, 'export-explanation.png') });
     await togglePanel(page, 'Toggle export');
     const installed = await page.evaluate(
@@ -356,9 +366,24 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       expect(
         readFileSync(join(importedFolder, 'notebook/Imported/Novel/Chapters/One.md'), 'utf8'),
       ).toContain('NEWER_MAIN_CHAPTER');
-      expect((await checkpointMeta(restored.page, id)).map((m) => m.appChanges)).toEqual(
-        growth.map((m) => m.appChanges),
-      );
+      // The archive carries the same history: no automatic Growth, the merge summary intact.
+      expect(await checkpointMeta(restored.page, id)).toEqual([]);
+      const reopenedMeta = (await restored.page.evaluate(
+        async (id) =>
+          JSON.parse(
+            (
+              (await window.electronAPI!.sqlite.get('SELECT meta FROM cruxes WHERE id = ?', [
+                id,
+              ])) as { meta: string }
+            ).meta,
+          ),
+        id,
+      )) as { messages?: { taskMergeId?: string; content?: string }[] };
+      expect(
+        reopenedMeta.messages?.some(
+          (m) => !!m.taskMergeId && !!m.content?.startsWith('Merged task: Customize app'),
+        ),
+      ).toBe(true);
       await expect(
         restored.page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]'),
       ).toHaveText('Saved', { timeout: 120000 });
@@ -370,7 +395,8 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
             metadataPreserved: true,
             originalUnchanged: true,
             taskMergePreservedNewerMainContent: true,
-            growthCheckpoints: growth.length,
+            automaticGrowth: 0,
+            editCheckpoints: history.checkpoints.length,
             buildCode: built.code,
             publicContentFiltered: true,
             archiveReopened: true,

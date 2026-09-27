@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, storedFingerprint } from './multi-crux-helpers';
 
 test('miniPaint refuses stale or missing state, preserves native drafts and permits zoom-only handoff', async () => {
   test.setTimeout(300000);
@@ -104,8 +104,18 @@ test('miniPaint refuses stale or missing state, preserves native drafts and perm
     await collaborate('edit', 1);
     // Hold a native pointer gesture while sending the next message via keyboard.
     await collaborate('inspect', 1);
-    const bounds = (await frame.locator('#canvas_minipaint').boundingBox())!;
-    await page.mouse.move(bounds.x + 20, bounds.y + 20);
+    // The zoomed canvas runs past the Workshop's edge (the window cannot be
+    // resized from a test): press inside the part of it that is on screen, or
+    // the pointer lands on a neighbouring pane and no drawing begins.
+    const canvas = (await frame.locator('#canvas_minipaint').boundingBox())!;
+    const shown = (await page.locator('iframe[data-crux-id]').boundingBox())!;
+    const left = Math.max(canvas.x, shown.x);
+    const top = Math.max(canvas.y, shown.y);
+    const right = Math.min(canvas.x + canvas.width, shown.x + shown.width);
+    const bottom = Math.min(canvas.y + canvas.height, shown.y + shown.height);
+    expect(right - left).toBeGreaterThan(40);
+    expect(bottom - top).toBeGreaterThan(40);
+    await page.mouse.move((left + right) / 2, (top + bottom) / 2);
     await page.mouse.down();
     try {
       await collaborate('edit', 1, 'Finish the current drawing');
@@ -130,11 +140,18 @@ test('miniPaint refuses stale or missing state, preserves native drafts and perm
       return canvas.toDataURL('image/png').split(',')[1]!;
     });
     mkdirSync(join(folder, 'assets'), { recursive: true });
-    const reloaded = page.waitForEvent('framenavigated', {
-      predicate: (current) => current !== page.mainFrame() && /^http:/.test(current.url()),
-    });
+    // A new root Artifact refreshes this static preview (a versioned URL, so
+    // the frame navigates). Wait for the index and for that reload before
+    // the import scenario, or the reload lands in the middle of it.
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const srcBefore = await page.locator('iframe[data-crux-id]').getAttribute('src');
     writeFileSync(join(folder, 'assets/marker.png'), Buffer.from(fixture, 'base64'));
-    await reloaded;
+    await expect
+      .poll(() => storedFingerprint(page, id, 'assets/marker.png'), { timeout: 60000 })
+      .not.toBeNull();
+    await expect
+      .poll(() => page.locator('iframe[data-crux-id]').getAttribute('src'), { timeout: 60000 })
+      .not.toBe(srcBefore);
     await ready();
     await frame.locator('.layer_name').getByText('Shared panel', { exact: true }).click();
     await collaborate('inspect', 1);

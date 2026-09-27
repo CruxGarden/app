@@ -43,12 +43,50 @@ export async function indexedTaskManifest(id: string): Promise<TaskManifest> {
   return manifest;
 }
 
+const TEXT_MIME = /^(text\/|application\/(json|javascript|xml|x-sh)|image\/svg)/;
+
 /** Capture disk, not a possibly lagging Artifact index. Call with writers settled. */
 export async function captureTaskManifest(id: string): Promise<TaskManifest> {
   await flushIngestion();
   const folder = await folderForCrux(id);
   if (!folder) return indexedTaskManifest(id);
   const api = window.electronAPI?.project;
+  if (api?.captureManifest) {
+    // Hashed in the main process against a stat-signature cache: a reopened
+    // 2,000-file tool costs one hashing pass, later captures a stat walk, and
+    // no bytes cross IPC. Reading every file into the renderer and hashing it
+    // there kept a 151 MB Crux's export on "Saving files…" for minutes.
+    const indexed = await indexedTaskManifest(id);
+    const captured = await api.captureManifest(folder, Object.keys(indexed));
+    const manifest: TaskManifest = {};
+    for (const file of captured.files) {
+      if (!isTaskArtifact(file.path)) continue;
+      const known = indexed[file.path];
+      // Unchanged bytes keep their indexed type: re-deriving it (a bundled
+      // asset registered as binary reads as UTF-8 text) moved the head on
+      // every export, and the embedded tool reloaded itself mid-export.
+      if (known && known.fingerprint === file.fingerprint) {
+        manifest[file.path] = { ...known, mode: file.mode, size: file.size };
+        continue;
+      }
+      const mimeType = guessMimeType(file.path);
+      manifest[file.path] = {
+        fingerprint: file.fingerprint,
+        mimeType,
+        encoding: file.utf8 && TEXT_MIME.test(mimeType) ? 'utf-8' : 'binary',
+        mode: file.mode,
+        size: file.size,
+      };
+    }
+    // Indexed paths the folder's ignore rules cover (a tool's `runtime/`) are
+    // the index's own: the folder is not their truth, so a capture neither
+    // reads nor drops them. Dropping them emptied the Workshop after an export
+    // and left complete archives without the tool they claimed to hold.
+    for (const path of captured.retained)
+      if (indexed[path] && !manifest[path]) manifest[path] = indexed[path];
+    validateTaskPaths(manifest);
+    return manifest;
+  }
   if (!api?.capture) throw new Error('Restart the updated desktop app to capture a task.');
   const files = await api.capture(folder);
   const manifest: TaskManifest = {};
@@ -58,7 +96,7 @@ export async function captureTaskManifest(id: string): Promise<TaskManifest> {
     const fingerprint = await hashContent(data);
     await getSqliteClient().blobWrite(fingerprint, data);
     const mimeType = guessMimeType(file.path);
-    let text = /^(text\/|application\/(json|javascript|xml|x-sh)|image\/svg)/.test(mimeType);
+    let text = TEXT_MIME.test(mimeType);
     if (text) {
       try {
         new TextDecoder('utf-8', { fatal: true }).decode(data);

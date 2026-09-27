@@ -162,15 +162,15 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
       await expect.poll(() => publication().wireframes.length).toBe(2);
       await expect(status(page)).toHaveText('Saved');
       await frameOf(page).getByRole('button', { name: 'Public edition…' }).click();
-      const growth = (await page.evaluate(
-        async (id) =>
-          window.electronAPI!.sqlite.get(
-            "SELECT COUNT(*) AS count FROM dimensions WHERE source_id = ? AND type = 'growth'",
-            [id],
-          ),
-        (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!,
-      )) as { count: number };
-      expect(growth.count).toBeGreaterThan(2);
+      // App saves are not Growth: the API retains bounded Edit history as the
+      // content changes, so the project has recovery points without a snapshot.
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const history = (await page.evaluate(
+        (id) => window.electronAPI!.sqlite.fileContent!.history(id),
+        id,
+      )) as { revision: number; checkpoints: unknown[] };
+      console.log('Moqira edit history', history.revision, history.checkpoints.length);
+      expect(history.checkpoints.length).toBeGreaterThan(0);
       await page.screenshot({ path: join(evidence, 'moqira-editor.png') });
     });
 

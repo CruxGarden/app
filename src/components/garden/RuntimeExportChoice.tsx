@@ -21,8 +21,9 @@ export default function RuntimeExportChoice({
   if (getSqliteClient().fileContent)
     return (
       <p className="text-xs text-text-muted">
-        Includes files, tools, conversation, Tasks and Growth. This private backup is
-        self-contained.
+        Includes your files, the tool&apos;s own files, conversation, Tasks and Growth. This private
+        backup is self-contained: it opens in any Crux Garden. A tool that is not in the app or
+        installed there still opens; only its commands wait for the tool.
       </p>
     );
   return <RuntimeChoice template={template} artifacts={artifacts} disabled={disabled} />;

@@ -60,6 +60,13 @@ export class SqliteArtifactService implements IArtifactService {
       [args.resourceId, args.filePath],
     );
     if (!existing) return null;
+    // The same bytes again (a thumbnail re-shot on every reload): nothing to
+    // write, and the row keeps its `updated`, so no manifest entry moves.
+    if (
+      existing.fingerprint === args.fingerprint &&
+      (!args.mimeType || args.mimeType === existing.mime_type)
+    )
+      return this.findById(existing.id as string);
 
     if (!args.blobAlreadyWritten) await db.blobWrite(args.fingerprint, args.contentBytes);
     // Desktop: keep the Project Folder in sync (ADR 0001 write-through)

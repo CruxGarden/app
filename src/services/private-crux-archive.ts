@@ -62,6 +62,13 @@ export async function importPrivateCrux(options: ImportOptions): Promise<ImportR
     });
   })();
   const cruxId = result.roots[0]!;
+  // An archive made before captures retained a tool's ignored runtime holds the
+  // person's work without the tool's files: put them back from the tool here.
+  // The Crux opens either way; without its tool the Workshop names what it needs.
+  const { restoreToolRuntime } = await import('./tool-runtime');
+  await restoreToolRuntime(cruxId).catch((error) =>
+    console.warn('[import] could not restore the tool runtime:', error),
+  );
   const meta = (info.root.meta ?? {}) as CruxMeta;
   options.onProgress?.(1, 1);
   return {

@@ -1,6 +1,6 @@
 import { fork, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -11,12 +11,39 @@ test.skip(
   !existsSync(join(apiRoot, 'test/support/billing-simulation-host.ts')),
   'Cross-repository integration requires the matching API checkout (CRUX_TEST_API_ROOT).',
 );
+
+/**
+ * The API's own Node, as `nvm use` in `api/` would pick it: its native
+ * better-sqlite3 binding is built for the version in `api/.nvmrc`, and the
+ * Electron suite runs on a newer Node (a different NODE_MODULE_VERSION). The
+ * exact version when installed, else the newest installed with the same
+ * major; the current process as the last resort.
+ */
+function apiNode(): string {
+  const wanted = existsSync(join(apiRoot, '.nvmrc'))
+    ? readFileSync(join(apiRoot, '.nvmrc'), 'utf8').trim().replace(/^v/, '')
+    : '';
+  if (!wanted || wanted === process.versions.node) return process.execPath;
+  const nvmDir = process.env.NVM_DIR ?? join(homedir(), '.nvm');
+  const versions = join(nvmDir, 'versions/node');
+  if (!existsSync(versions)) return process.execPath;
+  const binary = (version: string) => join(versions, version, 'bin/node');
+  if (existsSync(binary(`v${wanted}`))) return binary(`v${wanted}`);
+  const major = wanted.split('.')[0]!;
+  const newest = readdirSync(versions)
+    .filter((v) => v.startsWith(`v${major}.`))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+    .at(-1);
+  return newest && existsSync(binary(newest)) ? binary(newest) : process.execPath;
+}
+
 async function startBilling(filename: string, fallback: string, port = '0') {
   const child = fork(
     join(apiRoot, 'test/support/billing-simulation-host.ts'),
     [filename, fallback, port],
     {
       cwd: apiRoot,
+      execPath: apiNode(),
       execArgv: ['-r', join(apiRoot, 'node_modules/ts-node/register/transpile-only')],
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     },

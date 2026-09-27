@@ -447,9 +447,7 @@ function validateLayout(layout: PersistedLayout, scope: WorkspaceScope = 'crux')
   // Build visibility with defaults for missing entries
   const validVisibility = {} as Record<PaneType, boolean>;
   for (const pane of DEFAULT_PANE_ORDER.concat(GARDEN_PANE_ORDER)) {
-    validVisibility[pane] = allPanes.has(pane)
-      ? (savedVisibility[pane] ?? defaults[pane])
-      : false;
+    validVisibility[pane] = allPanes.has(pane) ? (savedVisibility[pane] ?? defaults[pane]) : false;
   }
 
   // Restore or build mosaic layout
@@ -626,7 +624,13 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
 
     workshopView: 'clean',
     setWorkshopView: (workshopView) => {
-      if (deferNotebookAction(get().activeCruxId, () => get().setWorkshopView(workshopView)))
+      // Leaving the app for Advanced saves its draft first. Coming back to it
+      // ("Use app") shows the app that holds the draft: nothing to flush, and
+      // a flush would wait on a frame Chromium throttles while it is off-screen.
+      if (
+        workshopView === 'advanced' &&
+        deferNotebookAction(get().activeCruxId, () => get().setWorkshopView(workshopView))
+      )
         return;
       set({ workshopView });
       const id = get().activeCruxId;

@@ -1375,6 +1375,86 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Planted Field notes with its brief. Open it from your garden.');
         }
+        if (lastUserText(prompt).includes('[garden:grow]')) {
+          // The Keeper grows a named Garden with a brief, then plants a member into it (guide KEEP-02).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('create_cruxspace', {
+              name: 'Field study',
+              brief: 'A season of field notes: one Crux per site, one page per day.',
+            });
+          if (rounds.length === 1) {
+            const grown = toolResultText(prompt, 'create_cruxspace') || '';
+            if (grown.startsWith('Error'))
+              return textStream(`The Garden could not be grown: ${grown.slice(0, 200)}`);
+            return toolCallStream('plant_crux', {
+              title: 'Site A notes',
+              template: 'blank',
+              brief: 'Notes from site A, one page per day.',
+              cruxspaceId: grown.match(/^id: (\S+)/m)?.[1],
+            });
+          }
+          return textStream('Grew Field study and planted Site A notes in it with its brief.');
+        }
+        const undertakingMode = lastUserText(prompt).match(
+          /\[garden:undertaking:(beside|start)\]/,
+        )?.[1];
+        if (undertakingMode) {
+          // The Keeper starts an undertaking from its template, the worked example
+          // beside the starter or used as the start (guide KEEP-03).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('create_cruxspace', {
+              name: 'Pocket game',
+              templateId: 'small-game',
+              exampleMode: undertakingMode,
+            });
+          const grown = toolResultText(prompt, 'create_cruxspace') || '';
+          if (grown.startsWith('Error'))
+            return textStream(`The undertaking could not start: ${grown.slice(0, 200)}`);
+          return textStream(
+            undertakingMode === 'beside'
+              ? 'Started Pocket game with its worked example beside the starter.'
+              : 'Started Pocket game from the worked example as the start.',
+          );
+        }
+        if (lastUserText(prompt).includes('[garden:delegate]')) {
+          // The Keeper hands a turn to Alpha's own collaborator and waits for it (guide KEEP-04).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('list_cruxes', {});
+          if (rounds.length === 1) {
+            const listed = toolResultText(prompt, 'list_cruxes') || '';
+            const id = listed.match(/"id":\s*"([^"]+)",\s*"title":\s*"Alpha"/)?.[1];
+            if (!id) return textStream('There is no Crux titled Alpha in this garden.');
+            return toolCallStream('run_turn', {
+              cruxId: id,
+              message: 'Please write a short note for the study.',
+            });
+          }
+          const reply = toolResultText(prompt, 'run_turn') || '';
+          return textStream(
+            reply.startsWith('Error')
+              ? `Alpha's collaborator could not take the turn: ${reply.slice(0, 200)}`
+              : "Alpha's collaborator took the turn and wrote the note; your own work was untouched.",
+          );
+        }
+        if (lastUserText(prompt).includes('[garden:mood]')) {
+          // The Keeper changes the Garden's Mood from the list it is offered (guide KEEP-05).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('list_moods', {});
+          if (rounds.length === 1) {
+            const listed = toolResultText(prompt, 'list_moods') || '';
+            if (!/^- raster-bars — /m.test(listed))
+              return textStream('Raster Bars is not among the Moods this Garden can wear.');
+            return toolCallStream('wear_mood', { id: 'raster-bars' });
+          }
+          const worn = toolResultText(prompt, 'wear_mood') || '';
+          return textStream(
+            worn.startsWith('Now wearing')
+              ? 'The garden now wears Raster Bars.'
+              : `The Mood could not be worn: ${worn.slice(0, 200)}`,
+          );
+        }
         if (lastUserText(prompt).includes('[shader:tweak]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_shader', {});

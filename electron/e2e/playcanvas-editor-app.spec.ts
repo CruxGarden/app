@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
-import { expectPanelBarReady } from './panel-helpers';
+import { expectPanelBarReady, giveToolRoom } from './panel-helpers';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 declare const editor: any;
@@ -129,8 +129,10 @@ test('PlayCanvas native editing, source, agent, launch and independent complete 
   renameSync(originalFolder, originalFolder + '-unavailable');
   const second = await launchApp();
   try {
+    await second.page.setViewportSize({ width: 1800, height: 1200 });
     await enterGarden(second.page);
     await importNativeCrux(second.page, archive);
+    await giveToolRoom(second.page);
     const frame = await ready(second.page);
     const id = (await second.page
       .locator('[data-workspace-id]')

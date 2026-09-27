@@ -141,7 +141,15 @@ test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, 
       ).not.toBeChecked();
       await frameOf(page).getByRole('button', { name: 'Public edition…' }).click();
       await expect(status(page)).toHaveText('Saved');
+      // App saves are not Growth: the API retains bounded Edit history as the
+      // content changes, so the notebook has recovery points without a snapshot.
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const history = (await page.evaluate(
+        (id) => window.electronAPI!.sqlite.fileContent!.history(id),
+        id,
+      )) as { revision: number; checkpoints: unknown[] };
+      console.log('Notes edit history', history.revision, history.checkpoints.length);
+      expect(history.checkpoints.length).toBeGreaterThan(0);
       const growth = (await page.evaluate(
         async (id) =>
           window.electronAPI!.sqlite.get(
@@ -150,7 +158,7 @@ test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, 
           ),
         id,
       )) as { count: number };
-      expect(growth.count).toBeGreaterThan(3);
+      expect(growth.count).toBe(0);
     });
 
     const stopped = instance.app.waitForEvent('close');

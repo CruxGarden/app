@@ -11,6 +11,7 @@ import { buildInsert } from './sqlite/helpers';
 import { createProjectFolder } from './project-folder';
 import { syncAgentsMd } from './agents-md';
 import { documentsFor } from './workspace-documents';
+import { flushNotebook, notebookIsDirty } from './notebook-lifecycle';
 import {
   serializeCopy,
   findWorkingCopy,
@@ -112,6 +113,12 @@ async function settled<T>(
       if (s.viewingSnapshotId)
         throw new Error('Return to the current workspace before managing tasks.');
       const docs = documentsFor(w.data, w.ui);
+      // An embedded app can still hold a draft — a reopened project marks
+      // itself unsaved until its first save. Ask it to save (bounded) before
+      // refusing, as its own Save would: exporting from the Workshop after a
+      // restart said "Export failed" with nothing actually unsaved.
+      const cruxId = s.crux?.id;
+      if (notebookIsDirty(cruxId)) await flushNotebook(cruxId).catch(() => {});
       if (docs.hasDirty())
         throw new Error('Save your open Artifacts before starting or reviewing a task.');
       if (!participating) w.data.setState({ closing: true });

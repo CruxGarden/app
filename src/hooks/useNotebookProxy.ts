@@ -107,18 +107,21 @@ export function useNotebookProxy(cruxId: string | null) {
     const unregister = registerNotebookEditor(cruxId, {
       dirty: () => dirty,
       flush: () => {
-        if (
-          peer &&
-          ![...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].some(
-            (frame) => frame.dataset.cruxId === cruxId && frame.contentWindow === peer!.source,
-          )
-        )
-          peer = null;
+        const frame = [
+          ...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]'),
+        ].find((frame) => frame.dataset.cruxId === cruxId && frame.contentWindow === peer?.source);
+        if (peer && !frame) peer = null;
         if (!peer)
           return dirty
             ? Promise.reject(new Error('The app editor is unavailable.'))
             : Promise.resolve();
-        return new Promise<void>((resolve, reject) => {
+        // Off-screen (Advanced view keeps the app frame parked for capture),
+        // Chromium throttles the frame and its reply may never come. The
+        // person cannot be editing it there: give it a moment, then go on and
+        // let the app keep its draft — the same bound the leave-page door uses.
+        const rect = frame!.getBoundingClientRect();
+        const parked = rect.right <= 0 || rect.bottom <= 0 || rect.width === 0 || rect.height === 0;
+        const answer = new Promise<void>((resolve, reject) => {
           const id = crypto.randomUUID();
           const timer = setTimeout(() => {
             flushes.delete(id);
@@ -139,6 +142,9 @@ export function useNotebookProxy(cruxId: string | null) {
             { targetOrigin: peer!.origin },
           );
         });
+        if (!parked) return answer;
+        answer.catch(() => {});
+        return Promise.race([answer, new Promise<void>((resolve) => setTimeout(resolve, 4000))]);
       },
     });
     let importTimer: ReturnType<typeof setTimeout> | undefined;

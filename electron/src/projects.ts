@@ -18,6 +18,28 @@ const {
  * out of the project folder.
  */
 
+/** What this process last learned about a file's bytes; valid while its stat signature holds. */
+interface ContentNote {
+  signature: string;
+  fingerprint: string;
+  size: number;
+  utf8: boolean | undefined;
+}
+function statSignature(stat: import('fs').Stats): string {
+  return `${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+}
+/** Strict UTF-8 validity without building a string; a binary file fails fast. */
+function isUtf8Bytes(bytes: Uint8Array): boolean {
+  const { isUtf8 } = require('buffer');
+  if (typeof isUtf8 === 'function') return isUtf8(bytes);
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 interface DesktopConfigData {
   gardenRoot: string;
   /** Every root ever used — folders under a previous root stay operable. */
@@ -270,16 +292,186 @@ export class ProjectFolders {
       fs.mkdirSync(path.dirname(target), { recursive: true });
       const temporary = `${target}.crux-write-${require('crypto').randomUUID()}`;
       try {
-        fs.copyFileSync(source, temporary);
+        // Copy-on-write where the filesystem offers it (APFS, Btrfs, XFS): a
+        // 14,000-file tool then costs directory entries, not bytes. Elsewhere
+        // this is an ordinary copy.
+        fs.copyFileSync(source, temporary, fs.constants.COPYFILE_FICLONE);
         fs.chmodSync(temporary, (entry.mode ?? 0o644) & 0o777);
         fs.renameSync(temporary, target);
         this.noteOwnWrite(target);
+        // The bytes are the blob's: a later capture can skip reading them.
+        this.rememberContent(folder, entry.path, target, entry.fingerprint);
       } finally {
         if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
       }
       written++;
     }
     return written;
+  }
+
+  // ── Content cache ─────────────────────────────────────────────────────────
+  // What this process knows about a file's bytes, keyed by the stat signature
+  // (inode, size, mtime, ctime) a capture already uses to detect a moving
+  // folder. A capture of a 2,000-file tool after a relaunch hashes each file
+  // once in this process; every later capture is a stat walk. `utf8` is only
+  // known once the bytes were read here.
+  private contents = new Map<string, Map<string, ContentNote>>();
+  private rememberContent(folder: string, rel: string, abs: string, fingerprint: string): void {
+    try {
+      const stat = fs.statSync(abs);
+      const base = this.assertKnownFolder(folder);
+      const notes = this.contents.get(base) ?? new Map<string, ContentNote>();
+      if (notes.size > 100000) notes.clear();
+      notes.set(rel, {
+        signature: statSignature(stat),
+        fingerprint,
+        size: stat.size,
+        utf8: undefined,
+      });
+      this.contents.set(base, notes);
+    } catch {
+      /* the file vanished already; a capture reads it afresh */
+    }
+  }
+
+  /**
+   * The Task manifest of a Project Folder without the bytes crossing IPC:
+   * every non-ignored file with its fingerprint, size and mode, hashed here
+   * and stored in the Blob Store when the store lacks it. `indexedPaths` are
+   * the paths the index already holds; those the folder's ignore rules cover
+   * are the index's own (a tool runtime, say) and come back as `retained`
+   * rather than being read or dropped.
+   */
+  async captureManifest(
+    folder: string,
+    blobDir: string,
+    indexedPaths: string[],
+  ): Promise<{
+    files: { path: string; fingerprint: string; size: number; mode: number; utf8: boolean }[];
+    retained: string[];
+  }> {
+    const base = this.assertKnownFolder(folder);
+    this.assertNoSymlinks(base, '');
+    if (!Array.isArray(indexedPaths) || indexedPaths.length > 200000)
+      throw new Error('captureManifest: choose up to 200,000 indexed paths');
+    const ig = this.captureIgnores(base);
+    const retained = indexedPaths.filter(
+      (rel) => typeof rel === 'string' && (ig.ignores(rel) || ig.ignores(rel + '/')),
+    );
+    const scan = (): { rel: string; abs: string; stat: import('fs').Stats }[] => {
+      const result: { rel: string; abs: string; stat: import('fs').Stats }[] = [];
+      const walk = (dir: string) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const abs = path.join(dir, entry.name);
+          const rel = toPosixRel(base, abs);
+          if (ig.ignores(rel) || ig.ignores(rel + '/')) continue;
+          if (entry.isSymbolicLink())
+            throw new Error(`Task capture does not support symlinks: ${rel}`);
+          if (entry.isDirectory()) walk(abs);
+          else if (entry.isFile()) result.push({ rel, abs, stat: fs.statSync(abs) });
+          else throw new Error(`Task capture does not support this file type: ${rel}`);
+        }
+      };
+      walk(base);
+      return result.sort((a, b) => a.rel.localeCompare(b.rel));
+    };
+    const signatures = (list: ReturnType<typeof scan>) =>
+      list.map((f) => `${f.rel}\0${statSignature(f.stat)}`).join('\n');
+    const before = scan();
+    const { NativeBlobStore } = require('./native-blobs');
+    const blobs = new NativeBlobStore(blobDir);
+    const notes = this.contents.get(base) ?? new Map<string, ContentNote>();
+    this.contents.set(base, notes);
+    // One file per turn of the event loop: a long synchronous read-and-hash of
+    // a 151 MB folder blocks the main process, and an inspector evaluate that
+    // interrupts it can see its promise collected before it settles.
+    const files: {
+      path: string;
+      fingerprint: string;
+      size: number;
+      mode: number;
+      utf8: boolean;
+    }[] = [];
+    for (const file of before) {
+      const signature = statSignature(file.stat);
+      let note = notes.get(file.rel);
+      if (note && note.signature === signature && blobs.blobExists(note.fingerprint)) {
+        if (note.utf8 === undefined) {
+          note = { ...note, utf8: isUtf8Bytes(await fs.promises.readFile(file.abs)) };
+          notes.set(file.rel, note);
+        }
+      } else {
+        const bytes = await fs.promises.readFile(file.abs);
+        const fingerprint = require('crypto').createHash('sha256').update(bytes).digest('hex');
+        if (!blobs.blobExists(fingerprint)) blobs.blobWrite(fingerprint, bytes);
+        note = { signature, fingerprint, size: bytes.length, utf8: isUtf8Bytes(bytes) };
+        notes.set(file.rel, note);
+      }
+      files.push({
+        path: file.rel,
+        fingerprint: note.fingerprint,
+        size: note.size,
+        mode: file.stat.mode & 0o777,
+        utf8: note.utf8!,
+      });
+    }
+    if (signatures(before) !== signatures(scan()))
+      throw new Error(
+        'The Project Folder changed during capture. Pause external writers and try again.',
+      );
+    return { files, retained };
+  }
+
+  /** A file's fingerprint from the content cache when its stat signature still holds, else hashed now. */
+  private fingerprintOf(base: string, rel: string): string {
+    this.assertNoSymlinks(base, rel);
+    const abs = this.resolveInside(base, rel);
+    const stat = fs.statSync(abs);
+    const signature = statSignature(stat);
+    const notes = this.contents.get(base) ?? new Map<string, ContentNote>();
+    this.contents.set(base, notes);
+    const note = notes.get(rel);
+    if (note && note.signature === signature) return note.fingerprint;
+    const bytes = fs.readFileSync(abs);
+    const fingerprint = require('crypto').createHash('sha256').update(bytes).digest('hex');
+    if (notes.size > 100000) notes.clear();
+    notes.set(rel, { signature, fingerprint, size: bytes.length, utf8: isUtf8Bytes(bytes) });
+    return fingerprint;
+  }
+
+  /** Which of these paths the folder's ignore rules cover (a tool's `runtime/`, say). */
+  ignoredPaths(folder: string, paths: string[]): string[] {
+    const base = this.assertKnownFolder(folder);
+    if (!Array.isArray(paths) || paths.length > 200000)
+      throw new Error('ignoredPaths: choose up to 200,000 paths');
+    const ig = this.captureIgnores(base);
+    return paths.filter(
+      (rel) => typeof rel === 'string' && !!rel && (ig.ignores(rel) || ig.ignores(rel + '/')),
+    );
+  }
+
+  /** The rules a Task capture applies: the watcher's defaults, secrets, the folder's `.cruxignore`. */
+  private captureIgnores(base: string) {
+    const createIgnore = require('ignore');
+    const { DEFAULT_IGNORES } = require('./watcher');
+    const ig = createIgnore()
+      .add(DEFAULT_IGNORES)
+      .add([
+        '.env',
+        '.env.*',
+        '*.pem',
+        '*.key',
+        '.claude/',
+        '.codex/',
+        '.cursor/',
+        '*.crux-write-*',
+      ]);
+    const ignorePath = path.join(base, '.cruxignore');
+    if (fs.existsSync(ignorePath)) {
+      this.assertNoSymlinks(base, '.cruxignore');
+      ig.add(fs.readFileSync(ignorePath, 'utf8'));
+    }
+    return ig;
   }
 
   setMode(folder: string, relPath: string, mode: number): void {
@@ -394,11 +586,7 @@ export class ProjectFolders {
     const present = new Set(files);
     const events: import('./watcher').WatchEvent[] = [];
     for (const relPath of files) {
-      const fingerprint = require('crypto')
-        .createHash('sha256')
-        .update(this.readFile(base, relPath))
-        .digest('hex');
-      if (previous.get(relPath) !== fingerprint)
+      if (previous.get(relPath) !== this.fingerprintOf(base, relPath))
         events.push({ type: 'write', relPath, own: false });
     }
     for (const entry of indexed) {

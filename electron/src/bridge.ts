@@ -262,6 +262,17 @@ export interface ChangeBatch {
 export interface ProjectBridge {
   /** Stable capture of eligible Artifacts for task creation/review. Rejects symlinks. */
   capture?(folder: string): Promise<{ path: string; data: Uint8Array; mode: number }[]>;
+  /** Which of these paths the folder's ignore rules (defaults + `.cruxignore`) cover. */
+  ignoredPaths?(folder: string, paths: string[]): Promise<string[]>;
+  /** The same capture as a manifest: fingerprints hashed in the main process and stored in the
+   * Blob Store, no bytes crossing IPC; indexed paths the folder ignores come back as `retained`. */
+  captureManifest?(
+    folder: string,
+    indexedPaths: string[],
+  ): Promise<{
+    files: { path: string; fingerprint: string; size: number; mode: number; utf8: boolean }[];
+    retained: string[];
+  }>;
   setMode?(folder: string, relPath: string, mode: number): Promise<void>;
   createFolder(slug: string): Promise<string>;
   ensureFolder(folder: string): Promise<string>;

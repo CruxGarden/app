@@ -42,6 +42,25 @@ export async function expectPanelBarReady(page: Page) {
   });
 }
 
+/**
+ * A native tool wants the Workshop's width: close Tasks and Collaboration
+ * (they open beside every app Crux and leave the tool ~700 px, where tools
+ * fold their own panels over each other). `talk` reopens Collaboration for a
+ * turn and returns its composer.
+ */
+export async function giveToolRoom(page: Page) {
+  await expectPanelBarReady(page);
+  for (const label of ['Toggle tasks', 'Toggle collaboration'])
+    if ((await panelPressed(page, label)) === 'true') await togglePanel(page, label);
+}
+export async function talk(page: Page) {
+  if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+    await togglePanel(page, 'Toggle collaboration');
+  const composer = page.getByPlaceholder('Send a message...');
+  await expect(composer).toBeVisible({ timeout: 30_000 });
+  return composer;
+}
+
 type GardenPane = 'Mood' | 'Explore' | 'Settings' | 'Console' | 'Navigator' | 'Tending';
 const PANE_TYPE: Record<GardenPane, string> = {
   Mood: 'mood',

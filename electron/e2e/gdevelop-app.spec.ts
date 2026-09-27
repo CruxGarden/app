@@ -1,4 +1,4 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { panelPressed, togglePanel, giveToolRoom } from './panel-helpers';
 import { test, expect, chromium, type Page, type FrameLocator } from '@playwright/test';
 import { unzipSync, zipSync } from 'fflate';
 import { createServer } from 'node:http';
@@ -512,6 +512,13 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     editableFiles['game.json'] = Buffer.from(JSON.stringify(editableGame));
     const reimportPath = join(first.dir, 'roundtrip.zip');
     writeFileSync(reimportPath, zipSync(editableFiles));
+    // The export may have refreshed the tool's preview (a new file in the
+    // Crux reloads it): open the project only once the editor is back, with
+    // the Workshop's full width for GDevelop's open dialog.
+    await giveToolRoom(page);
+    await ready(page);
+    await expect(f.locator('#garden-project')).toBeVisible({ timeout: 60_000 });
+    await page.waitForTimeout(1500);
     await f.locator('#garden-project').click();
     await page.keyboard.press('ControlOrMeta+o');
     const [projectChooser] = await Promise.all([

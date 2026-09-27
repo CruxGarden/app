@@ -980,6 +980,12 @@ async function setupIpc() {
       projects.reconcile(folder, indexed),
   );
   ipcMain.handle('project:capture', (_e: any, folder: string) => projects.capture(folder));
+  ipcMain.handle('project:ignored-paths', (_e: any, folder: string, paths: string[]) =>
+    projects.ignoredPaths(folder, paths),
+  );
+  ipcMain.handle('project:capture-manifest', (_e: any, folder: string, indexedPaths: string[]) =>
+    projects.captureManifest(folder, getBlobDir(), indexedPaths),
+  );
   ipcMain.handle('project:set-mode', (_e: any, folder: string, relPath: string, mode: number) =>
     projects.setMode(folder, relPath, mode),
   );

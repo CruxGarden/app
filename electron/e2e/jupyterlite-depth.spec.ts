@@ -59,6 +59,12 @@ test('notebook depth: agent analysis, native error recovery, manual notes, Undo,
     });
   }
   async function rerun(message: string) {
+    // After a reopen or import JupyterLab restores the notebook tab a beat
+    // after the Garden bar reports saved; inspect answers "no notebook open"
+    // until then, and the rerun has no cell to name.
+    await expect(frame().locator('.jp-Notebook .jp-CodeCell').first()).toBeVisible({
+      timeout: 120000,
+    });
     const prior = (await calls()).filter((c: any) => c.name === 'run_jupyterlite_cell').length;
     await collaborator(instance.page, message, 'Re-executed the saved analysis in a fresh kernel.');
     // Imported Collaboration includes the old closing sentence. Wait for this execution's result.
@@ -72,7 +78,12 @@ test('notebook depth: agent analysis, native error recovery, manual notes, Undo,
       )
       .toBe(true);
     const runs = (await calls()).filter((c: any) => c.name === 'run_jupyterlite_cell');
-    expect(JSON.parse(runs.at(-1).result).executionSucceeded).toBe(true);
+    const last = runs.at(-1);
+    const inspected = (await calls()).filter((c: any) => c.name === 'inspect_jupyterlite').at(-1);
+    console.log('rerun inspect →', String(inspected?.result ?? '').slice(0, 1200));
+    // A refused or failed run answers in words, not JSON: say which before parsing.
+    expect(last.result, `${message}: ${last.result}`).not.toMatch(/^Error/);
+    expect(JSON.parse(last.result).executionSucceeded).toBe(true);
     await expect(
       instance.page.getByRole('button', { name: 'Stop', exact: true }),
     ).not.toBeVisible();

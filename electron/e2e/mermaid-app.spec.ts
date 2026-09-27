@@ -78,6 +78,13 @@ test('Mermaid native editor, agent, SVG/PNG exports, conflict and restart', asyn
     }
     expect((await download('SVG')).toString()).toContain('Research');
     expect((await download('PNG')).subarray(1, 4).toString()).toBe('PNG');
+    // The exports touch the editor's stored state, and the bridge autosaves
+    // 800 ms after any change. Let that save land on disk before writing the
+    // file from outside: an external write inside a save already in flight is
+    // the save's to overwrite, not a conflict.
+    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden');
+    await page.waitForTimeout(1500);
+    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden');
     const external = doc();
     const updated = state();
     updated.code = 'flowchart LR\n  External --> Diagram';

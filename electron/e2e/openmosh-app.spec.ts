@@ -3,6 +3,7 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
+import { panelPressed, togglePanel } from './panel-helpers';
 test('actual OpenMosh: native effects, agent, originals and restart', async () => {
   test.setTimeout(180000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
@@ -33,7 +34,24 @@ test('actual OpenMosh: native effects, agent, originals and restart', async () =
     const rack = frame
       .locator('.strip')
       .filter({ has: frame.getByRole('button', { name: /Posterize/ }) });
-    await rack.locator('button.toggle').click();
+    // The effects chain lives in OpenMosh's scrolling sidebar. With Tasks and
+    // Collaboration open the Workshop is narrow and the chain runs below the
+    // pane's edge, where a click lands on the panel mosaic; widen the Workshop
+    // for the native click, then bring Collaboration back for the agent turn.
+    const enable = rack.locator('button.toggle');
+    if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+      await togglePanel(page, 'Toggle tasks');
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
+    // Widening remounts OpenMosh's layout (sidebar instead of sheet): let the
+    // retrying assertions re-resolve the toggle rather than scroll a stale node.
+    await expect(enable).toBeVisible();
+    await expect(enable).toBeInViewport();
+    await expect(enable).toHaveAttribute('title', 'Enable');
+    await enable.click();
+    await expect(enable).toHaveAttribute('title', 'Disable');
+    await togglePanel(page, 'Toggle collaboration');
+    await expect(page.getByPlaceholder('Send a message...')).toBeVisible();
     await frame.getByRole('button', { name: 'Save project', exact: true }).click();
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 20000,
@@ -110,7 +128,17 @@ test('actual OpenMosh: native effects, agent, originals and restart', async () =
     const external = doc();
     external.local['openmosh-external'] = 'kept';
     writeFileSync(join(folder, 'data/project.json'), JSON.stringify(external));
-    await rack.locator('button.toggle').click();
+    // The chain sits in OpenMosh's sidebar only while the Workshop is wide;
+    // narrower, it folds into a sheet below the fold. The chat is done here.
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
+    // Widening remounts OpenMosh's layout (sidebar instead of sheet): let the
+    // retrying assertions re-resolve the toggle rather than scroll a stale node.
+    await expect(enable).toBeVisible();
+    await expect(enable).toBeInViewport();
+    await expect(enable).toHaveAttribute('title', 'Disable');
+    await enable.click();
+    await expect(enable).toHaveAttribute('title', 'Enable');
     await frame.getByRole('button', { name: 'Save project', exact: true }).click();
     await expect(frame.locator('#garden-project [role=status]')).toContainText('changed elsewhere');
     expect(doc().local['openmosh-external']).toBe('kept');
@@ -212,7 +240,11 @@ for (const mode of ['Editor', 'Slideshow'] as const)
       if (mode === 'Editor') {
         expect(doc().databases['openmosh-sequence-media'].pools.length).toBeGreaterThan(0);
         expect(doc().databases['openmosh-sequence-media'].timelines.length).toBeGreaterThan(0);
-      } else expect(doc().databases['openmosh-sequence-media'].sessions[0].mode).toBe('slideshow');
+      } else
+        // The slideshow's session record follows its media into the saved project.
+        await expect
+          .poll(() => doc().databases['openmosh-sequence-media'].sessions[0]?.mode)
+          .toBe('slideshow');
       expect(doc().databases['openmosh-sequence-media'].proxies).toBeUndefined();
       const track = doc().databases['openmosh-tracks'].tracks[0];
       expect(

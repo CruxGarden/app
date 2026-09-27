@@ -216,6 +216,10 @@ const api: ElectronBridge = {
 
   project: {
     capture: (folder: string) => ipcRenderer.invoke('project:capture', folder),
+    ignoredPaths: (folder: string, paths: string[]) =>
+      ipcRenderer.invoke('project:ignored-paths', folder, paths) as Promise<string[]>,
+    captureManifest: (folder: string, indexedPaths: string[]) =>
+      ipcRenderer.invoke('project:capture-manifest', folder, indexedPaths),
     setMode: (folder: string, relPath: string, mode: number) =>
       ipcRenderer.invoke('project:set-mode', folder, relPath, mode),
     materialize: (
@@ -375,7 +379,8 @@ const api: ElectronBridge = {
         line?: string;
       }) => void,
     ) => subscribe('native:install-progress', callback),
-    onProgress: (callback: (event: { cruxId: string; tool: string; progress: number }) => void) => subscribe('native:progress', callback),
+    onProgress: (callback: (event: { cruxId: string; tool: string; progress: number }) => void) =>
+      subscribe('native:progress', callback),
   },
   projectRunner: {
     choose: () => ipcRenderer.invoke('project:choose'),
@@ -459,7 +464,8 @@ const api: ElectronBridge = {
       timeoutMs?: number;
     }) =>
       ipcRenderer.invoke('containers:compose', opts) as Promise<{ code: number; output: string }>,
-    onOutput: (callback: (event: { cruxId: string; verb: string; line: string }) => void) => subscribe('containers:output', callback),
+    onOutput: (callback: (event: { cruxId: string; verb: string; line: string }) => void) =>
+      subscribe('containers:output', callback),
   },
   media: {
     fetch: (url: string, options?: { maxBytes?: number }) =>
@@ -516,7 +522,8 @@ const api: ElectronBridge = {
       ipcRenderer.on('agent:event', handler);
       return () => ipcRenderer.removeListener('agent:event', handler);
     },
-    onPermission: (cb: (request: AgentPermissionRequest) => void) => subscribe('agent:permission', cb),
+    onPermission: (cb: (request: AgentPermissionRequest) => void) =>
+      subscribe('agent:permission', cb),
   },
   // The address of the API this garden meets (ADR 0049): CRUX_API_URL at
   // launch pins it — the e2e suite's mock API, or a deliberate override;
