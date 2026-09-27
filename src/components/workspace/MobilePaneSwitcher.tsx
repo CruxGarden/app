@@ -37,7 +37,9 @@ export default function MobilePaneSwitcher() {
             style={isActive ? { color: PANE_COLORS[pane] } : undefined}
             className={cn(
               'flex shrink-0 flex-col items-center gap-0.5 px-3 py-1 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              !isActive && 'text-text-muted',
+              isActive
+                ? 'bg-accent-muted'
+                : 'text-text-muted hover:text-text hover:bg-action-button-hover',
             )}
           >
             <PaneIcon type={pane} size={16} />

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import DeadEnd from '@/components/layout/DeadEnd';
+import { buttonClass } from '@/components/ui/button-class';
 import { SectionLabel } from '@/components/ui';
 import { Link, useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
@@ -13,20 +15,21 @@ type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
 /** A dead end still offers the way back: the author's garden, Explore, home. */
 function WayBack({ username }: { username?: string }) {
+  const link = buttonClass('ghost', 'sm');
   return (
-    <nav aria-label="Way back" className="flex items-center gap-3 mt-2 text-xs">
+    <>
       {username && (
-        <Link to={`/${username}`} className="text-accent hover:underline">
+        <Link to={`/${username}`} className={link}>
           {username.startsWith('@') ? username : `@${username}`}
         </Link>
       )}
-      <Link to="/explore" className="text-accent hover:underline">
+      <Link to="/explore" className={link}>
         Explore
       </Link>
-      <Link to="/" className="text-accent hover:underline">
+      <Link to="/" className={buttonClass('secondary', 'sm')}>
         Home
       </Link>
-    </nav>
+    </>
   );
 }
 
@@ -104,25 +107,17 @@ export default function PublicCrux() {
 
   if (state === 'not-found') {
     return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
-          <span className="font-display font-bold text-text">Not found</span>
-          <span className="text-text-muted">This creation doesn't exist or is private</span>
-          <WayBack username={username} />
-        </div>
-      </div>
+      <DeadEnd title="Not found" body="This creation doesn't exist or is private">
+        <WayBack username={username} />
+      </DeadEnd>
     );
   }
 
   if (state === 'error') {
     return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
-          <span className="font-display font-bold text-text">Something went wrong</span>
-          <span className="text-text-muted">We couldn't load this creation</span>
-          <WayBack username={username} />
-        </div>
-      </div>
+      <DeadEnd title="Something went wrong" body="We couldn't load this creation">
+        <WayBack username={username} />
+      </DeadEnd>
     );
   }
 

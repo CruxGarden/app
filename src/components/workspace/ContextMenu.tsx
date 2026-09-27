@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { menuItemClass } from '@/components/ui/button-class';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useDismiss } from '@/hooks/useDismiss';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import GlassSurface from '@/components/ui/GlassSurface';
-import { cn } from '@/lib/cn';
 
 interface MenuItem {
   label: string;
@@ -184,7 +184,7 @@ export default function ContextMenu({
           <GlassSurface role="dropdown">
             <div
               ref={panelRef}
-              className="w-full bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden"
+              className="w-full bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown p-1 overflow-hidden"
             >
               {items.map((item) => (
                 <button
@@ -192,13 +192,7 @@ export default function ContextMenu({
                   role="menuitem"
                   onClick={item.action}
                   disabled={item.disabled}
-                  className={cn(
-                    'w-full text-left px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer',
-                    'disabled:cursor-not-allowed',
-                    item.destructive
-                      ? 'text-error hover:bg-error-muted'
-                      : 'text-text hover:bg-accent-muted/20',
-                  )}
+                  className={menuItemClass(item.destructive ? 'danger' : 'default', 'text-xs')}
                 >
                   {item.label}
                 </button>

@@ -273,17 +273,19 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
               </div>
               {/* Home is the Garden's anchor: it stays. */}
               {paneType !== 'home' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPaneVisible(paneType, false);
-                }}
-                className="pane-toolbar-close p-1 hover:opacity-80 transition-opacity cursor-pointer"
-                style={{ color: `var(${prefix}-header-close)` }}
-                title={`Close ${labels[paneType]}`}
-              >
-                <CloseIcon size={12} />
-              </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPaneVisible(paneType, false);
+                  }}
+                  // The colour rides on a variable, not an inline `color`, so the
+                  // header's hover colour (globals.css) can take over on hover.
+                  className="pane-toolbar-close w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] [color:var(--pt-close)] hover:bg-action-button-hover active-dim motion-press cursor-pointer"
+                  style={{ '--pt-close': `var(${prefix}-header-close)` } as React.CSSProperties}
+                  title={`Close ${labels[paneType]}`}
+                >
+                  <CloseIcon size={12} />
+                </button>
               )}
             </div>
           )}

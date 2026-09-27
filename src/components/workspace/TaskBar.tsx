@@ -7,7 +7,8 @@ import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { useWorkspaceRegistry, closeCruxWorkspaces } from '@/stores/workspaceRegistry';
 import { choiceDialog } from '@/stores/dialogStore';
 import { Capability, can } from '@/lib/platform';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, rowClass } from '@/components/ui';
+import { cn } from '@/lib/cn';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
 import { getSetting, setSetting } from '@/services/settings';
 import {
@@ -188,7 +189,13 @@ export default function TaskBar() {
         <nav className="task-pane-list flex flex-col gap-0.5" aria-label="Crux tasks">
           <Link
             aria-current={!identity ? 'page' : undefined}
-            className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] text-sm hover:bg-action-button-hover ${!identity ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text'}`}
+            className={rowClass(
+              !identity,
+              cn(
+                'justify-between py-1.5 text-sm',
+                !identity ? 'text-accent' : 'text-text-muted hover:text-text',
+              ),
+            )}
             to={url()}
             {...MOOD_LINK}
           >
@@ -200,7 +207,13 @@ export default function TaskBar() {
               to={url(t.id)}
               {...MOOD_LINK}
               aria-current={crux.id === t.id ? 'page' : undefined}
-              className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] text-sm hover:bg-action-button-hover ${crux.id === t.id ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text'}`}
+              className={rowClass(
+                crux.id === t.id,
+                cn(
+                  'justify-between py-1.5 text-sm',
+                  crux.id === t.id ? 'text-accent' : 'text-text-muted hover:text-text',
+                ),
+              )}
             >
               <span className="truncate">{t.title}</span>
               <span className="text-xxs shrink-0">

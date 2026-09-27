@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { buttonClass, fieldClass } from '@/components/ui';
 import { useWorkspaceUIStore } from '@/stores/uiStore';
 import { can, Capability } from '@/lib/platform';
 import {
@@ -144,7 +145,7 @@ export default function BrowserPane() {
           aria-label="Browser back"
           disabled={!state?.back}
           onClick={() => act('back')}
-          className="px-2 py-1 disabled:opacity-40"
+          className={buttonClass('ghost', 'xs', 'w-7 px-0 text-text-muted')}
         >
           ←
         </button>
@@ -153,7 +154,7 @@ export default function BrowserPane() {
           aria-label="Browser forward"
           disabled={!state?.forward}
           onClick={() => act('forward')}
-          className="px-2 py-1 disabled:opacity-40"
+          className={buttonClass('ghost', 'xs', 'w-7 px-0 text-text-muted')}
         >
           →
         </button>
@@ -161,7 +162,7 @@ export default function BrowserPane() {
           type="button"
           aria-label={state?.loading ? 'Stop browser loading' : 'Reload browser'}
           onClick={() => act(state?.loading ? 'stop' : 'reload')}
-          className="px-2 py-1"
+          className={buttonClass('ghost', 'xs', 'w-7 px-0 text-text-muted')}
         >
           {state?.loading ? '×' : '↻'}
         </button>
@@ -171,9 +172,9 @@ export default function BrowserPane() {
           placeholder="Enter a web address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          className="min-w-24 flex-1 bg-surface border border-border rounded px-2 py-1 text-xs"
+          className={fieldClass(undefined, 'min-w-24 flex-1', 'sm')}
         />
-        <button type="submit" className="px-2 py-1 text-xs">
+        <button type="submit" className={buttonClass('secondary', 'xs')}>
           Go
         </button>
         <button
@@ -183,7 +184,7 @@ export default function BrowserPane() {
           onClick={() => {
             if (state?.url) void openWeb(state.url);
           }}
-          className="px-2 py-1 text-xs disabled:opacity-40"
+          className={buttonClass('ghost', 'xs', 'text-text-muted')}
         >
           ↗
         </button>

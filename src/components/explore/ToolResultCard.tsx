@@ -52,11 +52,13 @@ export default function ToolResultCard({
           : `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return (
     <div
-      className="rounded-[var(--radius)] border border-border bg-panel p-4 flex flex-col gap-2"
+      className="rounded-[var(--radius)] border border-border bg-panel p-4 flex flex-col gap-2 transition-[border-color,box-shadow] hover:border-action-button-border-hover hover:shadow-card-hover motion-enter-card"
       data-testid={`explore-tool-${id ?? crux.id}`}
     >
-      <button type="button" onClick={onOpen} className="text-left cursor-pointer">
-        <p className="font-body font-medium text-text truncate">{name}</p>
+      <button type="button" onClick={onOpen} className="group/open text-left cursor-pointer">
+        <p className="font-body font-medium text-text group-hover/open:text-accent transition-colors truncate">
+          {name}
+        </p>
         <p className="text-xs text-text-muted line-clamp-2">
           {manifest?.toolInfo?.upstream
             ? `${manifest.toolInfo.upstream} · ${manifest.toolInfo.relationship}`

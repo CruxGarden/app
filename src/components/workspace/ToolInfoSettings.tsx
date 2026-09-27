@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { linkClass } from '@/components/ui/button-class';
 import ReactMarkdown from 'react-markdown';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -48,14 +49,14 @@ export default function ToolInfoSettings() {
     <section className="p-3 border-b border-border space-y-2 text-xs" aria-label="About this tool">
       <h2 className="font-medium">About this tool</h2>
       <p>{info.relationship}</p>
-      <a href={info.upstream} target="_blank" rel="noopener noreferrer" className="underline">
+      <a href={info.upstream} target="_blank" rel="noopener noreferrer" className={linkClass()}>
         {info.name} — upstream project and contributors
       </a>
       <p className="text-text-muted">
         An independent Garden adaptation. Upstream names and credits do not imply endorsement.
       </p>
       <button
-        className="underline block"
+        className={linkClass('block')}
         aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
       >
@@ -105,7 +106,7 @@ export default function ToolInfoSettings() {
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline"
+                        className={linkClass()}
                       >
                         {children}
                       </a>
@@ -125,7 +126,7 @@ export default function ToolInfoSettings() {
             </p>
           )}
           {file && (
-            <button className="underline" onClick={() => openFile(file.id, pathOf(file))}>
+            <button className={linkClass()} onClick={() => openFile(file.id, pathOf(file))}>
               Open record in Artifacts
             </button>
           )}

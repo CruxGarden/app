@@ -1,0 +1,172 @@
+/* ── Interaction — how the app answers a person ────────────────────────────
+   Daniel, 2026-09-27: "everything needs a hover state, everything needs to
+   react to user input — it should feel alive, and also minimal, and
+   beautiful. Pay attention to how things are revealed in the UI, it should
+   feel effortless and fun to use." Also: "modal and menu opacity, for the
+   most part they should be opaque", and "text should always be on a panel
+   or inner panel".
+
+   This is the floor under every component. The look of each control lives in
+   components/ui/button-class.ts (one vocabulary: buttons, icon buttons,
+   links, segments, chips, menu items, rows); what is here makes every one of
+   them move between its states on the Mood's beat, reveals things instead of
+   snapping them in, and keeps the words on overlays legible. Durations are
+   the Mood's × the person's Motion setting, so Motion off is instant. ── */
+
+@layer base {
+  /* Everything you can press eases between its states. Colour, fill, edge,
+     ring and shadow only: position and transforms stay the component's own
+     (virtualised rows and dragged tiles move by transform and must not glide). */
+  :where(
+    button,
+    a[href],
+    summary,
+    select,
+    input,
+    textarea,
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    [role='menuitemradio'],
+    [role='menuitemcheckbox'],
+    [role='option'],
+    [role='switch'],
+    [role='treeitem']
+  ):not(:where(.monaco-editor *)) {
+    /* Monaco's own lists (suggestions, find) follow the keyboard frame by
+       frame; a fade there would read as lag, so the editor keeps its own. */
+    transition-property:
+      color, background-color, border-color, outline-color, text-decoration-color, fill, stroke,
+      box-shadow, opacity;
+    transition-duration: var(--default-transition-duration);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  /* A disclosure opens and closes rather than jumping: its contents grow into
+     the space and fade up (Chromium's ::details-content, interpolate-size). A
+     little clip margin keeps focus rings at the edges whole. */
+  details {
+    interpolate-size: allow-keywords;
+  }
+  details::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow-y: clip;
+    overflow-clip-margin: 6px;
+    transition:
+      block-size var(--motion-ms-base) var(--motion-ease-standard),
+      opacity var(--motion-ms-base) var(--motion-ease-standard),
+      content-visibility var(--motion-ms-base) allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* A disclosure's summary brightens under the pointer like any other control,
+   whatever quiet colour its own utilities give it at rest (unlayered, so it
+   wins over a text-* utility; only while hovered). */
+summary:hover {
+  color: var(--text);
+}
+summary::marker {
+  color: var(--text-muted);
+}
+
+/* ── Tooltips arrive after a beat and leave at once ─────────────────────────
+   A tooltip that flashes up the instant the pointer crosses a toolbar is
+   noise; one that waits a moment answers the pause that asked for it. The
+   group is the control's wrapper (IconButton's `group/btn`). */
+.tooltip-reveal {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  transition-property: opacity, transform, visibility;
+  transition-duration: var(--motion-ms-fast), var(--motion-ms-fast), 0s;
+  transition-timing-function: var(--motion-ease-standard);
+  transition-delay: 0s, 0s, var(--motion-ms-fast);
+}
+.group\/btn:hover > .tooltip-reveal,
+.group\/btn:has(:focus-visible) > .tooltip-reveal {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 350ms;
+}
+
+/* ── A choice slides to where you put it ────────────────────────────────────
+   The lit segment of a SegmentedControl is one light that travels. */
+.segment-thumb {
+  transition:
+    transform var(--motion-ms-base) var(--motion-ease-enter),
+    width var(--motion-ms-base) var(--motion-ease-enter);
+}
+
+/* ── A switch gives a little under the finger ───────────────────────────────
+   The thumb stretches while pressed and slides across on the Mood's beat. */
+.toggle-switch {
+  --toggle-stretch: 0px;
+}
+.toggle-switch:active:not(:disabled) {
+  --toggle-stretch: 4px;
+}
+.toggle-thumb {
+  transition:
+    transform var(--motion-ms-base) var(--motion-ease-enter),
+    width var(--motion-ms-fast) var(--motion-ease-standard),
+    background-color var(--motion-ms-fast) var(--motion-ease-standard);
+}
+
+/* ── Controls revealed by hover fade in rather than pop ─────────────────────
+   Row and card actions (a card's ⋮, a row's ×) sit at opacity 0 until their
+   group is hovered or focused; the base transition above carries the fade. */
+.reveal-on-hover {
+  opacity: 0;
+}
+:where(.group:hover, .group:focus-within) .reveal-on-hover,
+.reveal-on-hover:focus-visible,
+.reveal-on-hover[aria-expanded='true'] {
+  opacity: 1;
+}
+
+/* ── Overlays are read, not looked through ─────────────────────────────────
+   Menus, pickers, tooltips and dialogs lay whatever tint the Mood gives them
+   over the Mood's own ground, so the page behind never bleeds into their
+   words, whatever colour it is. Solid Moods land here; glass.css and
+   plasma.css say the same for their surfaces. */
+.bg-dropdown {
+  --_overlay-tint: var(--dropdown);
+}
+.bg-model-selector-dropdown {
+  --_overlay-tint: var(--model-selector-dropdown);
+}
+.bg-tooltip {
+  --_overlay-tint: var(--tooltip);
+}
+:is([data-modal-open] > [data-motion-role='dialog'] > .bg-panel, .overlay-plate) {
+  --_overlay-tint: var(--panel);
+}
+html:not([data-surface-style='glass'], [data-surface-style='plasma'])
+  :is(
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-tooltip,
+    [data-modal-open] > [data-motion-role='dialog'] > .bg-panel,
+    .overlay-plate
+  ) {
+  background-image:
+    linear-gradient(var(--_overlay-tint), var(--_overlay-tint)),
+    linear-gradient(var(--bg), var(--bg));
+}
+
+/* ── Rows fade into lists as they arrive ────────────────────────────────────
+   Results, cards and messages carry .motion-enter-card / -bubble; a list can
+   give each item --enter-index so they settle one after another instead of
+   landing as one block. Capped, so a long list is never a slow one. */
+:is(.motion-enter-card, .motion-enter-bubble)[style*='--enter-index'] {
+  animation-delay: calc(min(var(--enter-index), 12) * 28ms);
+}

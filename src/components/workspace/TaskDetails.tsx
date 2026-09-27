@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Input, SectionLabel } from '@/components/ui';
+import { Button, Input, SectionLabel, fieldClass } from '@/components/ui';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useTendingRows } from '@/stores/tendingStore';
 import { tendingLabel } from '@/services/tending-state';
@@ -169,7 +169,7 @@ export default function TaskDetails() {
           onBlur={() => void saveNotes()}
           rows={4}
           placeholder="What this is for, what is decided, what is left…"
-          className="w-full rounded-[var(--radius-sm)] border border-input-border hover:border-input-border-hover bg-input px-2.5 py-2 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
+          className={fieldClass(undefined, 'h-auto py-2 resize-y')}
           disabled={saving === 'notes'}
         />
       </label>
@@ -184,11 +184,14 @@ export default function TaskDetails() {
         </p>
       )}
       {!isTask && (
-        <p className="text-2xs text-text-muted">
-          <Button size="sm" variant="ghost" onClick={() => void saveNotes()}>
-            Save notes
-          </Button>
-        </p>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="self-start -ml-3"
+          onClick={() => void saveNotes()}
+        >
+          Save notes
+        </Button>
       )}
     </section>
   );

@@ -177,13 +177,16 @@ export default function TopBar() {
                 aria-pressed={paneVisibility.console}
                 className={cn(
                   'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
-                  'ring-1 hover:ring-accent/40 transition-shadow cursor-pointer',
+                  'ring-1 hover:ring-2 hover:ring-accent/40 active-dim motion-press cursor-pointer',
                   paneVisibility.console ? 'ring-accent/60' : 'ring-text-muted/20',
                 )}
               >
                 <ConsoleAvatar className="w-6 h-6" />
               </button>
-              <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+              <div
+                aria-hidden
+                className="tooltip-reveal absolute top-full right-0 mt-2 z-50 pointer-events-none"
+              >
                 <div className="flex items-center gap-2.5 px-3 py-2 rounded-tooltip bg-tooltip border border-tooltip-border shadow-tooltip whitespace-nowrap">
                   <span className="text-xs font-medium text-tooltip-text">Console</span>
                   <kbd className="text-xxs font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">

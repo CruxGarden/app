@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import DeadEnd from '@/components/layout/DeadEnd';
+import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
-import { Button, Panel } from '@/components/ui';
-import CruxBloom from '@/components/brand/CruxBloom';
-import { cn } from '@/lib/cn';
+import { Button, Panel, SegmentedControl } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
@@ -93,7 +92,12 @@ export default function PublicGarden() {
   }
 
   if (state === 'not-found') {
-    return <Missing title="No garden here" body={`There is no @${username} at this address.`} />;
+    return (
+      <Missing
+        title="No garden here"
+        body={`There is no @${username?.replace(/^@/, '')} at this address.`}
+      />
+    );
   }
 
   if (state === 'error') {
@@ -127,27 +131,16 @@ export default function PublicGarden() {
             <div className="flex-1">
               <GardenSearch value={search} onChange={setSearch} />
             </div>
-            <div className="flex items-center gap-1 text-xs font-mono text-text-muted shrink-0">
-              <span>Sort by</span>
-              <button
-                onClick={() => setSortBy('created')}
-                className={cn(
-                  'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                  sortBy === 'created' ? 'text-text bg-surface' : 'hover:text-text',
-                )}
-              >
-                Created
-              </button>
-              <button
-                onClick={() => setSortBy('updated')}
-                className={cn(
-                  'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                  sortBy === 'updated' ? 'text-text bg-surface' : 'hover:text-text',
-                )}
-              >
-                Updated
-              </button>
-            </div>
+            <SegmentedControl
+              label="Sort by"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'created', label: 'Created' },
+                { value: 'updated', label: 'Updated' },
+              ]}
+              className="h-9 shrink-0"
+            />
           </div>
         </Panel>
 
@@ -158,7 +151,7 @@ export default function PublicGarden() {
               {search ? 'No cruxes match your search' : 'No published cruxes yet'}
             </p>
             {search && (
-              <Button variant="ghost" onClick={() => setSearch('')}>
+              <Button variant="ghost" size="sm" onClick={() => setSearch('')}>
                 Clear search
               </Button>
             )}
@@ -173,16 +166,5 @@ export default function PublicGarden() {
 
 /** The page when there is nothing to show: a missing author, or no answer. */
 function Missing({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-      <div className="relative z-10 text-center max-w-md">
-        <CruxBloom size={64} className="mx-auto mb-6 opacity-30" />
-        <h1 className="font-display text-3xl text-text mb-2">{title}</h1>
-        <p className="text-text-muted mb-8">{body}</p>
-        <Link to="/">
-          <Button variant="secondary">Return to Garden</Button>
-        </Link>
-      </div>
-    </div>
-  );
+  return <DeadEnd title={title} body={body} />;
 }

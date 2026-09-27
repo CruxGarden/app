@@ -1,5 +1,17 @@
 import { publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
-import { Avatar, Panel, Button, SectionLabel, Spinner } from '@/components/ui';
+import {
+  Avatar,
+  Panel,
+  Button,
+  SectionLabel,
+  Spinner,
+  buttonClass,
+  chipClass,
+  iconButtonClass,
+  fieldClass,
+  segmentClass,
+  segmentGroupClass,
+} from '@/components/ui';
 import { SearchIcon, CloseIcon } from '@/components/ui/icons';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -103,13 +115,7 @@ function TagChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={cn(
-        'rounded-chip border cursor-pointer transition-colors font-mono',
-        size === 'xs' ? 'px-1.5 py-0.5 text-3xs' : 'px-2.5 py-1 text-xs',
-        active
-          ? 'bg-accent text-bg border-accent'
-          : 'bg-surface/50 text-text-muted border-border hover:text-text hover:border-text-muted',
-      )}
+      className={chipClass(active, size === 'xs' ? 'h-5 px-1.5 text-3xs' : 'h-7 px-2.5 text-xs')}
     >
       #{label}
       {count !== undefined && <span className="ml-1 opacity-50">{count}</span>}
@@ -320,7 +326,7 @@ export default function Explore({
         onKeyDown={(e) => {
           if (e.key === 'Enter') handleNavigate(href);
         }}
-        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-start gap-3 border-b border-border last:border-b-0 motion-enter-card"
+        className="w-full px-3 py-2.5 text-left rounded-[var(--radius-sm)] hover:bg-action-button-hover focus-visible:bg-action-button-hover transition-colors cursor-pointer group flex items-start gap-3 motion-enter-card"
       >
         {/* The cover needs room; a narrow pane shows the person's face alone. */}
         <div className="hidden @md:block">
@@ -367,7 +373,7 @@ export default function Explore({
                 e.stopPropagation();
                 filterByAuthor(crux.author_username);
               }}
-              className="hover:text-accent cursor-pointer"
+              className="hover:text-accent transition-colors cursor-pointer"
             >
               @{crux.author_username}
             </button>
@@ -384,7 +390,7 @@ export default function Explore({
     return (
       <button
         onClick={() => handleNavigate(`/${author.username}`)}
-        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0 motion-enter-card"
+        className="w-full px-3 py-2.5 text-left rounded-[var(--radius-sm)] hover:bg-action-button-hover transition-colors cursor-pointer group flex items-center gap-3 motion-enter-card"
       >
         <Avatar
           url={avatarUrl}
@@ -465,14 +471,14 @@ export default function Explore({
     </div>
   );
   const cruxList = (list: ExploreCrux[]) => (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-0.5 px-1.5">
       {list.map((crux) => (
         <CruxCard key={crux.id} crux={crux} />
       ))}
     </div>
   );
   const peopleList = (list: ExploreAuthor[]) => (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-0.5 px-1.5">
       {list.map((a) => (
         <AuthorCard key={a.id} author={a} />
       ))}
@@ -487,7 +493,11 @@ export default function Explore({
           <button
             type="button"
             onClick={() => changeView(to)}
-            className="text-xxs font-mono text-text-muted hover:text-accent cursor-pointer"
+            className={buttonClass(
+              'ghost',
+              'xs',
+              '-mr-2.5 min-h-6 py-0.5 px-2.5 text-xxs text-text-muted',
+            )}
           >
             All {title.toLowerCase()} →
           </button>
@@ -534,14 +544,14 @@ export default function Explore({
             }}
             placeholder="Search cruxes, people, tools, moods and authors… (@name, #tag)"
             aria-label="Search Explore"
-            className="w-full pl-10 pr-9 py-2.5 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline font-body"
+            className={fieldClass(undefined, 'pl-10 pr-9')}
             autoFocus
           />
           {q && (
             <button
               onClick={handleClear}
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text cursor-pointer"
+              className={iconButtonClass('xs', false, 'absolute right-2 top-1/2 -translate-y-1/2')}
             >
               <CloseIcon size={12} />
             </button>
@@ -550,7 +560,7 @@ export default function Explore({
 
         {/* What to look through */}
         <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
-          <div role="tablist" aria-label="Look through" className="flex items-center gap-1 text-xs">
+          <div role="tablist" aria-label="Look through" className={segmentGroupClass()}>
             {VIEWS.map((v) => (
               <button
                 key={v.id}
@@ -558,16 +568,13 @@ export default function Explore({
                 role="tab"
                 aria-selected={view === v.id}
                 onClick={() => changeView(v.id)}
-                className={cn(
-                  'px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer transition-colors',
-                  view === v.id ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
-                )}
+                className={segmentClass(view === v.id)}
               >
                 {v.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1 text-xs font-mono text-text-muted">
+          <div className={segmentGroupClass()} role="group" aria-label="Sort">
             <span className="sr-only">Sort</span>
             {SORTS.filter((s) => s.id !== 'relevant' || q).map((s) => (
               <button
@@ -578,10 +585,7 @@ export default function Explore({
                   setPage(1);
                 }}
                 aria-pressed={sort === s.id}
-                className={cn(
-                  'px-2 py-0.5 rounded-[var(--radius-sm)] cursor-pointer',
-                  sort === s.id ? 'text-text bg-surface' : 'hover:text-text',
-                )}
+                className={segmentClass(sort === s.id, 'xs', 'font-mono')}
               >
                 {s.label}
               </button>
@@ -599,7 +603,7 @@ export default function Explore({
                   setAuthor('');
                   setPage(1);
                 }}
-                className="px-2 py-0.5 rounded-chip text-xxs font-mono bg-accent text-bg cursor-pointer"
+                className={chipClass(true)}
                 aria-label={`Remove author filter ${author}`}
               >
                 @{author} ×
@@ -610,7 +614,7 @@ export default function Explore({
                 key={t}
                 type="button"
                 onClick={() => toggleTag(t)}
-                className="px-2 py-0.5 rounded-chip text-xxs font-mono bg-accent text-bg cursor-pointer"
+                className={chipClass(true)}
                 aria-label={`Remove tag filter ${t}`}
               >
                 #{t} ×
@@ -623,7 +627,7 @@ export default function Explore({
                   setKind('');
                   setPage(1);
                 }}
-                className="px-2 py-0.5 rounded-chip text-xxs font-mono bg-accent text-bg cursor-pointer"
+                className={chipClass(true)}
                 aria-label={`Remove kind filter ${KIND_LABEL[kind] ?? kind}`}
               >
                 {KINDS.find((k) => k.id === kind)?.label ?? kind} ×
@@ -632,7 +636,7 @@ export default function Explore({
             <button
               type="button"
               onClick={clearFilters}
-              className="text-xxs text-text-muted hover:text-text cursor-pointer ml-1"
+              className={buttonClass('ghost', 'xs', 'min-h-6 py-0.5 px-2 text-xxs text-text-muted')}
             >
               Clear all
             </button>
@@ -648,7 +652,11 @@ export default function Explore({
                 <button
                   type="button"
                   onClick={() => setAllTags((v) => !v)}
-                  className="text-xxs font-mono text-text-muted hover:text-text cursor-pointer"
+                  className={buttonClass(
+                    'ghost',
+                    'xs',
+                    '-mr-2 min-h-6 py-0.5 px-2 text-xxs text-text-muted',
+                  )}
                 >
                   {allTags ? 'Fewer tags' : `All ${tags.length} tags`}
                 </button>
@@ -680,12 +688,7 @@ export default function Explore({
                   setPage(1);
                 }}
                 aria-pressed={kind === k.id}
-                className={cn(
-                  'px-2.5 py-1 rounded-chip text-xxs border cursor-pointer transition-colors',
-                  kind === k.id
-                    ? 'bg-accent text-bg border-accent font-medium'
-                    : 'bg-surface/50 text-text-muted border-border hover:text-text',
-                )}
+                className={chipClass(kind === k.id, 'font-body')}
               >
                 {k.label}
               </button>
@@ -741,7 +744,11 @@ export default function Explore({
           )}
         </Panel>
       ) : (
-        <div className={cn(loading && 'opacity-60 transition-opacity')} aria-busy={loading}>
+        <Panel
+          padding="none"
+          className={cn('py-1.5 transition-opacity', loading && 'opacity-60')}
+          aria-busy={loading}
+        >
           {view === 'all' && (
             <>
               {group('People', 'people', people.length, peopleList(people))}
@@ -757,11 +764,11 @@ export default function Explore({
 
           {/* Pagination */}
           {view !== 'all' && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6 mb-4">
+            <div className="flex items-center justify-center gap-2 mt-4 mb-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="px-3 py-1 text-xs font-mono text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-default cursor-pointer"
+                className={buttonClass('ghost', 'xs', 'text-text-muted')}
               >
                 Prev
               </button>
@@ -771,13 +778,13 @@ export default function Explore({
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="px-3 py-1 text-xs font-mono text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-default cursor-pointer"
+                className={buttonClass('ghost', 'xs', 'text-text-muted')}
               >
                 Next
               </button>
             </div>
           )}
-        </div>
+        </Panel>
       )}
     </div>
   );

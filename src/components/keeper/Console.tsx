@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { onPersonaChange } from '@/services/persona';
 import { Avatar } from '@/components/ui';
 import { getModelShortName } from '@/ai/providers';
@@ -171,7 +172,7 @@ export default function Console() {
               onClick={newConversation}
               disabled={!loaded}
               aria-label="New Conversation"
-              className="text-xs text-accent px-1.5 py-1 cursor-pointer"
+              className={buttonClass('ghost', 'xs', 'text-accent')}
             >
               New
             </button>
@@ -180,7 +181,7 @@ export default function Console() {
                 onClick={() => deleteConversation(activeId)}
                 disabled={activeId === turnId}
                 aria-label="Delete conversation"
-                className="text-xs text-text-muted px-1.5 py-1 cursor-pointer disabled:opacity-40"
+                className={buttonClass('ghost', 'xs', 'text-text-muted hover:text-error')}
               >
                 Delete
               </button>
@@ -239,13 +240,18 @@ export default function Console() {
               {loading ? (
                 'Loading conversations…'
               ) : (
-                <button onClick={() => void load()}>Try loading again</button>
+                <button className={linkClass()} onClick={() => void load()}>
+                  Try loading again
+                </button>
               )}
             </div>
           )}
           {saveError && (
             <div role="alert" className="px-4 py-2 text-xs text-error">
-              {saveError} <button onClick={() => void flush().catch(() => {})}>Retry save</button>
+              {saveError}{' '}
+              <button className={linkClass()} onClick={() => void flush().catch(() => {})}>
+                Retry save
+              </button>
             </div>
           )}
           {/* Error */}

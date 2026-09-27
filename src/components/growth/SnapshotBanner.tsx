@@ -1,10 +1,10 @@
 import { useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
 import { RESTORE_RECOVERED_MESSAGE, type RestoreReport } from '@/services/growth';
 import { motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
-import { cn } from '@/lib/cn';
 import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 
 export default function SnapshotBanner() {
@@ -66,10 +66,7 @@ export default function SnapshotBanner() {
     });
   };
 
-  const btnClass = cn(
-    'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)]',
-    'text-text-muted hover:text-text border border-border hover:border-accent/50 transition-colors cursor-pointer',
-  );
+  const btnClass = buttonClass('secondary', 'xs', 'min-h-6 py-0.5 px-2 text-xxs');
 
   return (
     <motion.div
@@ -137,9 +134,12 @@ export default function SnapshotBanner() {
         <button
           disabled={restoring}
           onClick={exitSnapshotView}
-          className={cn(
-            'px-2 py-0.5 text-xxs font-mono rounded-button',
-            'bg-snapshot-banner-button text-bg hover:bg-snapshot-banner-button-hover transition-colors motion-press cursor-pointer',
+          // The banner's own action colour stays the Mood's (snapshotBannerButton*);
+          // its shape and behaviour are the shared primary button's.
+          className={buttonClass(
+            'primary',
+            'xs',
+            'min-h-6 py-0.5 px-2 text-xxs bg-snapshot-banner-button hover:bg-snapshot-banner-button-hover text-bg border-transparent hover:border-transparent bg-none',
           )}
         >
           Back to current

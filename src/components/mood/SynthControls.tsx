@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buttonClass, fieldClass } from '@/components/ui';
 import { useShallow } from 'zustand/react/shallow';
 import { useAudioStore } from '@/stores/audioStore';
 import {
@@ -64,7 +65,7 @@ export default function SynthControls() {
         <button
           type="button"
           disabled={!enabled}
-          className="rounded bg-accent text-bg px-3 py-2 text-xs cursor-pointer disabled:opacity-40"
+          className={buttonClass('primary', 'sm')}
           onClick={() => {
             setError('');
             void toggle().catch((e) => setError(String(e instanceof Error ? e.message : e)));
@@ -188,12 +189,12 @@ export default function SynthControls() {
             maxLength={80}
             value={presetName}
             onChange={(e) => setPresetName(e.target.value)}
-            className="min-w-0 flex-1 rounded border border-border bg-panel p-2"
+            className={fieldClass(undefined, 'min-w-0 flex-1')}
           />
           <button
             type="button"
             disabled={!presetName.trim()}
-            className="cursor-pointer disabled:opacity-40"
+            className={buttonClass('secondary', 'sm')}
             onClick={() => {
               try {
                 saveSynthPreset(presetName);
@@ -212,7 +213,7 @@ export default function SynthControls() {
             <li key={p.name} className="flex justify-between gap-2">
               <button
                 type="button"
-                className="text-left cursor-pointer hover:text-accent"
+                className={buttonClass('ghost', 'xs', '-ml-2.5')}
                 aria-label={`Load sound ${p.name}`}
                 onClick={() => void setSynth(p)}
               >
@@ -220,7 +221,7 @@ export default function SynthControls() {
               </button>
               <button
                 type="button"
-                className="text-text-muted cursor-pointer"
+                className={buttonClass('ghost', 'xs', 'text-text-muted hover:text-error')}
                 aria-label={`Delete sound ${p.name}`}
                 onClick={() => removeSynthPreset(p.name)}
               >
@@ -230,8 +231,8 @@ export default function SynthControls() {
           ))}
         </ul>
         <p className="mt-3 text-text-muted">
-          Presets stay with this Mood. Save the Mood, then export or share it to
-          bring your sounds with it. Reusing a name replaces that preset.
+          Presets stay with this Mood. Save the Mood, then export or share it to bring your sounds
+          with it. Reusing a name replaces that preset.
         </p>
       </details>
       <div className="grid grid-cols-1 @[520px]:grid-cols-2 gap-3">
@@ -266,7 +267,11 @@ export default function SynthControls() {
                 type="button"
                 aria-label={`Mute track ${i + 1}`}
                 aria-pressed={t.muted}
-                className="text-xs text-text-muted hover:text-text cursor-pointer"
+                className={buttonClass(
+                  'ghost',
+                  'xs',
+                  'h-6 px-2 text-text-muted aria-pressed:text-accent',
+                )}
                 onClick={() => change(i, { muted: !t.muted })}
               >
                 {t.muted ? 'Muted' : 'Mute'}

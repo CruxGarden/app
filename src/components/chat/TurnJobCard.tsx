@@ -4,6 +4,7 @@ import { copyIdentity, TASKS_CHANGED } from '@/services/working-copies';
 import { motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import { cn } from '@/lib/cn';
+import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { useCruxStore } from '@/stores/cruxStore';
 import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -280,11 +281,7 @@ function MergePanel({
               }
             }}
             disabled={!decided || busy || merging}
-            className={cn(
-              'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)] border transition-colors cursor-pointer',
-              'text-accent border-accent/40 hover:border-accent',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
+            className={buttonClass('primary', 'xs')}
             title={decided ? undefined : 'Choose a version for every file first'}
           >
             {merging ? 'Merging…' : 'Merge'}
@@ -297,10 +294,7 @@ function MergePanel({
         </p>
       )}
       {pending && merge.resultCopyId && merge.error && cruxId && (
-        <Link
-          className="text-xs text-accent underline"
-          to={`/c/${cruxId}?task=${merge.resultCopyId}`}
-        >
+        <Link className={linkClass('text-xs')} to={`/c/${cruxId}?task=${merge.resultCopyId}`}>
           Open result Task
         </Link>
       )}
@@ -398,11 +392,7 @@ export default function TurnJobCard() {
   const currentStep = job?.plan.steps[job.currentStep];
   const doneCount = job?.plan.steps.filter((s) => s.status === 'done').length ?? 0;
 
-  const btn = cn(
-    'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)] border transition-colors cursor-pointer',
-    'text-text-muted hover:text-text border-border hover:border-accent/50',
-    'disabled:opacity-50 disabled:cursor-not-allowed',
-  );
+  const btn = buttonClass('secondary', 'xs');
 
   return (
     <motion.div
@@ -494,10 +484,7 @@ export default function TurnJobCard() {
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {active ? (
-              <button
-                onClick={() => stopTurn('stopped')}
-                className={cn(btn, 'text-error/80 hover:text-error border-error/30')}
-              >
+              <button onClick={() => stopTurn('stopped')} className={buttonClass('danger', 'xs')}>
                 Stop
               </button>
             ) : (
@@ -506,7 +493,7 @@ export default function TurnJobCard() {
                   <button
                     onClick={handleRestore}
                     disabled={restoring}
-                    className={cn(btn, 'text-accent border-accent/40')}
+                    className={buttonClass('primary', 'xs')}
                     title={lastSnapshotLabel ?? undefined}
                   >
                     Restore last snapshot
@@ -553,7 +540,11 @@ export default function TurnJobCard() {
                 </span>
                 <button
                   onClick={() => void removeQueued(i)}
-                  className="text-2xs font-mono text-text-muted hover:text-error cursor-pointer"
+                  className={buttonClass(
+                    'ghost',
+                    'xs',
+                    'h-6 px-2 text-text-muted hover:text-error',
+                  )}
                   aria-label={`Remove queued message ${i + 1}`}
                 >
                   Remove

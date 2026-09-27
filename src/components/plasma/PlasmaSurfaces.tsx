@@ -52,6 +52,10 @@ function isSurface(el: HTMLElement) {
   // its shape under the scrim and squares off the corners of whatever it
   // overlaps.
   if (el.closest('[data-modal-open]')) return false;
+  // There are no plasma panes inside plasma panes: a card or a panel laid
+  // inside a pane is an inner plate (plasma.css paints it), not a second drop
+  // of material under the first — and it would spend a slot a pane wanted.
+  if (el.parentElement?.closest(FUSING)) return false;
   const r = el.getBoundingClientRect();
   return r.width >= MIN_SIDE && r.height >= MIN_SIDE / 2;
 }

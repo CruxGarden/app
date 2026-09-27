@@ -1,5 +1,16 @@
 export { default as ApiKeySetup } from './ApiKeySetup';
 export { default as Button } from './Button';
+export {
+  buttonClass,
+  iconButtonClass,
+  linkClass,
+  segmentGroupClass,
+  segmentClass,
+  chipClass,
+  menuItemClass,
+  rowClass,
+} from './button-class';
+export type { ButtonVariant, ButtonSize } from './button-class';
 export { default as PlasmaButton } from './PlasmaButton';
 export { default as Input, Textarea, Select } from './Input';
 export { fieldClass } from './field-class';

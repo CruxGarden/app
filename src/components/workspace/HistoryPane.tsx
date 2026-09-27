@@ -1,4 +1,5 @@
 import { useCruxStore } from '@/stores/cruxStore';
+import { buttonClass } from '@/components/ui/button-class';
 import { useGrowthCreation } from '@/hooks/useGrowthCreation';
 import { GrowthTimeline } from '@/components/growth';
 import { lazy, Suspense, useState } from 'react';
@@ -21,7 +22,7 @@ export default function HistoryPane() {
         <button
           onClick={() => setExploring(true)}
           disabled={!ownerId}
-          className="w-full rounded-[var(--radius-sm)] border border-accent/30 bg-accent-muted px-3 py-2 text-xs text-accent hover:border-accent cursor-pointer"
+          className={buttonClass('secondary', 'sm', 'w-full py-1.5 text-xs')}
         >
           Whole Crux · branches & merges
         </button>

@@ -1,4 +1,5 @@
 import { useCruxStoreApi } from '@/stores/cruxStore';
+import { buttonClass } from '@/components/ui/button-class';
 import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
@@ -15,7 +16,14 @@ import { alertDialog } from '@/stores/dialogStore';
 import { parseShelf, type ShelfEntry } from '@/game/shelf';
 import { HIDDEN_KINDS, type HiddenKind } from '@/game/hidden';
 import { shelfPathOf, useShelf } from './useShelf';
-import { ActionButton, NewItemButton, AddImageButton, AddPhotosButton, AddMediaButton, CustomAction } from './builder-actions';
+import {
+  ActionButton,
+  NewItemButton,
+  AddImageButton,
+  AddPhotosButton,
+  AddMediaButton,
+  CustomAction,
+} from './builder-actions';
 
 /** Action types the Builder renders from dedicated components, not CustomAction. */
 const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
@@ -129,10 +137,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
             ) : (
               <span>Not published yet</span>
             )}
-            <button
-              onClick={openPublish}
-              className="ml-auto shrink-0 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] bg-accent text-bg hover:opacity-90 transition-opacity cursor-pointer"
-            >
+            <button onClick={openPublish} className={buttonClass('primary', 'sm', 'ml-auto')}>
               🚀 Publish
             </button>
           </div>
@@ -230,7 +235,7 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
               key={item.artifact.id}
               className={cn(
                 'group flex items-center gap-3 px-4 py-3 rounded-[var(--radius-sm)]',
-                'bg-surface border border-border hover:border-accent/60 transition-colors',
+                'bg-surface border border-border hover:border-accent/60 hover:bg-action-button-hover transition-colors',
               )}
             >
               <button
@@ -367,7 +372,6 @@ function ShelfSection({ path }: { path: string }) {
   );
 }
 
-
 const EMPTY_ENTRY = {
   name: '',
   aliases: '',
@@ -454,12 +458,7 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
             placeholder="Aliases, comma-separated (variants, spellings, titles)"
           />
           <div className="flex gap-2">
-            <Select
-              value={form.kind}
-              onChange={set('kind')}
-              fieldSize="sm"
-              aria-label="Kind"
-            >
+            <Select value={form.kind} onChange={set('kind')} fieldSize="sm" aria-label="Kind">
               {HIDDEN_KINDS.map((k) => (
                 <option key={k} value={k}>
                   {k}

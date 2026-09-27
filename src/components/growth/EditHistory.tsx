@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { linkClass } from '@/components/ui/button-class';
 import {
   listEditHistory,
   inspectEditCheckpoint,
@@ -72,7 +73,7 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
         <p role="alert" className="text-sm text-error">
           {error}{' '}
           <button
-            className="underline cursor-pointer"
+            className={linkClass()}
             onClick={() => {
               setError('');
               void refresh();

@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
 import { useCruxStore } from '@/stores/cruxStore';
 import {
   deferredImportSnapshot,
@@ -45,17 +46,17 @@ export default function DeferredImportNotice() {
           ? 'Importing your file…'
           : 'Your file is ready to import when Workshop opens.'}
       {interrupted && (
-        <span className="ml-3 inline-flex gap-3">
+        <span className="ml-3 inline-flex gap-1.5 align-middle">
           <button
             disabled={busy}
-            className="text-accent cursor-pointer"
+            className={buttonClass('secondary', 'xs')}
             onClick={() => void act(() => retryDeferredImport(id))}
           >
             Retry import
           </button>
           <button
             disabled={busy}
-            className="cursor-pointer"
+            className={buttonClass('ghost', 'xs')}
             onClick={() => void act(() => dismissDeferredImport(id))}
           >
             Dismiss

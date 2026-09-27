@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { linkClass } from '@/components/ui/button-class';
 import type { NavigationViewProps } from './navigation-view';
 import type { GardenIdentity } from '@/stores/gardenContext';
 import { ChevronRightIcon, ChevronDownIcon, FolderIcon, SproutIcon } from '@/components/ui/icons';
@@ -67,8 +68,10 @@ function Branch({
     <li>
       <div
         className={cn(
-          'flex items-center gap-1 rounded-lg',
-          selected ? 'bg-accent-muted text-accent' : 'text-text-muted hover:bg-surface',
+          'flex items-center gap-1 rounded-[var(--radius-sm)] transition-colors',
+          selected
+            ? 'bg-accent-muted text-accent'
+            : 'text-text-muted hover:text-text hover:bg-action-button-hover',
         )}
       >
         {isGarden ? (
@@ -76,7 +79,7 @@ function Branch({
             aria-label={`${expanded ? 'Collapse' : 'Expand'} ${node.title || 'Untitled Garden'}`}
             aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
-            className="p-1.5 rounded cursor-pointer"
+            className="p-1.5 rounded-[var(--radius-sm)] hover:bg-action-button-hover active-dim cursor-pointer"
           >
             {expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
           </button>
@@ -118,7 +121,7 @@ function Branch({
           {error && (
             <li role="alert" className="p-2 text-xs text-error">
               {error}{' '}
-              <button className="underline cursor-pointer" onClick={() => setRetry((n) => n + 1)}>
+              <button className={linkClass()} onClick={() => setRetry((n) => n + 1)}>
                 Retry
               </button>
             </li>
@@ -155,7 +158,7 @@ export default function NavigationTree(props: NavigationViewProps) {
       {error && (
         <p role="alert" className="p-2 text-xs text-error">
           {error}{' '}
-          <button className="underline cursor-pointer" onClick={() => setRetry((n) => n + 1)}>
+          <button className={linkClass()} onClick={() => setRetry((n) => n + 1)}>
             Retry
           </button>
         </p>

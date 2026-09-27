@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { downloadBlob } from '@/lib/download';
 import { useNavigate } from 'react-router-dom';
-import { Button, Modal, Input, Select } from '@/components/ui';
+import { Button, Modal, Input, Select, buttonClass } from '@/components/ui';
 import { getServices } from '@/services';
 import type { Crux } from '@/api/types';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -162,7 +162,7 @@ export default function Cruxspaces({
           : `Exported ${result.filename} with ${result.manifest.members.length} member Cruxes.`,
       );
     });
-  const quiet = 'text-xs text-accent hover:underline cursor-pointer disabled:opacity-50';
+  const quiet = buttonClass('ghost', 'xs', 'text-text-muted');
   // Garden Home shows this only once the Garden has Cruxes to share between.
   if (gardenId && !space?.cruxIds.length) return null;
   return (
@@ -200,7 +200,8 @@ export default function Cruxspaces({
           {targetId && spaces.length > 1 && (
             <Select
               aria-label="Garden"
-              fieldSize="sm" className="mb-3"
+              fieldSize="sm"
+              className="mb-3"
               value={selected}
               onChange={(e) => {
                 setSelected(e.target.value);
@@ -224,7 +225,9 @@ export default function Cruxspaces({
                 Walking through {moment.spaceName} · step {moment.step} of {moment.steps}:{' '}
                 {moment.title}. Its Cruxes open read-only at that moment.
               </span>
-              <Button onClick={() => setCruxspaceMoment(null)}>Back to now</Button>
+              <Button size="sm" onClick={() => setCruxspaceMoment(null)}>
+                Back to now
+              </Button>
             </p>
           )}
           {assets.length > 0 ? (
@@ -234,7 +237,7 @@ export default function Cruxspaces({
                 {assets.map((asset) => (
                   <article
                     key={asset.id}
-                    className="border border-border rounded-[var(--radius-sm)] p-3"
+                    className="bg-surface border border-border rounded-[var(--radius-sm)] p-3 transition-[border-color] hover:border-action-button-border-hover"
                   >
                     <Thumbnail asset={asset} />
                     <h4 className="text-sm font-medium mt-2">{asset.label}</h4>
@@ -242,6 +245,8 @@ export default function Cruxspaces({
                       From {asset.sourceTitle} · {new Date(asset.created).toLocaleString()}
                     </p>
                     <Button
+                      size="sm"
+                      variant="secondary"
                       onClick={() => {
                         setUsing(asset);
                         setError('');
@@ -264,7 +269,7 @@ export default function Cruxspaces({
               </p>
             )
           )}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <div className="flex flex-wrap items-center gap-1 -ml-2.5">
             <button type="button" className={quiet} onClick={() => setStory(true)}>
               History
             </button>
@@ -376,12 +381,7 @@ export default function Cruxspaces({
           )}
           <label className="block text-sm">
             {unpack ? 'Destination folder' : 'Destination path'}
-            <Input
-              required
-              fieldSize="sm"
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
-            />
+            <Input required fieldSize="sm" value={path} onChange={(e) => setPath(e.target.value)} />
           </label>
           <p className="text-xs text-text-muted">
             For an Astro website, use public/assets/… (or public/game for an unpacked game) and

@@ -5,6 +5,7 @@ import { gardenPath, useGardenContext } from '@/stores/gardenContext';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { gardenLocation } from '@/services/garden-navigation';
 import { ChevronDownIcon, CloseIcon } from '@/components/ui/icons';
+import { buttonClass, iconButtonClass, linkClass, menuItemClass } from '@/components/ui';
 
 /** Location is a read-only sheet; opening it never closes or navigates the workspace. */
 export default function GardenLocation() {
@@ -88,8 +89,7 @@ export default function GardenLocation() {
     finish();
     navigate(gardenPath(id));
   };
-  const buttonClass =
-    'w-full text-left px-3 py-2 rounded-[var(--radius-sm)] hover:bg-dropdown-item-hover focus:bg-dropdown-item-hover cursor-pointer break-words';
+  const rowButton = menuItemClass('default', 'break-words aria-[current=location]:text-accent');
   return (
     <>
       <button
@@ -99,7 +99,11 @@ export default function GardenLocation() {
         aria-expanded={open}
         disabled={!garden}
         onClick={() => setOpen(!open)}
-        className="max-w-48 min-w-0 flex items-center gap-1 text-sm font-display text-toolbar-text px-2 py-1 hover:bg-action-button-hover rounded-[var(--radius-sm)] cursor-pointer"
+        className={buttonClass(
+          'ghost',
+          'xs',
+          'max-w-48 min-w-0 gap-1 px-2 text-sm font-display text-toolbar-text hover:text-toolbar-text',
+        )}
       >
         <span className="truncate">{garden?.title || 'Garden'}</span>
         <ChevronDownIcon />
@@ -113,7 +117,7 @@ export default function GardenLocation() {
             aria-label="Garden location"
             tabIndex={-1}
             style={position}
-            className="fixed z-50 overflow-y-auto bg-dropdown backdrop-blur-xl text-dropdown-text text-sm border border-dropdown-border rounded-dropdown shadow-dropdown p-2"
+            className="fixed z-50 overflow-y-auto bg-dropdown text-text text-sm border border-dropdown-border rounded-dropdown shadow-dropdown p-1.5 motion-enter-dropdown"
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
                 event.preventDefault();
@@ -138,12 +142,12 @@ export default function GardenLocation() {
               }
             }}
           >
-            <div className="flex items-center justify-between px-3 py-1 text-text-muted">
+            <div className="flex items-center justify-between pl-2.5 pr-0.5 py-0.5 text-text-muted">
               <h2 className="text-xs">Garden location</h2>
               <button
                 aria-label="Close Garden location"
                 onClick={finish}
-                className="p-1 cursor-pointer hover:text-text"
+                className={iconButtonClass()}
               >
                 <CloseIcon />
               </button>
@@ -156,7 +160,7 @@ export default function GardenLocation() {
             {error && (
               <div role="alert" className="px-3 py-2 text-error">
                 {error}{' '}
-                <button className="underline cursor-pointer" onClick={() => setRetry((n) => n + 1)}>
+                <button className={linkClass()} onClick={() => setRetry((n) => n + 1)}>
                   Retry
                 </button>
               </div>
@@ -169,7 +173,7 @@ export default function GardenLocation() {
                       More than one containing Garden. Choose one to visit.
                     </p>
                     {result.containers.map((item) => (
-                      <button key={item.id} onClick={() => go(item.id)} className={buttonClass}>
+                      <button key={item.id} onClick={() => go(item.id)} className={rowButton}>
                         {item.title || 'Untitled Garden'}
                       </button>
                     ))}
@@ -182,7 +186,7 @@ export default function GardenLocation() {
                         <button
                           aria-current={item.id === garden.id ? 'location' : undefined}
                           onClick={() => go(item.id)}
-                          className={buttonClass}
+                          className={rowButton}
                         >
                           {item.title || 'Untitled Garden'}
                         </button>
@@ -194,7 +198,7 @@ export default function GardenLocation() {
             )}
             {route && (
               <div className="mt-2 pt-2 border-t border-dropdown-border">
-                <button className={buttonClass} onClick={() => go(garden.id)}>
+                <button className={rowButton} onClick={() => go(garden.id)}>
                   Close crux
                 </button>
               </div>

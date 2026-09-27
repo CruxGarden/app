@@ -46,11 +46,11 @@ export default function SettingsSection({
             type="button"
             onClick={() => setCollapsed((v) => !v)}
             aria-expanded={!collapsed}
-            className="flex items-center gap-2 cursor-pointer group"
+            className="group flex items-center gap-2 -ml-1.5 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:bg-action-button-hover cursor-pointer"
           >
             <ChevronDownIcon
               className={cn(
-                'text-text-muted transition-transform',
+                'text-text-muted group-hover:text-text transition-transform',
                 collapsed ? '-rotate-90' : 'rotate-0',
               )}
             />
@@ -62,7 +62,8 @@ export default function SettingsSection({
         {aside && <span className="text-xxs font-mono text-text-muted">{aside}</span>}
       </div>
       {!collapsed && description && <p className="text-xs text-text-muted mb-4">{description}</p>}
-      {!collapsed && children}
+      {!collapsed &&
+        (collapsible ? <div className="motion-enter-dropdown">{children}</div> : children)}
     </Panel>
   );
 }

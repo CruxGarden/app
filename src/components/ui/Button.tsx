@@ -1,35 +1,15 @@
 import { type ButtonHTMLAttributes } from 'react';
-import { cn } from '@/lib/cn';
 import Spinner from './Spinner';
-
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-type Size = 'sm' | 'md' | 'lg';
+import { buttonClass, type ButtonSize, type ButtonVariant } from './button-class';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant;
-  size?: Size;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   loading?: boolean;
   fullWidth?: boolean;
 }
 
-const variants: Record<Variant, string> = {
-  primary:
-    // A soft top light and a hairline shadow give the fill some body in every Mood
-    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover active-dim react-accent bg-gradient-to-b from-white/10 to-transparent shadow-[0_1px_1px_rgb(0_0_0/0.18)]',
-  secondary:
-    'bg-action-button text-action-button-text border border-action-button-border hover:bg-action-button-hover hover:text-action-button-text-hover hover:border-action-button-border-hover active-dim',
-  ghost:
-    'bg-transparent text-action-button-text border border-transparent hover:bg-action-button-hover hover:text-action-button-text-hover active-dim',
-  danger:
-    'bg-danger-button text-danger-button-text border border-danger-button-border hover:bg-danger-button-hover active-dim',
-};
-
-const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-sm gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-12 px-6 text-base gap-2.5',
-};
-
+/** A labelled action. The look lives in buttonClass, so anything can wear it. */
 export default function Button({
   variant = 'primary',
   size = 'md',
@@ -43,21 +23,15 @@ export default function Button({
   return (
     <button
       disabled={disabled || loading}
-      className={cn(
-        'inline-flex items-center justify-center font-medium rounded-button',
-        'cursor-pointer motion-press',
-        // Recolours through the button-disabled tokens; opts out of the global
-        // `button:disabled { opacity }` dim so the two do not stack.
-        'disabled:bg-button-disabled disabled:text-button-disabled-text disabled:border-transparent disabled:opacity-100 disabled:cursor-not-allowed',
-        'font-body',
-        variants[variant],
-        sizes[size],
-        fullWidth && 'w-full',
-        className,
+      aria-busy={loading || undefined}
+      className={buttonClass(
+        variant,
+        size,
+        [fullWidth && 'w-full', className].filter(Boolean).join(' '),
       )}
       {...props}
     >
-      {loading ? <Spinner size={size === 'sm' ? 14 : 16} /> : null}
+      {loading ? <Spinner size={size === 'sm' || size === 'xs' ? 14 : 16} /> : null}
       {children}
     </button>
   );

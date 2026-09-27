@@ -1,15 +1,12 @@
 import { useState, useRef } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
 import { useAppStore } from '@/stores/appStore';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { alertDialog } from '@/stores/dialogStore';
 
-const btnClass = cn(
-  'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-  'bg-surface border border-border text-text hover:bg-accent-muted cursor-pointer',
-  'disabled:cursor-not-allowed',
-);
+const btnClass = cn(buttonClass('secondary', 'xs'));
 
 interface AvatarUploadProps {
   /** Compact layout — smaller avatar, tighter spacing */
@@ -109,10 +106,10 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
             <button
               onClick={handleRemove}
               disabled={uploading}
-              className={cn(
-                'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                'text-error hover:bg-error-muted cursor-pointer',
-                'disabled:cursor-not-allowed',
+              className={buttonClass(
+                'ghost',
+                'xs',
+                'text-error hover:text-error hover:bg-error-muted',
               )}
             >
               Remove

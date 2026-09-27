@@ -2,9 +2,9 @@ import { useUIStore } from '@/stores/uiStore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
 import IconButton from '@/components/ui/IconButton';
+import { buttonClass } from '@/components/ui/button-class';
 import { BellIcon } from '@/components/ui/icons';
 import {
   useAlerts,
@@ -80,7 +80,7 @@ export default function AlertsBell() {
         {open.length > 0 && (
           <span
             data-testid="alerts-count"
-            className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-accent text-on-accent text-3xs font-mono font-bold flex items-center justify-center"
+            className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-accent text-bg text-3xs font-mono font-bold flex items-center justify-center"
           >
             {open.length > 99 ? '99+' : open.length}
           </span>
@@ -103,16 +103,16 @@ export default function AlertsBell() {
           />
           <div
             ref={panelRef}
-            className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 max-h-[60vh] overflow-y-auto"
+            className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown p-1 max-h-[60vh] overflow-y-auto motion-enter-dropdown"
           >
-            <div className="px-3 py-2 flex items-center justify-between border-b border-border">
+            <div className="px-2.5 py-2 flex items-center justify-between border-b border-border mb-1">
               <span className="text-xs font-display font-medium text-text">Alerts</span>
               <span className="text-2xs font-mono text-text-muted">
                 {open.length ? `${open.length} new` : 'nothing new'}
               </span>
             </div>
             {open.length === 0 && (
-              <p className="px-3 py-4 text-xs text-text-muted">
+              <p className="px-2.5 py-4 text-xs text-text-muted">
                 Nothing needs you right now. Tending shows everything that is growing.
               </p>
             )}
@@ -121,12 +121,12 @@ export default function AlertsBell() {
                 key={a.id}
                 data-testid="alert"
                 data-kind={a.kind}
-                className="px-3 py-2 border-b border-border last:border-b-0"
+                className="px-2.5 py-2 rounded-[var(--radius-sm)] transition-colors hover:bg-action-button-hover"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <button
                     onClick={() => go(a)}
-                    className="text-left text-sm text-text hover:text-accent truncate cursor-pointer min-w-0"
+                    className="text-left text-sm text-text hover:text-accent transition-colors truncate cursor-pointer min-w-0"
                     title={a.title}
                   >
                     {a.title}
@@ -139,29 +139,38 @@ export default function AlertsBell() {
                 <div className="flex items-center gap-1 mt-1.5">
                   <button
                     onClick={() => go(a)}
-                    className={cn(
-                      'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)]',
-                      'bg-accent-muted text-accent hover-bright cursor-pointer',
-                    )}
+                    className={buttonClass('primary', 'xs', 'min-h-6 py-0.5 px-2 text-xxs')}
                   >
                     Open
                   </button>
                   <button
                     onClick={() => snoozeAlert(a.id, inHour())}
-                    className="px-2 py-0.5 text-xxs font-mono text-text-muted hover:text-text cursor-pointer"
+                    className={buttonClass(
+                      'ghost',
+                      'xs',
+                      'min-h-6 py-0.5 px-2 text-xxs text-text-muted',
+                    )}
                   >
                     Snooze 1 h
                   </button>
                   <button
                     onClick={() => snoozeAlert(a.id, 'launch')}
-                    className="px-2 py-0.5 text-xxs font-mono text-text-muted hover:text-text cursor-pointer"
+                    className={buttonClass(
+                      'ghost',
+                      'xs',
+                      'min-h-6 py-0.5 px-2 text-xxs text-text-muted',
+                    )}
                     title="Put it away until the next time you open the app"
                   >
                     Later
                   </button>
                   <button
                     onClick={() => doneAlert(a.id)}
-                    className="ml-auto px-2 py-0.5 text-xxs font-mono text-text-muted hover:text-text cursor-pointer"
+                    className={buttonClass(
+                      'ghost',
+                      'xs',
+                      'ml-auto min-h-6 py-0.5 px-2 text-xxs text-text-muted',
+                    )}
                   >
                     Done
                   </button>

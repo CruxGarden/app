@@ -236,7 +236,7 @@ function ToolCallItem({ tc }: { tc: ToolCall }) {
         <span className="truncate">{label}</span>
       </button>
       {expanded && tc.result && (
-        <pre className="mt-1 mx-1 px-2 py-1.5 text-2xs font-mono leading-relaxed bg-code-block rounded border border-code-block-border text-chat-text-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
+        <pre className="motion-enter-dropdown mt-1 mx-1 px-2 py-1.5 text-2xs font-mono leading-relaxed bg-code-block rounded border border-code-block-border text-chat-text-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
           {tc.result}
         </pre>
       )}

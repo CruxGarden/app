@@ -13,6 +13,7 @@ import EditorContent from './EditorContent';
 import BuilderView from './BuilderView';
 import { onCaptureSettled } from '@/lib/thumbnail-capture';
 import { cn } from '@/lib/cn';
+import { buttonClass, segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { useShallow } from 'zustand/react/shallow';
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
@@ -174,21 +175,20 @@ export default function EditorPane() {
   );
   const entry = workshopEntry(crux, artifacts, entryFile);
   const hasBuilder = !!crux?.meta?.contentModel;
-  const button =
-    'px-3 py-1.5 text-xs rounded-[var(--radius-sm)] hover:bg-accent-muted cursor-pointer';
+  const button = buttonClass('ghost', 'xs', 'text-text-muted hover:text-text');
   const settings = () => {
     setPane('details', true);
     setMobilePane('details');
   };
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="workshop-view" data-view={view}>
-      <div className="flex items-center gap-1 p-1 border-b border-border shrink-0 flex-wrap">
-        <div role="group" aria-label="Workshop view" className="flex items-center">
+      <div className="flex items-center gap-1 px-1.5 py-1.5 border-b border-border shrink-0 flex-wrap">
+        <div role="group" aria-label="Workshop view" className={segmentGroupClass()}>
           {(['clean', 'advanced'] as const).map((mode) => (
             <button
               key={mode}
               aria-pressed={view === mode}
-              className={cn(button, view === mode && 'bg-accent-muted text-accent')}
+              className={segmentClass(view === mode)}
               onClick={() => {
                 if (mode === 'advanced' && !hasTabs && entry.artifact && !hasBuilder) {
                   openFile(entry.artifact.id, pathOf(entry.artifact));
@@ -242,7 +242,7 @@ export default function EditorPane() {
             Read the saved Artifacts in Advanced view. Return to the current app to write.
           </p>
           <button
-            className={button}
+            className={buttonClass('primary', 'sm')}
             onClick={() => {
               const note = artifacts.find(
                 (a) =>
@@ -256,7 +256,7 @@ export default function EditorPane() {
           >
             Read saved Artifacts
           </button>
-          <button className={button} onClick={() => void exitSnapshot()}>
+          <button className={buttonClass('secondary', 'sm')} onClick={() => void exitSnapshot()}>
             Return to current app
           </button>
         </div>
@@ -293,7 +293,7 @@ export default function EditorPane() {
           </p>
           <div className="flex gap-2 flex-wrap justify-center">
             <button
-              className={cn(button, 'bg-accent-muted text-accent')}
+              className={buttonClass('primary', 'sm')}
               onClick={() => {
                 setPane('collaboration', true);
                 setMobilePane('collaboration');
@@ -302,7 +302,7 @@ export default function EditorPane() {
               Open Collaboration
             </button>
             <button
-              className={button}
+              className={buttonClass('secondary', 'sm')}
               onClick={() => {
                 setPane('artifacts', true);
                 setMobilePane('artifacts');
@@ -312,7 +312,7 @@ export default function EditorPane() {
               Add files
             </button>
             {!entry.missing && artifacts.length > 0 && (
-              <button className={button} onClick={settings}>
+              <button className={buttonClass('secondary', 'sm')} onClick={settings}>
                 Choose entry file
               </button>
             )}

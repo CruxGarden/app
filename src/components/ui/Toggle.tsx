@@ -33,21 +33,24 @@ export default function Toggle({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative rounded-full shrink-0 cursor-pointer border border-toggle-border transition-colors',
+          'toggle-switch relative rounded-full shrink-0 cursor-pointer border border-toggle-border',
+          'transition-[background-color,border-color,box-shadow] hover-bright',
+          'hover:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_16%,transparent)]',
+          'disabled:cursor-not-allowed disabled:hover:shadow-none',
           checked ? 'bg-toggle-active' : 'bg-toggle',
         )}
         style={{ width: 'var(--toggle-width)', height: 'var(--toggle-height)' }}
       >
         <span
           className={cn(
-            'absolute top-[2px] left-[2px] rounded-full transition-transform',
+            'toggle-thumb absolute top-[2px] left-[2px] rounded-full',
             checked ? 'bg-toggle-thumb-active' : 'bg-toggle-thumb',
           )}
           style={{
-            width: 'calc(var(--toggle-height) - 4px)',
+            width: 'calc(var(--toggle-height) - 4px + var(--toggle-stretch))',
             height: 'calc(var(--toggle-height) - 4px)',
             transform: checked
-              ? 'translateX(calc(var(--toggle-width) - var(--toggle-height)))'
+              ? 'translateX(calc(var(--toggle-width) - var(--toggle-height) - var(--toggle-stretch)))'
               : undefined,
           }}
         />

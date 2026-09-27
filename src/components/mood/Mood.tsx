@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { SectionLabel } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
@@ -93,7 +94,6 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
     </div>
   );
 }
-
 
 export default function MoodEditor() {
   const [tab, setTab] = useState<Tab>(() => useUIStore.getState().moodTab ?? 'moods');
@@ -228,27 +228,28 @@ export default function MoodEditor() {
   return (
     <div className="select-none flex-1 flex flex-col min-h-0">
       {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-x-1 gap-y-2 pb-3 mb-3 border-b border-border shrink-0">
-        {(
-          [
-            ['moods', 'Moods'],
-            ['theme', 'Theme'],
-            ['background', 'Background'],
-            ['sound', 'Sound'],
-            ['persona', 'Persona'],
-          ] as const
-        ).map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-2.5 py-1 text-xs font-body font-medium rounded-[var(--radius-sm)] cursor-pointer shrink-0',
-              tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 pb-3 mb-3 border-b border-border shrink-0">
+        <div role="group" aria-label="Mood sections" className={segmentGroupClass('flex-wrap')}>
+          {(
+            [
+              ['moods', 'Moods'],
+              ['theme', 'Theme'],
+              ['background', 'Background'],
+              ['sound', 'Sound'],
+              ['persona', 'Persona'],
+            ] as const
+          ).map(([t, label]) => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={tab === t}
+              onClick={() => setTab(t)}
+              className={segmentClass(tab === t)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="flex-1" />
         <SurfaceThemeControl />
         <MotionIntensityControl />
@@ -256,7 +257,10 @@ export default function MoodEditor() {
 
       <KeepLook />
       {/* Active tab content */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto pr-3">
+      <div
+        key={tab}
+        className="flex-1 min-h-0 flex flex-col overflow-y-auto pr-3 motion-enter-dropdown"
+      >
         {tab === 'theme' && (
           <div className="flex flex-col gap-6">
             <AppearanceControls />
@@ -289,7 +293,7 @@ export default function MoodEditor() {
                           onClick={() => deleteUserPreset(preset.id)}
                           aria-label={`Delete preset ${preset.name}`}
                           title="Delete this preset"
-                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error text-xs leading-none opacity-0 group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer"
+                          className="reveal-on-hover absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error hover:border-error/50 text-xs leading-none cursor-pointer"
                         >
                           ×
                         </button>

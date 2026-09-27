@@ -5,7 +5,7 @@ import { useGardenStore } from '@/stores/gardenStore';
 import { getServices } from '@/services';
 import { getSqliteClient } from '@/services/sqlite/client';
 import type { Crux } from '@/api/types';
-import { Button } from '@/components/ui';
+import { Button, buttonClass, fieldClass } from '@/components/ui';
 import { importGardenPackage } from '@/services/garden-package';
 
 /** Explicit placement actions; moving preserves the Crux and its content. */
@@ -31,9 +31,10 @@ export default function GardenActions() {
   };
   return (
     <section aria-label="Garden actions" className="mb-4">
-      <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted">
+      <div className="flex flex-wrap items-center gap-1 -ml-2.5">
         <button
-          className="hover:text-text cursor-pointer"
+          className={buttonClass('ghost', 'xs', 'text-text-muted')}
+          aria-expanded={mode === 'new'}
           onClick={() => {
             setMode('new');
             setError('');
@@ -42,7 +43,8 @@ export default function GardenActions() {
           New Garden
         </button>
         <button
-          className="hover:text-text cursor-pointer"
+          className={buttonClass('ghost', 'xs', 'text-text-muted')}
+          aria-expanded={mode === 'add'}
           onClick={() => {
             setMode('add');
             setError('');
@@ -76,7 +78,7 @@ export default function GardenActions() {
           Add existing Crux
         </button>
         <button
-          className="hover:text-text cursor-pointer disabled:opacity-50"
+          className={buttonClass('ghost', 'xs', 'text-text-muted')}
           disabled={busy}
           onClick={() => packageInput.current?.click()}
         >
@@ -132,7 +134,7 @@ export default function GardenActions() {
             placeholder="Garden name"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="min-w-0 flex-1 bg-input border border-input-border rounded-input px-3 py-2 text-sm text-input-text"
+            className={fieldClass(undefined, 'min-w-0 flex-1')}
           />
           <Button type="submit" disabled={busy || !title.trim()}>
             Create Garden
@@ -143,7 +145,7 @@ export default function GardenActions() {
         </form>
       )}
       {mode === 'add' && (
-        <div className="mt-3 rounded-[var(--radius)] border border-border bg-panel p-3">
+        <div className="mt-3 rounded-[var(--radius)] border border-border bg-panel p-3 motion-enter-dropdown">
           <div className="flex gap-2 mb-2">
             <input
               autoFocus
@@ -151,7 +153,7 @@ export default function GardenActions() {
               placeholder="Find a Crux…"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="flex-1 min-w-0 bg-input rounded-input px-3 py-2 text-sm text-input-text"
+              className={fieldClass(undefined, 'flex-1 min-w-0')}
             />
             <Button variant="ghost" onClick={() => setMode(null)}>
               Done
@@ -165,7 +167,7 @@ export default function GardenActions() {
               .map(({ crux: row, parents }) => (
                 <li
                   key={row.id}
-                  className="flex items-center justify-between gap-3 py-2 text-sm text-text"
+                  className="flex items-center justify-between gap-3 px-2 -mx-2 py-2 rounded-[var(--radius-sm)] text-sm text-text hover:bg-action-button-hover"
                 >
                   <span className="min-w-0">
                     <span className="block truncate">{row.title || row.slug}</span>
@@ -178,7 +180,7 @@ export default function GardenActions() {
                   <button
                     disabled={busy}
                     aria-label={`${parents.length ? 'Move' : 'Add'} ${row.title || row.slug} to this Garden`}
-                    className="text-accent cursor-pointer shrink-0"
+                    className={buttonClass('secondary', 'xs')}
                     onClick={() => {
                       const destination = garden.id;
                       setBusy(true);

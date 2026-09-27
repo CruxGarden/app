@@ -40,7 +40,7 @@ export default function TimerChip() {
           >
             <button
               onClick={() => useUIStore.getState().openTending()}
-              className="cursor-pointer hover:underline"
+              className="cursor-pointer hover:text-text transition-colors"
               title={s.title}
             >
               {phase?.label} {formatRemaining(left)}
@@ -48,7 +48,7 @@ export default function TimerChip() {
             <button
               onClick={() => pauseTimer(s.id)}
               aria-label={`Pause ${s.title}`}
-              className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-accent/20 cursor-pointer"
+              className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-accent/25 active-dim cursor-pointer"
             >
               <span className="block w-1.5 h-1.5 border-x-[1.5px] border-current" />
             </button>

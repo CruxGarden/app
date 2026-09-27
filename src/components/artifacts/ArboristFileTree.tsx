@@ -134,8 +134,8 @@ const NodeRenderer = memo(function NodeRenderer({
       ref={dragHandle}
       style={{ ...style, paddingLeft: ((style.paddingLeft as number) || 0) + 8 }}
       className={cn(
-        'group/node flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
-        'cursor-pointer select-none',
+        'group/node flex items-center gap-1.5 py-0.5 pr-2 mx-1.5 text-xs font-mono',
+        'rounded-[var(--radius-sm)] cursor-pointer select-none transition-colors',
         node.isSelected
           ? 'bg-file-tree-item-selected text-file-tree-item-text-selected'
           : 'bg-file-tree-item text-file-tree-item-text hover:bg-file-tree-item-hover',

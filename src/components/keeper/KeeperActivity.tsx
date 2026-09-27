@@ -1,4 +1,5 @@
 import { useKeeperStore } from '@/stores/keeperStore';
+import { buttonClass } from '@/components/ui/button-class';
 import { useGardenContext } from '@/stores/gardenContext';
 import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
 import { ConsoleAvatar } from './Console';
@@ -34,7 +35,7 @@ function Activity() {
       <button
         type="button"
         onClick={() => useUIStore.getState().setConsoleOpen(true)}
-        className="flex items-center gap-1.5 cursor-pointer"
+        className="flex items-center gap-1.5 -ml-0.5 pl-0.5 pr-1.5 rounded-full hover:bg-action-button-hover transition-colors cursor-pointer"
         aria-label="Open the console"
       >
         <ConsoleAvatar className="w-5 h-5 rounded-full overflow-hidden" />
@@ -43,7 +44,7 @@ function Activity() {
       <button
         type="button"
         onClick={stop}
-        className="px-1.5 h-5 rounded-full border border-border text-xxs hover:border-accent hover:text-accent cursor-pointer"
+        className={buttonClass('secondary', 'xs', 'min-h-5 py-0.5 px-2 rounded-full text-xxs')}
       >
         Stop
       </button>

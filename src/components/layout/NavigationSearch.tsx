@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { linkClass } from '@/components/ui/button-class';
 import { useGardenContext } from '@/stores/gardenContext';
 import {
   searchNavigation,
@@ -175,7 +176,7 @@ function Results({
               setBusy(true);
               setRetry((n) => n + 1);
             }}
-            className="mt-2 underline cursor-pointer"
+            className={linkClass('mt-2')}
           >
             Retry search
           </button>
@@ -192,7 +193,7 @@ function Results({
             setBusy(true);
             setCursor(next);
           }}
-          className="p-2 text-xs underline cursor-pointer"
+          className={linkClass('p-2 text-xs')}
         >
           More results
         </button>

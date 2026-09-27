@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
 import { captureLocalPreview } from '@/services/preview-capture';
 import { nativeToolsAvailable, onNativeProgress, renderVideo } from '@/services/native-tools';
 import { getServices } from '@/services';
@@ -94,8 +95,11 @@ export default function PreviewCaptureActions({
     }
   };
 
-  const cls =
-    'shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+  const cls = buttonClass(
+    'ghost',
+    'xs',
+    'min-h-6 py-0.5 px-2 text-2xs font-mono text-text-muted hover:text-text',
+  );
   return (
     <>
       {visual && (

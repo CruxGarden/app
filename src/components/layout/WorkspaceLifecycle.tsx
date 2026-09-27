@@ -1,4 +1,5 @@
 import { keeperNeedsCloseDecision } from '@/stores/keeperStore';
+import { buttonClass } from '@/components/ui/button-class';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -80,7 +81,7 @@ export default function WorkspaceLifecycle() {
   if (!requested) return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center"
+      className="fixed inset-0 z-[110] modal-scrim flex items-center justify-center"
       onKeyDown={(e) => {
         e.stopPropagation();
         if (e.key === 'Escape') {
@@ -103,9 +104,14 @@ export default function WorkspaceLifecycle() {
         role="dialog"
         aria-modal="true"
         aria-label="Close Crux Garden"
-        className="bg-surface-solid border border-border p-5 rounded text-text max-w-lg"
+        className="overlay-plate border border-dropdown-border p-5 rounded-[var(--radius)] shadow-modal text-text max-w-lg motion-enter-dropdown"
       >
-        <h2 style={{ fontFamily: 'var(--dialog-title-font)' }}>Close Crux Garden?</h2>
+        <h2
+          className="font-medium text-accent"
+          style={{ fontFamily: 'var(--dialog-title-font)', fontSize: 'var(--dialog-title-size)' }}
+        >
+          Close Crux Garden?
+        </h2>
         <p className="text-sm my-2">
           These workspaces have unsaved edits or ongoing work. Running turns will stop; queued
           prompts will wait when you reopen.
@@ -118,14 +124,27 @@ export default function WorkspaceLifecycle() {
             </li>
           ))}
         </ul>
-        <div className="flex gap-4 mt-4">
-          <button ref={cancelButton} disabled={busy} onClick={cancel}>
+        <div className="flex flex-wrap justify-end gap-2 mt-4">
+          <button
+            ref={cancelButton}
+            disabled={busy}
+            onClick={cancel}
+            className={buttonClass('ghost', 'sm')}
+          >
             Cancel
           </button>
-          <button disabled={busy} onClick={() => void finish('discard')}>
+          <button
+            disabled={busy}
+            onClick={() => void finish('discard')}
+            className={buttonClass('secondary', 'sm')}
+          >
             Discard edits and exit
           </button>
-          <button disabled={busy} onClick={() => void finish('save')}>
+          <button
+            disabled={busy}
+            onClick={() => void finish('save')}
+            className={buttonClass('primary', 'sm')}
+          >
             Save and exit
           </button>
         </div>

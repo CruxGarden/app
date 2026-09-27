@@ -1,15 +1,30 @@
 import { useGardenContext } from '@/stores/gardenContext';
+import { chipClass } from '@/components/ui/button-class';
 import ScheduleForm from './ScheduleForm';
 import { allMoods } from './schedule-moods';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Toggle, Panel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGardenStore } from '@/stores/gardenStore';
-import { describeTrigger, formatRemaining, moodSchedulesEnabled, ownedBy, pauseTimer, removeSchedule, resetTimer, setMoodSchedulesEnabled, setScheduleEnabled, setScheduleSource, startTimer, timerRemaining, useSchedules, type Action, type Schedule } from '@/services/schedules';
+import {
+  describeTrigger,
+  formatRemaining,
+  moodSchedulesEnabled,
+  ownedBy,
+  pauseTimer,
+  removeSchedule,
+  resetTimer,
+  setMoodSchedulesEnabled,
+  setScheduleEnabled,
+  setScheduleSource,
+  startTimer,
+  timerRemaining,
+  useSchedules,
+  type Action,
+  type Schedule,
+} from '@/services/schedules';
 import { describeCron } from '@/services/cron';
 import { CUE_KINDS } from '@/services/cues';
-
-
 
 function describeAction(a: Action, cruxTitle: (id?: string) => string): string {
   switch (a.kind) {
@@ -79,11 +94,6 @@ function TimerControls({ s }: { s: Schedule }) {
     </div>
   );
 }
-
-
-
-
-
 
 export default function SchedulesSection() {
   const all = useSchedules((s) => s.schedules);
@@ -162,7 +172,10 @@ export default function SchedulesSection() {
                       type="button"
                       title="From the worn Mood — click to keep it in the garden instead"
                       onClick={() => setScheduleSource(s.id, undefined)}
-                      className="ml-2 align-middle text-3xs uppercase tracking-wider text-accent border border-accent/40 rounded-full px-1.5 cursor-pointer"
+                      className={chipClass(
+                        true,
+                        'ml-2 h-5 px-1.5 align-middle text-3xs uppercase tracking-wider',
+                      )}
                     >
                       Mood
                     </button>

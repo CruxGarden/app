@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Avatar } from '@/components/ui';
+import { Avatar, menuItemClass } from '@/components/ui';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
@@ -8,10 +8,9 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { ThemeMode } from '@/lib/types';
-import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
 import { useShallow } from 'zustand/react/shallow';
-import { SunIcon, MoonIcon, MonitorIcon } from '@/components/ui/icons';
+import { SunIcon, MoonIcon, MonitorIcon, CheckIcon } from '@/components/ui/icons';
 
 export default function UserMenu() {
   const navigate = useNavigate();
@@ -51,7 +50,7 @@ export default function UserMenu() {
         aria-label="Account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="rounded-[var(--radius-sm)] ring-1 ring-profile-button-border hover:ring-profile-button-hover transition-shadow cursor-pointer"
+        className="rounded-[var(--radius-sm)] ring-1 ring-profile-button-border hover:ring-profile-button-hover hover:ring-2 active-dim motion-press cursor-pointer"
       >
         <Avatar
           url={avatarUrl}
@@ -74,7 +73,7 @@ export default function UserMenu() {
           />
           <div
             ref={menuPanelRef}
-            className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1"
+            className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown p-1 motion-enter-dropdown"
           >
             {author ? (
               <button
@@ -82,7 +81,7 @@ export default function UserMenu() {
                   setOpen(false);
                   navigate('/home');
                 }}
-                className="w-full px-3 py-2 border-b border-border text-left hover:bg-accent-muted transition-colors cursor-pointer"
+                className={menuItemClass('default', 'flex-col items-start gap-0')}
               >
                 <p className="text-sm font-medium text-text truncate">{author.username}</p>
                 <p className="text-xs text-text-muted truncate">Home Garden</p>
@@ -94,7 +93,7 @@ export default function UserMenu() {
                 setOpen(false);
                 useUIStore.getState().setSettingsOpen(true);
               }}
-              className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-accent-muted transition-colors cursor-pointer"
+              className={menuItemClass()}
             >
               <span className="flex items-center justify-between w-full">
                 Settings
@@ -106,41 +105,44 @@ export default function UserMenu() {
 
             <button
               onClick={() => setMode(ThemeMode.Light)}
-              className={cn(
-                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-                mode === 'light' ? 'text-text' : 'text-text-muted hover:text-text',
+              aria-current={mode === 'light' || undefined}
+              className={menuItemClass(
+                'default',
+                mode !== 'light' && 'text-text-muted hover:text-text',
               )}
             >
               <SunIcon />
-              Light
+              <span className="flex-1">Light</span>
+              {mode === 'light' && <CheckIcon size={14} />}
             </button>
             <button
               onClick={() => setMode(ThemeMode.Dark)}
-              className={cn(
-                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-                mode === 'dark' ? 'text-text' : 'text-text-muted hover:text-text',
+              aria-current={mode === 'dark' || undefined}
+              className={menuItemClass(
+                'default',
+                mode !== 'dark' && 'text-text-muted hover:text-text',
               )}
             >
               <MoonIcon />
-              Dark
+              <span className="flex-1">Dark</span>
+              {mode === 'dark' && <CheckIcon size={14} />}
             </button>
             <button
               onClick={() => setMode(ThemeMode.Auto)}
-              className={cn(
-                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-                mode === 'auto' ? 'text-text' : 'text-text-muted hover:text-text',
+              aria-current={mode === 'auto' || undefined}
+              className={menuItemClass(
+                'default',
+                mode !== 'auto' && 'text-text-muted hover:text-text',
               )}
             >
               <MonitorIcon />
-              System
+              <span className="flex-1">System</span>
+              {mode === 'auto' && <CheckIcon size={14} />}
             </button>
 
             <div className="divider my-1" />
 
-            <button
-              onClick={handleLogout}
-              className="w-full px-3 py-2 text-left text-sm text-error hover:bg-error-muted transition-colors cursor-pointer"
-            >
+            <button onClick={handleLogout} className={menuItemClass('danger')}>
               Log out
             </button>
           </div>

@@ -7,6 +7,7 @@ import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { Link } from 'react-router-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { cn } from '@/lib/cn';
+import { linkClass, menuItemClass } from '@/components/ui/button-class';
 import { formatDateTime } from '@/lib/format';
 import { useDismiss } from '@/hooks/useDismiss';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -26,6 +27,8 @@ interface CruxCardProps {
   /** Already-resolved image URL (public pages, where there is no Blob Store). */
   thumbnailUrl?: string;
   tendingCount?: number;
+  /** Where the card sits in its grid: cards settle one after another as a garden opens. */
+  enterIndex?: number;
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -59,6 +62,7 @@ export default function CruxCard({
   thumbnailFingerprint,
   thumbnailUrl,
   tendingCount,
+  enterIndex,
 }: CruxCardProps) {
   const garden = useGardenContext((s) => s.garden);
   const navigate = useMoodNavigate();
@@ -80,6 +84,11 @@ export default function CruxCard({
 
   return (
     <div
+      style={
+        enterIndex !== undefined
+          ? ({ '--enter-index': enterIndex } as React.CSSProperties)
+          : undefined
+      }
       className={cn(
         'relative group shape-card flex flex-col rounded-[var(--radius)] overflow-hidden motion-enter-card',
         'bg-garden-card border border-garden-card-border',
@@ -150,7 +159,7 @@ export default function CruxCard({
       </button>
 
       {!!tendingCount && (
-        <Link to="/tending" className="px-3 pb-2 text-xs text-accent hover:underline">
+        <Link to="/tending" className={linkClass('mx-3.5 mb-3 -mt-1 self-start text-xs')}>
           {tendingCount} {tendingCount === 1 ? 'needs' : 'need'} tending
         </Link>
       )}
@@ -164,12 +173,9 @@ export default function CruxCard({
               setMenuOpen(!menuOpen);
             }}
             aria-label="Crux actions"
-            className={cn(
-              'p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover:brightness-125 cursor-pointer transition-opacity',
-              menuOpen
-                ? 'opacity-100'
-                : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
-            )}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="reveal-on-hover p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover-bright active-dim motion-press cursor-pointer"
           >
             <MoreVerticalIcon size={14} />
           </button>
@@ -184,7 +190,7 @@ export default function CruxCard({
             <div
               ref={actionsRef}
               role="menu"
-              className="absolute right-0 top-full mt-1 w-32 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 z-50"
+              className="absolute right-0 top-full mt-1 w-40 p-1 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown z-50 motion-enter-dropdown"
             >
               <button
                 role="menuitem"
@@ -193,14 +199,14 @@ export default function CruxCard({
                   setMenuOpen(false);
                   setExportOpen(true);
                 }}
-                className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted transition-colors cursor-pointer"
+                className={menuItemClass('default', 'text-xs')}
               >
                 Export...
               </button>
               {onDelete && garden && (
                 <button
                   role="menuitem"
-                  className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted cursor-pointer"
+                  className={menuItemClass('default', 'text-xs')}
                   onClick={(e) => {
                     e.stopPropagation();
                     const gardenId = garden.id;
@@ -224,7 +230,7 @@ export default function CruxCard({
                     setMenuOpen(false);
                     onDelete(crux.id);
                   }}
-                  className="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-error-muted transition-colors cursor-pointer"
+                  className={menuItemClass('danger', 'text-xs')}
                 >
                   Delete
                 </button>

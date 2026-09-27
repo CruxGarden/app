@@ -3,13 +3,12 @@ import { getSqliteClient } from '@/services/sqlite/client';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useState, useRef, useEffect } from 'react';
 import type { Dimension, CruxSummary as CruxSummaryType } from '@/api/types';
-import { LoadingPanel, SegmentedControl } from '@/components/ui';
+import { LoadingPanel, SegmentedControl, buttonClass, fieldClass } from '@/components/ui';
 import { useCruxStore } from '@/stores/cruxStore';
 import { confirmDialog, alertDialog } from '@/stores/dialogStore';
 import CruxSummary from './CruxSummary';
 import GrowthCard from './GrowthCard';
 import GrowthDetail from './GrowthDetail';
-import { cn } from '@/lib/cn';
 import { PaneAction, PaneEmpty } from '@/components/workspace/pane-ui';
 
 function LayersIcon() {
@@ -121,6 +120,7 @@ export default function GrowthTimeline({
       {crux && getSqliteClient().fileContent && (
         <SegmentedControl
           label="History views"
+          className="mx-3 mt-2 self-start"
           value={view}
           onChange={setView}
           options={[
@@ -161,7 +161,11 @@ export default function GrowthTimeline({
                   <button
                     onClick={handleRemoveLatest}
                     disabled={isCreatingGrowth || removing}
-                    className="self-start px-0.5 text-2xs font-mono text-text-muted hover:text-error transition-colors cursor-pointer disabled:opacity-50"
+                    className={buttonClass(
+                      'ghost',
+                      'xs',
+                      'self-start -ml-2.5 min-h-6 py-0.5 text-2xs text-text-muted hover:text-error',
+                    )}
                     title="Remove the most recent snapshot. Your files stay as they are."
                     data-testid="growth-remove-latest"
                   >
@@ -183,19 +187,9 @@ export default function GrowthTimeline({
                         }
                       }}
                       placeholder="Label (optional)"
-                      className={cn(
-                        'flex-1 min-w-0 px-2.5 h-8 text-xs font-body rounded-[var(--radius-sm)]',
-                        'bg-surface border border-border text-text placeholder:text-text-muted',
-                        'focus:outline-none focus:border-input-border-active',
-                      )}
+                      className={fieldClass(undefined, 'flex-1 min-w-0', 'sm')}
                     />
-                    <button
-                      onClick={handleSnapshot}
-                      className={cn(
-                        'px-3 h-8 text-xs font-body font-medium rounded-[var(--radius-sm)]',
-                        'bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer',
-                      )}
-                    >
+                    <button onClick={handleSnapshot} className={buttonClass('primary', 'sm')}>
                       Save
                     </button>
                     <button
@@ -204,7 +198,7 @@ export default function GrowthTimeline({
                         setLabelText('');
                       }}
                       aria-label="Cancel"
-                      className="px-2 h-8 text-sm text-text-muted hover:text-text transition-colors cursor-pointer"
+                      className={buttonClass('ghost', 'sm', 'w-8 px-0 text-text-muted')}
                     >
                       &times;
                     </button>

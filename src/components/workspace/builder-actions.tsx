@@ -1,9 +1,9 @@
 import { useCruxStoreApi } from '@/stores/cruxStore';
+import { buttonClass } from '@/components/ui/button-class';
 import { useOpenFileByPath, useOpenRound } from './useOpenRound';
 import { useCallback, useRef, useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
-import { cn } from '@/lib/cn';
 import { serializeFrontmatter, slugify, interpolate } from '@/lib/frontmatter';
 import { Modal, Input, Button } from '@/components/ui';
 import type { ContentCollection, BuilderAction } from '@/templates';
@@ -52,14 +52,7 @@ export function ActionButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-2 px-3 py-2 text-xs rounded-[var(--radius-sm)]',
-        'bg-surface border border-border text-text',
-        'hover:border-accent hover:text-accent transition-colors cursor-pointer',
-      )}
-    >
+    <button onClick={onClick} className={buttonClass('secondary', 'sm', 'justify-start')}>
       {icon && <span>{icon}</span>}
       {label}
     </button>

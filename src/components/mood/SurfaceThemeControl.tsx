@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fieldClass } from '@/components/ui/field-class';
 import { cn } from '@/lib/cn';
 import {
   SURFACE_THEMES,
@@ -26,10 +27,7 @@ export default function SurfaceThemeControl({ className }: { className?: string 
           setValue(next);
           setSurfaceTheme(next);
         }}
-        className={cn(
-          'h-6 px-1.5 rounded-[var(--radius-sm)] text-xxs font-body',
-          'bg-surface text-text border border-border hover:border-accent cursor-pointer',
-        )}
+        className={fieldClass(undefined, 'h-7 w-auto px-1.5 text-xxs cursor-pointer', 'sm')}
       >
         {SURFACE_THEMES.map((v) => (
           <option key={v} value={v}>

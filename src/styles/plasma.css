@@ -198,7 +198,7 @@ html[data-surface-style='plasma'] {
   --plasma-overlay-border: color-mix(in srgb, var(--border) 55%, var(--text) 45%);
 }
 html[data-surface-style='plasma']
-  :is([data-modal-open] .bg-panel, .bg-dropdown, .bg-model-selector-dropdown) {
+  :is([data-modal-open] .bg-panel, .bg-dropdown, .bg-model-selector-dropdown, .overlay-plate) {
   background: var(--plasma-overlay);
   border-color: var(--plasma-overlay-border);
   box-shadow: var(--shadow-modal);
@@ -299,6 +299,27 @@ html[data-surface-style='plasma']
   box-shadow: none;
 }
 
+/* A Crux card inside a pane (Home is a pane now) is an inner plate like the
+   rest: the material draws the pane, never a card in it (PlasmaSurfaces
+   skips nested surfaces), so the card paints its own shade — without one its
+   title and dates sat straight on the field. It answers the pointer: a lift
+   of light, an accent edge, a shadow. */
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window .bg-garden-card,
+html[data-surface-style='plasma'] .bg-panel .bg-garden-card {
+  background: var(--plasma-inner);
+  border-color: color-mix(in srgb, var(--text) 9%, transparent);
+  box-shadow: none;
+}
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  .bg-garden-card:is(:hover, :focus-within),
+html[data-surface-style='plasma'] .bg-panel .bg-garden-card:is(:hover, :focus-within) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--plasma-inner));
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.55);
+}
+
 /* A crux card is one surface, not a black rectangle sitting on one. The
    thumbnail paints an opaque plate so a card with no image reads as a card;
    here the material is already doing that, and the plate only cuts the card in
@@ -365,7 +386,8 @@ html[data-surface-style='plasma'][data-plasma-chrome='flat']
   margin: 0;
   border-radius: 0;
   background: color-mix(in srgb, var(--toolbar) 86%, transparent);
-  backdrop-filter: blur(24px) saturate(130%);
+  /* The chrome's frost is the Mood's (plasmaChromeFrost); menus and dialogs are opaque now, the bar keeps it. */
+  backdrop-filter: blur(var(--plasma-chrome-frost)) saturate(130%);
   border-bottom: 1px solid var(--plasma-chrome-edge);
   box-shadow: none;
 }
@@ -374,15 +396,18 @@ html[data-surface-style='plasma'][data-plasma-chrome='flat'][data-desktop-chrome
   margin-top: 0;
   padding-left: 6rem;
 }
+/* Opaque (Daniel, 2026-09-27: "modal and menu opacity, for the most part they
+   should be opaque"): the plate's tint is laid over the Mood's ground, so it
+   keeps its colour and nothing behind it reaches the words. */
 html[data-surface-style='plasma'][data-plasma-chrome='flat']
-  :is([data-modal-open] .bg-panel, .bg-dropdown, .bg-model-selector-dropdown) {
-  background: var(--plasma-chrome-plate);
-  backdrop-filter: blur(var(--plasma-chrome-frost)) saturate(105%);
+  :is([data-modal-open] .bg-panel, .bg-dropdown, .bg-model-selector-dropdown, .overlay-plate) {
+  background: linear-gradient(var(--plasma-chrome-plate), var(--plasma-chrome-plate)), var(--bg);
+  backdrop-filter: none;
   border: 1px solid var(--plasma-chrome-edge);
   box-shadow: var(--shadow-modal);
 }
 html[data-surface-style='plasma'][data-plasma-chrome='flat'] [data-modal-open] .bg-panel {
-  background: var(--plasma-chrome-dialog);
+  background: linear-gradient(var(--plasma-chrome-dialog), var(--plasma-chrome-dialog)), var(--bg);
 }
 /* A `filter` on an ancestor — even blur(0px), which the dialog's motion
    wrapper keeps after its enter — makes that ancestor the backdrop root, and

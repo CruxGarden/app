@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
+import { linkClass } from '@/components/ui/button-class';
 import type { NavigationLink, Neighborhood } from '@/services/navigation-neighborhood';
 import type { NavigationViewProps } from './navigation-view';
 import type { GardenIdentity } from '@/stores/gardenContext';
@@ -139,7 +141,7 @@ export default function DimensionConnections({
       {error && (
         <p role="alert" className="p-2 text-xs text-error">
           {error}{' '}
-          <button onClick={() => setRetry((n) => n + 1)} className="underline cursor-pointer">
+          <button onClick={() => setRetry((n) => n + 1)} className={linkClass()}>
             Retry connections
           </button>
         </p>
@@ -150,7 +152,7 @@ export default function DimensionConnections({
       {!loading && !error && result?.next && (
         <button
           onClick={() => setAfter(result.next!)}
-          className="p-2 text-sm text-accent cursor-pointer"
+          className={buttonClass('ghost', 'xs', 'm-1 text-accent')}
         >
           More connections
         </button>

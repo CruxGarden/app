@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buttonClass, segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { useGrowthGraphView } from './useGrowthGraphView';
 import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
 import { Modal, SectionLabel } from '@/components/ui';
@@ -10,8 +11,7 @@ import { GRAPH_BG, GRAPH_TEXT, laneColor } from './graph-style';
 
 const Canvas2D = lazy(() => import('./GrowthGraphCanvas'));
 const Canvas3D = lazy(() => import('./GrowthGraph3D'));
-const action =
-  'rounded px-3 py-1.5 text-xs border border-border hover:border-accent cursor-pointer disabled:opacity-50';
+const action = buttonClass('secondary', 'xs');
 
 export default function GrowthExplorer({
   cruxId,
@@ -149,27 +149,33 @@ export default function GrowthExplorer({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              className={`${action} ${mode === '2d' ? 'bg-accent-muted text-accent border-accent' : ''}`}
-              aria-pressed={mode === '2d'}
-              onClick={() => setMode('2d')}
-            >
-              2D lanes
-            </button>
-            <button
-              className={`${action} ${mode === '3d' ? 'bg-accent-muted text-accent border-accent' : ''}`}
-              aria-pressed={mode === '3d'}
-              onClick={() => setMode('3d')}
-            >
-              Explore in 3D
-            </button>
+            <div role="group" aria-label="Growth view" className={segmentGroupClass()}>
+              <button
+                className={segmentClass(mode === '2d')}
+                aria-pressed={mode === '2d'}
+                onClick={() => setMode('2d')}
+              >
+                2D lanes
+              </button>
+              <button
+                className={segmentClass(mode === '3d')}
+                aria-pressed={mode === '3d'}
+                onClick={() => setMode('3d')}
+              >
+                Explore in 3D
+              </button>
+            </div>
             <button className={action} onClick={() => setFit((n) => n + 1)}>
               Fit graph
             </button>
             <button className={action} onClick={() => setRefresh((n) => n + 1)}>
               Refresh
             </button>
-            <button className={action} onClick={onClose} aria-label="Close Growth graph">
+            <button
+              className={buttonClass('ghost', 'xs')}
+              onClick={onClose}
+              aria-label="Close Growth graph"
+            >
               Close
             </button>
           </div>
@@ -191,7 +197,7 @@ export default function GrowthExplorer({
               {graph?.lanes.map((lane, index) => (
                 <button
                   key={lane.id}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover transition-colors cursor-pointer"
                   onClick={() => select(`copy:${lane.id}`)}
                 >
                   <span

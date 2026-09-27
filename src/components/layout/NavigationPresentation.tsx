@@ -1,4 +1,7 @@
 import { cn } from '@/lib/cn';
+import { iconButtonClass } from '@/components/ui/button-class';
+import { fieldClass } from '@/components/ui/field-class';
+import { linkClass } from '@/components/ui/button-class';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '@/stores/appStore';
@@ -106,14 +109,14 @@ export default function NavigationPresentation(
               ),
             );
           }}
-          className="min-w-0 flex-1 rounded bg-surface text-sm p-1.5"
+          className={fieldClass(undefined, 'min-w-0 flex-1', 'sm')}
         >
           {options}
         </select>
         <button
           aria-label="Refresh navigation"
           onClick={props.refresh}
-          className="p-1.5 rounded hover:bg-surface cursor-pointer"
+          className={iconButtonClass('sm')}
         >
           ↻
         </button>
@@ -126,7 +129,7 @@ export default function NavigationPresentation(
               setError('');
               props.refresh();
             }}
-            className="underline cursor-pointer"
+            className={linkClass()}
           >
             Retry navigation preferences
           </button>
@@ -187,7 +190,7 @@ export default function NavigationPresentation(
                   saveUserNavigation(authorId!, { gardenId: props.gardenId, view: null }),
                 )
               }
-              className="text-left underline cursor-pointer"
+              className={linkClass('text-left')}
             >
               Follow Garden preference
             </button>

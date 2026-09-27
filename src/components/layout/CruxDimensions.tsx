@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { iconButtonClass } from '@/components/ui/button-class';
 import DimensionConnections from './DimensionConnections';
 import { useConnectionNavigation } from './useConnectionNavigation';
 import { useNavigationView } from './useNavigationView';
@@ -37,7 +38,7 @@ export default function CruxDimensions() {
           aria-label="Refresh connections"
           title="Refresh connections"
           onClick={view.refresh}
-          className="shrink-0 px-1 py-0.5 rounded text-text-muted hover:bg-surface cursor-pointer"
+          className={iconButtonClass('xs')}
         >
           ↻
         </button>

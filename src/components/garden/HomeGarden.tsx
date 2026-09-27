@@ -245,15 +245,10 @@ export default function HomeGarden() {
               </div>
             </div>
           </div>
-          <IconButton
-            label="Add Crux"
-            size="lg"
-            tooltip={{ label: 'Add Crux' }}
-            onClick={() => setShowNewCrux(true)}
-            className="bg-panel text-text-muted hover:bg-accent/20 hover:text-accent"
-          >
-            <PlusCircleIcon size={20} />
-          </IconButton>
+          <Button size="sm" onClick={() => setShowNewCrux(true)}>
+            <PlusCircleIcon size={15} />
+            Add Crux
+          </Button>
         </div>
         {(dropping || dropNotice) && (
           <p role="status" className="text-xs text-text-muted mt-2">
@@ -283,7 +278,7 @@ export default function HomeGarden() {
       {garden && <GardenActions key={garden.id} />}
       {can(Capability.V2) && (
         <details className="mb-4 text-sm text-text-muted">
-          <summary className="cursor-pointer py-2">Shared gardens</summary>
+          <summary className="py-2 hover:text-text">Shared gardens</summary>
           <Gardens />
         </details>
       )}
@@ -292,12 +287,9 @@ export default function HomeGarden() {
       {cruxList.length === 0 && search.length > 0 ? (
         <Panel padding="md" className="flex flex-col items-center py-10">
           <p className="text-sm text-text-muted mb-3">No cruxes match your search</p>
-          <button
-            onClick={handleClearSearch}
-            className="text-sm text-accent hover:text-text transition-colors cursor-pointer"
-          >
+          <Button variant="ghost" size="sm" onClick={handleClearSearch}>
             Clear search
-          </button>
+          </Button>
         </Panel>
       ) : cruxList.length === 0 ? (
         <Panel padding="md" className="flex flex-col items-center text-center py-14 px-6">
@@ -317,15 +309,17 @@ export default function HomeGarden() {
           >
             Explore undertakings
           </PlasmaButton>
-          <button
-            className="mt-3 text-sm text-accent cursor-pointer"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2"
             onClick={() => {
               setNewCruxView('crux');
               setShowNewCrux(true);
             }}
           >
             Just a Crux
-          </button>
+          </Button>
         </Panel>
       ) : (
         <GardenGrid

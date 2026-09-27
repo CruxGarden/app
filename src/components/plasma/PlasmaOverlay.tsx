@@ -114,7 +114,10 @@ export default function PlasmaOverlay({
       // optics — so a dialog reads as one of the panes, only higher.
       mood={{ colors: optics.colors, blend: 20, spring: { stiffness: 170, damping: 16 } }}
       tint={optics.tint}
-      opacity={optics.opacity}
+      // A menu or a dialog is read, not looked through: its material is all
+      // but opaque whatever the panes' is (Daniel, 2026-09-27). The plasma
+      // button stays the ground's own glass.
+      opacity={always ? optics.opacity : Math.max(optics.opacity, 0.94)}
       frost={Math.min(optics.frost, t.frost ?? 1)}
       // A dialog reads as one of the panes, so it warms with them: the same
       // lit rim (lib/moods/signals.ts), still scaled by whatever this overlay asked for.

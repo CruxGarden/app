@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
+import { fieldClass } from '@/components/ui/field-class';
+import { segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { useCruxStore } from '@/stores/cruxStore';
 import {
   searchMedia,
@@ -9,7 +12,6 @@ import {
   type MediaKind,
 } from '@/services/media-finder';
 import { PaneEmpty, PaneNote, PaneToolbar } from './pane-ui';
-import { cn } from '@/lib/cn';
 
 /**
  * Find media: openly licensed images, sounds and video from Openverse and
@@ -97,18 +99,13 @@ export default function MediaPane() {
   return (
     <div className="flex flex-col h-full min-h-0">
       <PaneToolbar>
-        <div role="tablist" aria-label="Media kind" className="flex gap-1">
+        <div role="tablist" aria-label="Media kind" className={segmentGroupClass()}>
           {KINDS.map((k) => (
             <button
               key={k.kind}
               role="tab"
               aria-selected={kind === k.kind}
-              className={cn(
-                'px-2 py-1 text-xs rounded-[var(--radius-sm)] border',
-                kind === k.kind
-                  ? 'bg-accent/20 border-accent text-text'
-                  : 'border-border text-text-muted',
-              )}
+              className={segmentClass(kind === k.kind)}
               onClick={() => {
                 setKind(k.kind);
                 setItems(null);
@@ -137,12 +134,12 @@ export default function MediaPane() {
           }
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 px-2 h-8 text-sm rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text"
+          className={fieldClass(undefined, 'flex-1', 'sm')}
         />
         <button
           type="submit"
           disabled={busy === 'search' || !query.trim()}
-          className="px-3 h-8 text-sm rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20"
+          className={buttonClass('secondary', 'sm')}
         >
           {busy === 'search' ? 'Searching…' : 'Search'}
         </button>
@@ -207,14 +204,18 @@ export default function MediaPane() {
                   </p>
                   <div className="flex gap-2 mt-1">
                     <button
-                      className="px-2 py-0.5 rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20"
+                      className={buttonClass('primary', 'xs')}
                       disabled={busy !== null}
                       onClick={() => void use(item)}
                     >
                       {busy === item.id ? 'Adding…' : `Use ${item.title}`}
                     </button>
                     <button
-                      className="px-2 py-0.5 rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20"
+                      className={buttonClass(
+                        'secondary',
+                        'xs',
+                        'aria-pressed:bg-accent-muted aria-pressed:text-accent',
+                      )}
                       disabled={previewBusy !== null}
                       aria-pressed={preview?.id === item.id}
                       onClick={() => void togglePreview(item)}

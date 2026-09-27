@@ -186,6 +186,26 @@ html[data-surface-style='glass'] .modal-scrim {
   backdrop-filter: blur(calc(var(--glass-blur) / 3));
 }
 
+/* ── Overlays stay glass at the edge and opaque where the words are ─────────
+   A menu or a dialog keeps the frame and the specular edge, but its plate is
+   its own tint laid over the Mood's ground (interaction.css): what sits behind
+   never shows through what it says (Daniel, 2026-09-27: "modal and menu
+   opacity, for the most part they should be opaque"). */
+/* Painted as images, which the frost above never sets: the tint over the
+   ground is opaque whatever frosted colour the surface keeps underneath. */
+html[data-surface-style='glass']
+  :is(
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-tooltip,
+    [data-modal-open] > [data-motion-role='dialog'] > .bg-panel,
+    .overlay-plate
+  ) {
+  background-image:
+    linear-gradient(var(--_overlay-tint), var(--_overlay-tint)),
+    linear-gradient(var(--bg), var(--bg));
+}
+
 /* ── Discrete surfaces inside a glass-surface: the library paints the glass; the
    child keeps its border and shape but no second fill or blur ── */
 html[data-surface-style='glass'] .glass-surface .bg-panel,

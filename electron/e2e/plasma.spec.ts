@@ -55,7 +55,10 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
     else expect((await bg('header.bg-toolbar'))?.bg).not.toBe(transparent);
     const home = await shapes();
     if (home) {
-      expect(home.some((c) => c.includes('bg-panel'))).toBe(true);
+      // Home is a pane: the pane is the material's, and what is laid inside it
+      // (the header panel, the Crux cards) is an inner plate, never a second drop.
+      expect(home.some((c) => c.includes('mosaic-window'))).toBe(true);
+      expect(home.some((c) => c.includes('bg-panel') || c.includes('bg-garden-card'))).toBe(false);
       expect(home.some((c) => c.includes('bg-toolbar'))).toBe(barOn);
     }
 

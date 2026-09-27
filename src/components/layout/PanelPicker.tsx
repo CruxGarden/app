@@ -14,6 +14,7 @@ import { PlusCircleIcon } from '@/components/ui/icons';
 import { arrangeWorkspacePanels } from '@/services/workspace-layouts';
 import { togglePin, usePinned } from '@/stores/pins';
 import { cn } from '@/lib/cn';
+import { buttonClass, fieldClass, iconButtonClass, menuItemClass } from '@/components/ui';
 
 /** Panes with their own top-bar button: listed only when closed, never pinned. */
 const OWN_BUTTON = new Set<PaneType>(['navigator', 'explore', 'mood', 'console']);
@@ -134,7 +135,7 @@ export default function PanelPicker() {
         aria-label="Add panel"
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="h-7 px-2 inline-flex items-center gap-1 text-xs text-toolbar-text rounded-[var(--radius-sm)] hover:bg-action-button-hover cursor-pointer"
+        className={buttonClass('ghost', 'xs', 'gap-1 px-2 text-toolbar-text')}
         onClick={() => {
           setQuery('');
           setError('');
@@ -152,7 +153,7 @@ export default function PanelPicker() {
             aria-label="Add panel"
             data-motion-role="dropdown"
             style={position}
-            className="fixed z-50 overflow-y-auto bg-dropdown backdrop-blur-xl text-dropdown-text border border-dropdown-border rounded-dropdown shadow-dropdown p-2"
+            className="fixed z-50 overflow-y-auto bg-dropdown text-text border border-dropdown-border rounded-dropdown shadow-dropdown p-1.5 motion-enter-dropdown"
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 e.preventDefault();
@@ -188,7 +189,7 @@ export default function PanelPicker() {
               placeholder="Find a panel…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full px-2 py-2 mb-1 text-sm bg-input text-input-text border border-input-border rounded-input"
+              className={fieldClass(undefined, 'mb-1.5')}
             />
             {available.map((pane) => {
               const { icon: Icon, label, prefix } = PANES[pane];
@@ -200,7 +201,7 @@ export default function PanelPicker() {
                     type="button"
                     aria-label={`Toggle ${label.toLowerCase()}`}
                     aria-pressed={isOpen}
-                    className="flex-1 min-w-0 flex items-center gap-2 text-left text-sm px-2 py-2 rounded-[var(--radius-sm)] hover:bg-dropdown-item-hover focus:bg-dropdown-item-hover cursor-pointer"
+                    className={menuItemClass('default', 'flex-1 min-w-0 w-auto')}
                     onClick={() => {
                       ui.getState().setPaneVisible(pane, !isOpen);
                       if (!isOpen) finish();
@@ -225,9 +226,10 @@ export default function PanelPicker() {
                       aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${labels[pane]}`}
                       aria-pressed={isPinned}
                       title={isPinned ? 'Unpin from the bar' : 'Keep in the bar'}
-                      className={cn(
-                        'shrink-0 w-7 h-7 flex items-center justify-center rounded-[var(--radius-sm)] hover:bg-dropdown-item-hover cursor-pointer',
-                        isPinned ? 'text-accent' : 'text-text-muted opacity-60 hover:opacity-100',
+                      className={iconButtonClass(
+                        'sm',
+                        false,
+                        isPinned ? 'text-accent hover:text-accent' : 'opacity-60 hover:opacity-100',
                       )}
                       onClick={() => togglePin(scope, pane)}
                     >
@@ -246,7 +248,7 @@ export default function PanelPicker() {
               <button
                 type="button"
                 disabled={busy}
-                className="w-full text-left text-sm px-2 py-2 hover:bg-dropdown-item-hover rounded-[var(--radius-sm)] cursor-pointer disabled:opacity-50"
+                className={menuItemClass()}
                 onClick={() => {
                   setBusy(true);
                   setError('');
@@ -260,7 +262,7 @@ export default function PanelPicker() {
               </button>
               <button
                 type="button"
-                className="w-full text-left text-sm px-2 py-2 hover:bg-dropdown-item-hover rounded-[var(--radius-sm)] cursor-pointer"
+                className={menuItemClass()}
                 onClick={() => {
                   finish();
                   useUIStore.getState().setSettingsOpen(true);

@@ -1,4 +1,6 @@
 import { deferNotebookAction } from '@/services/notebook-lifecycle';
+import { buttonClass } from '@/components/ui/button-class';
+import { linkClass } from '@/components/ui/button-class';
 import { copyIdentity } from '@/services/working-copies';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { documentsFor } from '@/services/workspace-documents';
@@ -639,7 +641,7 @@ export default function EditorContent({
           <a
             href={blobUrl}
             download={basename(path) || 'file'}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors motion-press"
+            className={buttonClass('primary', 'md')}
           >
             Download
           </a>
@@ -662,7 +664,7 @@ export default function EditorContent({
           {documentError || 'This Artifact changed externally. Your unsaved edits are retained.'}
           {documentConflict && (
             <button
-              className="ml-2 underline"
+              className={linkClass('ml-2')}
               onClick={() => void documents.save(artifact, true).catch(() => {})}
             >
               Overwrite with my edits
@@ -770,10 +772,7 @@ export default function EditorContent({
           ) : (
             <>
               <p className="text-xs text-error">Preview could not start</p>
-              <button
-                className="text-xs underline cursor-pointer"
-                onClick={() => void site.restart()}
-              >
+              <button className={linkClass('text-xs')} onClick={() => void site.restart()}>
                 Retry preview
               </button>
               <pre className="text-2xs font-mono text-text-muted max-w-md max-h-40 overflow-auto whitespace-pre-wrap text-left">

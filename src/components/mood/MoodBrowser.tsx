@@ -1,4 +1,5 @@
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
+import { linkClass } from '@/components/ui/button-class';
 import { downloadBlob } from '@/lib/download';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useEffect, useRef, useState } from 'react';
@@ -98,12 +99,12 @@ function MoodCard({
     .filter(Boolean)
     .join(' · ');
   const iconBtn =
-    'w-7 h-7 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-text-muted hover:text-text hover:bg-surface transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
+    'w-7 h-7 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-text-muted hover:text-text hover:bg-action-button-hover active-dim motion-press cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
   return (
     <div
       className={cn(
-        'group shape-card rounded-[var(--radius)] border bg-panel overflow-hidden flex flex-col transition-colors',
-        worn ? 'border-accent/60' : 'border-border hover:border-accent/40',
+        'group shape-card rounded-[var(--radius)] border bg-panel overflow-hidden flex flex-col transition-[border-color,box-shadow] motion-enter-card',
+        worn ? 'border-accent/60' : 'border-border hover:border-accent/40 hover:shadow-card-hover',
         busy && 'opacity-70',
       )}
       data-testid={testId}
@@ -373,7 +374,11 @@ export default function MoodBrowser() {
       {loadError && (
         <div role="alert" className="text-sm text-error">
           {loadError}{' '}
-          <button type="button" onClick={() => setReload((value) => value + 1)}>
+          <button
+            type="button"
+            className={linkClass()}
+            onClick={() => setReload((value) => value + 1)}
+          >
             Retry
           </button>
         </div>
@@ -449,9 +454,7 @@ export default function MoodBrowser() {
       {/* HyperMoods: the rooms with their own render, track, cues and effects. */}
       <section className="flex flex-col gap-2" data-testid="bundled-moods">
         <div className="flex items-baseline justify-between gap-3">
-          <SectionLabel as="h3">
-            HyperMoods
-          </SectionLabel>
+          <SectionLabel as="h3">HyperMoods</SectionLabel>
           <span className="text-2xs text-text-muted text-right">
             {HYPER_MOODS.length} rooms — a render, a sound and a voice, made as one. Click one to
             wear it.
@@ -493,15 +496,17 @@ export default function MoodBrowser() {
       </details>
 
       <section className="flex flex-col gap-2">
-        <SectionLabel as="h3" className="mt-3">Yours</SectionLabel>
+        <SectionLabel as="h3" className="mt-3">
+          Yours
+        </SectionLabel>
       </section>
 
       {moods.length === 0 ? (
         <div className="rounded-[var(--radius)] border border-dashed border-border/70 p-8 text-center">
           <p className="text-sm text-heading">No saved Moods yet</p>
           <p className="text-xs text-text-muted mt-1">
-            Shape the app in Theme, Background, Sound and Persona, then save what you're wearing. Or import a .cruxmood
-            someone sent you.
+            Shape the app in Theme, Background, Sound and Persona, then save what you're wearing. Or
+            import a .cruxmood someone sent you.
           </p>
         </div>
       ) : (

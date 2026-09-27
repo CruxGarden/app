@@ -7,8 +7,16 @@ import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useWorkspaceRegistry, openWorkspace, closeWorkspace } from '@/stores/workspaceRegistry';
 import { useDialogStore } from '@/stores/dialogStore';
 import { getServices } from '@/services';
-import { FolderIcon } from '@/components/ui/icons';
-import { Button, Input } from '@/components/ui';
+import { ChevronDownIcon, CloseIcon, FolderIcon } from '@/components/ui/icons';
+import {
+  Button,
+  Input,
+  buttonClass,
+  fieldClass,
+  iconButtonClass,
+  menuItemClass,
+} from '@/components/ui';
+import { cn } from '@/lib/cn';
 import { recentOrder, nextRecent } from '@/lib/workspace-switching';
 import { useGardenContext } from '@/stores/gardenContext';
 import { gardenMembers, opensAsWorkspace } from '@/services/garden-navigation';
@@ -313,34 +321,49 @@ export default function WorkspaceSwitcher() {
         aria-keyshortcuts="Control+Alt+K Meta+Alt+K Control+Tab"
         aria-expanded={open}
         title="Switch Crux · Cmd/Ctrl+Alt+K · Ctrl+Tab for recent Cruxes"
-        className="text-xs font-display text-toolbar-text truncate max-w-64 cursor-pointer px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover focus-visible:outline-2 focus-visible:outline-accent"
+        className={buttonClass(
+          'ghost',
+          'xs',
+          'max-w-64 min-w-0 gap-1 px-2 text-sm font-display text-toolbar-text hover:text-toolbar-text',
+        )}
         onClick={beginSearch}
       >
-        <span style={active ? { viewTransitionName: `crux-${active.id}` } : undefined}>
+        <span
+          className="truncate"
+          style={active ? { viewTransitionName: `crux-${active.id}` } : undefined}
+        >
           {active?.title ?? <FolderIcon />}
-        </span>{' '}
-        {active ? '▾' : null}
-        {scopedEntries.some((e) => e.id !== activeId && /approval|merge|Failed|Done/.test(e.status))
-          ? ' •'
-          : ''}
+        </span>
+        {active ? <ChevronDownIcon /> : null}
+        {scopedEntries.some(
+          (e) => e.id !== activeId && /approval|merge|Failed|Done/.test(e.status),
+        ) ? (
+          <span
+            aria-label="Another Crux needs you"
+            className="w-1.5 h-1.5 rounded-full bg-accent motion-attention"
+          />
+        ) : null}
       </button>
       {recent &&
         createPortal(
           <div
             role="status"
             aria-label="Recent Cruxes"
-            className="fixed z-[100] top-20 left-1/2 -translate-x-1/2 rounded bg-surface-solid border border-border p-4 shadow-modal"
+            className="overlay-plate fixed z-[100] top-20 left-1/2 -translate-x-1/2 min-w-64 rounded-dropdown border border-dropdown-border p-2 shadow-modal motion-enter-dropdown"
           >
             {recent.ids.map((id, i) => (
               <div
                 key={id}
                 aria-current={i === recent.index ? 'true' : undefined}
-                className={i === recent.index ? 'text-accent' : 'text-text-muted'}
+                className={cn(
+                  'px-2.5 py-1.5 rounded-[var(--radius-sm)] text-sm transition-colors',
+                  i === recent.index ? 'bg-accent-muted text-text' : 'text-text-muted',
+                )}
               >
                 {entries.find((e) => e.id === id)?.title ?? 'Closed Crux'}
               </div>
             ))}
-            <p className="text-xs text-text-muted mt-2">
+            <p className="text-xs text-text-muted mt-1.5 px-2.5">
               Release Control to switch · Escape to cancel
             </p>
           </div>,
@@ -349,7 +372,7 @@ export default function WorkspaceSwitcher() {
       {modal &&
         createPortal(
           <div
-            className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/40"
+            className="fixed inset-0 z-[100] flex items-start justify-center pt-20 modal-scrim"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) cancel();
             }}
@@ -367,7 +390,7 @@ export default function WorkspaceSwitcher() {
                       : 'Rename Crux'
                     : 'Switch Crux workspace'
               }
-              className="bg-surface-solid text-text border border-border rounded p-4 w-[min(30rem,calc(100vw-2rem))] shadow-modal"
+              className="overlay-plate text-text border border-dropdown-border rounded-dropdown p-2 w-[min(30rem,calc(100vw-2rem))] shadow-modal motion-enter-dropdown"
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   e.preventDefault();
@@ -391,12 +414,12 @@ export default function WorkspaceSwitcher() {
               {closing ? (
                 <>
                   <h2
-                    className="text-sm font-medium text-text"
+                    className="px-2 pt-1 text-sm font-medium text-text"
                     style={{ fontFamily: 'var(--dialog-title-font)' }}
                   >
                     Close {entries.find((e) => e.id === closing)?.title}?
                   </h2>
-                  <p className="text-xs text-text-muted my-3">
+                  <p className="px-2 text-xs text-text-muted my-3">
                     Running work will stop. Queued prompts and Growth remain available when you
                     reopen. Save or discard unsaved Artifact edits before closing.
                   </p>
@@ -433,7 +456,7 @@ export default function WorkspaceSwitcher() {
                     }
                   }}
                 >
-                  <label className="flex flex-col gap-1 text-xs text-text-muted">
+                  <label className="flex flex-col gap-1 p-1 text-xs text-text-muted">
                     {copyIdentity(getWorkspace(renaming)?.data.getState().crux)
                       ? 'Task name'
                       : 'Crux title'}
@@ -480,7 +503,7 @@ export default function WorkspaceSwitcher() {
                       setQuery(e.target.value);
                       setIndex(0);
                     }}
-                    className="w-full border border-border rounded p-2 bg-bg mb-3"
+                    className={fieldClass(undefined, 'mb-1.5')}
                     onKeyDown={(e) => {
                       if (e.nativeEvent.isComposing) return;
                       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -500,15 +523,18 @@ export default function WorkspaceSwitcher() {
                     {rows.map((row, i) => (
                       <div
                         key={row.id}
-                        className={`flex items-center gap-2 rounded px-2 ${i === index ? 'bg-accent-muted' : ''}`}
+                        className={cn(
+                          'group flex items-center gap-1 pr-1 rounded-[var(--radius-sm)] transition-colors',
+                          i === index ? 'bg-accent-muted' : 'hover:bg-action-button-hover',
+                        )}
                       >
                         <button
-                          className="flex-1 text-left py-2 min-w-0 focus-visible:outline-2 focus-visible:outline-accent"
+                          className="flex-1 text-left px-2.5 py-1.5 min-w-0 rounded-[var(--radius-sm)] cursor-pointer"
                           aria-current={row.id === activeId ? 'page' : undefined}
                           onClick={() => choose(row.id)}
                         >
-                          <span className="block truncate">
-                            {row.id === activeId ? '✓ ' : ''}
+                          <span className="block truncate text-sm">
+                            {row.id === activeId ? <span className="text-accent">✓ </span> : ''}
                             {row.title}
                           </span>
                           <span className="text-xs text-text-muted">
@@ -526,25 +552,30 @@ export default function WorkspaceSwitcher() {
                         {entries.some((e) => e.id === row.id) && (
                           <button
                             aria-label={`Close ${row.title} workspace`}
-                            className="p-2"
+                            className={iconButtonClass(
+                              'sm',
+                              false,
+                              i !== index && 'reveal-on-hover',
+                            )}
                             onClick={() => {
                               setClosing(row.id);
                               setError('');
                             }}
                           >
-                            ×
+                            <CloseIcon size={14} />
                           </button>
                         )}
                       </div>
                     ))}
                   </div>
                   {!rows.length && (
-                    <p role="status" className="py-4 text-sm">
+                    <p role="status" className="px-2.5 py-4 text-sm text-text-muted">
                       No matching Cruxes.
                     </p>
                   )}
-                  <div className="border-t border-border mt-2 pt-2 flex flex-col items-start gap-2 text-sm">
+                  <div className="border-t border-dropdown-border mt-1.5 pt-1.5 flex flex-col">
                     <button
+                      className={menuItemClass()}
                       onClick={async () => {
                         try {
                           const cruxes = garden
@@ -578,6 +609,7 @@ export default function WorkspaceSwitcher() {
                     {active && (
                       <>
                         <button
+                          className={menuItemClass()}
                           onClick={() => {
                             setRenaming(active.id);
                             setTitle(
@@ -588,20 +620,25 @@ export default function WorkspaceSwitcher() {
                         >
                           Rename current Crux…
                         </button>
-                        <button onClick={() => setClosing(active.id)}>
+                        <button className={menuItemClass()} onClick={() => setClosing(active.id)}>
                           Close current workspace
                         </button>
                       </>
                     )}
-                    <button onClick={cancel}>Cancel</button>
-                    <span className="text-xs text-text-muted">
+                    <button
+                      className={menuItemClass('default', 'text-text-muted')}
+                      onClick={cancel}
+                    >
+                      Cancel
+                    </button>
+                    <span className="px-2.5 pt-1.5 pb-0.5 text-xs text-text-muted">
                       Ctrl+Tab: recent Cruxes · ↑↓: select · Enter: open
                     </span>
                   </div>
                 </>
               )}
               {error && (
-                <p role="alert" className="text-error text-xs mt-3">
+                <p role="alert" className="px-2 text-error text-xs mt-3">
                   {error}
                 </p>
               )}

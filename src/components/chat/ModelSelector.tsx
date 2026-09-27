@@ -1,5 +1,5 @@
 import { includedUsage } from '@/api/inference';
-import { SectionLabel } from '@/components/ui';
+import { SectionLabel, menuItemClass } from '@/components/ui';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useAuthStore } from '@/stores/authStore';
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
@@ -100,11 +100,24 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   useLayoutEffect(() => {
     if (!open) return;
     const measure = () => {
-      const rect = buttonRef.current?.getBoundingClientRect();
-      if (!rect) return;
+      const button = buttonRef.current;
+      const rect = button?.getBoundingClientRect();
+      if (!button || !rect) return;
       const gap = 8;
-      const above = rect.top - gap;
-      const below = window.innerHeight - rect.bottom - gap;
+      // The room that counts is the pane's, not the window's: the pane clips
+      // whatever hangs out of it, and a menu measured against the window
+      // opened downward into a pane's bottom edge and was cut off there.
+      let top = 0;
+      let bottom = window.innerHeight;
+      for (let el = button.parentElement; el; el = el.parentElement) {
+        const { overflowY } = getComputedStyle(el);
+        if (overflowY === 'visible') continue;
+        const box = el.getBoundingClientRect();
+        top = Math.max(top, box.top);
+        bottom = Math.min(bottom, box.bottom);
+      }
+      const above = rect.top - top - gap;
+      const below = bottom - rect.bottom - gap;
       const cap = window.innerHeight * 0.6;
       // Keep opening upward while there is real room; flip only when below is
       // genuinely roomier, so the common case does not move under the cursor.
@@ -112,7 +125,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
       const room = side === 'top' ? above : below;
       // A floor keeps the menu usable (and scrollable) in a cramped pane
       // rather than collapsing to a sliver.
-      setPlacement({ side, maxHeight: Math.max(140, Math.min(cap, room)) });
+      setPlacement({ side, maxHeight: Math.max(120, Math.min(cap, room)) });
     };
     measure();
     window.addEventListener('resize', measure);
@@ -167,8 +180,9 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          'flex items-center gap-1.5 px-2 py-0.5 text-xxs font-mono rounded transition-colors cursor-pointer',
-          'bg-accent-muted text-accent',
+          'flex items-center gap-1.5 h-6 px-2 text-xxs font-mono rounded-[var(--radius-sm)] cursor-pointer',
+          'bg-accent-muted text-accent hover-bright active-dim',
+          open && 'ring-1 ring-accent/40',
           'disabled:cursor-not-allowed',
         )}
       >
@@ -220,14 +234,18 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
               <div
                 ref={pickerRef}
                 style={{ maxHeight: placement.maxHeight || undefined }}
-                className="w-full overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1"
+                className="w-full overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown p-1"
               >
                 {groups.map((group) => (
                   <div key={group.providerId}>
                     {(() => {
                       const Icon = PROVIDER_ICONS[group.providerId];
                       return (
-                        <SectionLabel as="div" tone="muted" className="px-3 py-1 flex items-center gap-1.5">
+                        <SectionLabel
+                          as="div"
+                          tone="muted"
+                          className="px-2.5 pt-2 pb-1 flex items-center gap-1.5"
+                        >
                           {Icon && <Icon size={10} />}
                           {group.provider}
                         </SectionLabel>
@@ -240,11 +258,12 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                           onChange(model.id);
                           setOpen(false);
                         }}
-                        className={cn(
-                          'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
-                          model.id === value
-                            ? 'text-accent bg-accent-muted'
-                            : 'text-text hover:bg-accent-muted',
+                        className={menuItemClass(
+                          'default',
+                          cn(
+                            'text-xs font-mono',
+                            model.id === value && 'text-accent bg-accent-muted',
+                          ),
                         )}
                       >
                         {model.name}
@@ -263,7 +282,11 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                       key={agentGroup.providerId}
                       data-testid={`model-group-${agentGroup.providerId}`}
                     >
-                      <SectionLabel as="div" tone="muted" className="px-3 py-1 flex items-center gap-1.5">
+                      <SectionLabel
+                        as="div"
+                        tone="muted"
+                        className="px-2.5 pt-2 pb-1 flex items-center gap-1.5"
+                      >
                         {(() => {
                           const Icon = PROVIDER_ICONS[agentGroup.providerId];
                           return Icon ? <Icon size={10} /> : null;
@@ -281,13 +304,14 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                             onChange(model.id);
                             setOpen(false);
                           }}
-                          className={cn(
-                            'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors',
-                            !available
-                              ? 'text-text-muted/60 cursor-not-allowed'
-                              : model.id === value
-                                ? 'text-accent bg-accent-muted cursor-pointer'
-                                : 'text-text hover:bg-accent-muted cursor-pointer',
+                          className={menuItemClass(
+                            'default',
+                            cn(
+                              'text-xs font-mono',
+                              !available
+                                ? 'text-text-muted/60'
+                                : model.id === value && 'text-accent bg-accent-muted',
+                            ),
                           )}
                         >
                           {model.name}
@@ -305,7 +329,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                 {/* Local inference (desktop, running servers only) */}
                 {localEndpoints.map((endpoint) => (
                   <div key={endpoint.id}>
-                    <SectionLabel as="div" tone="muted" className="px-3 py-1">
+                    <SectionLabel as="div" tone="muted" className="px-2.5 pt-2 pb-1">
                       {endpoint.name} · local
                     </SectionLabel>
                     {sortLocalModels(endpoint.models).map((name) => {
@@ -317,11 +341,9 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                             onChange(id);
                             setOpen(false);
                           }}
-                          className={cn(
-                            'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
-                            id === value
-                              ? 'text-accent bg-accent-muted'
-                              : 'text-text hover:bg-accent-muted',
+                          className={menuItemClass(
+                            'default',
+                            cn('text-xs font-mono', id === value && 'text-accent bg-accent-muted'),
                           )}
                         >
                           {name}
@@ -332,7 +354,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                       );
                     })}
                     {endpoint.models.length === 0 && (
-                      <div className="px-3 py-1.5 text-xs font-mono text-text-muted">
+                      <div className="px-2.5 py-1.5 text-xs font-mono text-text-muted">
                         No models installed
                       </div>
                     )}

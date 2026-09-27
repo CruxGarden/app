@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { linkClass } from '@/components/ui/button-class';
 import { Link } from 'react-router-dom';
 import { getServices } from '@/services';
 import type { ChatMessage, Crux } from '@/api/types';
@@ -126,7 +127,7 @@ export default function GrowthInspector({
       <Link
         onClick={onClose}
         to={`/c/${graph.cruxId}${lane.id === graph.cruxId ? '' : `?task=${lane.id}`}`}
-        className="text-accent underline"
+        className={linkClass('self-start')}
       >
         Open {lane.title}
       </Link>
@@ -148,7 +149,7 @@ export default function GrowthInspector({
                 <button
                   key={link.source}
                   onClick={() => onSelect(parent.id)}
-                  className="block text-left text-accent underline text-xs"
+                  className={linkClass('block text-left text-xs')}
                 >
                   {graph.lanes.find((l) => l.id === parent.ownerId)?.title} · {parent.title}
                   {link.kind === 'merge' ? ' · merged Task' : ''}
@@ -216,10 +217,7 @@ export default function GrowthInspector({
               </div>
             ))}
             {messages.length > messageLimit && (
-              <button
-                className="text-accent underline"
-                onClick={() => setMessageLimit((n) => n + 20)}
-              >
+              <button className={linkClass()} onClick={() => setMessageLimit((n) => n + 20)}>
                 Show more messages
               </button>
             )}

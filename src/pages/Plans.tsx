@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
+import { linkClass, segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import * as billingApi from '@/api/billing';
 import { formatBytes } from '@/lib/format';
 import { APP_NAME } from '@/lib/constants';
 import PageHeader from '@/components/layout/PageHeader';
-import { cn } from '@/lib/cn';
 
 /**
  * crux.garden/plans — the one place prices live on the website. The landing
@@ -44,21 +44,20 @@ export default function Plans() {
 
         {catalog && (
           <>
-            <div className="flex items-center justify-end gap-1 text-xxs font-mono text-text-muted mt-8 mb-2">
-              {(['month', 'year'] as const).map((iv) => (
-                <button
-                  key={iv}
-                  type="button"
-                  onClick={() => setInterval_(iv)}
-                  aria-pressed={interval === iv}
-                  className={cn(
-                    'px-2 py-0.5 rounded-[var(--radius-sm)] cursor-pointer',
-                    interval === iv ? 'text-text bg-surface' : 'hover:text-text',
-                  )}
-                >
-                  {iv === 'month' ? 'Monthly' : 'Yearly'}
-                </button>
-              ))}
+            <div className="flex items-center justify-end mt-8 mb-2">
+              <div role="group" aria-label="Billing interval" className={segmentGroupClass()}>
+                {(['month', 'year'] as const).map((iv) => (
+                  <button
+                    key={iv}
+                    type="button"
+                    onClick={() => setInterval_(iv)}
+                    aria-pressed={interval === iv}
+                    className={segmentClass(interval === iv, 'xs', 'font-mono')}
+                  >
+                    {iv === 'month' ? 'Monthly' : 'Yearly'}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {catalog.plans.map(({ plan, prices }) => {
@@ -98,7 +97,7 @@ export default function Plans() {
               Pick a plan inside the app: Settings → Plan. Checkout is Stripe's, with Apple Pay,
               Google Pay and Link
               {catalog.trialDays > 0 ? `, and trials need no card` : ''}.{' '}
-              <a href="/#download" className="text-accent hover:underline">
+              <a href="/#download" className={linkClass()}>
                 Download the app
               </a>
               .

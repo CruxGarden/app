@@ -232,6 +232,28 @@ const NO_BLOOM = {
 };
 
 /**
+ * How the soft and Plasma Moods move: things are revealed, not switched on
+ * (Daniel, 2026-09-27: "it should feel alive, and also minimal … pay
+ * attention to how things are revealed"). Menus, messages and cards fade in,
+ * a dialog settles from a touch smaller, a press sinks a pixel, what is
+ * working pulses; panes form in the material and nothing drifts on its own.
+ */
+const QUIET_MOTION: Record<string, string> = {
+  motionEnterPane: 'none',
+  motionEnterDialog: 'scale',
+  motionEnterDropdown: 'fade',
+  motionEnterBubble: 'fade',
+  motionEnterCard: 'fade',
+  motionEnterToast: 'slide-down',
+  motionExitDialog: 'fade',
+  motionExitDropdown: 'fade',
+  motionExitToast: 'fade',
+  motionPress: 'sink',
+  motionAttention: 'pulse',
+  motionAmbient: 'none',
+};
+
+/**
  * The soft Moods (Daniel, 2026-09-19): one basis — the library's "clear as
  * water" recipe over a solid ground, frosted, a mild lens, a hairline edge,
  * nothing moving, 10 px corners, thin gutters, flat chrome, Inter — in a
@@ -378,18 +400,7 @@ function softOverrides(t: SoftTone): Record<string, string> {
     // Thin, but the frost of two neighbours must not meet: 12 px between panes.
     paneGap: '6px',
     workspacePadding: '6px',
-    motionEnterPane: 'none',
-    motionEnterDialog: 'none',
-    motionEnterDropdown: 'none',
-    motionEnterBubble: 'none',
-    motionEnterCard: 'none',
-    motionEnterToast: 'none',
-    motionExitDialog: 'none',
-    motionExitDropdown: 'none',
-    motionExitToast: 'none',
-    motionPress: 'none',
-    motionAttention: 'none',
-    motionAmbient: 'none',
+    ...QUIET_MOTION,
     surfaceStyle: 'plasma',
     glassOpacity: '90%',
     glassBlur: '20px',
@@ -876,7 +887,8 @@ function plasmaOverrides(t: SoftTone): Record<string, string> {
     // The field painted from the tone: its ground, its muted accent, its accent.
     plasmaField: `${t.bg} ${t.accentMuted} ${t.accent}`,
     plasmaBackground: 'field',
-    plasmaOpacity: '0.55',
+    // The panes hold their tint so the field never shows behind text (2026-09-27; was 0.55).
+    plasmaOpacity: '0.8',
     plasmaFrost: '0.5',
     plasmaRim: '0.65',
     plasmaRimWidth: '1.4',
@@ -960,7 +972,11 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       // plate inside a pane and no frame around one: the material is the pane.
       plasmaField: '#050b12 #0f5e46 #b04bd6',
       plasmaTint: '#061016',
-      plasmaOpacity: '0.55',
+      // Text always sits on a panel (Daniel, 2026-09-27: "the way text is
+      // rendered on backgrounds that could be any color, avoid that"): the
+      // pane holds its tint firmly enough that the aurora is a glow at the
+      // edges and never a colour behind the words. Was 0.55.
+      plasmaOpacity: '0.8',
       plasmaFrost: '0.5',
       // Tigrana's rim: a hair of iridescence, no more (Daniel: "he's pulled
       // back even further with the iridescent border").
@@ -1041,20 +1057,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
         '#26241f',
         '#989389',
       ),
-      // No motion but the material's (Daniel: "no animation except for the
-      // plasma, don't want to do too much"): things appear, the plasma forms.
-      motionEnterPane: 'none',
-      motionEnterDialog: 'none',
-      motionEnterDropdown: 'none',
-      motionEnterBubble: 'none',
-      motionEnterCard: 'none',
-      motionEnterToast: 'none',
-      motionExitDialog: 'none',
-      motionExitDropdown: 'none',
-      motionExitToast: 'none',
-      motionPress: 'none',
-      motionAttention: 'none',
-      motionAmbient: 'none',
+      // Quiet motion. 2026-09-19: "no animation except for the plasma, don't
+      // want to do too much"; 2026-09-27: "it should feel alive, and also
+      // minimal … pay attention to how things are revealed". So things are
+      // revealed rather than switched on — menus, messages and cards fade in,
+      // a dialog settles, a press gives a pixel — only what is working pulses,
+      // and nothing drifts. Panes still form in the plasma.
+      ...QUIET_MOTION,
       // Tigrana's type and sizing (Daniel, 2026-09-19: "copy this design …
       // subtler with better sizing and white space … I like the font as
       // well"): Inter for the body, the Mood's display face for titles,

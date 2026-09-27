@@ -116,7 +116,7 @@ function EditableField({
           setDraft(value);
           setEditing(true);
         }}
-        className="text-left hover:text-accent transition-colors cursor-pointer w-full flex items-start gap-1.5 group"
+        className="group text-left cursor-pointer flex items-start gap-1.5 -mx-1.5 px-1.5 py-0.5 w-[calc(100%+0.75rem)] rounded-[var(--radius-sm)] hover:bg-action-button-hover hover:text-accent transition-colors"
         title="Click to edit"
       >
         <span className="truncate flex-1">
@@ -131,7 +131,7 @@ function EditableField({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-text-muted shrink-0 mt-0.5"
+          className="text-text-muted group-hover:text-accent transition-colors shrink-0 mt-0.5"
         >
           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
           <path d="m15 5 4 4" />
@@ -409,7 +409,7 @@ export default function MetadataContent({
             <button
               onClick={cycleVisibility}
               className={cn(
-                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-colors',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/40',
                 VISIBILITY_COLORS[crux.visibility],
               )}
               title="Click to change"
@@ -434,7 +434,7 @@ export default function MetadataContent({
             <button
               onClick={cycleKind}
               className={cn(
-                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-colors',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/40',
                 crux.kind
                   ? 'bg-accent/20 text-accent'
                   : 'bg-badge text-badge-text border border-badge-border',

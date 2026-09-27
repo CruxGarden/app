@@ -10,7 +10,7 @@ import { isEmbeddedApp, isLocalCreationTool, embeddedContentRoot } from '@/servi
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
 import { can, Capability } from '@/lib/platform';
-import { Modal, Button } from '@/components/ui';
+import { Modal, Button, buttonClass, fieldClass } from '@/components/ui';
 
 /** Make a source-editing Task through the same save and copy boundary as TaskBar. */
 export default function EmbeddedAppActions() {
@@ -62,8 +62,7 @@ export default function EmbeddedAppActions() {
       setBusy(false);
     }
   }
-  const button =
-    'px-3 py-1.5 text-xs rounded-[var(--radius-sm)] hover:bg-accent-muted cursor-pointer';
+  const button = buttonClass('ghost', 'xs', 'text-text-muted hover:text-text');
   return (
     <>
       <button
@@ -123,7 +122,7 @@ export default function EmbeddedAppActions() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               disabled={busy}
-              className="block w-full mt-2 p-2 bg-surface border border-border rounded"
+              className={fieldClass(undefined, 'block mt-2 h-auto py-2 resize-y')}
               placeholder="A quieter editor, a reading mode, a new tool…"
             />
           </label>

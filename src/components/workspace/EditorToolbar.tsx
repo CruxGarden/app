@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { buttonClass, segmentClass } from '@/components/ui/button-class';
 import { isPreviewable } from '@/lib/monacoLanguages';
 import type { EditorTab, EditorViewMode } from '@/stores/uiStore';
 
@@ -74,7 +75,7 @@ export default function EditorToolbar({
         {tab.dirty && onSave && (
           <button
             onClick={onSave}
-            className="px-2 py-0.5 text-2xs font-mono rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer"
+            className={buttonClass('primary', 'xs', 'min-h-6 py-0.5 px-2 text-2xs')}
           >
             Save
           </button>
@@ -121,10 +122,8 @@ function ModeButton({
   return (
     <button
       onClick={onClick}
-      className={cn(
-        'px-2 py-0.5 text-2xs font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-        active ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text',
-      )}
+      aria-pressed={active}
+      className={segmentClass(active, 'xs', 'font-mono')}
     >
       {label}
     </button>

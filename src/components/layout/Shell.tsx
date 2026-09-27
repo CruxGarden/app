@@ -10,7 +10,7 @@ import { restoreWorkspaceList } from '@/stores/workspaceRegistry';
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TopBar from './TopBar';
-import { DialogHost } from '@/components/ui';
+import { DialogHost, Panel, buttonClass, rowClass } from '@/components/ui';
 import { currentWorkspaceUI, useUIStore } from '@/stores/uiStore';
 import { startNavigatorPane } from '@/services/navigator-pane';
 import { useAppStore } from '@/stores/appStore';
@@ -212,14 +212,14 @@ export default function Shell() {
           <main className="relative flex-1 min-w-0 min-h-0 overflow-y-auto">
             {initError || resolved?.error ? (
               <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
-                <div className="max-w-sm flex flex-col gap-3">
+                <Panel padding="lg" className="max-w-sm w-full flex flex-col items-center gap-3">
                   <h2 className="font-display text-base text-text">
                     {initError ? "Crux Garden couldn't start" : 'Could not open this location'}
                   </h2>
                   <p className="text-sm text-text-muted">{initError || resolved?.error}</p>
                   {!initError && (
                     <button
-                      className="text-accent cursor-pointer"
+                      className={buttonClass('secondary', 'sm')}
                       onClick={() => setLocationRetry((n) => n + 1)}
                     >
                       Retry location
@@ -227,16 +227,21 @@ export default function Shell() {
                   )}
                   {rootGarden && (
                     <button
-                      className="text-accent cursor-pointer"
+                      className={buttonClass('ghost', 'sm')}
                       onClick={() => void navigate(gardenPath(rootGarden.id))}
                     >
                       Open {rootGarden.title || 'My Garden'}
                     </button>
                   )}
-                </div>
+                </Panel>
               </div>
             ) : resolved?.value?.status === 'choose' ? (
-              <section className="p-8 max-w-md mx-auto" aria-label="Choose Garden">
+              <Panel
+                as="section"
+                padding="lg"
+                className="m-8 max-w-md mx-auto"
+                aria-label="Choose Garden"
+              >
                 <h1 className="text-base font-display mb-2">Choose a Garden</h1>
                 <p className="text-sm text-text-muted mb-4">
                   This Crux is in more than one Garden.
@@ -245,7 +250,10 @@ export default function Shell() {
                   <button
                     key={choice.id}
                     disabled={!choice.available}
-                    className="block w-full text-left p-3 rounded hover:bg-surface disabled:opacity-50 cursor-pointer"
+                    className={rowClass(
+                      false,
+                      'block disabled:opacity-50 disabled:cursor-not-allowed',
+                    )}
                     onClick={() => {
                       void navigate(locationPath(choice.id), { replace: true });
                     }}
@@ -254,16 +262,21 @@ export default function Shell() {
                     {!choice.available && ' · Unavailable'}
                   </button>
                 ))}
-              </section>
+              </Panel>
             ) : resolved?.value?.status === 'unplaced' ? (
-              <section className="p-8 max-w-md mx-auto" aria-label="Unplaced Crux">
+              <Panel
+                as="section"
+                padding="lg"
+                className="m-8 max-w-md mx-auto"
+                aria-label="Unplaced Crux"
+              >
                 <h1 className="text-base font-display mb-2">This Crux isn’t in a Garden yet</h1>
                 <p className="text-sm text-text-muted mb-4">
                   Open a Garden and choose Add existing Crux to place it. Its content is still here.
                 </p>
                 {rootGarden && (
                   <button
-                    className="text-accent cursor-pointer"
+                    className={buttonClass('secondary', 'sm')}
                     onClick={() => {
                       void navigate(gardenPath(rootGarden.id));
                     }}
@@ -271,7 +284,7 @@ export default function Shell() {
                     Open {rootGarden.title || 'My Garden'}
                   </button>
                 )}
-              </section>
+              </Panel>
             ) : servicesReady && resolved?.value?.status === 'ready' ? (
               <Outlet />
             ) : (

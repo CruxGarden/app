@@ -461,7 +461,7 @@ export default function ThemeTokensTab() {
           <button
             type="button"
             onClick={() => setThemePreview(null)}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-xxs cursor-pointer"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-xxs cursor-pointer hover-bright active-dim motion-press"
             title="A conversation is previewing tokens on top of your theme"
           >
             AI preview: {previewCount} token{previewCount === 1 ? '' : 's'} · clear

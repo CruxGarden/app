@@ -294,7 +294,7 @@ export default function GrowthCard({
           aria-label="Snapshot details"
           title="Details"
           className={cn(
-            'absolute top-2 right-2 p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover:brightness-125 cursor-pointer transition-opacity',
+            'absolute top-2 right-2 p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover-bright active-dim motion-press cursor-pointer',
             isActive
               ? 'opacity-100'
               : 'opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100',

@@ -47,8 +47,9 @@ test.describe('motion roles', () => {
       await page.getByRole('button', { name: 'Welcome' }).click();
       await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({ timeout: 30_000 });
 
-      // Plasma, the Default Mood, sets every role to none; the roles are
-      // exercised under Fractal Garden, a HyperMood that carries them.
+      // Plasma, the Default Mood, keeps its motion quiet (fades, a sink, no
+      // drift); the full set of roles is exercised under Fractal Garden, a
+      // HyperMood that carries them all.
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page
         .getByTestId('bundled-moods')
@@ -131,7 +132,7 @@ test.describe('motion roles', () => {
       await page.getByPlaceholder('My Crux').fill('Moving picture');
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
-      // Plasma, the Default Mood, moves nothing; Fractal Garden fades panes.
+      // Plasma, the Default Mood, leaves pane changes to the material; Fractal Garden fades panes.
       expect(await pane()).toBe('none');
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page
@@ -151,7 +152,12 @@ test.describe('motion roles', () => {
           return original(cb);
         }) as typeof document.startViewTransition;
       });
-      await page.getByRole('button', { name: 'wanderer', exact: false }).first().click();
+      // Back to the Garden's Home through its location (the crumb names the Garden, not the person).
+      await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Garden location', exact: true })
+        .getByRole('button', { name: 'Close crux', exact: true })
+        .click();
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
       expect(await transitions()).toBe(1);
 
@@ -167,9 +173,11 @@ test.describe('motion roles', () => {
       );
       expect(named).toMatch(/^crux-/);
 
-      // A Mood without a pane enter makes the swap instant: Mountain Grey says none
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      // A Mood without a pane enter makes the swap instant: Mountain Grey says none.
+      // Mood is a pane: the button toggles it, so open it only when it is not showing.
       const built = page.getByTestId('bundled-moods');
+      if (!(await built.isVisible().catch(() => false)))
+        await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await built
         .getByTestId('bundled-mountain-grey')
         .getByRole('button', { name: 'Apply' })

@@ -12,7 +12,7 @@ import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
-import { Modal, Button, PlasmaButton, SectionLabel } from '@/components/ui';
+import { Modal, Button, SectionLabel, buttonClass, fieldClass, linkClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { FIVE_WS_NAME, FIVE_WS_TEMPLATE_ID, FIVE_WS_TAGLINE } from '@/templates';
 import { applyTemplateToCrux } from '@/services/crux-create';
@@ -23,7 +23,17 @@ import { HomeIcon, LayoutIcon, PencilIcon } from '@/components/ui/icons';
 import { toolManifests, isToolAvailable, toolManifest } from '@/services/crux-tools/registry';
 import { useInstalledTools, installToolFromCrux } from '@/services/crux-tools/installed';
 import type { ToolIcon } from '@/services/crux-tools/manifest';
-import { BlankThumb, HomeThumb, BlogThumb, ResumeThumb, BusinessThumb, GalleryThumb, FeedThumb, MediaThumb, FiveWsThumb } from './TemplateThumbs';
+import {
+  BlankThumb,
+  HomeThumb,
+  BlogThumb,
+  ResumeThumb,
+  BusinessThumb,
+  GalleryThumb,
+  FeedThumb,
+  MediaThumb,
+  FiveWsThumb,
+} from './TemplateThumbs';
 
 // ── Templates ────────────────────────────────────────────
 
@@ -47,7 +57,6 @@ interface Template {
 // ── Thumbnails ──────────────────────────────────────────
 // Tiny CSS wireframe previews (~80×52px) for each template.
 // Uses inline styles to stay self-contained — no external CSS needed.
-
 
 /** Entries the app itself owns; every Crux Tool comes from its manifest (ADR 0050). */
 const OWN_TEMPLATES: Template[] = [
@@ -617,18 +626,14 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
     onClose();
   };
 
-  const inputClass = cn(
-    'w-full px-3 h-9 text-sm font-body rounded-[var(--radius-sm)]',
-    'bg-surface-solid border border-border text-text placeholder:text-text-muted/50',
-    'focus:outline-none focus:border-input-border-active transition-colors',
-  );
+  const inputClass = fieldClass();
 
   if (view === 'undertakings')
     return (
       <Modal open={open} onClose={handleClose} size="screen" title="Add Crux">
         <button
           disabled={creating}
-          className="text-sm text-accent mb-4 cursor-pointer"
+          className={buttonClass('ghost', 'sm', 'self-start -ml-3 mb-3')}
           onClick={() => setView('crux')}
         >
           Just a Crux
@@ -651,7 +656,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           <h2 className="text-lg font-medium">What would you like to grow?</h2>
           <button
             disabled={creating || importing}
-            className="text-sm text-accent cursor-pointer"
+            className={linkClass('text-sm')}
             onClick={() => setView('undertakings')}
           >
             Undertakings — start a Garden
@@ -659,8 +664,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           <p className="text-sm text-text-muted">
             Start with an idea or choose a starting point. You can change everything as you go.
           </p>
-          <SectionLabel 
-            htmlFor="new-crux-idea" as="label" tone="muted" className="pt-3 mb-2">
+          <SectionLabel htmlFor="new-crux-idea" as="label" tone="muted" className="pt-3 mb-2">
             Your idea <span className="normal-case tracking-normal">(optional)</span>
           </SectionLabel>
           <textarea
@@ -678,8 +682,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         </div>
         {/* Name */}
         <div className="shrink-0">
-          <SectionLabel 
-            htmlFor="new-crux-name" as="label" tone="muted" className="mb-2">
+          <SectionLabel htmlFor="new-crux-name" as="label" tone="muted" className="mb-2">
             Name
           </SectionLabel>
           <input
@@ -719,11 +722,14 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
                     }
                   }}
                   disabled={creating}
+                  aria-pressed={selectedTemplate === t.id}
                   className={cn(
-                    'w-full px-3 py-2.5 text-left cursor-pointer',
-                    'flex items-center gap-3 border-b border-border last:border-b-0',
+                    'w-full px-3 py-2.5 text-left cursor-pointer rounded-[var(--radius-sm)]',
+                    'flex items-center gap-3 transition-colors',
                     'disabled:cursor-not-allowed',
-                    selectedTemplate === t.id ? 'bg-accent-muted/30' : 'hover:bg-accent-muted/15',
+                    selectedTemplate === t.id
+                      ? 'bg-accent-muted/40'
+                      : 'hover:bg-action-button-hover',
                   )}
                 >
                   <div
@@ -774,7 +780,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
         </div>
 
         {/* Actions — pinned to bottom */}
-        <div className="shrink-0 flex items-center justify-between border-t border-border pt-4">
+        <div className="shrink-0 flex items-center gap-1 border-t border-border pt-4">
           <input
             ref={importInputRef}
             type="file"
@@ -823,6 +829,8 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           ) : (
             <Button
               variant="ghost"
+              size="sm"
+              className="-ml-3"
               onClick={() => importInputRef.current?.click()}
               disabled={creating}
             >
@@ -844,6 +852,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           {!importing && (
             <Button
               variant="ghost"
+              size="sm"
               onClick={() => startFileRef.current?.click()}
               disabled={creating}
               title="A document, image, sound, video, PDF, notebook or project file becomes a Crux in the tool that opens it"
@@ -852,11 +861,16 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
             </Button>
           )}
           {isToolAvailable(template.id) ? (
-            <PlasmaButton onClick={() => handleCreate()} loading={creating} disabled={importing}>
+            <Button
+              className="ml-auto min-w-24"
+              onClick={() => handleCreate()}
+              loading={creating}
+              disabled={importing}
+            >
               Create
-            </PlasmaButton>
+            </Button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
               <Button
                 variant="secondary"
                 onClick={() => importInputRef.current?.click()}

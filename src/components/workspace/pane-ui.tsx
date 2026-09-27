@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { Spinner, SectionLabel } from '@/components/ui';
+import { Spinner, SectionLabel, buttonClass } from '@/components/ui';
 
 /**
  * The shared vocabulary of the small workspace panes (Sync, Share, Export,
@@ -106,20 +106,11 @@ export function PaneAction({
       type="button"
       onClick={onClick}
       disabled={disabled || isBusy}
-      className={cn(
-        'w-full flex items-center justify-center gap-1.5 px-3 h-8 rounded-[var(--radius-sm)]',
-        'text-xs font-medium font-body transition-all whitespace-nowrap',
-        tone === 'primary'
-          ? 'bg-accent-muted text-accent border border-accent/20'
-          : 'bg-surface text-text border border-border',
-        isBusy
-          ? 'cursor-wait'
-          : disabled
-            ? 'opacity-50 cursor-not-allowed'
-            : tone === 'primary'
-              ? 'hover:border-accent cursor-pointer'
-              : 'hover:border-accent cursor-pointer',
-        className,
+      aria-busy={isBusy || undefined}
+      className={buttonClass(
+        tone === 'primary' ? 'primary' : 'secondary',
+        'sm',
+        cn('w-full', isBusy && 'cursor-wait disabled:cursor-wait', className),
       )}
     >
       {isBusy ? (

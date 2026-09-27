@@ -33,10 +33,11 @@ export default memo(function GardenGrid({
         gridTemplateColumns: 'repeat(auto-fill, minmax(var(--garden-card-min-width), 1fr))',
       }}
     >
-      {cruxes.map((crux) => (
+      {cruxes.map((crux, index) => (
         <CruxCard
           key={crux.id}
           crux={crux}
+          enterIndex={index}
           tendingCount={tendingCounts?.[crux.id]}
           linkTo={linkBuilder?.(crux)}
           onDelete={onDelete}

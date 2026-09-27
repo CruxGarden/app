@@ -37,13 +37,13 @@ export default function MoodResultCard({
   };
   return (
     <div
-      className="rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col"
+      className="group rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col transition-[border-color,box-shadow] hover:border-action-button-border-hover hover:shadow-card-hover motion-enter-card"
       data-testid={`explore-mood-${crux.id}`}
     >
       <button
         type="button"
         onClick={onOpen}
-        className="text-left cursor-pointer"
+        className="text-left cursor-pointer [&_img]:transition-transform [&_img]:duration-300 hover:[&_img]:scale-[1.03]"
         aria-label={`Open ${crux.title || crux.slug}`}
       >
         {coverUrl ? (

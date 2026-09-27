@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
 import { Link } from 'react-router-dom';
 import { APP_NAME } from '@/lib/constants';
 import { ChevronRightIcon } from '@/components/ui/icons';
@@ -18,7 +19,11 @@ export default function PageHeader({ title, children }: { title: string; childre
       <div className="flex items-center gap-1.5 min-w-0">
         <Link
           to="/"
-          className="shrink-0 text-sm font-display font-medium text-toolbar-text whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
+          className={buttonClass(
+            'ghost',
+            'xs',
+            'px-2 text-sm font-display text-toolbar-text hover:text-toolbar-text',
+          )}
         >
           {APP_NAME}
         </Link>

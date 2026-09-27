@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { isEmbeddedApp, isLocalCreationTool } from '@/services/embedded-app';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
@@ -434,7 +435,7 @@ export default function PublishPane() {
                     void openGardenPage(publicUrl);
                   }
                 }}
-                className="block text-xxs font-mono text-accent truncate leading-relaxed hover:underline"
+                className={linkClass('block text-xxs font-mono truncate leading-relaxed')}
               >
                 {publicUrl}
               </a>
@@ -442,11 +443,7 @@ export default function PublishPane() {
                 <button
                   type="button"
                   onClick={handleCopyUrl}
-                  className={cn(
-                    'flex-1 inline-flex items-center justify-center gap-1.5 h-7 rounded-[var(--radius-sm)]',
-                    'text-xxs font-body border border-border bg-surface text-text',
-                    'hover:border-accent hover:text-accent transition-colors cursor-pointer',
-                  )}
+                  className={buttonClass('secondary', 'xs', 'flex-1')}
                 >
                   {copied ? <CheckIcon /> : <CopyIcon size={12} />}
                   {copied ? 'Copied' : 'Copy link'}
@@ -528,11 +525,10 @@ export default function PublishPane() {
                 type="button"
                 onClick={handleUnpublish}
                 disabled={publishing}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 h-8 rounded-[var(--radius-sm)]',
-                  'text-xs font-body border border-border bg-surface text-text-muted',
-                  'hover:border-error hover:text-error transition-colors cursor-pointer',
-                  'disabled:cursor-not-allowed',
+                className={buttonClass(
+                  'secondary',
+                  'sm',
+                  'w-full text-text-muted hover:text-error hover:border-error/60 hover:bg-error-muted',
                 )}
               >
                 <PowerIcon size={13} />

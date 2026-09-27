@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { iconButtonClass } from './button-class';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { AnimatePresence, motion } from 'motion/react';
@@ -184,8 +185,9 @@ export default function Modal({
                     {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
                   </div>
                   <button
+                    type="button"
                     onClick={onClose}
-                    className="text-text-muted hover:text-text cursor-pointer"
+                    className={iconButtonClass('sm', false, '-mr-1.5')}
                     aria-label="Close"
                   >
                     <svg

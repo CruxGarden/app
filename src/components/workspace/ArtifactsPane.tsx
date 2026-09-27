@@ -18,6 +18,8 @@ import { confirmDialog } from '@/stores/dialogStore';
 import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
 import { expandTreeSelection, FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
 import ConvertActions from '@/components/artifacts/ConvertActions';
+import IconButton from '@/components/ui/IconButton';
+import { buttonClass, menuItemClass } from '@/components/ui/button-class';
 
 function RevealIcon() {
   return (
@@ -523,82 +525,63 @@ export default function ArtifactsPane() {
     <>
       {hasProjectFolder && cruxId && (
         <>
-          <div className="relative group/btn">
-            <button
-              aria-label="Reveal in Finder"
-              onClick={() => revealProjectFolder(cruxId)}
-              className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-            >
-              <RevealIcon />
-            </button>
-            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-              <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-                <span className="text-xs font-medium text-text">Reveal in Finder</span>
-              </div>
-            </div>
-          </div>
+          <IconButton
+            label="Reveal in Finder"
+            size="sm"
+            tooltip={{ label: 'Reveal in Finder' }}
+            onClick={() => revealProjectFolder(cruxId)}
+          >
+            <RevealIcon />
+          </IconButton>
           <div className="w-px h-3 bg-border mx-0.5" />
         </>
       )}
-      <div className="relative group/btn">
-        <button
-          aria-label="Collapse folders"
-          onClick={() => treeRef.current?.closeAll()}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <CollapseAllIcon />
-        </button>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-            <span className="text-xs font-medium text-text">Collapse folders</span>
-          </div>
-        </div>
-      </div>
+      <IconButton
+        label="Collapse folders"
+        size="sm"
+        tooltip={{ label: 'Collapse folders' }}
+        onClick={() => treeRef.current?.closeAll()}
+      >
+        <CollapseAllIcon />
+      </IconButton>
       <div className="w-px h-3 bg-border mx-0.5" />
-      <div className="relative group/btn">
-        <button
-          aria-label="New file"
-          onClick={() => {
-            startFileOperation({ type: 'create-file', parentPath: getParentPath() });
-          }}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <FilePlusIcon />
-        </button>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-            <span className="text-xs font-medium text-text">New file</span>
-          </div>
-        </div>
-      </div>
-      <div className="relative group/btn">
-        <button
-          aria-label="New folder"
-          onClick={() => {
-            startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
-          }}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <FolderPlusIcon />
-        </button>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-            <span className="text-xs font-medium text-text">New folder</span>
-          </div>
-        </div>
-      </div>
+      <IconButton
+        label="New file"
+        size="sm"
+        tooltip={{ label: 'New file' }}
+        onClick={() => {
+          startFileOperation({ type: 'create-file', parentPath: getParentPath() });
+        }}
+      >
+        <FilePlusIcon />
+      </IconButton>
+      <IconButton
+        label="New folder"
+        size="sm"
+        tooltip={{ label: 'New folder' }}
+        onClick={() => {
+          startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
+        }}
+      >
+        <FolderPlusIcon />
+      </IconButton>
       <div className="relative" ref={uploadDropdownRef}>
-        <button
-          aria-label="Upload"
+        <IconButton
+          label="Upload"
+          size="sm"
+          className={
+            uploadMenuOpen ? 'bg-icon-button-hover text-icon-button-icon-hover' : undefined
+          }
+          aria-expanded={uploadMenuOpen}
+          aria-haspopup="menu"
           onClick={() => setUploadMenuOpen((v) => !v)}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <UploadIcon />
-        </button>
+        </IconButton>
         {uploadMenuOpen && (
           <div
             ref={uploadMenuRef}
-            className="absolute top-full right-0 mt-1 z-50 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown overflow-hidden"
+            className="absolute top-full right-0 mt-1 z-50 min-w-32 p-1 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown motion-enter-dropdown"
             data-plasma-host
           >
             <PlasmaOverlay
@@ -607,7 +590,7 @@ export default function ArtifactsPane() {
               canvasStyle={{ position: 'fixed' }}
             />
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
+              className={menuItemClass('default', 'text-xs whitespace-nowrap')}
               onClick={() => {
                 setUploadMenuOpen(false);
                 fileInputRef.current?.click();
@@ -616,7 +599,7 @@ export default function ArtifactsPane() {
               Files…
             </button>
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
+              className={menuItemClass('default', 'text-xs whitespace-nowrap')}
               onClick={() => {
                 setUploadMenuOpen(false);
                 const el = folderInputRef.current;
@@ -654,10 +637,7 @@ export default function ArtifactsPane() {
           <span className="text-xs text-text">
             Project folder is missing on disk. Your files are safe in history.
           </span>
-          <button
-            onClick={() => restoreProjectFolder()}
-            className="shrink-0 px-2 py-1 text-xs font-medium rounded-[var(--radius-sm)] bg-accent text-bg hover:opacity-90 transition-opacity cursor-pointer"
-          >
+          <button onClick={() => restoreProjectFolder()} className={buttonClass('primary', 'xs')}>
             Restore folder
           </button>
         </div>

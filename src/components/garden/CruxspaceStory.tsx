@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
 import { useGrowthGraphView } from '@/components/growth/useGrowthGraphView';
 import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
 import { useNavigate } from 'react-router-dom';
@@ -20,8 +21,7 @@ import { planCruxspaceRevert, revertCruxspaceTo } from '@/stores/cruxspaceRevert
 import { confirmDialog } from '@/stores/dialogStore';
 
 const Canvas2D = lazy(() => import('@/components/growth/GrowthGraphCanvas'));
-const action =
-  'rounded px-3 py-1.5 text-xs border border-border hover:border-accent cursor-pointer disabled:opacity-50';
+const action = buttonClass('secondary', 'xs');
 
 /**
  * The story of a Garden (G10): what it is for, who its members are, every
@@ -205,7 +205,11 @@ export default function CruxspaceStory({
             <button className={action} onClick={() => setFit((n) => n + 1)}>
               Fit graph
             </button>
-            <button className={action} onClick={onClose} aria-label="Close Garden history">
+            <button
+              className={buttonClass('ghost', 'xs')}
+              onClick={onClose}
+              aria-label="Close Garden history"
+            >
               Close
             </button>
           </div>
@@ -245,7 +249,7 @@ export default function CruxspaceStory({
                 Back to now
               </button>
               <button
-                className={`${action} border-error/60 text-error`}
+                className={buttonClass('danger', 'xs')}
                 disabled={reverting}
                 onClick={() => void revertAll()}
               >
@@ -340,7 +344,7 @@ export default function CruxspaceStory({
                   return (
                     <li
                       key={m.id}
-                      className={`rounded border p-2 ${current ? 'border-accent bg-accent-muted' : selectedId && selectedId === m.nodeId ? 'border-accent' : 'border-transparent hover:bg-surface'}`}
+                      className={`rounded-[var(--radius-sm)] border p-2 transition-colors ${current ? 'border-accent bg-accent-muted' : selectedId && selectedId === m.nodeId ? 'border-accent' : 'border-transparent hover:bg-action-button-hover'}`}
                     >
                       <button
                         className="block w-full text-left text-xs cursor-pointer"

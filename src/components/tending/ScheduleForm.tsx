@@ -1,7 +1,14 @@
 import type { Crux } from '@/api/types';
+import { linkClass } from '@/components/ui/button-class';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Input, Select, Textarea } from '@/components/ui';
-import { TIMER_PRESETS, addSchedule, type Action, type TimerPhase, type Trigger } from '@/services/schedules';
+import {
+  TIMER_PRESETS,
+  addSchedule,
+  type Action,
+  type TimerPhase,
+  type Trigger,
+} from '@/services/schedules';
 import { cronError, describeCron } from '@/services/cron';
 import { GARDEN_EVENTS, type GardenEventName } from '@/services/garden-events';
 import { CUE_KINDS } from '@/services/cues';
@@ -88,7 +95,7 @@ function LocationRow({ children }: { children?: ReactNode }) {
           <button
             type="button"
             onClick={() => pick(null)}
-            className="text-text-muted hover:text-text underline cursor-pointer"
+            className={linkClass('text-text-muted hover:text-text')}
           >
             change
           </button>
@@ -100,7 +107,8 @@ function LocationRow({ children }: { children?: ReactNode }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name (optional)"
-            fieldSize="sm" className={'w-36'}
+            fieldSize="sm"
+            className={'w-36'}
           />
           <Input
             aria-label="Latitude"
@@ -108,7 +116,8 @@ function LocationRow({ children }: { children?: ReactNode }) {
             onChange={(e) => setLat(e.target.value)}
             placeholder="Latitude"
             inputMode="decimal"
-            fieldSize="sm" className={'w-24'}
+            fieldSize="sm"
+            className={'w-24'}
           />
           <Input
             aria-label="Longitude"
@@ -116,7 +125,8 @@ function LocationRow({ children }: { children?: ReactNode }) {
             onChange={(e) => setLon(e.target.value)}
             placeholder="Longitude"
             inputMode="decimal"
-            fieldSize="sm" className={'w-24'}
+            fieldSize="sm"
+            className={'w-24'}
           />
           <Button size="sm" variant="secondary" onClick={typed} disabled={!lat || !lon}>
             Set
@@ -153,7 +163,8 @@ function WeatherSourceRow() {
           onChange={(e) => setUrl(e.target.value)}
           onBlur={() => setWeatherUrl(url)}
           placeholder="https://your-station.local/weather"
-          fieldSize="sm" className={'w-80 font-mono'}
+          fieldSize="sm"
+          className={'w-80 font-mono'}
         />
         {weather && <span className="text-text-muted">{describeWeather(weather)}</span>}
         {problem && (
@@ -193,7 +204,6 @@ function inAnHourLocal(): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
 
 const TOOL_NAMES = () =>
   defaultToolDefinitions()
@@ -391,7 +401,8 @@ export default function ScheduleForm({
                 onChange={(e) =>
                   setMinutes(Math.max(1, Math.min(10080, Number(e.target.value) || 1)))
                 }
-                fieldSize="sm" className="w-24"
+                fieldSize="sm"
+                className="w-24"
               />
               <span className="text-text-muted">minutes</span>
             </div>
@@ -408,11 +419,11 @@ export default function ScheduleForm({
                 value={expr}
                 onChange={(e) => setExpr(e.target.value)}
                 placeholder="0 9 * * mon-fri"
-                fieldSize="sm" className="font-mono"
+                fieldSize="sm"
+                className="font-mono"
               />
               <span className="text-2xs text-text-muted" data-testid="cron-reading">
-                {cronError(expr) ??
-                  `Reads: ${describeCron(expr)} (minute hour day month weekday)`}
+                {cronError(expr) ?? `Reads: ${describeCron(expr)} (minute hour day month weekday)`}
               </span>
             </div>
           </>
@@ -448,10 +459,9 @@ export default function ScheduleForm({
                 min={0}
                 max={365}
                 value={days}
-                onChange={(e) =>
-                  setDays(Math.max(0, Math.min(365, Number(e.target.value) || 0)))
-                }
-                fieldSize="sm" className="w-20"
+                onChange={(e) => setDays(Math.max(0, Math.min(365, Number(e.target.value) || 0)))}
+                fieldSize="sm"
+                className="w-20"
               />
               <span className="text-text-muted">days untouched</span>
             </div>
@@ -488,7 +498,8 @@ export default function ScheduleForm({
                     aria-label={`Phase ${i + 1} name`}
                     value={p.label}
                     onChange={(e) => setPhase(i, { label: e.target.value })}
-                    fieldSize="sm" className={'w-32'}
+                    fieldSize="sm"
+                    className={'w-32'}
                   />
                   <Input
                     aria-label={`Phase ${i + 1} minutes`}
@@ -501,7 +512,8 @@ export default function ScheduleForm({
                         minutes: Math.max(1, Math.min(1440, Number(e.target.value) || 1)),
                       })
                     }
-                    fieldSize="sm" className={'w-20'}
+                    fieldSize="sm"
+                    className={'w-20'}
                   />
                   <span className="text-text-muted">min</span>
                   <button
@@ -535,10 +547,9 @@ export default function ScheduleForm({
                 min={0}
                 max={99}
                 value={rounds}
-                onChange={(e) =>
-                  setRounds(Math.max(0, Math.min(99, Number(e.target.value) || 0)))
-                }
-                fieldSize="sm" className="w-20"
+                onChange={(e) => setRounds(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
+                fieldSize="sm"
+                className="w-20"
               />
               <span className="text-text-muted">0 repeats until you stop it</span>
             </div>
@@ -679,7 +690,8 @@ export default function ScheduleForm({
                           times: Math.max(1, Math.min(10, Number(e.target.value) || 1)),
                         })
                       }
-                      fieldSize="sm" className="w-16"
+                      fieldSize="sm"
+                      className="w-16"
                     />
                     times
                   </label>
@@ -718,7 +730,8 @@ export default function ScheduleForm({
                     onChange={(e) => setAction(i, { ...a, prompt: e.target.value })}
                     placeholder="Summarise this week's changes into NOTES.md"
                     rows={2}
-                    fieldSize="sm" className={'h-auto py-1.5'}
+                    fieldSize="sm"
+                    className={'h-auto py-1.5'}
                   />
                 </>
               )}
@@ -735,7 +748,8 @@ export default function ScheduleForm({
                     value={a.name}
                     onChange={(e) => setAction(i, { ...a, name: e.target.value })}
                     placeholder="the handler's name — functions/<name>.js"
-                    fieldSize="sm" className="font-mono"
+                    fieldSize="sm"
+                    className="font-mono"
                   />
                   <Textarea
                     aria-label={`Function input ${i + 1}`}
@@ -753,7 +767,8 @@ export default function ScheduleForm({
                       }
                     }}
                     rows={2}
-                    fieldSize="sm" className={'h-auto py-1.5 font-mono'}
+                    fieldSize="sm"
+                    className={'h-auto py-1.5 font-mono'}
                   />
                 </>
               )}
@@ -769,7 +784,8 @@ export default function ScheduleForm({
                     aria-label={`Tool ${i + 1}`}
                     value={a.tool}
                     onChange={(e) => setAction(i, { ...a, tool: e.target.value })}
-                    fieldSize="sm" className="font-mono"
+                    fieldSize="sm"
+                    className="font-mono"
                   >
                     {TOOL_NAMES().map((n) => (
                       <option key={n} value={n}>
@@ -793,7 +809,8 @@ export default function ScheduleForm({
                       }
                     }}
                     rows={2}
-                    fieldSize="sm" className={'h-auto py-1.5 font-mono'}
+                    fieldSize="sm"
+                    className={'h-auto py-1.5 font-mono'}
                   />
                 </>
               )}
