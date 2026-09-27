@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, addArtifact, storedCrux } from './multi-crux-helpers';
+import {
+  enterGarden,
+  createCrux,
+  addArtifact,
+  storedCrux,
+  reenterWorkspace,
+} from './multi-crux-helpers';
+import { fileText } from './content-helpers';
 import { togglePanel } from './panel-helpers';
 
 test('owned metadata commands preserve concurrent fields, serve normal Growth and rename UI updates, and survive restart', async () => {
@@ -94,7 +101,7 @@ test('owned metadata commands preserve concurrent fields, serve normal Growth an
     await launch.page.keyboard.press('Escape');
     await launch.app.close();
     launch = await launchApp({ dir, env });
-    await launch.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(launch.page, 'Renamed through API');
     await expect(launch.page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
       'Renamed through API',
     );
@@ -110,15 +117,7 @@ test('owned metadata commands preserve concurrent fields, serve normal Growth an
         id,
       ),
     ).toEqual({ description: 'Updated by agent', remote_id: 'remote-reference', kind: null });
-    const saved = await launch.page.evaluate(async (id) => {
-      const db = window.electronAPI!.sqlite;
-      const row = (await db.get(
-        'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-        [id, 'saved.txt'],
-      )) as { fingerprint: string };
-      return new TextDecoder().decode(await db.blobRead(row.fingerprint));
-    }, id);
-    expect(saved).toBe('Preserved file');
+    expect(await fileText(launch.page, id, 'saved.txt')).toBe('Preserved file');
   } finally {
     await launch.app.close();
   }

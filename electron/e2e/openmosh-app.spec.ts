@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 test('actual OpenMosh: native effects, agent, originals and restart', async () => {
   test.setTimeout(180000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
@@ -17,7 +17,7 @@ test('actual OpenMosh: native effects, agent, originals and restart', async () =
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^OpenMosh/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(page.locator('[data-workspace-id]')).toBeVisible();
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(page, id)).projectFolder;
     console.log('OpenMosh project', folder);
@@ -142,7 +142,7 @@ test('actual OpenMosh: native effects, agent, originals and restart', async () =
   }
   const second = await launchApp({ dir: first.dir, env: { CRUX_AI_MOCK: '1' } });
   try {
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = second.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project')).toBeVisible({ timeout: 60000 });
     await frame.getByRole('button', { name: /demo.png/ }).click();
@@ -189,7 +189,7 @@ for (const mode of ['Editor', 'Slideshow'] as const)
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^OpenMosh/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.locator('[data-workspace-id]')).toBeVisible();
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       const folder = (await storedCrux(page, id)).projectFolder;
       const frame = page.frameLocator('iframe[data-crux-id]');

@@ -134,7 +134,13 @@ test.describe('agent-events mapper', () => {
       },
       s,
     );
-    expect(tr).toEqual({ type: 'tool_result', id: 'b1', name: 'Bash', result: 'Error: nope' });
+    expect(tr).toEqual({
+      type: 'tool_result',
+      id: 'b1',
+      name: 'Bash',
+      result: 'Error: nope',
+      error: true,
+    });
     expect(s.hadMutation).toBe(false);
     const events = mapSdkMessage(
       { type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['boom'] },

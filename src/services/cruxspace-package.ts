@@ -7,11 +7,23 @@ import type { KeeperConversation } from '@/stores/keeperStore';
 import { getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { exportCrux, importCrux, type ImportMode } from './crux-io';
-import { collectionsChanged, getCruxspace, insertCruxspace, type Cruxspace, type CruxspaceOrigin, cruxspaceMembers } from './cruxspaces';
+import {
+  collectionsChanged,
+  getCruxspace,
+  insertCruxspace,
+  type Cruxspace,
+  type CruxspaceOrigin,
+  cruxspaceMembers,
+} from './cruxspaces';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { listCruxspaceAssets, type AssetOrigin, type CruxOutput } from './cruxspace-assets';
 import { pathOf } from '@/lib/artifact-path';
 import { toolManifest, isToolAvailable } from './crux-tools/registry';
+import {
+  decodeGardenSchedules,
+  writeGardenSchedules,
+  type GardenSchedules,
+} from './garden-schedules';
 
 /**
  * The `.cruxspace` package (ADR 0036 amendment, GAME-CRUXSPACE-PLAN G8): one
@@ -62,6 +74,8 @@ export interface PackageManifest {
    * written before this was recorded — read it through `toolsNeeded`.
    */
   tools?: { id: string; name: string; releaseVersion?: string }[];
+  /** The Garden's own schedules (its `meta.gardenSchedules`), so they travel with it. */
+  schedules?: GardenSchedules;
 }
 
 /**
@@ -181,10 +195,16 @@ export async function exportCruxspace(
     });
   }
 
+  // The Garden Crux (where there is a Garden graph, the space is one) holds the schedules.
+  const gardenCrux = await getServices()
+    .crux.findById(spaceId)
+    .catch(() => null);
+  const scheduleDefs = decodeGardenSchedules(gardenCrux?.meta?.gardenSchedules);
   const manifest: PackageManifest = {
     version: 1,
     format: PACKAGE_FORMAT,
     exportedAt: new Date().toISOString(),
+    ...(scheduleDefs?.length ? { schedules: { version: 1, schedules: scheduleDefs } } : {}),
     space: {
       id: space.id,
       name: space.name,
@@ -297,6 +317,9 @@ export async function importCruxspace(
     });
   }
   try {
+    // Its schedules come back with it; when they next run is this installation's.
+    const scheduleDefs = decodeGardenSchedules(manifest.schedules);
+    if (garden && scheduleDefs?.length) await writeGardenSchedules(garden.id, scheduleDefs);
     for (const member of manifest.members) {
       onProgress?.(`Restoring ${member.title}…`);
       const archive = await memberArchive(zip, member);

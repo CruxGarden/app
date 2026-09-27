@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
-import { writeFileSync, existsSync } from 'node:fs';
+import { test, expect, type Page, type Locator } from '@playwright/test';
+import { writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import JSZip from 'jszip';
 import { launchApp } from '../launch';
-import { enterGarden, createCrux, goHome } from '../multi-crux-helpers';
+import { enterGarden, createCrux, goHome, storedCrux } from '../multi-crux-helpers';
 import { openPanel } from '../panel-helpers';
 
 /**
@@ -13,7 +13,10 @@ import { openPanel } from '../panel-helpers';
  * v2-gate.spec.ts.
  */
 const cardCount = (page: Page) =>
-  page.getByTestId('pane-body-home').getByRole('button', { name: /^Open / }).count();
+  page
+    .getByTestId('pane-body-home')
+    .getByRole('button', { name: /^Open / })
+    .count();
 
 test.describe('guide 03 · Add Crux', () => {
   test('CREATE-01 — choices are described; one Create makes one Crux with the typed name', async () => {
@@ -124,6 +127,8 @@ test.describe('guide 03 · Add Crux', () => {
   });
 
   test('CREATE-05 — Start from a file routes an audio clip, a PDF and a folder, or says why not', async () => {
+    // Two routings into tools with big runtimes (AudioMass, BentoPDF) when every tool is bundled.
+    test.setTimeout(420_000);
     const { app, page, dir } = await launchApp();
     try {
       await expect(page.getByRole('button', { name: 'Enter' })).toBeVisible({ timeout: 30_000 });
@@ -141,18 +146,90 @@ test.describe('guide 03 · Add Crux', () => {
         await (await chooser).setFiles(file);
         const opened = page.locator('[data-workspace-id]');
         const refused = page.getByRole('alert').or(page.getByRole('alertdialog'));
-        await expect(opened.or(refused).first()).toBeVisible({ timeout: 60_000 });
+        // A PDF routes into BentoPDF when that tool is in the build: a big runtime to copy.
+        await expect(opened.or(refused).first()).toBeVisible({ timeout: 180_000 });
         if (await opened.count()) {
-          // The file arrived whole, under the name it had.
+          // The file arrived whole, under the name it had: in the Artifacts tree of a
+          // plain Crux, or inside the tool that takes its kind (AudioMass for a clip,
+          // when that tool is in the build), which says where it put it.
           const name = file.split('/').pop()!;
-          await expect(page.getByText(name, { exact: true }).first()).toBeVisible({
-            timeout: 30_000,
-          });
+          await expect(
+            page
+              .getByText(name, { exact: true })
+              .or(page.getByText(new RegExp(`Started from ${name}: it is in this Crux at `)))
+              .first(),
+          ).toBeVisible({ timeout: 30_000 });
         } else {
           await expect(refused.first()).toContainText(/[a-z]/);
           await page.keyboard.press('Escape');
         }
       }
+    } finally {
+      await app.close();
+    }
+  });
+
+  test('CREATE-06 — several files dropped together land in one new Crux with the right count; a same-named drop asks, Cancel keeps the earlier file, Replace swaps it', async () => {
+    test.setTimeout(150_000);
+    const { app, page } = await launchApp();
+    try {
+      await expect(page.getByRole('button', { name: 'Enter' })).toBeVisible({ timeout: 30_000 });
+      await enterGarden(page);
+      const dropOn = (target: Locator, files: { name: string; content: string }[]) =>
+        target.evaluate((el, files) => {
+          const dt = new DataTransfer();
+          for (const f of files) dt.items.add(new File([f.content], f.name, { type: 'text/csv' }));
+          for (const type of ['dragenter', 'dragover', 'drop'] as const)
+            el.dispatchEvent(
+              new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }),
+            );
+        }, files);
+      // Two spreadsheets at once on Home: one Crux, both files, counted.
+      await dropOn(page.getByTestId('home-drop'), [
+        { name: 'seedlings.csv', content: 'plant,count\nfern,3\n' },
+        { name: 'harvest.csv', content: 'plant,kg\nfern,1\n' },
+      ]);
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60_000 });
+      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
+        'seedlings and 1 more',
+      );
+      // The notice with the count is the Crux's first Collaboration message (the spreadsheet
+      // tool's layout leaves that pane too narrow to read on this screen).
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      await expect
+        .poll(
+          async () =>
+            ((await storedCrux(page, id)).messages as { content: string }[] | undefined)?.some(
+              (m) => /the files are in this Crux at .*\(2 files\)/.test(m.content),
+            ) ?? false,
+          { timeout: 30_000 },
+        )
+        .toBe(true);
+      const folder = (await storedCrux(page, id)).projectFolder as string;
+      await expect.poll(() => existsSync(join(folder, 'inbox/seedlings.csv'))).toBe(true);
+      expect(readFileSync(join(folder, 'inbox/harvest.csv'), 'utf8')).toBe('plant,kg\nfern,1\n');
+      await goHome(page);
+      await expect.poll(() => cardCount(page), { timeout: 15_000 }).toBe(1);
+
+      // The same name again, into that Crux's Artifacts: Cancel keeps the first, Replace swaps.
+      await page.getByRole('button', { name: /^Open seedlings/ }).click();
+      const tree = await openPanel(page, 'artifacts', 'Toggle artifacts');
+      await dropOn(tree.getByRole('tree'), [{ name: 'notes.csv', content: 'first\n' }]);
+      await expect(tree.getByRole('tree').getByText('notes.csv', { exact: true })).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect.poll(() => existsSync(join(folder, 'notes.csv'))).toBe(true);
+      await dropOn(tree.getByRole('tree'), [{ name: 'notes.csv', content: 'second\n' }]);
+      const ask = page.getByRole('dialog').filter({ hasText: 'already exists' });
+      await expect(ask).toContainText('"notes.csv" already exists');
+      await ask.getByRole('button', { name: 'Cancel' }).click();
+      await expect(ask).toHaveCount(0);
+      await page.waitForTimeout(500);
+      expect(readFileSync(join(folder, 'notes.csv'), 'utf8')).toBe('first\n');
+      await dropOn(tree.getByRole('tree'), [{ name: 'notes.csv', content: 'second\n' }]);
+      await ask.getByRole('button', { name: 'Replace' }).click();
+      await expect.poll(() => readFileSync(join(folder, 'notes.csv'), 'utf8')).toBe('second\n');
+      await expect(tree.getByRole('tree').getByText('notes.csv', { exact: true })).toHaveCount(1);
     } finally {
       await app.close();
     }

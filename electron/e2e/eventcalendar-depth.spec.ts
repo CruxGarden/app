@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux, setAutoCheck } from './multi-crux-helpers';
+import { enterGarden, storedCrux, setAutoCheck, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -130,7 +130,7 @@ test('Calendar tools revise and duplicate events, preserve drafts and manual fie
     await instance.app.close();
     instance = await launchApp({ dir });
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
-    await instance.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(instance.page);
     await ready();
     expect(doc().view).toBe('listWeek');
     await expect(frame().locator('.ec-event').filter({ hasText: 'Manual review' })).toBeVisible();

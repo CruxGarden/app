@@ -195,6 +195,28 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     await expect(merge.getByRole('checkbox')).toBeEnabled({ timeout: 120000 });
     await merge.getByRole('checkbox').check();
     await merge.getByRole('button', { name: 'Merge into Main', exact: true }).click();
+    // Background writers (the toolchain, thumbnails) can move Main between the
+    // check and the merge; the dialog then asks for a new review. Do as asked.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const stale = merge.getByText(/Prepare a new review/);
+      await expect(merge.or(stale).first()).toBeVisible();
+      if (!(await merge.count())) break;
+      if (!(await stale.isVisible().catch(() => false))) {
+        await expect(merge)
+          .toHaveCount(0, { timeout: 60000 })
+          .catch(() => {});
+        if (!(await merge.count())) break;
+        if (!(await stale.isVisible().catch(() => false))) continue;
+      }
+      await merge.getByRole('button', { name: 'Check combined result' }).click();
+      await expect(merge.getByRole('button', { name: 'Check combined result' })).toBeEnabled({
+        timeout: 300000,
+      });
+      await expect(merge.getByRole('checkbox')).toBeEnabled({ timeout: 120000 });
+      if (!(await merge.getByRole('checkbox').isChecked()))
+        await merge.getByRole('checkbox').check();
+      await merge.getByRole('button', { name: 'Merge into Main', exact: true }).click();
+    }
     await expect(merge).toHaveCount(0, { timeout: 60000 });
     expect(readFileSync(join(folder, 'src/styles/app.css'), 'utf8')).toContain(
       'Novel customization',

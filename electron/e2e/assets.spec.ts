@@ -22,7 +22,7 @@ test.describe('mood assets', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
-      await showPane(page, 'Mood');
+      const moodPane = await showPane(page, 'Mood');
       // Files live at the foot of the Theme section, under the tokens
       await page.getByRole('button', { name: 'Theme', exact: true }).click();
 
@@ -58,6 +58,9 @@ test.describe('mood assets', () => {
 
       // Cover → the saved Mood shows the image
       await card.getByRole('button', { name: 'Cover', exact: true }).click();
+      // Changes are kept only while you stay unless kept for the Garden; a
+      // new Crux workspace starts from the Garden's Mood.
+      await moodPane.getByRole('button', { name: /^Keep for /, exact: false }).click();
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
       await page.getByRole('button', { name: 'Save current as Mood' }).click();
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Textured');
@@ -77,7 +80,13 @@ test.describe('mood assets', () => {
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       const body = page.locator('.mosaic-window.pane-workshop .mosaic-window-body').first();
       await expect(body).toBeVisible({ timeout: 30_000 });
-      await expect(body).toHaveCSS('background-image', /blob:/);
+      // The token reaches the pane: its texture resolves to the asset's blob URL.
+      // Whether it paints is the surface theme's call (ADR 0043): Plasma and
+      // Glass draw their own plates over pane textures (styles/plasma.css,
+      // styles/glass.css); a solid Mood paints it as its background image.
+      await expect
+        .poll(() => body.evaluate((el) => getComputedStyle(el).getPropertyValue('--pane-texture')))
+        .toMatch(/blob:/);
       await page.screenshot({ path: 'e2e/.results/assets-3-workspace.png' });
     } finally {
       await app.close();

@@ -2,7 +2,13 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, storedCrux, addArtifact } from './multi-crux-helpers';
+import {
+  enterGarden,
+  createCrux,
+  storedCrux,
+  addArtifact,
+  reenterWorkspace,
+} from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 
 test('historical HTML shows saved source without mounting the live preview or changing current files', async () => {
@@ -53,7 +59,7 @@ test('historical HTML shows saved source without mounting the live preview or ch
     expect(readFileSync(path, 'utf8')).toBe(current);
     await launch.app.close();
     launch = await launchApp({ dir });
-    await launch.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(launch.page);
     await expect(launch.page.locator('[data-workspace-id]')).toBeVisible();
     const reopenedHistory = launch.page.getByTestId('pane-body-history');
     if (!(await reopenedHistory.isVisible())) await togglePanel(launch.page, 'Toggle history');

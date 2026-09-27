@@ -1,4 +1,4 @@
-import { togglePanel, showPane, hidePane } from './panel-helpers';
+import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, switchCrux } from './multi-crux-helpers';
@@ -11,10 +11,10 @@ import { enterGarden, createCrux, switchCrux } from './multi-crux-helpers';
  *    opens a crux that has no workspace yet. (The magnifier top right is
  *    Explore — the public, API-backed search — covered by explore.spec.ts;
  *    keyboard MRU switching is covered by multi-crux-keyboard.spec.ts.)
- *  - Panes: every pane opens from its TopBar toggle and closes from its header,
- *    the open set survives a relaunch, and a narrow window says "Widen the pane".
- *  - The Keeper Console: enable AI tools, open with Escape / the TopBar button,
- *    talk to the scripted model, close.
+ *  - Panes in a narrow native window: every header and close control stays
+ *    reachable and a squeezed pane says "Widen the pane" (FEEL-02 evidence).
+ *    Pane open/close/pin and the arrangement surviving a relaunch are
+ *    journeys/04-panels.spec.ts; the Keeper Console is journeys/07-agent.spec.ts.
  */
 
 const PANES: { type: string; label: string }[] = [
@@ -29,11 +29,13 @@ const PANES: { type: string; label: string }[] = [
   { type: 'store', label: 'Store' },
 ];
 
-/** Open a pane if it is closed; never toggle an open one shut. */
-async function ensurePane(page: Page, type: string, toggle: string) {
-  const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
-  await expect(body).toBeVisible({ timeout: 30_000 });
+/** Press a pane's TopBar toggle if it is not pressed yet; never toggle an open one shut. */
+async function openPane(page: Page, toggle: string) {
+  // panelPressed reads the bar without waiting: an unpinned closed pane has no square there.
+  if ((await panelPressed(page, toggle)) !== 'true') await togglePanel(page, toggle);
+  await expect(
+    page.locator('header').getByRole('button', { name: toggle, exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
 }
 
 /** Garden location → Close crux lands on the Garden's Home; the workspace stays open. */
@@ -68,7 +70,7 @@ async function closeWorkspace(page: Page, title: string) {
   await expect(page.getByRole('dialog')).toHaveCount(0);
 }
 
-test.describe('home garden, crux picker, panes, console', () => {
+test.describe('home garden, crux picker, narrow panes', () => {
   test.setTimeout(150_000);
 
   test('home garden: search, clear, sort by created/updated, public garden, card menu', async () => {
@@ -200,56 +202,29 @@ test.describe('home garden, crux picker, panes, console', () => {
     }
   });
 
-  test('panes: toggle open, close from the header, survive a relaunch, ask for room when narrow', async () => {
-    const first = await launchApp();
-    const { dir } = first;
+  test('panes: a narrow native window keeps every header reachable and asks for room (FEEL-02)', async () => {
+    const { app, page } = await launchApp();
     try {
-      const { page } = first;
       await enterGarden(page);
       await createCrux(page, 'Pane Garden');
       await expect(page.getByTestId('pane-body-collaboration')).toBeVisible({ timeout: 30_000 });
 
-      // Every pane: closes from its own header, opens again from the TopBar toggle.
-      // (A new crux may start with more than Collaboration open, so start from open.)
-      for (const { type, label } of PANES) {
-        const body = page.getByTestId(`pane-body-${type}`);
-        const toggle = page.getByRole('button', { name: `Toggle ${label.toLowerCase()}` });
-        await ensurePane(page, type, `Toggle ${label.toLowerCase()}`);
-        await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-        await page.getByTitle(`Close ${label}`).click();
-        await expect(body).toHaveCount(0);
-        await expect(toggle).toHaveCount(0);
-        await togglePanel(page, `Toggle ${label.toLowerCase()}`);
-        await expect(body).toBeVisible({ timeout: 30_000 });
-        await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-        await page.getByTitle(`Close ${label}`).click();
-        await expect(body).toHaveCount(0);
-      }
-
-      // Open them all; the layout is saved (debounced) per crux.
-      for (const { type, label } of PANES)
-        await ensurePane(page, type, `Toggle ${label.toLowerCase()}`);
-      await page.waitForTimeout(800);
-      await page.screenshot({ path: 'e2e/.results/garden-panes-3-all-open.png' });
-    } finally {
-      await first.app.close();
-    }
-
-    const second = await launchApp({ dir });
-    try {
-      const { page } = second;
-      await page.getByRole('button', { name: 'Enter', exact: true }).click();
-      // A relaunch opens on Garden Home; the Crux keeps its arrangement.
-      await page.getByRole('button', { name: 'Open Pane Garden', exact: true }).click();
-      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
-        'Pane Garden',
-        { timeout: 30_000 },
-      );
+      // Open every pane, then the explicit repair: nine panes inserted one after
+      // another can leave the last tile with no body room until "Arrange open
+      // panels" (the picker's action) gives every tile its share. The layout is
+      // saved (debounced) per crux.
+      for (const { label } of PANES) await openPane(page, `Toggle ${label.toLowerCase()}`);
+      await page.getByRole('button', { name: 'Add panel', exact: true }).click();
+      const picker = page.getByRole('dialog', { name: 'Add panel', exact: true });
+      await picker.getByRole('button', { name: 'Arrange open panels', exact: true }).click();
+      await expect(picker).toHaveCount(0);
       for (const { type } of PANES)
         await expect(page.getByTestId(`pane-body-${type}`)).toBeVisible({ timeout: 30_000 });
+      await page.waitForTimeout(800);
+      await page.screenshot({ path: 'e2e/.results/garden-panes-3-all-open.png' });
 
       // Even in a narrow native window every tile and close control remains on screen.
-      await second.app.evaluate(({ BrowserWindow }) =>
+      await app.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows()[0]!.setSize(900, 700),
       );
       for (const { type, label } of PANES) {
@@ -287,59 +262,6 @@ test.describe('home garden, crux picker, panes, console', () => {
       }
       await expect(widen).toHaveCount(0);
       await expect(page.getByPlaceholder('Send a message...')).toBeVisible();
-    } finally {
-      await second.app.close();
-    }
-  });
-
-  test('keeper console: enable AI tools, open with Escape and the TopBar button, chat, close', async () => {
-    const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
-    try {
-      await enterGarden(page);
-      const consolePane = page.getByTestId('pane-body-console');
-      // AI tools are off in a fresh garden: no console button, Escape opens nothing.
-      await expect(page.getByRole('button', { name: 'Console', exact: true })).toHaveCount(0);
-      await page.keyboard.press('Escape');
-      await expect(consolePane.getByPlaceholder('Send a message...')).toHaveCount(0);
-
-      // Settings → AI: enable, and give the Keeper's provider a key.
-      const settings = await showPane(page, 'Settings');
-      await settings.locator('h2', { hasText: /^AI$/ }).click();
-      await settings.getByRole('switch', { name: 'Enable AI Tools' }).click();
-      const key = settings.getByPlaceholder('sk-ant-...');
-      await key.fill('sk-ant-e2e-not-a-real-key');
-      await key.press('Enter');
-      await expect(settings.getByPlaceholder('sk-ant-...')).toHaveCount(0, { timeout: 15_000 });
-      await hidePane(page, 'Settings');
-
-      // Escape on Garden Home opens the Garden's Collaboration as a pane
-      await page.keyboard.press('Escape');
-      await expect(consolePane).toBeVisible();
-      const console_ = page.getByRole('button', { name: 'Console', exact: true });
-      await expect(console_).toHaveAttribute('aria-pressed', 'true');
-      await console_.click();
-      await expect(consolePane).toHaveCount(0);
-
-      // The TopBar button opens it too
-      await console_.click();
-      await expect(consolePane).toBeVisible();
-
-      // Talk to the scripted model; the reply lands in the conversation
-      const input = consolePane.getByPlaceholder('Send a message...');
-      await input.fill('Hello Keeper');
-      await input.press('Enter');
-      await expect(consolePane.getByText('Mock reply: Hello Keeper').first()).toBeVisible({
-        timeout: 30_000,
-      });
-      await page.screenshot({ path: 'e2e/.results/garden-panes-5-console.png' });
-
-      // The conversation is kept: close, reopen and it is still there
-      await console_.click();
-      await expect(consolePane).toHaveCount(0);
-      await console_.click();
-      await expect(consolePane.getByText('Mock reply: Hello Keeper').first()).toBeVisible();
-      await console_.click();
-      await expect(consolePane).toHaveCount(0);
     } finally {
       await app.close();
     }

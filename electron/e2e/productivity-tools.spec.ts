@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady } from './panel-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -26,6 +27,13 @@ for (const [type, label] of [
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: new RegExp('^' + label) }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // The Tasks pane opens with every app Crux now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      const tasks = page
+        .locator('header')
+        .getByRole('button', { name: 'Toggle tasks', exact: true });
+      if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
       const frame = page.frameLocator('iframe[data-crux-id]');
       await expect(frame.locator('#editor')).toHaveAttribute('data-ready', 'true', {
         timeout: 90000,
@@ -142,7 +150,7 @@ for (const [type, label] of [
     }
     const second = await launchApp({ dir: first.dir });
     try {
-      await second.page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(second.page);
       const frame = second.page.frameLocator('iframe[data-crux-id]');
       await expect(frame.locator('#editor')).toHaveAttribute('data-ready', 'true', {
         timeout: 60000,

@@ -18,6 +18,9 @@ export function definitionOf(s: Schedule): ScheduleDefinition {
   return { id: s.id, title: s.title, enabled: s.enabled, trigger: s.trigger, actions: s.actions };
 }
 
+/** The definitions inside a `meta.gardenSchedules` payload, or null when it is not one. */
+export const decodeGardenSchedules = (value: unknown): ScheduleDefinition[] | null => decode(value);
+
 function decode(value: unknown): ScheduleDefinition[] | null {
   const state = value as GardenSchedules | undefined;
   if (!state || state.version !== 1 || !Array.isArray(state.schedules)) return null;

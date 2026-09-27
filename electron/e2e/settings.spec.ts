@@ -8,7 +8,7 @@ import { launchApp } from './launch';
  * rename persists across closing and reopening.
  */
 test.describe('settings & mood', () => {
-  test('mood presets, persona rename, settings modal, escape discipline', async () => {
+  test('mood presets, persona rename, settings pane, escape discipline', async () => {
     const { app, page } = await launchApp();
     try {
       await page.getByRole('button', { name: /enter/i }).click();

@@ -493,15 +493,11 @@ async function setupIpc() {
   fromGarden('content:list', (_e: unknown, input: FileContentSelection) =>
     fileContent().list(input),
   );
-  fromGarden('content:read', (_e: unknown, input: FileContentRead) =>
-    fileContent().read(input),
-  );
+  fromGarden('content:read', (_e: unknown, input: FileContentRead) => fileContent().read(input));
   fromGarden('content:lookup', (_e: unknown, input: FileContentRead) =>
     fileContent().lookup(input),
   );
-  fromGarden('content:edit', (_e: unknown, input: FileContentEdit) =>
-    fileContent().edit(input),
-  );
+  fromGarden('content:edit', (_e: unknown, input: FileContentEdit) => fileContent().edit(input));
   fromGarden('content:restore', (_e: unknown, input: GrowthContentRestore) =>
     fileContent().restore(input),
   );
@@ -509,12 +505,9 @@ async function setupIpc() {
     fileContent().snapshot(input),
   );
 
-  fromGarden(
-    'sqlite:merge-crux-meta',
-    (_e: any, id: string, patch: Record<string, unknown>) => {
-      return db.mergeCruxMeta(id, patch);
-    },
-  );
+  fromGarden('sqlite:merge-crux-meta', (_e: any, id: string, patch: Record<string, unknown>) => {
+    return db.mergeCruxMeta(id, patch);
+  });
 
   fromGarden('sqlite:update-crux', (_e: any, id: string, patch: LocalCruxUpdate) => {
     return db.updateCrux(id, patch);
@@ -527,19 +520,16 @@ async function setupIpc() {
     },
   );
 
-  fromGarden(
-    'sqlite:prepare-working-copy-folder',
-    (_e: unknown, id: string, revision: number) => {
-      return db.prepareWorkingCopyFolder(id, revision, (copyId, current) => {
-        const folder =
-          current && projects.folderExists(current)
-            ? current
-            : projects.createFolder(`task-${copyId}`);
-        watcher.watch(folder);
-        return folder;
-      });
-    },
-  );
+  fromGarden('sqlite:prepare-working-copy-folder', (_e: unknown, id: string, revision: number) => {
+    return db.prepareWorkingCopyFolder(id, revision, (copyId, current) => {
+      const folder =
+        current && projects.folderExists(current)
+          ? current
+          : projects.createFolder(`task-${copyId}`);
+      watcher.watch(folder);
+      return folder;
+    });
+  });
   fromGarden(
     'sqlite:finish-working-copy-setup',
     (_e: unknown, id: string, revision: number, phase: 'ready' | 'failed') => {
@@ -853,28 +843,25 @@ async function setupIpc() {
   fromGarden('settings:list', (_event: Electron.IpcMainInvokeEvent) => {
     return localDb.settings.list();
   });
-  fromGarden(
-    'settings:put',
-    (event: Electron.IpcMainInvokeEvent, key: string, value: string) => {
-      return localDb.settings.put(key, value);
-    },
-  );
+  fromGarden('settings:put', (event: Electron.IpcMainInvokeEvent, key: string, value: string) => {
+    return localDb.settings.put(key, value);
+  });
   fromGarden('settings:remove', (event: Electron.IpcMainInvokeEvent, key: string) => {
     return localDb.settings.remove(key);
   });
-  ipcMain.handle(
+  fromGarden(
     'garden-membership:add',
     (event: Electron.IpcMainInvokeEvent, input: { gardenId: string; memberId: string }) => {
       return localDb.gardenMembership.add(input);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'garden-membership:parents',
     (event: Electron.IpcMainInvokeEvent, memberId: string) => {
       return localDb.gardenMembership.parents(memberId);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'garden-membership:move',
     (
       event: Electron.IpcMainInvokeEvent,
@@ -883,13 +870,13 @@ async function setupIpc() {
       return localDb.gardenMembership.move(input);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'garden-membership:remove',
     (event: Electron.IpcMainInvokeEvent, gardenId: string, memberId: string) => {
       return localDb.gardenMembership.remove(gardenId, memberId);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'garden-membership:list',
     (
       event: Electron.IpcMainInvokeEvent,
@@ -905,12 +892,9 @@ async function setupIpc() {
       return localDb.privateArchiveReplacementToken(selection);
     },
   );
-  fromGarden(
-    'archive:export',
-    (event: Electron.IpcMainInvokeEvent, selection: GraphSelection) => {
-      return localDb.exportPrivateArchive(selection);
-    },
-  );
+  fromGarden('archive:export', (event: Electron.IpcMainInvokeEvent, selection: GraphSelection) => {
+    return localDb.exportPrivateArchive(selection);
+  });
   fromGarden('archive:inspect', (event: Electron.IpcMainInvokeEvent, bytes: Uint8Array) => {
     return localDb.inspectPrivateArchive(bytes);
   });
@@ -942,16 +926,13 @@ async function setupIpc() {
     },
   );
 
-  fromGarden(
-    'sqlite:create-crux',
-    (event: Electron.IpcMainInvokeEvent, input: LocalCruxCreate) => {
-      return db.createCrux(input, (slug) => {
-        const folder = projects.createFolder(slug);
-        watcher.watch(folder);
-        return folder;
-      });
-    },
-  );
+  fromGarden('sqlite:create-crux', (event: Electron.IpcMainInvokeEvent, input: LocalCruxCreate) => {
+    return db.createCrux(input, (slug) => {
+      const folder = projects.createFolder(slug);
+      watcher.watch(folder);
+      return folder;
+    });
+  });
 
   ipcMain.handle('project:create-folder', (_e: any, slug: string) => {
     const folder = projects.createFolder(slug);
@@ -1720,7 +1701,9 @@ async function setupIpc() {
       !(base && url.startsWith(base)) &&
       !(target.protocol === 'http:' && isPrivateHost(target.hostname))
     )
-      throw new Error('Only https sources are fetched (http only on this machine or your network).');
+      throw new Error(
+        'Only https sources are fetched (http only on this machine or your network).',
+      );
     const cap = Math.min(options?.maxBytes ?? 64_000_000, 512_000_000);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 90_000);

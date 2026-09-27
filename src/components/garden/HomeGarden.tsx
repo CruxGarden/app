@@ -31,7 +31,14 @@ import Cruxspaces from '@/components/garden/Cruxspaces';
 import Gardens from '@/components/garden/Gardens';
 import { TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
 import { openGardenPage } from '@/lib/public-url';
-import { IconButton, Button, PlasmaButton, Spinner, Panel, SegmentedControl } from '@/components/ui';
+import {
+  IconButton,
+  Button,
+  PlasmaButton,
+  Spinner,
+  Panel,
+  SegmentedControl,
+} from '@/components/ui';
 import { GlobeIcon, PlusCircleIcon } from '@/components/ui/icons';
 import { useAuthStore } from '@/stores/authStore';
 import * as cruxesApi from '@/api/cruxes';
@@ -107,9 +114,20 @@ export default function HomeGarden() {
     async (id: string) => {
       const crux = cruxList.find((c) => c.id === id);
       const published = !!crux?.meta?.publishedAt && isAuthenticated;
+      const isGarden = crux?.kind === 'garden';
+      // A Garden's members are not deleted with it: they move up to this Garden.
+      const members = isGarden
+        ? await (await import('@/services/garden-navigation')).gardenMembers(id).catch(() => [])
+        : [];
       const { choice, checked } = await choiceDialog({
-        title: 'Delete Crux',
-        message: `Delete ${crux?.title || 'this crux'}? It moves to Recently deleted, where you can restore it for ${TRASH_RETENTION_DAYS} days. Its files stay in its Project Folder on disk.`,
+        title: isGarden ? 'Delete Garden' : 'Delete Crux',
+        message: isGarden
+          ? `Delete ${crux?.title || 'this Garden'}? It moves to Recently deleted, where you can restore it for ${TRASH_RETENTION_DAYS} days.${
+              members.length
+                ? ` Its ${members.length === 1 ? 'Crux moves' : `${members.length} Cruxes move`} to ${garden?.title || 'this Garden'} first, so nothing is lost.`
+                : ''
+            }`
+          : `Delete ${crux?.title || 'this crux'}? It moves to Recently deleted, where you can restore it for ${TRASH_RETENTION_DAYS} days. Its files stay in its Project Folder on disk.`,
         choices: [
           { id: 'cancel', label: 'Cancel', variant: 'ghost' },
           { id: 'delete', label: 'Delete', variant: 'danger' },
@@ -124,13 +142,28 @@ export default function HomeGarden() {
       });
       if (choice !== 'delete') return;
       try {
+        if (isGarden && members.length) {
+          const { getSqliteClient } = await import('@/services/sqlite/client');
+          const membership = getSqliteClient().gardenMembership;
+          const parentId = garden?.id;
+          if (!membership || !parentId) throw new Error('This Garden’s Cruxes could not be moved.');
+          for (const member of members)
+            await membership.move({
+              gardenId: parentId,
+              memberId: member.id,
+              expectedParents: [id],
+            });
+        }
         if (published && checked) await cruxesApi.unpublish(id);
         await deleteCrux(id);
       } catch (error) {
-        await alertDialog((error as Error).message, 'Could not delete the Crux');
+        await alertDialog(
+          (error as Error).message,
+          isGarden ? 'Could not delete the Garden' : 'Could not delete the Crux',
+        );
       }
     },
-    [cruxList, deleteCrux, isAuthenticated],
+    [cruxList, deleteCrux, isAuthenticated, garden?.id, garden?.title],
   );
 
   // Page title
@@ -309,7 +342,6 @@ export default function HomeGarden() {
 
       {/* The Trash: deleted cruxes wait here, restorable, until purged */}
       <TrashSection />
-
 
       {/* New crux modal */}
       <NewCruxModal

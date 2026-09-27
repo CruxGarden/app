@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { openPanel, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -102,8 +102,7 @@ test('Underrun: plays from source, remixes on reload, imports into a clean Garde
       await enterGarden(page);
       await importNativeCrux(page, archive);
       // A source-run game carries no Workshop layout in its archive; open the pane.
-      if (!(await page.locator('iframe[data-crux-id]').count()))
-        await togglePanel(page, 'Toggle workshop');
+      await openPanel(page, 'workshop', 'Toggle workshop');
       await expect(frameOf(page).locator('#a')).toContainText('GARDEN REMIX', { timeout: 60000 });
       await startAndPlay(page);
       await page.screenshot({ path: join(evidence, 'underrun-imported.png') });

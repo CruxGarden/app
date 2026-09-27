@@ -20,10 +20,12 @@ test.describe('theme tools (mock AI)', () => {
 
       const collab = page.locator('.mosaic-window.pane-collaboration');
       await expect(collab).toBeVisible({ timeout: 30_000 });
-      const before = await collab
-        .locator('.mosaic-window-body')
-        .first()
-        .evaluate((el) => getComputedStyle(el).backgroundColor);
+      // The pane body's paint is the Mood's business (Plasma frosts it over
+      // the ground); the token the tool sets is what the pane resolves.
+      const body = collab.locator('.mosaic-window-body').first();
+      const panel = () =>
+        body.evaluate((el) => getComputedStyle(el).getPropertyValue('--panel').trim());
+      const before = await panel();
 
       const input = page.getByPlaceholder('Send a message...');
       await input.fill('paint the workspace while you work');
@@ -31,12 +33,12 @@ test.describe('theme tools (mock AI)', () => {
       await expect(page.getByText('Done — I painted it.')).toBeVisible({ timeout: 30_000 });
 
       // Body: the pane's own surface token. Frame: a gradient border, 3px.
-      await expect(collab.locator('.mosaic-window-body').first()).toHaveCSS(
-        'background-color',
-        'rgb(17, 34, 51)',
-      );
-      await expect(collab).toHaveCSS('background-image', /linear-gradient\(135deg/);
-      await expect(collab).toHaveCSS('padding-left', '3px');
+      await expect.poll(panel).toBe('#112233');
+      // Plasma paints the frame its own way: the tokens the pane resolves are the claim.
+      const token = (name: string) =>
+        collab.evaluate((el, n) => getComputedStyle(el).getPropertyValue(n).trim(), name);
+      await expect.poll(() => token('--border')).toContain('linear-gradient(135deg');
+      await expect.poll(() => token('--pane-border-width')).toBe('3px');
       const accent = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
       );
@@ -51,11 +53,8 @@ test.describe('theme tools (mock AI)', () => {
       await page.getByRole('button', { name: /AI preview/ }).click();
       await expect(page.getByText(/AI preview/)).toHaveCount(0);
       await hidePane(page, 'Mood');
-      await expect(collab.locator('.mosaic-window-body').first()).toHaveCSS(
-        'background-color',
-        before,
-      );
-      await expect(collab).not.toHaveCSS('background-image', /linear-gradient/);
+      await expect.poll(panel).toBe(before);
+      await expect.poll(() => token('--border')).not.toContain('linear-gradient');
     } finally {
       await app.close();
     }

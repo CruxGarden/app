@@ -1,4 +1,4 @@
-import { requiresLivePreview } from '@/lib/preview-decision';
+import { requiresLivePreview, settingsPathOf } from '@/lib/preview-decision';
 import { isSiteCrux } from '@/services/site';
 import { documentIdentity } from '@/services/workspace-documents';
 import FigmaPane from './FigmaPane';
@@ -73,6 +73,7 @@ function AdvancedEditor() {
 
   // Check if the crux has a form schema (set during template creation)
   const hasFormSchema = !!(crux?.meta as Record<string, unknown> | undefined)?.formSchema;
+  const settingsPath = settingsPathOf(crux?.meta as Record<string, unknown> | undefined);
   // Content-model cruxes get the Builder as the Workshop's home view
   const hasBuilder = !!(crux?.meta as Record<string, unknown> | undefined)?.contentModel;
   const showBuilder = hasBuilder && !activeTab;
@@ -126,6 +127,7 @@ function AdvancedEditor() {
             previewAvailable={!sourceOnly}
             hasContent={true}
             hasFormSchema={hasFormSchema && !sourceOnly}
+            settingsPath={settingsPath}
             onViewModeChange={(mode) => setTabViewMode(activeTab.id, mode)}
             onSave={() => saveRef.current?.()}
             onCapture={

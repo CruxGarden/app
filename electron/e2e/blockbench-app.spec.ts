@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 test('Blockbench models, textures, animation, agent edits and complete portable editing', async () => {
   test.setTimeout(300000);
@@ -250,7 +250,7 @@ test('Blockbench models, textures, animation, agent edits and complete portable 
   const second = await launchApp({ dir: first.dir });
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const f = await ready(second.page);
     expect(model().name).toBe('External lantern');
     expect(model().elements).toHaveLength(1);

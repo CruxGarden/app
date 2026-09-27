@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, switchCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, switchCrux, reenterWorkspace } from './multi-crux-helpers';
 
 test('WWW browses unframeable sites with isolated privileges, UI/MCP controls, modal occlusion and restart', async () => {
   test.setTimeout(150000);
@@ -149,14 +149,22 @@ test('WWW browses unframeable sites with isolated privileges, UI/MCP controls, m
     // Chromium itself refuses file links before the navigation event is emitted.
     await expect(address).toHaveValue(`${base}/three`);
     expect((await native())?.url).toBe(`${base}/three`);
+    // Room for a fourth pane: a narrow Settings pane shows only "Widen the pane".
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]!.setSize(1700, 1000),
+    );
     await app.evaluate(({ webContents }, id) => {
       const wc = webContents.fromId(id)!;
       wc.focus();
       wc.sendInputEvent({ type: 'keyDown', keyCode: ',', modifiers: ['meta'] });
     }, guestId);
-    await expect(page.getByRole('region', { name: 'Workspace layouts' })).toBeVisible();
-    await expect.poll(visible).toBe(false);
-    await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
+    // The shortcut reaches the app from the guest: Settings opens (a workspace
+    // pane beside WWW now, not a modal over it).
+    const settings = page.getByTestId('pane-body-settings');
+    await expect(settings).toBeVisible({ timeout: 30_000 });
+    await settings
+      .getByRole('switch', { name: 'Agent access for Whole garden', exact: true })
+      .click();
     const path = join(dir, 'userData', 'garden-agent-host', '.crux', 'mcp.json');
     await expect.poll(() => existsSync(path)).toBe(true);
     const config = JSON.parse(readFileSync(path, 'utf8'));
@@ -220,7 +228,7 @@ test('WWW browses unframeable sites with isolated privileges, UI/MCP controls, m
   }
   const second = await launchApp({ dir });
   try {
-    await second.page.getByRole('button', { name: 'Enter', exact: true }).click();
+    await reenterWorkspace(second.page, 'Web research');
     await expect(second.page.getByRole('textbox', { name: 'Browser address' })).toHaveValue(
       `${base}/agent`,
     );

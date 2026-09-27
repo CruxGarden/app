@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -119,7 +119,7 @@ test('AM-1: real tempo and patch edits, kept export, agent tools, restart and cl
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1500, height: 1100 });
     await test.step('restart: the session and the saved patch come back', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       await expect(frameOf(page).locator('#tempoOut')).toHaveText('96');
       await expect(frameOf(page).locator('#patchList option[value="s:Garden bees"]')).toHaveCount(

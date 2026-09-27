@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -130,7 +130,7 @@ test('BeepBox: notes on the real grid, saved song, agent tools, restart and clea
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
     await test.step('restart: the song reopens at 140 BPM in D', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       expect(await songOf(page)).toMatchObject({ tempo: 140, key: 'D' });
       await page.screenshot({ path: join(evidence, 'beepbox-reopened.png') });

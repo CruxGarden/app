@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace, storedFingerprint } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -148,20 +148,7 @@ test('Hextris: real play, saved game and high scores, agent reset, remix, restar
       const { createHash } = await import('node:crypto');
       const fingerprint = createHash('sha256').update(readFileSync(path)).digest('hex');
       await expect
-        .poll(
-          () =>
-            page.evaluate(
-              async ([cruxId, p]) =>
-                (
-                  (await window.electronAPI!.sqlite.get(
-                    'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-                    [cruxId, p],
-                  )) as { fingerprint: string } | undefined
-                )?.fingerprint,
-              [id, 'js/initialization.js'],
-            ),
-          { timeout: 60000 },
-        )
+        .poll(() => storedFingerprint(page, id, 'js/initialization.js'), { timeout: 60000 })
         .toBe(fingerprint);
       await frameOf(page)
         .locator('body')
@@ -184,7 +171,7 @@ test('Hextris: real play, saved game and high scores, agent reset, remix, restar
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1500, height: 1000 });
     await test.step('restart: the saved game is offered again and the remix holds', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       expect((await gameOf(page)).saved).toBe(true);
       expect(

@@ -1,9 +1,9 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -45,6 +45,13 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Song\b/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // The Tasks pane opens with every app Crux now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      const tasks = page
+        .locator('header')
+        .getByRole('button', { name: 'Toggle tasks', exact: true });
+      if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -121,7 +128,7 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1700, height: 1050 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the song comes back with its name, tracks and outputs', async () => {
       await ready(page);
       await expect(frameOf(page).getByText('Melody')).toBeVisible({ timeout: 60000 });

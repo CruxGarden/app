@@ -4,7 +4,7 @@ import { existsSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { openBuilder } from './builder-helpers';
 
@@ -188,7 +188,7 @@ test('Home Page (Keel): Builder post and work, live routes, collaborator post, s
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the posts are still there', async () => {
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       await openBuilder(page);

@@ -29,7 +29,7 @@ async function plantGarden(page: Page) {
 
 /**
  * Settings → AI (keys live in the platform secret store, never in SQLite or
- * plaintext localStorage on desktop), the Mood modal's Sound tab (on/off,
+ * plaintext localStorage on desktop), the Mood pane's Sound tab (on/off,
  * volume, remove / re-pick / add a track), and the Persona tab (name, greeting,
  * avatar — and the greeting a new crux opens with).
  */

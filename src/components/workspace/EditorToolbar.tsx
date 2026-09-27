@@ -2,10 +2,14 @@ import { cn } from '@/lib/cn';
 import { isPreviewable } from '@/lib/monacoLanguages';
 import type { EditorTab, EditorViewMode } from '@/stores/uiStore';
 
+import { isConfigJsonPath } from '@/lib/preview-decision';
+
 interface EditorToolbarProps {
   tab: EditorTab;
   hasContent: boolean;
   hasFormSchema: boolean;
+  /** The template's declared settings file, when it is not config.json. */
+  settingsPath?: string | null;
   onViewModeChange: (mode: EditorViewMode) => void;
   onSave?: () => void;
   onCapture?: () => void;
@@ -17,6 +21,7 @@ export default function EditorToolbar({
   tab,
   hasContent,
   hasFormSchema,
+  settingsPath,
   onViewModeChange,
   onSave,
   onCapture,
@@ -26,8 +31,8 @@ export default function EditorToolbar({
   const canPreview = previewAvailable && isPreviewable(tab.path) && hasContent;
   const inPreview = tab.viewMode === 'preview' && canPreview;
 
-  // Show form button for config.json when a form schema exists
-  const isConfigFile = /^config\.json$/i.test(tab.path.split('/').pop() || '');
+  // Show form button for the settings file (config.json, or the template's own) when a form schema exists
+  const isConfigFile = isConfigJsonPath(tab.path, settingsPath);
   const canForm = isConfigFile && hasFormSchema && hasContent;
 
   return (

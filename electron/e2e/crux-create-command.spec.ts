@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, addArtifact } from './multi-crux-helpers';
+import { enterGarden, addArtifact, reenterWorkspace } from './multi-crux-helpers';
 const env = { CRUX_API_OWNER: '1' };
 
 test('normal creation reports a folder failure, retries through the owner, then reopens saved work', async () => {
@@ -59,7 +59,7 @@ test('normal creation reports a folder failure, retries through the owner, then 
     await launch.app.close();
     launch = await launchApp({ dir, env });
     page = launch.page;
-    await page.getByRole('button', { name: 'Enter', exact: true }).click();
+    await reenterWorkspace(page, 'Retry creation');
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', id);
     await page.getByRole('tree').getByText('saved.txt', { exact: true }).click();
     await expect(page.locator('.monaco-editor')).toContainText('Creation survives restart');

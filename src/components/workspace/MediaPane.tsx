@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import {
   searchMedia,
   addMedia,
+  previewMedia,
   defaultFolder,
   type MediaItem,
   type MediaKind,
@@ -30,6 +31,36 @@ export default function MediaPane() {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  // One preview at a time; its object URL is revoked when it stops.
+  const [preview, setPreview] = useState<{ id: string; url: string } | null>(null);
+  const [previewBusy, setPreviewBusy] = useState<string | null>(null);
+  const previewRef = useRef<{ id: string; url: string } | null>(null);
+  const stopPreview = () => {
+    const current = previewRef.current;
+    if (current) URL.revokeObjectURL(current.url);
+    previewRef.current = null;
+    setPreview(null);
+  };
+  const togglePreview = async (item: MediaItem) => {
+    if (previewRef.current?.id === item.id) {
+      stopPreview();
+      return;
+    }
+    stopPreview();
+    setError('');
+    setPreviewBusy(item.id);
+    try {
+      const url = await previewMedia(item);
+      previewRef.current = { id: item.id, url };
+      setPreview(previewRef.current);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'That file could not be previewed.');
+    } finally {
+      setPreviewBusy(null);
+    }
+  };
+  // Nothing keeps playing after the category changes or the pane closes.
+  useEffect(() => stopPreview, [kind]);
 
   const search = async () => {
     setError('');
@@ -182,6 +213,18 @@ export default function MediaPane() {
                     >
                       {busy === item.id ? 'Adding…' : `Use ${item.title}`}
                     </button>
+                    <button
+                      className="px-2 py-0.5 rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20"
+                      disabled={previewBusy !== null}
+                      aria-pressed={preview?.id === item.id}
+                      onClick={() => void togglePreview(item)}
+                    >
+                      {previewBusy === item.id
+                        ? 'Loading…'
+                        : preview?.id === item.id
+                          ? 'Stop preview'
+                          : `Preview ${item.title}`}
+                    </button>
                     <a
                       href={item.sourceUrl}
                       target="_blank"
@@ -191,6 +234,33 @@ export default function MediaPane() {
                       Source ↗
                     </a>
                   </div>
+                  {preview?.id === item.id && (
+                    <div className="mt-2" data-testid="media-preview">
+                      {item.kind === 'audio' ? (
+                        <audio
+                          controls
+                          autoPlay
+                          src={preview.url}
+                          className="w-full"
+                          aria-label={`Preview of ${item.title}`}
+                        />
+                      ) : item.kind === 'video' ? (
+                        <video
+                          controls
+                          autoPlay
+                          src={preview.url}
+                          className="w-full max-h-48 rounded-[var(--radius-sm)] bg-black"
+                          aria-label={`Preview of ${item.title}`}
+                        />
+                      ) : (
+                        <img
+                          src={preview.url}
+                          alt={`Preview of ${item.title}`}
+                          className="max-h-48 rounded-[var(--radius-sm)]"
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </li>
             ))}

@@ -1,10 +1,10 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { collaborator, outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -52,6 +52,11 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^PPTist/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    const tasks = page.locator('header').getByRole('button', { name: 'Toggle tasks', exact: true });
+    if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
     const workspace = page.locator('[data-workspace-id]');
     await expect(workspace).toBeVisible();
     folder = (await storedCrux(page, (await workspace.getAttribute('data-workspace-id'))!))
@@ -113,7 +118,7 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
 
     instance = await launchApp({ dir });
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     await check();
     await exportNativeCrux(page, archive, instance.app);

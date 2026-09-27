@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 
 function tone() {
   const frames = 48000,
@@ -138,7 +138,7 @@ test('AudioMass native waveform, multitrack, agent, conflict and restart', async
   const second = await launchApp({ dir: first.dir, env: { CRUX_AI_MOCK: '1' } });
   try {
     await second.page.setViewportSize({ width: 1700, height: 1100 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = second.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 60000,

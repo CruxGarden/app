@@ -91,6 +91,28 @@ export default function Modal({
   const role = useMotionRole('dialog');
   // Under the Plasma theme the panel is drawn by a second canvas above the scrim (PlasmaOverlay).
   const panelRef = useRef<HTMLDivElement>(null);
+  // Focus returns to whatever opened the dialog once it closes (keyboard users
+  // land back on the button they pressed, not on <body>).
+  // Captured while rendering the opening: by the time effects run, a field
+  // inside the dialog may already hold focus (autoFocus), which would name
+  // the wrong opener.
+  const openerRef = useRef<Element | null>(null);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current && typeof document !== 'undefined')
+    openerRef.current = document.activeElement;
+  wasOpen.current = open;
+  useEffect(() => {
+    if (!open) return;
+    const opener = openerRef.current;
+    const panel = panelRef.current;
+    return () => {
+      // Only when nothing else has taken focus meanwhile (a field the person
+      // already moved to keeps it): focus is on <body> or was inside the dialog.
+      const active = document.activeElement;
+      const orphaned = !active || active === document.body || (panel?.contains(active) ?? false);
+      if (orphaned && opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, [open]);
   // Flat chrome: a plain plate, so the contents need not wait for any material.
   const flat = useFlatChrome();
   const plasma = usePlasmaOn() && !flat;

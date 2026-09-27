@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { openWindow, serve } from './public-site-helpers';
 
@@ -24,8 +24,21 @@ import { openWindow, serve } from './public-site-helpers';
 const frameOf = (page: Page) => page.frameLocator('iframe[data-crux-id]');
 const status = (page: Page) => frameOf(page).locator('#garden-project [role=status]');
 const editor = (page: Page) => frameOf(page).locator('.tiptap').first();
+/** Tigrana opens in focus mode at narrower widths, with the note list (and its + button) hidden. */
+async function showNoteList(page: Page) {
+  const frame = frameOf(page);
+  if (await frame.getByRole('button', { name: 'Add Note or Folder', exact: true }).count()) return;
+  const focus = frame.getByRole('button', { name: 'Exit focus mode', exact: true });
+  if (await focus.count()) await focus.click();
+  const sidebar = frame.getByRole('button', { name: 'Show left sidebar', exact: true });
+  if (await sidebar.count()) await sidebar.click();
+  await expect(
+    frame.getByRole('button', { name: 'Add Note or Folder', exact: true }),
+  ).toBeVisible();
+}
 async function createNote(page: Page, title: string) {
   // Tigrana adds the note as Untitled; opening it and naming it in the title field renames the file.
+  await showNoteList(page);
   await frameOf(page).getByRole('button', { name: 'Add Note or Folder', exact: true }).click();
   await frameOf(page)
     .getByRole('menuitem', { name: /New Note/ })
@@ -35,9 +48,10 @@ async function createNote(page: Page, title: string) {
   await expect(field).toHaveValue('Untitled');
   await field.fill(title);
   await field.press('Enter');
-  await expect(
-    frameOf(page).getByRole('button', { name: title, exact: true }).first(),
-  ).toBeVisible();
+  // The title field keeps the name and the list shows it (its tab/list button
+  // label differs between Tigrana builds, so the text is the stable check).
+  await expect(field).toHaveValue(title);
+  await expect(frameOf(page).getByText(title, { exact: true }).first()).toBeVisible();
   await expect(editor(page)).toBeVisible();
 }
 
@@ -152,8 +166,9 @@ test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, 
     await page.setViewportSize({ width: 1600, height: 1050 });
 
     await test.step('restart: the notes reopen; a stale external write is refused and the draft kept', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await showNoteList(page);
       await frameOf(page)
         .getByRole('button', { name: /Field journal/ })
         .first()
@@ -173,6 +188,7 @@ test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, 
         .getByRole('button', { name: 'Discard draft and reload', exact: true })
         .click();
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await showNoteList(page);
       await frameOf(page)
         .getByRole('button', { name: /Field journal/ })
         .first()
@@ -233,6 +249,7 @@ test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, 
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await showNoteList(page);
       await frameOf(page)
         .getByRole('button', { name: /Field journal/ })
         .first()

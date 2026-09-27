@@ -95,6 +95,48 @@ test.describe('guide 02 · Home Garden', () => {
     }
   });
 
+  test('HOME-06 — the globe opens the public page at the username in the browser; nothing local is published by opening it', async () => {
+    const api = await startMockApi();
+    const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
+    try {
+      // The system browser, stubbed in the main process.
+      await app.evaluate(({ shell }) => {
+        const g = globalThis as unknown as { __opened: string[] };
+        g.__opened = [];
+        shell.openExternal = async (url: string) => {
+          g.__opened.push(url);
+        };
+      });
+      const opened = () =>
+        app.evaluate(() => (globalThis as unknown as { __opened: string[] }).__opened);
+      await expect(page.getByRole('button', { name: 'Enter' })).toBeVisible({ timeout: 30_000 });
+      await enterGarden(page);
+      await createCrux(page, 'Private draft');
+      await writeFirstFile(page, 'index.html', '<h1>Not for the public</h1>');
+      await goHome(page);
+      // Connect from Settings → Account.
+      const settings = await openPanel(page, 'settings', 'Toggle settings');
+      await settings.locator('h2', { hasText: /^Account$/ }).click();
+      await connectAccount(page, settings);
+      await expect(settings.getByText(/Connected/)).toBeVisible({ timeout: 30_000 });
+      await page.locator('.mosaic-window.pane-settings .pane-toolbar-close').click();
+      const before = api.log.length;
+      const globe = page.getByRole('button', { name: 'Public Garden' });
+      await expect(globe).toBeVisible({ timeout: 30_000 });
+      await globe.click();
+      await expect.poll(opened).toEqual(['https://crux.garden/tester']);
+      // Back in the app, nothing left: Home is where it was, the draft still private.
+      await expect(page.getByTestId('pane-body-home')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Open Private draft' })).toBeVisible();
+      expect(api.log.slice(before).filter((l) => /^(POST|PUT|PATCH) /.test(l))).toEqual([]);
+      expect(Object.keys(api.state.cruxes)).toEqual([]);
+      expect(Object.keys(api.state.published)).toEqual([]);
+    } finally {
+      await app.close();
+      await api.close();
+    }
+  });
+
   test('HOME-07 — Home stays usable while the account is offline', async () => {
     const api = await startMockApi();
     const first = await launchApp({ env: { CRUX_API_URL: api.url } });

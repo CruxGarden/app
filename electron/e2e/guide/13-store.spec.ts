@@ -96,6 +96,110 @@ test.describe('guide 13 · Crux Store', () => {
     }
   });
 
+  test('STORE-05 — a visitor value shows on Live after a refresh; local test values never cross over', async () => {
+    test.setTimeout(150_000);
+    const api = await startMockApi();
+    const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
+    try {
+      await enterGarden(page);
+      await createCrux(page, 'Answer sheet');
+      await writeFirstFile(page, 'index.html', '<h1>Sheet</h1>');
+      const store = await openPanel(page, 'store', 'Toggle store');
+      await addKey(store, 'draft', 'local only');
+      await expect(store.getByTestId('store-source-live')).toBeDisabled();
+      // Share it, then a visitor of the shared site writes an answer through the API.
+      const share = await openPanel(page, 'publish', 'Toggle share');
+      await share.getByRole('button', { name: 'Share', exact: true }).click({ timeout: 60_000 });
+      await connectAccount(page);
+      const ask = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      await expect(ask).toBeVisible({ timeout: 30_000 });
+      await ask.getByRole('button', { name: 'Share without a backup' }).click();
+      await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
+      const cruxId = Object.keys(api.state.published)[0]!;
+      api.state.store = [];
+      const wrote = await fetch(`${api.url}/store/${cruxId}/answer`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: 'from a visitor', mode: 'public' }),
+      });
+      expect(wrote.status).toBe(200);
+      // Live: the visitor's value, and not the local draft.
+      await store.getByTestId('store-source-live').click();
+      const live = store.getByTestId('store-live');
+      await store.getByTitle('Refresh').click();
+      await expect(live.locator('tbody tr', { hasText: 'answer' })).toContainText(
+        'from a visitor',
+        {
+          timeout: 30_000,
+        },
+      );
+      await expect(live.locator('tbody tr', { hasText: 'draft' })).toHaveCount(0);
+      // Local: the draft, and not the visitor's value — before and after a refresh.
+      await store.getByTestId('store-source-local').click();
+      await expect(row(store, 'draft')).toContainText('local only');
+      await expect(store.locator('tbody tr', { hasText: 'answer' })).toHaveCount(0);
+      await store.getByTitle('Refresh').click();
+      await expect(row(store, 'draft')).toContainText('local only');
+      await expect(store.locator('tbody tr', { hasText: 'answer' })).toHaveCount(0);
+      await expect(store).toContainText('1 key');
+      // The local draft never reached the API's store.
+      expect(api.state.store.map((e) => e.key)).toEqual(['answer']);
+    } finally {
+      await app.close();
+      await api.close();
+    }
+  });
+
+  test('STORE-06 — a per-visitor key is marked with its visitor; deleting it asks and removes only that row', async () => {
+    test.setTimeout(150_000);
+    const api = await startMockApi();
+    const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
+    try {
+      await enterGarden(page);
+      await createCrux(page, 'Daily game');
+      await writeFirstFile(page, 'index.html', '<h1>Game</h1>');
+      const store = await openPanel(page, 'store', 'Toggle store');
+      await addKey(store, 'local-note', 'stays');
+      const share = await openPanel(page, 'publish', 'Toggle share');
+      await share.getByRole('button', { name: 'Share', exact: true }).click({ timeout: 60_000 });
+      await connectAccount(page);
+      const ask = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      await expect(ask).toBeVisible({ timeout: 30_000 });
+      await ask.getByRole('button', { name: 'Share without a backup' }).click();
+      await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
+      const cruxId = Object.keys(api.state.published)[0]!;
+      // The mock seeds a public leaderboard and one visitor's protected record.
+      await store.getByTestId('store-source-live').click();
+      const live = store.getByTestId('store-live');
+      const played = live.locator('tbody tr', { hasText: 'played:2026-09-06' });
+      const board = live.locator('tbody tr', { hasText: 'leaderboard:2026-09-06' });
+      await expect(played).toBeVisible({ timeout: 30_000 });
+      await expect(played).toContainText('· visitor-');
+      await expect(played.getByTitle('Visitor visitor-a1b2c3d4')).toBeVisible();
+      await expect(played).toContainText('protected');
+      await expect(board).toContainText('public');
+      await expect(board.getByTitle(/^Visitor /)).toHaveCount(0);
+      // Delete the visitor's row: cancel keeps it; confirm removes it and nothing else.
+      await played.getByTitle('Delete this key from the live store').click();
+      const confirm = page.getByRole('dialog');
+      await expect(confirm).toContainText(/Every visitor's value for it goes too/);
+      await confirm.getByRole('button', { name: 'Cancel' }).click();
+      await expect(played).toBeVisible();
+      await played.getByTitle('Delete this key from the live store').click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
+      await expect(played).toHaveCount(0, { timeout: 30_000 });
+      await expect(board).toBeVisible();
+      expect(api.log.filter((l) => l.startsWith(`DELETE /store/${cruxId}/played`))).toHaveLength(1);
+      expect(api.state.store!.map((e) => e.key)).toEqual(['leaderboard:2026-09-06']);
+      // The local store is not the live store: its key is still there.
+      await store.getByTestId('store-source-local').click();
+      await expect(row(store, 'local-note')).toContainText('stays');
+    } finally {
+      await app.close();
+      await api.close();
+    }
+  });
+
   test('STORE-07 — Live going offline is recoverable and never disables the local Store', async () => {
     test.setTimeout(150_000);
     const api = await startMockApi();

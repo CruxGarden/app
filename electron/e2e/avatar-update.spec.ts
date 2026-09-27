@@ -32,7 +32,9 @@ for (const owner of ['0', '1']) {
       await enterGarden(page);
       const cruxId = await createCrux(page, 'Portrait history');
       await page.keyboard.press('ControlOrMeta+,');
-      const settings = () => page.getByRole('dialog', { name: 'Settings', exact: true });
+      // Settings is a workspace pane, not a dialog.
+      const settings = () => page.getByTestId('pane-body-settings');
+      await expect(settings()).toBeVisible({ timeout: 30_000 });
       const upload = (buffer: Buffer) =>
         settings()
           .locator('input[type=file][accept="image/*"]')

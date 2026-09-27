@@ -6,94 +6,11 @@ import { launchApp } from './launch';
  * the Mood decides what that means. Dialogs, dropdowns and toasts are driven
  * by the Motion library from the same tokens (hooks/useMotionRole); the
  * element carries `data-motion-choice` / `data-motion-exit` for evidence.
- * Catppuccin Mocha says `scale`, Sunday Paper says `none` — the same open
- * Mood modal changes as each is applied, and closing under a Mood with an
- * exit plays it (inline styles move) before the modal unmounts.
+ * The Mood pane is a workspace pane (no dialog role), so the dialog-role
+ * evidence lives with the dialogs themselves; here: the person's Motion
+ * setting, pixel Moods stepping in frames, and the Home ↔ Crux transition.
  */
 test.describe('motion roles', () => {
-  test('the Mood decides how the Mood modal enters and leaves', async () => {
-    const { app, page } = await launchApp();
-    const cssVar = (name: string) =>
-      page.evaluate(
-        (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
-        name,
-      );
-    try {
-      await page.getByRole('button', { name: /enter/i }).click();
-      await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
-      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
-        timeout: 30_000,
-      });
-
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      const built = page.getByTestId('bundled-moods');
-      await expect(built).toBeVisible();
-      const dialog = page.locator('[data-motion-role="dialog"]').first();
-      const choice = () => dialog.getAttribute('data-motion-choice');
-
-      // Plasma, the Default Mood, moves nothing but the material; Fractal
-      // Garden, a HyperMood, drifts dialogs in.
-      expect(await cssVar('--motion-enter-dialog')).toBe('none');
-      await built
-        .getByTestId('bundled-digital-fractal-garden')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('drift');
-      await expect.poll(choice).toBe('drift');
-      // The enter settled at the rest state Motion wrote inline
-      await expect(dialog).toHaveCSS('opacity', '1');
-
-      await built
-        .getByTestId('bundled-jade-capital')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('scale');
-      await expect.poll(choice).toBe('scale');
-      // The spring travels with the Mood too: a pop would read the snappy spring token
-      expect(await cssVar('--motion-spring-snappy')).toMatch(/^\d+ \d+ \d+$/);
-
-      await built
-        .getByTestId('bundled-mountain-grey')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('none');
-      await expect.poll(choice).toBe('none');
-      expect(await dialog.getAttribute('data-motion-exit')).toBe('none');
-
-      // Closing under Mountain Grey: no exit, the modal is simply gone
-      await page.keyboard.press('Escape');
-      await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
-
-      // Re-open, back to Jade Capital, and closing now plays the exit: the element
-      // stays mounted while Motion moves its inline style, then goes.
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await built
-        .getByTestId('bundled-jade-capital')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await expect.poll(() => cssVar('--motion-exit-dialog')).toBe('scale');
-      await expect.poll(() => dialog.getAttribute('data-motion-exit')).toBe('scale');
-      await expect(dialog).toHaveCSS('opacity', '1');
-      await page.evaluate(() => {
-        const w = window as unknown as { __sawExit: boolean };
-        w.__sawExit = false;
-        const el = document.querySelector('[data-motion-role="dialog"]')!;
-        new MutationObserver(() => {
-          const opacity = parseFloat((el as HTMLElement).style.opacity || '1');
-          if (opacity < 1) w.__sawExit = true;
-        }).observe(el, { attributes: true, attributeFilter: ['style'] });
-      });
-      await page.keyboard.press('Escape');
-      await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
-      expect(
-        await page.evaluate(() => (window as unknown as { __sawExit: boolean }).__sawExit),
-      ).toBe(true);
-    } finally {
-      await app.close();
-    }
-  });
-
   /**
    * Motion intensity (ADR 0041): the person's one knob. `System` follows the
    * Mood's default and the OS reduced-motion preference; off is instant,

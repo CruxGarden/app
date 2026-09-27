@@ -197,8 +197,21 @@ export class ManifestArtifactService implements IArtifactService {
       });
       return manifestArtifact(captured.resourceId, head, entry);
     };
+    // Another writer (a preview capture, the watcher) can advance the head
+    // between reading it and editing: the entry itself is still guarded by
+    // `expected`, so one fresh read is the honest answer, not a failed save.
+    const attempt = async (retry: boolean): Promise<Artifact> => {
+      try {
+        return await execute();
+      } catch (err) {
+        if (retry && isHeadConflict(err)) return attempt(false);
+        throw err;
+      }
+    };
     // Disk is authoritative; ingestion already owns the queue for indexed writes.
-    return captured.writeThrough === false ? execute() : serializeIngestion(execute);
+    return captured.writeThrough === false
+      ? attempt(true)
+      : serializeIngestion(() => attempt(true));
   }
 
   create(input: CreateArtifactInput): Promise<Artifact> {
@@ -311,4 +324,10 @@ export class ManifestArtifactService implements IArtifactService {
   async cloneArtifactsToSnapshot(): Promise<void> {
     throw new Error('Create Growth through the API to retain its content root.');
   }
+}
+
+/** The content service refused an edit because the head moved under it. */
+function isHeadConflict(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /ConflictException|File content changed/.test(message);
 }

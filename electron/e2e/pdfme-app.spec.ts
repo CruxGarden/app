@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -123,7 +123,7 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the poster comes back with its blocks and outputs', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#layout-name')).toHaveValue('Open day poster');

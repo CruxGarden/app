@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 test('Bitsy native editor, agent, playable export, conflict and restart', async () => {
   test.setTimeout(180000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
@@ -95,7 +95,7 @@ test('Bitsy native editor, agent, playable export, conflict and restart', async 
   const second = await launchApp({ dir: first.dir, env: { CRUX_AI_MOCK: '1' } });
   try {
     await second.page.setViewportSize({ width: 1700, height: 1100 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = second.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 60000,

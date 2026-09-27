@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SectionLabel } from '@/components/ui';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Artifact } from '@/api/types';
 import { APP_NAME } from '@/lib/constants';
@@ -10,6 +10,25 @@ import { publishOriginFor } from '@/lib/public-url';
 import MetadataContent from '@/components/workspace/MetadataContent';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
+
+/** A dead end still offers the way back: the author's garden, Explore, home. */
+function WayBack({ username }: { username?: string }) {
+  return (
+    <nav aria-label="Way back" className="flex items-center gap-3 mt-2 text-xs">
+      {username && (
+        <Link to={`/${username}`} className="text-accent hover:underline">
+          {username.startsWith('@') ? username : `@${username}`}
+        </Link>
+      )}
+      <Link to="/explore" className="text-accent hover:underline">
+        Explore
+      </Link>
+      <Link to="/" className="text-accent hover:underline">
+        Home
+      </Link>
+    </nav>
+  );
+}
 
 export default function PublicCrux() {
   const {
@@ -89,6 +108,7 @@ export default function PublicCrux() {
         <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
           <span className="font-display font-bold text-text">Not found</span>
           <span className="text-text-muted">This creation doesn't exist or is private</span>
+          <WayBack username={username} />
         </div>
       </div>
     );
@@ -100,6 +120,7 @@ export default function PublicCrux() {
         <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
           <span className="font-display font-bold text-text">Something went wrong</span>
           <span className="text-text-muted">We couldn't load this creation</span>
+          <WayBack username={username} />
         </div>
       </div>
     );

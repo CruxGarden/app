@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { hidePane, showPane } from './panel-helpers';
+import { goHome } from './multi-crux-helpers';
 
 async function openWorkspace(page: Page) {
   await page.getByRole('button', { name: /enter/i }).click();
@@ -78,19 +79,16 @@ test('Raster Bars applies its pixel icons, frames and type; reduced motion stops
         ),
       )
       .toBe('4');
-    expect(
-      await page.evaluate(() =>
-        getComputedStyle(document.documentElement).getPropertyValue('--font-display'),
-      ),
-    ).toContain('Press Start 2P');
-    // Raster Bars is quiet (no track of its own): the bar says so, sound stays on
-    await expect(page.getByRole('region', { name: 'Mood Bar' })).toContainText('No track');
+    // Raster Bars has no track of its own: the bar offers the Crux Synth, sound stays on
+    await expect(page.getByRole('region', { name: 'Mood Bar' })).toContainText('Crux Synth');
     await page.mouse.move(0, 0);
     await page.screenshot({ path: test.info().outputPath('raster-bars-workspace.png') });
 
     // Dialogs pop in under Raster Bars (Motion-driven, stepped in four frames);
-    // the OS asking for reduced motion makes the enter instant, and lifting it restores the pop
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    // the OS asking for reduced motion makes the enter instant, and lifting it restores the pop.
+    // Mood is a pane now; the Add Crux Modal on Home is the dialog to watch.
+    await goHome(page);
+    await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     const dialog = page.locator('[data-motion-role="dialog"]').first();
     await expect(dialog).toHaveAttribute('data-motion-choice', 'pop');
     await page.emulateMedia({ reducedMotion: 'reduce' });

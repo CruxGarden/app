@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -47,6 +47,7 @@ test('Notation: the jig renders and saves, a person edits and saves an SVG, the 
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
+      console.log('Notation folder', folder);
       await ready(page);
       await expect.poll(() => doc().project?.name ?? '').toBe('Score');
       expect(doc().project.abc).toContain('T:Moss on the Stone');
@@ -142,8 +143,8 @@ test('Notation: the jig renders and saves, a person edits and saves an SVG, the 
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
     await test.step('restart: the score comes back with its name, text and outputs', async () => {
+      await reenterWorkspace(page);
       await ready(page);
       await expect(frameOf(page).locator('#score-name')).toHaveValue('Moss Waltz');
       await expect(frameOf(page).locator('#abc')).toHaveValue(/Moss Waltz/);

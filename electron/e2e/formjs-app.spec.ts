@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -205,7 +205,7 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the form comes back with its fields', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#form-name')).toHaveValue('Open day RSVP');

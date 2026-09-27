@@ -26,8 +26,15 @@ export function isHtmlPath(path: string): boolean {
   return ext === 'html' || ext === 'htm';
 }
 
-export function isConfigJsonPath(path: string): boolean {
+export function isConfigJsonPath(path: string, settingsPath?: string | null): boolean {
+  if (settingsPath && path.replace(/^\/+/, '') === settingsPath.replace(/^\/+/, '')) return true;
   return /^config\.json$/i.test(basename(path));
+}
+
+/** The settings file a template declares for its form (`contentModel.settings.path`), if any. */
+export function settingsPathOf(meta: Record<string, unknown> | null | undefined): string | null {
+  const model = meta?.contentModel as { settings?: { path?: unknown } } | undefined;
+  return typeof model?.settings?.path === 'string' ? model.settings.path : null;
 }
 
 /** The crux thumbnail file — excluded from auto-capture to avoid feedback loops. */
@@ -55,6 +62,8 @@ export interface PreviewInput {
   mimeType: string;
   /** Crux meta carries a formSchema (template cruxes). */
   hasFormSchema: boolean;
+  /** The template's declared settings file, when it is not config.json. */
+  settingsPath?: string | null;
   /** Text content is loaded (content !== null). */
   hasContent: boolean;
   /** Binary blob URL is available (blobUrl !== null). */
@@ -109,7 +118,12 @@ export function previewFor(input: PreviewInput): PreviewTarget {
     return { kind: 'source' };
 
   // Form mode: schema-driven editor for config.json
-  if (viewMode === 'form' && isConfigJsonPath(path) && input.hasFormSchema && input.hasContent) {
+  if (
+    viewMode === 'form' &&
+    isConfigJsonPath(path, input.settingsPath) &&
+    input.hasFormSchema &&
+    input.hasContent
+  ) {
     return { kind: 'form' };
   }
 

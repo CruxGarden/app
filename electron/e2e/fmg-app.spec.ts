@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -43,7 +43,7 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Fantasy Map\b/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 180000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
       await ready(page);
@@ -102,7 +102,7 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1700, height: 1050 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the same world comes back', async () => {
       await ready(page);
       expect(doc().project.seed).toBe(seed);

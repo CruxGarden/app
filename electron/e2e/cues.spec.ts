@@ -8,11 +8,11 @@ type AudioState = {
   cuesPlayed: number;
 };
 
-/** The Mood's track plays and loops; a mock AI turn plays cues and ducks it. */
+/** The Mood's soundscape (Crux Synth, ADR 0017) plays; a mock AI turn plays cues and ducks it. */
 test.describe('sound: track + cues', () => {
   test.setTimeout(150_000);
 
-  test('the Default Mood has a track; an AI turn cues and ducks', async () => {
+  test('the Default Mood has a soundscape; an AI turn cues and ducks', async () => {
     const { app, page } = await launchApp({ sound: true, env: { CRUX_AI_MOCK: '1' } });
     const state = () =>
       page.evaluate(() =>
@@ -24,18 +24,11 @@ test.describe('sound: track + cues', () => {
       await page.getByRole('button', { name: 'Welcome' }).click();
       const dock = page.getByRole('region', { name: 'Mood Bar' });
       await expect(dock).toBeVisible({ timeout: 30_000 });
-      // The Default Mood is Plasma, which has no track; wear Fractal Garden,
-      // whose track is Echoes From Beyond, and press play once (the opt-in).
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page
-        .getByTestId('bundled-moods')
-        .getByTestId('bundled-digital-fractal-garden')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await page.keyboard.press('Escape');
+      // Every Mood plays the Crux Synth (a Mood plays one Track, ADR 0017);
+      // press play once (the opt-in).
       await expect
         .poll(async () => (await state()).trackName, { timeout: 30_000 })
-        .toBe('Echoes From Beyond');
+        .toBe('Crux Synth');
       if (!(await state()).playing)
         await dock.getByRole('button', { name: 'Play soundscape' }).click();
       await expect.poll(async () => (await state()).playing, { timeout: 15_000 }).toBe(true);

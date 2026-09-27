@@ -1,9 +1,10 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createServer } from 'node:http';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 
 /**
  * The actual Moqira (upstream's app, believing it runs in Tauri while the
@@ -68,13 +69,10 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
         .locator('.canvas-node')
         .first()
         .evaluate((el) => getComputedStyle(el).fontFamily);
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      // The Mood browser is a workspace pane, not a modal.
+      await showPane(page, 'Mood');
       await page.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
-      await page
-        .locator('[data-modal-open]')
-        .getByRole('button', { name: 'Close', exact: true })
-        .click();
-      await expect(page.locator('[data-modal-open]')).toHaveCount(0);
+      await hidePane(page, 'Mood');
       await expect(frameOf(page).locator('html')).toHaveAttribute('data-garden-mood', 'true');
       expect(
         await frameOf(page)
@@ -190,7 +188,7 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
     await page.setViewportSize({ width: 1600, height: 1050 });
 
     await test.step('restart: the project reopens; a stale write is refused and the draft kept', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
       await expect(frameOf(page).getByRole('button', { name: /Second screen/ })).toBeVisible();
       const external = read();

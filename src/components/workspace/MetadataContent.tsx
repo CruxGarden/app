@@ -393,6 +393,18 @@ export default function MetadataContent({
             <span className="px-2 py-0.5 rounded-full text-2xs font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
               {crux.visibility}
             </span>
+          ) : crux.meta?.publishedAt ? (
+            // A shared page is public by being shared; the local value would only
+            // mislead here. Whether it is listed is the Discoverable switch in Share.
+            <span
+              className={cn(
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase inline-block',
+                VISIBILITY_COLORS.public,
+              )}
+              title="Shared pages are public. Listing in Explore is the Discoverable switch in Share."
+            >
+              public
+            </span>
           ) : (
             <button
               onClick={cycleVisibility}

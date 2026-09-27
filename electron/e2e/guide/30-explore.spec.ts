@@ -1,8 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import JSZip from 'jszip';
+import type { DownloadItem, Event } from 'electron';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
-import { enterGarden } from '../multi-crux-helpers';
-import { showPane } from '../panel-helpers';
+import { enterGarden, createCrux } from '../multi-crux-helpers';
+import { showPane, openPanel } from '../panel-helpers';
+import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /**
  * V1-TESTING-GUIDE § 30 · Explore — opening a result and coming back.
@@ -142,6 +147,98 @@ test.describe('guide 30 · Explore', () => {
       await expect(explore.getByRole('link', { name: 'Rainy Garden Notes' })).toHaveCount(0);
     } finally {
       await app.close();
+    }
+  });
+
+  test('EXPLORE-06 — a Mood installed from Explore is the advertised one: it wears with its colours and exports as a package', async () => {
+    test.setTimeout(180_000);
+    const api = await startMockApi();
+    const { app, page, dir } = await launchApp({ env: { CRUX_API_URL: api.url } });
+    const cssVar = (name: string) =>
+      page.evaluate(
+        (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+        name,
+      );
+    try {
+      await enterGarden(page);
+      // A published Crux first: that is what connects the account and opens publishing.
+      await createCrux(page, 'Carrier');
+      await writeFirstFile(page, 'index.html', '<h1>Hi</h1>');
+      const share = await openPanel(page, 'publish', 'Toggle share');
+      await share.getByRole('button', { name: 'Share', exact: true }).click({ timeout: 60_000 });
+      await connectAccount(page);
+      const ask = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      await expect(ask).toBeVisible({ timeout: 30_000 });
+      await ask.getByRole('button', { name: 'Share without a backup' }).click();
+      await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
+      // A look of one's own, saved and published as a Mood.
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+      await mood.getByLabel('Find a token').fill('accent');
+      await mood.getByLabel('Accent color').first().fill('#ff8800');
+      await expect.poll(() => cssVar('--accent')).toMatch(/#ff8800|255, 136, 0/i);
+      await mood.getByRole('button', { name: 'Moods', exact: true }).click();
+      await mood.getByRole('button', { name: 'Save current as Mood' }).click();
+      await mood.getByRole('textbox', { name: 'Mood name' }).fill('Sea Glass');
+      await mood.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(mood.getByRole('status').filter({ hasText: 'Saved "Sea Glass"' })).toBeVisible();
+      await mood.getByRole('button', { name: 'Publish Sea Glass' }).click();
+      await expect(
+        mood.getByRole('status').filter({ hasText: 'Published "Sea Glass"' }),
+      ).toBeVisible({ timeout: 60_000 });
+      const moodCrux = Object.values(api.state.cruxes).find((c) => c.kind === 'mood')!;
+      // Wear a bundled Mood and drop the local copy, so what comes back is the installed one.
+      await page
+        .getByTestId('bundled-moods')
+        .getByTestId('bundled-digital-fractal-garden')
+        .getByRole('button', { name: 'Apply' })
+        .click();
+      await expect.poll(() => cssVar('--accent')).not.toMatch(/#ff8800|255, 136, 0/i);
+      await mood.getByRole('button', { name: 'Delete Mood Sea Glass', exact: true }).click();
+      await expect(mood.getByRole('button', { name: 'Apply Sea Glass', exact: true })).toHaveCount(
+        0,
+      );
+      // Explore → Moods → Install.
+      const explore = await showPane(page, 'Explore');
+      await explore.getByRole('tab', { name: 'Moods', exact: true }).click();
+      const card = page.getByTestId(`explore-mood-${moodCrux.id as string}`);
+      await expect(card).toBeVisible({ timeout: 30_000 });
+      await card.getByRole('button', { name: 'Install', exact: true }).click();
+      await expect(card).toContainText('Installed', { timeout: 30_000 });
+      // Wear it: the advertised colours arrive from the installed package.
+      const apply = mood.getByRole('button', { name: 'Apply Sea Glass', exact: true });
+      await expect(apply).toBeVisible({ timeout: 30_000 });
+      await apply.click();
+      await expect(apply).toHaveAttribute('aria-pressed', 'true');
+      await expect.poll(() => cssVar('--accent')).toMatch(/#ff8800|255, 136, 0/i);
+      // Export: a whole .cruxmood package, from local content.
+      const archive = join(dir, 'sea-glass.cruxmood');
+      await app.evaluate(({ session }, destination) => {
+        const listener = (_event: Event, item: DownloadItem) => {
+          if (!item.getFilename().endsWith('.cruxmood')) return;
+          session.defaultSession.removeListener('will-download', listener);
+          item.setSavePath(destination);
+        };
+        session.defaultSession.on('will-download', listener);
+      }, archive);
+      await mood.getByRole('button', { name: 'Export Sea Glass', exact: true }).click();
+      await expect.poll(() => existsSync(archive), { timeout: 30_000 }).toBe(true);
+      await expect
+        .poll(async () => {
+          try {
+            const zip = await JSZip.loadAsync(readFileSync(archive));
+            const pkg = JSON.parse(await zip.file('package.json')!.async('text')) as {
+              name: string;
+            };
+            return pkg.name;
+          } catch {
+            return null;
+          }
+        })
+        .toBe('Sea Glass');
+    } finally {
+      await app.close();
+      await api.close();
     }
   });
 });

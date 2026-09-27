@@ -20,7 +20,7 @@ test('agent metrics: a turn is counted and the report lands in the Garden Root',
 
     // Switch the meter on. Settings → AI holds the section.
     await page.keyboard.press('ControlOrMeta+,');
-    // The Settings modal carries no dialog role; reach the section by its heading.
+    // The Settings pane carries no dialog role; reach the section by its heading.
     await page.locator('h2', { hasText: /^AI$/ }).click();
     const metrics = page.getByTestId('agent-metrics');
     await expect(metrics).toBeVisible();

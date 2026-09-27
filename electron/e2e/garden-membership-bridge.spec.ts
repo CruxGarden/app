@@ -153,7 +153,7 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
           return (error as Error).message;
         }
       }, setup.root),
-    ).toContain('only available from Garden');
+    ).toContain('only available to Crux Garden');
     await extra.close();
 
     await instance.app.close();

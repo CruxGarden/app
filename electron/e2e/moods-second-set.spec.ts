@@ -1,3 +1,4 @@
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -24,11 +25,11 @@ const SECOND_SET: Array<{ id: string; accent: string; light?: boolean }> = [
   { id: 'scanline', accent: '#f0863a' },
 ];
 
+/** The Mood browser is a workspace pane: open it, apply, close it again. */
 async function applyMood(page: Page, id: string) {
-  await page.getByRole('button', { name: 'Mood', exact: true }).click();
+  await showPane(page, 'Mood');
   await page.getByTestId(`bundled-${id}`).getByRole('button', { name: 'Apply' }).click();
-  await page.keyboard.press('Escape');
-  await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
+  await hidePane(page, 'Mood');
 }
 
 test('the second set of bundled Moods applies and paints', async () => {
@@ -50,11 +51,11 @@ test('the second set of bundled Moods applies and paints', async () => {
     await page.getByRole('button', { name: /^Blank/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('.mosaic-window.pane-collaboration')).toBeVisible();
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
+    await showPane(page, 'Mood');
     await expect(
       page.getByTestId('bundled-moods').locator('[data-testid^="bundled-"]'),
-    ).toHaveCount(36);
-    await page.keyboard.press('Escape');
+    ).toHaveCount(37);
+    await hidePane(page, 'Mood');
     for (const mood of SECOND_SET) {
       await applyMood(page, mood.id);
       await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe(mood.accent);

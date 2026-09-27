@@ -6,6 +6,7 @@
  */
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
+import { applyActiveMood, getThemeOverrides, setThemeOverrides } from './active';
 import { RENAMED_TRACKS } from '@/services/sound';
 
 export type AssetKind = 'image' | 'audio' | 'font' | 'other';
@@ -76,6 +77,17 @@ export function addAsset(a: Omit<MoodAsset, 'added' | 'kind'> & { kind?: AssetKi
 
 export function removeAsset(fingerprint: string): void {
   write(getAssets().filter((a) => a.fingerprint !== fingerprint));
+  // Tokens that pointed at it no longer do: a removed image must not stay
+  // painted, nor travel as a broken reference inside a Mood package.
+  const ref = `asset:${fingerprint}`;
+  for (const section of ['Dark', 'Light'] as const) {
+    const overrides = getThemeOverrides(section);
+    const kept = Object.fromEntries(Object.entries(overrides).filter(([, v]) => v !== ref));
+    if (Object.keys(kept).length !== Object.keys(overrides).length) {
+      setThemeOverrides(section, kept);
+      applyActiveMood(section);
+    }
+  }
 }
 
 function guessType(name: string): string {

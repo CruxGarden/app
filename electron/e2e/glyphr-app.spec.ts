@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -111,7 +111,7 @@ test('Font: Glyphr Studio opens and saves, a person renames it, the collaborator
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the font comes back with its glyph and outputs', async () => {
       await ready(page);
       expect(doc().project.name).toBe('Moss Sans');

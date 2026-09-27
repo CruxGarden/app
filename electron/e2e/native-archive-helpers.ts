@@ -40,7 +40,9 @@ export async function exportNativeCrux(
           app.evaluate(
             () => (globalThis as unknown as { __nativeDownload?: string }).__nativeDownload,
           ),
-        { timeout: 180000 },
+        // A complete archive with a large tool runtime (BentoPDF, PlayCanvas)
+        // streams for minutes; the spec's own timeout bounds the wait.
+        { timeout: 480000 },
       )
       .toBe('completed');
     return;
@@ -100,4 +102,15 @@ export async function importNativeCrux(page: Page, path: string) {
   ]);
   await chooser.setFiles(path);
   await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90000 });
+  // An imported Crux may arrive without a Workshop layout: open the pane so the
+  // tool's frame exists, and give the Tasks pane's width back to it.
+  const frame = page.locator('iframe[data-crux-id]');
+  if (!(await frame.count())) {
+    const { openPanel } = await import('./panel-helpers');
+    await openPanel(page, 'workshop', 'Toggle workshop');
+  }
+  const tasks = page.locator('header').getByRole('button', { name: 'Toggle tasks', exact: true });
+  if ((await tasks.count()) && (await tasks.getAttribute('aria-pressed')) === 'true')
+    await tasks.click();
+  await expect(frame.first()).toBeVisible({ timeout: 90000 });
 }

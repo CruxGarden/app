@@ -1,9 +1,9 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -77,6 +77,15 @@ test('Wick Editor: a drawn rectangle saves the .wick file, agent tools, restart 
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Wick Editor/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // Creating copies the editor's 2,400 files into the Project Folder (about
+      // two minutes on a laptop). The Tasks pane opens with every app Crux
+      // now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 300_000 });
+      await expectPanelBarReady(page);
+      const tasks = page
+        .locator('header')
+        .getByRole('button', { name: 'Toggle tasks', exact: true });
+      if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -133,7 +142,7 @@ test('Wick Editor: a drawn rectangle saves the .wick file, agent tools, restart 
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1800, height: 1100 });
     await test.step('restart: the project reopens from its .wick file with the drawing, name and frame rate', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       await expect
         .poll(() => projectOf(page))

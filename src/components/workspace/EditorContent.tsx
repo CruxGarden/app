@@ -25,6 +25,7 @@ import {
   mountedIframeSrc,
   isHtmlPath,
   isConfigJsonPath,
+  settingsPathOf,
   isPreviewJpgPath,
 } from '@/lib/preview-decision';
 import {
@@ -118,13 +119,15 @@ export default function EditorContent({
   const language = getMonacoLanguage(path);
   const themeName = activeMode === 'dark' ? 'crux-garden-dark' : 'crux-garden-light';
   const isHtmlFile = isHtmlPath(path);
-  const isConfigJson = isConfigJsonPath(path);
-
-  // Form schema from crux meta (set during template creation)
+  // Form schema from crux meta (set during template creation), and the file it edits
   const formSchema = useCruxStore((s) => {
     const meta = s.crux?.meta as Record<string, unknown> | undefined;
     return (meta?.formSchema as FormSchema | undefined) ?? null;
   });
+  const settingsPath = useCruxStore((s) =>
+    settingsPathOf(s.crux?.meta as Record<string, unknown> | undefined),
+  );
+  const isConfigJson = isConfigJsonPath(path, settingsPath);
 
   // Form data change handler — updates content as pretty JSON, marks dirty, triggers save
   const handleFormChange = useCallback(
@@ -524,6 +527,7 @@ export default function EditorContent({
     viewMode: tab.viewMode,
     mimeType: mime,
     hasFormSchema: !!formSchema,
+    settingsPath,
     hasContent: content !== null,
     hasBlob: blobUrl !== null,
     site,

@@ -3,7 +3,7 @@ import { test, expect, chromium, type Page } from '@playwright/test';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { openBuilder } from './builder-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -193,7 +193,7 @@ test('Astro collaboration preserves manual edits, recovers changed passages and 
     await instance.app.close();
     instance = await launchApp({ dir: originalDir });
     watch();
-    await instance.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(instance.page);
     await identify();
     expect(content()).toBe(manualAfter);
     await exportNativeCrux(instance.page, archive, instance.app, async () => {

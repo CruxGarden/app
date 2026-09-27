@@ -108,4 +108,75 @@ test.describe('guide 33 · Recovery', () => {
       await again.app.close();
     }
   });
+
+  test('RECOVER-05 — killed after a save, the file is whole; killed with an edit pending, the saved text is whole and the loss window is recorded', async () => {
+    test.setTimeout(180_000);
+    const kill = async (app: import('@playwright/test').ElectronApplication) => {
+      const exited = new Promise<void>((resolve) => app.process().once('exit', () => resolve()));
+      app.process().kill('SIGKILL');
+      await exited;
+    };
+    const first = await launchApp();
+    const dir = first.dir;
+    let folder = '';
+    let killed = false;
+    try {
+      const { page } = first;
+      await enterGarden(page);
+      const id = await createCrux(page, 'Pending edit');
+      await writeFirstFile(page, 'notes.txt', 'Saved line');
+      folder = (await storedCrux(page, id)).projectFolder as string;
+      await expect.poll(() => readFileSync(join(folder, 'notes.txt'), 'utf8')).toBe('Saved line');
+      await kill(first.app);
+      killed = true;
+    } finally {
+      if (!killed) await first.app.close();
+    }
+    // 1. After a save: everything saved is there.
+    const second = await launchApp({ dir });
+    killed = false;
+    try {
+      const { page } = second;
+      await page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Open Pending edit', exact: true }).click();
+      await page.getByRole('tree').getByText('notes.txt').click({ timeout: 30_000 });
+      const monaco = page.locator('.monaco-editor').first();
+      await expect(monaco).toContainText('Saved line', { timeout: 30_000 });
+      expect(readFileSync(join(folder, 'notes.txt'), 'utf8')).toBe('Saved line');
+      // 2. A small edit, not saved, then the process dies.
+      await monaco.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' plus pending');
+      await expect(monaco).toContainText('plus pending');
+      await page.waitForTimeout(1000);
+      await kill(second.app);
+      killed = true;
+    } finally {
+      if (!killed) await second.app.close();
+    }
+    const third = await launchApp({ dir });
+    try {
+      const { page } = third;
+      await page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Open Pending edit', exact: true }).click();
+      await page.getByRole('tree').getByText('notes.txt').click({ timeout: 30_000 });
+      const monaco = page.locator('.monaco-editor').first();
+      await expect(monaco).toContainText('Saved line', { timeout: 30_000 });
+      // Never a torn file: exactly the saved text, or the whole pending edit if it was kept.
+      const onDisk = readFileSync(join(folder, 'notes.txt'), 'utf8');
+      expect(['Saved line', 'Saved line plus pending']).toContain(onDisk);
+      const shown = await monaco.textContent();
+      const recovered = onDisk.includes('plus pending') || (shown ?? '').includes('plus pending');
+      console.log(`[RECOVER-05] on disk: ${JSON.stringify(onDisk)}; editor shows pending: ${(shown ?? '').includes('plus pending')}`);
+      test.info().annotations.push({
+        type: 'loss window',
+        description: recovered
+          ? 'the unsaved edit came back after the kill'
+          : 'unsaved keystrokes since the last Cmd+S are lost on a hard kill; the saved file is intact',
+      });
+      await expect(page.getByRole('tree').getByText('notes.txt')).toBeVisible();
+    } finally {
+      await third.app.close();
+    }
+  });
 });

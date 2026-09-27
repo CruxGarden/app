@@ -11,7 +11,8 @@ const blog = defineCollection({
 			pubDate: z.date(),
 			image: z.string(),
 			author: z.string(),
-			tags: z.array(z.string())
+			// The Builder writes string front matter only; a news entry without tags still renders.
+			tags: z.array(z.string()).default([])
 		})
 })
 

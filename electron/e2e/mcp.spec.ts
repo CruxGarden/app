@@ -49,6 +49,11 @@ async function plantGarden(page: Page, template: RegExp) {
   await page.getByRole('button', { name: 'Add Crux' }).click();
   await page.getByRole('button', { name: template }).click();
   await page.getByRole('button', { name: 'Create', exact: true }).click();
+  // A panel opened while the workspace is still mounting lands on the workspace being left.
+  await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByRole('button', { name: 'Add panel', exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 /** Settings → Agents: switch the (only) crux on, read back the config the app wrote. */

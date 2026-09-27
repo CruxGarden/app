@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { indexedFiles } from './content-helpers';
 
 /**
  * Find media (V1-GAPS-PLAN.md §2.7): the Find media pane searches Openverse
@@ -103,22 +104,18 @@ test('Find media: an image, a sound and a video from the catalogues land in the 
     });
 
     await test.step('the files and their origins are Artifacts of the Crux', async () => {
-      const paths = (await page.evaluate(
-        async (cruxId) =>
-          window.electronAPI!.sqlite.all(
-            "SELECT path FROM artifacts WHERE resource_id = ? AND (path LIKE 'images/%' OR path LIKE 'audio/%' OR path LIKE 'media/%' OR path LIKE 'media-origins/%') ORDER BY path",
-            [cruxId],
-          ),
-        id,
-      )) as { path: string }[];
-      expect(paths.map((p) => p.path)).toEqual(
-        expect.arrayContaining([
-          'images/seedlings-for-seedlings-img-1.png',
-          'audio/chime-for-bell-aud-1.wav',
-          'media/bees-at-work-900.webm',
-        ]),
-      );
-      expect(paths.filter((p) => p.path.startsWith('media-origins/')).length).toBe(3);
+      // Files are read through the API's content heads, not per-file rows.
+      await expect
+        .poll(async () => Object.keys(await indexedFiles(page, id)).sort())
+        .toEqual(
+          expect.arrayContaining([
+            'images/seedlings-for-seedlings-img-1.png',
+            'audio/chime-for-bell-aud-1.wav',
+            'media/bees-at-work-900.webm',
+          ]),
+        );
+      const paths = Object.keys(await indexedFiles(page, id));
+      expect(paths.filter((p) => p.startsWith('media-origins/')).length).toBe(3);
     });
   } finally {
     await app.close();

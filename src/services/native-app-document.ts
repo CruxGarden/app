@@ -104,7 +104,9 @@ export async function readNativeAsset(owner: string, path: unknown) {
   if (!existing || existing.fingerprint !== full.slice(12, -4))
     throw new Error('The saved media is missing or has changed.');
   await verifyOriginal(owner, full, existing.fingerprint);
-  const blob = await service.downloadBlob(existing.id);
+  // The Artifact itself, not its id: files are manifest projections, read by
+  // the file reference they were listed with.
+  const blob = await service.downloadBlob(existing);
   return {
     bytes: await blob.arrayBuffer(),
     mimeType: blob.type,

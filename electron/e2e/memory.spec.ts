@@ -127,6 +127,11 @@ test.describe('garden memory (mock AI)', () => {
       // ── Clear empties it everywhere ────────────────────────────────────────
       await openSettings(page);
       await page.getByRole('button', { name: 'Clear', exact: true }).click();
+      // Clear asks first (SETAI-08).
+      await page
+        .getByRole('dialog', { name: 'Clear memory' })
+        .getByRole('button', { name: 'Clear', exact: true })
+        .click();
       await expect(page.getByTestId('memory-status')).toHaveText('nothing remembered');
       await expect(page.getByTestId('memory-text')).not.toHaveValue(new RegExp(NOTE));
       await closeSettings(page);

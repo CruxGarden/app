@@ -7,7 +7,7 @@ import TendingNotifications from '@/components/tending/TendingNotifications';
 import { startTendingCatalog } from '@/stores/tendingStore';
 import WorkspaceLifecycle from './WorkspaceLifecycle';
 import { restoreWorkspaceList } from '@/stores/workspaceRegistry';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TopBar from './TopBar';
 import { DialogHost } from '@/components/ui';
@@ -24,6 +24,9 @@ import { MotionConfig } from 'motion/react';
 export default function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
+  // Read at redirect time, not a reason to re-run the resolver.
+  const locationState = useRef(location.state);
+  locationState.current = location.state;
   const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
   const [initError, setInitError] = useState<string | null>(null);
   const aiEnabled = useUIStore((s) => s.aiEnabled);
@@ -62,8 +65,10 @@ export default function Shell() {
               query.delete('growth');
             }
             // Canonicalize the new entry, preserving the location we came from.
+            // `state` rides along: a Tending "Answer" says which pane to reveal.
             void navigate(`${enterGarden ? '/home' : location.pathname}?${query}${location.hash}`, {
               replace: true,
+              state: locationState.current,
             });
             return;
           }

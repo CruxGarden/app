@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
+import { expectPanelBarReady } from './panel-helpers';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 declare const editor: any;
@@ -52,6 +53,11 @@ test('PlayCanvas native editing, source, agent, launch and independent complete 
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByRole('button', { name: /^PlayCanvas Editor/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    const tasks = page.locator('header').getByRole('button', { name: 'Toggle tasks', exact: true });
+    if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 45000 });
     const frame = await ready(page);
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;

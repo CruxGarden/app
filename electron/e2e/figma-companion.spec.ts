@@ -53,7 +53,7 @@ test('Figma companion saves its reference and imports an attributed asset', asyn
       ),
     });
     await expect(companion.getByRole('status')).toHaveText(
-      'Imported Fixture artwork. It is available in Cruxspace assets.',
+      'Imported Fixture artwork. It is available in Garden outputs.',
     );
     const output = readdirSync(join(folder, 'exports')).find((name) =>
       name.endsWith('.asset.json'),

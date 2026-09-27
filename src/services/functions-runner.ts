@@ -320,7 +320,19 @@ export async function callLocalFunction(
   const code = await loadSource(cruxId, `functions/${name}.js`);
   if (code === null)
     return { status: 404, body: { error: `No function "${name}"` }, ms: 0, logs: [] };
+  // A scheduled handler is written for the clock's event, so Run by hand hands
+  // it one (the API's clock does the same at the address).
+  if (schedulePattern(code)) {
+    const event = { name: 'schedule', data: body ?? {}, at: new Date().toISOString() };
+    return runLocalHandler(cruxId, name, code, { event, visitorId });
+  }
   return runLocalHandler(cruxId, name, code, { body, visitorId });
+}
+
+/** The exported `schedule` text of a scheduled handler, without running it. */
+function schedulePattern(code: string): string | null {
+  const m = /export\s+const\s+schedule\s*=\s*(['"`])([^'"`]+)\1/.exec(code);
+  return m ? m[2]! : null;
 }
 
 /** The exported `match` pattern of an event handler, without running it. */

@@ -43,7 +43,9 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
   const owner = workspace.getState().crux?.id;
   let tail: Promise<unknown> = Promise.resolve();
   return (request: Record<string, unknown>) => {
-    const operation = tail.then(async () => {
+    // The whole request is retried once when the Crux's content head moved
+    // under it (a thumbnail save, the watcher): every step re-selects fresh.
+    const attempt = async (): Promise<unknown> => {
       const state = workspace.getState();
       if (!owner || state.crux?.id !== owner || !isEmbeddedApp(state.crux) || state.closing)
         throw new Error('This app is no longer open.');
@@ -314,8 +316,22 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       // A watcher can ingest another writer during refresh. Acknowledge
       // our bytes, never that newer version: the next save must detect its conflict.
       return { fingerprint: writtenFingerprint };
+    };
+    const operation = tail.then(async () => {
+      try {
+        return await attempt();
+      } catch (err) {
+        if (isHeadConflict(err)) return attempt();
+        throw err;
+      }
     });
     tail = operation.catch(() => {});
     return operation;
   };
+}
+
+/** The content service refused a read or edit because the head moved under it. */
+function isHeadConflict(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /ConflictException|File content changed/.test(message);
 }

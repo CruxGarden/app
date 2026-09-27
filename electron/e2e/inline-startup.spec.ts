@@ -1,103 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 
-const env = { CRUX_API_OWNER: '1' };
-test('an inline legacy profile starts through the API and reopens its work in the UI', async () => {
-  let launch = await launchApp({ env });
-  const dir = launch.dir;
-  try {
-    await enterGarden(launch.page);
-    const id = await createCrux(launch.page, 'Legacy startup work');
-    await addArtifact(launch.page, 'startup.txt');
-    await launch.page.locator('.monaco-editor').click();
-    await launch.page.keyboard.type('Inline startup preserved');
-    await launch.page.keyboard.press('ControlOrMeta+s');
-    await expect
-      .poll(async () =>
-        launch.page.evaluate(async (id) => {
-          const db = window.electronAPI!.sqlite;
-          const row = (await db.get(
-            'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-            [id, 'startup.txt'],
-          )) as { fingerprint: string } | undefined;
-          return row ? new TextDecoder().decode(await db.blobRead(row.fingerprint)) : null;
-        }, id),
-      )
-      .toBe('Inline startup preserved');
-    const folder = await launch.app.evaluate(({ app }) => app.getPath('userData'));
-    await launch.app.close();
-    // Use Electron's SQLite ABI to turn the closed synthetic profile into a legacy fixture.
-    const seed = await launchApp();
-    try {
-      await seed.app.evaluate(({ app }, folder) => {
-        const fs = process.getBuiltinModule('fs');
-        const path = process.getBuiltinModule('path');
-        const load = process
-          .getBuiltinModule('module')
-          .createRequire(path.join(app.getAppPath(), 'package.json'));
-        const Database = load('better-sqlite3');
-        const db = new Database(path.join(folder, 'cruxgarden.db'));
-        try {
-          db.exec(
-            'ALTER TABLE artifacts ADD COLUMN content BLOB; UPDATE schema_version SET version = 1;',
-          );
-          // Keep the existing Project Folder authoritative and identical; only storage changes.
-          const rows = db
-            .prepare('SELECT id, fingerprint FROM artifacts WHERE fingerprint IS NOT NULL')
-            .all();
-          for (const row of rows) {
-            const bytes = fs.readFileSync(path.join(folder, 'blobs', row.fingerprint));
-            db.prepare('UPDATE artifacts SET content = ?, fingerprint = NULL WHERE id = ?').run(
-              bytes,
-              row.id,
-            );
-          }
-        } finally {
-          db.close();
-        }
-        // No external blob can accidentally mask an unconverted record.
-        for (const name of fs.readdirSync(path.join(folder, 'blobs')))
-          if (/^[a-f0-9]{64}$/.test(name)) fs.unlinkSync(path.join(folder, 'blobs', name));
-      }, folder);
-    } finally {
-      await seed.app.close();
-    }
-    for (let restart = 0; restart < 2; restart++) {
-      launch = await launchApp({ dir, env });
-      await launch.page.getByRole('button', { name: /enter/i }).click();
-      await expect(
-        launch.page.getByRole('button', { name: 'Switch Crux workspace' }),
-      ).toContainText('Legacy startup work');
-      const saved = await launch.page.evaluate(async (id) => {
-        const db = window.electronAPI!.sqlite;
-        const row = (await db.get(
-          'SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ?',
-          [id, 'startup.txt'],
-        )) as { fingerprint: string };
-        return {
-          bytes: new TextDecoder().decode(await db.blobRead(row.fingerprint)),
-          version: await db.get('SELECT version FROM schema_version'),
-          inline: await db.all(
-            "SELECT name FROM pragma_table_info('artifacts') WHERE name = 'content'",
-          ),
-        };
-      }, id);
-      expect(saved).toEqual({
-        bytes: 'Inline startup preserved',
-        version: { version: 4 },
-        inline: [],
-      });
-      await expect(launch.page.locator('.monaco-editor').first()).toContainText(
-        'Inline startup preserved',
-      );
-      if (restart === 0) await launch.app.close();
-    }
-  } finally {
-    await launch.app.close();
-  }
-});
-
+/**
+ * The API's inline-content migration (schema 1 → 4) survives being killed
+ * between extraction and the schema commit: the retained checkpoint lets the
+ * next open finish the conversion. (The UI half of the old spec — a legacy
+ * inline profile reopening its work — is gone with the clean slate: Crux files
+ * are manifest projections now, not artifacts rows, and old-format profiles
+ * are out of scope.)
+ */
 test('termination after inline extraction but before schema commit retains inline files for startup retry', async () => {
   let launch = await launchApp();
   const dir = launch.dir;

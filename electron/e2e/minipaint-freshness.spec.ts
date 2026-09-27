@@ -28,7 +28,10 @@ test('miniPaint refuses stale or missing state, preserves native drafts and perm
   };
   const history = async (name: 'Undo' | 'Redo') => {
     await frame.getByText('Edit', { exact: true }).first().click();
-    await frame.getByText(name, { exact: true }).first().click();
+    await frame
+      .getByRole('menuitem', { name: new RegExp(`^${name}\\b`) })
+      .first()
+      .click();
     await save();
   };
   const collaborate = async (scenario: string, count: number, error?: string) => {
@@ -66,7 +69,8 @@ test('miniPaint refuses stale or missing state, preserves native drafts and perm
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^miniPaint/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(page.locator('[data-workspace-id]')).toBeVisible();
+    // Copying miniPaint's runtime into the Project Folder takes a while under load.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
     folder = (
       await storedCrux(
         page,

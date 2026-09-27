@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 test('Ketcher native chemistry, templates, agent, exports and clean-profile portability', async () => {
@@ -158,7 +158,7 @@ test('Ketcher native chemistry, templates, agent, exports and clean-profile port
   const second = await launchApp({ dir: first.dir });
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = await ready(second.page);
     expect(atoms()).toBe(6);
     expect(state('storage')['ketcher-tmpls']).toContain('Research ring');

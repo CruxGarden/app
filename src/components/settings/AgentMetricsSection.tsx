@@ -122,8 +122,8 @@ export default function AgentMetricsSection() {
       </dl>
 
       {isDesktop() && (
-        <label className="block space-y-1">
-          <span className="text-xs text-text-muted">
+        <label className="block space-y-1 min-w-0">
+          <span className="block text-xs text-text-muted break-all">
             Append to{root ? ` ${shortenHomePath(root)}/` : ' the Garden Root: '}
           </span>
           <Input

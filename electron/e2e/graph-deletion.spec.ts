@@ -144,9 +144,14 @@ test('purging a linked Crux preserves shared work and history after restart', as
   const again = await launchApp({ dir: first.dir });
   try {
     await again.page.getByRole('button', { name: /enter/i }).click();
+    // Home lists the root Garden's members: the surviving Garden is still there
+    // (the shared creation lives inside it), the discarded one is gone.
     await expect(
-      again.page.getByRole('button', { name: 'Open Shared creation', exact: true }),
-    ).toBeVisible();
+      again.page.getByRole('button', { name: 'Open Surviving Garden', exact: true }),
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(
+      again.page.getByRole('button', { name: 'Open Discarded Garden', exact: true }),
+    ).toHaveCount(0);
     await check(again.page);
   } finally {
     await again.app.close();

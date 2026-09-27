@@ -93,7 +93,7 @@ test('API file content publication retains old and staged bytes through failed c
         await owner.close();
       }
     });
-    expect(saved.schema).toEqual({ version: 5 });
+    expect(saved.schema).toEqual({ version: 7 });
     expect(saved.refused).toBe(true);
     expect(saved.recoveryRefused).toBe(true);
     expect(saved.after).toEqual(saved.head);

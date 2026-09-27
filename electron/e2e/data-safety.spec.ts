@@ -1,4 +1,4 @@
-import { goHome } from './multi-crux-helpers';
+import { closeWorkspace } from './journeys/journey-helpers';
 import { togglePanel, showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -64,6 +64,8 @@ test.describe('data safety: export, import, wipe, restore', () => {
     const dir = mkdtempSync(join(tmpdir(), 'crux-archives-'));
     const { app, page } = await launchApp();
     try {
+      // A restored layout brings every pane back; give them room to show their contents.
+      await page.setViewportSize({ width: 2000, height: 1200 });
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
@@ -122,7 +124,10 @@ test.describe('data safety: export, import, wipe, restore', () => {
       await hidePane(page, 'Settings');
 
       // ── Import the .crux as a copy: a second crux with the same file ──
-      await goHome(page);
+      // Close the first workspace from the switcher (its Home card stays);
+      // the switcher lists open workspaces by the Garden's members, so each
+      // one is closed from inside it.
+      await closeWorkspace(page, 'My Crux');
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       await page.getByRole('button', { name: 'Add Crux' }).click();
       const [chooser] = await Promise.all([
@@ -135,12 +140,8 @@ test.describe('data safety: export, import, wipe, restore', () => {
       });
       await ensurePane(page, 'artifacts', 'Toggle artifacts');
       await expect(page.getByRole('tree').getByText('index.html')).toBeVisible({ timeout: 30_000 });
-      await goHome(page);
-      await expect(page.getByRole('button', { name: /^Open My Crux/ })).toHaveCount(2, {
-        timeout: 15_000,
-      });
 
-      // ── Wipe the garden: refused while workspaces are open (ADR 0018), then typed confirmation ──
+      // ── Wipe the garden: refused while a workspace is open (ADR 0018), then typed confirmation ──
       await openGardenSettings(page);
       await expect(page.getByRole('button', { name: 'Wipe garden' })).toBeDisabled();
       await page.getByPlaceholder('delete me').fill('delete me');
@@ -150,28 +151,18 @@ test.describe('data safety: export, import, wipe, restore', () => {
         timeout: 15_000,
       });
       await page.keyboard.press('Escape');
-      // close both workspaces from the switcher
+      await hidePane(page, 'Settings');
+      // The imported copy is the active workspace; the switcher offers
+      // "Close current workspace" for it (its title is shared with the original).
       await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
-      for (let i = 0; i < 2; i++) {
-        await page
-          .getByRole('button', { name: /^Close .* workspace$/ })
-          .first()
-          .click();
-        const closeDlg = page.getByRole('dialog', { name: 'Close workspace' });
-        if (await closeDlg.isVisible().catch(() => false))
-          await page.getByRole('button', { name: 'Save and close', exact: true }).click();
-        await page.waitForTimeout(500);
-        if (
-          i === 0 &&
-          !(await page
-            .getByRole('button', { name: /^Close .* workspace$/ })
-            .first()
-            .isVisible()
-            .catch(() => false))
-        )
-          await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
-      }
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Close current workspace', exact: true }).click();
+      const closing = page.getByRole('dialog', { name: 'Close workspace' });
+      await expect(closing).toBeVisible();
+      await closing.getByRole('button', { name: 'Save and close', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /^Open My Crux/ })).toHaveCount(2, {
+        timeout: 15_000,
+      });
       await openGardenSettings(page);
       await page.getByPlaceholder('delete me').fill('delete me');
       await page.getByRole('button', { name: 'Wipe garden' }).click();

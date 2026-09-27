@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -173,13 +173,19 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the map comes back with its places and outputs', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#map-name')).toHaveValue('Seed swap walk');
       await expect(frameOf(page).locator('#place-list li')).toHaveCount(3);
       expect(outputs(folder).length).toBe(2);
       await page.screenshot({ path: join(evidence, 'maps-reopened.png') });
+      // Room for the Export pane beside the Workshop: the Share and Tasks panes came back with the layout.
+      for (const toggle of ['Toggle share', 'Toggle tasks']) {
+        const button = page.locator('header').getByRole('button', { name: toggle, exact: true });
+        if ((await button.count()) && (await button.getAttribute('aria-pressed')) === 'true')
+          await button.click();
+      }
       await exportNativeCrux(page, archive, second.app);
     });
   } finally {

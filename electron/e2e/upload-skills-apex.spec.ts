@@ -230,7 +230,14 @@ test.describe('upload, skills, apex domain', () => {
       expect(agentsMd()).not.toMatch(/^- Skill: /m);
       expect(first).toContain('## Skills');
       expect(first).toContain('load_skill');
-      for (const name of skillNames) expect(first).toContain(`- **${name}** —`);
+      // The general skills are offered with a summary; the template-bound
+      // ones are named on the "Also loadable by name" line (skills/index.ts).
+      const alsoLoadable = first.match(/^Also loadable by name[^\n]*$/m)?.[0] ?? '';
+      for (const name of skillNames)
+        expect(
+          first.includes(`- **${name}** —`) || alsoLoadable.includes(name),
+          `${name} is indexed`,
+        ).toBe(true);
       expect(first).not.toContain('## Site Crux');
       expect(first).not.toContain('The astro-basics skill is loaded in your workspace context');
 
@@ -251,7 +258,9 @@ test.describe('upload, skills, apex domain', () => {
       const second = (await systemPrompts(page)).at(-1) ?? '';
       expect(second).toContain('## Site Crux');
       expect(second).toContain('The astro-basics skill is loaded in your workspace context');
-      expect(second).toContain('- **astro-basics** —'); // the index is still there for the rest
+      // A skill already in the context is not advertised again; the rest still are.
+      expect(second).not.toContain('- **astro-basics** —');
+      expect(second).toContain('- **crux-store** —');
       // The Project Folder's guide for outside agents regenerated with the skill
       await expect.poll(agentsMd, { timeout: 15_000 }).toContain('- Skill: `astro-basics`');
       expect(agentsMd()).toContain('load_skill("astro-basics")');

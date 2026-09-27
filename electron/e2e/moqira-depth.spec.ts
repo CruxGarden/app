@@ -3,7 +3,13 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux, setAutoCheck } from './multi-crux-helpers';
+import {
+  enterGarden,
+  storedCrux,
+  setAutoCheck,
+  reenterWorkspace,
+  storedFingerprint,
+} from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -133,11 +139,11 @@ test('Moqira tools create editable screens, preserve manual work, use native his
     writeFileSync(join(folder, 'brand.png'), Buffer.from(image, 'base64'));
     await expect
       .poll(
-        () =>
-          instance.page.evaluate(async () =>
-            window.electronAPI!.sqlite.get(
-              "SELECT id FROM artifacts WHERE path = 'brand.png' LIMIT 1",
-            ),
+        async () =>
+          storedFingerprint(
+            instance.page,
+            (await instance.page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!,
+            'brand.png',
           ),
         { timeout: 60000 },
       )
@@ -218,7 +224,7 @@ test('Moqira tools create editable screens, preserve manual work, use native his
     await instance.app.close();
     instance = await launchApp({ dir });
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
-    await instance.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(instance.page);
     await ready();
     await expect(
       frame().locator('.canvas-node').getByText('Handmade stationery', { exact: true }),

@@ -29,11 +29,17 @@ export default function SettingsSection({
   children?: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(collapsible && defaultCollapsed);
-  const heading = (
-    <h2 className="font-display text-sm font-medium text-settings-label">{title}</h2>
-  );
+  const heading = <h2 className="font-display text-sm font-medium text-settings-label">{title}</h2>;
   return (
-    <Panel padding="md" className={className} data-testid={testId}>
+    <Panel
+      as="section"
+      aria-label={typeof title === 'string' ? title : undefined}
+      padding="md"
+      // A narrow pane at a large text size: long paths and addresses break
+      // rather than push the section sideways.
+      className={cn('min-w-0 break-words', className)}
+      data-testid={testId}
+    >
       <div className={cn('flex items-baseline justify-between gap-3', !collapsed && 'mb-3')}>
         {collapsible ? (
           <button

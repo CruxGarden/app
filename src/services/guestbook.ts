@@ -80,6 +80,13 @@ export async function addGuestbook(cruxId: string): Promise<AddGuestbookResult> 
   const paths = artifacts.map((a) => pathOf(a));
   const placement = guestbookPlacement(paths);
   const snippet = guestbookSnippet(placement);
+  // Read the page before writing anything: the file references listed above
+  // are pinned to the current content head, and creating the script advances it.
+  let text: string | null = null;
+  if (placement.pagePath) {
+    const page = artifacts.find((a) => pathOf(a) === placement.pagePath)!;
+    text = await (await artifact.downloadBlob(page)).text();
+  }
   await artifact.create({
     resourceId: cruxId,
     resourceType: 'crux',
@@ -89,9 +96,7 @@ export async function addGuestbook(cruxId: string): Promise<AddGuestbookResult> 
   });
   let inserted = false;
   let present = false;
-  if (placement.pagePath) {
-    const page = artifacts.find((a) => pathOf(a) === placement.pagePath)!;
-    const text = await (await artifact.downloadBlob(page)).text();
+  if (placement.pagePath && text !== null) {
     present = pageHasGuestbook(text);
     if (!present) {
       await artifact.create({

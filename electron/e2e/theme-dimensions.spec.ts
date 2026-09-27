@@ -5,7 +5,7 @@ import { launchApp } from './launch';
 /**
  * Every dimension is a token: type scale, density, per-pane border width,
  * header label case, editor font size reach the rendered app; a look can be
- * saved as a preset (appears under Yours in the Mood modal) and undone.
+ * saved as a preset (appears under Yours in the Mood pane) and undone.
  */
 test.describe('theme dimensions', () => {
   test.setTimeout(150_000);
@@ -27,9 +27,12 @@ test.describe('theme dimensions', () => {
       await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
       const html = page.locator('html');
-      await expect(html).toHaveCSS('font-size', '16px');
+      // The Default Mood (Plasma) opens the type a touch (fontScale 1.04) and
+      // keeps header labels in sentence case: the baseline is whatever it set.
+      await expect.poll(() => cssVar('--font-scale')).toBe('1.04');
+      await expect(html).toHaveCSS('font-size', '16.64px');
       const label = page.locator('.mosaic-window.pane-collaboration .pane-toolbar-label').first();
-      await expect(label).toHaveCSS('text-transform', 'uppercase');
+      await expect(label).toHaveCSS('text-transform', 'none');
 
       // The Mood pane → Theme
       const mood = await showPane(page, 'Mood');
@@ -49,12 +52,12 @@ test.describe('theme dimensions', () => {
       await density.press('Enter');
       await expect.poll(() => cssVar('--density')).toBe('1.5');
 
-      // Pane headers: label case none
+      // Pane headers: label case uppercase
       await page.getByRole('button', { name: 'Pane headers' }).click();
       const labelCase = page.getByRole('textbox', { name: 'Pane header label case value' });
-      await labelCase.fill('none');
+      await labelCase.fill('uppercase');
       await labelCase.press('Enter');
-      await expect.poll(() => cssVar('--pane-header-label-case')).toBe('none');
+      await expect.poll(() => cssVar('--pane-header-label-case')).toBe('uppercase');
 
       // Collaboration pane: its own 6px frame
       await page.getByRole('button', { name: 'Collaboration pane' }).click();
@@ -73,25 +76,28 @@ test.describe('theme dimensions', () => {
       await page.getByRole('button', { name: 'Save as preset' }).click();
       await page.getByRole('textbox', { name: 'Preset name' }).fill('Big & Loud');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
-      await expect(page.getByRole('status')).toContainText('Saved "Big & Loud"');
+      await expect(mood.getByRole('status').filter({ hasText: 'Saved' })).toContainText(
+        'Saved "Big & Loud"',
+      );
       await expect(page.getByText(/\b0 custom\b/)).toHaveCount(0);
       await page.screenshot({ path: 'e2e/.results/dimensions-1-theme-tab.png' });
 
-      // Back in the workspace everything holds
-      await page.getByRole('button', { name: 'Done' }).click();
+      // Back in the workspace (the Mood pane closed) everything holds
+      await hidePane(page, 'Mood');
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
       await expect(html).toHaveCSS('font-size', '20px');
-      await expect(label).toHaveCSS('text-transform', 'none');
-      await expect(page.locator('.mosaic-window.pane-collaboration')).toHaveCSS(
-        'padding-left',
-        '6px',
-      );
-      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('padding-left', '1px');
+      await expect(label).toHaveCSS('text-transform', 'uppercase');
+      const frameWidth = (pane: string) =>
+        page
+          .locator(`.mosaic-window.${pane}`)
+          .evaluate((el) => getComputedStyle(el).getPropertyValue('--pane-border-width').trim());
+      await expect.poll(() => frameWidth('pane-collaboration')).toBe('6px');
+      await expect.poll(() => frameWidth('pane-workshop')).toBe('1px');
       await page.screenshot({ path: 'e2e/.results/dimensions-2-workspace.png' });
 
-      // The preset is in the Mood modal under Yours and is the active one
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Theme', exact: true }).click();
+      // The preset is in the Mood pane under Yours and is the active one
+      const again = await showPane(page, 'Mood');
+      await again.getByRole('button', { name: 'Theme', exact: true }).click();
       await expect(page.getByText('Yours', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Big & Loud', exact: true })).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/dimensions-3-yours.png' });

@@ -23,7 +23,9 @@ test.describe('background tool (mock AI)', () => {
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
 
       // An image in the workspace (the hidden multi-file input behind Upload)
+      // The Artifacts pane's upload input, not the composer's attachment input.
       await page
+        .getByTestId('pane-body-artifacts')
         .locator('input[type="file"][multiple]')
         .setInputFiles(join(__dirname, 'fixtures', 'backdrop.png'));
       await expect(page.getByRole('tree').getByText('backdrop.png', { exact: true })).toBeVisible({

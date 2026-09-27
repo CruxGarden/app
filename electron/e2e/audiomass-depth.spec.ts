@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 function stereo() {
@@ -253,7 +253,7 @@ test('audio waveform tools preserve manual work, native history and portable PCM
     await instance.app.close();
     instance = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     expect(pcm()).toEqual(finalPCM);
     expect(doc().multitrack).toEqual(finalArrangement);

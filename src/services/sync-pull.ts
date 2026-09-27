@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as syncApi from '@/api/sync';
 import { importCrux, peekImport } from './crux-io';
 import { settleIngestion } from './ingestion';
+import { contentRevision, type BackupRecord } from './backup';
 import {
   activateWorkspace,
   closeCruxWorkspaces,
@@ -37,6 +38,7 @@ export async function pullCrux(cruxId: string): Promise<void> {
     await settleIngestion();
     report({ busy: true, message: 'Importing crux...', error: '' });
     await importCrux({ data: blob, mode: 'replace' });
+    await recordPulledCopy(cruxId);
   } catch (err) {
     const status = (err as { response?: { status?: number } })?.response?.status;
     error = status === 404 ? 'No cloud version found for this crux' : 'Pull failed';
@@ -53,5 +55,30 @@ export async function pullCrux(cruxId: string): Promise<void> {
       }
     }
     report({ busy: false, message: error ? '' : 'Pull complete', error });
+  }
+}
+
+/**
+ * After a pull this machine holds exactly the cloud copy, so that copy is its
+ * backup: the record says so, or the Sync pane would keep calling the cloud
+ * copy "never pushed from this machine" and warn about drift that is not there.
+ */
+async function recordPulledCopy(cruxId: string): Promise<void> {
+  try {
+    const { getServices } = await import('./index');
+    const entry = (await syncApi.listSyncedCruxes()).find((c) => c.cruxId === cruxId);
+    if (!entry) return;
+    const crux = await getServices().crux.findById(cruxId);
+    const revision = await contentRevision(cruxId);
+    const record: BackupRecord = {
+      at: entry.updatedAt,
+      growthCount: (crux.meta?.growthCount as number | undefined) ?? 0,
+      size: entry.size,
+      ...(revision !== undefined ? { contentRevision: revision } : {}),
+    };
+    await getServices().crux.update(cruxId, { meta: { ...crux.meta, backup: record } });
+  } catch (err) {
+    // The pull itself succeeded; a missing record only costs a cautious note.
+    console.warn('Could not record the pulled copy as this machine’s backup:', err);
   }
 }

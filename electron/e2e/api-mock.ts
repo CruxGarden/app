@@ -38,11 +38,17 @@ export interface MockApi {
     published: Record<string, PublishedFile[]>;
     /** Answer every sync push with 402 (over the plan's storage) */
     syncOverLimit?: boolean;
+    /** Find media: every file download answers 503 (the catalogue still lists it) */
+    failMediaFile?: boolean;
+    /** Publish: drop the connection while the upload is still arriving (a mid-upload disconnect) */
+    dropPublish?: boolean;
     /** Extra bytes counted against the storage budget (usage/me) */
     storageUsedBytes?: number;
     includedUsagePercent?: number;
     includedUncertain?: number;
     failIncludedUsage?: boolean;
+    /** Answer GET /usage/me with 503 (Settings → Usage's error state) */
+    failUsage?: boolean;
     /** The email of the last login; other@example.com is a second account */
     loginEmail?: string;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
@@ -173,6 +179,12 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       res.end(bytes);
     };
     if (method === 'OPTIONS') return send(204, null);
+    if (state.dropPublish && method === 'POST' && /^\/cruxes\/[^/]+\/publish$/.test(path)) {
+      // The socket dies under the upload: no status, no body — a network failure.
+      log.push(`${method} ${path} -> (dropped)`);
+      req.socket.destroy();
+      return;
+    }
     const rawBuf = await readBody(req);
     const raw = rawBuf.toString();
     const bodyJson = (): Record<string, unknown> => {
@@ -196,7 +208,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       const kind = parsedUrl.searchParams.get('kind');
       const counts = new Map<string, number>();
       for (const c of Object.values(state.cruxes)) {
-        if (c.visibility !== 'public' || c.discoverable === false) continue;
+        // Like the API: discoverable defaults to false, so only an explicit true is listed.
+        if (c.visibility !== 'public' || c.discoverable !== true) continue;
         if (kind && c.kind !== kind) continue;
         const tags = (c.meta as { tags?: string[] } | undefined)?.tags ?? [];
         for (const t of tags) counts.set(t, (counts.get(t) ?? 0) + 1);
@@ -213,7 +226,9 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         const hit =
           !term ||
           AUTHOR.username.toLowerCase().includes(term) ||
-          String(AUTHOR.display_name ?? '').toLowerCase().includes(term);
+          String(AUTHOR.display_name ?? '')
+            .toLowerCase()
+            .includes(term);
         res.setHeader('Pagination', JSON.stringify({ currentPage: 1, lastPage: 1 }));
         return send(200, hit ? [AUTHOR] : []);
       }
@@ -229,7 +244,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         q = '';
       }
       const items = Object.values(state.cruxes)
-        .filter((c) => c.visibility === 'public' && c.discoverable !== false)
+        .filter((c) => c.visibility === 'public' && c.discoverable === true)
         .filter((c) => !kind || c.kind === kind)
         .filter(() => !author || AUTHOR.username.toLowerCase().startsWith(author))
         .filter((c) => {
@@ -294,9 +309,11 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     if (path.startsWith('/openverse/v1/images')) {
       const q = parsedUrl.searchParams.get('q') ?? '';
       const file = `${state.baseUrl}/media-file/seedling.png`;
+      // "nothing" is the one query the catalogue has no pictures for (the empty state).
+      const hits = !!q && q !== 'nothing';
       return send(200, {
-        result_count: q ? 2 : 0,
-        results: q
+        result_count: hits ? 2 : 0,
+        results: hits
           ? [
               {
                 id: 'img-1',
@@ -384,6 +401,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       });
     }
     if (path.startsWith('/media-file/')) {
+      if (state.failMediaFile) return send(503, { message: 'The file host is down' });
       const name = path.slice('/media-file/'.length);
       const png = readFileSync(join(__dirname, 'fixtures/documents/seal.png'));
       const wav = Buffer.concat([
@@ -727,6 +745,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       ]);
     }
     if (path === '/usage/me' && method === 'GET') {
+      if (state.failUsage) return send(503, { message: 'Usage unavailable' });
       const cruxes = Object.keys(state.published).map(usageFor);
       const syncCruxes = Object.entries(state.sync.cruxes);
       const gardenBytes = state.sync.garden?.bytes ?? 0;

@@ -4,7 +4,7 @@ import { launchApp } from './launch';
 import { enterGarden, createCrux, switchCrux, goHome } from './multi-crux-helpers';
 
 /**
- * Schedules (GARDEN-SCHEDULER-PLAN §2) through the Tending page: a one-off
+ * Schedules (GARDEN-SCHEDULER-PLAN §2) through the Tending pane: a one-off
  * set for ten minutes ago fires the moment it is added and says it was
  * missed; a tool action runs a garden tool on the Crux and reports its
  * result; a cron line reads back in plain words; an "untouched" rule names

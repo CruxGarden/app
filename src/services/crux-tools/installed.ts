@@ -160,7 +160,7 @@ export async function installedToolPackage(tool: InstalledTool) {
   const file = artifacts.find((a) => (a.meta?.path || a.filename) === TOOL_PACKAGE_PATH);
   if (!file) return null;
   return openToolPackage(
-    await service.downloadBlob(file.id),
+    await service.downloadBlob(file),
     tool.id,
     file.fingerprint || undefined,
   );

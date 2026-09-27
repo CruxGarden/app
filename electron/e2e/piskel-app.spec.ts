@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady } from './panel-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 test('Piskel native drawing, frames, agent, PNG/GIF/project export and restart', async () => {
   test.setTimeout(180000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
@@ -20,6 +21,11 @@ test('Piskel native drawing, frames, agent, PNG/GIF/project export and restart',
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Piskel/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    const tasks = page.locator('header').getByRole('button', { name: 'Toggle tasks', exact: true });
+    if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
     const frame = page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 60000,
@@ -106,7 +112,7 @@ test('Piskel native drawing, frames, agent, PNG/GIF/project export and restart',
   const second = await launchApp({ dir: first.dir, env: { CRUX_AI_MOCK: '1' } });
   try {
     await second.page.setViewportSize({ width: 1900, height: 1100 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = second.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 60000,

@@ -13,8 +13,10 @@ test('a v1 launch hides the v2 pieces; CRUX_V2=1 shows them', async () => {
     await enterGarden(v1.page);
     await expect(v1.page.getByTestId('gardens-section')).toHaveCount(0);
     await v1.page.getByRole('button', { name: 'Add Crux' }).click();
-    await expect(v1.page.getByRole('button', { name: /^Order Desk/ })).toBeVisible();
-    await expect(v1.page.getByRole('button', { name: /^Garden/ })).toHaveCount(0);
+    // Scoped to the dialog: the top bar's own "Garden location" button is not a template.
+    const v1Picker = v1.page.getByRole('dialog', { name: 'Add Crux' });
+    await expect(v1Picker.getByRole('button', { name: /^Order Desk/ })).toBeVisible();
+    await expect(v1Picker.getByRole('button', { name: /^Garden\b/ })).toHaveCount(0);
   } finally {
     await v1.app.close();
   }
@@ -22,7 +24,9 @@ test('a v1 launch hides the v2 pieces; CRUX_V2=1 shows them', async () => {
   try {
     await enterGarden(v2.page);
     await v2.page.getByRole('button', { name: 'Add Crux' }).click();
-    await expect(v2.page.getByRole('button', { name: /^Garden/ })).toBeVisible();
+    await expect(
+      v2.page.getByRole('dialog', { name: 'Add Crux' }).getByRole('button', { name: /^Garden\b/ }),
+    ).toBeVisible();
   } finally {
     await v2.app.close();
   }

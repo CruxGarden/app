@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from '
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -168,7 +168,7 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1050 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the choice and both books are still there', async () => {
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
       await togglePanel(page, 'Toggle metadata');

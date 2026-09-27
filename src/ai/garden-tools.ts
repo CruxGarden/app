@@ -449,10 +449,7 @@ export const isGardenTool = (name: string) => GARDEN_TOOL_NAMES.has(name);
 
 const str = (v: unknown, max = 8000) => sharedStr(v, max);
 
-export function validateGardenTool(
-  name: string,
-  input: Record<string, unknown>,
-): ValidationResult {
+export function validateGardenTool(name: string, input: Record<string, unknown>): ValidationResult {
   if (
     (name === 'export_crux' || name === 'export_cruxspace') &&
     input.runtime !== undefined &&
@@ -708,11 +705,20 @@ async function resolveCrux(input: Record<string, unknown>) {
   if (title) {
     const all = (await services.crux.listAll()).filter((c) => c.kind !== 'snapshot');
     const lower = title.toLowerCase();
-    const found =
+    const exact =
       all.find((c) => c.title === title) ??
-      all.find((c) => (c.title ?? '').toLowerCase() === lower) ??
-      all.find((c) => (c.title ?? '').toLowerCase().startsWith(lower));
-    if (found) return found;
+      all.find((c) => (c.title ?? '').toLowerCase() === lower);
+    if (exact) return exact;
+    // A prefix is a convenience only while it names one Crux; several is a
+    // question for the person, never a silent pick of whichever comes first.
+    const prefixed = all.filter((c) => (c.title ?? '').toLowerCase().startsWith(lower));
+    if (prefixed.length === 1) return prefixed[0]!;
+    if (prefixed.length > 1) {
+      const names = prefixed.map((c) => `"${c.title}"`).join(', ');
+      throw new Error(
+        `"${title}" matches several cruxes: ${names}. Give the exact title or the id.`,
+      );
+    }
   }
   throw new Error(`No crux ${id ? `with id ${id}` : `titled "${title}"`}. list_cruxes names them.`);
 }
@@ -1019,7 +1025,7 @@ async function runGardenToolInner(
       const briefFile = st.artifacts.find((a) => pathOf(a) === 'BRIEF.md');
       const briefText = briefFile
         ? await services.artifact
-            .downloadBlob(briefFile.id)
+            .downloadBlob(briefFile)
             .then((b) => b.text())
             .catch(() => '')
         : '';

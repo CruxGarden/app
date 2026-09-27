@@ -128,7 +128,8 @@ test('static previews retain distinct ports and storage; shortcuts work from a p
           modifiers: ['control', 'alt'],
         });
     });
-    await expect(page.getByRole('textbox', { name: 'Find an open Crux' })).toBeFocused();
+    // The switcher's search is scoped to the Garden in view ("Find a Crux in My Garden").
+    await expect(page.getByRole('textbox', { name: /^Find a Crux in / })).toBeFocused();
     await page.keyboard.press('Escape');
     await switchCrux(page, 'Beta');
     await page.getByRole('button', { name: 'Switch Crux workspace' }).click();

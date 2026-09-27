@@ -176,6 +176,9 @@ export default function Explore({
   const [tags, setTags] = useState<ExploreTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadedOnce, setLoadedOnce] = useState(false);
+  // An API that could not be reached is not an empty catalogue.
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -204,15 +207,19 @@ export default function Explore({
     if (view === 'moods') cruxParams.kind = 'mood';
     const wantCruxes = view !== 'people';
     const wantPeople = view === 'people' || (view === 'all' && !!q);
+    let unreachable = false;
+    const none = { items: [], totalPages: 1 };
+    const failedAs = () => {
+      unreachable = true;
+      return none;
+    };
     Promise.all([
-      wantCruxes
-        ? publicApi.explore(cruxParams).catch(() => ({ items: [], totalPages: 1 }))
-        : Promise.resolve({ items: [], totalPages: 1 }),
+      wantCruxes ? publicApi.explore(cruxParams).catch(failedAs) : Promise.resolve(none),
       wantPeople
         ? publicApi
             .explore({ ...base, type: 'authors', perPage: view === 'all' ? 4 : 24 })
-            .catch(() => ({ items: [], totalPages: 1 }))
-        : Promise.resolve({ items: [], totalPages: 1 }),
+            .catch(failedAs)
+        : Promise.resolve(none),
     ]).then(([c, p]) => {
       if (cancelled) return;
       const cruxItems = c.items as (ExploreCrux | ExploreAuthor)[];
@@ -220,13 +227,14 @@ export default function Explore({
       setCruxes(cruxItems.filter(isCrux));
       setPeople(peopleItems.filter((r): r is ExploreAuthor => !isCrux(r)));
       setTotalPages(view === 'people' ? p.totalPages : c.totalPages);
+      setFailed(unreachable);
       setLoading(false);
       setLoadedOnce(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [q, view, sort, activeTags, kind, author, page]);
+  }, [q, view, sort, activeTags, kind, author, page, attempt]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -516,6 +524,14 @@ export default function Explore({
             type="text"
             defaultValue={initial?.q ?? ''}
             onChange={handleSearchChange}
+            onKeyDown={(e) => {
+              // Enter asks again even when the words are the same (a listing may have changed).
+              if (e.key === 'Enter') {
+                clearTimeout(debounceRef.current);
+                setQ(e.currentTarget.value);
+                setAttempt((n) => n + 1);
+              }
+            }}
             placeholder="Search cruxes, people, tools, moods and authors… (@name, #tag)"
             aria-label="Search Explore"
             className="w-full pl-10 pr-9 py-2.5 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline font-body"
@@ -683,6 +699,14 @@ export default function Explore({
         <Panel padding="md" className="flex items-center justify-center gap-2 py-16">
           <Spinner size={14} />
           <p className="text-text-muted text-sm">Looking…</p>
+        </Panel>
+      ) : failed && empty ? (
+        <Panel padding="md" className="flex flex-col items-center py-10 text-center" role="alert">
+          <p className="text-text text-sm mb-1">Couldn't reach crux.garden</p>
+          <p className="text-xs text-text-muted mb-3">Check your connection and try again.</p>
+          <Button variant="secondary" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+            Try again
+          </Button>
         </Panel>
       ) : empty ? (
         <Panel padding="md" className="flex flex-col items-center py-10 text-center">

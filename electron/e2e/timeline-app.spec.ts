@@ -1,10 +1,10 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -49,6 +49,13 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Timeline\b/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // The Tasks pane opens with every app Crux now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      const tasks = page
+        .locator('header')
+        .getByRole('button', { name: 'Toggle tasks', exact: true });
+      if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -157,7 +164,7 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the timeline comes back with its name and events', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#timeline-name')).toHaveValue('A Garden Year, Told');

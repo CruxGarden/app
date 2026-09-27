@@ -163,7 +163,7 @@ test('Garden Mood selection crosses the trusted desktop bridge, private Copy and
       return errors;
     }, result.gardenId);
     expect(refusals).toHaveLength(3);
-    for (const refusal of refusals) expect(refusal).toContain('only available from Garden');
+    for (const refusal of refusals) expect(refusal).toContain('only available to Crux Garden');
     await extra.close();
     await instance.app.close();
     instance = await launchApp({ dir });

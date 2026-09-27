@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace, storedFingerprint } from './multi-crux-helpers';
 
 test('One Big Sky: offline game, keyboard match, focus pause and preserved sources', async () => {
   test.setTimeout(150000);
@@ -78,20 +78,7 @@ test('One Big Sky: offline game, keyboard match, focus pause and preserved sourc
     );
     writeFileSync(join(folder, 'index.html'), html);
     const fingerprint = createHash('sha256').update(html).digest('hex');
-    await expect
-      .poll(() =>
-        page.evaluate(
-          async (id) =>
-            (
-              (await window.electronAPI!.sqlite.get(
-                "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'index.html'",
-                [id],
-              )) as { fingerprint: string }
-            )?.fingerprint,
-          id,
-        ),
-      )
-      .toBe(fingerprint);
+    await expect.poll(() => storedFingerprint(page, id, 'index.html')).toBe(fingerprint);
     const history = page.getByTestId('pane-body-history');
     if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
@@ -104,16 +91,18 @@ test('One Big Sky: offline game, keyboard match, focus pause and preserved sourc
   const again = await launchApp({ dir: first.dir });
   try {
     const { page } = again;
-    // The Default Mood (Fractal Garden) is back on relaunch; the game needs no Mood of its own
+    // The Default Mood (Plasma: its own field, mint accent) is back on relaunch; the game needs no Mood of its own
     await expect
       .poll(() =>
         page.evaluate(() =>
           getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
         ),
       )
-      .toBe('#5fd2a5');
-    await expect(page.getByTestId('mood-background-image')).toBeVisible();
-    await page.getByRole('button', { name: /enter/i }).click();
+      .toBe('#9ff3e4');
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
+      .toBe('plasma');
+    await reenterWorkspace(page);
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
     const frame = page.frameLocator('iframe[data-crux-id]');
     await expect(frame.getByText('Our own sky arena.', { exact: true })).toBeVisible();

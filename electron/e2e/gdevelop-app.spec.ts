@@ -6,7 +6,7 @@ import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 test('GDevelop native game editing, local preview, agent changes and portable reopening', async () => {
@@ -561,7 +561,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
     await localOnly(second.page);
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const f = await ready(second.page);
     expect(game().properties.name).toBe('External game');
     expect(game().layouts[0].instances).toHaveLength(1);

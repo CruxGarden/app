@@ -156,16 +156,18 @@ test.describe('guide 22 · Account and Names', () => {
         await field.blur();
       }
       await expect(page.locator('header')).toContainText('The Bachelor Pad');
-      await expect(page.locator('.mosaic-window.pane-collaboration .pane-toolbar-label')).toHaveText(
-        /talk/i,
+      await expect(
+        page.locator('.mosaic-window.pane-collaboration .pane-toolbar-label'),
+      ).toHaveText(/talk/i);
+      await expect(page.locator('.mosaic-window.pane-tasks .pane-toolbar-label')).toHaveText(
+        /chores/i,
       );
-      await expect(page.locator('.mosaic-window.pane-tasks .pane-toolbar-label')).toHaveText(/chores/i);
       // The toggles keep their functional names for the journeys; the picker shows the new words.
       await page.getByRole('button', { name: 'Add panel', exact: true }).click();
       const picker = page.getByRole('dialog', { name: 'Add panel', exact: true });
-      await expect(picker.getByRole('button', { name: 'Toggle artifacts', exact: true })).toContainText(
-        'Stuff',
-      );
+      await expect(
+        picker.getByRole('button', { name: 'Toggle artifacts', exact: true }),
+      ).toContainText('Stuff');
       await page.keyboard.press('Escape');
     } finally {
       await first.app.close();
@@ -176,12 +178,102 @@ test.describe('guide 22 · Account and Names', () => {
       await page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
       await expect(page.locator('header')).toContainText('The Bachelor Pad', { timeout: 30_000 });
       await page.getByRole('button', { name: 'Open Renamed everywhere', exact: true }).click();
-      await expect(page.locator('.mosaic-window.pane-collaboration .pane-toolbar-label')).toHaveText(
-        /talk/i,
-        { timeout: 30_000 },
-      );
+      await expect(
+        page.locator('.mosaic-window.pane-collaboration .pane-toolbar-label'),
+      ).toHaveText(/talk/i, { timeout: 30_000 });
     } finally {
       await again.app.close();
+    }
+  });
+
+  test('SETAC-01 — Settings opens from the account menu, the shortcut and closes from its own header; sections fold; closing it leaves the Crux alone', async () => {
+    const { app, page } = await launchApp();
+    try {
+      await enterGarden(page);
+      await createCrux(page, 'Still here');
+      // Account menu → Settings.
+      await page.getByRole('button', { name: 'Account menu' }).click();
+      await page.getByRole('button', { name: /^Settings/ }).click();
+      const settings = page.getByRole('region', { name: 'Settings', exact: true });
+      await expect(settings).toBeVisible();
+      // A folded section opens and folds again; reopening the pane keeps it folded.
+      const garden = settings.locator('h2', { hasText: /^Garden$/ });
+      const fold = garden.locator('..');
+      await expect(fold).toHaveAttribute('aria-expanded', 'false');
+      await garden.click();
+      await expect(fold).toHaveAttribute('aria-expanded', 'true');
+      await expect(settings.getByRole('button', { name: 'Export garden' })).toBeVisible();
+      await garden.click();
+      await expect(fold).toHaveAttribute('aria-expanded', 'false');
+      await expect(settings.getByRole('button', { name: 'Export garden' })).toHaveCount(0);
+      // Its own header closes it — and only it.
+      await page.locator('.mosaic-window.pane-settings .pane-toolbar-close').click();
+      await expect(page.getByTestId('pane-body-settings')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
+        'Still here',
+      );
+      await expect(page.getByTestId('pane-body-collaboration')).toBeVisible();
+      // The shortcut toggles it both ways.
+      await page.keyboard.press('ControlOrMeta+,');
+      await expect(page.getByTestId('pane-body-settings')).toBeVisible();
+      await expect(settings.locator('h2', { hasText: /^Garden$/ }).locator('..')).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+      await page.keyboard.press('ControlOrMeta+,');
+      await expect(page.getByTestId('pane-body-settings')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
+        'Still here',
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  test('SETAC-04 — the API address: an unreachable one fails in words, Back to default restores it; a launch-pinned address is read-only', async () => {
+    test.setTimeout(150_000);
+    const free = await launchApp();
+    try {
+      const { page } = free;
+      await enterGarden(page);
+      const account = await accountSection(page);
+      const address = account.getByTestId('api-address');
+      await expect(address).toContainText(/Talking to .*\(the default\)/);
+      const box = address.getByRole('textbox', { name: 'API address' });
+      // Not an address at all.
+      await box.fill('nowhere');
+      await address.getByRole('button', { name: 'Use this address' }).click();
+      await expect(address).toContainText('Enter an http or https address');
+      // A port nobody listens on.
+      await box.fill('http://127.0.0.1:1');
+      await address.getByRole('button', { name: 'Use this address' }).click();
+      await expect(address).toContainText('Talking to http://127.0.0.1:1');
+      await account.getByPlaceholder('email@example.com').fill('tester@example.com');
+      await account.getByRole('button', { name: 'Send Code' }).click();
+      // A failure, said as one — never an empty account.
+      await expect(account.getByText(/Failed to send code|connection failed/)).toBeVisible({
+        timeout: 30_000,
+      });
+      await expect(account.getByText(/Connected/)).toHaveCount(0);
+      await address.getByRole('button', { name: 'Back to default' }).click();
+      await expect(address).toContainText(/Talking to .*\(the default\)/);
+      await expect(address.getByRole('button', { name: 'Back to default' })).toHaveCount(0);
+    } finally {
+      await free.app.close();
+    }
+    const api = await startMockApi();
+    const pinned = await launchApp({ env: { CRUX_API_URL: api.url } });
+    try {
+      const { page } = pinned;
+      await enterGarden(page);
+      const account = await accountSection(page);
+      const address = account.getByTestId('api-address');
+      await expect(address).toContainText(`Pinned for this launch: ${api.url}`);
+      await expect(address.getByRole('textbox', { name: 'API address' })).toHaveCount(0);
+      await expect(address.getByRole('button', { name: 'Use this address' })).toHaveCount(0);
+    } finally {
+      await pinned.app.close();
+      await api.close();
     }
   });
 });

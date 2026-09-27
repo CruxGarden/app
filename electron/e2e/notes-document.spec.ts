@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { collaborator, outputs } from './game-cruxspace-helpers';
 
 /**
@@ -126,7 +126,7 @@ test('Notes documents: DOCX in through the bar and the collaborator, notes out a
       page = instance.page;
       page.setDefaultTimeout(60000);
       await page.setViewportSize({ width: 2000, height: 1200 });
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       // The last Crux reopens on its own.
       await expect(status()).toHaveText('Saved', { timeout: 120000 });
       await openNote('Imported', 'Letter');

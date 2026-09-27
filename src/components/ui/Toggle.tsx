@@ -21,7 +21,7 @@ export default function Toggle({
   return (
     <label
       className={cn(
-        'inline-flex items-center gap-2 cursor-pointer select-none',
+        'inline-flex items-center gap-2 cursor-pointer select-none max-w-full',
         disabled && 'opacity-50 cursor-not-allowed',
       )}
     >
@@ -52,7 +52,7 @@ export default function Toggle({
           }}
         />
       </button>
-      {label && <span className="text-xs text-text-muted whitespace-nowrap">{label}</span>}
+      {label && <span className="text-xs text-text-muted min-w-0">{label}</span>}
     </label>
   );
 }

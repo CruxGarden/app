@@ -79,14 +79,15 @@ export default function DesktopSettings() {
     <SettingsSection
       title="Desktop"
       testId="desktop-settings"
-      aside={info && (
+      aside={
+        info && (
           <span className="text-xxs font-mono text-text-muted">
             v{info.version} · {info.platform}-{info.arch}
             {info.packaged ? '' : ' · dev'}
           </span>
-        )}
+        )
+      }
     >
-
       <div className="flex flex-col gap-3 text-xs">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -164,16 +165,21 @@ export default function DesktopSettings() {
         <div className="divider my-1" />
 
         <div className="flex items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="text-text">Logs</div>
-            <div className="text-text-muted font-mono">
+            <div className="text-text-muted font-mono break-all">
               {info ? shortenHomePath(info.logsDir) : ''}
             </div>
             <div className="text-xxs text-text-muted">
               Written locally, never sent. Attach main.log to a GitHub issue when something breaks.
             </div>
           </div>
-          <Button size="sm" variant="secondary" onClick={() => void openLogs()}>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="shrink-0"
+            onClick={() => void openLogs()}
+          >
             Open logs folder
           </Button>
         </div>
