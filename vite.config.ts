@@ -51,6 +51,9 @@ export default defineConfig({
     sourcemap: !process.env.VITE_PUBLIC_SITE,
   },
   test: {
+    // Archive/template tests load whole editor distributions. Parallel transforms
+    // exhaust memory and cause false timeouts even on large development machines.
+    maxWorkers: 1,
     globals: true,
     environment: 'node',
     setupFiles: ['./src/test/setup.ts'],

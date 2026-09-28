@@ -1,5 +1,12 @@
 import { defineConfig } from '@playwright/test';
 
+const gateSpecs = [
+  '**/journeys/*.spec.ts',
+  '**/ipc-security.spec.ts',
+  '**/garden-membership-bridge.spec.ts',
+  '**/www-browser.spec.ts',
+];
+
 /**
  * UI tests drive the REAL desktop app (Playwright's Electron support) against
  * a throwaway userData dir + garden root — see e2e/launch.ts. Run:
@@ -14,6 +21,11 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   workers: 1, // one Electron instance at a time
+  projects: [
+    { name: 'unit', testMatch: '**/*.unit.spec.ts' },
+    { name: 'gate', testMatch: gateSpecs },
+    { name: 'desktop', testIgnore: ['**/*.unit.spec.ts', ...gateSpecs] },
+  ],
   reporter: [['list']],
   outputDir: './e2e/.results',
   use: { screenshot: 'only-on-failure', trace: 'retain-on-failure' },

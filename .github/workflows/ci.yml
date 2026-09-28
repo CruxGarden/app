@@ -103,7 +103,7 @@ jobs:
         working-directory: electron
       # Ubuntu 24.04 AppArmor blocks Electron's user-namespace sandbox; allow it for this run
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - run: xvfb-run -a npx playwright test e2e/smoke.spec.ts e2e/files.spec.ts e2e/settings.spec.ts e2e/paths.unit.spec.ts e2e/updater.unit.spec.ts e2e/multi-crux.spec.ts e2e/multi-crux-keyboard.spec.ts e2e/multi-crux-lifecycle.spec.ts e2e/multi-crux-turns.spec.ts e2e/preview-ports.unit.spec.ts
+      - run: xvfb-run -a npx playwright test --project=gate
         working-directory: electron
       - uses: actions/upload-artifact@v4
         if: always()
@@ -136,7 +136,7 @@ jobs:
         working-directory: electron
       - run: npm run build:all
         working-directory: electron
-      - run: npx playwright test e2e/multi-crux.spec.ts e2e/multi-crux-keyboard.spec.ts e2e/multi-crux-lifecycle.spec.ts e2e/multi-crux-turns.spec.ts e2e/multi-crux-preview.spec.ts e2e/preview-ports.unit.spec.ts
+      - run: npx playwright test --project=gate
         working-directory: electron
       - run: npm run test:e2e:apps
         working-directory: electron
