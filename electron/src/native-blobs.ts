@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 /** Shared filesystem content store; database ownership is supplied separately. */
 export class NativeBlobStore {
@@ -22,12 +22,21 @@ export class NativeBlobStore {
 
   blobWrite(fingerprint: string, data: Uint8Array): void {
     const destination = this.blobPath(fingerprint);
+    const bytes = Buffer.from(data);
+    if (createHash('sha256').update(bytes).digest('hex') !== fingerprint)
+      throw new Error('Blob bytes do not match their fingerprint');
+    if (fs.existsSync(destination)) return;
     const staging = path.join(this.blobDir, `.${fingerprint}.${randomUUID()}.tmp`);
     try {
       // Never truncate a committed blob: snapshots and other Cruxes may share
-      // it. Flush a complete sibling file before the atomic rename commits it.
-      fs.writeFileSync(staging, Buffer.from(data), { flag: 'wx', mode: 0o600, flush: true });
-      fs.renameSync(staging, destination);
+      // it. A hard link admits the flushed bytes atomically without replacing
+      // a blob another writer committed while this one was being staged.
+      fs.writeFileSync(staging, bytes, { flag: 'wx', mode: 0o600, flush: true });
+      try {
+        fs.linkSync(staging, destination);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      }
     } finally {
       try {
         fs.rmSync(staging, { force: true });

@@ -99,7 +99,12 @@ export async function launchApp(
             (!!process.env.CRUX_DEV_SERVER && url.startsWith(process.env.CRUX_DEV_SERVER))
           );
         });
-        if (window) ipcMain.emit('workspace:close-guard', { sender: window.webContents }, false);
+        if (window)
+          ipcMain.emit(
+            'workspace:close-guard',
+            { sender: window.webContents, senderFrame: window.webContents.mainFrame },
+            false,
+          );
         // A native editor's late save/dirty update can remount the renderer's
         // close subscription between this evaluation and app.quit(). Teardown
         // is noninteractive: prevent it from rearming the guard after clearing it.

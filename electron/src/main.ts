@@ -13,17 +13,9 @@ import type {
 import { lookupProjectCrux } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
+import { gardenIpc, isGardenUrl } from './garden-ipc';
 import { INSTALLATION_COMMANDS, type InstallationCommand } from './bridge';
-const {
-  app,
-  BrowserWindow,
-  ipcMain,
-  protocol,
-  dialog,
-  shell,
-  desktopCapturer,
-  net,
-} = require('electron');
+const { app, BrowserWindow, protocol, dialog, shell, desktopCapturer, net } = require('electron');
 const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
@@ -52,6 +44,11 @@ try {
 }
 
 let mainWindow: any = null;
+const gardenBridge = gardenIpc(
+  () => mainWindow,
+  app.isPackaged ? undefined : process.env.CRUX_DEV_SERVER,
+);
+const fromGarden = gardenBridge.handle;
 // Docked mode (GARDEN-SCHEDULER-PLAN): closing the window hides it; the app
 // lives on in the menu bar until Quit. `quitting` tells the close handler the
 // difference between the red button and Cmd+Q / the tray's Quit.
@@ -108,11 +105,11 @@ function requestWorkspaceClose(event: any): boolean {
   }
   return true;
 }
-ipcMain.on('workspace:close-guard', (event: any, enabled: boolean) => {
-  if (event.sender === mainWindow?.webContents) workspaceCloseGuard = enabled;
+gardenBridge.on('workspace:close-guard', (_event: Electron.IpcMainEvent, enabled: boolean) => {
+  workspaceCloseGuard = enabled;
 });
-ipcMain.on('workspace:close-response', (event: any, approved: boolean) => {
-  if (event.sender !== mainWindow?.webContents || !workspaceClosePending) return;
+gardenBridge.on('workspace:close-response', (_event: Electron.IpcMainEvent, approved: boolean) => {
+  if (!workspaceClosePending) return;
   workspaceClosePending = false;
   if (approved) {
     workspaceMayClose = true;
@@ -396,11 +393,8 @@ function createWindow() {
   // window anywhere else would hand `electronAPI` — BYOK secrets, raw SQL,
   // filesystem access, `pnpm dlx` — to that page. Nothing may navigate the
   // shell: in-app routing is client-side, and real links open in the browser.
-  const isAppUrl = (target: string) => {
-    if (target.startsWith('crux-app://')) return true;
-    const dev = process.env.CRUX_DEV_SERVER;
-    return !!dev && target.startsWith(dev);
-  };
+  const isAppUrl = (target: string) =>
+    isGardenUrl(target, app.isPackaged ? undefined : process.env.CRUX_DEV_SERVER);
 
   mainWindow.webContents.on('will-navigate', (event: any, target: string) => {
     if (!isAppUrl(target)) event.preventDefault();
@@ -416,7 +410,7 @@ function createWindow() {
 
   // Default: serve the built web app from dist/ (bundled resources when
   // packaged). A Vite dev server is opt-in via CRUX_DEV_SERVER for HMR work.
-  const devServerUrl = process.env.CRUX_DEV_SERVER;
+  const devServerUrl = app.isPackaged ? undefined : process.env.CRUX_DEV_SERVER;
   if (devServerUrl) {
     debugLog(`Loading from dev server: ${devServerUrl}`);
     mainWindow.loadURL(devServerUrl);
@@ -445,24 +439,6 @@ function createWindow() {
 
 // ── SQLite IPC handlers ──────────────────────────────────────
 
-/**
- * Register a handler only the app's own main frame may invoke: the Garden's
- * database, secrets, history, archives and window placement are never open to
- * an embedded page or a preview.
- */
-const fromGarden = (
-  channel: string,
-  listener: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown,
-) =>
-  ipcMain.handle(channel, (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => {
-    if (
-      event.sender !== mainWindow?.webContents ||
-      event.senderFrame !== mainWindow?.webContents.mainFrame
-    )
-      throw new Error(`${channel} is only available to Crux Garden`);
-    return listener(event, ...args);
-  });
-
 /** localhost, loopback, RFC 1918 ranges and .local names: the person's own machines. */
 function isPrivateHost(host: string): boolean {
   const h = host.replace(/^\[|\]$/g, '').toLowerCase();
@@ -474,7 +450,7 @@ function isPrivateHost(host: string): boolean {
 }
 
 async function setupIpc() {
-  registerBrowserPanel(() => mainWindow);
+  registerBrowserPanel(() => mainWindow, gardenBridge);
   // The actual local API is the sole desktop database owner.
   const localDb = await SqliteApi.open(getDbPath(), getBlobDir());
   db = localDb;
@@ -666,7 +642,7 @@ async function setupIpc() {
 
   // ── Local inference (Ollama / LM Studio, Phase A4) ──────────
   const { detectLocalAi } = require('./localai');
-  ipcMain.handle('localai:detect', () => detectLocalAi());
+  fromGarden('localai:detect', () => detectLocalAi());
 
   // ── Project Folders (ADR 0001) ──────────────────────────────
   const desktopConfig = new DesktopConfig(app.getPath('userData'));
@@ -737,11 +713,11 @@ async function setupIpc() {
     });
   }
 
-  ipcMain.handle('desktop:config', () => ({
+  fromGarden('desktop:config', () => ({
     gardenRoot: desktopConfig.gardenRoot,
   }));
 
-  ipcMain.handle('desktop:choose-garden-root', async () => {
+  fromGarden('desktop:choose-garden-root', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Choose your Garden folder',
       defaultPath: desktopConfig.gardenRoot,
@@ -832,7 +808,7 @@ async function setupIpc() {
       return localDb.gardenMood.select(input);
     },
   );
-  ipcMain.handle(
+  fromGarden(
     'installation',
     (event: Electron.IpcMainInvokeEvent, name: InstallationCommand, ...args: unknown[]) => {
       if (!(INSTALLATION_COMMANDS as readonly string[]).includes(name))
@@ -934,62 +910,54 @@ async function setupIpc() {
     });
   });
 
-  ipcMain.handle('project:create-folder', (_e: any, slug: string) => {
+  fromGarden('project:create-folder', (_e: any, slug: string) => {
     const folder = projects.createFolder(slug);
     watcher.watch(folder);
     return folder;
   });
-  ipcMain.handle('project:ensure-folder', (_e: any, folder: string) => {
+  fromGarden('project:ensure-folder', (_e: any, folder: string) => {
     const resolved = projects.ensureFolder(folder);
     watcher.watch(resolved);
     return resolved;
   });
-  ipcMain.handle('project:folder-exists', (_e: any, folder: string) =>
-    projects.folderExists(folder),
-  );
-  ipcMain.handle(
-    'project:write-file',
-    (_e: any, folder: string, relPath: string, data: Uint8Array) => {
-      return projects.writeFile(folder, relPath, data);
-    },
-  );
-  ipcMain.handle('project:read-file', (_e: any, folder: string, relPath: string) =>
+  fromGarden('project:folder-exists', (_e: any, folder: string) => projects.folderExists(folder));
+  fromGarden('project:write-file', (_e: any, folder: string, relPath: string, data: Uint8Array) => {
+    return projects.writeFile(folder, relPath, data);
+  });
+  fromGarden('project:read-file', (_e: any, folder: string, relPath: string) =>
     projects.readFile(folder, relPath),
   );
-  ipcMain.handle('project:delete-file', (_e: any, folder: string, relPath: string) => {
+  fromGarden('project:delete-file', (_e: any, folder: string, relPath: string) => {
     return projects.deleteFile(folder, relPath);
   });
-  ipcMain.handle(
-    'project:rename-file',
-    (_e: any, folder: string, fromRel: string, toRel: string) => {
-      return projects.renameFile(folder, fromRel, toRel);
-    },
-  );
-  ipcMain.handle('project:reveal', (_e: any, folder: string, relPath?: string) =>
+  fromGarden('project:rename-file', (_e: any, folder: string, fromRel: string, toRel: string) => {
+    return projects.renameFile(folder, fromRel, toRel);
+  });
+  fromGarden('project:reveal', (_e: any, folder: string, relPath?: string) =>
     projects.reveal(folder, relPath),
   );
-  ipcMain.handle('project:watch', (_e: any, folder: string) => watcher.watch(folder));
-  ipcMain.handle('project:unwatch', (_e: any, folder: string) => watcher.unwatch(folder));
+  fromGarden('project:watch', (_e: any, folder: string) => watcher.watch(folder));
+  fromGarden('project:unwatch', (_e: any, folder: string) => watcher.unwatch(folder));
   // Cut the watcher's debounce short: the batches come back on the reply (an event sent
   // during the handler could arrive after it), and the renderer records them itself.
-  ipcMain.handle('project:flush', (_e: any, folder?: string) => watcher?.flush(folder) ?? []);
-  ipcMain.handle('project:list-files', (_e: any, folder: string) => projects.listFiles(folder));
-  ipcMain.handle(
+  fromGarden('project:flush', (_e: any, folder?: string) => watcher?.flush(folder) ?? []);
+  fromGarden('project:list-files', (_e: any, folder: string) => projects.listFiles(folder));
+  fromGarden(
     'project:reconcile',
     (_e: any, folder: string, indexed: { path: string; fingerprint: string | null }[]) =>
       projects.reconcile(folder, indexed),
   );
-  ipcMain.handle('project:capture', (_e: any, folder: string) => projects.capture(folder));
-  ipcMain.handle('project:ignored-paths', (_e: any, folder: string, paths: string[]) =>
+  fromGarden('project:capture', (_e: any, folder: string) => projects.capture(folder));
+  fromGarden('project:ignored-paths', (_e: any, folder: string, paths: string[]) =>
     projects.ignoredPaths(folder, paths),
   );
-  ipcMain.handle('project:capture-manifest', (_e: any, folder: string, indexedPaths: string[]) =>
+  fromGarden('project:capture-manifest', (_e: any, folder: string, indexedPaths: string[]) =>
     projects.captureManifest(folder, getBlobDir(), indexedPaths),
   );
-  ipcMain.handle('project:set-mode', (_e: any, folder: string, relPath: string, mode: number) =>
+  fromGarden('project:set-mode', (_e: any, folder: string, relPath: string, mode: number) =>
     projects.setMode(folder, relPath, mode),
   );
-  ipcMain.handle(
+  fromGarden(
     'project:materialize',
     (_e: any, folder: string, entries: { path: string; fingerprint: string; mode?: number }[]) =>
       projects.materialize(folder, getBlobDir(), entries),
@@ -998,28 +966,28 @@ async function setupIpc() {
   // ── Preview server (ADR 0003) ───────────────────────────────
   previewServer = new PreviewServer((folder: string) => projects.resolveKnownFolder(folder));
 
-  ipcMain.handle('preview:start', (_e: any, folder: string) => previewServer.start(folder));
-  ipcMain.handle('preview:stop', (_e: any, folder: string) => previewServer.stop(folder));
+  fromGarden('preview:start', (_e: any, folder: string) => previewServer.start(folder));
+  fromGarden('preview:stop', (_e: any, folder: string) => previewServer.stop(folder));
 
   // Screenshot a local preview URL in a hidden window (snapshot thumbnails —
   // desktop preview has no injected capture script, ADR 0003).
   const { capturePreviewUrl } = require('./capture');
-  ipcMain.handle('preview:capture', (_e: any, url: string) => capturePreviewUrl(url));
+  fromGarden('preview:capture', (_e: any, url: string) => capturePreviewUrl(url));
 
   // Open a local preview URL in the default browser — locked to loopback
-  ipcMain.handle('desktop:open-external', (_e: any, url: string) => {
+  fromGarden('desktop:open-external', (_e: any, url: string) => {
     if (/^http:\/\/127\.0\.0\.1:\d+(\/|$)/.test(url)) shell.openExternal(url);
   });
 
   // https only — never file:, never the app's own scheme
-  ipcMain.handle('desktop:open-web', (_e: any, url: string) => {
+  fromGarden('desktop:open-web', (_e: any, url: string) => {
     if (/^https:\/\/[^\s]+$/i.test(url)) shell.openExternal(url);
   });
 
   // logsDir / userDataDir are shown in Settings → Desktop so a user can find and
   // attach their own logs. They are local filesystem paths that reveal the account
   // name: they must never be put into any telemetry or crash-report payload (ADR 0008).
-  ipcMain.handle('desktop:info', () => ({
+  fromGarden('desktop:info', () => ({
     version: app.getVersion(),
     electron: process.versions.electron,
     platform: process.platform,
@@ -1028,8 +996,8 @@ async function setupIpc() {
     logsDir,
     userDataDir: app.getPath('userData'),
   }));
-  ipcMain.handle('desktop:set-docked', (_e: any, on: boolean) => setDocked(!!on));
-  ipcMain.handle('desktop:open-logs', () => {
+  fromGarden('desktop:set-docked', (_e: any, on: boolean) => setDocked(!!on));
+  fromGarden('desktop:open-logs', () => {
     shell.openPath(logsDir);
   });
 
@@ -1043,11 +1011,11 @@ async function setupIpc() {
       for (const w of BrowserWindow.getAllWindows()) w.webContents.send('updates:changed', state);
     },
   });
-  ipcMain.handle('updates:state', () => updater.getState());
-  ipcMain.handle('updates:check', () => updater.check());
-  ipcMain.handle('updates:download', () => updater.download());
-  ipcMain.handle('updates:install', () => updater.install());
-  ipcMain.handle('updates:set-auto', (_e: any, on: boolean) => updater.setAutoCheck(!!on));
+  fromGarden('updates:state', () => updater.getState());
+  fromGarden('updates:check', () => updater.check());
+  fromGarden('updates:download', () => updater.download());
+  fromGarden('updates:install', () => updater.install());
+  fromGarden('updates:set-auto', (_e: any, on: boolean) => updater.setAutoCheck(!!on));
   if (!process.env.CRUX_USER_DATA) updater.scheduleLaunchCheck();
 
   // ── Agent Host (ADR 0013): one MCP server per switched-on crux ──────
@@ -1064,7 +1032,7 @@ async function setupIpc() {
   // ImageMagick, each resolved per platform (media-binaries.ts). The working
   // directory is the folder; every path-like argument must stay inside it;
   // only the `file` protocol is allowed; no shell is involved.
-  ipcMain.handle('native:tools', async (_e: any, opts?: { refresh?: boolean }) => {
+  fromGarden('native:tools', async (_e: any, opts?: { refresh?: boolean }) => {
     const { mediaTools, clearMediaToolCache } =
       require('./media-binaries') as typeof import('./media-binaries');
     const { canInstall } = require('./media-install') as typeof import('./media-install');
@@ -1083,7 +1051,7 @@ async function setupIpc() {
    * locked-down hidden window — see print-pdf.ts. An HTML source skips the
    * first step.
    */
-  ipcMain.handle(
+  fromGarden(
     'native:pdf',
     async (
       _e: any,
@@ -1177,7 +1145,7 @@ async function setupIpc() {
    * and it goes through the OS dialog, so nothing a Crux carries can point the
    * app at a folder the person never picked.
    */
-  ipcMain.handle('project:choose', async () => {
+  fromGarden('project:choose', async () => {
     const { approveFolder, readProject } =
       require('./project-runner') as typeof import('./project-runner');
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -1191,7 +1159,7 @@ async function setupIpc() {
     return readProject(folder);
   });
 
-  ipcMain.handle('project:read', async (_e: any, opts: { folder: string }) => {
+  fromGarden('project:read', async (_e: any, opts: { folder: string }) => {
     const { readProject, folderApproved } =
       require('./project-runner') as typeof import('./project-runner');
     const folder = String(opts?.folder ?? '');
@@ -1207,7 +1175,7 @@ async function setupIpc() {
    * directory of footage, a dataset — so this reports what is there and how
    * much, and nothing is copied.
    */
-  ipcMain.handle('project:scan', async (_e: any, opts: { folder: string }) => {
+  fromGarden('project:scan', async (_e: any, opts: { folder: string }) => {
     const { folderApproved } = require('./project-runner') as typeof import('./project-runner');
     const { scanFolder } = require('./folder-scan') as typeof import('./folder-scan');
     const folder = String(opts?.folder ?? '');
@@ -1217,12 +1185,12 @@ async function setupIpc() {
     return scanFolder(folder, { maxFiles: 5000 });
   });
 
-  ipcMain.handle('project:state', async (_e: any, opts: { cruxId: string }) => {
+  fromGarden('project:state', async (_e: any, opts: { cruxId: string }) => {
     const { projectState } = require('./project-runner') as typeof import('./project-runner');
     return projectState(String(opts?.cruxId ?? ''));
   });
 
-  ipcMain.handle(
+  fromGarden(
     'project:start',
     async (
       _e: any,
@@ -1240,26 +1208,26 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.handle('project:stop', async (_e: any, opts: { cruxId: string }) => {
+  fromGarden('project:stop', async (_e: any, opts: { cruxId: string }) => {
     const { stopProject } = require('./project-runner') as typeof import('./project-runner');
     await stopProject(String(opts?.cruxId ?? ''));
     return true;
   });
 
-  ipcMain.handle('containers:runner', async (_e: any, opts?: { refresh?: boolean }) => {
+  fromGarden('containers:runner', async (_e: any, opts?: { refresh?: boolean }) => {
     const { composeRunner, clearComposeRunnerCache } =
       require('./containers') as typeof import('./containers');
     if (opts?.refresh) clearComposeRunnerCache();
     return composeRunner(opts?.refresh);
   });
 
-  ipcMain.handle('containers:inspect', async (_e: any, opts: { cruxId: string; file?: string }) => {
+  fromGarden('containers:inspect', async (_e: any, opts: { cruxId: string; file?: string }) => {
     const { inspectCompose } = require('./containers') as typeof import('./containers');
     const crux = await requireCruxFolder(opts.cruxId);
     return inspectCompose(path.resolve(crux.folder), opts.file);
   });
 
-  ipcMain.handle(
+  fromGarden(
     'containers:resolve',
     async (_e: any, opts: { cruxId: string; profiles?: string[] }) => {
       const { composeConfig, portsInUse, readOverride } =
@@ -1282,13 +1250,13 @@ async function setupIpc() {
   );
 
   /** This machine's own files for a Crux, which never travel with it. */
-  ipcMain.handle('containers:local', async (_e: any, opts: { cruxId: string; file: string }) => {
+  fromGarden('containers:local', async (_e: any, opts: { cruxId: string; file: string }) => {
     const { readLocal } = require('./containers') as typeof import('./containers');
     const crux = await requireCruxFolder(opts.cruxId);
     return readLocal(path.resolve(crux.folder), String(opts.file ?? ''));
   });
 
-  ipcMain.handle(
+  fromGarden(
     'containers:write-local',
     async (_e: any, opts: { cruxId: string; file: string; text: string }) => {
       const { writeLocal } = require('./containers') as typeof import('./containers');
@@ -1298,32 +1266,29 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.handle(
-    'containers:override',
-    async (_e: any, opts: { cruxId: string; wishes: unknown }) => {
-      const { writeOverride } = require('./containers') as typeof import('./containers');
-      const crux = await requireCruxFolder(opts.cruxId);
-      const wishes = Array.isArray(opts.wishes)
-        ? (opts.wishes as { service?: unknown }[]).filter(
-            (wish) => typeof wish?.service === 'string' && /^[\w.-]{1,64}$/.test(wish.service),
-          )
-        : [];
-      return writeOverride(path.resolve(crux.folder), wishes as never);
-    },
-  );
+  fromGarden('containers:override', async (_e: any, opts: { cruxId: string; wishes: unknown }) => {
+    const { writeOverride } = require('./containers') as typeof import('./containers');
+    const crux = await requireCruxFolder(opts.cruxId);
+    const wishes = Array.isArray(opts.wishes)
+      ? (opts.wishes as { service?: unknown }[]).filter(
+          (wish) => typeof wish?.service === 'string' && /^[\w.-]{1,64}$/.test(wish.service),
+        )
+      : [];
+    return writeOverride(path.resolve(crux.folder), wishes as never);
+  });
 
-  ipcMain.handle('containers:ports-in-use', async (_e: any, opts: { ports: number[] }) => {
+  fromGarden('containers:ports-in-use', async (_e: any, opts: { ports: number[] }) => {
     const { portsInUse } = require('./containers') as typeof import('./containers');
     const ports = Array.isArray(opts?.ports) ? opts.ports.map(Number).filter(Boolean) : [];
     return portsInUse(ports);
   });
 
-  ipcMain.handle('containers:free-port', async (_e: any, opts?: { from?: number }) => {
+  fromGarden('containers:free-port', async (_e: any, opts?: { from?: number }) => {
     const { freePort } = require('./containers') as typeof import('./containers');
     return freePort(typeof opts?.from === 'number' ? opts.from : 8000);
   });
 
-  ipcMain.handle(
+  fromGarden(
     'containers:compose',
     async (
       e: any,
@@ -1354,7 +1319,7 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.handle('native:install', async (e: any, opts: { tool: string }) => {
+  fromGarden('native:install', async (e: any, opts: { tool: string }) => {
     const { MEDIA_TOOLS } = require('./media-binaries') as typeof import('./media-binaries');
     const { installMediaTool } = require('./media-install') as typeof import('./media-install');
     const tool = opts?.tool as (typeof MEDIA_TOOLS)[number];
@@ -1364,7 +1329,7 @@ async function setupIpc() {
     });
   });
 
-  ipcMain.handle(
+  fromGarden(
     'native:run',
     async (e: any, opts: { cruxId: string; tool: string; args: unknown[]; timeoutMs?: number }) => {
       const { MEDIA_TOOLS, mediaToolPath } =
@@ -1494,7 +1459,7 @@ async function setupIpc() {
   );
 
   // ── Frames from the preview (step 5): into <crux folder>/<subdir>/ ──
-  ipcMain.handle(
+  fromGarden(
     'preview:record',
     async (
       e: any,
@@ -1537,8 +1502,8 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.on('agent-host:ready', (event: Electron.IpcMainEvent, ready: boolean) => {
-    if (event.sender === mainWindow?.webContents) agentHostReady = ready === true;
+  gardenBridge.on('agent-host:ready', (_event: Electron.IpcMainEvent, ready: boolean) => {
+    agentHostReady = ready === true;
   });
   agentHost = new AgentHost({
     gardenHostFolder: path.join(app.getPath('userData'), 'garden-agent-host'),
@@ -1564,11 +1529,11 @@ async function setupIpc() {
   agentHost
     .resumeGarden()
     .catch((err: Error) => debugLog(`Garden agent host resume failed: ${err.message}`));
-  ipcMain.handle('agent-host:list', () => agentHost.list());
-  ipcMain.handle('agent-host:enable', (_e: any, cruxId: string) => agentHost.enable(cruxId));
-  ipcMain.handle('agent-host:disable', (_e: any, cruxId: string) => agentHost.disable(cruxId));
-  ipcMain.handle('agent-host:regenerate', (_e: any, cruxId: string) => agentHost.enable(cruxId));
-  ipcMain.on('agent-host:response', (_e: any, response: unknown) =>
+  fromGarden('agent-host:list', () => agentHost.list());
+  fromGarden('agent-host:enable', (_e: any, cruxId: string) => agentHost.enable(cruxId));
+  fromGarden('agent-host:disable', (_e: any, cruxId: string) => agentHost.disable(cruxId));
+  fromGarden('agent-host:regenerate', (_e: any, cruxId: string) => agentHost.enable(cruxId));
+  gardenBridge.on('agent-host:response', (_e: any, response: unknown) =>
     agentHost.handleResponse(response),
   );
 
@@ -1578,8 +1543,7 @@ async function setupIpc() {
     mainWindow.webContents.send('agent:tool-request', request);
     return true;
   });
-  ipcMain.on('agent:tool-response', (event: any, response: any) => {
-    if (event.sender !== mainWindow?.webContents) return;
+  gardenBridge.on('agent:tool-response', (_event: Electron.IpcMainEvent, response: any) => {
     toolBroker.answer(response.requestId, response.result);
   });
   const runtimeDeps: AgentRuntimeDeps = {
@@ -1601,10 +1565,10 @@ async function setupIpc() {
     new AgentProvider(runtimeDeps),
     new CodexProvider(runtimeDeps),
   ]);
-  ipcMain.handle('agent:status', (_e: any, force: boolean, provider?: string) =>
+  fromGarden('agent:status', (_e: any, force: boolean, provider?: string) =>
     agentProvider.status(force, provider),
   );
-  ipcMain.handle('agent:start', async (_e: any, opts: any) => {
+  fromGarden('agent:start', async (_e: any, opts: any) => {
     // The folder must be one of ours: the SDK gets the resolved path, nothing else.
     const cwd = projects.resolveKnownFolder(opts?.cwd);
     const owner = await lookupCrux(opts?.cruxId);
@@ -1619,8 +1583,8 @@ async function setupIpc() {
       throw new Error('Recover the pending merge before starting an agent in this workspace.');
     return agentProvider.start({ ...opts, cwd });
   });
-  ipcMain.handle('agent:interrupt', (_e: any, runId: string) => agentProvider.interrupt(runId));
-  ipcMain.on('agent:answer', (_e: any, a: { requestId: string; allow: boolean }) =>
+  fromGarden('agent:interrupt', (_e: any, runId: string) => agentProvider.interrupt(runId));
+  gardenBridge.on('agent:answer', (_e: any, a: { requestId: string; allow: boolean }) =>
     agentProvider.answer(a.requestId, !!a.allow),
   );
 
@@ -1663,36 +1627,34 @@ async function setupIpc() {
     },
   );
 
-  ipcMain.handle('toolchain:is-installed', (_e: any, folder: string) =>
-    toolchain.isInstalled(folder),
-  );
-  ipcMain.handle('toolchain:has-package-json', (_e: any, folder: string) =>
+  fromGarden('toolchain:is-installed', (_e: any, folder: string) => toolchain.isInstalled(folder));
+  fromGarden('toolchain:has-package-json', (_e: any, folder: string) =>
     toolchain.hasPackageJson(folder),
   );
-  ipcMain.handle('toolchain:install', (_e: any, folder: string) => toolchain.install(folder));
-  ipcMain.handle('toolchain:build', (_e: any, folder: string) => toolchain.build(folder));
-  ipcMain.handle('toolchain:scaffold', (_e: any, folder: string, args: string[]) => {
+  fromGarden('toolchain:install', (_e: any, folder: string) => toolchain.install(folder));
+  fromGarden('toolchain:build', (_e: any, folder: string) => toolchain.build(folder));
+  fromGarden('toolchain:scaffold', (_e: any, folder: string, args: string[]) => {
     // Template scaffolds only — no arbitrary pnpm surface from the renderer
     if (!Array.isArray(args) || !['dlx', 'create'].includes(args[0])) {
       throw new Error('scaffold args must start with dlx or create');
     }
     return toolchain.run(folder, args);
   });
-  ipcMain.handle('devserver:start', (_e: any, folder: string, opts?: { port?: number }) =>
+  fromGarden('devserver:start', (_e: any, folder: string, opts?: { port?: number }) =>
     devServers.start(folder, opts ?? {}),
   );
-  ipcMain.handle('devserver:restart', (_e: any, folder: string, opts?: { port?: number }) =>
+  fromGarden('devserver:restart', (_e: any, folder: string, opts?: { port?: number }) =>
     devServers.restart(folder, opts ?? {}),
   );
-  ipcMain.handle('devserver:stop', (_e: any, folder: string) => devServers.stop(folder));
-  ipcMain.handle('devserver:status', (_e: any, folder: string) => devServers.status(folder));
-  ipcMain.handle('devserver:log', (_e: any, folder: string) => devServers.lastLog(folder));
+  fromGarden('devserver:stop', (_e: any, folder: string) => devServers.stop(folder));
+  fromGarden('devserver:status', (_e: any, folder: string) => devServers.status(folder));
+  fromGarden('devserver:log', (_e: any, folder: string) => devServers.lastLog(folder));
 
   // ── FFmpeg transcode handler ──────────────────────────────
   // Find media (V1-GAPS-PLAN.md §2.7): the renderer asks the main process to fetch a public
   // catalogue or a file, so no page origin or CORS rule stands between a person and a result.
   // https only, a size cap, a timeout; the caller checks the type of what came back.
-  ipcMain.handle('media:fetch', async (_e: any, url: string, options?: { maxBytes?: number }) => {
+  fromGarden('media:fetch', async (_e: any, url: string, options?: { maxBytes?: number }) => {
     let target: URL;
     try {
       target = new URL(url);
@@ -1738,11 +1700,11 @@ async function setupIpc() {
     }
   });
 
-  ipcMain.handle('ffmpeg:available', () => {
+  fromGarden('ffmpeg:available', () => {
     return !!(ffmpegPath && fs.existsSync(ffmpegPath));
   });
 
-  ipcMain.handle(
+  fromGarden(
     'ffmpeg:transcode',
     async (
       _e: any,

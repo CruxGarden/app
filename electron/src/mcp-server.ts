@@ -1,3 +1,4 @@
+import { isLoopbackHost } from './loopback';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -56,16 +57,6 @@ export interface McpConfigFile {
 
 export function mcpConfigPath(folder: string): string {
   return path.join(folder, MCP_CONFIG_DIR, MCP_CONFIG_FILE);
-}
-
-/** Loopback-only Host header check (`127.0.0.1[:port]`, `localhost[:port]`, `[::1][:port]`). */
-export function isLoopbackHost(host: string | undefined): boolean {
-  if (!host) return false;
-  const h = host.trim().toLowerCase();
-  const bare = h.startsWith('[')
-    ? h.replace(/^\[([^\]]+)\](:\d+)?$/, '$1')
-    : h.replace(/:\d+$/, '');
-  return bare === '127.0.0.1' || bare === 'localhost' || bare === '::1';
 }
 
 /** Loopback peer check for the raw socket. */

@@ -3,11 +3,12 @@ import { test, expect } from '@playwright/test';
 /** Pure Agent Host rules (compiled to dist/mcp-server.js by `npm run build`) — no Electron needed. */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const mcp = require('../dist/mcp-server.js') as typeof import('../src/mcp-server');
+const { isLoopbackHost } = require('../dist/loopback.js') as typeof import('../src/loopback');
 
 test.describe('Agent Host request rules', () => {
   test('only loopback Host headers pass, with or without a port', () => {
     for (const ok of ['127.0.0.1', '127.0.0.1:5123', 'localhost', 'LOCALHOST:80', '[::1]:5123']) {
-      expect(mcp.isLoopbackHost(ok), ok).toBe(true);
+      expect(isLoopbackHost(ok), ok).toBe(true);
     }
     for (const bad of [
       undefined,
@@ -17,7 +18,7 @@ test.describe('Agent Host request rules', () => {
       '10.0.0.5:5123',
       'localhost.evil.com',
     ]) {
-      expect(mcp.isLoopbackHost(bad), String(bad)).toBe(false);
+      expect(isLoopbackHost(bad), String(bad)).toBe(false);
     }
   });
 

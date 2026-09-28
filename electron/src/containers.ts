@@ -22,6 +22,7 @@
 import { execFile, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveInsideOrThrow } from './paths';
 
 /** The compose verbs a Crux may use. */
 export const COMPOSE_VERBS = [
@@ -286,7 +287,7 @@ export function inspectCompose(folder: string, file?: string): ComposeReading {
 
   // Base first, then the override on top — the order Compose merges them.
   for (const name of files) {
-    const at = path.join(folder, name);
+    const at = resolveInsideOrThrow(folder, name);
     if (!fs.existsSync(at)) continue;
     const text = fs.readFileSync(at, 'utf8');
     variablesIn(text, variables, set);
@@ -371,17 +372,23 @@ export const LOCAL_COMPOSE = '.crux/local.compose.yaml';
 
 /** Read one of this machine's own files for a Crux. */
 export function readLocal(folder: string, file: string): string {
+  const at = localFilePath(folder, file);
   try {
-    return fs.readFileSync(path.join(folder, file), 'utf8');
-  } catch {
-    return '';
+    return fs.readFileSync(at, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return '';
+    throw error;
   }
+}
+
+function localFilePath(folder: string, file: string): string {
+  if (file !== LOCAL_ENV && file !== LOCAL_COMPOSE) throw new Error(`Not a local file: ${file}`);
+  return resolveInsideOrThrow(folder, file);
 }
 
 /** Write one, making `.crux/` if this is the first. */
 export function writeLocal(folder: string, file: string, text: string): void {
-  if (file !== LOCAL_ENV && file !== LOCAL_COMPOSE) throw new Error(`Not a local file: ${file}`);
-  const at = path.join(folder, file);
+  const at = localFilePath(folder, file);
   fs.mkdirSync(path.dirname(at), { recursive: true });
   fs.writeFileSync(at, text.endsWith('\n') ? text : `${text}\n`);
 }

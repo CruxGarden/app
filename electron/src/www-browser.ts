@@ -1,14 +1,9 @@
-import {
-  BrowserWindow,
-  ipcMain,
-  session,
-  WebContentsView,
-  type IpcMainInvokeEvent,
-} from 'electron';
+import { BrowserWindow, session, WebContentsView } from 'electron';
+import type { GardenIpc } from './garden-ipc';
 import type { BrowserPanelState, BrowserPanelAction, BrowserPanelBounds } from './bridge';
 
 /** WWW is remote content, never the privileged app window or its session. */
-export function registerBrowserPanel(getWindow: () => BrowserWindow | null) {
+export function registerBrowserPanel(getWindow: () => BrowserWindow | null, bridge: GardenIpc) {
   const partition = session.fromPartition('persist:crux-www');
   partition.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
   partition.setPermissionCheckHandler(() => false);
@@ -16,15 +11,9 @@ export function registerBrowserPanel(getWindow: () => BrowserWindow | null) {
     string,
     { view: WebContentsView; window: BrowserWindow; error: string | null }
   >();
-  function appWindow(event: IpcMainInvokeEvent) {
+  function appWindow() {
     const win = getWindow();
-    if (
-      !win ||
-      win.isDestroyed() ||
-      event.sender !== win.webContents ||
-      event.senderFrame !== win.webContents.mainFrame
-    )
-      throw new Error('Browser controls belong to the app window.');
+    if (!win || win.isDestroyed()) throw new Error('The app window is closed.');
     return win;
   }
   function owner(raw: unknown): string {
@@ -179,10 +168,10 @@ export function registerBrowserPanel(getWindow: () => BrowserWindow | null) {
         publish(id);
       }
   });
-  ipcMain.handle(
+  bridge.handle(
     'browser:action',
-    async (event, rawId: unknown, action: BrowserPanelAction, rawUrl?: unknown) => {
-      const win = appWindow(event),
+    async (_event, rawId: unknown, action: BrowserPanelAction, rawUrl?: unknown) => {
+      const win = appWindow(),
         id = owner(rawId);
       if (!['state', 'navigate', 'back', 'forward', 'reload', 'stop', 'close'].includes(action))
         throw new Error('Unknown browser control.');
@@ -208,8 +197,8 @@ export function registerBrowserPanel(getWindow: () => BrowserWindow | null) {
       return state(id);
     },
   );
-  ipcMain.handle('browser:bounds', (event, rawId: unknown, bounds: BrowserPanelBounds | null) => {
-    const win = appWindow(event),
+  bridge.handle('browser:bounds', (_event, rawId: unknown, bounds: BrowserPanelBounds | null) => {
+    const win = appWindow(),
       id = owner(rawId),
       item = views.get(id);
     if (!item || item.window !== win) return;

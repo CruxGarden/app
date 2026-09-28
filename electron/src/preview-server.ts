@@ -1,4 +1,6 @@
 import { claimPreviewPort, releasePreviewPort } from './preview-ports';
+import { resolveInsideOrThrow, toPosixRel } from './paths';
+import { isLoopbackHost } from './loopback';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -47,6 +49,21 @@ const MIME_MAP: Record<string, string> = {
 
 function mimeFor(filePath: string): string {
   return MIME_MAP[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+}
+
+/** Capture exclusions are not an access policy: bundled runtime/ assets are ignored by history. */
+function privatePreviewPath(relative: string): boolean {
+  return relative
+    .split('/')
+    .some(
+      (part) =>
+        part.startsWith('.') ||
+        part === 'node_modules' ||
+        /\.(pem|key|swp|swx)$/i.test(part) ||
+        part.endsWith('~') ||
+        part.includes('.crux-write-') ||
+        part === 'Thumbs.db',
+    );
 }
 
 interface RunningServer {
@@ -113,25 +130,49 @@ export class PreviewServer {
   }
 
   private handle(base: string, req: any, res: any): void {
+    const refuse = (status: number, text: string) => {
+      res.writeHead(status, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+      res.end(text);
+    };
+    // Binding to loopback alone does not prevent a foreign hostname from resolving here.
+    if (!isLoopbackHost(req.headers.host)) {
+      refuse(403, 'Forbidden');
+      return;
+    }
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      refuse(405, 'Method not allowed');
+      return;
+    }
+    let relative: string;
     try {
-      const pathname = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-
-      // Traversal guard — same discipline as ProjectFolders
-      let target = path.resolve(base, '.' + (pathname === '/' ? '/index.html' : pathname));
-      if (target !== base && !target.startsWith(base + path.sep)) {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
+      relative = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\//, '');
+    } catch {
+      refuse(400, 'Invalid path');
+      return;
+    }
+    // Check both the requested name and its resolved destination. A harmless-looking
+    // symlink must not expose .crux/mcp.json or an external file.
+    const resolvePublic = (name: string) => {
+      if (privatePreviewPath(name)) throw new Error('Private path');
+      const target = resolveInsideOrThrow(base, name);
+      if (fs.existsSync(target)) {
+        const real = fs.realpathSync.native(target);
+        if (privatePreviewPath(toPosixRel(fs.realpathSync.native(base), real)))
+          throw new Error('Private destination');
+        return real as string;
       }
-
+      return target;
+    };
+    let target: string;
+    try {
+      target = resolvePublic(relative || 'index.html');
       let stat = fs.existsSync(target) ? fs.statSync(target) : null;
       if (stat?.isDirectory()) {
-        target = path.join(target, 'index.html');
+        target = resolvePublic(path.posix.join(relative, 'index.html'));
         stat = fs.existsSync(target) ? fs.statSync(target) : null;
       }
       if (!stat?.isFile()) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not found');
+        refuse(404, 'Not found');
         return;
       }
 
@@ -140,14 +181,18 @@ export class PreviewServer {
         'Content-Length': stat.size,
         // Always fresh — this is a live workspace, not a CDN
         'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
       });
+      if (req.method === 'HEAD') {
+        res.end();
+        return;
+      }
       const file = fs.createReadStream(target);
       res.once('close', () => file.destroy());
       file.once('error', () => res.destroy());
       file.pipe(res);
     } catch {
-      res.writeHead(500);
-      res.end('Error');
+      refuse(403, 'Forbidden');
     }
   }
 
