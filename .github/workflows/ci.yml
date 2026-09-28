@@ -40,6 +40,10 @@ jobs:
       - run: npm run verify # tsc + eslint + vitest + vite build — the same gate the agent runs
       - run: npm run verify
         working-directory: electron
+      - run: npx playwright install --with-deps chromium
+        working-directory: electron
+      - run: npm run test:browser
+        working-directory: electron
 
   e2e:
     name: e2e (real desktop app, macOS)

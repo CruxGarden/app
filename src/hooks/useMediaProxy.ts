@@ -29,6 +29,7 @@ export function useMediaProxy(cruxId: string | null) {
   useEffect(() => {
     if (!cruxId) return;
     let stopProgress: (() => void) | undefined;
+    let disposed = false;
 
     const frameFor = (e: MessageEvent) =>
       [...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].find(
@@ -38,16 +39,7 @@ export function useMediaProxy(cruxId: string | null) {
     async function handle(e: MessageEvent) {
       const type = e.data?.type as string | undefined;
       if (!type?.startsWith('crux:media:')) return;
-      if (workspace.getState().closing || !isPreviewOrigin(e.origin)) {
-        console.info(
-          '[media-proxy] refused',
-          type,
-          'closing?',
-          workspace.getState().closing,
-          e.origin,
-        );
-        return;
-      }
+      if (workspace.getState().closing || !isPreviewOrigin(e.origin)) return;
       const frame = frameFor(e);
       if (!frame || new URL(frame.src, location.href).origin !== e.origin) return;
       if (!isServicesReady() || !e.source) return;
@@ -149,17 +141,22 @@ export function useMediaProxy(cruxId: string | null) {
     window.addEventListener('message', onMessage);
     // A long encode reports progress; pass it to whichever frame is listening.
     void import('@/services/native-tools').then(({ onNativeProgress }) => {
+      if (disposed) return;
       stopProgress = onNativeProgress?.((event) => {
         if (event.cruxId !== cruxId) return;
-        for (const f of document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]'))
-          if (f.dataset.cruxId === cruxId)
-            f.contentWindow?.postMessage(
-              { type: 'crux:media:progress', progress: event.progress, tool: event.tool },
-              '*',
-            );
+        for (const frame of document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')) {
+          if (frame.dataset.cruxId !== cruxId) continue;
+          const origin = new URL(frame.src, location.href).origin;
+          if (!isPreviewOrigin(origin)) continue;
+          frame.contentWindow?.postMessage(
+            { type: 'crux:media:progress', progress: event.progress, tool: event.tool },
+            origin,
+          );
+        }
       });
     });
     return () => {
+      disposed = true;
       window.removeEventListener('message', onMessage);
       stopProgress?.();
     };

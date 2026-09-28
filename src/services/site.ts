@@ -63,20 +63,6 @@ async function siteContext(
   return folder ? { api, folder } : null;
 }
 
-/**
- * Run a template's scaffold script (e.g. `pnpm dlx create-astro …`) in the
- * crux's Project Folder. Files it writes reach the store via ingestion.
- */
-export async function runScaffold(cruxId: string, pnpmArgs: string[]): Promise<void> {
-  const ctx = await siteContext(cruxId);
-  if (!ctx) return;
-  const { api, folder } = ctx;
-  const result = await api.toolchain.scaffold(folder, pnpmArgs);
-  if (result.code !== 0) {
-    throw new SiteBuildError('Template scaffold failed', result.log);
-  }
-}
-
 /** One install at a time per crux: a second caller waits on the first instead of racing it. */
 const installs = new Map<string, Promise<void>>();
 

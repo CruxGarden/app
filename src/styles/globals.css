@@ -160,7 +160,6 @@
   --color-accent-muted: var(--accent-muted);
   --color-error: var(--error);
   --color-error-muted: var(--error-muted);
-  --color-contrast: var(--contrast);
   --color-preview-bg: var(--preview-bg);
   --color-brand-ai: var(--brand-ai);
 
@@ -438,7 +437,6 @@
   /* Text on top of --error (danger buttons). Always white: red buttons must read the same in every theme. */
   --on-error: #ffffff;
   --error-muted: rgba(230, 57, 70, 0.15);
-  --contrast: #ffffff;
   --preview-bg: rgba(0, 0, 0, 0.2);
   --brand-ai: #d97757;
   --pane-collaboration: #d47080;

@@ -31,3 +31,6 @@ jupyterlite-crux/.jupyterlite.doit.db*
 
 # Staged native binaries (built by electron/scripts/stage-binaries.mjs, never committed)
 electron/resources/bin/
+
+# Isolated browser boundary test output
+electron/e2e-browser/.results/

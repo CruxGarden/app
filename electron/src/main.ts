@@ -1633,13 +1633,6 @@ async function setupIpc() {
   );
   fromGarden('toolchain:install', (_e: any, folder: string) => toolchain.install(folder));
   fromGarden('toolchain:build', (_e: any, folder: string) => toolchain.build(folder));
-  fromGarden('toolchain:scaffold', (_e: any, folder: string, args: string[]) => {
-    // Template scaffolds only — no arbitrary pnpm surface from the renderer
-    if (!Array.isArray(args) || !['dlx', 'create'].includes(args[0])) {
-      throw new Error('scaffold args must start with dlx or create');
-    }
-    return toolchain.run(folder, args);
-  });
   fromGarden('devserver:start', (_e: any, folder: string, opts?: { port?: number }) =>
     devServers.start(folder, opts ?? {}),
   );

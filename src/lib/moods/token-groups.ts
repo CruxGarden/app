@@ -263,7 +263,6 @@ const FOUNDATION_KEYS = new Set([
   'error',
   'warning',
   'success',
-  'contrast',
   'heading',
   'caption',
   'placeholder',

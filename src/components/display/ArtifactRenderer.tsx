@@ -1,16 +1,15 @@
 import { apiBaseUrl } from '@/api/client';
 import { useObjectUrl } from '@/hooks/useBlobUrl';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { publicApi } from '@/api';
-import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
 import { LoadingPanel } from '@/components/ui';
 import { pathOf, basename, extensionOf } from '@/lib/artifact-path';
-import { publishOriginFor, publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
+import { isolatedPublishUrl, publishBaseUrlFor } from '@/lib/public-url';
 
 /** Fetch a blob by artifact ID — defaults to publicApi if not provided */
 type DownloadBlobFn = (artifactId: string) => Promise<Blob>;
@@ -73,34 +72,27 @@ function resolveMain(artifacts: Artifact[]): MainFile | null {
   return null;
 }
 
-/**
- * HTML renderer using the preview service worker.
- *
- * All artifacts are cached at /__preview/ paths and the iframe loads via src=.
- * The browser handles all relative path resolution natively — linked CSS,
- * images, multi-page <a href> navigation all just work.
- *
- * External links open in new tabs via sandbox="allow-popups".
- */
+/** Published HTML runs only on a separate origin. */
 function HtmlRenderer({
   artifact,
-  artifacts,
   cruxId,
   username,
   slug,
   subPath,
-  downloadBlob,
 }: {
   artifact: Artifact;
-  artifacts: Artifact[];
   cruxId: string;
   username: string;
   slug: string;
   subPath?: string;
-  downloadBlob: DownloadBlobFn;
 }) {
-  // The only origin allowed to exchange postMessages with this viewer.
-  const iframeOrigin = publishOriginFor(cruxId);
+  const entryPath = subPath || pathOf(artifact) || 'index.html';
+  const published = isolatedPublishUrl(
+    `${publishBaseUrlFor(cruxId)}/${entryPath}`,
+    window.location.origin,
+  );
+  const iframeOrigin = published?.origin;
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
@@ -108,7 +100,12 @@ function HtmlRenderer({
   useEffect(() => {
     const basePath = `/${username}/${slug}`;
     const handler = (e: MessageEvent) => {
-      if (e.origin !== iframeOrigin) return;
+      if (
+        !iframeOrigin ||
+        e.origin !== iframeOrigin ||
+        e.source !== iframeRef.current?.contentWindow
+      )
+        return;
       if (e.data?.type === 'crux:navigate' && typeof e.data.path === 'string') {
         const newPath = e.data.path === '/' ? basePath : `${basePath}${e.data.path}`;
         if (window.location.pathname !== newPath) {
@@ -146,6 +143,7 @@ function HtmlRenderer({
 
     const pendingUnsubs = new Set<() => void>();
     function sendWhenReady(source: Window) {
+      if (!iframeOrigin) return;
       // If auth is still initializing (token refresh in progress), wait for it
       const { isLoading } = useAuthStore.getState();
       if (isLoading) {
@@ -163,7 +161,12 @@ function HtmlRenderer({
     }
 
     function handler(e: MessageEvent) {
-      if (e.origin !== iframeOrigin) return;
+      if (
+        !iframeOrigin ||
+        e.origin !== iframeOrigin ||
+        e.source !== iframeRef.current?.contentWindow
+      )
+        return;
       if (e.data?.type === 'crux:ready' && e.source) {
         sendWhenReady(e.source as Window);
       }
@@ -177,77 +180,35 @@ function HtmlRenderer({
     };
   }, [cruxId, iframeOrigin]);
 
-  if (hasRemotePublishOrigin()) {
-    // Deep links pass straight through; the edge router resolves directory
-    // paths to their index.html.
-    const entryPath = subPath || pathOf(artifact) || 'index.html';
-    const src = `${publishBaseUrlFor(cruxId)}/${entryPath}`;
-
+  if (!published) {
     return (
-      <div className="w-full h-full relative">
-        {!iframeLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-bg">
-            <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-        <iframe
-          src={src}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
-          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen; gamepad"
-          className={`w-full h-full border-0 transition-opacity ${iframeLoaded ? 'opacity-100' : 'opacity-0'}`}
-          onLoad={() => setIframeLoaded(true)}
-          title="Published creation"
-        />
-      </div>
-    );
-  }
-
-  // Fallback: service worker approach (local dev without S3)
-  return (
-    <ServiceWorkerHtmlRenderer
-      artifact={artifact}
-      artifacts={artifacts}
-      username={username}
-      slug={slug}
-      cruxId={cruxId}
-      downloadBlob={downloadBlob}
-    />
-  );
-}
-
-function ServiceWorkerHtmlRenderer({
-  artifact,
-  artifacts,
-  username,
-  slug,
-  downloadBlob,
-}: {
-  artifact: Artifact;
-  artifacts: Artifact[];
-  username: string;
-  slug: string;
-  cruxId: string;
-  downloadBlob: DownloadBlobFn;
-}) {
-  const previewUrl = usePublicPreviewUrl(artifacts, artifact.id, username, slug, downloadBlob);
-
-  if (!previewUrl) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <LoadingPanel />
+      <div
+        role="status"
+        className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-text-secondary"
+      >
+        <p>Website preview unavailable</p>
+        <p>This host needs a separate publishing address to display this creation.</p>
       </div>
     );
   }
 
   return (
-    <iframe
-      key={previewUrl}
-      src={previewUrl}
-      sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
-      allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen; gamepad"
-      className="w-full h-full border-0 bg-contrast"
-      title="Published creation"
-    />
+    <div className="w-full h-full relative">
+      {!iframeLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-bg">
+          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      <iframe
+        ref={iframeRef}
+        src={published.href}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
+        allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen; gamepad"
+        className={`w-full h-full border-0 transition-opacity ${iframeLoaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setIframeLoaded(true)}
+        title="Published creation"
+      />
+    </div>
   );
 }
 
@@ -301,16 +262,13 @@ function ImageRenderer({
 }) {
   const [failed, setFailed] = useState(false);
   const path = pathOf(artifact) || artifact.id;
-  const objectUrl = useObjectUrl(
-    () => {
-      setFailed(false);
-      return downloadBlob(artifact.id).catch((error: unknown) => {
-        setFailed(true);
-        throw error;
-      });
-    },
-    [artifact.id, downloadBlob],
-  );
+  const objectUrl = useObjectUrl(() => {
+    setFailed(false);
+    return downloadBlob(artifact.id).catch((error: unknown) => {
+      setFailed(true);
+      throw error;
+    });
+  }, [artifact.id, downloadBlob]);
 
   if (failed) {
     return (
@@ -428,12 +386,10 @@ export default function ArtifactRenderer({
       return (
         <HtmlRenderer
           artifact={main.artifact}
-          artifacts={artifacts}
           cruxId={cruxId}
           username={username}
           slug={slug}
           subPath={subPath}
-          downloadBlob={dl}
         />
       );
     case 'markdown':

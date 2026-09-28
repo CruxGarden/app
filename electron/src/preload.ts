@@ -272,11 +272,6 @@ const api: ElectronBridge = {
         log: string;
         distFiles: string[];
       }>,
-    scaffold: (folder: string, args: string[]) =>
-      ipcRenderer.invoke('toolchain:scaffold', folder, args) as Promise<{
-        code: number;
-        log: string;
-      }>,
     onOutput: (callback: (data: { folder: string; line: string }) => void) => {
       const handler = (_e: unknown, data: unknown) =>
         callback(data as { folder: string; line: string });

@@ -320,7 +320,6 @@ export interface ToolchainBridge {
   hasPackageJson(folder: string): Promise<boolean>;
   install(folder: string): Promise<{ code: number; log: string }>;
   build(folder: string): Promise<{ code: number; log: string; distFiles: string[] }>;
-  scaffold(folder: string, args: string[]): Promise<{ code: number; log: string }>;
   onOutput(callback: (data: { folder: string; line: string }) => void): () => void;
 }
 

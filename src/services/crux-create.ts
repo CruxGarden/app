@@ -20,7 +20,7 @@ import { syncAgentsMd } from './agents-md';
 
 /**
  * "New crux from a template" as one operation — file creation, the desktop
- * scaffold script, and the meta stamping (greeting, AI context, Builder
+ * file staging and the meta stamping (greeting, AI context, Builder
  * inputs), owned and tested here rather than in the dialog.
  *
  * The caller creates the bare crux first (the workspace store owns that, so
@@ -202,17 +202,6 @@ export async function applyTemplateToCrux(
   }
 
   await stageTemplateFiles(crux.id, def.files);
-
-  // Script-driven setup (desktop): files it writes reach the store through
-  // ingestion. Failure is non-fatal — the embedded files stand.
-  if (def.scaffold) {
-    try {
-      const { runScaffold } = await import('./site');
-      await runScaffold(crux.id, def.scaffold.pnpmArgs);
-    } catch (err) {
-      console.error('[template] scaffold failed:', err);
-    }
-  }
 
   const meta = applyTemplateMeta(crux.meta as Record<string, unknown>, def, templateId);
   // Template greetings retain the captured creation Persona.

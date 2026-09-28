@@ -215,14 +215,6 @@ export interface TemplateDefinition {
   schema?: FormSchema;
   /** Optional workspace layout — controls which panes open and their sizes */
   layout?: TemplateLayout;
-  /**
-   * Script-driven setup (desktop only): pnpm args run in the Project Folder
-   * after `files` are written. This is how ecosystem templates scaffold, e.g.
-   * `['dlx', 'create-astro@latest', '.', '--template', 'blog', '--no-install',
-   * '--no-git', '--yes']` — the scaffold writes real files to disk and the
-   * watcher/ingestion pipeline records them as artifacts automatically.
-   */
-  scaffold?: { pnpmArgs: string[] };
   /** What the user makes here — drives the Builder (Workshop home view) */
   contentModel?: ContentModel;
   /**
@@ -238,7 +230,7 @@ export interface TemplateDefinition {
 // Starting afresh (ADR 0006): the old bundled library is retired. Built-ins
 // are the Empty Crux (blank) plus real toolchain projects; the library of
 // dozens/hundreds lives on crux.garden as clonable Template Cruxes, and
-// ecosystem templates arrive via TemplateDefinition.scaffold scripts.
+// ecosystem templates arrive as cloned Template Crux files.
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition | ToolTemplateFiles }>> =
   {
     // Every bundled Crux Tool's module, chosen at build time (ADR 0050).

@@ -14,16 +14,16 @@ export default defineConfig({
   reporter: [['list']],
   outputDir: './e2e-web/.results',
   use: {
-    baseURL: 'http://localhost:8123',
+    baseURL: 'http://127.0.0.1:8123',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     browserName: 'chromium',
   },
   webServer: {
     command:
-      'VITE_PUBLIC_SITE=1 VITE_API_URL=http://127.0.0.1:8124 VITE_PREVIEW_ORIGIN= VITE_PUBLISH_ORIGIN_TEMPLATE= VITE_PUBLISHED_CONTENT_URL= npx vite --port 8123 --strictPort',
+      'VITE_PUBLIC_SITE=1 VITE_API_URL=http://127.0.0.1:8124 VITE_PREVIEW_ORIGIN= VITE_PUBLISH_ORIGIN_TEMPLATE= VITE_PUBLISHED_CONTENT_URL=http://127.0.0.1:8124/published npx vite --host 127.0.0.1 --port 8123 --strictPort',
     cwd: '..',
-    url: 'http://localhost:8123',
+    url: 'http://127.0.0.1:8123',
     reuseExistingServer: false,
     timeout: 120_000,
   },
