@@ -101,8 +101,8 @@ export default function ApiKeySetup({
             className="rounded-[var(--radius)] border border-border bg-[color-mix(in_srgb,var(--surface),transparent_50%)] p-4 space-y-3"
           >
             {/* Header row: icon + name + status */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                 {Icon && <Icon size={18} />}
                 <a
                   href={provider.keyUrl}
@@ -139,7 +139,7 @@ export default function ApiKeySetup({
             </div>
 
             {/* Capabilities */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {provider.capabilities.map((cap) => (
                 <span
                   key={cap}
@@ -152,7 +152,8 @@ export default function ApiKeySetup({
 
             {/* Key input */}
             {!local && !isAgentModel(providerId) && (
-              <div className="flex items-center gap-2">
+              // Wraps rather than clips in a narrow Settings pane at large text.
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="password"
                   value={input}
@@ -167,7 +168,7 @@ export default function ApiKeySetup({
                       : PROVIDER_PLACEHOLDERS[providerId] || 'Paste API key...'
                   }
                   className={cn(
-                    'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+                    'flex-1 basis-40 min-w-0 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                     'bg-bg border border-border text-text placeholder:text-text-muted/50',
                     'outline-none focus:border-input-border-active ',
                   )}
@@ -176,7 +177,7 @@ export default function ApiKeySetup({
                   onClick={() => handleSave(providerId)}
                   disabled={!input.trim()}
                   className={cn(
-                    'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+                    'shrink-0 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                     'bg-surface border border-border text-text hover:bg-accent-muted  cursor-pointer',
                     'disabled:cursor-not-allowed',
                   )}
@@ -187,7 +188,7 @@ export default function ApiKeySetup({
                   <button
                     onClick={() => handleRemove(providerId)}
                     className={cn(
-                      'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+                      'shrink-0 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                       'text-error hover:bg-error-muted  cursor-pointer',
                     )}
                   >

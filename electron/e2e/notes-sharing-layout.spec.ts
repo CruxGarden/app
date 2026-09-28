@@ -56,7 +56,7 @@ test('Notes sharing layout: Settings → selection → static routes → reader'
     writeFileSync(join(folder, 'notebook/Welcome.md'), 'PRIVATE_NOTE_BODY');
     writeFileSync(join(folder, 'notebook/.assets/dot.png'), png);
 
-    await togglePanel(page, 'Toggle metadata');
+    await togglePanel(page, 'Toggle details');
     const layout = page.getByLabel('Public notebook layout', { exact: true });
     await expect(layout).toHaveValue('single-page');
     await layout.selectOption('separate-pages');

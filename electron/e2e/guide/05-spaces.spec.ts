@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import JSZip from 'jszip';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, goHome, storedCrux } from '../multi-crux-helpers';
-import { showPane, openPanel } from '../panel-helpers';
+import { showPane, openPanel, newTaskButton } from '../panel-helpers';
 import { newGarden, goToGarden, writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -187,7 +187,7 @@ test.describe('guide 05 · Gardens', () => {
       await page.keyboard.press('Escape');
 
       // Into a Task: the copy is the Task's, not Main's.
-      await page.getByRole('button', { name: 'New task', exact: true }).click();
+      await (await newTaskButton(page)).click();
       await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Artwork');
       await page.getByRole('button', { name: 'Save and start task' }).click();
       await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();

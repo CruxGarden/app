@@ -1,3 +1,5 @@
+import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import TaskDetails from './TaskDetails';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -7,7 +9,7 @@ import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { useWorkspaceRegistry, closeCruxWorkspaces } from '@/stores/workspaceRegistry';
 import { choiceDialog } from '@/stores/dialogStore';
 import { Capability, can } from '@/lib/platform';
-import { Button, Modal, rowClass } from '@/components/ui';
+import { Button, Modal, fieldClass, rowClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
 import { getSetting, setSetting } from '@/services/settings';
@@ -120,6 +122,14 @@ export default function TaskBar() {
   const mainId = identity?.cruxId ?? crux?.id;
   const [tasks, setTasks] = useState<WorkingCopy[]>([]);
   const [creating, setCreating] = useState(false);
+  // "New task…" from the command palette.
+  useEffect(() => {
+    const answer = () => {
+      if (takeUiRequest('new-task')) setCreating(true);
+    };
+    answer();
+    return onUiRequest('new-task', answer);
+  }, []);
   const [title, setTitle] = useState('');
   const [prompt, setPrompt] = useState('');
   const [limit, setLimit] = useState(
@@ -130,6 +140,7 @@ export default function TaskBar() {
   const [review, setReview] = useState<TaskReview | null>(null);
   const [pending, setPending] = useState<TaskReview | null>(null);
   const [inspected, setInspected] = useState(false);
+  const aiEnabled = useAiEnabled();
   useEffect(() => {
     if (!mainId) return;
     let live = true;
@@ -297,8 +308,9 @@ export default function TaskBar() {
                 void run('Closing Crux…', async () => {
                   const answer = await choiceDialog({
                     title: 'Close Crux',
-                    message:
-                      'Close Main and all of its task workspaces. Running turns will stop; files and history stay in your garden.',
+                    message: aiEnabled
+                      ? 'Close Main and all of its task workspaces. Running turns will stop; files and history stay in your garden.'
+                      : 'Close Main and all of its task workspaces. Files and history stay in your garden.',
                     choices: [
                       { id: 'cancel', label: 'Cancel', variant: 'ghost' },
                       {
@@ -379,40 +391,43 @@ export default function TaskBar() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="block mt-1 w-full bg-surface border border-border rounded p-2"
+              className={fieldClass(undefined, 'block mt-1')}
               placeholder="Improve checkout"
             />
           </label>
           <label className="block text-sm">
-            What should change?
+            {aiEnabled ? 'What should change?' : 'Notes (optional)'}
             <textarea
               aria-label="Task description"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="block mt-1 w-full bg-surface border border-border rounded p-2"
+              className={fieldClass(undefined, 'block mt-1 h-auto py-2 resize-y')}
               rows={3}
             />
           </label>
-          <label className="block text-sm">
-            Maximum simultaneous turns per Crux
-            <select
-              aria-label="Maximum simultaneous turns"
-              className="ml-2 border border-border bg-surface rounded p-1"
-              value={limit}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                setLimit(n);
-                setSetting('cruxgarden:parallel-task-limit', String(n));
-              }}
-            >
-              {[1, 2, 3, 4].map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
-          </label>
+          {aiEnabled && (
+            <label className="block text-sm">
+              Maximum simultaneous turns per Crux
+              <select
+                aria-label="Maximum simultaneous turns"
+                className="ml-2 border border-border bg-surface rounded p-1"
+                value={limit}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setLimit(n);
+                  setSetting('cruxgarden:parallel-task-limit', String(n));
+                }}
+              >
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <p className="text-xs text-text-muted">
-            Starts from Main’s saved Artifacts. Each task has its own Collaboration, preview and
-            local Store. Agents start when you send a message.
+            {aiEnabled
+              ? 'Starts from Main’s saved Artifacts. Each task has its own Collaboration, preview and local Store. Agents start when you send a message.'
+              : 'Starts from Main’s saved Artifacts. Each task has its own preview and local Store; review and merge it into Main when it is ready.'}
           </p>
           {error && (
             <p role="alert" className="text-error text-sm">

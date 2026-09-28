@@ -1,11 +1,11 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, newTaskButton } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 async function newTask(page: Page, title: string) {
-  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await (await newTaskButton(page)).click();
   await page.getByRole('textbox', { name: 'Task name', exact: true }).fill(title);
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);

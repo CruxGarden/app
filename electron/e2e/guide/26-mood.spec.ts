@@ -128,7 +128,11 @@ test.describe('guide 26 · Mood theme tokens', () => {
       // The Mood Bar shows the same Mood as before: no tab replaced it.
       await expect(bar).toBeVisible();
       expect(await bar.textContent()).toBe(barBefore);
-      await expect(bar.getByRole('button', { name: /^Open Mood/ })).toBeVisible();
+      // The chip's own button opens the Mood pane, pressed while it is open.
+      await expect(bar.getByRole('button', { name: 'Mood', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
     } finally {
       await app.close();
     }

@@ -1,7 +1,7 @@
 import { buildMosaicTree, addPaneToMosaic } from '@/lib/mosaic-layout';
 import { deferNotebookAction } from '@/services/notebook-lifecycle';
 import { leaveSurface } from '@/lib/plasma-leave';
-import { PANE_MIN_WIDTH, type PaneType } from '@/components/workspace/paneConfig';
+import { PANE_MIN_WIDTH, AI_PANES, type PaneType } from '@/components/workspace/paneConfig';
 import { create, useStore } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, gardenWorkspace, workspaceSelection } from './workspaceSelection';
@@ -86,6 +86,12 @@ export interface UIState {
   paneVisibility: Record<PaneType, boolean>;
   mosaicLayout: MosaicNode<PaneType> | null;
   activeCruxId: string | null;
+  /**
+   * The active Crux opened on a layout of its own from before (false) or on a
+   * fresh one (true): an imported or restored Crux that already has Tasks
+   * shows them then (UX pass 2: Tasks arrives when a task exists).
+   */
+  layoutFresh: boolean;
 
   // Editor
   editor: EditorPaneState;
@@ -206,12 +212,14 @@ export const DEFAULT_PANE_ORDER: PaneType[] = [
   'tending',
 ];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
-  // Tasks is a pane like any other (Daniel, 2026-09-19): on by default.
-  tasks: true,
+  // Two panes to begin with (UX pass, 2026-09-27): the conversation and the
+  // creation — only the creation while AI tools are off. Tasks opens once a
+  // task exists (CruxBuilder), and is always in the picker.
+  tasks: false,
   history: false,
   collaboration: true,
   artifacts: false,
-  workshop: false,
+  workshop: true,
   details: false,
   sync: false,
   publish: false,
@@ -256,6 +264,14 @@ const scopeDefaults = (scope: WorkspaceScope) =>
 /** A typical workspace width, to turn least widths into fractions for placement. */
 const TYPICAL_WORKSPACE_PX = 1400;
 
+/** The least width a tile tree needs: side by side the panes add up, stacked the widest counts. */
+function leastWidth(node: MosaicNode<PaneType>): number {
+  if (typeof node === 'string') return PANE_MIN_WIDTH[node];
+  return node.direction === 'row'
+    ? leastWidth(node.first) + leastWidth(node.second)
+    : Math.max(leastWidth(node.first), leastWidth(node.second));
+}
+
 /** Garden-wide panes open as a full-height column on the right, beside the work. */
 const RAILS: ReadonlySet<PaneType> = new Set<PaneType>(['tasks', 'navigator']);
 const SIDE_PANES = new Set<PaneType>(['mood', 'settings', 'explore', 'console']);
@@ -281,6 +297,23 @@ function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<
           };
     return dock(tree, 1);
   }
+  if (pane === 'tasks') {
+    // Tasks arrives as the narrow column it has always been: full height at
+    // the left of the work, right of the Navigator, about a sixth wide.
+    const dock = (node: MosaicNode<PaneType>, share: number): MosaicNode<PaneType> =>
+      typeof node !== 'string' && node.direction === 'row' && node.first === 'navigator'
+        ? {
+            ...node,
+            second: dock(node.second, (share * (100 - (node.splitPercentage ?? 50))) / 100),
+          }
+        : {
+            direction: 'row',
+            first: 'tasks',
+            second: node,
+            splitPercentage: Math.min(40, 17 / share),
+          };
+    return dock(tree, 1);
+  }
   if (SIDE_PANES.has(pane)) {
     // Garden-wide panes share one right-hand column, about a third wide, stacked.
     const side = (node: MosaicNode<PaneType>, share: number): MosaicNode<PaneType> => {
@@ -296,11 +329,20 @@ function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<
             second: { direction: 'column', first: node.second, second: pane, splitPercentage: 50 },
           };
       }
+      // About a third of the window, but never so much that the work beside it
+      // drops below its panes' least widths (then only what the work spares,
+      // down to the side pane's own least width).
+      const width = share * TYPICAL_WORKSPACE_PX;
+      const spare = width - leastWidth(node);
+      const sidePx = Math.max(
+        PANE_MIN_WIDTH[pane],
+        Math.min((Math.min(60, 32 / share) / 100) * width, spare),
+      );
       return {
         direction: 'row',
         first: node,
         second: pane,
-        splitPercentage: 100 - Math.min(60, 32 / share),
+        splitPercentage: Math.max(40, 100 - (100 * sidePx) / width),
       };
     };
     return side(tree, 1);
@@ -427,6 +469,29 @@ interface ValidatedLayout {
   mosaicLayout: MosaicNode<PaneType> | null;
 }
 
+/**
+ * AI tools on or off (Settings → AI), mirrored here so layouts and pane
+ * actions can honour it before any React reads it: with AI off no workspace
+ * holds, opens or restores an AI pane. Set through the global store's
+ * `setAiEnabled`.
+ */
+let aiTools = false;
+const aiBlocked = (pane: PaneType) => !aiTools && AI_PANES.has(pane);
+/** Every UI store made, held weakly: turning AI off closes AI panes in all of them. */
+const liveStores = new Set<WeakRef<StoreApi<UIState>>>();
+
+/** A layout without its AI panes (hidden, and cut from the tree). */
+function withoutAiPanes(layout: ValidatedLayout): ValidatedLayout {
+  if (aiTools) return layout;
+  const paneVisibility = { ...layout.paneVisibility };
+  let mosaicLayout = layout.mosaicLayout;
+  for (const pane of AI_PANES) {
+    paneVisibility[pane] = false;
+    if (mosaicLayout) mosaicLayout = removePaneFromMosaic(mosaicLayout, pane);
+  }
+  return { ...layout, paneVisibility, mosaicLayout };
+}
+
 /** Validate and migrate a persisted layout to match current PaneType values */
 function validateLayout(layout: PersistedLayout, scope: WorkspaceScope = 'crux'): ValidatedLayout {
   const order = scopeOrder(scope);
@@ -472,7 +537,7 @@ function validateLayout(layout: PersistedLayout, scope: WorkspaceScope = 'crux')
       if (validVisibility[pane] && !leaves.has(pane)) mosaicLayout = addPane(mosaicLayout, pane);
   }
 
-  return { paneOrder: validOrder, paneVisibility: validVisibility, mosaicLayout };
+  return withoutAiPanes({ paneOrder: validOrder, paneVisibility: validVisibility, mosaicLayout });
 }
 
 function loadLayout(key: string): PersistedLayout | null {
@@ -502,11 +567,11 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
   const defaults = scopeDefaults(scope);
   const fresh = (): ValidatedLayout => {
     const visiblePanes = order.filter((p) => defaults[p]);
-    return {
+    return withoutAiPanes({
       paneOrder: [...order],
       paneVisibility: { ...defaults },
       mosaicLayout: buildMosaicTree(visiblePanes),
-    };
+    });
   };
   const agentApprovalResolvers = new Map<string, (approved: boolean) => void>();
   /** Debounced layout persistence — avoids writes on every resize frame */
@@ -550,11 +615,11 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     }
 
     const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
-    return {
+    return withoutAiPanes({
       paneOrder: [...DEFAULT_PANE_ORDER],
       paneVisibility: { ...DEFAULT_VISIBILITY },
       mosaicLayout: buildMosaicTree(visiblePanes),
-    };
+    });
   }
 
   /** Resolve layout for a crux: crux-specific → global → defaults */
@@ -567,11 +632,11 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     if (globalLayout) return validateLayout(globalLayout);
 
     const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
-    return {
+    return withoutAiPanes({
       paneOrder: [...DEFAULT_PANE_ORDER],
       paneVisibility: { ...DEFAULT_VISIBILITY },
       mosaicLayout: buildMosaicTree(visiblePanes),
-    };
+    });
   }
 
   /** Debounced save for scroll position updates (avoid thrashing localStorage) */
@@ -621,6 +686,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     paneVisibility: initialLayout.paneVisibility,
     mosaicLayout: initialLayout.mosaicLayout,
     activeCruxId: null,
+    layoutFresh: false,
 
     workshopView: 'clean',
     setWorkshopView: (workshopView) => {
@@ -645,9 +711,27 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     activeFileOperation: null,
     folderOpenState: {},
     contextMenu: { ...DEFAULT_CONTEXT_MENU },
-    mobileActivePane: (scope === 'garden' ? 'home' : 'collaboration') as PaneType,
+    mobileActivePane: (scope === 'garden'
+      ? 'home'
+      : aiTools
+        ? 'collaboration'
+        : 'workshop') as PaneType,
     aiEnabled: false,
-    setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
+    setAiEnabled: (enabled) => {
+      aiTools = enabled;
+      set({ aiEnabled: enabled });
+      if (enabled) return;
+      // Off means gone: every open workspace lets its AI panes go.
+      for (const ref of liveStores) {
+        const ui = ref.deref();
+        if (!ui) {
+          liveStores.delete(ref);
+          continue;
+        }
+        for (const pane of AI_PANES)
+          if (ui.getState().paneVisibility[pane]) ui.getState().setPaneVisible(pane, false);
+      }
+    },
     // Garden-wide panels are panes of the workspace on screen (Daniel, 2026-09-25).
     setSettingsOpen: (open) => currentWorkspaceUI().getState().setPaneVisible('settings', open),
     pendingAgentApprovals: [],
@@ -690,32 +774,28 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     seedCruxLayout: (cruxId, collaborationPercent) => {
       const visibility: Record<string, boolean> = {};
       for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
-      // Creation starts with a conversation and the result beside it. Template
-      // Builder actions remain available in Advanced; no provider-specific guess.
-      visibility.collaboration = true;
+      // Two panes, and the rest arrive when they are wanted (UX pass,
+      // 2026-09-27): the creation and the way it is made. With AI tools on
+      // that is the conversation beside the result; with them off, the files
+      // beside it — or, for an app Crux (the callers that pass a width), the
+      // app alone, with the whole window. Tasks opens once a task exists.
+      const app = collaborationPercent !== undefined;
+      const beside: PaneType | null = aiTools ? 'collaboration' : app ? null : 'artifacts';
       visibility.workshop = true;
-      // Tasks is a pane like any other (Daniel, 2026-09-19): on by default,
-      // beside the rest, dragged wherever it is wanted or closed.
-      visibility.tasks = DEFAULT_VISIBILITY.tasks;
+      if (beside) visibility[beside] = true;
       setSetting(
         layoutKey(cruxId),
         JSON.stringify({
           paneOrder: DEFAULT_PANE_ORDER,
           paneVisibility: visibility,
-          // Tasks stands as a narrow column on the left — a pane like any
-          // other, to be dragged elsewhere or closed — beside the conversation
-          // and the result.
-          mosaicLayout: {
-            direction: 'row',
-            first: 'tasks',
-            second: {
-              direction: 'row',
-              first: 'collaboration',
-              second: 'workshop',
-              splitPercentage: collaborationPercent ?? 50,
-            },
-            splitPercentage: 20,
-          },
+          mosaicLayout: beside
+            ? {
+                direction: 'row',
+                first: beside,
+                second: 'workshop',
+                splitPercentage: beside === 'collaboration' ? (collaborationPercent ?? 40) : 22,
+              }
+            : 'workshop',
         }),
       );
     },
@@ -745,6 +825,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
       }
 
       if (id) {
+        const layoutFresh = !loadLayout(layoutKey(id));
         const layout = resolveLayout(id);
         // Restore editor tabs for this crux
         const saved = loadEditorTabs(id);
@@ -765,6 +846,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
 
         set({
           activeCruxId: id,
+          layoutFresh,
           workshopView:
             getSetting(`cruxgarden:workshop-view:${id}`) === 'advanced' ? 'advanced' : 'clean',
           paneOrder: layout.paneOrder,
@@ -782,6 +864,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
         const layout = global ? validateLayout(global) : getInitialLayout();
         set({
           activeCruxId: null,
+          layoutFresh: false,
           paneOrder: layout.paneOrder,
           paneVisibility: layout.paneVisibility,
           mosaicLayout: layout.mosaicLayout,
@@ -793,6 +876,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
 
     togglePane: (pane) => {
       if (!order.includes(pane)) return;
+      if (aiBlocked(pane) && !get().paneVisibility[pane]) return;
       if (deferNotebookAction(get().activeCruxId, () => get().togglePane(pane))) return;
       const apply = () => {
         const prev = get();
@@ -832,6 +916,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
 
     setPaneVisible: (pane, visible) => {
       if (!order.includes(pane)) return;
+      if (visible && aiBlocked(pane)) return;
       if (deferNotebookAction(get().activeCruxId, () => get().setPaneVisible(pane, visible)))
         return;
       const prev = get();
@@ -868,7 +953,12 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
       saveLayout(s.activeCruxId ? layoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
     },
 
-    setMosaicLayout: (newLayout, options) => {
+    setMosaicLayout: (incoming, options) => {
+      // A named layout cannot bring an AI pane back while AI tools are off.
+      let newLayout = incoming;
+      if (!aiTools && newLayout)
+        for (const pane of AI_PANES)
+          newLayout = newLayout ? removePaneFromMosaic(newLayout, pane) : null;
       const prev = get();
       // Fast path: if leaves haven't changed (resize only), just update the tree
       const prevLeaves = getMosaicLeaves(prev.mosaicLayout);
@@ -1035,6 +1125,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
   }));
 
   if (cruxId) store.getState().setActiveCrux(cruxId);
+  liveStores.add(new WeakRef(store));
   return store;
 }
 

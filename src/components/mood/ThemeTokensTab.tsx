@@ -1,4 +1,7 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
+import ContrastCheck from './ContrastCheck';
+import { fieldClass } from '@/components/ui/field-class';
 import { downloadBlob } from '@/lib/download';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
@@ -18,6 +21,7 @@ import {
 } from '@/lib/moods/active';
 import {
   groupTokens,
+  isAiToken,
   isDerived,
   tokenKind,
   tokenChoices,
@@ -256,15 +260,18 @@ function TokenRow({
 export default function ThemeTokensTab() {
   const section: MoodSection = resolvedSection();
   const preset = activePreset(section);
+  // With AI tools off, what dresses only the collaborator is not offered.
+  const aiEnabled = useAiEnabled();
   const groups = useMemo(
     () =>
       groupTokens()
+        .filter(({ group }) => aiEnabled || !group.ai)
         .map(({ group, keys }) => ({
-          group,
-          keys: keys.filter((key) => !(key in APP_TYPOGRAPHY)),
+          group: aiEnabled ? group : { ...group, hint: group.plainHint ?? group.hint },
+          keys: keys.filter((key) => !(key in APP_TYPOGRAPHY) && (aiEnabled || !isAiToken(key))),
         }))
         .filter(({ keys }) => keys.length > 0),
-    [],
+    [aiEnabled],
   );
   const [groupId, setGroupId] = useState(groups[0]!.group.id);
   const [query, setQuery] = useState('');
@@ -464,7 +471,7 @@ export default function ThemeTokensTab() {
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-xxs cursor-pointer hover-bright active-dim motion-press"
             title="A conversation is previewing tokens on top of your theme"
           >
-            AI preview: {previewCount} token{previewCount === 1 ? '' : 's'} · clear
+            Preview from Collaboration: {previewCount} token{previewCount === 1 ? '' : 's'} · clear
           </button>
         )}
         <div className="flex-1" />
@@ -474,7 +481,7 @@ export default function ThemeTokensTab() {
           aria-label="Find a token"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-8 w-48 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
+          className={fieldClass(undefined, 'w-48', 'sm')}
         />
         <Button
           variant="ghost"
@@ -544,6 +551,7 @@ export default function ThemeTokensTab() {
           Reset all
         </Button>
       </div>
+      <ContrastCheck watch={total} />
 
       {savedNote && (
         <p role="status" className="text-xxs text-accent -mt-1">

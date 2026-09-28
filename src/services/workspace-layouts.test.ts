@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { initServices } from '@/services';
-import { createUIStore } from '@/stores/uiStore';
+import { createUIStore, useUIStore } from '@/stores/uiStore';
 import { SettingsKey } from '@/lib/constants';
 import { setSetting } from './settings';
 import { registerNotebookEditor } from './notebook-lifecycle';
@@ -13,6 +13,8 @@ import {
 } from './workspace-layouts';
 
 beforeEach(async () => {
+  // The saved arrangements include Collaboration, an AI pane: offered only with AI tools on.
+  useUIStore.getState().setAiEnabled(true);
   await initServices();
   setSetting(SettingsKey.WorkspaceLayouts, '[]');
 });

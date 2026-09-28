@@ -43,7 +43,7 @@ test('the collaborator shows its work and tests a function in its crux', async (
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-workshop')).toContainText('index.html');
     const log = trail.join('\n');
-    expect(log).toContain('[workspace-tool] show Opened the History pane.');
+    expect(log).toContain('[workspace-tool] show Opened the Growth pane.');
     expect(log).toContain('[workspace-tool] show Showing index.html in the Workshop.');
     const tested = trail.find((l) => l.startsWith('[workspace-tool] test_function'));
     expect(tested).toMatch(/functions\/hello\.js answered 200 in \d+ ms/);

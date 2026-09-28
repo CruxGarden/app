@@ -50,8 +50,8 @@ export default function PublicTopBar({
         {hasMetadata && onToggleMetadata && (
           <button
             onClick={onToggleMetadata}
-            aria-label="Metadata"
-            title="Metadata"
+            aria-label="Details"
+            title="Details"
             className={iconButtonClass('sm', !!metadataOpen)}
           >
             <svg

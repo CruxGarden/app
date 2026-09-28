@@ -18,7 +18,7 @@ test('reading history preserves the live editor draft and undo model without sav
     await page.keyboard.press('ControlOrMeta+s');
     const disk = () => readFileSync(join(meta.projectFolder, 'notes.txt'), 'utf8');
     await expect.poll(disk).toBe('Saved beginning');
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Saved checkpoint');

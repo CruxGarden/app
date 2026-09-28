@@ -1,3 +1,5 @@
+import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import {
   useGardenContext,
   captureGardenId,
@@ -8,6 +10,7 @@ import {
 import { getServices } from '@/services';
 import { PaneEmpty } from '@/components/workspace/pane-ui';
 import { alertDialog, choiceDialog } from '@/stores/dialogStore';
+import { toast } from '@/stores/toastStore';
 import GardenActions from '@/components/garden/GardenActions';
 import GardenBrief from '@/components/garden/GardenBrief';
 import { importGardenPackage } from '@/services/garden-package';
@@ -39,11 +42,12 @@ import {
   Panel,
   SegmentedControl,
 } from '@/components/ui';
-import { GlobeIcon, PlusCircleIcon } from '@/components/ui/icons';
+import { GlobeIcon, PlusIcon } from '@/components/ui/icons';
 import { useAuthStore } from '@/stores/authStore';
 import * as cruxesApi from '@/api/cruxes';
 
 export default function HomeGarden() {
+  const aiEnabled = useAiEnabled();
   const garden = useGardenContext((s) => s.garden);
   const isHome = useGardenContext((s) => !s.garden || s.garden.id === s.root?.id);
   const loadError = useGardenStore((s) => s.error);
@@ -71,6 +75,16 @@ export default function HomeGarden() {
   const thumbnails = useGardenStore((s) => s.thumbnails);
   const [showNewCrux, setShowNewCrux] = useState(false);
   const [newCruxView, setNewCruxView] = useState<'crux' | 'undertakings'>('crux');
+  // "New Crux…" from the command palette lands here.
+  useEffect(() => {
+    const answer = () => {
+      if (!takeUiRequest('new-crux')) return;
+      setNewCruxView('crux');
+      setShowNewCrux(true);
+    };
+    answer();
+    return onUiRequest('new-crux', answer);
+  }, []);
   const [dropping, setDropping] = useState(false);
   const [dropNotice, setDropNotice] = useState('');
   const handleDropFiles = useCallback(
@@ -119,6 +133,23 @@ export default function HomeGarden() {
       const members = isGarden
         ? await (await import('@/services/garden-navigation')).gardenMembers(id).catch(() => [])
         : [];
+      // Nothing to decide: it goes to Recently deleted at once, and the note
+      // that says so offers the way back (a question only when there is one).
+      if (!published && !members.length) {
+        const name = crux?.title || (isGarden ? 'the Garden' : 'the Crux');
+        try {
+          await deleteCrux(id);
+          toast(`Moved ${name} to Recently deleted`, {
+            action: { label: 'Undo', run: () => useGardenStore.getState().restoreCrux(id) },
+          });
+        } catch (error) {
+          await alertDialog(
+            (error as Error).message,
+            isGarden ? 'Could not delete the Garden' : 'Could not delete the Crux',
+          );
+        }
+        return;
+      }
       const { choice, checked } = await choiceDialog({
         title: isGarden ? 'Delete Garden' : 'Delete Crux',
         message: isGarden
@@ -246,7 +277,7 @@ export default function HomeGarden() {
             </div>
           </div>
           <Button size="sm" onClick={() => setShowNewCrux(true)}>
-            <PlusCircleIcon size={15} />
+            <PlusIcon size={15} />
             Add Crux
           </Button>
         </div>
@@ -294,12 +325,12 @@ export default function HomeGarden() {
       ) : cruxList.length === 0 ? (
         <Panel padding="md" className="flex flex-col items-center text-center py-14 px-6">
           <div className="w-12 h-12 rounded-full bg-accent-muted text-accent flex items-center justify-center mb-4">
-            <PlusCircleIcon size={20} />
+            <PlusIcon size={20} />
           </div>
           <p className="font-display text-base text-text mb-1">What do you want to make?</p>
           <p className="text-sm text-text-muted max-w-[34ch] mb-5">
-            Choose an undertaking with a worked example, or start with a single Crux. Work on your
-            own or with a collaborator.
+            Choose an undertaking with a worked example, or start with a single Crux
+            {aiEnabled ? '. Work on your own or with a collaborator.' : '.'}
           </p>
           <PlasmaButton
             onClick={() => {

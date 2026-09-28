@@ -86,7 +86,7 @@ test.describe('metadata and store panes', () => {
       });
 
       // ── Metadata: title, description, tags, kind ──
-      await ensurePane(page, 'details', 'Toggle metadata');
+      await ensurePane(page, 'details', 'Toggle details');
       const title = metaRow(page, 'Title');
       await expect(title).toContainText('My Crux');
       await title.getByRole('button').click();
@@ -142,7 +142,7 @@ test.describe('metadata and store panes', () => {
       await expect(page.locator('[data-testid^="pane-body-"]').first()).toBeVisible({
         timeout: 30_000,
       });
-      await openPanel(page, 'details', 'Toggle metadata');
+      await openPanel(page, 'details', 'Toggle details');
       await expect(metaRow(page, 'Title')).toContainText('Solar Notes');
       await expect(metaRow(page, 'Description')).toContainText('A field guide to the garden.');
       await expect(tagChip(metaRow(page, 'Tags'), 'notes')).toBeVisible();

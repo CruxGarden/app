@@ -6,7 +6,7 @@ import { WORKSPACE_ATTR } from '@/components/plasma/PlasmaStage';
 import { useSurfaceFormed } from '@/components/plasma/useSurfaceFormed';
 import { useNotebookProxy } from '@/hooks/useNotebookProxy';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
-import { copyIdentity } from '@/services/working-copies';
+import { copyIdentity, listWorkingCopies, TASKS_CHANGED } from '@/services/working-copies';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import {
   lazy,
@@ -331,6 +331,49 @@ export function GardenPaneBody({ paneType }: { paneType: PaneType }) {
 
 // ── Main layout ─────────────────────────────────────────
 
+/**
+ * Tasks is not open to begin with (UX pass, 2026-09-27): it arrives when a
+ * task does — one is created while this Crux is open — and whenever the
+ * workspace is itself a task, so Main is one click away. Closing it again is
+ * the person's choice; it is not forced back on every visit.
+ */
+function useTasksArrive() {
+  const ui = useWorkspaceUIStoreApi();
+  const setPaneVisible = useUIStore((s) => s.setPaneVisible);
+  const crux = useCruxStore((s) => s.crux);
+  const copy = copyIdentity(crux);
+  const mainId = copy?.cruxId ?? crux?.id;
+  const inTask = !!copy;
+  useEffect(() => {
+    if (inTask) setPaneVisible('tasks', true);
+  }, [inTask, setPaneVisible]);
+  useEffect(() => {
+    if (!mainId) return;
+    let known: number | null = null;
+    let live = true;
+    // A Crux that arrives with Tasks already (imported, restored on another
+    // machine) shows them on its first, fresh layout; after that a new Task
+    // brings the pane back, and a closed pane otherwise stays closed.
+    const fresh = ui.getState().layoutFresh;
+    const check = () => {
+      void listWorkingCopies(mainId)
+        .then((rows) => {
+          if (!live) return;
+          if (known === null ? fresh && rows.length > 0 : rows.length > known)
+            setPaneVisible('tasks', true);
+          known = rows.length;
+        })
+        .catch(() => {});
+    };
+    check();
+    window.addEventListener(TASKS_CHANGED, check);
+    return () => {
+      live = false;
+      window.removeEventListener(TASKS_CHANGED, check);
+    };
+  }, [mainId, setPaneVisible, ui]);
+}
+
 export default function WorkspaceLayout() {
   // The builder is open: the material calms its ripple while it is (PlasmaStage).
   useEffect(() => {
@@ -341,6 +384,7 @@ export default function WorkspaceLayout() {
   const uiStore = useWorkspaceUIStoreApi();
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
   const paneVisibility = useUIStore((s) => s.paneVisibility);
+  useTasksArrive();
   const openFile = useUIStore((s) => s.openFile);
   const artifacts = useCruxStore((s) => s.artifacts);
   const crux = useCruxStore((s) => s.crux);

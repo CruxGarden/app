@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import {
   cruxspaceTemplates,
@@ -17,6 +18,7 @@ export default function Undertakings({
   onStarted: () => void;
   onBusy: (busy: boolean) => void;
 }) {
+  const aiEnabled = useAiEnabled();
   const navigate = useMoodNavigate();
   const [selected, setSelected] = useState('');
   const [name, setName] = useState('');
@@ -55,7 +57,7 @@ export default function Undertakings({
         <h2 className="text-lg">What do you want to make?</h2>
         <p className="text-sm text-text-muted mt-2">
           Each undertaking is a new Garden of notes and creations around one aim, with a worked
-          example to learn from. Work on your own or with a collaborator.
+          example to learn from{aiEnabled ? '. Work on your own or with a collaborator.' : '.'}
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

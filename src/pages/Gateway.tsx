@@ -7,7 +7,7 @@ import Draggable from '@/components/gateway/Draggable';
 import { BgType } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton } from '@/components/ui';
-import { PlusCircleIcon, CloudIcon, FileUploadIcon, SproutIcon } from '@/components/ui/icons';
+import { PlusIcon, CloudIcon, FileUploadIcon, SproutIcon } from '@/components/ui/icons';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import { APP_NAME, SettingsKey } from '@/lib/constants';
 import { getSetting } from '@/services/settings';
@@ -266,7 +266,7 @@ function BannerStep({
           disabled={checking}
           className="!w-14 !h-14 bg-gateway-button !text-gateway-button-text hover:bg-gateway-button-hover hover:!text-gateway-button-text"
         >
-          {checking ? <Spinner size={20} /> : <PlusCircleIcon size={40} />}
+          {checking ? <Spinner size={20} /> : <PlusIcon size={40} />}
         </IconButton>
       </div>
     </Panel>
@@ -337,7 +337,6 @@ function OptionCard({
 }
 
 // ── Step: Setup ───────────────────────────────────────
-
 
 function CloudStep({ onBack }: { onBack: () => void }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -508,4 +507,3 @@ function ImportStep({ onBack }: { onBack: () => void }) {
 }
 
 // ── Shared Components ──────────────────────────────────
-

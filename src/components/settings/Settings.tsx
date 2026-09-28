@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import WorkspaceLayoutsSettings from '@/components/settings/WorkspaceLayoutsSettings';
 import AccountSettings from '@/components/settings/AccountSettings';
 import NamesSettings from '@/components/settings/NamesSettings';
@@ -11,6 +12,8 @@ import AgentsSettings from '@/components/settings/AgentsSettings';
 import MemorySettings from '@/components/settings/MemorySettings';
 
 export default function Settings() {
+  // With AI tools off, what only the collaborator uses is not shown at all.
+  const aiEnabled = useAiEnabled();
   return (
     <div
       className="@container/settings min-w-0 overflow-y-auto flex-1 flex flex-col gap-4 pr-3"
@@ -29,8 +32,8 @@ export default function Settings() {
       <NamesSettings />
       <WorkspaceLayoutsSettings />
       <AiSettings />
-      <MemorySettings />
-      <AgentsSettings />
+      {aiEnabled && <MemorySettings />}
+      {aiEnabled && <AgentsSettings />}
       <SyncSettings />
       <PlanSettings />
       <UsageSettings />

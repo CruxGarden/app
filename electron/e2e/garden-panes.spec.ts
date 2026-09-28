@@ -21,8 +21,8 @@ const PANES: { type: string; label: string }[] = [
   { type: 'collaboration', label: 'Collaboration' },
   { type: 'artifacts', label: 'Artifacts' },
   { type: 'workshop', label: 'Workshop' },
-  { type: 'details', label: 'Metadata' },
-  { type: 'history', label: 'History' },
+  { type: 'details', label: 'Details' },
+  { type: 'history', label: 'Growth' },
   { type: 'export', label: 'Export' },
   { type: 'sync', label: 'Sync' },
   { type: 'publish', label: 'Share' },
@@ -48,7 +48,7 @@ async function goHome(page: Page) {
   await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
 }
 
-/** The crux cards: "Open <title>" buttons inside the page (the MoodBar has "Open Mood" too). */
+/** The crux cards: "Open <title>" buttons inside the page. */
 function cards(page: Page) {
   return page.getByRole('main').getByRole('button', { name: /^Open / });
 }
@@ -123,18 +123,16 @@ test.describe('home garden, crux picker, narrow panes', () => {
       await gammaCard.hover();
       await gammaCard.getByRole('button', { name: 'Crux actions' }).click();
       await page.getByRole('menuitem', { name: 'Delete' }).click();
-      await expect(page.getByText('Delete Crux')).toBeVisible();
-      await page.getByRole('button', { name: 'Delete', exact: true }).click();
       await expect(page.getByRole('alertdialog')).toContainText('Close this Crux workspace');
       await page.keyboard.press('Escape');
-      await expect(page.getByText('Delete Crux')).toHaveCount(0);
+      await expect(page.getByRole('alertdialog')).toHaveCount(0);
 
       // ── Close Gamma's workspace, then the same menu really deletes it ──
       await closeWorkspace(page, 'Gamma Moss');
       await gammaCard.hover();
       await gammaCard.getByRole('button', { name: 'Crux actions' }).click();
       await page.getByRole('menuitem', { name: 'Delete' }).click();
-      await page.getByRole('button', { name: 'Delete', exact: true }).click();
+      await expect(page.getByTestId('toast')).toContainText('Moved Gamma Moss to Recently deleted');
       await expect(page.getByRole('button', { name: 'Open Gamma Moss' })).toHaveCount(0, {
         timeout: 15_000,
       });

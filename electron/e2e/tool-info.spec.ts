@@ -7,8 +7,8 @@ import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 async function openInfo(page: Page) {
-  if ((await panelPressed(page, 'Toggle metadata')) !== 'true')
-    await togglePanel(page, 'Toggle metadata');
+  if ((await panelPressed(page, 'Toggle details')) !== 'true')
+    await togglePanel(page, 'Toggle details');
   const info = page.getByRole('region', { name: 'About this tool', exact: true });
   await expect(info).toBeVisible();
   await info.getByRole('button', { name: 'Version, adaptations and licenses' }).click();

@@ -11,7 +11,7 @@ const native = (name: string, repo: string, detailsPath = 'UPSTREAM.md'): ToolIn
   name,
   upstream: `https://github.com/${repo}`,
   detailsPath,
-  relationship: `Built with ${name}. Crux Garden adapts its editor for local projects, Growth and Collaboration.`,
+  relationship: `Built with ${name}. Crux Garden adapts its editor for local projects and Growth.`,
 });
 const component = (name: string, repo: string, relationship: string): ToolInfo => ({
   name,

@@ -9,7 +9,7 @@
  */
 import { raiseAlert } from './alerts';
 import { resolveCue } from './cues';
-import type { Schedule, Action } from './schedules';
+import { AI_ACTIONS, type Schedule, type Action } from './schedules';
 
 export interface FiringContext {
   reason: string;
@@ -31,6 +31,8 @@ export interface ActionRuntime {
   wearMood(moodId: string, gardenId?: string): Promise<string | null>;
   /** Call a published Crux's function through the API; resolves to a one-line account of the answer. */
   fn(cruxId: string, name: string, input: Record<string, unknown>): Promise<string>;
+  /** Whether AI tools are on; prompts and tool calls wait while they are off. */
+  aiEnabled(): boolean;
 }
 
 let runtime: ActionRuntime = {
@@ -68,6 +70,9 @@ let runtime: ActionRuntime = {
   },
   cruxTitle(cruxId) {
     return cruxId;
+  },
+  aiEnabled() {
+    return true;
   },
   async fn(cruxId, name, input) {
     const { callFunction } = await import('./crux-functions');
@@ -203,6 +208,7 @@ async function runOne(s: Schedule, a: Action, index: number, ctx: FiringContext)
 /** Run every action, in order; one failing never stops the next. */
 export async function runScheduleActions(s: Schedule, ctx: FiringContext): Promise<void> {
   for (const [index, a] of s.actions.entries()) {
+    if (AI_ACTIONS.has(a.kind) && !runtime.aiEnabled()) continue;
     try {
       await runOne(s, a, index, ctx);
     } catch (err) {

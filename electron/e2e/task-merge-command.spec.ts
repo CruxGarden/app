@@ -3,6 +3,7 @@ import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { newTaskButton } from './panel-helpers';
 
 test('refused admission preserves Main and refused finalization preserves recoverable state and resumes after restart without duplicate Growth', async () => {
   const env = { CRUX_API_OWNER: '1' };
@@ -17,7 +18,7 @@ test('refused admission preserves Main and refused finalization preserves recove
     await page.locator('.monaco-editor').click();
     await page.keyboard.type('<h1>Main version</h1>');
     await page.keyboard.press('ControlOrMeta+s');
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Merge task');
     await page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();

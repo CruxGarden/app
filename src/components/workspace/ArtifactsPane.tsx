@@ -3,7 +3,14 @@ import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { walkEntry } from '@/lib/file-drop';
-import { isUnder, pathOf, basename, parentPath as parentPathOf } from '@/lib/artifact-path';
+import {
+  isUnder,
+  pathOf,
+  basename,
+  parentPath as parentPathOf,
+  isAgentFile,
+} from '@/lib/artifact-path';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, {
@@ -120,7 +127,22 @@ function UploadIcon() {
 export default function ArtifactsPane() {
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
-  const artifacts = useCruxStore((s) => s.artifacts);
+  const allArtifacts = useCruxStore((s) => s.artifacts);
+  // The agent guides (AGENTS.md, CLAUDE.md) are the collaborator's plumbing:
+  // folded away unless asked for, and never shown with AI off.
+  const aiEnabled = useAiEnabled();
+  const [showAgentFiles, setShowAgentFiles] = useState(false);
+  const artifacts = useMemo(
+    () =>
+      aiEnabled && showAgentFiles
+        ? allArtifacts
+        : allArtifacts.filter((a) => !isAgentFile(pathOf(a))),
+    [allArtifacts, aiEnabled, showAgentFiles],
+  );
+  const agentFileCount = useMemo(
+    () => allArtifacts.filter((a) => isAgentFile(pathOf(a))).length,
+    [allArtifacts],
+  );
   const cruxId = useCruxStore((s) => s.crux?.id);
   const folderMissing = useCruxStore((s) => s.folderMissing);
   const restoreProjectFolder = useCruxStore((s) => s.restoreProjectFolder);
@@ -794,12 +816,23 @@ export default function ArtifactsPane() {
             />
           </div>
         </div>
-      ) : artifacts.length > 0 ? (
-        <div className="shrink-0 px-3 py-1.5 border-t border-border text-2xs font-mono text-text-muted flex justify-between">
+      ) : artifacts.length > 0 || (aiEnabled && agentFileCount > 0) ? (
+        <div className="shrink-0 px-3 py-1.5 border-t border-border text-2xs font-mono text-text-muted flex items-center justify-between gap-2">
           <span>
             {artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}
           </span>
-          <span>{totalSize}</span>
+          {aiEnabled && agentFileCount > 0 && (
+            <button
+              type="button"
+              aria-pressed={showAgentFiles}
+              onClick={() => setShowAgentFiles((v) => !v)}
+              title="AGENTS.md and CLAUDE.md: what Crux Garden tells agents working in this folder"
+              className="-my-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer"
+            >
+              {showAgentFiles ? 'Hide agent files' : `Agent files (${agentFileCount})`}
+            </button>
+          )}
+          <span className="ml-auto">{totalSize}</span>
         </div>
       ) : null}
     </div>

@@ -97,7 +97,7 @@ export async function snapshot(page: Page, label: string) {
   const pane = page.getByTestId('pane-body-history');
   // A workspace that just switched (after a merge) can re-render its layout under the first click.
   for (let attempt = 0; attempt < 3 && !(await pane.isVisible()); attempt++) {
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     await pane.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   }
   await expect(pane).toBeVisible();
@@ -109,7 +109,7 @@ export async function snapshot(page: Page, label: string) {
   await pane.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(pane.getByText(label, { exact: true })).toBeVisible();
   await expect(pane.getByRole('button', { name: 'Mark version', exact: true })).toBeEnabled();
-  await togglePanel(page, 'Toggle history');
+  await togglePanel(page, 'Toggle growth');
 }
 
 /** Output descriptors a member advertises (exports/*.asset.json). */

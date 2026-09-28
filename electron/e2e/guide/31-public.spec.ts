@@ -104,7 +104,7 @@ test.describe('guide 31 · Public garden and public Crux', () => {
       await explore.getByRole('link', { name: 'Rainy Garden Notes' }).focus();
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL(/\/tester\/rainy-garden-notes/);
-      await page.getByRole('button', { name: 'Metadata' }).click({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Details' }).click({ timeout: 30_000 });
       // Who made it and with whom, what it is, and where its tags lead.
       await expect(page.getByText('Collaborators')).toBeVisible();
       await expect(page.getByText('Claude Sonnet 5')).toBeVisible();
@@ -120,7 +120,7 @@ test.describe('guide 31 · Public garden and public Crux', () => {
       const text = await page.locator('body').innerText();
       expect(text).not.toMatch(/sk-ant-|Bearer |token/i);
       // Off again.
-      await page.getByRole('button', { name: 'Metadata' }).click();
+      await page.getByRole('button', { name: 'Details' }).click();
       await expect(page.getByText('Collaborators')).toHaveCount(0);
     } finally {
       await app.close();

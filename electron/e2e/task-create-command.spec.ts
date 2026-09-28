@@ -3,6 +3,7 @@ import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { newTaskButton } from './panel-helpers';
 
 test('Task preparation rolls back partial preview data, retries and preserves separate copies after restart', async () => {
   const env = { CRUX_API_OWNER: '1' };
@@ -38,7 +39,7 @@ test('Task preparation rolls back partial preview data, retries and preserves se
       );
       return db.all('SELECT * FROM store ORDER BY id');
     }, main);
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     const dialog = page.getByRole('dialog', { name: 'New task', exact: true });
     await dialog.getByRole('textbox', { name: 'Task name', exact: true }).fill('Complete preview');
     await dialog.getByRole('button', { name: 'Save and start task' }).click();

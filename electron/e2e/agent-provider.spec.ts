@@ -74,7 +74,7 @@ test.describe('agent provider (mock Claude Code)', () => {
         timeout: 30_000,
       });
       // a snapshot for the turn
-      await ensurePane(page, 'history', 'Toggle history');
+      await ensurePane(page, 'history', 'Toggle growth');
       await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
         0,
         {

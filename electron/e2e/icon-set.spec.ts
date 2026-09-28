@@ -18,7 +18,8 @@ test.describe('icon set', () => {
       });
 
       const html = page.locator('html');
-      const explore = page.getByRole('button', { name: 'Explore' }).locator('svg');
+      // The command bar's search glyph (Explore used to have its own button).
+      const explore = page.getByRole('button', { name: 'Search or run a command' }).locator('svg');
       await expect(html).toHaveAttribute('data-icon-set', 'line');
       await expect(explore).toHaveAttribute('data-set', 'line');
       await expect(explore).toHaveAttribute('data-icon', 'search');

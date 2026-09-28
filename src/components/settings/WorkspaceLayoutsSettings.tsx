@@ -22,7 +22,7 @@ export default function WorkspaceLayoutsSettings() {
   return (
     <SettingsSection
       title="Workspace layouts"
-      description="Save an arrangement of panels and reuse it in the Crux you’re working on. Your files, drafts and collaborators stay where they are."
+      description="Save an arrangement of panels and reuse it in the Crux you’re working on. Your files and drafts stay where they are."
     >
       <Button
         size="sm"

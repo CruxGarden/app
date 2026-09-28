@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, goHome, storedCrux } from '../multi-crux-helpers';
-import { openPanel } from '../panel-helpers';
+import { openPanel, newTaskButton } from '../panel-helpers';
 import { writeFirstFile } from '../journeys/journey-helpers';
 
 /** Send the next download to `filename` and wait for it to exist. */
@@ -48,7 +48,7 @@ test.describe('guide 15 · Export', () => {
       const originalFolder = (await storedCrux(page, originalId)).projectFolder as string;
       await writeFirstFile(page, 'index.html', '<h1>Main</h1>');
       // A Task with its own edit: the graph the copy must not share.
-      await page.getByRole('button', { name: 'New task', exact: true }).click();
+      await (await newTaskButton(page)).click();
       await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Alternative');
       await page.getByRole('button', { name: 'Save and start task' }).click();
       await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible({

@@ -38,4 +38,9 @@ describe('Workshop entry', () => {
   it('never chooses the generated agent guide or thumbnail as the creation', () => {
     expect(entryCandidates(files('AGENTS.md', 'preview.jpg', 'package.json'))).toEqual([]);
   });
+  it('never opens CLAUDE.md as the creation, even when it is the only page-like file', () => {
+    const artifacts = files('AGENTS.md', 'CLAUDE.md', 'hello.txt');
+    expect(entryCandidates(artifacts)).toEqual([]);
+    expect(workshopEntry(crux(), artifacts).artifact).toBeNull();
+  });
 });

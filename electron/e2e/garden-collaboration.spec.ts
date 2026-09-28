@@ -8,7 +8,7 @@ import { enterGarden, storedCrux } from './multi-crux-helpers';
 
 test('Garden Collaboration owns history, drafts and background work across navigation, failed saves, MCP and restart', async () => {
   test.setTimeout(150_000);
-  let instance = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+  let instance = await launchApp({ ai: false, env: { CRUX_AI_MOCK: '1' } });
   const dir = instance.dir;
   let client: Client | undefined;
   try {
@@ -140,7 +140,7 @@ test('Garden Collaboration owns history, drafts and background work across navig
     await client.close();
     client = undefined;
     await instance.app.close();
-    instance = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
+    instance = await launchApp({ dir, ai: false, env: { CRUX_AI_MOCK: '1' } });
     page = instance.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
@@ -183,7 +183,7 @@ test('Garden Collaboration owns history, drafts and background work across navig
     const closed = instance.app.waitForEvent('close');
     await page.getByRole('button', { name: 'Save and exit', exact: true }).click();
     await closed;
-    instance = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
+    instance = await launchApp({ dir, ai: false, env: { CRUX_AI_MOCK: '1' } });
     page = instance.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();

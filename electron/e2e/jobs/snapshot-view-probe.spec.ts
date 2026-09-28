@@ -21,7 +21,7 @@ test('snapshot view under Plasma', async () => {
         .isVisible()
         .catch(() => false))
     )
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('One');

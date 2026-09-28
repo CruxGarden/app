@@ -21,7 +21,7 @@ for (const action of ['Revert', 'Branch'] as const) {
       await page.keyboard.press('ControlOrMeta+s');
       const disk = () => readFileSync(join(meta.projectFolder, 'notes.txt'), 'utf8');
       await expect.poll(disk).toBe('Earlier version');
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       const history = page.getByTestId('pane-body-history');
       await history.getByRole('button', { name: 'Mark version', exact: true }).click();
       await history.getByPlaceholder('Label (optional)').fill('Earlier');
@@ -108,7 +108,7 @@ for (const action of ['Revert', 'Branch'] as const) {
         expect(refusal).toContain('recovery copy');
       }
 
-      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await history.getByRole('button', { name: 'Edits', exact: true }).click();
       const row = history.locator(`[data-checkpoint-id="${recovery.id}"]`);
       await row.getByRole('button', { name: /Inspect recovery/ }).click();
       await expect(row.getByText('notes.txt', { exact: true })).toBeVisible();

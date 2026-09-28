@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import EditHistory from './EditHistory';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useCruxStoreApi } from '@/stores/cruxStore';
@@ -67,6 +68,7 @@ export default function GrowthTimeline({
   onViewSnapshot,
   onExitSnapshot,
 }: GrowthTimelineProps) {
+  const aiEnabled = useAiEnabled();
   const cruxStore = useCruxStoreApi();
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
   const [showLabelInput, setShowLabelInput] = useState(false);
@@ -119,13 +121,13 @@ export default function GrowthTimeline({
     <div className="flex flex-col h-full">
       {crux && getSqliteClient().fileContent && (
         <SegmentedControl
-          label="History views"
+          label="Growth views"
           className="mx-3 mt-2 self-start"
           value={view}
           onChange={setView}
           options={[
-            { value: 'growth', label: 'Growth' },
-            { value: 'history', label: 'Edit history' },
+            { value: 'growth', label: 'Versions' },
+            { value: 'history', label: 'Edits' },
           ]}
         />
       )}
@@ -212,7 +214,7 @@ export default function GrowthTimeline({
                   </PaneAction>
                 )}
 
-                {summary && <CruxSummary summary={summary} className="mb-1" />}
+                {aiEnabled && summary && <CruxSummary summary={summary} className="mb-1" />}
 
                 {isCreatingGrowth && (
                   <div className="px-2">

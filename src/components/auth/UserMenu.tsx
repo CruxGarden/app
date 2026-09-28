@@ -38,9 +38,9 @@ export default function UserMenu() {
   const handleLogout = async () => {
     setOpen(false);
     // The account is the connection to crux.garden; the author is who you are
-    // in your own garden, and it is kept — signing out is not forgetting.
+    // in your own garden, and it is kept — signing out is not forgetting. The
+    // work in front stays in front (it used to jump to Home, and not always).
     await disconnectAccount();
-    navigate('/home', { replace: true });
   };
 
   return (

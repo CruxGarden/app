@@ -1,23 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { useAudioStore } from '@/stores/audioStore';
-import { useUIStore } from '@/stores/uiStore';
-import { getDockState, setDockState } from '@/services/sound';
+import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
 import { getThemePreview, onThemePreviewChange } from '@/lib/moods/active';
 import { isPublicSite } from '@/lib/site';
 import { useShallow } from 'zustand/react/shallow';
-import { PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/ui/icons';
+import { MoodIcon, PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/ui/icons';
 
 /**
- * The Mood Bar, a control in the top bar: the Mood's track — play/pause,
- * volume, what's playing — and a way into the Mood pane and the Sound
- * section. Collapsed it is one small button with live level bars; expanded it
- * shows the track name, play/pause, volume and the sound settings. The
- * collapsed state persists. Every part is a Mood token (moodBar*), so a theme
- * can restyle it.
+ * The Mood chip in the top bar: the Mood and its sound as one control (UX pass
+ * 2, 2026-09-27). At rest it is the Mood — the button that opens the Mood
+ * pane, with live level bars — and play/pause; hovered or focused it also shows
+ * what is playing, the volume and the way into the Sound section. Every part
+ * is a Mood token (moodBar*), so a theme can restyle it.
  *
- * On the public website (crux.garden) there is no Mood pane: the level button scrolls to the landing page's Moods section and the
- * settings button is not shown.
+ * On the public website (crux.garden) there is no Mood pane: the level button
+ * scrolls to the landing page's Moods section and the settings button is not
+ * shown. On the Gateway it is just the player.
  */
 
 const BARS = [
@@ -95,7 +94,9 @@ export default function MoodBar({
   );
   const canPlay = (!publicSite || !!track) && enabled;
   const soundName = publicSite ? (track?.name ?? 'No track') : 'Crux Synth';
-  const [collapsed, setCollapsed] = useState(() => getDockState()?.collapsed ?? false);
+  // In the app the chip is the Mood's one control: the Mood pane and its sound.
+  const inApp = !publicSite && !gateway;
+  const moodOpen = useWorkspaceUIStore((s) => !!s.paneVisibility.mood);
   const [aiPreview, setAiPreview] = useState(() => Object.keys(getThemePreview()).length);
   useEffect(
     () => onThemePreviewChange(() => setAiPreview(Object.keys(getThemePreview()).length)),
@@ -112,34 +113,58 @@ export default function MoodBar({
     useUIStore.getState().toggleMoodPane();
   }, [publicSite, gateway]);
 
-  const setCollapsedPersist = useCallback((c: boolean) => {
-    setCollapsed(c);
-    const prev = getDockState() ?? { x: -1, y: -1, collapsed: c };
-    setDockState({ ...prev, collapsed: c });
-  }, []);
-
   const PlayIcon = playing ? <PauseIcon size={11} /> : <PlayIconGlyph size={11} />;
+  const trackName = (
+    <span
+      className="min-w-0 max-w-[9rem] text-left block text-xxs font-body truncate leading-tight px-1"
+      title={soundName}
+      data-testid="mood-bar-track"
+    >
+      {enabled ? soundName : 'Sound off'}
+    </span>
+  );
+  const volumeSlider = (
+    <input
+      type="range"
+      aria-label="Soundscape volume"
+      min={0}
+      max={1}
+      step={0.01}
+      value={volume}
+      onChange={(e) => setVolume(parseFloat(e.target.value))}
+      className="w-14 accent-mood-bar-accent cursor-pointer"
+    />
+  );
 
   return (
     <div
       role="region"
       aria-label="Mood Bar"
       className={cn(
-        'flex items-center gap-1 h-7 pl-1 pr-1 select-none',
+        'group/mood relative flex items-center gap-1 h-7 pl-0.5 pr-1 select-none',
         'bg-mood-bar border border-mood-bar-border text-mood-bar-text rounded-[var(--mood-bar-radius)] shadow-mood-bar',
         className,
       )}
     >
-      {/* Level button: expand when collapsed, open Mood when expanded */}
       <button
         type="button"
-        onClick={() => (collapsed ? setCollapsedPersist(false) : openMood())}
-        title={
-          collapsed ? (track ? `${track.name}${playing ? ' — playing' : ''}` : 'Mood') : 'Mood'
-        }
-        aria-label={collapsed ? 'Expand Mood Bar' : publicSite ? 'Go to Moods' : 'Open Mood'}
-        className="relative w-5 h-5 rounded-[var(--mood-bar-radius)] flex items-center justify-center cursor-pointer shrink-0 hover:bg-mood-bar-hover"
+        onClick={openMood}
+        disabled={gateway}
+        aria-label={publicSite ? 'Go to Moods' : 'Mood'}
+        aria-pressed={inApp ? moodOpen : undefined}
+        // No tooltip: hovering the chip opens its flyout in the same place.
+        aria-keyshortcuts={inApp ? 'Meta+M Control+M' : undefined}
+        className={cn(
+          'relative h-6 px-1.5 rounded-[var(--mood-bar-radius)] flex items-center gap-1.5 shrink-0',
+          'transition-colors disabled:cursor-default',
+          inApp && 'cursor-pointer hover:bg-mood-bar-hover motion-press',
+          inApp &&
+            (moodOpen
+              ? 'bg-mood-bar-hover text-mood-bar-accent'
+              : 'text-mood-bar-text-muted hover:text-mood-bar-text'),
+        )}
       >
+        {inApp && <MoodIcon size={14} />}
         <LevelBars playing={playing} />
         {aiPreview > 0 && (
           <span
@@ -150,15 +175,7 @@ export default function MoodBar({
         )}
       </button>
 
-      {!collapsed && (
-        <span
-          className="min-w-0 max-w-[9rem] text-left px-1 block text-xxs font-body truncate leading-tight"
-          title={soundName}
-          data-testid="mood-bar-track"
-        >
-          {enabled ? soundName : 'Sound off'}
-        </span>
-      )}
+      {!inApp && trackName}
 
       <button
         type="button"
@@ -171,39 +188,34 @@ export default function MoodBar({
         {PlayIcon}
       </button>
 
-      {!collapsed && (
-        <>
-          <input
-            type="range"
-            aria-label="Soundscape volume"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-14 accent-mood-bar-accent cursor-pointer"
-          />
-          {!publicSite && !gateway && (
+      {inApp ? (
+        // What plays, its volume and the way into Sound open under the chip on
+        // hover or focus, so the bar itself never changes width (UX pass 2).
+        <div
+          className={cn(
+            'absolute top-full right-0 z-50 pt-1.5',
+            'opacity-0 pointer-events-none -translate-y-0.5',
+            'transition-[opacity,translate] [transition-duration:var(--motion-ms-fast)]',
+            'group-hover/mood:opacity-100 group-hover/mood:pointer-events-auto group-hover/mood:translate-y-0',
+            'group-focus-within/mood:opacity-100 group-focus-within/mood:pointer-events-auto group-focus-within/mood:translate-y-0',
+          )}
+        >
+          <div className="flex items-center gap-2 h-9 pl-2 pr-1.5 whitespace-nowrap bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown text-text">
+            {trackName}
+            {volumeSlider}
             <button
               type="button"
               onClick={() => useUIStore.getState().openMood('sound')}
               title="Sound"
               aria-label="Open sound settings"
-              className="w-5 h-5 rounded-[var(--mood-bar-radius)] text-mood-bar-text-muted hover:text-mood-bar-accent flex items-center justify-center cursor-pointer shrink-0"
+              className="w-6 h-6 rounded-[var(--radius-sm)] text-text-muted hover:text-text hover:bg-action-button-hover flex items-center justify-center cursor-pointer shrink-0 transition-colors"
             >
               <SlidersIcon size={12} />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setCollapsedPersist(true)}
-            aria-label="Collapse Mood Bar"
-            title="Collapse"
-            className="w-4 h-5 text-mood-bar-text-muted hover:text-mood-bar-text flex items-center justify-center cursor-pointer shrink-0 text-xs"
-          >
-            ‹
-          </button>
-        </>
+          </div>
+        </div>
+      ) : (
+        volumeSlider
       )}
     </div>
   );

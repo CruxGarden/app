@@ -9,7 +9,16 @@ import { join } from 'node:path';
  * must NOT inherit ELECTRON_RUN_AS_NODE from the shell.
  */
 export async function launchApp(
-  opts: { env?: Record<string, string>; dir?: string; sound?: boolean; args?: string[] } = {},
+  opts: {
+    env?: Record<string, string>;
+    dir?: string;
+    sound?: boolean;
+    args?: string[];
+    /** A fresh garden starts with AI tools on unless this is false (the product default is off). */
+    ai?: boolean;
+    /** The app's own tooltips over `title=` (off in the suite; see CRUX_PLAIN_TITLES). */
+    titleTips?: boolean;
+  } = {},
 ): Promise<{ app: ElectronApplication; page: Page; dir: string }> {
   // Pass a previous run's `dir` to relaunch on the same garden (restart tests).
   const dir = opts.dir ?? mkdtempSync(join(tmpdir(), 'crux-e2e-'));
@@ -22,6 +31,12 @@ export async function launchApp(
   // Silent by default: the soundscape and cues are distracting while suites run.
   // Tests about sound pass `sound: true`.
   env.CRUX_SILENT = opts.sound ? '0' : '1';
+  // AI tools on by default in the suite: most journeys drive the collaborator.
+  // AI-off specs (and those that switch AI on themselves) pass `ai: false`.
+  env.CRUX_AI = opts.ai === false ? 'off' : 'on';
+  // Titles stay put unless a spec is about the app's tooltips: a shown tooltip
+  // moves its control's title aside, and the pointer rests where tests leave it.
+  env.CRUX_PLAIN_TITLES = opts.titleTips ? '0' : '1';
   Object.assign(env, opts.env);
 
   // Ubuntu runners (24.04+) restrict unprivileged user namespaces, so Chromium's

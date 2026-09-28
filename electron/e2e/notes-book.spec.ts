@@ -68,12 +68,12 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
           'base64',
         ),
       );
-      await togglePanel(page, 'Toggle metadata');
+      await togglePanel(page, 'Toggle details');
       const format = page.getByLabel('Book edition', { exact: true });
       await expect(format).toHaveValue('web');
       await format.selectOption('epub');
       await expect.poll(() => publication().format).toBe('epub');
-      await togglePanel(page, 'Toggle metadata');
+      await togglePanel(page, 'Toggle details');
       await frameOf(page).getByRole('button', { name: 'Public edition…' }).click();
       const box = (path: string) =>
         frameOf(page).locator(`#garden-publication input[data-note="${path}"]`);
@@ -171,9 +171,9 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
     await reenterWorkspace(page);
     await test.step('restart: the choice and both books are still there', async () => {
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
-      await togglePanel(page, 'Toggle metadata');
+      await togglePanel(page, 'Toggle details');
       await expect(page.getByLabel('Book edition', { exact: true })).toHaveValue('epub');
-      await togglePanel(page, 'Toggle metadata');
+      await togglePanel(page, 'Toggle details');
       expect(outputs(folder).length).toBe(2);
       await exportNativeCrux(page, archive, second.app);
     });

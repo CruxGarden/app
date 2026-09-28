@@ -28,7 +28,7 @@ test('historical HTML shows saved source without mounting the live preview or ch
     await expect(page.frameLocator('iframe[data-crux-id]').getByRole('heading')).toHaveText(
       'Earlier saved page',
     );
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Earlier page');
@@ -62,7 +62,7 @@ test('historical HTML shows saved source without mounting the live preview or ch
     await reenterWorkspace(launch.page);
     await expect(launch.page.locator('[data-workspace-id]')).toBeVisible();
     const reopenedHistory = launch.page.getByTestId('pane-body-history');
-    if (!(await reopenedHistory.isVisible())) await togglePanel(launch.page, 'Toggle history');
+    if (!(await reopenedHistory.isVisible())) await togglePanel(launch.page, 'Toggle growth');
     await reopenedHistory.getByText('Earlier page', { exact: true }).click();
     await launch.page.getByRole('tree').getByText('index.html', { exact: true }).click();
     await expect(launch.page.locator('.monaco-editor').first()).toContainText('Earlier saved page');

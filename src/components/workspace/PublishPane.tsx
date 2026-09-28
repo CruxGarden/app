@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { isEmbeddedApp, isLocalCreationTool } from '@/services/embedded-app';
@@ -39,6 +40,7 @@ const PHASE_LABELS: Record<PublishPhase, string> = {
 };
 
 export default function PublishPane() {
+  const aiEnabled = useAiEnabled();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
   const crux = useCruxStore((s) => s.crux);
@@ -262,7 +264,11 @@ export default function PublishPane() {
         <PaneEmpty
           icon={<ShareIcon size={14} />}
           title="Nothing to share yet"
-          description="Add a file or ask the AI to make something. Sharing puts it live on crux.garden."
+          description={
+            aiEnabled
+              ? 'Add a file or ask the collaborator to make something. Sharing puts it live on crux.garden.'
+              : 'Add a file or make one in Artifacts. Sharing puts it live on crux.garden.'
+          }
         />
       </div>
     );
@@ -330,8 +336,10 @@ export default function PublishPane() {
             <PaneSection label="Status" tone="dashed">
               <p className="text-xxs text-text-muted">
                 {isEmbeddedApp(crux)
-                  ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content and Collaboration stay here.'
-                  : 'Not shared yet. Sharing publishes this crux at its own address, with its conversation open to visitors.'}
+                  ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content stays here.'
+                  : aiEnabled
+                    ? 'Not shared yet. Sharing publishes this crux at its own address, with its conversation open to visitors.'
+                    : 'Not shared yet. Sharing publishes this crux at its own address.'}
               </p>
             </PaneSection>
           )}

@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
 import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useMemo } from 'react';
@@ -47,6 +48,7 @@ function ZipIcon() {
 }
 
 export default function ExportPane() {
+  const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
   const allMessages = useCruxStore((s) => s.messages);
@@ -143,33 +145,40 @@ export default function ExportPane() {
         <PaneEmpty
           icon={<ExportIcon />}
           title="Nothing to export yet"
-          description="Once this crux has files or a conversation, you can download it as an archive."
+          description={
+            aiEnabled
+              ? 'Once this crux has files or a conversation, you can download it as an archive.'
+              : 'Once this crux has files, you can download it as an archive.'
+          }
         />
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
           {isEmbeddedApp(crux) && (
             <PaneNote tone="muted" className="text-left whitespace-normal">
               {samplerType(crux) ? (
-                'Complete editable project: includes all project data and media, private Collaboration, Tasks and Growth. Anyone with this archive can open them.'
+                `Complete editable project: includes all project data and media, ${aiEnabled ? 'private Collaboration, ' : ''}Tasks and Growth. Anyone with this archive can open them.`
               ) : isCardinal(crux) ? (
-                'Complete instrument: includes its app, patch, presets, private Collaboration, Tasks and Growth. Anyone with this file and the required tools can open them. Retain the included licenses and source information.'
+                `Complete instrument: includes its app, patch, presets, ${aiEnabled ? 'private Collaboration, ' : ''}Tasks and Growth. Anyone with this file and the required tools can open them. Retain the included licenses and source information.`
               ) : (
                 <>
                   Complete editable Crux: includes your app changes, all content (including private
-                  notes or designs), Collaboration, Tasks and Growth. Anyone with this file and the
-                  required tools can open them. To share selected content as a website, use Share.
+                  notes or designs), {aiEnabled ? 'Collaboration, ' : ''}Tasks and Growth. Anyone
+                  with this file and the required tools can open them. To share selected content as
+                  a website, use Share.
                 </>
               )}
             </PaneNote>
           )}
           <PaneSection label="Archive" aside={formatBytes(totalSize)}>
             <ul className="text-xxs font-mono text-text-muted flex flex-col gap-0.5">
-              <li className="flex justify-between gap-2">
-                <span className="text-text">conversation</span>
-                <span>
-                  {messageCount} message{messageCount === 1 ? '' : 's'}
-                </span>
-              </li>
+              {(aiEnabled || messageCount > 0) && (
+                <li className="flex justify-between gap-2">
+                  <span className="text-text">conversation</span>
+                  <span>
+                    {messageCount} message{messageCount === 1 ? '' : 's'}
+                  </span>
+                </li>
+              )}
               <li className="flex justify-between gap-2">
                 <span className="text-text">history</span>
                 <span>
@@ -222,8 +231,8 @@ export default function ExportPane() {
               )}
             </div>
             <PaneHint align="left">
-              The .crux archive carries the files, the conversation and every snapshot; Export
-              Artifacts is a plain zip of the files.
+              The .crux archive carries the files{aiEnabled ? ', the conversation' : ''} and every
+              snapshot; Export Artifacts is a plain zip of the files.
             </PaneHint>
           </div>
 

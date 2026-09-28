@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -21,6 +22,7 @@ import {
  * takes an orphaned site down.
  */
 export default function RecoverSection() {
+  const aiEnabled = useAiEnabled();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
   const allCruxes = useGardenStore((s) => s.allCruxes);
@@ -97,7 +99,8 @@ export default function RecoverSection() {
       </div>
       <p className="text-xs text-text-muted mb-3">
         Restore brings a backup back whole. Recover rebuilds a crux from what its published site
-        serves — the files visitors see and the public conversation, not the history.
+        serves — the files visitors see{aiEnabled ? ' and the public conversation' : ''}, not the
+        history.
       </p>
       <ul className="flex flex-col divide-y divide-border">
         {rows.map((row) => {

@@ -8,6 +8,15 @@ import MarkdownRenderer from './MarkdownRenderer';
 import TurnStatus from './TurnStatus';
 import ToolCallRows from './ToolCallRows';
 import { useCruxStore } from '@/stores/cruxStore';
+import { useWorkspaceUIStore } from '@/stores/uiStore';
+import { chipClass } from '@/components/ui/button-class';
+
+/** Three ways in for an empty Collaboration: a click puts one in the composer, to edit or send. */
+const EXAMPLES = [
+  'A one-page site about my project',
+  'A tiny game I can play in the browser',
+  'A reading list I can share',
+];
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -23,6 +32,7 @@ export default function MessageList({
   truncatedAfter,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
   const author = useAppStore((s) => s.author);
   // The work as it happens, folded under the reply being written — the same
@@ -31,6 +41,8 @@ export default function MessageList({
   const liveToolCalls = useCruxStore((s) => s.streamingToolCalls);
 
   const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
+  const setComposerDraft = useWorkspaceUIStore((s) => s.setComposerDraft);
+  const started = messages.some((m) => m.role === 'user');
   const avatarUrl = useAvatarUrl(author);
 
   // A smooth scroll per token queues an animation on top of the one still
@@ -55,7 +67,7 @@ export default function MessageList({
   }, [streamingContent, liveToolCalls]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+    <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
       {messages.length === 0 && !isStreaming && (
         <div className="text-text-muted">
           <p className="text-sm font-medium">What would you like to make?</p>
@@ -69,6 +81,28 @@ export default function MessageList({
       {messages.map((msg, i) => (
         <MessageBubble key={i} message={msg} avatarUrl={avatarUrl} userInitial={userInitial} />
       ))}
+
+      {!started && !isStreaming && (
+        <div className="flex flex-wrap gap-1.5 pl-8" aria-label="Examples to start from">
+          {EXAMPLES.map((example, i) => (
+            <button
+              key={example}
+              type="button"
+              style={{ '--enter-index': i } as React.CSSProperties}
+              className={chipClass(false, 'h-7 px-3 font-body text-xs motion-enter-card')}
+              onClick={() => {
+                setComposerDraft(example);
+                // This pane's composer: several workspaces can be mounted at once.
+                listRef.current?.parentElement
+                  ?.querySelector<HTMLTextAreaElement>('[data-testid="composer"] textarea')
+                  ?.focus();
+              }}
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+      )}
 
       {truncatedAfter != null && truncatedAfter > 0 && (
         <div className="flex items-center gap-2 py-2">

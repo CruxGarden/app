@@ -35,7 +35,7 @@ async function plantGarden(page: Page) {
  */
 test.describe('settings AI, mood sound & persona', () => {
   test('AI: enable, add a provider key (masked, encrypted), remove it', async () => {
-    const { app, page, dir } = await launchApp({ sound: true });
+    const { app, page, dir } = await launchApp({ sound: true, ai: false });
     const storageKeys = () =>
       page.evaluate(() =>
         Object.keys(localStorage).filter((k) => k.startsWith('cruxgarden:apiKey:')),

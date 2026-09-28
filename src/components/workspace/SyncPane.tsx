@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useCallback, useEffect } from 'react';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -60,6 +61,7 @@ function autoBackupLine(): { text: string; tone: 'muted' | 'error' } | null {
 }
 
 export default function SyncPane() {
+  const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux);
   const store = useCruxStoreApi();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -258,8 +260,8 @@ export default function SyncPane() {
               </PaneAction>
             </div>
             <PaneHint align="left" className="mt-2">
-              Push sends this crux, its conversation and its history to your account. Pull replaces
-              the local copy with the cloud version.
+              Push sends this crux{aiEnabled ? ', its conversation' : ''} and its history to your
+              account. Pull replaces the local copy with the cloud version.
             </PaneHint>
           </PaneSection>
 

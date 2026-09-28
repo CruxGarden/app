@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, goHome, switchCrux, storedCrux } from '../multi-crux-helpers';
-import { showPane, togglePanel } from '../panel-helpers';
+import { runCommand, showPane, togglePanel, newTaskButton } from '../panel-helpers';
 
 /**
  * V1-TESTING-GUIDE § 19 · Tending and alerts. The scripted collaborator
@@ -15,7 +15,7 @@ import { showPane, togglePanel } from '../panel-helpers';
 const MOCK = { env: { CRUX_AI_MOCK: '1' } };
 
 async function newTask(page: Page, title: string) {
-  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await (await newTaskButton(page)).click();
   await page.getByRole('textbox', { name: 'Task name', exact: true }).fill(title);
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);
@@ -365,8 +365,8 @@ test.describe('guide 19 · Tending', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
-      // From Home: the top-bar link.
-      await page.locator('header').getByRole('button', { name: 'Tending', exact: true }).click();
+      // From Home: the command palette (Tending is a panel).
+      await runCommand(page, 'tending', 'Show Tending');
       await expect(page.getByTestId('pane-body-tending')).toBeVisible();
       await expect(page.locator('.mosaic-window.pane-tending')).toBeVisible();
       // A timer makes a chip; an alert rings the bell. Both lead here.
@@ -383,9 +383,9 @@ test.describe('guide 19 · Tending', () => {
       await page.getByTestId('timer-chip').first().getByRole('button').first().click();
       await expect(page.getByTestId('pane-body-tending')).toBeVisible({ timeout: 30_000 });
       await page.locator('.mosaic-window.pane-tending .pane-toolbar-close').click();
-      // Inside a Crux: the same link, the same pane, beside the work.
+      // Inside a Crux: the same command, the same pane, beside the work.
       await createCrux(page, 'Inside');
-      await page.locator('header').getByRole('button', { name: 'Tending', exact: true }).click();
+      await runCommand(page, 'tending', 'Show Tending');
       await expect(page.getByTestId('pane-body-tending')).toBeVisible();
       await expect(page.getByTestId('pane-body-collaboration')).toBeVisible();
       // It lists Cruxes, never Gardens or Moods.

@@ -24,7 +24,15 @@ test('a deleted Crux is restored whole', async () => {
     await card.hover();
     await card.getByRole('button', { name: 'Crux actions' }).click();
     await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    // A question only when there is something to decide (published, or members to move).
+    const ask = page.getByRole('dialog', { name: /^Delete (Crux|Garden)$/ });
+    if (
+      await ask.waitFor({ timeout: 2_000 }).then(
+        () => true,
+        () => false,
+      )
+    )
+      await ask.getByRole('button', { name: 'Delete', exact: true }).click();
     const row = page.getByTestId('trash-section').locator('li').filter({ hasText: 'Keepsake' });
     await expect(row).toBeVisible({ timeout: 15_000 });
     await row.getByRole('button', { name: 'Restore' }).click();

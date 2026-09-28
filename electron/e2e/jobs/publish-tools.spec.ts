@@ -73,8 +73,8 @@ async function publishOne(page: Page, manifest: Manifest) {
   // now is before sharing.
   const metadata = page.getByTestId('pane-body-details');
 
-  if ((await panelPressed(page, 'Toggle metadata')) !== 'true')
-    await togglePanel(page, 'Toggle metadata');
+  if ((await panelPressed(page, 'Toggle details')) !== 'true')
+    await togglePanel(page, 'Toggle details');
   await expect(metadata).toBeVisible();
   const kindBadge = page.getByRole('button', {
     name: /^(auto|Web App|Page|Document|Image|Tool template)$/i,
@@ -93,7 +93,7 @@ async function publishOne(page: Page, manifest: Manifest) {
   }, id);
   await expect(page.locator(`[data-workspace-id="${id}"]`)).toBeVisible({ timeout: 120000 });
   if (await page.locator('.mosaic-window.pane-details').count()) {
-    await page.getByTitle('Close Metadata').click();
+    await page.getByTitle('Close Details').click();
     await expect(page.locator('.mosaic-window.pane-details')).toHaveCount(0, { timeout: 10000 });
   }
   await togglePanel(page, 'Toggle share');

@@ -1,3 +1,5 @@
+import CommandPalette from './CommandPalette';
+import { useCommandPalette } from '@/stores/commandPalette';
 import { gardenPath, useGardenContext } from '@/stores/gardenContext';
 import {
   resolveWorkspaceDestination,
@@ -150,22 +152,18 @@ export default function Shell() {
       const editing =
         !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
-      // Escape → open console (when AI enabled, console not open, not typing)
+      // Escape → open console (when AI enabled, console not open, not typing,
+      // and no dialog, menu or picker is open: that Escape is theirs).
       if (
         e.key === 'Escape' &&
         aiEnabled &&
         !editing &&
-        !currentWorkspaceUI().getState().paneVisibility.console
+        !currentWorkspaceUI().getState().paneVisibility.console &&
+        !document.querySelector(
+          '[data-modal-open], [aria-modal="true"], [aria-haspopup][aria-expanded="true"]',
+        )
       ) {
         currentWorkspaceUI().getState().setPaneVisible('console', true);
-        return;
-      }
-
-      // Cmd/Ctrl+K searches available Gardens and Cruxes in Navigator.
-      if (meta && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
-        if (document.querySelector('[data-modal-open="true"], [aria-modal="true"]')) return;
-        e.preventDefault();
-        useGardenContext.getState().requestSearch();
         return;
       }
 
@@ -183,12 +181,35 @@ export default function Shell() {
         return;
       }
     };
+    // Cmd/Ctrl+K: the command palette — go anywhere, any panel, any command.
+    // Heard before anything else, so an editor with its own Cmd+K chords
+    // (Monaco) does not swallow it; pressed again, it puts the palette away.
+    const palette = (e?: KeyboardEvent) => {
+      const state = useCommandPalette.getState();
+      if (state.open) {
+        e?.preventDefault();
+        e?.stopPropagation();
+        state.close();
+        return;
+      }
+      // A dialog already has the keyboard.
+      if (document.querySelector('[data-modal-open="true"], [aria-modal="true"]')) return;
+      e?.preventDefault();
+      e?.stopPropagation();
+      state.openPalette();
+    };
+    const capture = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing) return;
+      if (e.key.toLowerCase() === 'k') palette(e);
+    };
+    window.addEventListener('keydown', capture, true);
     window.addEventListener('keydown', handler);
+    // The desktop shell hears Cmd/Ctrl+K even while an embedded frame has the keyboard.
     const offCommand = window.electronAPI?.desktop.onWorkspaceCommand?.((command) => {
-      if (command === 'navigate')
-        handler(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+      if (command === 'navigate') palette();
     });
     return () => {
+      window.removeEventListener('keydown', capture, true);
       window.removeEventListener('keydown', handler);
       offCommand?.();
     };
@@ -200,6 +221,7 @@ export default function Shell() {
     <MotionConfig reducedMotion="never">
       <div className="flex flex-col h-screen overflow-hidden">
         <WorkspaceLifecycle />
+        {servicesReady && <CommandPalette />}
         {servicesReady && <TendingNotifications />}
         <MoodTextureLayers />
         {/* Top bar */}

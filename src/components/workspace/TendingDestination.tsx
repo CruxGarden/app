@@ -1,3 +1,4 @@
+import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { validateTendingTarget } from '@/services/tending-actions';
@@ -16,8 +17,10 @@ export default function TendingDestination() {
         ...target,
         attentionId: target.attentionId?.startsWith('permission:') ? target.attentionId : undefined,
       });
-      w.ui.getState().setPaneVisible('collaboration', true);
-      w.ui.getState().setMobileActivePane('collaboration');
+      // The decision lives in Collaboration; with AI tools off, in the Tasks pane.
+      const pane = aiEnabledNow() ? 'collaboration' : 'tasks';
+      w.ui.getState().setPaneVisible(pane, true);
+      w.ui.getState().setMobileActivePane(pane);
       const request = target.attentionId?.startsWith('permission:')
         ? target.attentionId.split(':').at(-1)
         : undefined;

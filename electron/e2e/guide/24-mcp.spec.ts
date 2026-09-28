@@ -120,7 +120,7 @@ test.describe('guide 24 · Agents', () => {
       expect(growth.snapshots.find((s) => s.label === 'Outside checkpoint')?.requestedBy).toBe(
         'agent:guide-agent',
       );
-      const history = await openPanel(page, 'history', 'Toggle history');
+      const history = await openPanel(page, 'history', 'Toggle growth');
       await expect(history.getByText('Outside checkpoint', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
@@ -185,7 +185,9 @@ test.describe('guide 24 · Agents', () => {
       const gardenPanel = settings.getByTestId('agents-garden-access');
       const connectButton = gardenPanel.getByRole('button', { name: 'Connect', exact: true });
       if (await connectButton.isVisible().catch(() => false)) await connectButton.click();
-      await gardenPanel.getByRole('button', { name: 'Regenerate token' }).click({ timeout: 30_000 });
+      await gardenPanel
+        .getByRole('button', { name: 'Regenerate token' })
+        .click({ timeout: 30_000 });
       await expect
         .poll(() => JSON.parse(readFileSync(configPath, 'utf8')).token !== first.token)
         .toBe(true);

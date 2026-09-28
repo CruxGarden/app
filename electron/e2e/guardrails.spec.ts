@@ -96,10 +96,10 @@ test.describe('guardrails: a way back from every destructive action', () => {
       await launch.page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
       await expect.poll(() => existsSync(file)).toBe(false);
       await expect(restoredTree.getByText('index.html', { exact: true })).toHaveCount(0);
-      await ensurePane(launch.page, 'history', 'Toggle history');
+      await ensurePane(launch.page, 'history', 'Toggle growth');
       const history = launch.page.getByTestId('pane-body-history');
       await expect(history.getByText('No snapshots yet')).toBeVisible();
-      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await history.getByRole('button', { name: 'Edits', exact: true }).click();
       await history
         .locator('li')
         .filter({ hasText: 'Safety copy' })
@@ -133,10 +133,10 @@ test.describe('guardrails: a way back from every destructive action', () => {
       await expect(tree.getByText('index.html', { exact: true })).toHaveCount(0, {
         timeout: 15_000,
       });
-      await ensurePane(page, 'history', 'Toggle history');
+      await ensurePane(page, 'history', 'Toggle growth');
       const history = page.getByTestId('pane-body-history');
       await expect(history.getByText('No snapshots yet')).toBeVisible();
-      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await history.getByRole('button', { name: 'Edits', exact: true }).click();
       await expect(history.getByText('Safety copy', { exact: true })).toBeVisible();
     } finally {
       await app.close();

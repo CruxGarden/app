@@ -50,7 +50,7 @@ test.describe('snapshots & revert', () => {
       await expect.poll(fileOnDisk).toBe('version one');
 
       // Snapshot "v1"
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       const snapshotWithLabel = async (label: string) => {
         await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
         const input = page.getByPlaceholder('Label (optional)');
@@ -100,9 +100,9 @@ test.describe('snapshots & revert', () => {
       await expect.poll(fileOnDisk).toBe('version one');
       // What was there before is kept as a safety copy in Edit history.
       const historyPane = page.getByTestId('pane-body-history');
-      await historyPane.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await historyPane.getByRole('button', { name: 'Edits', exact: true }).click();
       await expect(historyPane.getByText('Safety copy').first()).toBeVisible({ timeout: 30_000 });
-      await historyPane.getByRole('button', { name: 'Growth', exact: true }).click();
+      await historyPane.getByRole('button', { name: 'Versions', exact: true }).click();
       await page.screenshot({ path: 'e2e/.results/snapshots-2-reverted.png' });
 
       // Leave and come back: the reconstructed conversation/history must be
@@ -119,7 +119,7 @@ test.describe('snapshots & revert', () => {
       await expect(reopened).toBeVisible({ timeout: 30_000 });
       await expect(reopened).toContainText('version one');
       await expect(reopened).not.toContainText('version two');
-      await openPanel(page, 'history', 'Toggle history');
+      await openPanel(page, 'history', 'Toggle growth');
       await expect(
         page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
       ).toBeVisible();

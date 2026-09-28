@@ -1,6 +1,9 @@
 import { expect, it } from 'vitest';
 import type { MosaicNode } from 'react-mosaic-component';
-import { createUIStore, getMosaicLeaves, type PaneType } from './uiStore';
+import { createUIStore, getMosaicLeaves, useUIStore, type PaneType } from './uiStore';
+
+// These layouts include Collaboration, an AI pane: offered only with AI tools on.
+useUIStore.getState().setAiEnabled(true);
 
 /** Width of a pane as a fraction of the workspace (a column split shares its width). */
 function share(node: MosaicNode<PaneType> | null, pane: PaneType, of = 1): number {
@@ -79,4 +82,49 @@ it('a new pane never squeezes another below its least width', () => {
   expect(px('collaboration')).toBeGreaterThanOrEqual(260);
   expect(px('publish')).toBeGreaterThanOrEqual(270);
   expect(px('workshop')).toBeGreaterThanOrEqual(280);
+});
+
+it('Tasks arrives as the narrow full-height column at the left of the work', () => {
+  const ui = createUIStore('crux-f');
+  ui.getState().setMosaicLayout({
+    direction: 'row',
+    first: 'collaboration',
+    second: 'workshop',
+    splitPercentage: 40,
+  });
+  ui.getState().setPaneVisible('tasks', true);
+  const tree = ui.getState().mosaicLayout;
+  expect(tree).toMatchObject({ direction: 'row', first: 'tasks' });
+  expect(share(tree, 'tasks')).toBeGreaterThan(0.1);
+  expect(share(tree, 'tasks')).toBeLessThan(0.25);
+  // Beside the Navigator, it docks right of it rather than taking its place.
+  const nav = createUIStore('crux-g');
+  nav.getState().setMosaicLayout({
+    direction: 'row',
+    first: 'navigator',
+    second: 'workshop',
+    splitPercentage: 20,
+  });
+  nav.getState().setPaneVisible('tasks', true);
+  expect(nav.getState().mosaicLayout).toMatchObject({
+    direction: 'row',
+    first: 'navigator',
+    second: { direction: 'row', first: 'tasks', second: 'workshop' },
+  });
+});
+
+it('a Garden-wide pane takes less than a third when the work beside it needs the room', () => {
+  const ui = createUIStore('crux-h');
+  ui.getState().setMosaicLayout({
+    direction: 'row',
+    first: { direction: 'row', first: 'collaboration', second: 'workshop', splitPercentage: 45 },
+    second: { direction: 'column', first: 'details', second: 'publish', splitPercentage: 50 },
+    splitPercentage: 70,
+  });
+  ui.getState().setPaneVisible('explore', true);
+  const tree = ui.getState().mosaicLayout;
+  // The work needs 260 + 280 + 270 px of a typical 1400: Explore yields.
+  expect(share(tree, 'explore')).toBeLessThan(0.32);
+  expect(share(tree, 'explore') * 1400).toBeGreaterThanOrEqual(300 - 1);
+  expect((1 - share(tree, 'explore')) * 1400).toBeGreaterThanOrEqual(810 - 1);
 });

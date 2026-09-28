@@ -63,6 +63,10 @@ export interface TokenGroup {
   id: string;
   label: string;
   hint: string;
+  /** The hint while AI tools are off, when the usual one speaks of the collaborator. */
+  plainHint?: string;
+  /** Dresses only what the collaborator uses: hidden while AI tools are off. */
+  ai?: boolean;
   /** Key prefix stripped from labels inside this group (pane groups). */
   strip?: string;
   match: (key: string) => boolean;
@@ -72,8 +76,8 @@ const PANES: { id: string; label: string }[] = [
   { id: 'Collaboration', label: 'Collaboration' },
   { id: 'Artifacts', label: 'Artifacts' },
   { id: 'Workshop', label: 'Workshop' },
-  { id: 'Details', label: 'Metadata' },
-  { id: 'History', label: 'History' },
+  { id: 'Details', label: 'Details' },
+  { id: 'History', label: 'Growth' },
   { id: 'Export', label: 'Export' },
   { id: 'Sync', label: 'Sync' },
   { id: 'Publish', label: 'Share' },
@@ -359,12 +363,14 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     hint: `Everything about the ${p.label} pane: header, toggle button, body surface, text, labels, radii. Tokens inherit the shared ones until you set them.`,
     strip: `pane${p.id}`,
     match: (k) => k === `pane${p.id}` || k.startsWith(`pane${p.id}`),
+    ai: p.id === 'Collaboration',
   })),
   {
     id: 'chat',
     label: 'Collaboration chat',
     hint: 'Bubbles, input, send button, model selector.',
     match: starts('chat', 'brandAi', 'modelSelector'),
+    ai: true,
   },
   {
     id: 'controls',
@@ -400,7 +406,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'surfaces',
     label: 'Pages & overlays',
-    hint: 'Gateway, Settings, Console, Command palette, top bars, toolbars.',
+    hint: 'Gateway, Settings, the command palette, top bars and toolbars.',
     match: starts(
       'gateway',
       'settings',
@@ -434,13 +440,15 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'motion',
     label: 'Motion',
-    hint: "How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Springs (stiffness damping mass) drive pops and expressive enters; frames steps every motion for pixel Moods; intensity is the Mood's default for the person's Motion setting.",
+    hint: "How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, message bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Springs (stiffness damping mass) drive pops and expressive enters; frames steps every motion for pixel Moods; intensity is the Mood's default for the person's Motion setting.",
     match: (k) => k.startsWith('motion') && k !== 'motionScale',
   },
   {
     id: 'reactions',
     label: 'Reactions',
     hint: 'How much the interface reacts to what is happening, 0 (not at all) to 1: the accent glows with the soundscape level, the background lifts while you type, the Collaboration pane glows while a collaborator turn runs.',
+    plainHint:
+      'How much the interface reacts to what is happening, 0 (not at all) to 1: the accent glows with the soundscape level, the background lifts while you type.',
     match: (k) => k.startsWith('react') || k.startsWith('flow'),
   },
 ];
@@ -525,4 +533,11 @@ export function tokenLabel(key: string, group?: TokenGroup): string {
 /** Does this value reference another token rather than name a color/length? */
 export function isDerived(value: string): boolean {
   return /var\(|color-mix\(/.test(value);
+}
+
+/** Tokens that dress only what the collaborator uses: hidden in the Theme tab while AI tools are off. */
+export function isAiToken(key: string): boolean {
+  return /^(chat|console|brandAi|modelSelector|paneCollaboration|paneLabelCollaboration|paneLabelConsole|reactPaneAgent|motionEnterBubble|motionExitBubble|bubbleRadius)/.test(
+    key,
+  );
 }

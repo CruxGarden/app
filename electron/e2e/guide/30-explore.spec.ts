@@ -182,10 +182,10 @@ test.describe('guide 30 · Explore', () => {
       await mood.getByRole('textbox', { name: 'Mood name' }).fill('Sea Glass');
       await mood.getByRole('button', { name: 'Save', exact: true }).click();
       await expect(mood.getByRole('status').filter({ hasText: 'Saved "Sea Glass"' })).toBeVisible();
-      await mood.getByRole('button', { name: 'Publish Sea Glass' }).click();
-      await expect(
-        mood.getByRole('status').filter({ hasText: 'Published "Sea Glass"' }),
-      ).toBeVisible({ timeout: 60_000 });
+      await mood.getByRole('button', { name: 'Share Sea Glass' }).click();
+      await expect(mood.getByRole('status').filter({ hasText: 'Shared "Sea Glass"' })).toBeVisible({
+        timeout: 60_000,
+      });
       const moodCrux = Object.values(api.state.cruxes).find((c) => c.kind === 'mood')!;
       // Wear a bundled Mood and drop the local copy, so what comes back is the installed one.
       await page

@@ -24,8 +24,8 @@ async function latestRecovery(page: Page): Promise<string> {
 }
 async function restoreRecovery(page: Page, id: string) {
   const history = page.getByTestId('pane-body-history');
-  if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
-  await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+  if (!(await history.isVisible())) await togglePanel(page, 'Toggle growth');
+  await history.getByRole('button', { name: 'Edits', exact: true }).click();
   await history
     .locator(`[data-checkpoint-id="${id}"]`)
     .getByRole('button', { name: /Restore recovery/ })
@@ -105,10 +105,10 @@ test.describe('background turns (mock AI)', () => {
         await expect.poll(() => onDisk(gardenRoot, `step-${n}.txt`)).toBe(`step ${n}\n`);
       }
 
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       const history = page.getByTestId('pane-body-history');
       await expect(history.getByText('No snapshots yet')).toBeVisible();
-      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await history.getByRole('button', { name: 'Edits', exact: true }).click();
       await expect(history.locator('[data-checkpoint-id]').first()).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/background-2-done.png' });
     } finally {

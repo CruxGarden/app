@@ -16,7 +16,7 @@ for (const recovery of ['restart', 'retry'] as const)
       await addArtifact(page, 'note.txt');
       const editor = page.locator('.monaco-editor').first();
       const disk = () => readFileSync(join(meta.projectFolder, 'note.txt'), 'utf8');
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       const history = page.getByTestId('pane-body-history');
       for (const text of ['Earlier', 'Later']) {
         await editor.click();

@@ -85,7 +85,7 @@ test('Garden agent edits a disposable Penpot design and brings its real SVG back
     const content = native.content as { type: string; text?: string }[];
     const readback = JSON.parse(content.find((part) => part.type === 'text')!.text!).result;
     expect(readback.svg.trim()).toBe(svg.trim());
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
       0,

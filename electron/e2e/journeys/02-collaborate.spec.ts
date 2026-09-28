@@ -17,8 +17,8 @@ test('a turn writes a file and keeps a recovery point', async () => {
       timeout: 30_000,
     });
     await expect.poll(async () => Object.keys(await indexedFiles(page, id))).toContain('hello.txt');
-    const history = await openPanel(page, 'history', 'Toggle history');
-    await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+    const history = await openPanel(page, 'history', 'Toggle growth');
+    await history.getByRole('button', { name: 'Edits', exact: true }).click();
     await expect(
       history.getByRole('button', { name: 'Inspect recovery point 1', exact: true }),
     ).toBeVisible({ timeout: 30_000 });

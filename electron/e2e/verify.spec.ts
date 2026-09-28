@@ -95,10 +95,10 @@ test.describe('verify before done (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/verify-3-checked.png' });
 
       // Verification stays on the reply/job; recovery is separate from chosen Growth.
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       const history = page.getByTestId('pane-body-history');
       await expect(history.getByText('No snapshots yet')).toBeVisible();
-      await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+      await history.getByRole('button', { name: 'Edits', exact: true }).click();
       await expect(history.locator('[data-checkpoint-id]').first()).toBeVisible();
 
       // The person's "Check it" on the unchanged page: passes, no follow-up

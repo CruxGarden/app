@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { copyIdentity } from '@/services/working-copies';
 import { documentsFor } from '@/services/workspace-documents';
 import { getWorkspace } from '@/stores/workspaceRegistry';
@@ -87,6 +88,7 @@ function restoreFocus(id: string) {
 export default function WorkspaceSwitcher() {
   const { entries, activeId } = useWorkspaceRegistry();
   const navigate = useMoodNavigate();
+  const aiEnabled = useAiEnabled();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [picker, setPicker] = useState(false);
@@ -420,8 +422,9 @@ export default function WorkspaceSwitcher() {
                     Close {entries.find((e) => e.id === closing)?.title}?
                   </h2>
                   <p className="px-2 text-xs text-text-muted my-3">
-                    Running work will stop. Queued prompts and Growth remain available when you
-                    reopen. Save or discard unsaved Artifact edits before closing.
+                    Running work will stop.{' '}
+                    {aiEnabled ? 'Queued prompts and Growth remain' : 'Growth remains'} available
+                    when you reopen. Save or discard unsaved Artifact edits before closing.
                   </p>
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button variant="ghost" size="sm" disabled={busy} onClick={cancel}>

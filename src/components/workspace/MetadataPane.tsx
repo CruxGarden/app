@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import ToolInfoSettings from './ToolInfoSettings';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
@@ -8,6 +9,7 @@ import NotesSharingSettings from './NotesSharingSettings';
 import { PaneEmpty } from './pane-ui';
 
 export default function MetadataPane() {
+  const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux);
   const updateCrux = useCruxStore((s) => s.updateCrux);
   const summary = useCruxStore((s) => s.summary);
@@ -25,7 +27,7 @@ export default function MetadataPane() {
   return (
     <div className="flex flex-col h-full">
       <EntryFileSettings />
-      <CheckSettings />
+      {aiEnabled && <CheckSettings />}
       <NotesSharingSettings />
       <ToolInfoSettings />
       <MetadataContent

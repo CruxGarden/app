@@ -1,5 +1,5 @@
 import type { Artifact, Crux } from '@/api/types';
-import { normalizePath, pathOf, isWorkspaceThumbnail } from './artifact-path';
+import { normalizePath, pathOf, isWorkspaceThumbnail, isAgentFile } from './artifact-path';
 import { isSiteCrux } from '@/services/site';
 
 /** Entry selection is by portable path, never by a Working Copy's Artifact ID. */
@@ -8,7 +8,7 @@ export function entryCandidates(artifacts: Artifact[]): Artifact[] {
   return artifacts
     .filter((a) => {
       const path = normalizePath(pathOf(a));
-      if (isWorkspaceThumbnail(path) || /(^|\/)AGENTS\.md$/i.test(path)) return false;
+      if (isWorkspaceThumbnail(path) || isAgentFile(path)) return false;
       if (site) return /^src\/pages\/(?!.*\[).*\.(astro|html|md|mdx)$/i.test(path);
       return /\.(html?|md|svg|png|jpe?g|gif|webp)$/i.test(path);
     })

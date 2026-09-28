@@ -1,4 +1,5 @@
 import { exportPrivateCrux, importPrivateCrux, privateArchiveBytes } from './private-crux-archive';
+import { generateZip } from '@/lib/zip-off-thread';
 import { toArrayBuffer } from '@/lib/bytes';
 import { uniqueSlug } from '@/lib/slug';
 import {
@@ -476,7 +477,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
     typeof crux.meta?.template === 'string' ? [crux.meta.template] : [],
     crux.kind === 'tool' ? 'included' : (options.runtime ?? archiveRuntimeMode()),
   );
-  const blob = await zip.generateAsync({ type: 'blob' });
+  const blob = await generateZip(zip, { onProgress: (p) => onProgress?.(`Packing ${p}%`) });
 
   const now = new Date();
   const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
@@ -513,7 +514,7 @@ export async function exportArtifactsZip(
   }
 
   onProgress?.('Compressing...');
-  const blob = await zip.generateAsync({ type: 'blob' });
+  const blob = await generateZip(zip, { onProgress: (p) => onProgress?.(`Packing ${p}%`) });
 
   const now = new Date();
   const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
@@ -578,10 +579,7 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
     .sort((a, b) => a.index - b.index);
 
   const useOriginalIds = mode !== 'clone';
-  const slug =
-    useOriginalIds && cruxData.slug
-      ? cruxData.slug
-      : uniqueSlug(title);
+  const slug = useOriginalIds && cruxData.slug ? cruxData.slug : uniqueSlug(title);
 
   // ── Collect unique fingerprints ────────────────────
   const allFingerprints = new Set<string>();

@@ -127,6 +127,12 @@ export const useAppStore = create<AppState>((set, get) => ({
             import('./uiStore'),
           ]);
         applySavedMoodSettings();
+        // A fresh garden follows the launch knob (e2e); a saved choice always wins.
+        const { aiStartKnob } = await import('@/lib/platform');
+        if (getSetting(SettingsKey.AiEnabled) === null && aiStartKnob() === 'on') {
+          const { setSetting } = await import('@/services/settings');
+          setSetting(SettingsKey.AiEnabled, 'true');
+        }
         useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
         // e2e: the scripted model (CRUX_AI_MOCK) loads here and nowhere else.
         if (isAiMock()) await (await import('@/ai/engine')).primeMockModel();

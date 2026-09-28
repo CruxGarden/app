@@ -148,7 +148,7 @@ export async function wearMaterial(page: Page, id: string) {
 export async function setAutoCheck(page: Page, on: boolean) {
   const body = page.getByTestId('pane-body-details');
   const wasOpen = await body.isVisible().catch(() => false);
-  if (!wasOpen) await togglePanel(page, 'Toggle metadata');
+  if (!wasOpen) await togglePanel(page, 'Toggle details');
   await expect(body).toBeVisible({ timeout: 30_000 });
   const toggle = body.getByRole('switch', { name: 'Check when done' });
   await expect(toggle).toBeVisible({ timeout: 30_000 });
@@ -157,7 +157,7 @@ export async function setAutoCheck(page: Page, on: boolean) {
   // Leave the workspace as it was found: a journey that did not ask for this
   // pane has its own layout, and an extra one moves everything else along.
   if (!wasOpen) {
-    await togglePanel(page, 'Toggle metadata');
+    await togglePanel(page, 'Toggle details');
     await expect(body).toBeHidden({ timeout: 30_000 });
   }
 }

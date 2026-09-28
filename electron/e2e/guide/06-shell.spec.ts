@@ -13,8 +13,8 @@ const CRUX_PANES: { type: string; label: string; own?: boolean }[] = [
   { type: 'collaboration', label: 'Collaboration' },
   { type: 'artifacts', label: 'Artifacts' },
   { type: 'workshop', label: 'Workshop' },
-  { type: 'details', label: 'Metadata' },
-  { type: 'history', label: 'History' },
+  { type: 'details', label: 'Details' },
+  { type: 'history', label: 'Growth' },
   { type: 'export', label: 'Export' },
   { type: 'sync', label: 'Sync' },
   { type: 'publish', label: 'Share' },
@@ -82,22 +82,33 @@ test.describe('guide 06 · Workspace frame', () => {
       await enterGarden(page);
       await createCrux(page, 'Crowded');
       const mosaic = page.locator('.mosaic').first();
-      // Tasks, Collaboration and Workshop open by default; three more make six.
-      for (const label of ['artifacts', 'history', 'export']) {
+      // Collaboration and Workshop open by default; Tasks arrives as its rail
+      // (as it does with the first task); three more make six.
+      await (await openPicker(page))
+        .getByRole('button', { name: 'Toggle tasks', exact: true })
+        .click();
+      await expect(page.getByTestId('pane-body-tasks')).toBeVisible({ timeout: 30_000 });
+      for (const label of ['artifacts', 'growth', 'export']) {
         const before = await tiles(page);
         const railBefore = await tileArea(page, 'tasks');
         const picker = await openPicker(page);
         await picker.getByRole('button', { name: `Toggle ${label}`, exact: true }).click();
-        await expect(page.getByTestId(`pane-body-${label}`)).toBeVisible({ timeout: 30_000 });
+        const type = label === 'growth' ? 'history' : label;
+        await expect(page.getByTestId(`pane-body-${type}`)).toBeVisible({ timeout: 30_000 });
         await page.waitForTimeout(400);
         // The new pane took room from one of the wide tiles, not from the rail.
         const shrunk = before.filter(
-          (t) => t.type !== 'tasks' && t.area > (before.find((b) => b.type === t.type)?.area ?? 0) * 0,
+          (t) =>
+            t.type !== 'tasks' && t.area > (before.find((b) => b.type === t.type)?.area ?? 0) * 0,
         );
         const after = await tiles(page);
-        const gaveRoom = shrunk.some((t) => (after.find((a) => a.type === t.type)?.area ?? 0) < t.area);
+        const gaveRoom = shrunk.some(
+          (t) => (after.find((a) => a.type === t.type)?.area ?? 0) < t.area,
+        );
         expect(gaveRoom).toBe(true);
-        expect(Math.abs((await tileArea(page, 'tasks')) - railBefore) / railBefore).toBeLessThan(0.05);
+        expect(Math.abs((await tileArea(page, 'tasks')) - railBefore) / railBefore).toBeLessThan(
+          0.05,
+        );
         const tasks = (await page.locator('.mosaic-window.pane-tasks').boundingBox())!;
         const frame = (await mosaic.boundingBox())!;
         expect(tasks.height).toBeGreaterThan(frame.height * 0.9);

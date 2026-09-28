@@ -1,23 +1,23 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { createPortal } from 'react-dom';
 import {
   useWorkspaceUIStore,
   useWorkspaceUIStoreApi,
   useUIStore,
-  DEFAULT_PANE_ORDER,
-  GARDEN_PANE_ORDER,
   type PaneType,
 } from '@/stores/uiStore';
+import { offeredPanes } from './panel-order';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
 import { PANES } from '@/components/workspace/paneConfig';
-import { PlusCircleIcon } from '@/components/ui/icons';
+import { LayoutIcon } from '@/components/ui/icons';
 import { arrangeWorkspacePanels } from '@/services/workspace-layouts';
 import { togglePin, usePinned } from '@/stores/pins';
 import { cn } from '@/lib/cn';
 import { buttonClass, fieldClass, iconButtonClass, menuItemClass } from '@/components/ui';
 
-/** Panes with their own top-bar button: listed only when closed, never pinned. */
-const OWN_BUTTON = new Set<PaneType>(['navigator', 'explore', 'mood', 'console']);
+/** Panes with their own top-bar control: listed only when closed, never pinned. */
+const OWN_BUTTON = new Set<PaneType>(['navigator', 'mood', 'console']);
 
 function PinIcon({ filled }: { filled: boolean }) {
   return (
@@ -40,18 +40,8 @@ function PinIcon({ filled }: { filled: boolean }) {
 }
 
 /** Discovery for closed panels. Opening uses the same workspace operation as agents. */
-const GARDEN_WIDE = new Set<PaneType>([
-  'navigator',
-  'console',
-  'tending',
-  'mood',
-  'synth',
-  'browser',
-  'settings',
-  'explore',
-]);
-
 export default function PanelPicker() {
+  const aiEnabled = useAiEnabled();
   const ui = useWorkspaceUIStoreApi();
   const activeCruxId = useWorkspaceUIStore((s) => s.activeCruxId);
   const scope = useWorkspaceUIStore((s) => s.workspaceScope);
@@ -111,19 +101,10 @@ export default function PanelPicker() {
     trigger.current?.focus();
   };
   // This workspace's own panes first, then the Garden-wide ones.
-  const available = (
-    scope === 'garden'
-      ? GARDEN_PANE_ORDER
-      : activeCruxId
-        ? [
-            ...DEFAULT_PANE_ORDER.filter((p) => !GARDEN_WIDE.has(p)),
-            ...DEFAULT_PANE_ORDER.filter((p) => GARDEN_WIDE.has(p)),
-          ]
-        : []
-  )
+  const available = offeredPanes(scope, activeCruxId, aiEnabled)
     .filter((pane) => !OWN_BUTTON.has(pane) || !visibility[pane])
     .filter((pane) => {
-      return `${labels[pane]} ${PANES[pane].label}`
+      return `${labels[pane]} ${PANES[pane].label} ${PANES[pane].keywords ?? ''}`
         .toLowerCase()
         .includes(query.trim().toLowerCase());
     });
@@ -142,7 +123,7 @@ export default function PanelPicker() {
           setOpen(!open);
         }}
       >
-        <PlusCircleIcon />
+        <LayoutIcon size={15} />
         <span>Panels</span>
       </button>
       {open &&

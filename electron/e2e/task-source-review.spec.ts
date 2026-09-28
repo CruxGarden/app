@@ -1,13 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 test('a worker review resolves conflicts into its named source Task and recovers there after restart', async () => {
   let launch = await launchApp();
   try {
     await enterGarden(launch.page);
     const main = await createCrux(launch.page, 'Source review');
-    await launch.page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(launch.page)).click();
     await launch.page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Parent task');
     await launch.page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(

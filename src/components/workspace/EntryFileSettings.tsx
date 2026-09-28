@@ -17,7 +17,7 @@ export default function EntryFileSettings() {
   const entry = workshopEntry(crux, artifacts);
   const selected = crux.meta?.settings?.entryFile ?? '';
   return (
-    <section className="p-3 border-b border-border space-y-2" aria-label="Crux settings">
+    <section className="p-3 border-b border-border space-y-2" aria-label="Where it opens">
       <label htmlFor="crux-entry-file" className="block text-xs font-medium">
         Entry file
       </label>

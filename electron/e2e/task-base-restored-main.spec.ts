@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 test('retained Task base permits review after Main restores before its starting version', async () => {
   const launch = await launchApp();
@@ -60,8 +61,8 @@ test('retained Task base permits review after Main restores before its starting 
       return { earlier, latest };
     }, main);
     await page.reload();
-    await expect(page.getByRole('button', { name: 'New task', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await newTaskButton(page);
+    await (await newTaskButton(page)).click();
     await page
       .getByRole('textbox', { name: 'Task name', exact: true })
       .fill('Independent addition');

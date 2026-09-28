@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Input, SectionLabel, fieldClass } from '@/components/ui';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
@@ -15,6 +16,7 @@ import { formatDateTime } from '@/lib/format';
  * that travel with the task. Name and notes are edited in place.
  */
 export default function TaskDetails() {
+  const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux);
   const data = useCruxStoreApi();
   const identity = copyIdentity(crux);
@@ -147,7 +149,7 @@ export default function TaskDetails() {
             </dd>
           </>
         )}
-        {row?.model && (
+        {aiEnabled && row?.model && (
           <>
             <dt className="text-text-muted">Model</dt>
             <dd className="font-mono">{row.model}</dd>
@@ -156,7 +158,7 @@ export default function TaskDetails() {
       </dl>
       {seed && (
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-text-muted">The ask</span>
+          <span className="text-xs text-text-muted">{aiEnabled ? 'The ask' : 'Brief'}</span>
           <p className="text-xs whitespace-pre-wrap text-text">{seed}</p>
         </div>
       )}

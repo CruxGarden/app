@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import JSZip from 'jszip';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, storedCrux, addArtifact } from './multi-crux-helpers';
-import { togglePanel } from './panel-helpers';
+import { togglePanel, newTaskButton } from './panel-helpers';
 import { exportNativeCrux } from './native-archive-helpers';
 
 test('the visible Crux exporter and importer preserve Main, Tasks, starting state and binary files across profiles and restart', async () => {
@@ -28,7 +28,7 @@ test('the visible Crux exporter and importer preserve Main, Tasks, starting stat
       .poll(() => readFileSync(join(meta.projectFolder, 'note.txt'), 'utf8'))
       .toBe('Earlier text');
     writeFileSync(join(meta.projectFolder, 'binary.dat'), Buffer.from([0, 255, 14, 42]));
-    await source.page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(source.page)).click();
     await source.page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Experiment');
     await source.page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(

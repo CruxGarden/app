@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 test('refused Task completion retains setup across restart and recovery protects unexpected files', async () => {
   const env = { CRUX_API_OWNER: '1' };
@@ -21,7 +22,7 @@ test('refused Task completion retains setup across restart and recovery protects
         "CREATE TRIGGER refuse_ready BEFORE UPDATE ON working_copies WHEN NEW.phase = 'ready' BEGIN SELECT RAISE(ABORT, 'Ready state refused'); END",
       ),
     );
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     const dialog = page.getByRole('dialog', { name: 'New task', exact: true });
     await dialog.getByRole('textbox', { name: 'Task name', exact: true }).fill('Recoverable task');
     await dialog.getByRole('button', { name: 'Save and start task' }).click();

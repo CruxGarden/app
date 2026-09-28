@@ -75,7 +75,7 @@ test.describe('guide 11 · History', () => {
       const folder = (await storedCrux(page, id)).projectFolder as string;
       await expect.poll(() => existsSync(join(folder, 'notes.md')), { timeout: 60_000 }).toBe(true);
       expect(readFileSync(join(folder, 'notes.md'), 'utf8')).toBe('Keep these notes');
-      const history = await openPanel(page, 'history', 'Toggle history');
+      const history = await openPanel(page, 'history', 'Toggle growth');
       await expect(history.getByText('First words', { exact: true })).toBeVisible({
         timeout: 30_000,
       });

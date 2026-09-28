@@ -529,6 +529,9 @@ export async function generateSnapshotSummary(opts: {
   deps: Pick<GrowthDeps, 'dimension'>;
   onApplied?: (dimensionId: string, summary: string) => void;
 }): Promise<void> {
+  // With AI tools off nothing is sent to a model, a summary included.
+  const { aiEnabledNow } = await import('@/hooks/useAiEnabled');
+  if (!aiEnabledNow()) return;
   try {
     const { getApiKey } = await import('@/ai/keys');
     const { getProviderForModel } = await import('@/ai/providers');

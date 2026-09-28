@@ -80,7 +80,7 @@ test('real Codex discovers Garden tools and saves an Artifact from Collaboration
         'Garden Codex connection verified.\nHuman edit: keep this line.\nAgent continued the human edit.',
       );
 
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
       0,

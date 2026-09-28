@@ -127,7 +127,7 @@ test('make the ad with Crux Garden', async () => {
     await page.screenshot({ path: join(OUT, '2-workshop.png') });
 
     // History: the snapshot the agent took, or one we take now.
-    await ensurePane(page, 'history', 'Toggle history');
+    await ensurePane(page, 'history', 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
     if (
       !(await history

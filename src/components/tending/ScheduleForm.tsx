@@ -1,8 +1,12 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { chipClass } from '@/components/ui/button-class';
 import type { Crux } from '@/api/types';
 import { linkClass } from '@/components/ui/button-class';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Input, Select, Textarea } from '@/components/ui';
 import {
+  AI_ACTIONS,
+  AI_EVENTS,
   TIMER_PRESETS,
   addSchedule,
   type Action,
@@ -225,6 +229,8 @@ export default function ScheduleForm({
   cruxes: Crux[];
   onDone: () => void;
 }) {
+  const aiEnabled = useAiEnabled();
+  const events = GARDEN_EVENTS.filter((ev) => aiEnabled || !AI_EVENTS.has(ev.id));
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
 
@@ -439,7 +445,7 @@ export default function ScheduleForm({
               onChange={(e) => setEvent(e.target.value as GardenEventName)}
               fieldSize="sm"
             >
-              {GARDEN_EVENTS.map((ev) => (
+              {events.map((ev) => (
                 <option key={ev.id} value={ev.id}>
                   {ev.label}
                 </option>
@@ -563,7 +569,7 @@ export default function ScheduleForm({
               fieldSize="sm"
             >
               <option value="">When you press Start</option>
-              {GARDEN_EVENTS.map((ev) => (
+              {events.map((ev) => (
                 <option key={ev.id} value={ev.id}>
                   Itself, when {ev.label.charAt(0).toLowerCase() + ev.label.slice(1)}
                 </option>
@@ -630,16 +636,18 @@ export default function ScheduleForm({
       <div className="space-y-2" data-testid="schedule-actions">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-text-muted">Then</span>
-          {(Object.keys(ACTION_LABEL) as Action['kind'][]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => addAction(k)}
-              className="px-2 py-0.5 rounded-[var(--radius-sm)] border border-border text-text-muted hover:text-text hover:border-accent cursor-pointer"
-            >
-              + {ACTION_LABEL[k]}
-            </button>
-          ))}
+          {(Object.keys(ACTION_LABEL) as Action['kind'][])
+            .filter((k) => aiEnabled || !AI_ACTIONS.has(k))
+            .map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => addAction(k)}
+                className={chipClass(false, 'h-7 px-2.5 font-body text-xs')}
+              >
+                + {ACTION_LABEL[k]}
+              </button>
+            ))}
         </div>
         {actions.map((a, i) => (
           <div

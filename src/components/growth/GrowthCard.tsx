@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useEffect } from 'react';
 import { useObjectUrl } from '@/hooks/useBlobUrl';
 import { appChangesLabel } from '@/services/app-changes';
@@ -6,7 +7,6 @@ import 'react-photo-view/dist/react-photo-view.css';
 import { cn } from '@/lib/cn';
 import type { Dimension, Artifact } from '@/api/types';
 import { getServices } from '@/services';
-import { useUIStore } from '@/stores/uiStore';
 import { pathOf, basename } from '@/lib/artifact-path';
 
 interface GrowthCardProps {
@@ -212,7 +212,7 @@ export default function GrowthCard({
   const artifactCount = (growth.meta?.artifactCount as number) || 0;
   // Verify-before-done (B4): the check recorded on this snapshot, if one ran.
   const verification = growth.meta?.verification as { status?: string } | undefined;
-  const aiEnabled = useUIStore((s) => s.aiEnabled);
+  const aiEnabled = useAiEnabled();
   const [expanded, setExpanded] = useState(false);
 
   // "Summarizing…" is only honest while a summary can actually arrive.
@@ -350,7 +350,7 @@ export default function GrowthCard({
           )}
         </div>
 
-        {summary ? (
+        {aiEnabled && summary ? (
           <p
             onClick={(e) => {
               e.stopPropagation();

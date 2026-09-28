@@ -2,7 +2,7 @@ import { useGardenStore } from './gardenStore';
 import { newTurnJob } from '@/services/turn-jobs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCruxStore } from './cruxStore';
-import { createUIStore } from './uiStore';
+import { createUIStore, useUIStore } from './uiStore';
 import {
   activateWorkspace,
   allWorkspaces,
@@ -28,6 +28,8 @@ function deferred() {
   return { promise, resolve };
 }
 beforeEach(async () => {
+  // Workspaces here hold Collaboration, an AI pane: offered only with AI tools on.
+  useUIStore.getState().setAiEnabled(true);
   await initServices();
 });
 afterEach(async () => {

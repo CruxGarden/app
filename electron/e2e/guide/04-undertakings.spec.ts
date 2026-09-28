@@ -151,11 +151,11 @@ test.describe('guide 04 · Undertakings', () => {
         .toContain('A sentence of my own, on the first page.');
 
       // The public notes: the book is an EPUB of exactly the ticked pages.
-      await togglePanel(page, 'Toggle metadata');
+      await togglePanel(page, 'Toggle details');
       const format = page.getByLabel('Book edition', { exact: true });
       await expect(format).toBeVisible({ timeout: 30_000 });
       await format.selectOption('epub');
-      await togglePanel(page, 'Toggle metadata');
+      await togglePanel(page, 'Toggle details');
       await frame.getByRole('button', { name: 'Public edition…' }).click();
       const boxes = frame.locator('#garden-publication input[type=checkbox][data-note]');
       await expect(boxes.first()).toBeVisible({ timeout: 60_000 });

@@ -1,4 +1,5 @@
 import { getSqliteClient } from '@/services/sqlite/client';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { alertDialog } from '@/stores/dialogStore';
 import { useGardenStore } from '@/stores/gardenStore';
 import { gardenPath, useGardenContext } from '@/stores/gardenContext';
@@ -73,7 +74,9 @@ export default function CruxCard({
   const blobUrl = useBlobUrl(thumbnailFingerprint, 'image/jpeg');
   const imageUrl = thumbnailUrl || blobUrl;
 
-  const description = crux.meta?.summary?.purpose || crux.description;
+  // The written summary is the collaborator's; with AI tools off, only the person's words show.
+  const aiEnabled = useAiEnabled();
+  const description = (aiEnabled && crux.meta?.summary?.purpose) || crux.description;
   const isPublished = crux.meta?.publishedAt != null;
   const kindLabel = crux.kind ? KIND_LABELS[crux.kind] : undefined;
   const when = sortBy === 'updated' ? crux.updated : crux.created;

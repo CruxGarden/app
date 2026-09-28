@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import SynthControls from './SynthControls';
 import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -24,6 +25,11 @@ export default function SoundTab() {
   useEffect(() => init(), [init]);
   const [cues, setCues] = useState<SoundCues>(() => getCues());
   const [crafting, setCrafting] = useState<CueEvent | null>(null);
+  // Replies and tool calls come from the collaborator; without it they never happen.
+  const aiEnabled = useAiEnabled();
+  const events = CUE_EVENTS.filter(
+    (ev) => aiEnabled || (ev.id !== 'message' && ev.id !== 'toolDone'),
+  );
   const updateCue = (ev: CueEvent, kind: CueKind | null) => {
     const next = { ...cues, [ev]: kind };
     setCues(next);
@@ -38,7 +44,7 @@ export default function SoundTab() {
           Cues — short sounds on events
         </SectionLabel>
         <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1.5 items-center">
-          {CUE_EVENTS.map((ev) => (
+          {events.map((ev) => (
             <div key={ev.id} className="contents">
               <div className="min-w-0">
                 <div className="text-xs text-text">{ev.label}</div>

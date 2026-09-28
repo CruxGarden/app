@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { startMockApi, type MockApi } from '../api-mock';
 import { enterGarden, createCrux, storedCrux } from '../multi-crux-helpers';
-import { openPanel, showPane } from '../panel-helpers';
+import { openPanel, showPane, panelPressed, togglePanel } from '../panel-helpers';
 import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /** Share a fresh Crux without a backup; returns the Share pane and the API's id for it. */
@@ -218,6 +218,9 @@ test.describe('guide 17 · Share', () => {
       await expect
         .poll(() => api.state.cruxes[cruxId]?.discoverable, { timeout: 30_000 })
         .toBe(true);
+      // Room for Share beside Explore: the conversation and the files play no part here.
+      for (const label of ['Toggle collaboration', 'Toggle artifacts'])
+        if ((await panelPressed(page, label)) === 'true') await togglePanel(page, label);
       const explore = await showPane(page, 'Explore');
       await explore.getByPlaceholder(/moods and authors/).fill('quiet');
       await expect(explore.getByRole('link', { name: 'Quiet page' })).toBeVisible({

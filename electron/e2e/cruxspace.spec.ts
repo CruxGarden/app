@@ -199,7 +199,6 @@ test('a Garden connects a website, finished artwork and a tracker, retaining sel
     await tracker.hover();
     await tracker.getByRole('button', { name: 'Crux actions' }).click();
     await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(open(page, 'Launch board')).toHaveCount(0);
     await expect(open(page, 'Album website')).toBeVisible();
   } finally {

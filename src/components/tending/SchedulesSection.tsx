@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useGardenContext } from '@/stores/gardenContext';
 import { chipClass } from '@/components/ui/button-class';
 import ScheduleForm from './ScheduleForm';
@@ -7,6 +8,8 @@ import { Button, Toggle, Panel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGardenStore } from '@/stores/gardenStore';
 import {
+  AI_ACTIONS,
+  AI_EVENTS,
   describeTrigger,
   formatRemaining,
   moodSchedulesEnabled,
@@ -99,7 +102,25 @@ export default function SchedulesSection() {
   const all = useSchedules((s) => s.schedules);
   // The Garden in front's own schedules.
   const gardenId = useGardenContext((s) => s.garden?.id);
-  const schedules = useMemo(() => all.filter((s) => ownedBy(s, gardenId)), [all, gardenId]);
+  // With AI tools off, a schedule shows only what it can still do: its prompts
+  // and tool calls wait (the runner skips them), and one made only of those is
+  // not listed until they are back on.
+  const aiEnabled = useAiEnabled();
+  const schedules = useMemo(
+    () =>
+      all
+        .filter((s) => ownedBy(s, gardenId))
+        .filter(
+          (s) =>
+            aiEnabled ||
+            ((s.actions.length === 0 || s.actions.some((a) => !AI_ACTIONS.has(a.kind))) &&
+              !(s.trigger.kind === 'event' && AI_EVENTS.has(s.trigger.event))),
+        )
+        .map((s) =>
+          aiEnabled ? s : { ...s, actions: s.actions.filter((a) => !AI_ACTIONS.has(a.kind)) },
+        ),
+    [all, gardenId, aiEnabled],
+  );
   const cruxes = useGardenStore((s) => s.allCruxes);
   const cruxTitle = (id?: string) => cruxes.find((c) => c.id === id)?.title ?? 'a Crux';
   const [adding, setAdding] = useState(false);
@@ -119,9 +140,10 @@ export default function SchedulesSection() {
           <p className="text-xs text-text-muted">
             A cron for the garden: at a time, on an interval, on a cron line, a timer with phases,
             at dawn or dusk, when something happens, when the weather turns, or when a Crux sits
-            untouched — then alert, sound a cue, notify, wear a Mood, send a prompt, or run a tool.
-            They run while the app is open, or from the menu bar in docked mode; one that comes due
-            while it is closed says so when you are back.
+            untouched — then alert, sound a cue, notify, wear a Mood
+            {aiEnabled ? ', send a prompt, or run a tool' : ' or call a function'}. They run while
+            the app is open, or from the menu bar in docked mode; one that comes due while it is
+            closed says so when you are back.
           </p>
         </div>
         <Button size="sm" variant="secondary" onClick={() => setAdding((v) => !v)}>

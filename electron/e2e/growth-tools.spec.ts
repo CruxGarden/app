@@ -67,7 +67,7 @@ test.describe('growth tools (mock AI)', () => {
       // LIVE: only the deliberately marked checkpoint is in Growth; protected
       // recovery remains separate. Restore rebuilds the conversation without
       // duplicating it — each user message appears exactly once.
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       await expect(page.getByText('Checkpoint', { exact: true })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText('Before revert', { exact: true })).toHaveCount(0);
       expect(
@@ -89,7 +89,7 @@ test.describe('growth tools (mock AI)', () => {
       await expect(page.getByText('Please rewind', { exact: true })).toHaveCount(1);
       await expect(page.getByText('Done — rewound to the checkpoint.')).toHaveCount(1);
       await expect(page.getByText('Done — I wrote that file for you.')).toHaveCount(1);
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
 
       // Re-open the Crux: the chosen version and protected recovery both persist,
       // and the editor shows the restored content.
@@ -115,7 +115,7 @@ test.describe('growth tools (mock AI)', () => {
       await expect(monaco).not.toContainText('BROKEN');
 
       if (!(await page.getByText('Checkpoint', { exact: true }).isVisible())) {
-        await togglePanel(page, 'Toggle history');
+        await togglePanel(page, 'Toggle growth');
       }
       await expect(page.getByText('Checkpoint', { exact: true })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText('Before revert', { exact: true })).toHaveCount(0);

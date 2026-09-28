@@ -1,3 +1,4 @@
+import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { useUIStore } from '@/stores/uiStore';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +33,7 @@ export default function TendingNotifications() {
     );
     setActionRuntime({
       cruxTitle: (id) => useGardenStore.getState().allCruxes.find((c) => c.id === id)?.title ?? id,
+      aiEnabled: aiEnabledNow,
     });
     void initDockedMode();
     const stop = startScheduler();

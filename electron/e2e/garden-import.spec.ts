@@ -9,7 +9,7 @@ import { enterGarden } from './multi-crux-helpers';
 
 test('imported Garden graphs open Home and preserve nested members and private conversations through restart', async () => {
   test.setTimeout(150_000);
-  let instance = await launchApp();
+  let instance = await launchApp({ ai: false });
   const dir = instance.dir;
   let client: Client | undefined;
   try {
@@ -191,7 +191,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
       page.getByRole('region', { name: 'Fieldwork · Collaboration', exact: true }),
     ).toContainText('Private field observations');
     await instance.app.close();
-    instance = await launchApp({ dir });
+    instance = await launchApp({ dir, ai: false });
     page = instance.page;
     await page.getByRole('button', { name: /enter/i }).click();
     await expect.poll(() => new URL(page.url()).searchParams.get('garden')).toBe(home);

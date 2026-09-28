@@ -33,7 +33,7 @@ test.describe('preset screenshots', () => {
       );
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('cells interlinked');

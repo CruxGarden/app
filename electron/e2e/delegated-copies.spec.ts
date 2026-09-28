@@ -1,9 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 async function task(page: Page) {
-  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await (await newTaskButton(page)).click();
   await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Parent task');
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();

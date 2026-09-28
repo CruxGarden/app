@@ -580,7 +580,9 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
 
     if (artifacts.length === 0 && !isCreating) {
       return (
-        <div className="p-3 text-xs text-text-muted">No files yet. Ask the AI to create one.</div>
+        <div className="p-3 text-xs text-text-muted">
+          No files yet. Drop some here, or make one with New file.
+        </div>
       );
     }
 

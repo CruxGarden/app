@@ -80,7 +80,7 @@ test('One Big Sky: offline game, keyboard match, focus pause and preserved sourc
     const fingerprint = createHash('sha256').update(html).digest('hex');
     await expect.poll(() => storedFingerprint(page, id, 'index.html')).toBe(fingerprint);
     const history = page.getByTestId('pane-body-history');
-    if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
+    if (!(await history.isVisible())) await togglePanel(page, 'Toggle growth');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Our sky arena');
     await history.getByRole('button', { name: 'Save', exact: true }).click();

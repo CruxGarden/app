@@ -1,3 +1,4 @@
+import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { buttonClass } from '@/components/ui/button-class';
 import { useOpenFileByPath, useOpenRound } from './useOpenRound';
@@ -269,7 +270,12 @@ export function AddPhotosButton({
             );
         } else {
           void alertDialog(
-            summary + (added ? ' One per photo — add captions in each, or ask for them.' : ''),
+            summary +
+              (added
+                ? aiEnabledNow()
+                  ? ' One per photo — add captions in each, or ask for them.'
+                  : ' One per photo — add captions in each.'
+                : ''),
             failed.length && !added ? 'Add photos' : 'Photos added',
           );
         }

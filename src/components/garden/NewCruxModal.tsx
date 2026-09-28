@@ -1,4 +1,6 @@
 import { captureGardenId, cruxPath, inGarden } from '@/stores/gardenContext';
+import { inferStartingPoint, nameFromIdea } from '@/lib/infer-starting-point';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { plainError } from '@/lib/error-text';
 import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
@@ -85,7 +87,7 @@ const OWN_TEMPLATES: Template[] = [
     order: 2,
     id: 'blender',
     label: 'Blender',
-    description: 'Model together in Blender · keep scenes, renders and game assets in Garden',
+    description: 'Model in Blender · keep scenes, renders and game assets in Garden',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
     kind: 'webapp',
@@ -96,7 +98,7 @@ const OWN_TEMPLATES: Template[] = [
     order: 3,
     id: 'figma',
     label: 'Figma',
-    description: 'Design together in Figma · keep your brief and exported assets in Garden',
+    description: 'Design in Figma · keep your brief and exported assets in Garden',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
     kind: 'webapp',
@@ -413,6 +415,9 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   const [titleEdited, setTitleEdited] = useState(false);
   const [idea, setIdea] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
+  // Chosen from the list by hand: the idea stops choosing for the person.
+  const [pickedByHand, setPickedByHand] = useState(false);
+  const aiEnabled = useAiEnabled();
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -425,9 +430,29 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   useInstalledTools();
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
 
+  // One question: the idea picks where the Crux starts and what it is called,
+  // until the person picks or names it themselves (lib/infer-starting-point).
+  const onIdeaChange = (next: string) => {
+    setIdea(next);
+    let startsAs = template;
+    if (!pickedByHand) {
+      const offered = TEMPLATES.filter(
+        (t) =>
+          isToolAvailable(t.id) &&
+          (!t.desktopOnly || can(Capability.Build)) &&
+          (!t.v2 || can(Capability.V2)),
+      );
+      const inferred = inferStartingPoint(next, offered) ?? 'blank';
+      startsAs = (TEMPLATES.find((t) => t.id === inferred) ?? TEMPLATES[0])!;
+      setSelectedTemplate(startsAs.id);
+    }
+    if (!titleEdited) setTitle(nameFromIdea(next) || startsAs.defaultTitle || 'My Crux');
+  };
+
   const reset = () => {
     setTitle('My Crux');
     setTitleEdited(false);
+    setPickedByHand(false);
     setIdea('');
     setCreateError(null);
     setSelectedTemplate('blank');
@@ -605,7 +630,15 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
               ? 22
               : undefined,
         );
-      if (idea.trim()) setSetting(`cruxgarden:composer:${crux.id}`, idea.trim());
+      if (idea.trim()) {
+        // The idea is what the Crux is for: its description, whoever does the work.
+        await cruxStore
+          .getState()
+          .updateCrux({ description: idea.trim().slice(0, 280) })
+          .catch((err) => console.warn('[new-crux] description not saved:', err));
+        // With a collaborator, it also waits in Collaboration, ready to send.
+        if (aiEnabled) setSetting(`cruxgarden:composer:${crux.id}`, idea.trim());
+      }
 
       reset();
       onClose();
@@ -653,7 +686,39 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
     <Modal open={open} onClose={handleClose} size="screen" title="Add Crux">
       <div className="flex flex-col h-full gap-5">
         <div className="shrink-0 space-y-2">
-          <h2 className="text-lg font-medium">What would you like to grow?</h2>
+          <label htmlFor="new-crux-idea" className="block text-lg font-medium">
+            What do you want to make?
+          </label>
+          <textarea
+            id="new-crux-idea"
+            value={idea}
+            onChange={(e) => onIdeaChange(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter creates; Shift+Enter keeps writing.
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                void handleCreate();
+              }
+            }}
+            placeholder="A tiny game, a page for my project, a reading list…"
+            disabled={creating || importing}
+            rows={2}
+            autoFocus
+            className={cn(inputClass, 'h-auto py-2 resize-y')}
+          />
+          <p className="text-xs text-text-muted" data-testid="new-crux-starts-as">
+            {idea.trim() ? (
+              <>
+                Starts as <span className="text-text">{template.label}</span>, named{' '}
+                <span className="text-text">
+                  {title.trim() || template.defaultTitle || 'My Crux'}
+                </span>
+                {aiEnabled ? ' · the idea waits in Collaboration, ready to send.' : '.'}
+              </>
+            ) : (
+              'Describe it in a few words and press Enter, or choose where it starts below.'
+            )}
+          </p>
           <button
             disabled={creating || importing}
             className={linkClass('text-sm')}
@@ -661,24 +726,6 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           >
             Undertakings — start a Garden
           </button>
-          <p className="text-sm text-text-muted">
-            Start with an idea or choose a starting point. You can change everything as you go.
-          </p>
-          <SectionLabel htmlFor="new-crux-idea" as="label" tone="muted" className="pt-3 mb-2">
-            Your idea <span className="normal-case tracking-normal">(optional)</span>
-          </SectionLabel>
-          <textarea
-            id="new-crux-idea"
-            value={idea}
-            onChange={(e) => setIdea(e.target.value)}
-            placeholder="A tiny game, a page for my project, a reading list…"
-            disabled={creating || importing}
-            rows={2}
-            className={cn(inputClass, 'h-auto py-2 resize-y')}
-          />
-          <p className="text-xs text-text-muted">
-            Your idea becomes an editable message in Collaboration. Send it when you’re ready.
-          </p>
         </div>
         {/* Name */}
         <div className="shrink-0">
@@ -698,14 +745,13 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
             placeholder={template.defaultTitle || 'My Crux'}
             disabled={creating}
             className={inputClass}
-            autoFocus
           />
         </div>
 
         {/* Template selector — scrollable */}
         <div className="flex-1 min-h-0 flex flex-col">
           <SectionLabel as="label" tone="muted" className="mb-2 shrink-0">
-            Starting point
+            Or choose where it starts
           </SectionLabel>
           <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
             <div className="flex flex-col">
@@ -717,7 +763,8 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
                   data-template-id={t.id}
                   onClick={() => {
                     setSelectedTemplate(t.id);
-                    if (!titleEdited && t.defaultTitle) {
+                    setPickedByHand(true);
+                    if (!titleEdited && !idea.trim() && t.defaultTitle) {
                       setTitle(t.defaultTitle);
                     }
                   }}

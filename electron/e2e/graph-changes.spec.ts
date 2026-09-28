@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 test('API edits refresh open details without losing drafts, files or Task context, including restart', async () => {
   const env = { CRUX_API_OWNER: '1' };
@@ -32,7 +33,7 @@ test('API edits refresh open details without losing drafts, files or Task contex
     await expect(details.getByText('Notes saved')).toBeVisible();
     await page.locator('.monaco-editor').click();
     await page.keyboard.press('ControlOrMeta+s');
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('First task');
     await page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);

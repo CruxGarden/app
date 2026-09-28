@@ -1,4 +1,5 @@
 import { toArrayBuffer } from '@/lib/bytes';
+import { generateZip } from '@/lib/zip-off-thread';
 import {
   archiveRuntimeMode,
   referenceArchiveRuntimes,
@@ -167,7 +168,7 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
     options.runtime ?? archiveRuntimeMode(),
   );
   onProgress?.('Compressing...');
-  const blob = await zip.generateAsync({ type: 'blob' });
+  const blob = await generateZip(zip);
 
   const now = new Date();
   const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;

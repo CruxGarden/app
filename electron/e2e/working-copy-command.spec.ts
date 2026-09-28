@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact, storedCrux } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 test('owned Task edits preserve independent state through UI failure, retry and restart', async () => {
   const env = { CRUX_API_OWNER: '1' };
@@ -14,7 +15,7 @@ test('owned Task edits preserve independent state through UI failure, retry and 
     await launch.page.locator('.monaco-editor').click();
     await launch.page.keyboard.type('Preserved task content');
     await launch.page.keyboard.press('ControlOrMeta+s');
-    await launch.page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(launch.page)).click();
     await launch.page.getByRole('textbox', { name: 'Task name', exact: true }).fill('First task');
     await launch.page.evaluate(() =>
       window.electronAPI!.sqlite.run(

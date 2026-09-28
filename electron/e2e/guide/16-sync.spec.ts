@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, createCrux, storedCrux } from '../multi-crux-helpers';
-import { openPanel } from '../panel-helpers';
+import { openPanel, newTaskButton } from '../panel-helpers';
 import { connectAccount, markVersion, writeFirstFile } from '../journeys/journey-helpers';
 
 /** Open `name` from Artifacts and replace its text. */
@@ -23,7 +23,7 @@ async function editFile(page: Page, name: string, text: string) {
 
 /** Start a Task from the bar and land in its workspace; returns the Task's workspace id. */
 async function startTask(page: Page, name: string) {
-  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await (await newTaskButton(page)).click();
   await page.getByRole('textbox', { name: 'Task name', exact: true }).fill(name);
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible({
@@ -113,7 +113,7 @@ test.describe('guide 16 · Sync', () => {
         .toBe(true);
       expect(readFileSync(join(folder, 'index.html'), 'utf8')).toBe('<h1>Carried</h1>');
       // The history and its label came along.
-      const history = await openPanel(page, 'history', 'Toggle history');
+      const history = await openPanel(page, 'history', 'Toggle growth');
       await expect(history.getByText('First words', { exact: true })).toBeVisible({
         timeout: 30_000,
       });

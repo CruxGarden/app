@@ -68,7 +68,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await chat.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(approvals).toHaveCount(0);
     await expect(chat.getByText(/Saved codex-note.md using Garden tools/)).toHaveCount(3);
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
       0,

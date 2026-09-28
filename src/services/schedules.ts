@@ -235,6 +235,14 @@ export function ownedBy(s: Schedule, gardenId: string | undefined): boolean {
   return (s.gardenId ?? root) === (gardenId ?? root);
 }
 
+/** A prompt to a Crux and a garden tool call are the collaborator's: they run only with AI tools on. */
+export const AI_ACTIONS: ReadonlySet<Action['kind']> = new Set<Action['kind']>(['prompt', 'tool']);
+/** A reply and a finished tool call only happen with a collaborator. */
+export const AI_EVENTS: ReadonlySet<GardenEventName> = new Set<GardenEventName>([
+  'message',
+  'toolDone',
+]);
+
 const EVENTS: GardenEventName[] = [
   'launch',
   'message',

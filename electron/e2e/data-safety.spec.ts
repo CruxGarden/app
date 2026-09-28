@@ -89,7 +89,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await togglePanel(page, 'Toggle history');
+        await togglePanel(page, 'Toggle growth');
       const history = page.getByTestId('pane-body-history');
       await history.getByRole('button', { name: 'Mark version', exact: true }).click();
       await history.getByPlaceholder('Label (optional)').fill('v1');
@@ -192,7 +192,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await togglePanel(page, 'Toggle history');
+        await togglePanel(page, 'Toggle growth');
       await expect(
         page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
       ).toBeVisible({ timeout: 30_000 });

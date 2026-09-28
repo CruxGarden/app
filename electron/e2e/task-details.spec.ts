@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 /**
  * The Tasks area's details (Daniel, 2026-09-19): Main and each task show
@@ -22,7 +23,7 @@ test('a task’s details are reviewed and updated in the Tasks pane', async () =
     await expect(details.getByText('Notes saved')).toBeVisible();
 
     // A task: its ask, its status, its own notes and a rename.
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Checkout');
     await page
       .getByRole('dialog', { name: 'New task', exact: true })

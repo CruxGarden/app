@@ -1,4 +1,5 @@
 import { archiveRuntimeMode, hydrateArchiveRuntimes, type RuntimeMode } from './archive-runtimes';
+import { generateZip } from '@/lib/zip-off-thread';
 import { listGrowths } from './growth';
 import { hasGardenGraph } from './garden-navigation';
 import { slugify } from '@/lib/slug';
@@ -229,7 +230,7 @@ export async function exportCruxspace(
   };
   zip.file('cruxspace.json', JSON.stringify(manifest, null, 2));
   onProgress?.('Writing the package…');
-  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  const blob = await generateZip(zip, { compression: 'DEFLATE' });
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   const slug = slugify(space.name, 'cruxspace');
   return { blob, filename: `${slug}-${stamp}.cruxspace`, manifest, failed };
@@ -445,5 +446,5 @@ async function memberArchive(zip: JSZip, member: PackageMember): Promise<Blob> {
     else if (!(await db.blobExists(fp)))
       throw new Error(`The package is missing a file that ${member.title} needs.`);
   }
-  return archive.generateAsync({ type: 'blob' });
+  return generateZip(archive);
 }

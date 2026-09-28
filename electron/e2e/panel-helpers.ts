@@ -85,14 +85,13 @@ const inLayout = async (page: Page, pane: GardenPane) => {
   await page.locator('[data-testid^="pane-body-"]').first().waitFor();
   return (await page.getByTestId(`pane-body-${PANE_TYPE[pane]}`).count()) > 0;
 };
+/** Explore and Tending are ordinary panels since the calm top bar: the picker toggles them. */
+const PICKER_PANES = new Set<GardenPane>(['Explore', 'Tending']);
 const press = (page: Page, pane: GardenPane) =>
   pane === 'Settings'
     ? page.keyboard.press('ControlOrMeta+,')
-    : pane === 'Tending'
-      ? page
-          .locator('header')
-          .getByRole('button', { name: /^Tending/ })
-          .click()
+    : PICKER_PANES.has(pane)
+      ? togglePanel(page, `Toggle ${pane.toLowerCase()}`)
       : page.getByRole('button', { name: pane, exact: true }).click();
 
 /**
@@ -127,7 +126,9 @@ export async function hidePane(page: Page, pane: GardenPane) {
 export async function enableAi(page: Page) {
   const settings = await showPane(page, 'Settings');
   await settings.locator('h2', { hasText: /^AI$/ }).click();
-  await settings.getByRole('switch', { name: 'Enable AI Tools' }).click();
+  const toggle = settings.getByRole('switch', { name: 'Enable AI Tools' });
+  // Idempotent: the suite starts gardens with AI on (launchApp's `ai`), a spec may not.
+  if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click();
   const key = settings.getByPlaceholder('sk-ant-...');
   await key.fill('sk-ant-e2e-not-a-real-key');
   await key.press('Enter');
@@ -146,4 +147,28 @@ export async function openPanel(page: Page, type: string, label: string) {
   if (!inBar && !(await body.count())) await togglePanel(page, label);
   await expect(body).toBeVisible({ timeout: 30_000 });
   return body;
+}
+
+/** ⌘K: open the command palette and run the first command matching `query`. */
+export async function runCommand(page: Page, query: string, command?: string) {
+  await page.keyboard.press('ControlOrMeta+k');
+  const palette = page.getByRole('dialog', { name: 'Command palette' });
+  await expect(palette).toBeVisible();
+  await palette.getByRole('combobox', { name: 'Search or run a command' }).fill(query);
+  const option = command
+    ? palette.getByRole('option', { name: command, exact: true })
+    : palette.getByRole('option').first();
+  await option.click();
+  await expect(palette).toBeHidden();
+}
+
+/**
+ * Tasks arrives once a task exists (UX pass 2, 2026-09-27); before the first
+ * one, open the panel to reach New task. Never closes an open Tasks pane.
+ */
+export async function newTaskButton(page: Page) {
+  await openPanel(page, 'tasks', 'Toggle tasks');
+  const button = page.getByRole('button', { name: 'New task', exact: true });
+  await expect(button).toBeVisible({ timeout: 30_000 });
+  return button;
 }

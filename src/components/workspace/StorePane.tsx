@@ -337,7 +337,7 @@ export default function StorePane() {
                     ? 'What visitors of the published crux wrote'
                     : isPublished
                       ? 'Connect your account to read the live store'
-                      : 'Publish the crux to have a live store'
+                      : 'Share the crux to have a live store'
               }
               data-testid={`store-source-${src}`}
             >

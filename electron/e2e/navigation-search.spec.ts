@@ -1,6 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { runCommand, showPane } from './panel-helpers';
+
+/** ⌘K → "Find in Navigator": the Navigator's own search, opened from the command palette. */
+const findInNavigator = (page: Page) => runCommand(page, 'find in navigator', 'Find in Navigator');
 
 test('Navigator search disambiguates locations, shares routes, retries and survives restart', async () => {
   test.setTimeout(120_000);
@@ -13,7 +17,7 @@ test('Navigator search disambiguates locations, shares routes, retries and survi
     const source = page.url();
     const origin = page.getByRole('button', { name: 'Garden location', exact: true });
     await origin.focus();
-    await page.keyboard.press('ControlOrMeta+k');
+    await findInNavigator(page);
     const nav = page.getByRole('complementary', { name: 'Navigator' });
     const input = nav.getByRole('searchbox', { name: 'Find Gardens and Cruxes' });
     await expect(input).toBeFocused({ timeout: 3000 });
@@ -28,7 +32,7 @@ test('Navigator search disambiguates locations, shares routes, retries and survi
     const second = await createCrux(page, 'Dream study');
     await page.goto(source + '&navView=neighborhood');
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', first);
-    await page.keyboard.press('ControlOrMeta+k');
+    await findInNavigator(page);
     await input.fill('Dream study');
     const results = nav.getByRole('region', { name: 'Search results' });
     await expect(results.getByRole('button', { name: /Dream study/ })).toHaveCount(2);
@@ -44,7 +48,7 @@ test('Navigator search disambiguates locations, shares routes, retries and survi
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', first);
     await page.getByRole('button', { name: 'Navigator', exact: true }).click();
-    await page.keyboard.press('ControlOrMeta+k');
+    await findInNavigator(page);
     await page.keyboard.press('Escape');
     await expect(nav).toBeVisible();
     // Hold a real API search response while the user moves to a different query.
@@ -143,7 +147,7 @@ test('Navigator search disambiguates locations, shares routes, retries and survi
     await expect(
       instance.page.getByRole('button', { name: 'Garden location', exact: true }),
     ).toHaveText('Studio');
-    await instance.page.keyboard.press('ControlOrMeta+k');
+    await findInNavigator(instance.page);
     const restored = instance.page.getByRole('searchbox', { name: 'Find Gardens and Cruxes' });
     await restored.fill('Dream study');
     await expect(
@@ -168,10 +172,13 @@ test('Navigator search disambiguates locations, shares routes, retries and survi
       window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'k', modifiers: ['control'] });
       window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'k', modifiers: ['control'] });
     });
-    await expect(restored).toBeFocused();
-    await restored.press('Escape');
+    // …and opens the command palette, which takes the keyboard.
+    const palette = instance.page.getByRole('combobox', { name: 'Search or run a command' });
+    await expect(palette).toBeFocused();
+    await palette.press('Escape');
+    await expect(palette).toHaveCount(0);
     await instance.page.locator('#search-focus-fixture').evaluate((frame) => frame.remove());
-    await instance.page.getByRole('button', { name: 'Explore', exact: true }).click();
+    await showPane(instance.page, 'Explore');
     await expect(
       instance.page.getByRole('button', { name: 'Close Explore', exact: true }),
     ).toBeVisible();
@@ -182,6 +189,8 @@ test('Navigator search disambiguates locations, shares routes, retries and survi
     ).toBeVisible();
     await instance.page.keyboard.press('ControlOrMeta+k');
     await expect(restored).toBeHidden();
+    // A dialog already has the keyboard: ⌘K does not open the palette over it.
+    await expect(instance.page.getByRole('dialog', { name: 'Command palette' })).toHaveCount(0);
   } finally {
     await instance.app.close().catch(() => {});
   }

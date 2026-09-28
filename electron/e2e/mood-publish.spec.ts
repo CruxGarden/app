@@ -53,13 +53,11 @@ test.describe('publish + discover moods (mocked API)', () => {
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Sea Glass');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
       await expect(page.getByRole('status').filter({ hasText: 'Saved "Sea Glass"' })).toBeVisible();
-      await page.getByRole('button', { name: 'Publish Sea Glass' }).click();
-      await expect(
-        page.getByRole('status').filter({ hasText: 'Published "Sea Glass"' }),
-      ).toBeVisible({
+      await page.getByRole('button', { name: 'Share Sea Glass' }).click();
+      await expect(page.getByRole('status').filter({ hasText: 'Shared "Sea Glass"' })).toBeVisible({
         timeout: 60_000,
       });
-      await expect(page.getByRole('button', { name: 'Republish Sea Glass' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Share update of Sea Glass' })).toBeVisible();
 
       // The mock saw a mood crux published with the three files
       const moodCrux = Object.values(api.state.cruxes).find((c) => c.kind === 'mood');

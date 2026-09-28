@@ -1,4 +1,4 @@
-import { openPanel } from './panel-helpers';
+import { openPanel, showPane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, switchCrux, goHome } from './multi-crux-helpers';
@@ -23,10 +23,7 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
     await enterGarden(page);
     await createCrux(page, 'Ferns');
     await goHome(page);
-    await page
-      .locator('header')
-      .getByRole('button', { name: /^Tending/ })
-      .click();
+    await showPane(page, 'Tending');
     const section = page.getByTestId('schedules');
     await expect(section).toContainText('Nothing scheduled');
     const openForm = () => section.getByRole('button', { name: 'Schedule…' }).click();
@@ -104,7 +101,7 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
     await expect(page.getByTestId('alerts-count')).toHaveCount(0);
     // Mark a version in Ferns: a deliberate snapshot (routine saves are Edit history).
     await switchCrux(page, 'Ferns');
-    const history = await openPanel(page, 'history', 'Toggle history');
+    const history = await openPanel(page, 'history', 'Toggle growth');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('First light');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
@@ -117,10 +114,7 @@ test('a cron for the garden: time, tool, cron, untouched and event triggers', as
     await app.close();
     ({ app, page } = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } }));
     await page.getByRole('button', { name: /enter/i }).click();
-    await page
-      .locator('header')
-      .getByRole('button', { name: /^Tending/ })
-      .click();
+    await showPane(page, 'Tending');
     await expect(page.getByTestId('schedules').getByTestId('schedule')).toHaveCount(4);
     // The definitions live on the Garden Crux, so they travel with the Garden.
     await expect

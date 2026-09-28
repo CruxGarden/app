@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useRef } from 'react';
 import { type MoodTab } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
@@ -28,6 +29,7 @@ export function BackgroundTabContent({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [bgPrompt, setBgPrompt] = useState('');
+  const aiEnabled = useAiEnabled();
   const isLight = getResolvedMode() === 'Light';
 
   const animatedOptions: {
@@ -45,7 +47,9 @@ export function BackgroundTabContent({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <SectionLabel as="div" tone="muted">Animated</SectionLabel>
+        <SectionLabel as="div" tone="muted">
+          Animated
+        </SectionLabel>
         <div className="grid grid-cols-2 gap-2">
           {animatedOptions.map(({ value, label, description, darkOnly }) => {
             const disabled = darkOnly && isLight;
@@ -72,7 +76,9 @@ export function BackgroundTabContent({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <SectionLabel as="div" tone="muted">Image</SectionLabel>
+        <SectionLabel as="div" tone="muted">
+          Image
+        </SectionLabel>
         <button
           onClick={() => {
             onChangeBgType(BgType.Image);
@@ -100,43 +106,43 @@ export function BackgroundTabContent({
           }}
         />
 
-        <form
-          className="flex flex-col gap-1.5 mt-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (bgPrompt.trim() && !bgGenerating) onBgGenerate(bgPrompt.trim());
-          }}
-        >
-          <SectionLabel as="label">
-            Describe a backdrop
-          </SectionLabel>
-          <div className="flex gap-2">
-            <input
-              value={bgPrompt}
-              onChange={(e) => setBgPrompt(e.target.value)}
-              placeholder="fog over a pine forest at dawn, soft, muted"
-              aria-label="Backdrop description"
-              className="flex-1 h-8 rounded-input border border-input-border bg-input px-2.5 text-xs text-input-text placeholder:text-placeholder focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline"
-            />
-            <Button
-              type="submit"
-              size="sm"
-              variant="secondary"
-              disabled={!bgPrompt.trim() || bgGenerating}
-              loading={bgGenerating}
-            >
-              Generate
-            </Button>
-          </div>
-          <p className="text-2xs text-text-muted">
-            Uses your image-capable model key (same as the agent). Or pick an image file below.
-          </p>
-          {bgError && (
-            <p role="alert" data-testid="bg-error" className="text-2xs text-error">
-              {bgError}
+        {aiEnabled && (
+          <form
+            className="flex flex-col gap-1.5 mt-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (bgPrompt.trim() && !bgGenerating) onBgGenerate(bgPrompt.trim());
+            }}
+          >
+            <SectionLabel as="label">Describe a backdrop</SectionLabel>
+            <div className="flex gap-2">
+              <input
+                value={bgPrompt}
+                onChange={(e) => setBgPrompt(e.target.value)}
+                placeholder="fog over a pine forest at dawn, soft, muted"
+                aria-label="Backdrop description"
+                className="flex-1 h-8 rounded-input border border-input-border bg-input px-2.5 text-xs text-input-text placeholder:text-placeholder focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline"
+              />
+              <Button
+                type="submit"
+                size="sm"
+                variant="secondary"
+                disabled={!bgPrompt.trim() || bgGenerating}
+                loading={bgGenerating}
+              >
+                Generate
+              </Button>
+            </div>
+            <p className="text-2xs text-text-muted">
+              Uses your image-capable model key (same as the agent). Or pick an image file below.
             </p>
-          )}
-        </form>
+            {bgError && (
+              <p role="alert" data-testid="bg-error" className="text-2xs text-error">
+                {bgError}
+              </p>
+            )}
+          </form>
+        )}
         {bgType === 'image' && bgImagePreview && (
           <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/50 rounded-[var(--radius-sm)]">
             <div className="relative w-full h-28 rounded-[var(--radius-sm)] overflow-hidden">

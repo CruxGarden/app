@@ -1,4 +1,5 @@
 import { requiresLivePreview, settingsPathOf } from '@/lib/preview-decision';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { isSiteCrux } from '@/services/site';
 import { documentIdentity } from '@/services/workspace-documents';
 import FigmaPane from './FigmaPane';
@@ -169,12 +170,15 @@ export default function EditorPane() {
   const hasTabs = useUIStore((s) => s.editor.tabs.length > 0);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
   const setPane = useUIStore((s) => s.setPaneVisible);
+  // Offered only while it is not already beside the Workshop.
+  const collaborationOpen = useUIStore((s) => !!s.paneVisibility.collaboration);
   const setMobilePane = useUIStore((s) => s.setMobileActivePane);
   const entryFile = useCruxStore((s) =>
     s.viewingSnapshotId ? s.snapshotEntryFile : s.crux?.meta?.settings?.entryFile,
   );
   const entry = workshopEntry(crux, artifacts, entryFile);
   const hasBuilder = !!crux?.meta?.contentModel;
+  const aiEnabled = useAiEnabled();
   const button = buttonClass('ghost', 'xs', 'text-text-muted hover:text-text');
   const settings = () => {
     setPane('details', true);
@@ -224,7 +228,7 @@ export default function EditorPane() {
           </button>
         )}
         <button className={button} onClick={settings}>
-          Crux settings
+          Details
         </button>
         <CruxspaceAssetsButton />
       </div>
@@ -288,21 +292,28 @@ export default function EditorPane() {
           </h2>
           <p className="text-sm text-text-muted max-w-sm">
             {entry.missing
-              ? `${entry.missing} is missing or cannot be previewed. Select another Artifact in Crux settings, or restore it from Growth.`
-              : 'Describe what you want to make in Collaboration. As your files arrive, the preview opens here.'}
+              ? `${entry.missing} is missing or cannot be previewed. Select another Artifact in Details, or restore it from Growth.`
+              : aiEnabled
+                ? 'Describe what you want to make in Collaboration. As your files arrive, the preview opens here.'
+                : 'Add files or make one in Advanced. As your files arrive, the preview opens here.'}
           </p>
           <div className="flex gap-2 flex-wrap justify-center">
+            {aiEnabled && !collaborationOpen && (
+              <button
+                className={buttonClass('primary', 'sm')}
+                onClick={() => {
+                  setPane('collaboration', true);
+                  setMobilePane('collaboration');
+                }}
+              >
+                Open Collaboration
+              </button>
+            )}
             <button
-              className={buttonClass('primary', 'sm')}
-              onClick={() => {
-                setPane('collaboration', true);
-                setMobilePane('collaboration');
-              }}
-            >
-              Open Collaboration
-            </button>
-            <button
-              className={buttonClass('secondary', 'sm')}
+              className={buttonClass(
+                aiEnabled && !collaborationOpen ? 'secondary' : 'primary',
+                'sm',
+              )}
               onClick={() => {
                 setPane('artifacts', true);
                 setMobilePane('artifacts');

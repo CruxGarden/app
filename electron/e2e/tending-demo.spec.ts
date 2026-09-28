@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
+import { showPane } from './panel-helpers';
 
 /**
  * The Glasshouse demo Crux is created from Tending without a provider key,
@@ -14,10 +15,7 @@ test('Glasshouse is created without a key and Tending counts its Tasks', async (
   page.setDefaultTimeout(15000);
   try {
     await enterGarden(page);
-    await page
-      .getByRole('banner')
-      .getByRole('button', { name: /^Tending/ })
-      .click();
+    await showPane(page, 'Tending');
     await page.getByRole('button', { name: 'Create demo Crux', exact: true }).click();
     await expect(page.getByText('Glasshouse is ready.', { exact: false })).toBeVisible({
       timeout: 60000,

@@ -1309,7 +1309,7 @@ export function getMockLanguageModel(): LanguageModel {
           ];
           const step = steps[rounds.length];
           if (step) return toolCallStream(step[0], step[1]);
-          return textStream('Opened History, showed the page, and hello answered with the echo.');
+          return textStream('Opened Growth, showed the page, and hello answered with the echo.');
         }
         if (lastUserText(prompt).includes('[garden:operate]')) {
           // The Keeper reads the screen and the garden, chooses a collaborator, exports (keeper-operates.spec).

@@ -27,6 +27,7 @@ export { default as PauseIcon } from './PauseIcon';
 export { default as PencilIcon } from './PencilIcon';
 export { default as PlayIcon } from './PlayIcon';
 export { default as PlusCircleIcon } from './PlusCircleIcon';
+export { default as PlusIcon } from './PlusIcon';
 export { default as PowerIcon } from './PowerIcon';
 export { default as RefreshIcon } from './RefreshIcon';
 export { default as RepeatIcon } from './RepeatIcon';

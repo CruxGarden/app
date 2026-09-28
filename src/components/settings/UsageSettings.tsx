@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import IncludedUsagePanel from './IncludedUsagePanel';
 import { SectionLabel } from '@/components/ui';
 import SettingsSection from './SettingsSection';
@@ -15,6 +16,7 @@ export default function UsageSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const accountId = useAuthStore((s) => s.account?.id);
   const cruxes = useGardenStore((s) => s.allCruxes);
+  const aiEnabled = useAiEnabled();
   const [usage, setUsage] = useState<usageApi.AccountUsage | null>(null);
   const [past, setPast] = useState<usageApi.PeriodView[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -64,13 +66,15 @@ export default function UsageSettings() {
     <SettingsSection
       title="Usage"
       testId="usage-settings"
-      aside={usage && (
+      aside={
+        usage && (
           <span className="text-xxs font-mono text-text-muted">
             {day(usage.period.start)} → {day(usage.period.end)} · {usage.plan.name} plan
           </span>
-        )}
+        )
+      }
     >
-      <IncludedUsagePanel />
+      {aiEnabled && <IncludedUsagePanel />}
       {error && <p className="text-xs text-text-muted">{error}</p>}
       {usage && (
         <div className="flex flex-col gap-4">

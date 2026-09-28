@@ -5,6 +5,8 @@ import PlasmaStage from '@/components/plasma/PlasmaStage';
 import PlasmaSurfaces from '@/components/plasma/PlasmaSurfaces';
 import { isPublicSite } from '@/lib/site';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import TitleTooltips from '@/components/ui/TitleTooltips';
+import Toaster from '@/components/ui/Toaster';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 
 const Shell = lazy(() => import('@/components/layout/Shell'));
@@ -139,6 +141,8 @@ export default function App() {
           children — /home and /c/:id — so a material mounted
           there left the Gateway, Explore, Plans, the public pages and the
           404 flat. The Gateway is the first screen anyone ever sees. */}
+      <TitleTooltips />
+      <Toaster />
       <PlasmaStage>
         <PlasmaSurfaces />
         <Suspense fallback={null}>

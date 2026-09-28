@@ -55,8 +55,9 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
       <div ref={rowRef} className="flex items-center gap-2">
         {children}
 
-        {/* Always-visible usage bar — hidden when pane is narrow */}
-        {info && hasUsage && showBar && (
+        {/* The context meter appears when it starts to matter (past 60 %), and
+            only where there is room for it — a gauge at 3 % is noise. */}
+        {info && hasUsage && showBar && usagePercent >= 60 && (
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <div className="flex-1 h-1.5 bg-border/30 rounded-full overflow-hidden min-w-8">
               <div
@@ -77,7 +78,8 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-text-muted/60 hover:text-text transition-colors cursor-pointer text-xxs whitespace-nowrap"
+          aria-expanded={expanded}
+          className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] text-text-muted/60 hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer text-xxs whitespace-nowrap"
         >
           <svg
             width="6"
@@ -96,7 +98,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
       {/* Expanded info table */}
       {expanded && info && provider && (
-        <div className="mt-3 border-t border-border/50 pt-3 pb-1 space-y-4">
+        <div className="mt-3 border-t border-border/50 pt-3 pb-1 space-y-4 motion-enter-dropdown">
           {/* Model stats */}
           <div className="rounded overflow-hidden border border-border/30">
             <div className="flex justify-between items-center px-3 h-8 bg-surface/50">
@@ -162,7 +164,9 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Capabilities */}
           <div className="space-y-1.5">
-            <SectionLabel as="div" tone="muted">Capabilities</SectionLabel>
+            <SectionLabel as="div" tone="muted">
+              Capabilities
+            </SectionLabel>
             <div className="flex gap-1.5 flex-wrap">
               {provider.capabilities.map((cap) => (
                 <span key={cap} className="px-2 py-0.5 bg-accent-muted rounded text-text text-xxs">

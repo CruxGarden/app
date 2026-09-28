@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useWorkspaceUIStore } from '@/stores/uiStore';
@@ -9,6 +10,7 @@ import { revealProjectFolder } from '@/services/project-folder';
 import CruxspaceAssetsButton from './CruxspaceAssetsButton';
 
 export default function BlenderPane() {
+  const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux)!;
   const files = useCruxStore((s) => s.artifacts);
   const historical = useCruxStore((s) => !!s.viewingSnapshotId || !!s.crux?.meta?.workingCopy);
@@ -51,10 +53,13 @@ export default function BlenderPane() {
       <div className="max-w-xl mx-auto space-y-5">
         <header className="space-y-2">
           <p className="text-xs text-text-muted">External app · Proof of concept</p>
-          <h2 className="text-xl font-medium">Make something together in Blender</h2>
+          <h2 className="text-xl font-medium">
+            {aiEnabled ? 'Make something together in Blender' : 'Make something in Blender'}
+          </h2>
           <p className="text-sm text-text-muted">
-            Work on the same editable scene. Keep your brief, Collaboration, renders and game assets
-            here.
+            {aiEnabled
+              ? 'Work on the same editable scene. Keep your brief, Collaboration, renders and game assets here.'
+              : 'Work on the editable scene. Keep your brief, renders and game assets here.'}
           </p>
         </header>
         {error && (
@@ -127,18 +132,20 @@ export default function BlenderPane() {
             </div>
           )}
         </section>
-        <section className="space-y-2 rounded-lg border border-border p-4">
-          <h3 className="font-medium">Connect your collaborator</h3>
-          <p className="text-sm text-text-muted">
-            Choose Claude Code in Collaboration with the Blender MCP connection configured and its
-            local Blender bridge running. Other Garden providers are not connected by this POC.
-            Opening Blender does not establish tool access.
-          </p>
-          <p className="text-sm text-text-muted">
-            Ask your collaborator to inspect the open scene before editing, preserve your changes,
-            and save the scene and exports in this Project Folder.
-          </p>
-        </section>
+        {aiEnabled && (
+          <section className="space-y-2 rounded-lg border border-border p-4">
+            <h3 className="font-medium">Connect your collaborator</h3>
+            <p className="text-sm text-text-muted">
+              Choose Claude Code in Collaboration with the Blender MCP connection configured and its
+              local Blender bridge running. Other Garden providers are not connected by this POC.
+              Opening Blender does not establish tool access.
+            </p>
+            <p className="text-sm text-text-muted">
+              Ask your collaborator to inspect the open scene before editing, preserve your changes,
+              and save the scene and exports in this Project Folder.
+            </p>
+          </section>
+        )}
         <section className="space-y-3 rounded-lg border border-border p-4">
           <h3 className="font-medium">Share a saved output</h3>
           <p className="text-sm text-text-muted">

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { paneOffered } from '@/components/workspace/paneConfig';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import SettingsSection from './SettingsSection';
 import { Input, SectionLabel } from '@/components/ui';
 import {
@@ -24,6 +26,7 @@ const PANES = PANE_TYPES;
 const tokenFor = (type: PaneType) => `paneLabel${type[0]!.toUpperCase()}${type.slice(1)}`;
 
 export default function NamesSettings() {
+  const aiEnabled = useAiEnabled();
   const [tick, setTick] = useState(0);
   useEffect(() => onThemeOverridesChange(() => setTick((t) => t + 1)), []);
   void tick;
@@ -49,9 +52,7 @@ export default function NamesSettings() {
       description="What this Garden is called, and its panes. Leave a pane empty for the usual word."
     >
       <label className="flex flex-col gap-1 mb-4">
-        <SectionLabel tone="muted">
-          Garden title
-        </SectionLabel>
+        <SectionLabel tone="muted">Garden title</SectionLabel>
         <Input
           key={garden?.id}
           aria-label="Garden title"
@@ -74,7 +75,7 @@ export default function NamesSettings() {
         )}
       </label>
       <div className="grid grid-cols-1 @min-[600px]/settings:grid-cols-2 gap-x-6 gap-y-2">
-        {PANES.map((type) => (
+        {PANES.filter((type) => paneOffered(type, aiEnabled)).map((type) => (
           <label key={type} className="flex items-center gap-2">
             <span className="w-28 shrink-0 text-xs font-mono text-text-muted">
               {DEFAULT_PANE_LABELS[type]}

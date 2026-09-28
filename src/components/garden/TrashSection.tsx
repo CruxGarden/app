@@ -1,3 +1,4 @@
+import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { useState } from 'react';
 import { useGardenStore, TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
 import { Button, Panel } from '@/components/ui';
@@ -35,7 +36,7 @@ export default function TrashSection() {
     if (
       !(await confirmDialog({
         title: 'Delete forever',
-        message: `Delete ${title} for good? Its history and conversation go with it. The Project Folder on disk is left where it is.`,
+        message: `Delete ${title} for good? Its history${aiEnabledNow() ? ' and conversation go' : ' goes'} with it. The Project Folder on disk is left where it is.`,
         confirmLabel: 'Delete forever',
         danger: true,
       }))

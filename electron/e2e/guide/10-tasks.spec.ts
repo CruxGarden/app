@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, storedCrux } from '../multi-crux-helpers';
-import { openPanel } from '../panel-helpers';
+import { openPanel, newTaskButton } from '../panel-helpers';
 import { writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -12,7 +12,7 @@ import { writeFirstFile } from '../journeys/journey-helpers';
  * review and merge are parallel-tasks and task-* specs.
  */
 async function newTask(page: Page, title: string) {
-  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await (await newTaskButton(page)).click();
   await page.getByRole('textbox', { name: 'Task name', exact: true }).fill(title);
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);
@@ -163,7 +163,7 @@ test.describe('guide 10 · Tasks', () => {
       await enterGarden(page);
       await createCrux(page, 'Task work');
       await writeFirstFile(page, 'index.html', '<h1>Main</h1>');
-      await page.getByRole('button', { name: 'New task', exact: true }).click();
+      await (await newTaskButton(page)).click();
       await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Side quest');
       await page.getByRole('button', { name: 'Save and start task' }).click();
       await expect(page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);

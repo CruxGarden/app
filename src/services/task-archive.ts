@@ -1,4 +1,5 @@
 import { archiveRuntimeMode, referenceArchiveRuntimes } from './archive-runtimes';
+import { generateZip } from '@/lib/zip-off-thread';
 /** Version 2 preserves the complete private task graph, not just Main's first-parent history. */
 import JSZip from 'jszip';
 import type { ExportOptions, ExportResult, ImportOptions, ImportResult } from './crux-io';
@@ -165,7 +166,7 @@ async function packTaskCrux(options: ExportOptions): Promise<ExportResult> {
     options.runtime ?? archiveRuntimeMode(),
   );
   return {
-    blob: await zip.generateAsync({ type: 'blob' }),
+    blob: await generateZip(zip),
     filename: `${owner.slug}-${Date.now()}.crux`,
     failed: [],
   };

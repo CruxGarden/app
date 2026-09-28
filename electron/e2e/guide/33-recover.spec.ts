@@ -23,9 +23,10 @@ test.describe('guide 33 · Recovery', () => {
       await card.hover();
       await card.getByRole('button', { name: 'Crux actions' }).click();
       await page.getByRole('menuitem', { name: 'Delete' }).click();
-      const deleteAsk = page.getByRole('dialog', { name: 'Delete Crux' });
-      await expect(deleteAsk).toBeVisible();
-      await deleteAsk.getByRole('button', { name: 'Delete', exact: true }).click();
+      // Unshared, it goes at once to Recently deleted; a note offers Undo instead of asking.
+      await expect(
+        page.getByTestId('toast').filter({ hasText: 'Moved Disposable to Recently deleted' }),
+      ).toBeVisible();
       const trash = page.getByTestId('trash-section');
       await expect(trash).toContainText('Disposable');
       // Cancel is harmless.

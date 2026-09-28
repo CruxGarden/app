@@ -17,7 +17,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page
-      .getByLabel('Your idea (optional)')
+      .getByLabel('What do you want to make?')
       .fill('Make a tiny reading list with a warm green background.');
     await page.getByLabel('Name', { exact: true }).fill('Reading room');
     await page.screenshot({ path: '/private/tmp/clean-workshop/01-create.png' });
@@ -29,7 +29,9 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     );
     await expect(page.getByText('Your creation will appear here', { exact: true })).toBeVisible();
     await expect(page.getByTestId('pane-body-artifacts')).not.toBeVisible();
-    await expect(page.getByRole('banner').getByRole('button', { name: /^Tending/ })).toBeVisible();
+    await expect(
+      page.getByRole('banner').getByRole('button', { name: 'Search or run a command' }),
+    ).toBeVisible();
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const { projectFolder: folder } = await storedCrux(page, id);
     expect(
@@ -62,15 +64,16 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
     await workshop().getByRole('button', { name: 'Home', exact: true }).click();
     await expect(frame().getByRole('heading', { name: 'The reading room' })).toBeVisible();
-    await workshop().getByRole('button', { name: 'Crux settings' }).click();
+    await workshop().getByRole('button', { name: 'Details', exact: true }).click();
     await page.getByLabel('Entry file', { exact: true }).selectOption('reading.html');
     await expect
       .poll(async () => (await storedCrux(page, id)).settings?.entryFile)
       .toBe('reading.html');
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
-    // Frame-local actionability does not wait for the outer pane's entrance animation.
+    // Frame-local actionability does not wait for the outer panes' entrance animations
+    // (Details has just opened beside the Workshop and moved the preview).
     await workshop().evaluate(async (element) => {
-      const pane = element.closest('.mosaic-window') ?? element;
+      const pane = element.closest('.mosaic') ?? element.closest('.mosaic-window') ?? element;
       await Promise.all(
         pane
           .getAnimations({ subtree: true })
@@ -90,7 +93,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await expect(frame().getByRole('heading', { name: 'Updated reading list' })).toBeVisible();
     writeFileSync(join(folder, 'reading.html'), reading);
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
-    await togglePanel(page, 'Toggle metadata');
+    await togglePanel(page, 'Toggle details');
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
     await page.screenshot({ path: '/private/tmp/clean-workshop/03-clean.png' });
 

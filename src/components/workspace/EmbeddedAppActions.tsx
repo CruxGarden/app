@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useNavigate } from 'react-router-dom';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
@@ -23,6 +24,7 @@ export default function EmbeddedAppActions() {
   const [prompt, setPrompt] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const aiEnabled = useAiEnabled();
   if (!isEmbeddedApp(crux) || !crux || historical) return null;
   const identity = copyIdentity(crux);
   const showPane = (pane: 'publish' | 'export') => {
@@ -65,16 +67,18 @@ export default function EmbeddedAppActions() {
   const button = buttonClass('ghost', 'xs', 'text-text-muted hover:text-text');
   return (
     <>
-      <button
-        className={button}
-        title="Ask the agent to help with this app or its content"
-        onClick={() => {
-          ui.getState().setPaneVisible('collaboration', true);
-          ui.getState().setMobileActivePane('collaboration');
-        }}
-      >
-        Ask agent
-      </button>
+      {aiEnabled && (
+        <button
+          className={button}
+          title="Ask the agent to help with this app or its content"
+          onClick={() => {
+            ui.getState().setPaneVisible('collaboration', true);
+            ui.getState().setMobileActivePane('collaboration');
+          }}
+        >
+          Ask agent
+        </button>
+      )}
       {can(Capability.ProjectFolder) &&
         (!identity || (identity.role === 'task' && identity.phase === 'ready')) && (
           <button

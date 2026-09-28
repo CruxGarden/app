@@ -57,7 +57,7 @@ test('edit recovery preserves files and conversation without growing the deliber
     await call('edit_history', { action: 'capture' });
     const first = JSON.parse(await call('edit_history', { action: 'list' })).checkpoints.at(-1);
     await save('master');
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
     await expect(history.getByText('No snapshots yet')).toBeVisible();
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
@@ -67,7 +67,7 @@ test('edit recovery preserves files and conversation without growing the deliber
     await call('list_files', {});
     const before = await storedCrux(page, id);
     expect(before.messages.length).toBeGreaterThan(0);
-    await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+    await history.getByRole('button', { name: 'Edits', exact: true }).click();
     const recovery = history.locator(`[data-checkpoint-id="${first.id}"]`);
     await recovery.getByRole('button', { name: /Inspect recovery/ }).click();
     await expect(recovery.getByText('note.txt', { exact: true })).toBeVisible();
@@ -104,7 +104,7 @@ test('edit recovery preserves files and conversation without growing the deliber
     expect(
       JSON.parse(await call('edit_history', { action: 'capture', reason: 'safety' })).reason,
     ).toBe('safety');
-    await history.getByRole('button', { name: 'Growth', exact: true }).click();
+    await history.getByRole('button', { name: 'Versions', exact: true }).click();
     await expect(history.getByText('Master', { exact: true })).toBeVisible();
     const growth = () =>
       page.evaluate(
@@ -117,7 +117,7 @@ test('edit recovery preserves files and conversation without growing the deliber
       );
     expect(await growth()).toHaveLength(1);
     await expect(page.getByText('Could not load this Artifact.', { exact: true })).toHaveCount(0);
-    await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+    await history.getByRole('button', { name: 'Edits', exact: true }).click();
     await page.screenshot({ path: 'e2e/.results/edit-history.png' });
     await client.close();
     client = undefined;
@@ -127,8 +127,8 @@ test('edit recovery preserves files and conversation without growing the deliber
     await launch.page.getByRole('button', { name: 'Open Rough mix', exact: true }).click();
     await expect(launch.page.locator('[data-workspace-id]')).toBeVisible();
     const reopened = launch.page.getByTestId('pane-body-history');
-    if (!(await reopened.isVisible())) await togglePanel(launch.page, 'Toggle history');
-    await reopened.getByRole('button', { name: 'Edit history', exact: true }).click();
+    if (!(await reopened.isVisible())) await togglePanel(launch.page, 'Toggle growth');
+    await reopened.getByRole('button', { name: 'Edits', exact: true }).click();
     await expect(reopened.getByText('Safety copy').first()).toBeVisible();
     expect(disk()).toBe('master');
   } finally {
@@ -153,10 +153,10 @@ test('planned built-in agent edits advance steps and retain recovery without aut
     const meta = await storedCrux(page, id);
     for (const n of [1, 2, 3])
       expect(readFileSync(join(meta.projectFolder, `step-${n}.txt`), 'utf8')).toBe(`step ${n}\n`);
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
     await expect(history.getByText('No snapshots yet')).toBeVisible();
-    await history.getByRole('button', { name: 'Edit history', exact: true }).click();
+    await history.getByRole('button', { name: 'Edits', exact: true }).click();
     await expect(history.locator('[data-checkpoint-id]').first()).toBeVisible();
     expect(
       await page.evaluate(

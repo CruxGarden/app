@@ -25,8 +25,11 @@ export async function exportPrivateCrux(options: ExportOptions): Promise<ExportR
     const crux = await getServices().crux.findById(cruxId);
     options.onProgress?.('Packing complete Crux…');
     const bytes = await api.export({ roots: [cruxId], includeMembers: false });
+    // Wrap the bytes as they are: Uint8Array.from() walked a 150 MB archive
+    // one element at a time on the page's thread and froze the app for seconds.
+    const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes as ArrayLike<number>);
     return {
-      blob: new Blob([Uint8Array.from(bytes).buffer], { type: 'application/zip' }),
+      blob: new Blob([view as Uint8Array<ArrayBuffer>], { type: 'application/zip' }),
       filename: `${crux.slug || 'crux'}-${Date.now()}.crux`,
       failed: [],
     };

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, createCrux, goHome } from '../multi-crux-helpers';
-import { openPanel, showPane } from '../panel-helpers';
+import { openPanel, showPane, panelPressed, togglePanel } from '../panel-helpers';
 import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -16,7 +16,7 @@ test.describe('guide 12 · Metadata', () => {
       await enterGarden(page);
       await createCrux(page, 'Other one');
       const id = await createCrux(page, 'Slug work');
-      const details = await openPanel(page, 'details', 'Toggle metadata');
+      const details = await openPanel(page, 'details', 'Toggle details');
       const slugRow = details.locator('div', { hasText: /^Slug/ }).last();
       const slugOf = () =>
         page.evaluate(async (id) => {
@@ -81,7 +81,7 @@ test.describe('guide 12 · Metadata', () => {
       await enterGarden(page);
       await createCrux(page, 'Disposable page');
       await writeFirstFile(page, 'index.html', '<h1>Disposable</h1>');
-      const details = await openPanel(page, 'details', 'Toggle metadata');
+      const details = await openPanel(page, 'details', 'Toggle details');
       const visibilityRow = details.locator('div', { hasText: /^Visibility/ }).last();
       const visibility = visibilityRow.getByRole('button', { name: /^(public|unlisted|private)$/ });
       // Unshared: private, and the Share pane says it is not shared.
@@ -95,6 +95,15 @@ test.describe('guide 12 · Metadata', () => {
       await ask.getByRole('button', { name: 'Share without a backup' }).click();
       await expect(share.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
       const cruxId = Object.keys(api.state.published)[0]!;
+      // The Crux's own visibility field, as this machine saved it.
+      const savedVisibility = () =>
+        page.evaluate(async (id) => {
+          const row = (await window.electronAPI!.sqlite.get(
+            'SELECT visibility FROM cruxes WHERE id = ?',
+            [id],
+          )) as { visibility: string } | undefined;
+          return row?.visibility;
+        }, cruxId);
       // Shared: the badge reads public and is no longer a control — a shared page is
       // public by being shared; Discoverable (off) is the listing switch in Share.
       await expect(visibility).toHaveCount(0);
@@ -110,6 +119,9 @@ test.describe('guide 12 · Metadata', () => {
       expect(api.state.published[cruxId]).toBeTruthy();
       // Discoverable is the listing switch: off, the page is not in Explore; on, it is —
       // whatever the local badge says.
+      // Room for Share beside Explore: the conversation and the files play no part here.
+      for (const label of ['Toggle collaboration', 'Toggle artifacts'])
+        if ((await panelPressed(page, label)) === 'true') await togglePanel(page, label);
       const explore = await showPane(page, 'Explore');
       // Explore searches once per distinct query: each look uses new words that still
       // match the title, and waits for the API to have answered that query.
@@ -164,7 +176,7 @@ test.describe('guide 12 · Metadata', () => {
     try {
       await enterGarden(page);
       await createCrux(page, 'Facts');
-      const details = await openPanel(page, 'details', 'Toggle metadata');
+      const details = await openPanel(page, 'details', 'Toggle details');
       await expect(details.getByText('Author', { exact: true })).toBeVisible();
       await expect(details.getByText(/wanderer-|Wanderer/).first()).toBeVisible();
       await expect(details.getByText('Created', { exact: true })).toBeVisible();

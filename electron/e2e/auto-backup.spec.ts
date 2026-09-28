@@ -77,7 +77,7 @@ test.describe('automatic backup (mocked API, mock AI)', () => {
       await monaco.click();
       await page.keyboard.type('more');
       await page.keyboard.press('ControlOrMeta+s');
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('over');

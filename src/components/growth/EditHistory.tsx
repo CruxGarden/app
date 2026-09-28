@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useCallback, useEffect, useState } from 'react';
 import { linkClass } from '@/components/ui/button-class';
 import {
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui';
 type History = Awaited<ReturnType<typeof listEditHistory>>;
 
 export default function EditHistory({ cruxId }: { cruxId: string }) {
+  const aiEnabled = useAiEnabled();
   const [history, setHistory] = useState<History | null>(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -39,7 +41,7 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
         title: includeConversation ? 'Restore this workspace?' : 'Restore these files?',
         message: includeConversation
           ? 'Your current files and conversation context will be kept as a safety copy. This returns to the saved conversation and version branch.'
-          : 'Your current files will be kept as a safety copy. Your conversation stays unchanged.',
+          : `Your current files will be kept as a safety copy.${aiEnabled ? ' Your conversation stays unchanged.' : ''}`,
         confirmLabel: includeConversation ? 'Restore workspace' : 'Restore files',
       }))
     )
@@ -67,7 +69,7 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
     <section aria-label="Edit history" className="p-3 space-y-3">
       <p className="text-xs text-text-muted">
         Recent file recovery points. The latest 20 automatic checkpoints are kept; safety copies
-        stay available. Restoring files keeps your conversation.
+        stay available.{aiEnabled ? ' Restoring files keeps your conversation.' : ''}
       </p>
       {error && (
         <p role="alert" className="text-sm text-error">
@@ -135,7 +137,7 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
                 >
                   Restore files
                 </Button>
-                {checkpoint.workspace && (
+                {aiEnabled && checkpoint.workspace && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -147,7 +149,7 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
                   </Button>
                 )}
               </div>
-              {checkpoint.workspace && (
+              {aiEnabled && checkpoint.workspace && (
                 <p className="mt-2 text-xs text-text-muted">
                   Includes the saved version branch and {checkpoint.workspace.messages.length}{' '}
                   unmarked conversation messages.

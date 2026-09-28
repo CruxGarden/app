@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 // This proves the shared native storage capability. The live delegate tool's
 // fan-out/review integration is a separate consumer cutover.
@@ -9,7 +10,7 @@ test('Task-sourced work retains its actual starting files through refusal, priva
   try {
     await enterGarden(launch.page);
     const main = await createCrux(launch.page, 'Delegation starting state');
-    await launch.page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(launch.page)).click();
     await launch.page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Parent task');
     await launch.page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(

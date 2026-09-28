@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import {
   useTendingNotifications,
   enableTendingNotifications,
@@ -29,6 +30,7 @@ function elapsed(since: string, now: number): string {
       : `${Math.floor(seconds / 3600)}h ago`;
 }
 export default function Tending() {
+  const aiEnabled = useAiEnabled();
   const rows = useTendingRows();
   const notifications = useTendingNotifications();
   const { loading, error: loadError } = useTendingCatalog();
@@ -105,7 +107,8 @@ export default function Tending() {
       <p className="text-sm text-text-muted">
         What is growing, what needs you, and what is ready to review.
       </p>
-      {can(Capability.ProjectFolder) && (
+      {/* The demo is a scripted collaborator at work: an AI surface. */}
+      {aiEnabled && can(Capability.ProjectFolder) && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Button
             variant="secondary"
@@ -122,11 +125,14 @@ export default function Tending() {
         </div>
       )}
       <div className="grid grid-cols-3 gap-3" aria-label="Garden activity">
-        {[
-          ['Needs tending', count],
-          ['Working', working],
-          ['Tasks with a queue', queued],
-        ].map(([label, value]) => (
+        {(aiEnabled
+          ? [
+              ['Needs tending', count],
+              ['Working', working],
+              ['Tasks with a queue', queued],
+            ]
+          : [['Needs tending', count]]
+        ).map(([label, value]) => (
           <div key={label} className="bg-panel border border-border rounded-[var(--radius)] p-3">
             <p className="text-xl font-display text-heading">{value}</p>
             <p className="text-xs text-text-muted mt-1">{label}</p>
@@ -207,13 +213,18 @@ export default function Tending() {
                   <div>
                     <h3 className="font-medium text-text">{row.title}</h3>
                     <p className="text-xs text-text-muted mt-1">
-                      {getModelShortName(
-                        row.state.model ??
-                          resolveModel(row.model === 'Default model' ? undefined : row.model),
-                      ) ??
-                        row.state.model ??
-                        row.model}{' '}
-                      · {row.state.lifetimeId ? 'Open workspace' : 'Closed workspace'}
+                      {aiEnabled && (
+                        <>
+                          {getModelShortName(
+                            row.state.model ??
+                              resolveModel(row.model === 'Default model' ? undefined : row.model),
+                          ) ??
+                            row.state.model ??
+                            row.model}{' '}
+                          ·{' '}
+                        </>
+                      )}
+                      {row.state.lifetimeId ? 'Open workspace' : 'Closed workspace'}
                       {['merged', 'archived'].includes(row.phase) ? ` · ${row.phase}` : ''}
                     </p>
                   </div>
@@ -269,32 +280,36 @@ export default function Tending() {
                     ))}
                   </ul>
                 )}
-                <div className="flex flex-wrap justify-between items-center gap-3">
-                  <p className="text-xs text-text-muted">
-                    {row.state.verification.status === 'not-checked'
-                      ? 'Not checked'
-                      : row.state.verification.status === 'checking'
-                        ? 'Checking result…'
-                        : `${row.state.verification.status === 'passed' ? 'Check passed' : 'Check found problems'} · saved snapshot ${row.state.verification.snapshotId?.slice(0, 8)}`}
-                    {row.state.verification.note ? ` · ${row.state.verification.note}` : ''}
-                    {row.state.activity === 'queued' && row.state.queued === 0
-                      ? ' · Waiting for another Task to finish'
-                      : ''}
-                    {row.state.queued > 0 ? ` · ${row.state.queued} queued` : ''}
-                    {row.state.evidence === 'unknown' || row.state.evidence === 'inferred'
-                      ? ` · ${row.state.evidence} status`
-                      : ''}
-                  </p>
-                </div>
+                {aiEnabled && (
+                  <div className="flex flex-wrap justify-between items-center gap-3">
+                    <p className="text-xs text-text-muted">
+                      {row.state.verification.status === 'not-checked'
+                        ? 'Not checked'
+                        : row.state.verification.status === 'checking'
+                          ? 'Checking result…'
+                          : `${row.state.verification.status === 'passed' ? 'Check passed' : 'Check found problems'} · saved snapshot ${row.state.verification.snapshotId?.slice(0, 8)}`}
+                      {row.state.verification.note ? ` · ${row.state.verification.note}` : ''}
+                      {row.state.activity === 'queued' && row.state.queued === 0
+                        ? ' · Waiting for another Task to finish'
+                        : ''}
+                      {row.state.queued > 0 ? ` · ${row.state.queued} queued` : ''}
+                      {row.state.evidence === 'unknown' || row.state.evidence === 'inferred'
+                        ? ` · ${row.state.evidence} status`
+                        : ''}
+                    </p>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         </section>
       ))}
-      <p className="text-xs text-text-muted">
-        Work continues while you move around the garden. Keep the app window open while turns are
-        running.
-      </p>
+      {aiEnabled && (
+        <p className="text-xs text-text-muted">
+          Work continues while you move around the garden. Keep the app window open while turns are
+          running.
+        </p>
+      )}
     </div>
   );
 }

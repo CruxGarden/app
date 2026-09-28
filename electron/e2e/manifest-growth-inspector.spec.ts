@@ -14,7 +14,7 @@ async function openGraph(page: Page) {
     'Version-bound history',
   );
   const history = page.getByTestId('pane-body-history');
-  if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
+  if (!(await history.isVisible())) await togglePanel(page, 'Toggle growth');
   await history.getByRole('button', { name: 'Whole Crux · branches & merges' }).click();
   const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
   await graph.getByRole('button', { name: 'Expand checkpoints', exact: true }).click();

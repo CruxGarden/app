@@ -143,9 +143,20 @@ export function isAiMock(): boolean {
   return !!bridge()?.test?.aiMock;
 }
 
+/** e2e only: CRUX_AI=on|off — the AI switch a fresh garden starts with (a saved choice wins). */
+export function aiStartKnob(): 'on' | 'off' | null {
+  const v = bridge()?.test?.ai;
+  return v === 'on' || v === 'off' ? v : null;
+}
+
 /** e2e only: CRUX_SILENT=1 — never start the soundscape or play cues (Daniel: test audio is distracting). */
 export function isSilent(): boolean {
   return !!bridge()?.test?.silent;
+}
+
+/** e2e only: CRUX_PLAIN_TITLES=1 keeps native `title=` tooltips (see TitleTooltips). */
+export function plainTitles(): boolean {
+  return !!bridge()?.test?.plainTitles;
 }
 
 /** e2e only: CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window. */

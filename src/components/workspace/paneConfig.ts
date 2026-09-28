@@ -67,6 +67,10 @@ export interface PaneSpec {
   labelVar: string;
   /** Below this many pixels the pane asks to be widened instead of squeezing. */
   minWidth: number;
+  /** An AI surface: offered only while AI tools are on (Settings → AI). */
+  ai?: boolean;
+  /** Other words people look for it by (the picker and ⌘K find it by them too). */
+  keywords?: string;
 }
 
 export const PANES: Record<PaneType, PaneSpec> = {
@@ -78,6 +82,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-artifacts',
     labelVar: '--pane-label-navigator',
     minWidth: 170,
+    keywords: 'tree gardens browse',
   },
   home: {
     label: 'Home',
@@ -103,6 +108,8 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-collaboration',
     labelVar: '--pane-label-collaboration',
     minWidth: 260,
+    ai: true,
+    keywords: 'chat conversation ai',
   },
   console: {
     label: 'Garden Collaboration',
@@ -112,6 +119,8 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-collaboration',
     labelVar: '--pane-label-console',
     minWidth: 260,
+    ai: true,
+    keywords: 'keeper chat garden ai',
   },
   artifacts: {
     label: 'Artifacts',
@@ -121,6 +130,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-artifacts',
     labelVar: '--pane-label-artifacts',
     minWidth: 160,
+    keywords: 'files folder tree',
   },
   workshop: {
     label: 'Workshop',
@@ -129,23 +139,25 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-workshop',
     labelVar: '--pane-label-workshop',
     minWidth: 280,
+    keywords: 'editor preview code',
   },
   details: {
-    label: 'Metadata',
-    short: 'Details',
+    label: 'Details',
     icon: TagIcon,
     color: 'var(--pane-details)',
     prefix: '--pane-details',
     labelVar: '--pane-label-details',
     minWidth: 220,
+    keywords: 'metadata settings info title description tags entry',
   },
   history: {
-    label: 'History',
+    label: 'Growth',
     icon: StackIcon,
     color: 'var(--pane-history)',
     prefix: '--pane-history',
     labelVar: '--pane-label-history',
     minWidth: 200,
+    keywords: 'history versions snapshots checkpoints edits undo',
   },
   export: {
     label: 'Export',
@@ -154,6 +166,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-export',
     labelVar: '--pane-label-export',
     minWidth: 200,
+    keywords: 'download archive backup zip',
   },
   sync: {
     label: 'Sync',
@@ -162,6 +175,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-sync',
     labelVar: '--pane-label-sync',
     minWidth: 200,
+    keywords: 'cloud push pull backup',
   },
   publish: {
     label: 'Share',
@@ -170,6 +184,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-publish',
     labelVar: '--pane-label-publish',
     minWidth: 270,
+    keywords: 'publish live website link',
   },
   store: {
     label: 'Store',
@@ -186,6 +201,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-media',
     labelVar: '--pane-label-media',
     minWidth: 300,
+    keywords: 'images sounds stock photos',
   },
   mood: {
     label: 'Mood',
@@ -226,6 +242,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-explore',
     labelVar: '--pane-label-explore',
     minWidth: 360,
+    keywords: 'search community published discover',
   },
   tending: {
     label: 'Tending',
@@ -234,10 +251,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     prefix: '--pane-tasks',
     labelVar: '--pane-label-tending',
     minWidth: 320,
+    keywords: 'schedules timers alerts tasks',
   },
 };
 
 export const PANE_TYPES = Object.keys(PANES) as PaneType[];
+
+/** The panes that are AI (the Crux's and the Garden's Collaboration): gone while AI tools are off. */
+export const AI_PANES: ReadonlySet<PaneType> = new Set(PANE_TYPES.filter((p) => PANES[p].ai));
+/** Whether a pane can be offered at all right now. */
+export const paneOffered = (pane: PaneType, aiEnabled: boolean) => aiEnabled || !AI_PANES.has(pane);
 
 function column<K extends keyof PaneSpec>(key: K): Record<PaneType, PaneSpec[K]> {
   const out = {} as Record<PaneType, PaneSpec[K]>;

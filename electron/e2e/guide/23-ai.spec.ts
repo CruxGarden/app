@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, createCrux } from '../multi-crux-helpers';
-import { showPane, hidePane } from '../panel-helpers';
+import { showPane, hidePane, togglePanel } from '../panel-helpers';
 import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -13,36 +13,46 @@ import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
  * settings-ai-sound, included-collaborator and agent-metrics specs.
  */
 test.describe('guide 23 · AI and Memory', () => {
-  test('SETAI-01 — with AI Tools off the work goes on by hand and the composer says so', async () => {
-    const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+  test('SETAI-01 — with AI Tools off nothing AI is offered and the work goes on by hand; on brings it back', async () => {
+    const { app, page } = await launchApp({ ai: false, env: { CRUX_AI_MOCK: '1' } });
     try {
       await enterGarden(page);
       await createCrux(page, 'By hand');
-      const settings = await showPane(page, 'Settings');
-      await settings.getByRole('button', { name: 'AI', exact: true }).click();
-      const ai = settings.getByRole('switch', { name: 'Enable AI Tools' });
-      // Off (the default in a fresh garden), then on, then off again.
-      if ((await ai.getAttribute('aria-checked')) === 'true') await ai.click();
-      await expect(ai).toHaveAttribute('aria-checked', 'false');
-      // The Garden's collaborator says it is off and points at Settings.
+      // A new Crux starts with its files beside the result, no conversation.
+      await expect(page.getByTestId('pane-body-artifacts')).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByTestId('pane-body-workshop')).toBeVisible();
+      await expect(page.getByTestId('pane-body-collaboration')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Console', exact: true })).toHaveCount(0);
+      // Neither the Panels picker nor ⌘K offers an AI panel.
       await page.getByRole('button', { name: 'Add panel', exact: true }).click();
-      await page
-        .getByRole('dialog', { name: 'Add panel', exact: true })
-        .getByRole('button', { name: 'Toggle garden collaboration', exact: true })
-        .click();
-      const console_ = page.getByTestId('pane-body-console');
-      await expect(console_).toBeVisible({ timeout: 30_000 });
-      await expect(console_.getByText(/Turn it on in Settings/)).toBeVisible();
+      const picker = page.getByRole('dialog', { name: 'Add panel', exact: true });
+      await expect(
+        picker.getByRole('button', { name: 'Toggle artifacts', exact: true }),
+      ).toBeVisible();
+      await expect(picker.getByRole('button', { name: /collaboration/i })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('ControlOrMeta+k');
+      const palette = page.getByRole('dialog', { name: 'Command palette' });
+      await palette.getByRole('combobox').fill('collab');
+      await expect(palette.getByRole('option', { name: /Collaboration/ })).toHaveCount(0);
+      await page.keyboard.press('Escape');
       // Manual work is untouched.
       const monaco = await writeFirstFile(page, 'index.html', '<h1>By hand</h1>');
       await expect(monaco).toContainText('By hand');
-      // On: the Garden's collaborator is there to talk to.
+      // On: the collaborator is offered again, and opens.
+      const settings = await showPane(page, 'Settings');
+      await settings.getByRole('button', { name: 'AI', exact: true }).click();
+      const ai = settings.getByRole('switch', { name: 'Enable AI Tools' });
+      await expect(ai).toHaveAttribute('aria-checked', 'false');
       await ai.click();
       await expect(ai).toHaveAttribute('aria-checked', 'true');
-      await expect(console_.getByText(/Turn it on in Settings/)).toHaveCount(0);
-      await expect(console_.getByPlaceholder(/Send a message|Ask/i).first()).toBeVisible({
-        timeout: 30_000,
-      });
+      await togglePanel(page, 'Toggle collaboration');
+      await expect(page.getByTestId('pane-body-collaboration')).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole('button', { name: 'Console', exact: true })).toBeVisible();
+      // Off again: the conversation goes with it.
+      await ai.click();
+      await expect(ai).toHaveAttribute('aria-checked', 'false');
+      await expect(page.getByTestId('pane-body-collaboration')).toHaveCount(0);
     } finally {
       await app.close();
     }

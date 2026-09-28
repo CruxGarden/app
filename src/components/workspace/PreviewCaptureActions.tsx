@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { buttonClass } from '@/components/ui/button-class';
 import { captureLocalPreview } from '@/services/preview-capture';
 import { nativeToolsAvailable, onNativeProgress, renderVideo } from '@/services/native-tools';
@@ -31,6 +32,7 @@ export default function PreviewCaptureActions({
   const turning = useCruxStore((s) => s.isStreaming || s.turnSettling);
   const [busy, setBusy] = useState<'shot' | 'video' | null>(null);
   const [progress, setProgress] = useState<string>('');
+  const aiEnabled = useAiEnabled();
   useEffect(
     () =>
       onNativeProgress((e) => {
@@ -102,7 +104,7 @@ export default function PreviewCaptureActions({
   );
   return (
     <>
-      {visual && (
+      {visual && aiEnabled && (
         <button
           type="button"
           onClick={() => void checkNow().catch((err) => console.error('Check failed:', err))}

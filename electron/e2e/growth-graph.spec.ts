@@ -1,4 +1,4 @@
-import { togglePanel, panelPressed } from './panel-helpers';
+import { togglePanel, panelPressed, newTaskButton } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -8,12 +8,12 @@ import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 
 async function history(page: Page) {
   const pane = page.getByTestId('pane-body-history');
-  if (!(await pane.isVisible())) await togglePanel(page, 'Toggle history');
+  if (!(await pane.isVisible())) await togglePanel(page, 'Toggle growth');
   await expect(pane).toBeVisible();
   return pane;
 }
 async function newTask(page: Page, title: string) {
-  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await (await newTaskButton(page)).click();
   await page.getByRole('textbox', { name: 'Task name', exact: true }).fill(title);
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();

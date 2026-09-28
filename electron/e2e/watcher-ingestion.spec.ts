@@ -27,7 +27,7 @@ test('an external edit immediately after an app write enters history instead of 
     await expect
       .poll(() => storedFingerprint(page, id, 'note.txt'), { timeout: 60_000 })
       .toBe(fingerprint);
-    await togglePanel(page, 'Toggle history');
+    await togglePanel(page, 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('External edit preserved');

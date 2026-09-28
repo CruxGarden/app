@@ -810,6 +810,19 @@ export interface ElectronBridge {
     agentMock: boolean;
     /** CRUX_SILENT=1 — no soundscape or cues play (the e2e default; sound tests opt out). */
     silent: boolean;
+    /**
+     * CRUX_AI=on|off — whether a fresh garden starts with AI tools on (the e2e
+     * default is on, so the collaborator journeys see Collaboration; AI-off
+     * specs pass off). A choice saved in Settings always wins.
+     */
+    ai: 'on' | 'off' | null;
+    /**
+     * CRUX_PLAIN_TITLES=1 — `title=` attributes stay put and the app's own
+     * tooltip layer is off (the e2e default: a tooltip moves a hovered
+     * control's title aside, which a resting test pointer would hide from
+     * `getByTitle`). Tooltip specs pass `titleTips: true`.
+     */
+    plainTitles: boolean;
     autoBackupQuietMs: number | null;
   };
 }

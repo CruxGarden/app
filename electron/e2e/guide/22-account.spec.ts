@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, createCrux } from '../multi-crux-helpers';
-import { showPane } from '../panel-helpers';
+import { showPane, openPanel } from '../panel-helpers';
 
 /**
  * V1-TESTING-GUIDE § 22 · Settings: Account and Names — a wrong code,
@@ -148,7 +148,7 @@ test.describe('guide 22 · Account and Names', () => {
         ['Collaboration', 'Talk'],
         ['Artifacts', 'Stuff'],
         ['Workshop', 'Bench'],
-        ['History', 'Past'],
+        ['Growth', 'Past'],
         ['Tasks', 'Chores'],
       ] as const) {
         const field = names.getByLabel(`Name for ${pane}`);
@@ -159,6 +159,8 @@ test.describe('guide 22 · Account and Names', () => {
       await expect(
         page.locator('.mosaic-window.pane-collaboration .pane-toolbar-label'),
       ).toHaveText(/talk/i);
+      // Tasks arrives with the first task; open it to read its header.
+      await openPanel(page, 'tasks', 'Toggle tasks');
       await expect(page.locator('.mosaic-window.pane-tasks .pane-toolbar-label')).toHaveText(
         /chores/i,
       );

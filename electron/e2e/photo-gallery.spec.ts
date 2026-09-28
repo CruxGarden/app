@@ -154,7 +154,7 @@ test('Photo Gallery: the galleries render, a dropped file joins them, the settin
     });
 
     await test.step('the settings name the gallery', async () => {
-      await togglePanel(page, 'Toggle metadata');
+      await togglePanel(page, 'Toggle details');
       const settings = page.getByTestId('pane-body-details');
       await expect(settings).toBeVisible();
       await page.screenshot({ path: join(evidence, 'gallery-settings.png') });

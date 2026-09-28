@@ -86,7 +86,7 @@ test('Neighborhood follows real dimensions across Gardens, reveals a second hop 
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', main);
     const history = page.getByTestId('pane-body-history');
-    if (!(await history.isVisible())) await togglePanel(page, 'Toggle history');
+    if (!(await history.isVisible())) await togglePanel(page, 'Toggle growth');
     await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('Demo');
     await history.getByRole('button', { name: 'Save', exact: true }).click();

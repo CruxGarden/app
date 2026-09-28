@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useEffect, useRef } from 'react';
 import { segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { SectionLabel } from '@/components/ui';
@@ -96,8 +97,11 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
 }
 
 export default function MoodEditor() {
-  const [tab, setTab] = useState<Tab>(() => useUIStore.getState().moodTab ?? 'moods');
+  const [chosenTab, setTab] = useState<Tab>(() => useUIStore.getState().moodTab ?? 'moods');
   const requested = useUIStore((s) => s.moodTab);
+  // The Persona is the collaborator's; without AI tools there is none to dress.
+  const aiEnabled = useAiEnabled();
+  const tab: Tab = chosenTab === 'persona' && !aiEnabled ? 'moods' : chosenTab;
   useEffect(() => {
     if (!requested) return;
     setTab(requested);
@@ -238,17 +242,19 @@ export default function MoodEditor() {
               ['sound', 'Sound'],
               ['persona', 'Persona'],
             ] as const
-          ).map(([t, label]) => (
-            <button
-              key={t}
-              type="button"
-              aria-pressed={tab === t}
-              onClick={() => setTab(t)}
-              className={segmentClass(tab === t)}
-            >
-              {label}
-            </button>
-          ))}
+          )
+            .filter(([t]) => aiEnabled || t !== 'persona')
+            .map(([t, label]) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={tab === t}
+                onClick={() => setTab(t)}
+                className={segmentClass(tab === t)}
+              >
+                {label}
+              </button>
+            ))}
         </div>
         <div className="flex-1" />
         <SurfaceThemeControl />

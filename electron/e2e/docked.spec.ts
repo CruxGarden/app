@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
+import { showPane } from './panel-helpers';
 
 /**
  * Docked mode (GARDEN-SCHEDULER-PLAN): with the switch on, closing the
@@ -31,10 +32,7 @@ test('closing the window in docked mode keeps the garden running', async () => {
     await page.keyboard.press('Escape');
 
     // A schedule for a minute from now, so something has to happen while hidden.
-    await page
-      .locator('header')
-      .getByRole('button', { name: /^Tending/ })
-      .click();
+    await showPane(page, 'Tending');
     await page.getByTestId('schedules').getByRole('button', { name: 'Schedule…' }).click();
     await page.getByLabel('Title', { exact: true }).fill('While hidden');
     await page.getByLabel('When', { exact: true }).selectOption('every');

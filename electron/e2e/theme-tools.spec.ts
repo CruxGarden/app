@@ -48,10 +48,10 @@ test.describe('theme tools (mock AI)', () => {
       // Preview, not a saved theme: the Mood pane offers to clear it
       const mood = await showPane(page, 'Mood');
       await mood.getByRole('button', { name: 'Theme', exact: true }).click();
-      await expect(page.getByText(/AI preview: 4 tokens/)).toBeVisible();
+      await expect(page.getByText(/Preview from Collaboration: 4 tokens/)).toBeVisible();
       await expect(page.getByText(/\b0 custom\b|custom/)).toHaveCount(0);
-      await page.getByRole('button', { name: /AI preview/ }).click();
-      await expect(page.getByText(/AI preview/)).toHaveCount(0);
+      await page.getByRole('button', { name: /Preview from Collaboration/ }).click();
+      await expect(page.getByText(/Preview from Collaboration/)).toHaveCount(0);
       await hidePane(page, 'Mood');
       await expect.poll(panel).toBe(before);
       await expect.poll(() => token('--border')).not.toContain('linear-gradient');

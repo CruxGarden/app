@@ -20,15 +20,15 @@ test('panels open anywhere, pins keep their square, arrangements persist', async
     await expect(page.getByTestId('pane-body-tending')).toHaveCount(0);
 
     await createCrux(page, 'Desk');
-    await openPanel(page, 'history', 'Toggle history');
+    await openPanel(page, 'history', 'Toggle growth');
     const add = page.getByRole('button', { name: 'Add panel', exact: true });
     await add.click();
     const picker = page.getByRole('dialog', { name: 'Add panel', exact: true });
-    await picker.getByRole('button', { name: 'Pin History', exact: true }).click();
-    await expect(picker.getByRole('button', { name: 'Unpin History', exact: true })).toBeVisible();
+    await picker.getByRole('button', { name: 'Pin Growth', exact: true }).click();
+    await expect(picker.getByRole('button', { name: 'Unpin Growth', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
-    await page.getByTitle('Close History').click();
-    const square = page.locator('header').getByRole('button', { name: 'Toggle history' });
+    await page.getByTitle('Close Growth').click();
+    const square = page.locator('header').getByRole('button', { name: 'Toggle growth' });
     await expect(square).toHaveAttribute('aria-pressed', 'false');
 
     await instance.app.close();
@@ -37,7 +37,7 @@ test('panels open anywhere, pins keep their square, arrangements persist', async
     await page.getByRole('button', { name: /enter/i }).click();
     await page.getByRole('button', { name: 'Open Desk', exact: true }).click();
     await expect(
-      page.locator('header').getByRole('button', { name: 'Toggle history' }),
+      page.locator('header').getByRole('button', { name: 'Toggle growth' }),
     ).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByTestId('pane-body-history')).toHaveCount(0);
     await expect(page.getByTestId('pane-body-collaboration')).toBeVisible();

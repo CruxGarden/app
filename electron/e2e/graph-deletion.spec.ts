@@ -125,7 +125,15 @@ test('purging a linked Crux preserves shared work and history after restart', as
     await card.hover();
     await card.getByRole('button', { name: 'Crux actions' }).click();
     await first.page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-    await first.page.getByRole('button', { name: 'Delete', exact: true }).click();
+    // A question only when there is something to decide (published, or members to move).
+    const ask = first.page.getByRole('dialog', { name: /^Delete (Crux|Garden)$/ });
+    if (
+      await ask.waitFor({ timeout: 2_000 }).then(
+        () => true,
+        () => false,
+      )
+    )
+      await ask.getByRole('button', { name: 'Delete', exact: true }).click();
     const row = first.page
       .getByTestId('trash-section')
       .locator('li')

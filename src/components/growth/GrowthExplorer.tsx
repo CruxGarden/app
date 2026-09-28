@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buttonClass, segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { useGrowthGraphView } from './useGrowthGraphView';
@@ -23,6 +24,7 @@ export default function GrowthExplorer({
   /** A checkpoint to open on, for example from the Garden history. */
   initialSelectedId?: string | null;
 }) {
+  const aiEnabled = useAiEnabled();
   const [graph, setGraph] = useState<GrowthGraph | null>(null);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'2d' | '3d'>('2d');
@@ -344,8 +346,9 @@ export default function GrowthExplorer({
             ) : (
               <div className="p-4 text-sm text-text-muted space-y-3">
                 <p>
-                  Select a checkpoint to explore its Artifacts and the Collaboration that produced
-                  it.
+                  {aiEnabled
+                    ? 'Select a checkpoint to explore its Artifacts and the Collaboration that produced it.'
+                    : 'Select a checkpoint to explore its Artifacts.'}
                 </p>
                 <p>
                   Circles are checkpoints, diamonds in 2D mark merges, and outlined endpoints mark

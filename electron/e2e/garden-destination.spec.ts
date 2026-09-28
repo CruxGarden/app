@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 test('a Crux link resolves its actual Garden and Back returns to the previous location', async () => {
   test.setTimeout(90_000);
@@ -135,7 +136,7 @@ test('Task routes follow placement changes and recover from unplaced, ambiguous 
     await enterGarden(page);
     const root = new URL(page.url()).searchParams.get('garden')!;
     const target = await createCrux(page, 'Portable study');
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Rough mix');
     await page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();

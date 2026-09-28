@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useEffect, useId, useState } from 'react';
 import { Toggle } from '@/components/ui';
 import { readFlowSettings } from '@/lib/moods/flow';
@@ -12,6 +13,7 @@ import {
 export default function FlowControl() {
   const [settings, setSettings] = useState(readFlowSettings);
   const id = useId();
+  const aiEnabled = useAiEnabled();
   useEffect(() => {
     const update = () => setSettings(readFlowSettings());
     document.addEventListener('palette-change', update);
@@ -33,8 +35,8 @@ export default function FlowControl() {
             Flow
           </h3>
           <p id={`${id}-description`} className="text-xs text-text-muted mt-1">
-            Bring your garden to life. As you and your collaborators create, iridescent borders
-            light up. When you pause, they gently settle.
+            Bring your garden to life. As you{aiEnabled ? ' and your collaborators' : ''} create,
+            iridescent borders light up. When you pause, they gently settle.
           </p>
         </div>
         <Toggle

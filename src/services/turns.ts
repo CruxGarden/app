@@ -1,3 +1,4 @@
+import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { captureEditCheckpoint } from './edit-history';
 import { createTaskSlots } from './task-slots';
 import { getSetting } from './settings';
@@ -256,6 +257,8 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
 
   /** Can a turn run for the open crux — a model with a key (or the e2e mock)? */
   async function canCollaborate(): Promise<boolean> {
+    // AI tools off (Settings → AI): nothing offers a turn, whatever keys exist.
+    if (!aiEnabledNow()) return false;
     const crux = useCruxStore.getState().crux;
     if (!crux) return false;
     return (await resolveModelAndKey(crux)).apiKey !== null;

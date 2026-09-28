@@ -85,8 +85,8 @@ test.describe('polish tour', () => {
       // Each remaining pane, one at a time beside Collaboration + Artifacts
       await closePane(page, 'Share');
       for (const [type, label, n] of [
-        ['history', 'History', '11'],
-        ['details', 'Metadata', '12'],
+        ['history', 'Growth', '11'],
+        ['details', 'Details', '12'],
         ['store', 'Store', '13'],
         ['sync', 'Sync', '14'],
         ['export', 'Export', '15'],
@@ -98,8 +98,8 @@ test.describe('polish tour', () => {
       }
       // All panes open
       for (const [type, label] of [
-        ['history', 'History'],
-        ['details', 'Metadata'],
+        ['history', 'Growth'],
+        ['details', 'Details'],
         ['store', 'Store'],
         ['sync', 'Sync'],
         ['export', 'Export'],

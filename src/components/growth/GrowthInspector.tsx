@@ -1,3 +1,5 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { isAgentFile } from '@/lib/artifact-path';
 import { useEffect, useState } from 'react';
 import { linkClass } from '@/components/ui/button-class';
 import { Link } from 'react-router-dom';
@@ -64,6 +66,7 @@ export default function GrowthInspector({
   onSelect: (id: string) => void;
   onClose: () => void;
 }) {
+  const aiEnabled = useAiEnabled();
   const [detail, setDetail] = useState<{
     snapshot: Crux;
     artifacts: CheckpointFile[];
@@ -167,9 +170,9 @@ export default function GrowthInspector({
       {node.kind !== 'copy' && !detail && !error && <p role="status">Loading checkpoint…</p>}
       {detail && (
         <>
-          {(detail.summary || detail.snapshot.data) && (
+          {((aiEnabled && detail.summary) || detail.snapshot.data) && (
             <div className="text-xs text-text-muted whitespace-pre-wrap">
-              {detail.summary || detail.snapshot.data}
+              {(aiEnabled && detail.summary) || detail.snapshot.data}
             </div>
           )}
           <section className="space-y-2">
@@ -181,47 +184,51 @@ export default function GrowthInspector({
               className="w-full bg-surface border border-border rounded p-2 text-xs"
             >
               <option value="">Choose an Artifact</option>
-              {detail.artifacts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.path}
-                </option>
-              ))}
+              {detail.artifacts
+                .filter((a) => aiEnabled || !isAgentFile(a.path))
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.path}
+                  </option>
+                ))}
             </select>
             {file && <ArtifactContent key={`${node.id}:${file.id}`} artifact={file} />}
           </section>
-          <section className="space-y-3">
-            <h4 className="font-medium">Collaboration at this checkpoint</h4>
-            {!messages.length && (
-              <p className="text-xs text-text-muted">
-                No new messages recorded at this checkpoint.
-              </p>
-            )}
-            {messages.slice(0, messageLimit).map((message, i) => (
-              <div key={i} className="border-l-2 border-border pl-3 text-xs break-words">
-                <p className="font-mono text-accent mb-1">
-                  {message.role === 'user'
-                    ? 'You'
-                    : message.agent || message.model || 'Collaborator'}
+          {aiEnabled && (
+            <section className="space-y-3">
+              <h4 className="font-medium">Collaboration at this checkpoint</h4>
+              {!messages.length && (
+                <p className="text-xs text-text-muted">
+                  No new messages recorded at this checkpoint.
                 </p>
-                <MarkdownRenderer content={message.content.slice(0, 30000)} />
-                {message.content.length > 30000 && (
-                  <p className="text-text-muted">
-                    Message preview truncated; the full message remains in Collaboration.
+              )}
+              {messages.slice(0, messageLimit).map((message, i) => (
+                <div key={i} className="border-l-2 border-border pl-3 text-xs break-words">
+                  <p className="font-mono text-accent mb-1">
+                    {message.role === 'user'
+                      ? 'You'
+                      : message.agent || message.model || 'Collaborator'}
                   </p>
-                )}
-                {!!message.toolCalls?.length && (
-                  <p className="text-text-muted">
-                    Tools: {message.toolCalls.map((t) => t.name).join(', ')}
-                  </p>
-                )}
-              </div>
-            ))}
-            {messages.length > messageLimit && (
-              <button className={linkClass()} onClick={() => setMessageLimit((n) => n + 20)}>
-                Show more messages
-              </button>
-            )}
-          </section>
+                  <MarkdownRenderer content={message.content.slice(0, 30000)} />
+                  {message.content.length > 30000 && (
+                    <p className="text-text-muted">
+                      Message preview truncated; the full message remains in Collaboration.
+                    </p>
+                  )}
+                  {!!message.toolCalls?.length && (
+                    <p className="text-text-muted">
+                      Tools: {message.toolCalls.map((t) => t.name).join(', ')}
+                    </p>
+                  )}
+                </div>
+              ))}
+              {messages.length > messageLimit && (
+                <button className={linkClass()} onClick={() => setMessageLimit((n) => n + 20)}>
+                  Show more messages
+                </button>
+              )}
+            </section>
+          )}
         </>
       )}
     </div>

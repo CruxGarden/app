@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { linkClass } from '@/components/ui/button-class';
 import { downloadBlob } from '@/lib/download';
@@ -91,10 +92,11 @@ function MoodCard({
   canPublish?: boolean;
   testId: string;
 }) {
+  const aiEnabled = useAiEnabled();
   const meta = [
     pkg.theme.section,
     pkg.sound.synth?.name ?? 'Crux Synth',
-    pkg.persona ? pkg.persona.name : pkg.author ? `by ${pkg.author}` : null,
+    aiEnabled && pkg.persona ? pkg.persona.name : pkg.author ? `by ${pkg.author}` : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -162,11 +164,11 @@ function MoodCard({
               title={
                 canPublish
                   ? pkg.publishedCruxId
-                    ? 'Republish to crux.garden'
-                    : 'Publish to crux.garden'
-                  : 'Connect your account (Settings) to publish'
+                    ? 'Share the update on crux.garden'
+                    : 'Share on crux.garden'
+                  : 'Connect your account (Settings) to share'
               }
-              aria-label={`${pkg.publishedCruxId ? 'Republish' : 'Publish'} ${pkg.name}`}
+              aria-label={`${pkg.publishedCruxId ? 'Share update of' : 'Share'} ${pkg.name}`}
               className={iconBtn}
             >
               <ShareIcon size={13} />
@@ -194,6 +196,10 @@ function MoodCard({
 const HYPER_MOODS = BUNDLED_MOODS.filter((m) => m.id !== 'plasma' && !materialChoice(m.id));
 
 export default function MoodBrowser() {
+  const aiEnabled = useAiEnabled();
+  const wearing = aiEnabled
+    ? 'theme, background, persona and soundscape'
+    : 'theme, background and soundscape';
   const [moods, setMoods] = useState<MoodPackage[]>(() => getInstalledMoods());
   const gardenId = useGardenContext((s) => s.garden?.id);
   // A new root (startup, profile replacement) starts a new library epoch.
@@ -268,9 +274,9 @@ export default function MoodBrowser() {
         readBlob,
         publish: (crux, artifacts) => publishPipeline(crux, artifacts as never),
       });
-      say(`Published "${published.name}" — it's on crux.garden and in Explore → Moods.`);
+      say(`Shared "${published.name}" — it's on crux.garden and in Explore → Moods.`);
     } catch (err) {
-      say(err instanceof Error ? `Publish failed: ${err.message}` : 'Publish failed');
+      say(err instanceof Error ? `Sharing failed: ${err.message}` : 'Sharing failed');
     } finally {
       setBusy(null);
     }
@@ -289,7 +295,7 @@ export default function MoodBrowser() {
       const pkg = await installMood(captured, { gardenId: owner });
       setSaving(false);
       setName('');
-      say(`Saved "${pkg.name}" — theme, background, persona and soundscape.`);
+      say(`Saved "${pkg.name}" — ${wearing}.`);
     } catch (error) {
       say(error instanceof Error ? error.message : 'Could not save this Mood. Try again.');
     } finally {
@@ -385,8 +391,7 @@ export default function MoodBrowser() {
       )}
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-xs text-text-muted flex-1 min-w-[200px]">
-          A Mood is everything you're wearing — theme, background, persona, soundscape — as one
-          shareable package.
+          A Mood is everything you're wearing — {wearing} — as one shareable package.
         </p>
         {saving ? (
           <form
@@ -505,8 +510,8 @@ export default function MoodBrowser() {
         <div className="rounded-[var(--radius)] border border-dashed border-border/70 p-8 text-center">
           <p className="text-sm text-heading">No saved Moods yet</p>
           <p className="text-xs text-text-muted mt-1">
-            Shape the app in Theme, Background, Sound and Persona, then save what you're wearing. Or
-            import a .cruxmood someone sent you.
+            Shape the app in Theme, Background, Sound{aiEnabled ? ' and Persona' : ''}, then save
+            what you're wearing. Or import a .cruxmood someone sent you.
           </p>
         </div>
       ) : (

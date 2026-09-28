@@ -343,10 +343,7 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
       await expect(toggle).toHaveAttribute('aria-checked', 'false');
       await hidePane(page, 'Settings');
       // Something that would fire later: a schedule a minute out.
-      await page
-        .locator('header')
-        .getByRole('button', { name: /^Tending/ })
-        .click();
+      await showPane(page, 'Tending');
       await page.getByTestId('schedules').getByRole('button', { name: 'Schedule…' }).click();
       await page.getByLabel('Title', { exact: true }).fill('After quit');
       await page.getByLabel('When', { exact: true }).selectOption('every');
@@ -369,10 +366,7 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
       const { app, page } = again;
       await page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
       await expect(page.getByTestId('pane-body-home')).toBeVisible({ timeout: 30_000 });
-      await page
-        .locator('header')
-        .getByRole('button', { name: /^Tending/ })
-        .click();
+      await showPane(page, 'Tending');
       await expect(page.getByTestId('schedules').getByTestId('schedule')).toHaveCount(1);
       // Close the window the way the red button does: with docking off it goes (not hides).
       // The page is gone and, under the test harness, so is the process — docked.spec is

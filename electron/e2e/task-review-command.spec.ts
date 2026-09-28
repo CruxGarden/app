@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
 
 test('review checking and closing report refused writes, retry and preserve Task content after restart', async () => {
   const env = { CRUX_API_OWNER: '1' };
@@ -15,7 +16,7 @@ test('review checking and closing report refused writes, retry and preserve Task
     await page.locator('.monaco-editor').click();
     await page.keyboard.type('Keep both task and candidate content');
     await page.keyboard.press('ControlOrMeta+s');
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Retained task');
     await page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();

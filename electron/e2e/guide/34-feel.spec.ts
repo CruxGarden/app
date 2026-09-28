@@ -42,11 +42,11 @@ test.describe('guide 34 · Accessibility, polish and states', () => {
       }
       expect(reached, 'Tab reaches Add Crux').toBe(true);
       expect(await focusIsVisible(page)).toBe(true);
-      // Enter opens the dialog; the name field has focus; Escape closes it and gives focus back.
+      // Enter opens the dialog; its one question has focus; Escape closes it and gives focus back.
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('dialog', { name: 'Add Crux' });
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByPlaceholder('My Crux')).toBeFocused();
+      await expect(dialog.getByLabel('What do you want to make?')).toBeFocused();
       await page.keyboard.press('Escape');
       await expect(dialog).toHaveCount(0);
       // Focus should come back to the control that opened it (soft: the path continues).

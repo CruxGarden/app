@@ -44,9 +44,14 @@ async function deleteFromCard(page: Page, title: string) {
   await card.hover();
   await card.getByRole('button', { name: 'Crux actions' }).click();
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Delete Crux' })).toBeVisible();
-  await expect(page.getByText(/moves to Recently deleted/)).toBeVisible();
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  // Nothing to decide for an unpublished Crux: it goes at once, and a note offers Undo.
+  // The newest note: a second delete of a same-titled Crux stacks its own.
+  const note = page
+    .getByTestId('toast')
+    .filter({ hasText: `Moved ${title} to Recently deleted` })
+    .last();
+  await expect(note).toBeVisible();
+  await expect(note.getByRole('button', { name: 'Undo', exact: true })).toBeVisible();
 }
 
 test.describe('trash: recently deleted cruxes', () => {

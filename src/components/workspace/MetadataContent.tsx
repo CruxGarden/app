@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { SectionLabel } from '@/components/ui';
@@ -314,6 +315,10 @@ export default function MetadataContent({
   tagLink,
   onUpdate,
 }: MetadataContentProps) {
+  // With AI tools off the collaborator's traces stay out of view; a public page
+  // (readOnly) shows what its owner published, whatever the viewer's setting.
+  const aiEnabled = useAiEnabled();
+  const showAi = aiEnabled || !!readOnly;
   const collaborators = useMemo(() => {
     if (!messages?.length) return [];
     const models = new Set<string>();
@@ -363,7 +368,7 @@ export default function MetadataContent({
       </div>
 
       {/* ── Contributors ── */}
-      {(authorName || collaborators.length > 0) && (
+      {(authorName || (showAi && collaborators.length > 0)) && (
         <>
           <div className="divider" />
           <div className="flex flex-col gap-2">
@@ -372,7 +377,7 @@ export default function MetadataContent({
                 <span>{authorName}</span>
               </FieldRow>
             )}
-            {collaborators.length > 0 && (
+            {showAi && collaborators.length > 0 && (
               <FieldRow label="Collaborators">
                 {collaborators.map((model) => (
                   <span key={model}>{formatModel(model)}</span>
@@ -455,12 +460,12 @@ export default function MetadataContent({
         </FieldRow>
       </div>
 
-      {/* ── AI Summary ── */}
-      {summary && (
+      {/* ── The collaborator's summary ── */}
+      {showAi && summary && (
         <>
           <div className="divider" />
           <div className="flex flex-col gap-2">
-            <SectionLabel tone="muted">AI Summary</SectionLabel>
+            <SectionLabel tone="muted">Summary</SectionLabel>
             {summary.purpose && (
               <FieldRow label="Purpose">
                 <span className="whitespace-pre-wrap">{summary.purpose}</span>

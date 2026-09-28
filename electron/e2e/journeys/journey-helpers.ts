@@ -29,7 +29,7 @@ export async function markVersion(page: Page, label: string) {
     await page.getByRole('button', { name: 'Add panel', exact: true }).click();
     const picker = page.getByRole('dialog', { name: 'Add panel' });
     await picker.getByRole('textbox', { name: 'Find a panel' }).fill('history');
-    await picker.getByRole('button', { name: 'Toggle history', exact: true }).click();
+    await picker.getByRole('button', { name: 'Toggle growth', exact: true }).click();
   }
   await expect(history).toBeVisible({ timeout: 30_000 });
   await history.getByRole('button', { name: 'Mark version', exact: true }).click();

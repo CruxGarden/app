@@ -540,6 +540,8 @@ const api: ElectronBridge = {
     aiMock: process.env.CRUX_AI_MOCK === '1',
     agentMock: process.env.CRUX_AGENT_MOCK === '1',
     silent: process.env.CRUX_SILENT === '1',
+    ai: process.env.CRUX_AI === 'on' ? 'on' : process.env.CRUX_AI === 'off' ? 'off' : null,
+    plainTitles: process.env.CRUX_PLAIN_TITLES === '1',
     autoBackupQuietMs: process.env.CRUX_AUTOBACKUP_QUIET_MS
       ? Number(process.env.CRUX_AUTOBACKUP_QUIET_MS) || null
       : null,

@@ -17,7 +17,7 @@ test('polish pass: resting and answering states', async () => {
   test.skip(!SHOTS, 'Set CRUX_POLISH_SHOTS to a folder to take the polish-pass screenshots');
   test.setTimeout(8 * 60_000);
   mkdirSync(SHOTS!, { recursive: true });
-  const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+  const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' }, titleTips: true });
   const shot = async (name: string, settle = 900) => {
     await page.waitForTimeout(settle);
     await page.screenshot({ path: `${SHOTS}/${name}.png`, timeout: 60_000 });
@@ -51,8 +51,11 @@ test('polish pass: resting and answering states', async () => {
     await shot('07-add-crux', 800);
     await page.keyboard.press('Escape');
 
-    await page.getByRole('button', { name: 'Explore', exact: true }).hover();
+    await page.getByRole('button', { name: 'Navigator', exact: true }).hover();
     await shot('08-tooltip', 700);
+    // The Mood chip opens up on hover: what plays, the volume, the way to Sound.
+    await page.getByRole('region', { name: 'Mood Bar' }).hover();
+    await shot('08b-mood-chip', 700);
 
     // A Crux: the turn, the panes, the picker.
     await page.locator('.bg-garden-card').first().click();
@@ -65,7 +68,7 @@ test('polish pass: resting and answering states', async () => {
       .waitFor({ timeout: 30_000 })
       .catch(() => {});
     await shot('09-collaboration', 1200);
-    for (const label of ['artifacts', 'history', 'metadata'])
+    for (const label of ['artifacts', 'growth', 'details'])
       await togglePanel(page, `Toggle ${label}`).catch(() => {});
     await shot('10-crux-panes', 1500);
     const selector = page.getByTestId('model-selector');
@@ -76,6 +79,13 @@ test('polish pass: resting and answering states', async () => {
     }
     await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
     await shot('12-switcher', 600);
+    await page.keyboard.press('Escape');
+    // ⌘K: everything in one field, then narrowed by a word.
+    await page.keyboard.press('ControlOrMeta+k');
+    await page.getByRole('dialog', { name: 'Command palette' }).waitFor();
+    await shot('12b-command-palette', 700);
+    await page.keyboard.type('sh');
+    await shot('12c-command-palette-query', 700);
     await page.keyboard.press('Escape');
 
     // Pages outside the Shell.

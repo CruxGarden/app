@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, newTaskButton } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
@@ -16,7 +16,7 @@ test('Task archive/reopen reports refusal, preserves content, retries and surviv
     await page.locator('.monaco-editor').click();
     await page.keyboard.type('Preserved through archive');
     await page.keyboard.press('ControlOrMeta+s');
-    await page.getByRole('button', { name: 'New task', exact: true }).click();
+    await (await newTaskButton(page)).click();
     await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Archive me');
     await page.getByRole('button', { name: 'Save and start task' }).click();
     await expect(page.getByRole('button', { name: 'Archive task', exact: true })).toBeVisible();

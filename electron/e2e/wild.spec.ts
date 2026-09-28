@@ -37,7 +37,7 @@ test.describe('wild theme', () => {
       );
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('too much');
@@ -69,7 +69,7 @@ test.describe('wild theme', () => {
       await page.waitForTimeout(800);
       await shot('2-workspace');
       await togglePanel(page, 'Toggle share');
-      await togglePanel(page, 'Toggle history');
+      await togglePanel(page, 'Toggle growth');
       await togglePanel(page, 'Toggle sync');
       await togglePanel(page, 'Toggle store');
       await page.waitForTimeout(800);
