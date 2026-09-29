@@ -8,6 +8,7 @@
 
        Only what Electron itself needs:
        - allow-jit + allow-unsigned-executable-memory: V8 generates and executes machine code.
+       - camera + audio-input: recording after workspace and operating-system consent.
 
        Deliberately absent:
        - disable-library-validation: every dylib/.node we dlopen (better_sqlite3.node, Electron
@@ -18,5 +19,7 @@
          on would let anything in the environment inject code into a signed app. -->
   <key>com.apple.security.cs.allow-jit</key><true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.device.camera</key><true/>
+  <key>com.apple.security.device.audio-input</key><true/>
 </dict>
 </plist>

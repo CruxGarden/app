@@ -11,7 +11,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "install-electron && electron-builder install-app-deps",
     "start": "tsc && electron .",
     "dev": "tsc && CRUX_DEV_SERVER=http://localhost:8080 electron .",
     "build:web": "cd .. && npm run build",
@@ -35,9 +35,9 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.266",
-    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.rb3d0beef1a12.h22256bb7.tgz",
+    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.r84ac305b5174.h22256bb7.tgz",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "better-sqlite3": "^12.8.0",
+    "better-sqlite3": "13.0.3",
     "chokidar": "^4.0.3",
     "chokidar-fsevents": "npm:chokidar@3.6.0",
     "electron-updater": "^6.8.9",
@@ -51,7 +51,7 @@
     "@electron/rebuild": "^4.0.3",
     "@playwright/test": "^1.62.1",
     "@types/better-sqlite3": "^7.6.13",
-    "electron": "^41.10.7",
+    "electron": "^44.4.5",
     "electron-builder": "^26.17.0",
     "playwright": "^1.62.1",
     "typescript": "^5.7.0"
@@ -92,6 +92,12 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
+      "minimumSystemVersion": "13.0",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Use your camera when you allow a Crux to record video.",
+        "NSMicrophoneUsageDescription": "Use your microphone when you allow a Crux to record audio.",
+        "NSAudioCaptureUsageDescription": "Include system audio when you allow a Crux to capture it."
+      },
       "icon": "build/icon.icns",
       "target": [
         {

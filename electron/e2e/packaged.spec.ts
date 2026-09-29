@@ -1,6 +1,5 @@
 import { test, expect, _electron as electron } from '@playwright/test';
-import { existsSync } from 'node:fs';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -22,7 +21,7 @@ test.describe('packaged app', () => {
 
   test('the built .app launches, serves the bundled web app, and opens SQLite', async () => {
     expect(existsSync(exe), `no packaged app at ${exe}`).toBe(true);
-    const dir = mkdtempSync(join(tmpdir(), 'crux-packaged-'));
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'crux-packaged-')));
     const env: Record<string, string> = {};
     for (const [k, v] of Object.entries(process.env))
       if (v !== undefined && k !== 'ELECTRON_RUN_AS_NODE') env[k] = v;
@@ -48,6 +47,10 @@ test.describe('packaged app', () => {
       expect(info.name).toBe('Crux Garden');
       expect(info.userData).toBe(join(dir, 'userData'));
       expect(existsSync(join(dir, 'userData', 'cruxgarden.db'))).toBe(true);
+      const database = await page.evaluate(() =>
+        window.electronAPI!.sqlite.get('SELECT sqlite_version() AS version'),
+      );
+      expect(database).toEqual({ version: expect.stringMatching(/^\d+\.\d+\.\d+$/) });
       await page.screenshot({ path: 'e2e/.results/packaged-gateway.png' });
     } finally {
       await app.close();

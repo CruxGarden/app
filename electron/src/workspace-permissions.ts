@@ -91,7 +91,7 @@ export function installWorkspacePermissions(
     if (permission === 'media' && 'mediaTypes' in details && details.mediaTypes) {
       if (details.mediaTypes.some((type) => type !== 'video' && type !== 'audio'))
         return callback(false);
-      // Electron 41 labels both getDisplayMedia and legacy desktop capture as
+      // Electron labels both getDisplayMedia and legacy desktop capture as
       // media with no device types. Never auto-approve that ambiguous request:
       // legacy capture can bypass the display-source handler entirely.
       if (details.mediaTypes.length === 0) {
