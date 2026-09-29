@@ -27,6 +27,9 @@ export default defineConfig({
     port: 8080,
   },
   optimizeDeps: {
+    // Bundled tools contain their own HTML and Node-only build code. They are
+    // served as assets; only the host application's entry needs prebundling.
+    entries: ['index.html'],
     exclude: ['wa-sqlite', '@cruxgarden/plasma-ui'],
   },
   worker: {

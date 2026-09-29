@@ -34,3 +34,4 @@ electron/resources/bin/
 
 # Isolated browser boundary test output
 electron/e2e-browser/.results/
+electron/.web-build/

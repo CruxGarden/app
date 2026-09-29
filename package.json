@@ -123,7 +123,7 @@
     "@monaco-editor/react": "^4.7.0",
     "acorn": "8.16.0",
     "ai": "^7.0.47",
-    "axios": "^1.7.9",
+    "axios": "^1.20.0",
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
     "jszip": "3.10.1",
@@ -144,8 +144,8 @@
     "react-markdown": "^10.1.0",
     "react-mosaic-component": "^6.1.1",
     "react-photo-view": "^1.2.7",
-    "react-router": "^7.1.0",
-    "react-router-dom": "^7.1.0",
+    "react-router": "^7.18.4",
+    "react-router-dom": "^7.18.4",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0",
@@ -155,7 +155,10 @@
   },
   "overrides": {
     "react-dnd": "$react-dnd",
-    "react-dnd-html5-backend": "$react-dnd-html5-backend"
+    "react-dnd-html5-backend": "$react-dnd-html5-backend",
+    "react-mosaic-component": {
+      "uuid": "^11.1.1"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -171,7 +174,7 @@
     "monaco-editor": "^0.55.1",
     "openapi-typescript": "^7.13.0",
     "patch-package": "^8.0.1",
-    "pnpm": "10.34.4",
+    "pnpm": "10.34.6",
     "prettier": "^3.4.2",
     "sql.js": "^1.14.1",
     "tailwindcss": "^4.0.0",

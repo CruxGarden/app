@@ -15,7 +15,7 @@ Thanks for helping. This repo is the desktop app (Electron) and the web app it w
 ## Setup
 
 ```bash
-nvm use                      # Node 22 (.nvmrc)
+nvm use                      # the version in .nvmrc
 npm install && npm run dev   # web app on :8080
 cd electron && npm install && npm run dev   # desktop shell against the dev server
 ```
@@ -31,6 +31,20 @@ cd electron && npm run build:all && npm run test:e2e
 
 Tests run isolated from your real garden (throwaway userData + garden root). A mock API
 (`e2e/api-mock.ts`) and a scripted model (`CRUX_AI_MOCK=1`) mean no accounts or keys are needed.
+
+## Dependency updates
+
+Run full `npm audit` checks in both this directory and `electron/`, then run their gates and
+the affected desktop journeys. `npm audit --omit=dev` is useful for triage, but misses Electron
+and Monaco: both are declared as development dependencies and ship in the app. Audit bundled
+tools separately as well. A clean audit alone does not establish release readiness. Commit
+both package manifests and lockfiles.
+
+Mosaic 6 has a repository patch applied by `postinstall`. Its scoped UUID override uses UUID 11's
+compatible CommonJS `v4()` API, the only UUID API Mosaic calls. This updates the dependency
+without changing persisted panel layouts; Mosaic 7 changes the layout tree and needs a separate
+migration. Keep the patch applied after dependency installs, including `npm run postinstall` if
+you used `--ignore-scripts`. Panel and keyboard desktop journeys cover this integration.
 
 ## Pull requests
 
