@@ -170,6 +170,8 @@ export class PreviewServer {
     };
     let target: string;
     try {
+      // A running server must not follow a Project Folder replaced by a link.
+      this.resolveKnownFolder(base);
       target = resolvePublic(relative || 'index.html');
       let stat = fs.existsSync(target) ? fs.statSync(target) : null;
       if (stat?.isDirectory()) {
@@ -202,7 +204,12 @@ export class PreviewServer {
   }
 
   stop(folder: string): Promise<void> {
-    const base = this.resolveKnownFolder(folder);
+    // Stopping an owned server stays possible after its folder becomes unsafe.
+    const requested = path.resolve(folder);
+    const base =
+      this.running.has(requested) || this.starting.has(requested)
+        ? requested
+        : this.resolveKnownFolder(folder);
     const existing = this.stopping.get(base);
     if (existing) return existing;
     const pendingStart = this.starting.get(base);

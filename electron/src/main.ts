@@ -448,10 +448,12 @@ async function setupIpc() {
   );
 
   fromGarden('sqlite:merge-crux-meta', (_e: any, id: string, patch: Record<string, unknown>) => {
+    assertFolderMetadata(patch);
     return db.mergeCruxMeta(id, patch);
   });
 
   fromGarden('sqlite:update-crux', (_e: any, id: string, patch: LocalCruxUpdate) => {
+    assertFolderMetadata(patch.meta);
     return db.updateCrux(id, patch);
   });
 
@@ -600,6 +602,11 @@ async function setupIpc() {
   // ── Project Folders (ADR 0001) ──────────────────────────────
   const desktopConfig = new DesktopConfig(app.getPath('userData'), launchSettings.gardenRoot);
   const projects = new ProjectFolders(desktopConfig);
+  // Metadata may retain a host-allocated folder, but cannot turn an arbitrary
+  // path into a filesystem grant (including after a restart).
+  const assertFolderMetadata = (meta?: Record<string, unknown>) => {
+    if (meta?.projectFolder != null) projects.resolveKnownFolder(meta.projectFolder);
+  };
   localDb.setProjectionHost(
     (folder: string, files: import('@cruxgarden/local-api').FileEntry[]) => {
       const { createHash } = require('node:crypto');
@@ -702,7 +709,7 @@ async function setupIpc() {
       try {
         const meta = JSON.parse(row.meta || '{}');
         if (typeof meta.projectFolder === 'string') {
-          watcher.watch(meta.projectFolder);
+          watcher.watch(projects.registerFolder(meta.projectFolder));
           watched++;
         }
       } catch {
@@ -712,7 +719,7 @@ async function setupIpc() {
     for (const copy of await db.all<{ project_folder: string | null }>(
       "SELECT project_folder FROM working_copies WHERE phase = 'ready'",
     )) {
-      if (copy.project_folder) watcher.watch(copy.project_folder);
+      if (copy.project_folder) watcher.watch(projects.registerFolder(copy.project_folder));
     }
     debugLog(`Watcher bootstrap: watching ${watched} project folder(s)`);
   } catch (err: any) {
@@ -766,6 +773,7 @@ async function setupIpc() {
     (event: Electron.IpcMainInvokeEvent, name: InstallationCommand, ...args: unknown[]) => {
       if (!(INSTALLATION_COMMANDS as readonly string[]).includes(name))
         throw new Error('Unknown installation command');
+      if (name === 'setWorkingCopyFolder') projects.resolveKnownFolder(args[1]);
       return (localDb.installation[name] as (...a: unknown[]) => unknown)(...args);
     },
   );
@@ -856,6 +864,7 @@ async function setupIpc() {
   );
 
   fromGarden('sqlite:create-crux', (event: Electron.IpcMainInvokeEvent, input: LocalCruxCreate) => {
+    assertFolderMetadata(input.meta);
     return db.createCrux(input, (slug) => {
       const folder = projects.createFolder(slug);
       watcher.watch(folder);
@@ -889,11 +898,19 @@ async function setupIpc() {
   fromGarden('project:reveal', (_e: any, folder: string, relPath?: string) =>
     projects.reveal(folder, relPath),
   );
-  fromGarden('project:watch', (_e: any, folder: string) => watcher.watch(folder));
-  fromGarden('project:unwatch', (_e: any, folder: string) => watcher.unwatch(folder));
+  fromGarden('project:watch', (_e: any, folder: string) =>
+    watcher.watch(projects.resolveKnownFolder(folder)),
+  );
+  fromGarden('project:unwatch', (_e: any, folder: string) =>
+    watcher.unwatch(projects.resolveKnownFolder(folder)),
+  );
   // Cut the watcher's debounce short: the batches come back on the reply (an event sent
   // during the handler could arrive after it), and the renderer records them itself.
-  fromGarden('project:flush', (_e: any, folder?: string) => watcher?.flush(folder) ?? []);
+  fromGarden(
+    'project:flush',
+    (_e: any, folder?: string) =>
+      watcher?.flush(folder === undefined ? undefined : projects.resolveKnownFolder(folder)) ?? [],
+  );
   fromGarden('project:list-files', (_e: any, folder: string) => projects.listFiles(folder));
   fromGarden(
     'project:reconcile',
@@ -974,7 +991,10 @@ async function setupIpc() {
   // ── Agent Host (ADR 0013): one MCP server per switched-on crux ──────
   // Servers live here; every tool call is forwarded to the renderer, which
   // runs the same executor the built-in collaborator uses.
-  const lookupCrux = (cruxId: string) => lookupProjectCrux(db, cruxId);
+  const lookupCrux = async (cruxId: string) => {
+    const crux = await lookupProjectCrux(db, cruxId);
+    return crux ? { ...crux, folder: projects.resolveKnownFolder(crux.folder) } : null;
+  };
   const requireCruxFolder = async (cruxId: string) => {
     const crux = await lookupCrux(cruxId);
     if (!crux) throw new Error('This crux has no Project Folder');

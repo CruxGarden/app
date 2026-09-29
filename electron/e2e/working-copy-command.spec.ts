@@ -117,7 +117,7 @@ test('owned Task edits preserve independent state through UI failure, retry and 
     await launch.app.close();
     launch = await launchApp({ dir, env });
     await launch.page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await launch.page.goto(`crux-app://app/c/${main}?task=${id}`);
+    await launch.page.goto(new URL(`/c/${main}?task=${id}`, launch.page.url()).href);
     await expect(
       launch.page.getByTestId('task-details').getByRole('textbox', { name: 'Task name' }),
     ).toHaveValue('Renamed task');

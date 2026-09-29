@@ -4,6 +4,7 @@ const path = require('path');
 const os = require('os');
 const {
   isInside,
+  realpathLongestPrefix,
   resolveInsideOrThrow,
   sanitizeFolderName: sanitizeName,
   toPosixRel,
@@ -13,9 +14,9 @@ const {
  * Project Folders (ADR 0001) — main-process side.
  *
  * The Garden Root (default ~/CruxGarden) holds one real Project Folder per
- * crux. All folder paths handed to file operations are validated to sit under
- * a known garden root, and relative paths are normalized to prevent traversal
- * out of the project folder.
+ * crux. Only explicitly registered or freshly allocated Project Folders can
+ * receive operations. A Garden Root is a location for allocation, not a grant
+ * to every directory under it.
  */
 
 /** What this process last learned about a file's bytes; valid while its stat signature holds. */
@@ -42,7 +43,7 @@ function isUtf8Bytes(bytes: Uint8Array): boolean {
 
 interface DesktopConfigData {
   gardenRoot: string;
-  /** Every root ever used — folders under a previous root stay operable. */
+  /** Previous allocation locations; only registered projects there remain operable. */
   knownRoots: string[];
   /** Check GitHub Releases for updates on launch (ADR 0008: visible, disableable). */
   autoUpdate: boolean;
@@ -115,6 +116,8 @@ function sanitizeFolderName(slug: string): string {
 }
 
 export class ProjectFolders {
+  private folders = new Map<string, string>();
+
   constructor(private config: DesktopConfig) {}
 
   ensureGardenRoot(): string {
@@ -123,17 +126,35 @@ export class ProjectFolders {
     return root;
   }
 
-  /** True when `candidate` is inside (or is) a directory we manage. */
-  private isUnderKnownRoot(candidate: string): boolean {
-    return this.config.knownRoots.some((root: string) => isInside(root, candidate));
+  /** Host-only startup registration from the local database, never an IPC grant. */
+  registerFolder(folder: string): string {
+    if (typeof folder !== 'string' || !path.isAbsolute(folder))
+      throw new Error('Use a registered Project Folder');
+    const resolved = path.resolve(folder);
+    const canonical = realpathLongestPrefix(resolved);
+    if (
+      this.config.knownRoots.some((root: string) => realpathLongestPrefix(root) === canonical) ||
+      !this.config.knownRoots.some(
+        (root: string) => isInside(root, resolved) && realpathLongestPrefix(root) !== canonical,
+      ) ||
+      (fs.existsSync(resolved) && fs.lstatSync(resolved).isSymbolicLink())
+    )
+      throw new Error('Use a registered Project Folder inside a Garden root');
+    this.folders.set(resolved, canonical);
+    this.folders.set(canonical, canonical);
+    return canonical;
   }
 
   private assertKnownFolder(folder: string): string {
+    if (typeof folder !== 'string' || !path.isAbsolute(folder))
+      throw new Error('Use a registered Project Folder');
     const resolved = path.resolve(folder);
-    if (!this.isUnderKnownRoot(resolved)) {
-      throw new Error(`Path is outside the garden root: ${folder}`);
-    }
-    return resolved;
+    const canonical = this.folders.get(resolved);
+    if (!canonical || realpathLongestPrefix(resolved) !== canonical)
+      throw new Error('Use a registered Project Folder; this path is not authorized');
+    if (fs.existsSync(resolved) && fs.lstatSync(resolved).isSymbolicLink())
+      throw new Error('A Project Folder cannot be replaced with a symlink');
+    return canonical;
   }
 
   /** Resolve a relative path inside a project folder; reject traversal. */
@@ -153,7 +174,7 @@ export class ProjectFolders {
       try {
         // Exclusive allocation: never adopt a directory/symlink created by another writer.
         fs.mkdirSync(folder);
-        return folder;
+        return this.registerFolder(folder);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
         name = `${base}-${counter++}`;

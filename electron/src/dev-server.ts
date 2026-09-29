@@ -314,7 +314,12 @@ export class DevServerManager {
   }
 
   stop(folder: string): Promise<void> {
-    const cwd = this.resolveKnownFolder(folder);
+    // Cancelling our process does not grant new access to its former folder.
+    const requested = path.resolve(folder);
+    const cwd =
+      this.running.has(requested) || this.starting.has(requested)
+        ? requested
+        : this.resolveKnownFolder(folder);
     const pending = this.stopping.get(cwd);
     if (pending) return pending;
     const start = this.starting.get(cwd);

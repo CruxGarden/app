@@ -1,10 +1,20 @@
 import { test, expect } from '@playwright/test';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  renameSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 const { DesktopConfig, ProjectFolders } =
   require('../dist/projects.js') as typeof import('../src/projects');
+const { PreviewServer } =
+  require('../dist/preview-server.js') as typeof import('../src/preview-server');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
 function fixture() {
@@ -49,6 +59,68 @@ test('a missing Project Folder preserves all indexed artifacts', () => {
       projects.reconcile(folder, [{ path: 'important.txt', fingerprint: hash('work') }]),
     ).toEqual({ folder, folderMissing: true, events: [] });
   } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a Garden root and an unrelated sibling directory are not Project Folders', () => {
+  const { root, projects, folder } = fixture();
+  try {
+    const garden = join(root, 'garden');
+    const unrelated = join(garden, 'personal');
+    mkdirSync(unrelated);
+    writeFileSync(join(unrelated, 'private.txt'), 'untouched');
+    expect(() => projects.writeFile(garden, 'root.txt', Buffer.from('wrong'))).toThrow();
+    expect(() => projects.writeFile(unrelated, 'private.txt', Buffer.from('wrong'))).toThrow();
+    expect(() => projects.readFile(unrelated, 'private.txt')).toThrow();
+    expect(() => projects.resolveKnownFolder(unrelated)).toThrow();
+    projects.writeFile(folder, 'owned.txt', Buffer.from('allowed'));
+    expect(readFileSync(join(unrelated, 'private.txt'), 'utf8')).toBe('untouched');
+    expect(readFileSync(join(folder, 'owned.txt'), 'utf8')).toBe('allowed');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('changing roots retains explicit projects, not arbitrary old directories, and registrations survive restart', () => {
+  const { root, projects, folder } = fixture();
+  try {
+    const config = new DesktopConfig(root);
+    config.setGardenRoot(join(root, 'garden', 'next'));
+    const restarted = new ProjectFolders(config);
+    expect(() => restarted.writeFile(folder, 'note.txt', Buffer.from('unregistered'))).toThrow();
+    restarted.registerFolder(folder); // The host reloads committed Crux registrations, not directories.
+    restarted.writeFile(folder, 'note.txt', Buffer.from('preserved'));
+    const next = restarted.createFolder('next-project');
+    restarted.writeFile(next, 'note.txt', Buffer.from('new'));
+    expect(() => restarted.registerFolder(join(root, 'garden'))).toThrow();
+    expect(() => restarted.registerFolder(config.gardenRoot)).toThrow();
+    expect(() => restarted.ensureFolder(join(root, 'garden', 'unrelated'))).toThrow();
+    expect(readFileSync(join(folder, 'note.txt'), 'utf8')).toBe('preserved');
+    expect(projects.readFile(folder, 'note.txt').length).toBeGreaterThan(0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('replacing a registered directory with a link revokes file access and its running preview', async () => {
+  const { root, projects, folder } = fixture();
+  const preview = new PreviewServer((folder) => projects.resolveKnownFolder(folder));
+  try {
+    projects.writeFile(folder, 'index.html', Buffer.from('owned'));
+    const url = await preview.start(folder);
+    expect(await (await fetch(url)).text()).toBe('owned');
+    const outside = join(root, 'outside');
+    mkdirSync(outside);
+    writeFileSync(join(outside, 'index.html'), 'private');
+    renameSync(folder, folder + '-saved');
+    symlinkSync(outside, folder, 'dir');
+    expect(() => projects.readFile(folder, 'index.html')).toThrow();
+    expect(() => projects.writeFile(folder, 'index.html', Buffer.from('wrong'))).toThrow();
+    expect((await fetch(url)).status).toBe(403);
+    expect(readFileSync(join(outside, 'index.html'), 'utf8')).toBe('private');
+  } finally {
+    await preview.stopAll();
     rmSync(root, { recursive: true, force: true });
   }
 });
