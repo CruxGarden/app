@@ -16,7 +16,7 @@ describe('applyTemplateToCrux', () => {
   it('writes the template files, stamps the Builder inputs and the template id', async () => {
     // Bundled binaries (fonts, images) are `?url` assets the dev server would serve; here a stub answers.
     vi.stubGlobal('fetch', async (url: string) =>
-      url.startsWith('/blog-crux/')
+      url.startsWith('/__crux-assets/')
         ? new Response(new Uint8Array([0, 1, 2]), { status: 200 })
         : new Response('', { status: 404 }),
     );
