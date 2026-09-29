@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import manifest from '../../media-crux/crux-tool.json';
 import { parseManifest } from './crux-tools/manifest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { runInNewContext } from 'node:vm';
+import { planFfmpegRun } from '../../electron/src/ffmpeg-command';
+import { planMagickRun } from '../../electron/src/magick-command';
 
 /**
  * Media Tools (MAKING-THE-AD-PARITY gap 13): the bench that carries ffmpeg
@@ -9,6 +15,41 @@ import { parseManifest } from './crux-tools/manifest';
  * and the page's contract with the host.
  */
 describe('Media Tools', () => {
+  it('admits every built-in media recipe and its fallback through the desktop planners', async () => {
+    const { default: files } = await import('@/templates/media-app');
+    const app = files.files.find((file) => file.path === 'app.js')!.content;
+    // Evaluate only this repository's constant recipe declarations, not the
+    // browser application or any user-provided script.
+    const recipes = runInNewContext(
+      app.slice(app.indexOf('var VIDEO'), app.indexOf('function ext(')) + '\nBUILT_IN',
+    ) as {
+      id: string;
+      tool: string;
+      accepts: string[];
+      args: string[];
+      out: string;
+      alt?: { tool: string; args: string[] };
+    }[];
+    const folder = mkdtempSync(join(tmpdir(), 'crux-bench-recipes-'));
+    try {
+      for (const recipe of recipes) {
+        const input = `source${recipe.accepts[0]}`;
+        writeFileSync(join(folder, input), 'fixture');
+        const output = recipe.out.replace('{name}', 'source');
+        for (const variant of [recipe, recipe.alt].filter((value) => !!value)) {
+          if (variant.tool !== 'ffmpeg' && variant.tool !== 'magick') continue;
+          const args = variant.args.map((arg) =>
+            arg.replace('{in}', input).replace('{out}', output),
+          );
+          const plan = variant.tool === 'ffmpeg' ? planFfmpegRun : planMagickRun;
+          expect.soft(() => plan(folder, args), `${recipe.id}: ${variant.tool}`).not.toThrow();
+        }
+      }
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
   it('is a valid Crux Tool manifest, bundled, and claims no drop routes', () => {
     const m = parseManifest(manifest);
     expect(m.id).toBe('media-app');

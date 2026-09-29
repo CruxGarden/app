@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
+import { enterGarden, createCrux, addArtifact, storedCrux } from './multi-crux-helpers';
 
 /**
  * Step 5 (MAKING-IT-POSSIBLE-STEPS): a page that is a timeline becomes a video
@@ -19,24 +19,17 @@ function next(){ if(i<lines.length){ document.getElementById('t').textContent=li
 if(new URLSearchParams(location.search).get('auto')==='1') setTimeout(next,600);
 </script></body></html>`;
 
-function cruxFolder(dir: string): string {
-  const garden = join(dir, 'garden');
-  const [first] = readdirSync(garden);
-  if (!first) throw new Error('no crux folder');
-  return join(garden, first);
-}
-
 test('a timeline page becomes a video and a screenshot from the preview bar', async () => {
   test.setTimeout(240_000);
-  const { app, page, dir } = await launchApp();
+  const { app, page } = await launchApp();
   page.on('console', (m) => {
     if (m.text().includes('[render]')) console.log('APP', m.text());
   });
   try {
     await enterGarden(page);
-    await createCrux(page, 'Spot');
+    const cruxId = await createCrux(page, 'Spot');
     await addArtifact(page, 'index.html');
-    const folder = cruxFolder(dir);
+    const folder = (await storedCrux(page, cruxId)).projectFolder as string;
     writeFileSync(join(folder, 'index.html'), PAGE);
     if (
       !(await page

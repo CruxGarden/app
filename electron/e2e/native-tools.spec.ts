@@ -4,27 +4,21 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, createCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 
 /**
  * Native tools, step 1 (MAKING-THE-AD-PARITY gap 13): the bundled ffmpeg runs
  * inside a crux folder from the Artifacts pane — a folder of frames becomes
  * exports/frames.mp4 — and the seam refuses a path outside the folder.
  */
-function cruxFolder(dir: string): string {
-  const garden = join(dir, 'garden');
-  const [first] = readdirSync(garden);
-  if (!first) throw new Error('no crux folder');
-  return join(garden, first);
-}
 
 test('a folder of frames becomes a video from the Artifacts pane', async () => {
   test.setTimeout(180_000);
-  const { app, page, dir } = await launchApp();
+  const { app, page } = await launchApp();
   try {
     await enterGarden(page);
-    await createCrux(page, 'Frames');
-    const folder = cruxFolder(dir);
+    const cruxId = await createCrux(page, 'Frames');
+    const folder = (await storedCrux(page, cruxId)).projectFolder as string;
     // Thirty test-pattern frames, written by the shell's own ffmpeg (as a page or an agent would).
     const ffmpeg = join(__dirname, '..', 'node_modules', 'ffmpeg-static', 'ffmpeg');
     mkdirSync(join(folder, 'frames'), { recursive: true });
@@ -60,11 +54,10 @@ test('a folder of frames becomes a video from the Artifacts pane', async () => {
     await expect(tree.getByText('exports', { exact: true })).toBeVisible({ timeout: 30_000 });
 
     // The seam refuses to leave the folder.
-    const refused = await page.evaluate(async () => {
-      const id = new URL(location.href).pathname.split('/c/')[1]?.split('/')[0];
+    const refused = await page.evaluate(async (cruxId) => {
       try {
         await window.electronAPI!.native.run({
-          cruxId: id!,
+          cruxId,
           tool: 'ffmpeg',
           args: ['-i', '../outside.png', 'x.mp4'],
         });
@@ -72,8 +65,8 @@ test('a folder of frames becomes a video from the Artifacts pane', async () => {
       } catch (e) {
         return (e as Error).message;
       }
-    });
-    expect(refused).toMatch(/outside the crux folder/);
+    }, cruxId);
+    expect(refused).toMatch(/(?:outside|escapes).*folder/);
   } finally {
     await app.close();
   }

@@ -5,6 +5,7 @@ const gateSpecs = [
   '**/ipc-security.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',
+  '**/native-media-security.spec.ts',
   '**/toolchain-bridge.spec.ts',
   '**/updater-bridge.spec.ts',
   '**/editor-history-draft.spec.ts',

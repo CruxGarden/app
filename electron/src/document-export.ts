@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
-import { inTypesetFolder } from './typeset-folder';
+import { compileTypstPdf } from './typst-command';
 import { mediaToolPath } from './media-binaries';
 import { documentFile } from './pandoc-command';
 import { resolveInsideOrThrow, toPosixRel } from './paths';
@@ -78,34 +78,9 @@ export async function exportDocumentPdf(
           ],
           runOptions,
         );
-        await inTypesetFolder(
-          folder,
-          typeset,
-          fs.readFileSync(resolveInsideOrThrow(folder, typeset), 'utf8'),
-          async (root, isolatedInput) => {
-            const isolatedOutput = path.join(root, '.result.pdf');
-            const packages = path.join(root, '.packages');
-            fs.mkdirSync(packages);
-            await execute(
-              typst,
-              [
-                'compile',
-                '--root',
-                root,
-                '--package-path',
-                packages,
-                '--package-cache-path',
-                packages,
-                '--',
-                isolatedInput,
-                isolatedOutput,
-              ],
-              { ...runOptions, cwd: root },
-            );
-            resolveInsideOrThrow(folder, pdf);
-            fs.copyFileSync(isolatedOutput, resolveInsideOrThrow(folder, pdf));
-          },
-        );
+        const compiled = await compileTypstPdf(typst, folder, typeset, pdf);
+        if (compiled.code !== 0)
+          throw new Error(compiled.stderrTail || 'Typst could not compile this document.');
         return result('typst');
       } catch {
         // An unavailable font or unsupported Typst document can still be printed.

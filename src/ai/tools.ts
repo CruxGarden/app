@@ -294,7 +294,7 @@ export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
       'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
       'USE WHEN: converting media (webm → mp4, wav → m4a), making a video from a folder of frames ' +
       '(e.g. ["-framerate","30","-i","frames/f%04d.png","-c:v","libx264","-pix_fmt","yuv420p","exports/ad.mp4"]), ' +
-      'trimming, extracting frames or a contact sheet, muxing audio onto video. Always pass "-y" to overwrite an output you mean to replace.',
+      'trimming, extracting frames or a contact sheet, muxing audio onto video. Supported filters are numeric scale/fps, the built-in GIF/contact-sheet/thumbnail/grayscale recipes, and loudnorm; scripts, playlists, devices and arbitrary filters are refused. Always pass "-y" to overwrite an output you mean to replace.',
     input_schema: {
       type: 'object',
       properties: {
@@ -318,9 +318,11 @@ export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
       'Run ImageMagick inside this crux folder with the given arguments (no "magick" word, no shell). ' +
       'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
       'USE WHEN: converting or resizing a picture (["images/a.png","-resize","1200x","exports/a.jpg"]), ' +
-      'cropping, rotating, compositing, making a contact sheet (["montage","images/*.png","-tile","4x","-geometry","+4+4","exports/sheet.jpg"]), ' +
-      'a favicon or an icon set, adding text, or reading a picture with ["identify","-verbose","images/a.png"]. ' +
-      'The first argument may be an ImageMagick sub-command (identify, montage, mogrify, composite); otherwise it is a convert-style pipeline.',
+      'cropping with gravity/extent, rotating, making a favicon, or identifying a raster image ' +
+      '(["identify","-verbose","images/a.png"]). Conversion uses the first frame. ' +
+      'Only raster conversion options are supported: resize, extent, quality, background, alpha, gravity, rotate, colorspace and the favicon define. ' +
+      'SVG/PDF, text, delegates, file lists, arbitrary subcommands and configuration options are refused.',
+
     input_schema: {
       type: 'object',
       properties: {

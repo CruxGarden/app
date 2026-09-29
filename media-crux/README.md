@@ -46,6 +46,8 @@ A recipe is a line in `data/project.json`:
 
 `{in}` is the file you picked, `{out}` the output path, `{name}` its name without the extension. `tool` is `ffmpeg`, `magick`, `pandoc`, or `pdf` for the document-to-PDF route. Add one by hand or ask the collaborator: _"add a recipe that makes a 512-pixel square thumbnail"_.
 
+Native tools accept reviewed conversion options. FFmpeg supports the built-in media recipes, numeric scale/fps, trimming and audio/video conversion; arbitrary filters, playlists and devices are refused. ImageMagick accepts raster conversion and inspection, including the built-in picture recipes; SVG/PDF, delegates, indirect file lists and arbitrary subcommands are refused. Picture conversions use the first frame. Custom recipes use the same rules, and a refused option is reported before execution.
+
 ## Document command limits
 
 Pandoc accepts local input/output paths, built-in formats, standalone output, tables of contents, numbering, metadata and layout options. Filters, custom readers/writers, defaults files, external resource paths and PDF-engine options are refused. Conversion runs with Pandoc's sandbox, so documents cannot include arbitrary files; some image-embedding conversions may be unavailable. Use **PDF** or `make_pdf` for a PDF.

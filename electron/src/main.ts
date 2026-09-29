@@ -1252,115 +1252,37 @@ async function setupIpc() {
         );
       const crux = await requireCruxFolder(opts.cruxId);
       const folder = path.resolve(crux.folder);
-      const { planPandocRun } = require('./pandoc-command') as typeof import('./pandoc-command');
-      const planned = tool === 'pandoc' ? planPandocRun(folder, opts.args) : null;
-      const args = planned?.args ?? (opts.args ?? []).map((a) => String(a));
-      if (planned) {
-        for (const output of planned.outputs)
-          fs.mkdirSync(path.dirname(output), { recursive: true });
-      } else {
-        for (const a of args) {
-          if (a.startsWith('-')) continue;
-          if (/^[a-z][a-z0-9+.-]*:/i.test(a) && !/^[a-z]:[\\/]/i.test(a))
-            throw new Error(`Protocols are not allowed: ${a}`);
-          if (path.isAbsolute(a)) throw new Error(`Use paths relative to the crux folder: ${a}`);
-          if (a.includes('/') || a.includes('\\') || /\.[a-z0-9]{1,5}$/i.test(a)) {
-            if (!isInside(folder, path.resolve(folder, a)))
-              throw new Error(`Path outside the crux folder: ${a}`);
-          }
-        }
-        // Neither ffmpeg nor ImageMagick creates directories, and for both the
-        // output is the last argument. A folder under the crux is made for it.
-        const last = args.at(-1);
-        if (last && !last.startsWith('-'))
-          fs.mkdirSync(path.dirname(path.resolve(folder, last)), { recursive: true });
+      if (tool === 'typst') {
+        const { runTypst } = require('./typst-command') as typeof import('./typst-command');
+        return runTypst(binary, folder, opts.args, opts.timeoutMs);
       }
-      // Each program takes its own preamble: ffprobe has no -nostdin, and
-      // ImageMagick reads a delegate config that can name other programs, so
-      // the limits keep one bad file from taking the machine with it.
-      const magickLimits = [
-        '-limit',
-        'memory',
-        '1GiB',
-        '-limit',
-        'map',
-        '2GiB',
-        '-limit',
-        'time',
-        '600',
-      ];
-      // ImageMagick 7 takes its sub-command first (`magick identify …`), so the
-      // limits go after it; a convert-style pipeline takes them at the front.
-      const magickCommands = new Set([
-        'identify',
-        'montage',
-        'mogrify',
-        'composite',
-        'convert',
-        'compare',
-        'stream',
-        'display',
-        'animate',
-        'import',
-      ]);
-      const full =
-        tool === 'magick'
-          ? magickCommands.has(args[0] ?? '')
-            ? [args[0]!, ...magickLimits, ...args.slice(1)]
-            : [...magickLimits, ...args]
-          : tool === 'pandoc' || tool === 'typst'
-            ? args
-            : tool === 'ffprobe'
-              ? ['-hide_banner', '-protocol_whitelist', 'file,pipe', ...args]
-              : ['-nostdin', '-hide_banner', '-protocol_whitelist', 'file,pipe', ...args];
-      const started = Date.now();
-      return new Promise<{ code: number; ms: number; stderrTail: string; stdout: string }>(
-        (resolve, reject) => {
-          const proc = execFile(binary, full, {
-            cwd: folder,
-            maxBuffer: 50 * 1024 * 1024,
-            timeout: Math.min(opts.timeoutMs ?? 10 * 60_000, 30 * 60_000),
-          });
-          let stderr = '';
-          let duration = 0;
-          proc.stderr?.on('data', (chunk: string) => {
-            stderr += chunk;
-            if (stderr.length > 200_000) stderr = stderr.slice(-100_000);
-            const durMatch = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
-            if (durMatch && !duration)
-              duration =
-                parseInt(durMatch[1]!) * 3600 +
-                parseInt(durMatch[2]!) * 60 +
-                parseFloat(durMatch[3]!);
-            const timeMatch = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
-            if (timeMatch && duration > 0) {
-              const current =
-                parseInt(timeMatch[1]!) * 3600 +
-                parseInt(timeMatch[2]!) * 60 +
-                parseFloat(timeMatch[3]!);
-              e.sender.send('native:progress', {
-                cruxId: opts.cruxId,
-                tool: opts.tool,
-                progress: Math.min(current / duration, 1),
-              });
-            }
-          });
-          let stdout = '';
-          proc.stdout?.on('data', (chunk: string) => {
-            stdout += chunk;
-            if (stdout.length > 200_000) stdout = stdout.slice(-100_000);
-          });
-          proc.on('close', (code: number) =>
-            resolve({
-              code: code ?? -1,
-              ms: Date.now() - started,
-              stderrTail: stderr.slice(-2000),
-              stdout: stdout.slice(-100_000),
-            }),
-          );
-          proc.on('error', reject);
+      if (tool === 'magick') {
+        const { runMagick } = require('./magick-command') as typeof import('./magick-command');
+        return runMagick(binary, folder, opts.args, opts.timeoutMs);
+      }
+      const { planPandocRun } = require('./pandoc-command') as typeof import('./pandoc-command');
+      const { planFfmpegRun, planFfprobeRun } =
+        require('./ffmpeg-command') as typeof import('./ffmpeg-command');
+      const { runNativeProcess } = require('./native-process') as typeof import('./native-process');
+      const plan =
+        tool === 'pandoc'
+          ? planPandocRun(folder, opts.args)
+          : tool === 'ffmpeg'
+            ? planFfmpegRun(folder, opts.args)
+            : planFfprobeRun(folder, opts.args);
+      for (const output of plan.outputs) fs.mkdirSync(path.dirname(output), { recursive: true });
+      return runNativeProcess(binary, plan.args, {
+        cwd: folder,
+        timeoutMs: opts.timeoutMs,
+        onProgress: (progress) => {
+          if (!e.sender.isDestroyed())
+            e.sender.send('native:progress', {
+              cruxId: opts.cruxId,
+              tool,
+              progress,
+            });
         },
-      );
+      });
     },
   );
 

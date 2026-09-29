@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { actionsFor } from './ConvertActions';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { planFfmpegRun } from '../../../electron/src/ffmpeg-command';
+import { planMagickRun } from '../../../electron/src/magick-command';
 
 /**
  * Contextual conversion (Daniel, 2026-09-21): what a file *is* decides what
@@ -7,6 +12,32 @@ import { actionsFor } from './ConvertActions';
  * would pass, so they are worth holding still.
  */
 describe('what a file can become', () => {
+  it('offers only media recipes admitted by the desktop command boundary', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'crux-convert-recipes-'));
+    try {
+      for (const source of [
+        'video/clip.mov',
+        'video/clip.mp4',
+        'audio/take.wav',
+        'audio/take.mp3',
+        'images/card.png',
+        'images/photo.jpg',
+      ]) {
+        mkdirSync(dirname(join(folder, source)), { recursive: true });
+        writeFileSync(join(folder, source), 'fixture');
+        for (const action of actionsFor(source)) {
+          const plan = action.tool === 'ffmpeg' ? planFfmpegRun : planMagickRun;
+          expect(
+            () => plan(folder, action.args(source)),
+            `${source}: ${action.label}`,
+          ).not.toThrow();
+        }
+      }
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
   it('offers a video a streaming version first, and never converts it to itself', () => {
     const labels = actionsFor('video/clip.mov').map((a) => a.label);
     expect(labels[0]).toBe('For streaming');
