@@ -46,6 +46,12 @@ A recipe is a line in `data/project.json`:
 
 `{in}` is the file you picked, `{out}` the output path, `{name}` its name without the extension. `tool` is `ffmpeg`, `magick`, `pandoc`, or `pdf` for the document-to-PDF route. Add one by hand or ask the collaborator: _"add a recipe that makes a 512-pixel square thumbnail"_.
 
+## Document command limits
+
+Pandoc accepts local input/output paths, built-in formats, standalone output, tables of contents, numbering, metadata and layout options. Filters, custom readers/writers, defaults files, external resource paths and PDF-engine options are refused. Conversion runs with Pandoc's sandbox, so documents cannot include arbitrary files; some image-embedding conversions may be unavailable. Use **PDF** or `make_pdf` for a PDF.
+
+Typst receives a temporary copy of the Project Folder with no symlinks, hidden files or dependency folders, capped at 10,000 entries and 64 MB. Large projects and unsupported documents use the browser printer. Local images retain their relative paths. Temporary files are private and removed after conversion, and a failed conversion preserves an existing PDF.
+
 ## Asking the collaborator
 
 It has the same tools you do: `probe_media` to read a file, `run_ffmpeg`, `run_magick` and `run_pandoc` for anything the recipes do not cover, `make_pdf` for a PDF of something written, `media_tools` to check what this machine has, and `install_media_tool` when something is missing. Ask for what you want — _"trim the first four seconds off the interview and normalise the audio"_ — and the run is recorded in the log like any other.

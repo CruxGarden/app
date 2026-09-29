@@ -558,17 +558,6 @@ async function setupIpc() {
   // Raw SQL is a read path for the app and a fixture path for isolated test
   // profiles. Every write the app makes is a named command of the API owner.
   const testProfile = !!process.env.CRUX_USER_DATA;
-  const readOnly = (sql: string) => {
-    if (testProfile) return;
-    const statement = sql.replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/, '');
-    if (
-      !/^(SELECT|WITH)\b/i.test(statement) ||
-      /\b(INSERT|UPDATE|DELETE|REPLACE|DROP|ALTER|CREATE|ATTACH|DETACH|VACUUM|REINDEX)\b/i.test(
-        statement,
-      )
-    )
-      throw new Error('Only reads are open here; changes go through named commands.');
-  };
   fromGarden(
     'sqlite:run',
     (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
@@ -580,7 +569,6 @@ async function setupIpc() {
   fromGarden(
     'sqlite:get',
     (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
-      readOnly(sql);
       return db.get(sql, params);
     },
   );
@@ -588,7 +576,6 @@ async function setupIpc() {
   fromGarden(
     'sqlite:all',
     (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
-      readOnly(sql);
       return db.all(sql, params);
     },
   );
@@ -1045,95 +1032,25 @@ async function setupIpc() {
     return found.map((info) => ({ ...info, installable: !info.path && canInstall(info.tool) }));
   });
 
-  /**
-   * A document to PDF. Pandoc cannot make one without a PDF engine (LaTeX,
-   * gigabytes), so it writes a standalone page and the app prints it in a
-   * locked-down hidden window — see print-pdf.ts. An HTML source skips the
-   * first step.
-   */
   fromGarden(
     'native:pdf',
     async (
       _e: any,
       opts: { cruxId: string; path: string; out?: string; pageSize?: string; landscape?: boolean },
     ) => {
-      const { mediaToolPath } = require('./media-binaries') as typeof import('./media-binaries');
-      const { printHtmlToPdf } = require('./print-pdf') as typeof import('./print-pdf');
+      const { exportDocumentPdf } =
+        require('./document-export') as typeof import('./document-export');
       const crux = await requireCruxFolder(opts.cruxId);
-      const folder = path.resolve(crux.folder);
-      const source = String(opts.path ?? '');
-      if (!source || source.startsWith('/') || source.includes('..'))
-        throw new Error(`Use paths relative to the crux folder: ${source}`);
-      const base =
-        source
-          .replace(/\.[^./]+$/, '')
-          .split('/')
-          .pop() || 'document';
-      const out = String(opts.out ?? `exports/${base}.pdf`);
-      if (out.startsWith('/') || out.includes('..'))
-        throw new Error(`Use paths relative to the crux folder: ${out}`);
-
-      const resources = app.isPackaged ? process.resourcesPath : null;
-      const userData = app.getPath('userData');
-      const pandoc = await mediaToolPath('pandoc', resources, userData);
-      const isHtml = /\.html?$/i.test(source);
-
-      // Typst really typesets — page breaks, page numbers, a table of
-      // contents — so it is the engine when the machine has it. Its template
-      // insists on a font that exists, and if anything about that fails the
-      // browser route below still makes a PDF.
-      const typst = await mediaToolPath('typst', resources, userData);
-      if (!isHtml && pandoc && typst) {
-        const { typstFont } = require('./print-pdf') as typeof import('./print-pdf');
-        const font = await typstFont(typst);
-        const viaTypst = await new Promise<string | null>((resolve) => {
-          execFile(
-            pandoc,
-            [source, '--pdf-engine', typst, ...(font ? ['-V', `mainfont=${font}`] : []), '-o', out],
-            { cwd: folder, timeout: 5 * 60_000 },
-            (error: Error | null, _stdout: string, stderr: string) =>
-              resolve(error ? String(stderr || error.message).slice(0, 500) : null),
-          );
-        });
-        if (!viaTypst) {
-          const at = path.join(folder, out);
-          return {
-            path: out,
-            bytes: fs.existsSync(at) ? fs.statSync(at).size : 0,
-            engine: 'typst',
-          };
-        }
-        appLog.info(`[pdf] typst declined, printing instead: ${viaTypst}`);
-      }
-
-      let page = source;
-      let temporary: string | null = null;
-      if (!isHtml) {
-        if (!pandoc)
-          throw new Error('Pandoc is needed to turn this into a page first, and it is missing.');
-        temporary = `.crux/print/${base}.html`;
-        fs.mkdirSync(path.join(folder, '.crux', 'print'), { recursive: true });
-        await new Promise<void>((resolve, reject) => {
-          execFile(
-            pandoc,
-            [source, '--standalone', '--embed-resources', '-o', temporary!],
-            { cwd: folder, timeout: 5 * 60_000 },
-            (error: Error | null, _stdout: string, stderr: string) =>
-              error ? reject(new Error(String(stderr || error.message).slice(0, 2000))) : resolve(),
-          );
-        });
-        page = temporary;
-      }
-      try {
-        const { bytes } = await printHtmlToPdf(folder, page, out, {
-          pageSize: opts.pageSize,
-          landscape: opts.landscape,
-        });
-        return { path: out, bytes, engine: 'browser' };
-      } finally {
-        // The intermediate page is scaffolding, and .crux/ is never ingested.
-        if (temporary) fs.rmSync(path.join(folder, temporary), { force: true });
-      }
+      return exportDocumentPdf(
+        path.resolve(crux.folder),
+        String(opts.path ?? ''),
+        opts.out,
+        {
+          resources: app.isPackaged ? process.resourcesPath : null,
+          userData: app.getPath('userData'),
+        },
+        { pageSize: opts.pageSize, landscape: opts.landscape },
+      );
     },
   );
 
@@ -1353,22 +1270,29 @@ async function setupIpc() {
         );
       const crux = await requireCruxFolder(opts.cruxId);
       const folder = path.resolve(crux.folder);
-      const args = (opts.args ?? []).map((a) => String(a));
-      for (const a of args) {
-        if (a.startsWith('-')) continue;
-        if (/^[a-z][a-z0-9+.-]*:/i.test(a) && !/^[a-z]:[\\/]/i.test(a))
-          throw new Error(`Protocols are not allowed: ${a}`);
-        if (path.isAbsolute(a)) throw new Error(`Use paths relative to the crux folder: ${a}`);
-        if (a.includes('/') || a.includes('\\') || /\.[a-z0-9]{1,5}$/i.test(a)) {
-          if (!isInside(folder, path.resolve(folder, a)))
-            throw new Error(`Path outside the crux folder: ${a}`);
+      const { planPandocRun } = require('./pandoc-command') as typeof import('./pandoc-command');
+      const planned = tool === 'pandoc' ? planPandocRun(folder, opts.args) : null;
+      const args = planned?.args ?? (opts.args ?? []).map((a) => String(a));
+      if (planned) {
+        for (const output of planned.outputs)
+          fs.mkdirSync(path.dirname(output), { recursive: true });
+      } else {
+        for (const a of args) {
+          if (a.startsWith('-')) continue;
+          if (/^[a-z][a-z0-9+.-]*:/i.test(a) && !/^[a-z]:[\\/]/i.test(a))
+            throw new Error(`Protocols are not allowed: ${a}`);
+          if (path.isAbsolute(a)) throw new Error(`Use paths relative to the crux folder: ${a}`);
+          if (a.includes('/') || a.includes('\\') || /\.[a-z0-9]{1,5}$/i.test(a)) {
+            if (!isInside(folder, path.resolve(folder, a)))
+              throw new Error(`Path outside the crux folder: ${a}`);
+          }
         }
+        // Neither ffmpeg nor ImageMagick creates directories, and for both the
+        // output is the last argument. A folder under the crux is made for it.
+        const last = args.at(-1);
+        if (last && !last.startsWith('-'))
+          fs.mkdirSync(path.dirname(path.resolve(folder, last)), { recursive: true });
       }
-      // Neither ffmpeg nor ImageMagick creates directories, and for both the
-      // output is the last argument. A folder under the crux is made for it.
-      const last = args.at(-1);
-      if (last && !last.startsWith('-'))
-        fs.mkdirSync(path.dirname(path.resolve(folder, last)), { recursive: true });
       // Each program takes its own preamble: ffprobe has no -nostdin, and
       // ImageMagick reads a delegate config that can name other programs, so
       // the limits keep one bad file from taking the machine with it.

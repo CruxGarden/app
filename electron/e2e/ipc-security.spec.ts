@@ -121,3 +121,37 @@ test('one-way replies require the live main frame and app navigation uses exact 
     await instance.app.close();
   }
 });
+
+test('the packaged database owner refuses writes through both SQL read methods', async () => {
+  const instance = await launchApp();
+  try {
+    const evidence = await instance.page.evaluate(async () => {
+      const sqlite = window.electronAPI!.sqlite;
+      await sqlite.run(
+        "INSERT INTO settings (key, value) VALUES ('ipc-read-boundary', 'unchanged')",
+      );
+      const refusals: string[] = [];
+      for (const method of ['get', 'all'] as const) {
+        try {
+          await sqlite[method](
+            "WITH changed AS (SELECT 'bad' AS value) UPDATE settings SET value = (SELECT value FROM changed) WHERE key = 'ipc-read-boundary' RETURNING value",
+          );
+          refusals.push('NOT REFUSED');
+        } catch (error) {
+          refusals.push((error as Error).message);
+        }
+      }
+      return {
+        refusals,
+        row: await sqlite.get("SELECT value FROM settings WHERE key = 'ipc-read-boundary'"),
+        words: await sqlite.get("SELECT 'INSERT UPDATE DELETE' AS value"),
+      };
+    });
+    expect(evidence.refusals).toHaveLength(2);
+    for (const refusal of evidence.refusals) expect(refusal).toContain('read-only');
+    expect(evidence.row).toEqual({ value: 'unchanged' });
+    expect(evidence.words).toEqual({ value: 'INSERT UPDATE DELETE' });
+  } finally {
+    await instance.app.close();
+  }
+});

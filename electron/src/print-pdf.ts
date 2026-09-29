@@ -27,7 +27,9 @@
 import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { pathToFileURL } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { randomUUID } from 'node:crypto';
+import { isInside, resolveInsideOrThrow } from './paths';
 
 const { BrowserWindow, session } = require('electron');
 
@@ -78,8 +80,7 @@ export interface PrintOptions {
 function insideFolder(url: string, folder: string): boolean {
   if (!url.startsWith('file://')) return false;
   try {
-    const at = path.resolve(decodeURIComponent(new URL(url).pathname));
-    return at === folder || at.startsWith(folder + path.sep);
+    return isInside(folder, fileURLToPath(url));
   } catch {
     return false;
   }
@@ -96,14 +97,11 @@ export async function printHtmlToPdf(
   options: PrintOptions = {},
 ): Promise<{ bytes: number }> {
   const root = path.resolve(folder);
-  const source = path.resolve(root, htmlPath);
-  const target = path.resolve(root, pdfPath);
-  for (const at of [source, target])
-    if (at !== root && !at.startsWith(root + path.sep))
-      throw new Error(`Use paths relative to the crux folder: ${path.relative(root, at)}`);
+  const source = resolveInsideOrThrow(root, htmlPath);
+  const target = resolveInsideOrThrow(root, pdfPath);
   if (!fs.existsSync(source)) throw new Error(`There is no ${htmlPath} to print.`);
 
-  const printSession = session.fromPartition(`crux-print-${Date.now()}`, { cache: false });
+  const printSession = session.fromPartition(`crux-print-${randomUUID()}`, { cache: false });
   printSession.webRequest.onBeforeRequest(
     (details: { url: string }, callback: (response: { cancel: boolean }) => void) => {
       callback({ cancel: !insideFolder(details.url, root) });
@@ -132,8 +130,13 @@ export async function printHtmlToPdf(
   );
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('the document took too long to lay out')), LOAD_TIMEOUT_MS),
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>(
+    (_, reject) =>
+      (timer = setTimeout(
+        () => reject(new Error('the document took too long to lay out')),
+        LOAD_TIMEOUT_MS,
+      )),
   );
   try {
     await Promise.race([win.loadURL(pathToFileURL(source).toString()), timeout]);
@@ -144,10 +147,12 @@ export async function printHtmlToPdf(
       printBackground: options.background !== false,
       margins: { marginType: 'default' },
     });
+    resolveInsideOrThrow(root, pdfPath); // Recheck after asynchronous layout.
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, pdf);
     return { bytes: pdf.length };
   } finally {
+    clearTimeout(timer!);
     if (!win.isDestroyed()) win.destroy();
   }
 }

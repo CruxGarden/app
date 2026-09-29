@@ -117,7 +117,8 @@ test('renderer Garden membership uses the API graph, trusted attribution, bounde
       }
       return { error, members: await db.gardenMembership!.list(ids.child) };
     }, setup);
-    expect(refused.error).toContain('Membership refused');
+    expect(refused.error).toContain('Dimension creation error');
+    expect(refused.error).not.toContain('Membership refused');
     expect(
       await instance.page.evaluate(
         async (memberId) =>

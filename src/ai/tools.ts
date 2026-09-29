@@ -344,7 +344,7 @@ export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
       'Run Pandoc inside this crux folder with the given arguments (no "pandoc" word, no shell). ' +
       'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
       'USE WHEN: a document must become another format — Markdown to DOCX, DOCX to Markdown, Markdown to a standalone HTML page or EPUB, anything to plain text: ["notes/brief.md","-o","notes/brief.docx"]. ' +
-      'Add "--standalone" for a page or a book. A PDF needs a LaTeX engine on the machine; check with media_tools and say so rather than promising one.',
+      'Add "--standalone" for a page or a book. Use make_pdf for PDF output. Only built-in formats and conversion options are accepted; filters, defaults, custom readers/writers and external resources are refused.',
     input_schema: {
       type: 'object',
       properties: {
