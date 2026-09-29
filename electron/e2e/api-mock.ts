@@ -27,6 +27,7 @@ export interface MockApi {
   url: string;
   state: {
     failPublish: boolean;
+    failUnpublish?: boolean;
     /** Refuse one recovery listing page to exercise visible retry. */
     failCruxPage?: number;
     /** This server's own URL (for canned file links). */
@@ -1079,6 +1080,10 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       }
       if (sub === '/tags' && method === 'PUT') return send(200, []);
       if (sub === '/unpublish' && method === 'POST') {
+        if (state.failUnpublish)
+          return send(500, {
+            message: 'Could not finish removing the published site. Please retry.',
+          });
         delete state.cruxes[id];
         delete state.published[id];
         if (state.crux?.id === id) state.crux = null;

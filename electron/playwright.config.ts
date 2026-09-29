@@ -11,6 +11,7 @@ const gateSpecs = [
   '**/notes-save-navigation.spec.ts',
   '**/composer-paste.spec.ts',
   '**/account-recovery.spec.ts',
+  '**/publication-teardown.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',
   '**/typst-offline.spec.ts',
