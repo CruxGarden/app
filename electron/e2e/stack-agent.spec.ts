@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, storedCrux } from './multi-crux-helpers';
 
 /**
  * The collaborator drives the stack.
@@ -17,13 +17,6 @@ import { enterGarden } from './multi-crux-helpers';
  * The seeded nursery pulls hundreds of megabytes, so the journey writes a
  * small stack of its own and asserts what Docker itself reports.
  */
-function cruxFolder(dir: string): string {
-  const garden = join(dir, 'garden');
-  const [first] = readdirSync(garden);
-  if (!first) throw new Error('no crux folder');
-  return join(garden, first);
-}
-
 function runner(): string | null {
   for (const program of ['docker', 'podman']) {
     try {
@@ -41,14 +34,21 @@ test('the collaborator sees and starts a stack from Collaboration', async () => 
   const program = runner();
   test.skip(!program, 'this machine has no Docker or Podman');
 
-  const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+  const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+  let stackId: string | undefined;
   try {
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Stack/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
-    const folder = cruxFolder(dir);
+    stackId = (await page
+      .locator('[data-workspace-id]')
+      .first()
+      .getAttribute('data-workspace-id'))!;
+    const { projectFolder: folder } = await storedCrux(page, stackId);
+    const { projectName } = require('../dist/containers') as typeof import('../src/containers');
+    const project = projectName(stackId);
 
     // A stack small enough to start in a test, and one the bench has to read
     // from the file like any other.
@@ -76,10 +76,20 @@ test('the collaborator sees and starts a stack from Collaboration', async () => 
 
     // Docker is the witness, not the chat: the container really exists.
     const containers = () =>
-      execFileSync(program!, ['ps', '--format', '{{.Image}} {{.Status}}'], {
-        encoding: 'utf8',
-        timeout: 20_000,
-      });
+      execFileSync(
+        program!,
+        [
+          'ps',
+          '--filter',
+          `label=com.docker.compose.project=${project}`,
+          '--format',
+          '{{.Image}} {{.Status}}',
+        ],
+        {
+          encoding: 'utf8',
+          timeout: 20_000,
+        },
+      );
     await expect
       .poll(() => containers(), { timeout: 180_000, intervals: [2000] })
       .toContain('alpine:3');
@@ -90,6 +100,13 @@ test('the collaborator sees and starts a stack from Collaboration', async () => 
       .poll(() => containers(), { timeout: 120_000, intervals: [2000] })
       .not.toContain('alpine:3');
   } finally {
-    await app.close();
+    try {
+      if (stackId)
+        await page.evaluate(async (cruxId) => {
+          await window.electronAPI!.containers.compose({ cruxId, verb: 'down' });
+        }, stackId);
+    } finally {
+      await app.close();
+    }
   }
 });

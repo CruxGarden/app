@@ -3,7 +3,7 @@ import { getServices } from '@/services';
 import { listCruxspaces, type Cruxspace } from '@/services/cruxspaces';
 import { findWorkingCopy } from '@/services/working-copies';
 import { pathOf } from '@/lib/artifact-path';
-import { inspectCompose, type ComposeService } from '@/services/containers';
+import { inspectCompose, resolveCompose, type ComposeService } from '@/services/containers';
 
 /**
  * A workspace: what a Cruxspace can run (ADR 0053).
@@ -29,7 +29,7 @@ export interface WorkspaceService {
   about?: string;
   image?: string;
   /** Ports as the files declare them; the Runner assigns the real ones. */
-  ports: { host: number; container?: number }[];
+  ports: { host: number; container?: number; protocol?: string; hostIp?: string }[];
   dependsOn: string[];
   profiles: string[];
   /** Whether it stays up, or runs to completion — a task. */
@@ -222,7 +222,16 @@ export async function discoverWorkspace(cruxId: string): Promise<WorkspaceStack>
   if (stackMember) {
     try {
       const reading = await inspectCompose(stackMember.cruxId);
-      stack = { cruxId: stackMember.cruxId, services: reading.services };
+      const resolved = await resolveCompose(stackMember.cruxId);
+      if (resolved.error) throw new Error(resolved.error);
+      stack = {
+        cruxId: stackMember.cruxId,
+        services: resolved.services.map((service) => ({
+          ...service,
+          about: reading.services.find((source) => source.name === service.name)?.about,
+          ports: service.ports.map((port) => ({ ...port, host: Number(port.host) })),
+        })),
+      };
       for (const refusal of reading.refusals)
         if (!/^There is no /.test(refusal)) notes.push(`${stackMember.title}: ${refusal}`);
     } catch (error) {

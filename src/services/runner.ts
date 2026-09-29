@@ -149,14 +149,6 @@ export async function settleConfiguration(cruxId: string): Promise<PortAssignmen
   return assigned;
 }
 
-/** What a service run from source needs in order to reach the rest. */
-async function hostEnvironment(cruxId: string): Promise<Record<string, string>> {
-  const workspace = await discoverWorkspace(cruxId);
-  const assigned = await settleConfiguration(cruxId);
-  const ports = Object.fromEntries(assigned.map((a) => [a.service, a.port]));
-  return connectionsFor(workspace.services, ports, { consumer: 'host' });
-}
-
 /** The services to act on: what was asked for, plus everything it needs. */
 function planFor(workspace: WorkspaceStack, names: string[]): WorkspaceService[] {
   const wanted = closureFor(workspace.services, names);
@@ -220,7 +212,7 @@ export async function startWorkspace(cruxId: string, names: string[]): Promise<A
         {
           port: ports[service.name] ?? service.ports[0]?.host,
           // Addresses as they are from here, so the code reaches the stack.
-          env: await hostEnvironment(cruxId),
+          env: connectionsFor(workspace.services, ports, { consumer: 'host' }),
         },
       );
       lines.push(`${service.name}: ${run.status}${run.port ? ` on ${run.port}` : ''}`);

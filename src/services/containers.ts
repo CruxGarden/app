@@ -3,9 +3,9 @@
  *
  * The Crux carries `compose.yaml` in its Project Folder. This is the seam the
  * Stack bench and the collaborator both call; everything it does goes through
- * the shell, which pins the working directory to the folder, fixes the project
- * name to the Crux, allows only compose verbs, and reads the file for anything
- * dangerous before it starts. See `electron/src/containers.ts`.
+ * the shell, which prepares a validated snapshot, fixes the project identity
+ * to the Crux and admits bounded operations. Existing-resource controls stay
+ * available even when the source configuration is invalid. See `electron/src/containers.ts`.
  */
 export type ComposeVerb =
   | 'up'
@@ -27,7 +27,7 @@ export interface ComposeService {
   /** The comment above it in the file. */
   about?: string;
   /** Host ports the file asks for, as written. */
-  ports: { host: number; container?: number }[];
+  ports: { host: number; container?: number; protocol?: string; hostIp?: string }[];
   dependsOn: string[];
   healthcheck: boolean;
   restart?: string;
@@ -93,7 +93,7 @@ export async function inspectCompose(cruxId: string, file?: string): Promise<Com
  * The Crux's own secrets are handed to Compose as environment, so a stack can
  * read `${JWT_SECRET}` without anyone writing the value into a file that gets
  * published. Non-secret settings belong in `.env` beside the compose file,
- * which Compose reads by itself and which travels with the Crux.
+ * which holds literal values and travels with the Crux.
  */
 export async function compose(
   cruxId: string,
@@ -114,10 +114,10 @@ export async function compose(
 }
 
 /** One service as Compose resolves it, after every file, `.env` and profiles. */
-export interface ResolvedService {
+export interface ResolvedService extends Omit<ComposeService, 'ports'> {
   name: string;
   image?: string;
-  ports: { host: string; container: number; protocol?: string }[];
+  ports: { host: string; container: number; protocol?: string; hostIp?: string }[];
   environment: Record<string, string>;
   profiles: string[];
 }
@@ -154,7 +154,8 @@ export async function resolveCompose(
   cruxId: string,
   profiles: string[] = [],
 ): Promise<ComposeResolution> {
-  return api().resolve({ cruxId, profiles });
+  const { localSecrets } = await import('./crux-functions');
+  return api().resolve({ cruxId, profiles, env: localSecrets(cruxId) });
 }
 
 /** Write this machine's ports and settings into the override file. */
@@ -162,7 +163,8 @@ export async function writeOverride(
   cruxId: string,
   wishes: OverrideWish[],
 ): Promise<{ written: boolean; snippet: string }> {
-  return api().override({ cruxId, wishes });
+  const { localSecrets } = await import('./crux-functions');
+  return api().override({ cruxId, wishes, env: localSecrets(cruxId) });
 }
 
 /** A free host port, for offering a way out of a collision. */

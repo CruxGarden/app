@@ -358,7 +358,9 @@
                   esc(key) +
                   '" value="' +
                   esc(s.environment[key]) +
-                  '"></td></tr>'
+                  '"' +
+                  (String(s.environment[key]).indexOf('[secret]') >= 0 ? ' readonly' : '') +
+                  '></td></tr>'
                 );
               })
               .join('') +
@@ -366,9 +368,8 @@
           );
         })
         .join('') +
-      '<p class="hint">What each service will actually get. An empty value usually means a ' +
-      "secret the stack expects — put it in the Crux's secrets and it is supplied at start, " +
-      'never written down. Changes here go to the override file.</p>' +
+      '<p class="hint">Private values are shown as [secret]. Change them in this Crux’s secrets. ' +
+      'Other changes here go to the override file.</p>' +
       '<p><button id="save-env" type="button">Save environment</button></p></details>';
 
     box.querySelectorAll('[data-env-service]').forEach(function (input) {

@@ -3,9 +3,9 @@
 # every change is kept in Growth, and publishing the Crux shares the stack
 # with whoever installs it.
 #
-# Sensible defaults, overridable per machine. Every setting below is written
-# ${NAME:-default}, so the stack runs unchanged and a `.env` beside this file
-# changes it here without touching the file everyone shares:
+# Set a random JWT_SECRET in this Crux’s secrets before starting the API.
+# Other settings have demo defaults. A `.env` beside this file stores literal
+# values without changing the shared service definitions:
 #
 #     POSTGRES_PORT=55432
 #     API_PORT=3001
@@ -38,11 +38,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-cruxgarden}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cruxgarden_nursery_password}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data_nursery:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cruxgarden}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cruxgarden}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -52,11 +52,11 @@ services:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data_nursery:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -69,10 +69,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: development
       DATABASE_URL: ${DATABASE_URL:-postgresql://cruxgarden:cruxgarden_nursery_password@postgres:5432/cruxgarden}
-    command: ["npm", "run", "migrate:nursery"]
-    restart: "no"
+      NURSERY_MODE: 'true'
+    command: ['npm', 'run', 'migrate:nursery']
+    restart: 'no'
 
   # Crux Garden API - Nursery Configuration
   api:
@@ -85,10 +86,10 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "${API_PORT:-3000}:3000"
+      - '127.0.0.1:${API_PORT:-3000}:3000'
     environment:
       # Application
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: development
       PORT: 3000
       HOSTNAME: ${HOSTNAME:-0.0.0.0}
       BASE_URL: ${BASE_URL:-http://localhost:3000}
@@ -98,23 +99,22 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
 
       # Security
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-min-32-chars-for-development-only}
+      JWT_SECRET: ${JWT_SECRET:?Set a random JWT_SECRET in this Crux's secrets before starting}
       NURSERY_MODE: ${NURSERY_MODE:-true}
 
-      # The API refuses to boot in production without Stripe keys; the nursery
-      # is a demo, so it runs the mock billing provider on purpose.
+      # The nursery is a local demo; mock billing does not take payments.
       BILLING_ALLOW_MOCK: ${BILLING_ALLOW_MOCK:-1}
 
       # AWS SES (optional for nursery)
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummy}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummy}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_SES_FROM_EMAIL: ${AWS_SES_FROM_EMAIL:-noreply@example.com}
       AWS_S3_ARTIFACTS_BUCKET: ${AWS_S3_ARTIFACTS_BUCKET:-artifacts.crux.garden}
       AWS_S3_SYNC_BUCKET: ${AWS_S3_SYNC_BUCKET:-sync.crux.garden}
 
       # Optional Configuration
-      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DB_POOL_MIN: ${DB_POOL_MIN:-2}
       DB_POOL_MAX: ${DB_POOL_MAX:-10}
@@ -125,9 +125,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
         ]
       interval: 30s

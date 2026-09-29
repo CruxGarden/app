@@ -170,14 +170,19 @@ describe('the files this machine keeps to itself', () => {
     });
   });
 
-  it('writes a local Compose file only when this machine differs', () => {
+  it('retains resolved ports when projecting the machine configuration again', () => {
     const services = [svc('postgres', { ports: [{ host: 5432, container: 5432 }] })];
-    // Nothing moved and nothing runs from source: nothing to write.
-    expect(localComposeFor(services, { postgres: 5432 }, [])).toBe('');
+    // A previously assigned port must survive the next full projection.
+    expect(localComposeFor(services, { postgres: 5432 }, [])).toContain('127.0.0.1:5432:5432/tcp');
     // A moved port is written as an override.
     const moved = localComposeFor(services, { postgres: 55432 }, []);
-    expect(moved).toContain('"55432:5432"');
+    expect(moved).toContain('ports: !override');
+    expect(moved).toContain('"127.0.0.1:55432:5432/tcp"');
     expect(moved).toContain('# Written by the Runner');
+    services[0]!.ports.push({ host: 8125, container: 8125, protocol: 'udp' });
+    const multi = localComposeFor(services, { postgres: 55432 }, []);
+    expect(multi).toContain('127.0.0.1:55432:5432/tcp');
+    expect(multi).toContain('127.0.0.1:8125:8125/udp');
   });
 
   it('gives containers a way to reach a service running on this machine', () => {

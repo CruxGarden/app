@@ -479,16 +479,10 @@ export interface ContainersBridge {
   /**
    * What Compose itself resolves the stack to, after every file, `.env` and
    * the active profiles — plus which of those host ports are already taken.
-   * The Crux's secrets are not applied here: a secret is for the run.
+   * Private inputs are applied, and secret values are redacted from the response.
    */
-  resolve(opts: { cruxId: string; profiles?: string[] }): Promise<{
-    services: {
-      name: string;
-      image?: string;
-      ports: { host: string; container: number; protocol?: string }[];
-      environment: Record<string, string>;
-      profiles: string[];
-    }[];
+  resolve(opts: { cruxId: string; profiles?: string[]; env?: Record<string, string> }): Promise<{
+    services: import('./containers').ResolvedService[];
     error?: string;
     taken: number[];
     overrides: { service: string; ports?: Record<string, string> }[];
@@ -502,6 +496,7 @@ export interface ContainersBridge {
    */
   override(opts: {
     cruxId: string;
+    env?: Record<string, string>;
     wishes: {
       service: string;
       ports?: Record<string, string>;

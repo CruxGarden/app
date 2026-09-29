@@ -40,6 +40,12 @@ jobs:
       - run: npm run verify # tsc + eslint + vitest + vite build — the same gate the agent runs
       - run: npm run verify
         working-directory: electron
+      - name: Verify actual Compose parsing (no containers started)
+        run: CRUX_COMPOSE_TEST=1 npx playwright test e2e/compose-config.spec.ts --project=desktop
+        working-directory: electron
+      - name: Verify Compose lifecycle against the local engine
+        run: CRUX_COMPOSE_LIFECYCLE_TEST=1 npx playwright test e2e/compose-lifecycle.spec.ts --project=desktop
+        working-directory: electron
       - run: npx playwright install --with-deps chromium
         working-directory: electron
       - run: npm run test:browser

@@ -85,6 +85,9 @@ export function useStackProxy(cruxId: string | null) {
               await track(
                 containers.compose(cruxId!, verb, {
                   service: e.data.service ? String(e.data.service) : undefined,
+                  profiles: Array.isArray(e.data.profiles)
+                    ? e.data.profiles.map(String)
+                    : undefined,
                   tail: typeof e.data.tail === 'number' ? e.data.tail : undefined,
                   command: Array.isArray(e.data.command) ? e.data.command.map(String) : undefined,
                   wait: e.data.wait === true,

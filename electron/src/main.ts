@@ -1118,12 +1118,15 @@ async function setupIpc() {
 
   fromGarden(
     'containers:resolve',
-    async (_e: any, opts: { cruxId: string; profiles?: string[] }) => {
+    async (
+      _e: any,
+      opts: { cruxId: string; profiles?: string[]; env?: Record<string, string> },
+    ) => {
       const { composeConfig, portsInUse, readOverride } =
         require('./containers') as typeof import('./containers');
       const crux = await requireCruxFolder(opts.cruxId);
       const folder = path.resolve(crux.folder);
-      const resolution = await composeConfig(folder, opts.profiles ?? []);
+      const resolution = await composeConfig(folder, opts.profiles ?? [], opts.env ?? {});
       const wanted = resolution.services.flatMap((service) =>
         service.ports.map((port) => Number(port.host)).filter(Boolean),
       );
@@ -1155,16 +1158,19 @@ async function setupIpc() {
     },
   );
 
-  fromGarden('containers:override', async (_e: any, opts: { cruxId: string; wishes: unknown }) => {
-    const { writeOverride } = require('./containers') as typeof import('./containers');
-    const crux = await requireCruxFolder(opts.cruxId);
-    const wishes = Array.isArray(opts.wishes)
-      ? (opts.wishes as { service?: unknown }[]).filter(
-          (wish) => typeof wish?.service === 'string' && /^[\w.-]{1,64}$/.test(wish.service),
-        )
-      : [];
-    return writeOverride(path.resolve(crux.folder), wishes as never);
-  });
+  fromGarden(
+    'containers:override',
+    async (_e: any, opts: { cruxId: string; wishes: unknown; env?: Record<string, string> }) => {
+      const { writeOverride } = require('./containers') as typeof import('./containers');
+      const crux = await requireCruxFolder(opts.cruxId);
+      return writeOverride(
+        path.resolve(crux.folder),
+        opts.wishes as import('./containers').OverrideWish[],
+        'compose.override.yaml',
+        opts.env ?? {},
+      );
+    },
+  );
 
   fromGarden('containers:ports-in-use', async (_e: any, opts: { ports: number[] }) => {
     const { portsInUse } = require('./containers') as typeof import('./containers');

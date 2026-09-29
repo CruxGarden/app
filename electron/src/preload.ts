@@ -417,15 +417,9 @@ const api: ElectronBridge = {
         profiles: string[];
         variables: { name: string; fallback?: string; fromEnv: boolean }[];
       }>,
-    resolve: (opts: { cruxId: string; profiles?: string[] }) =>
+    resolve: (opts: { cruxId: string; profiles?: string[]; env?: Record<string, string> }) =>
       ipcRenderer.invoke('containers:resolve', opts) as Promise<{
-        services: {
-          name: string;
-          image?: string;
-          ports: { host: string; container: number; protocol?: string }[];
-          environment: Record<string, string>;
-          profiles: string[];
-        }[];
+        services: import('./containers').ResolvedService[];
         error?: string;
         taken: number[];
         overrides: { service: string; ports?: Record<string, string> }[];
@@ -433,6 +427,7 @@ const api: ElectronBridge = {
       }>,
     override: (opts: {
       cruxId: string;
+      env?: Record<string, string>;
       wishes: {
         service: string;
         ports?: Record<string, string>;

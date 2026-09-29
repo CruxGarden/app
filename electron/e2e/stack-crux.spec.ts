@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, storedCrux } from './multi-crux-helpers';
 
 /**
  * A Stack Crux: `compose.yaml` in the folder is the stack, and the bench is
@@ -18,13 +18,6 @@ import { enterGarden } from './multi-crux-helpers';
  * The seeded nursery stack pulls hundreds of megabytes, so the journey writes
  * a small one of its own.
  */
-function cruxFolder(dir: string): string {
-  const garden = join(dir, 'garden');
-  const [first] = readdirSync(garden);
-  if (!first) throw new Error('no crux folder');
-  return join(garden, first);
-}
-
 function hasRunner(): boolean {
   for (const program of ['docker', 'podman']) {
     try {
@@ -39,14 +32,20 @@ function hasRunner(): boolean {
 
 test('a stack crux describes its compose file, refuses what reaches outside, and runs', async () => {
   test.setTimeout(300_000);
-  const { app, page, dir } = await launchApp();
+  test.skip(!hasRunner(), 'this machine has no Docker or Podman');
+  const { app, page } = await launchApp();
+  let stackId: string | undefined;
   try {
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Stack/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
-    const folder = cruxFolder(dir);
+    stackId = (await page
+      .locator('[data-workspace-id]')
+      .first()
+      .getAttribute('data-workspace-id'))!;
+    const { projectFolder: folder } = await storedCrux(page, stackId);
 
     const bench = page.frameLocator('iframe[data-crux-id]');
     await expect(bench.locator('#services')).toBeVisible({ timeout: 30_000 });
@@ -101,6 +100,7 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
   core:
     image: alpine:3
     command: ["sleep", "5"]
+    environment: {ENV_MARKER: before}
     ports:
       - "\${CORE_PORT:-8099}:80"
 
@@ -151,8 +151,17 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
       )
       .toContain('CORE_PORT=8123');
 
-    // And an override file, which Compose merges over the shared stack.
-    await bench.getByRole('button', { name: 'Add an override file' }).click();
+    // Successive panel edits retain each other; dollars remain literal data.
+    await bench.locator('input[data-port-service="core"]').fill('8124');
+    await bench.getByRole('button', { name: 'Save ports' }).click();
+    await expect(bench.locator('input[data-port-service="core"]')).toHaveValue('8124');
+    await bench.locator('#env summary').click();
+    await bench.locator('input[data-env-key="ENV_MARKER"]').fill('literal $VALUE ${UNCHANGED}');
+    await bench.getByRole('button', { name: 'Save environment' }).click();
+    await expect(bench.locator('input[data-port-service="core"]')).toHaveValue('8124');
+    await expect(bench.locator('input[data-env-key="ENV_MARKER"]')).toHaveValue(
+      'literal $VALUE ${UNCHANGED}',
+    );
     await expect
       .poll(() => existsSync(join(folder, 'compose.override.yaml')), {
         timeout: 30_000,
@@ -163,6 +172,8 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
     await expect(bench.locator('#files-note')).toContainText('compose.override.yaml', {
       timeout: 30_000,
     });
+
+    rmSync(join(folder, 'compose.override.yaml'));
 
     // A secret the stack reads is supplied at start and never written down:
     // it is in the Crux's secrets, not in compose.yaml and not in .env.
@@ -183,8 +194,9 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
     environment:
       STACK_SECRET: \${STACK_SECRET:-}
 `);
-    // Compose resolves it as empty — a secret is for the run, not for a panel.
+    // The panel resolves private inputs but shows a redacted value.
     await expect(bench.locator('#env')).toContainText('STACK_SECRET', { timeout: 60_000 });
+    await expect(bench.locator('input[data-env-key="STACK_SECRET"]')).toHaveValue('[secret]');
     await bench.getByRole('button', { name: 'Start', exact: true }).first().click();
     await expect(bench.locator('#output')).toContainText(/teller|Creat|Network/i, {
       timeout: 180_000,
@@ -195,7 +207,7 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
     await expect(bench.locator('#output')).toContainText('SECRET_IS=from-the-secret-store', {
       timeout: 120_000,
     });
-    // It is nowhere on disk.
+    // It is absent from shared Project Folder configuration.
     expect(readFileSync(join(folder, 'compose.yaml'), 'utf8')).not.toContain(
       'from-the-secret-store',
     );
@@ -227,7 +239,7 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
     await expect(bench.locator('#output')).toContainText('exit 0');
 
     // With a runner on the machine, it really runs.
-    test.skip(!hasRunner(), 'this machine has no Docker or Podman');
+
     await useStack(`services:
   # Says hello and stops.
   hello:
@@ -256,6 +268,13 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
       timeout: 120_000,
     });
   } finally {
-    await app.close();
+    try {
+      if (stackId)
+        await page.evaluate(async (cruxId) => {
+          await window.electronAPI!.containers.compose({ cruxId, verb: 'down' });
+        }, stackId);
+    } finally {
+      await app.close();
+    }
   }
 });

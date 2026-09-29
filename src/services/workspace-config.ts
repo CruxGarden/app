@@ -197,14 +197,21 @@ export function localComposeFor(
     if (service.from !== 'stack') continue;
     const port = ports[service.name];
     const declared = service.ports[0];
-    const needsPort = port && declared && port !== declared.host;
+    // Keep the full resolved port list on every projection, including ports
+    // already assigned here. A replacement must not erase another mapping.
+    const needsPort = port && declared;
     // A container that may need to reach a service running on this machine.
     const needsGateway = hostServices.length > 0;
     if (!needsPort && !needsGateway) continue;
-    lines.push(`  ${service.name}:`);
+    lines.push(`  ${JSON.stringify(service.name)}:`);
     if (needsPort) {
-      lines.push('    ports:');
-      lines.push(`      - "${port}:${declared!.container ?? declared!.host}"`);
+      lines.push('    ports: !override');
+      for (const [index, mapping] of service.ports.entries()) {
+        const host = index === 0 ? port : mapping.host;
+        const address = index === 0 ? '127.0.0.1' : mapping.hostIp || '127.0.0.1';
+        const binding = `${address}:${host}:${mapping.container ?? mapping.host}/${mapping.protocol ?? 'tcp'}`;
+        lines.push(`      - ${JSON.stringify(binding)}`);
+      }
     }
     if (needsGateway) {
       // Linux has no host.docker.internal unless the file says so.

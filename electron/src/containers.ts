@@ -1,28 +1,33 @@
-/**
- * Containers: running a Crux's own stack with Docker Compose.
- *
- * A Stack Crux carries a `compose.yaml` in its Project Folder; the app starts
- * and stops it, and shows what is running. Growth versions the stack because
- * it is text, and export carries it to another machine.
- *
- * The seam is narrow on purpose:
- *
- *   · only `docker compose` (or `podman compose`), never bare `docker run`;
- *   · only the verbs below — no `exec`, no `cp`, no `build --output`;
- *   · the working directory is pinned to the Crux folder, and the project
- *     name is fixed to `crux-<cruxId>`, so `down` can only reach containers
- *     this Crux started;
- *   · the compose file is read and checked before every start.
- *
- * **The risk is the file, not the arguments.** A compose file can mount the
- * whole disk, take the host's network, or hand over the Docker socket — which
- * is root. `inspectCompose` refuses all of that before anything runs, and it
- * lives here, in the shell, where a page cannot reach it.
+/** A Crux owns its Compose project; every operation uses one validated snapshot.
+ * The bench, Runner and agents share this module. Compose loading and host-access
+ * policy live in compose-project; no command reloads unchecked Project Folder files.
  */
-import { execFile, spawn } from 'child_process';
+import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { resolveInsideOrThrow } from './paths';
+import { Document, isSeq } from 'yaml';
+import {
+  prepareComposeControl,
+  verifyExistingCompose,
+  verifyComposeResources,
+} from './compose-lifecycle';
+import {
+  composeFiles,
+  composeName,
+  composePath,
+  composeProcess,
+  composeProcessEnvironment,
+  composeVariables,
+  mapping,
+  parseCompose,
+  prepareComposeProject,
+  readComposeFile,
+  writeComposeFile,
+  validateCompose,
+  LOCAL_ENV,
+  LOCAL_COMPOSE,
+} from './compose-project';
+export { composeFiles, LOCAL_ENV, LOCAL_COMPOSE } from './compose-project';
 
 /** The compose verbs a Crux may use. */
 export const COMPOSE_VERBS = [
@@ -36,15 +41,15 @@ export const COMPOSE_VERBS = [
   'start',
   // A command in a service: `run` starts a fresh container and removes it,
   // `exec` uses the one already running. Both take an argument list, never a
-  // command line, and neither reaches a shell — the danger a stack poses is
-  // what its file asks for, and that is checked before anything starts.
+  // host shell command. The service must belong to the prepared project;
+  // command arguments follow that validated service name.
   'run',
   'exec',
 ] as const;
 export type ComposeVerb = (typeof COMPOSE_VERBS)[number];
 
 export interface ComposeRunner {
-  /** The program that answered: `docker` or `podman`. */
+  /** Absolute path of the Docker or Podman executable that answered. */
   program: string;
   version: string;
 }
@@ -60,7 +65,7 @@ export interface ComposeService {
   /** The comment written above the service in the file, if any. */
   about?: string;
   /** Host ports the service asks for, with what they reach inside. */
-  ports: { host: number; container?: number }[];
+  ports: { host: number; container?: number; protocol?: string; hostIp?: string }[];
   /** Services it waits for. */
   dependsOn: string[];
   /** Whether the file gives it a healthcheck, so the bench can wait for it. */
@@ -104,9 +109,14 @@ let runnerCache: ComposeRunner | null | undefined;
 
 function ask(program: string, args: string[], timeout = 8000): Promise<string | null> {
   return new Promise((resolve) => {
-    execFile(program, args, { timeout }, (error, stdout) => {
-      resolve(error ? null : String(stdout || '').trim());
-    });
+    execFile(
+      program,
+      args,
+      { timeout, env: composeProcessEnvironment(), killSignal: 'SIGKILL', maxBuffer: 64_000 },
+      (error, stdout) => {
+        resolve(error ? null : String(stdout || '').trim());
+      },
+    );
   });
 }
 
@@ -117,7 +127,9 @@ function ask(program: string, args: string[], timeout = 8000): Promise<string | 
  */
 export async function composeRunner(refresh = false): Promise<ComposeRunner | null> {
   if (runnerCache !== undefined && !refresh) return runnerCache;
-  for (const program of ['docker', 'podman']) {
+  for (const command of ['docker', 'podman']) {
+    const program = findRunner(command);
+    if (!program) continue;
     const version = await ask(program, ['compose', 'version']);
     if (version) {
       runnerCache = { program, version: version.split('\n')[0] ?? version };
@@ -128,231 +140,126 @@ export async function composeRunner(refresh = false): Promise<ComposeRunner | nu
   return null;
 }
 
+function findRunner(command: string): string | null {
+  const executable = process.platform === 'win32' ? `${command}.exe` : command;
+  for (const directory of (process.env.PATH ?? '').split(path.delimiter)) {
+    if (!path.isAbsolute(directory)) continue;
+    const candidate = path.join(directory, executable);
+    try {
+      if (!fs.statSync(candidate).isFile()) continue;
+      fs.accessSync(
+        candidate,
+        process.platform === 'win32' ? fs.constants.F_OK : fs.constants.X_OK,
+      );
+      return fs.realpathSync(candidate);
+    } catch {
+      /* Try the next trusted PATH directory. */
+    }
+  }
+  return null;
+}
+
 export function clearComposeRunnerCache(): void {
   runnerCache = undefined;
 }
 
-/**
- * Read a compose file well enough to build an interface from it: the services,
- * what each one is (the comment above it counts as its description), the ports
- * it publishes, what it waits for, and whether it is meant to stay up.
- *
- * This is a reader, not a YAML implementation. It handles the shapes compose
- * files actually use and ignores what it does not recognise, because its
- * answers drive a page, and `docker compose config` remains the authority.
- */
-function scanYaml(text: string): { services: ComposeService[]; lines: string[] } {
-  const lines = text.split('\n');
-  const services: ComposeService[] = [];
-  let inServices = false;
-  let current: ComposeService | null = null;
-  let block: 'ports' | 'environment' | 'volumes' | 'depends_on' | 'profiles' | null = null;
-  let comment: string[] = [];
-
-  const blank = (name: string, about: string[]): ComposeService => ({
-    name,
-    about: about.length ? about.join(' ') : undefined,
-    ports: [],
-    dependsOn: [],
-    healthcheck: false,
-    envKeys: [],
-    volumes: [],
-    profiles: [],
-  });
-
-  for (const raw of lines) {
-    const line = raw.replace(/\t/g, '  ');
-    if (!line.trim()) {
-      comment = [];
-      continue;
-    }
-    if (/^\s*#/.test(line)) {
-      comment.push(line.replace(/^\s*#\s?/, '').trim());
-      continue;
-    }
-    const indent = line.length - line.trimStart().length;
-    if (indent === 0) {
-      inServices = /^services\s*:/.test(line);
-      if (current) services.push(current);
-      current = null;
-      block = null;
-      comment = [];
-      continue;
-    }
-    if (!inServices) {
-      comment = [];
-      continue;
-    }
-    if (indent === 2 && /^\s*[\w.-]+\s*:\s*$/.test(line)) {
-      if (current) services.push(current);
-      current = blank(line.trim().replace(/:$/, ''), comment);
-      block = null;
-      comment = [];
-      continue;
-    }
-    comment = [];
-    if (!current) continue;
-
-    if (indent <= 4) {
-      block = null;
-      const key = /^\s*([\w.-]+)\s*:/.exec(line)?.[1];
-      if (
-        key === 'ports' ||
-        key === 'environment' ||
-        key === 'volumes' ||
-        key === 'depends_on' ||
-        key === 'profiles'
-      )
-        block = key;
-      // A list can be written inline — `profiles: [api]` — as well as over
-      // several lines, and a compose file may use either.
-      const inline = /^\s*[\w.-]+\s*:\s*\[(.*)\]\s*$/.exec(line)?.[1];
-      if (block && inline !== undefined) {
-        const items = inline
-          .split(',')
-          .map((part) => part.trim().replace(/^["']|["']$/g, ''))
-          .filter(Boolean);
-        if (block === 'profiles') current.profiles.push(...items);
-        if (block === 'volumes') current.volumes.push(...items);
-        if (block === 'depends_on') current.dependsOn.push(...items);
-        block = null;
-        continue;
-      }
-      if (key === 'image') current.image = line.split(':').slice(1).join(':').trim();
-      if (key === 'restart')
-        current.restart = line
-          .split(':')
-          .slice(1)
-          .join(':')
-          .trim()
-          .replace(/^["']|["']$/g, '');
-      if (key === 'healthcheck') current.healthcheck = true;
-      if (block) continue;
-    }
-
-    const item = /^\s*-\s*(.*)$/.exec(line)?.[1]?.replace(/^["']|["']$/g, '');
-    if (block === 'ports' && item) {
-      // "5432:5432", "${POSTGRES_PORT:-5432}:5432", "127.0.0.1:8080:80", "3000"
-      const parts = item.split(':');
-      const container = Number(/(\d+)/.exec(parts[parts.length - 1] ?? '')?.[1] ?? 0) || undefined;
-      const hostText = parts.length > 1 ? (parts[parts.length - 2] ?? '') : (parts[0] ?? '');
-      const host = Number(/:-\s*(\d+)/.exec(hostText)?.[1] ?? /(\d+)/.exec(hostText)?.[1] ?? 0);
-      if (host) current.ports.push({ host, container });
-      continue;
-    }
-    if (block === 'volumes' && item) {
-      current.volumes.push(item);
-      continue;
-    }
-    if (block === 'profiles' && item) {
-      current.profiles.push(item);
-      continue;
-    }
-    if (block === 'depends_on') {
-      // Both "- postgres" and the long form "postgres:\n  condition: ...".
-      if (item) current.dependsOn.push(item);
-      else {
-        const key = /^\s*([\w.-]+)\s*:\s*$/.exec(line)?.[1];
-        if (key && key !== 'condition') current.dependsOn.push(key);
-      }
-      continue;
-    }
-    if (block === 'environment') {
-      const key = item ? item.split('=')[0] : /^\s*([\w.]+)\s*:/.exec(line)?.[1];
-      if (key) current.envKeys.push(key.trim());
-      continue;
-    }
-  }
-  if (current) services.push(current);
-  return { services, lines };
-}
-
-/**
- * Read a Crux's compose file and say whether it may run.
- *
- * Refusals are deliberately blunt: anything that reaches outside the Crux
- * folder or above the person's own privileges is a no, with the reason named
- * so they can change the file rather than guess.
- */
+/** Preview metadata comes from parsed YAML. Execution additionally resolves and
+ * validates all variables and merges through prepareComposeProject. */
 export function inspectCompose(folder: string, file?: string): ComposeReading {
   const files = file ? [file] : composeFiles(folder, true);
   const blank = { services: [], profiles: [], variables: [] };
   if (!files.length)
-    return { ...blank, files: [], refusals: ['There is no compose.yaml in this Crux.'] };
-
-  const set = envNames(folder);
+    return { ...blank, files, refusals: ['There is no compose.yaml in this Crux.'] };
+  // Containment errors remain errors rather than masquerading as missing files.
+  for (const name of files) composePath(folder, name);
   const merged = new Map<string, ComposeService>();
   const variables = new Map<string, ComposeVariable>();
   const refusals: string[] = [];
-
-  // Base first, then the override on top — the order Compose merges them.
-  for (const name of files) {
-    const at = resolveInsideOrThrow(folder, name);
-    if (!fs.existsSync(at)) continue;
-    const text = fs.readFileSync(at, 'utf8');
-    variablesIn(text, variables, set);
-    const { services, lines } = scanYaml(text);
-    for (const service of services) {
-      const already = merged.get(service.name);
-      // An override adds to a service rather than replacing it, so a later
-      // file's ports and mounts are added to what the base already asked for.
-      merged.set(
-        service.name,
-        already
-          ? {
-              ...already,
-              ...service,
-              about: service.about ?? already.about,
-              image: service.image ?? already.image,
-              restart: service.restart ?? already.restart,
-              healthcheck: already.healthcheck || service.healthcheck,
-              ports: [...already.ports, ...service.ports],
-              dependsOn: [...new Set([...already.dependsOn, ...service.dependsOn])],
-              envKeys: [...new Set([...already.envKeys, ...service.envKeys])],
-              volumes: [...new Set([...already.volumes, ...service.volumes])],
-              profiles: [...new Set([...already.profiles, ...service.profiles])],
-            }
-          : service,
-      );
+  try {
+    const set = new Set(Object.keys(composeVariables(folder)));
+    for (const name of files) {
+      const text = readComposeFile(folder, name);
+      const parsed = parseCompose(text);
+      validateCompose(parsed.model, folder);
+      variablesIn(text, variables, set);
+      for (const [key, raw] of Object.entries(mapping(parsed.model.services ?? {}, 'services'))) {
+        const service = describeService(key, mapping(raw, key), parsed.comments[key]);
+        const before = merged.get(key);
+        merged.set(
+          key,
+          before
+            ? {
+                ...before,
+                ...service,
+                image: service.image ?? before.image,
+                about: service.about ?? before.about,
+                restart: service.restart ?? before.restart,
+                healthcheck: before.healthcheck || service.healthcheck,
+                ports: parsed.portOverrides.has(key)
+                  ? service.ports
+                  : [...before.ports, ...service.ports],
+                dependsOn: [...new Set([...before.dependsOn, ...service.dependsOn])],
+                envKeys: [...new Set([...before.envKeys, ...service.envKeys])],
+                profiles: [...new Set([...before.profiles, ...service.profiles])],
+                volumes: [...new Set([...before.volumes, ...service.volumes])],
+              }
+            : service,
+        );
+      }
     }
-    for (const reason of refusalsIn(lines))
-      refusals.push(files.length > 1 ? `${name}: ${reason}` : reason);
+  } catch (error) {
+    refusals.push((error as Error).message);
   }
-
   const services = [...merged.values()];
   return {
     services,
     files,
-    refusals: [...new Set(refusals)],
-    profiles: [...new Set(services.flatMap((s) => s.profiles))].sort(),
+    refusals,
+    profiles: [...new Set(services.flatMap((service) => service.profiles))].sort(),
     variables: [...variables.values()].sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
 
-/**
- * Why a file must not be started. Deliberately blunt: anything that reaches
- * outside the Crux folder, or above the person's own privileges, is a no with
- * the reason named so they can change the file rather than guess.
- */
-function refusalsIn(lines: string[]): string[] {
-  const refusals: string[] = [];
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (/^#/.test(line)) continue;
-    if (/^privileged\s*:\s*true/.test(line))
-      refusals.push('A service asks for privileged mode, which is the whole machine.');
-    if (/^(network_mode|pid|ipc|userns_mode)\s*:\s*(["']?)host\2/.test(line))
-      refusals.push(`A service asks to share the host's ${line.split(':')[0]}.`);
-    if (/docker\.sock/.test(line))
-      refusals.push('A service mounts the Docker socket, which is root on this machine.');
-    if (/^-\s*(["']?)(\/|~|\$\{?HOME)/.test(line) && /:/.test(line))
-      refusals.push(`A service mounts a path outside the Crux: ${line.replace(/^-\s*/, '')}`);
-    if (/^-\s*(["']?)\.\.\//.test(line))
-      refusals.push(`A service mounts a path above the Crux: ${line.replace(/^-\s*/, '')}`);
-    if (/^\s*build\s*:/.test(raw) && /\.\./.test(raw))
-      refusals.push('A service builds from a directory above the Crux.');
-  }
-  return [...new Set(refusals)];
+function describeService(
+  name: string,
+  service: Record<string, unknown>,
+  about?: string,
+): ComposeService {
+  const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+  const ports = list(service.ports).flatMap((port) => {
+    if (typeof port === 'object' && port) {
+      const entry = port as { published?: string; target?: number };
+      return entry.published
+        ? [{ host: Number(entry.published), container: Number(entry.target) }]
+        : [];
+    }
+    const text = String(port).replace(
+      /\$\{[^}:]+(?::?-([^}]*))?\}/g,
+      (_match, fallback: string) => fallback ?? '',
+    );
+    const parts = text.split(':');
+    const container = Number(parts.at(-1)?.split('/')[0]);
+    const host = Number(parts.length > 1 ? parts.at(-2) : parts[0]);
+    return host ? [{ host, container }] : [];
+  });
+  return {
+    name,
+    about,
+    image: typeof service.image === 'string' ? service.image : undefined,
+    restart: typeof service.restart === 'string' ? service.restart : undefined,
+    healthcheck: !!service.healthcheck,
+    ports,
+    dependsOn: Array.isArray(service.depends_on)
+      ? service.depends_on.map(String)
+      : Object.keys(service.depends_on ?? {}),
+    envKeys: Array.isArray(service.environment)
+      ? service.environment.map((entry) => String(entry).split('=')[0]!)
+      : Object.keys(service.environment ?? {}),
+    volumes: list(service.volumes).map((entry) =>
+      typeof entry === 'string' ? entry : JSON.stringify(entry),
+    ),
+    profiles: list(service.profiles).map(String),
+  };
 }
 
 /**
@@ -367,14 +274,12 @@ function refusalsIn(lines: string[]): string[] {
  *   `.crux/local.env`          values for `${NAME}`
  *   `.crux/local.compose.yaml` structural overrides, merged last
  */
-export const LOCAL_ENV = '.crux/local.env';
-export const LOCAL_COMPOSE = '.crux/local.compose.yaml';
 
 /** Read one of this machine's own files for a Crux. */
 export function readLocal(folder: string, file: string): string {
-  const at = localFilePath(folder, file);
+  localFilePath(folder, file);
   try {
-    return fs.readFileSync(at, 'utf8');
+    return readComposeFile(folder, file);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return '';
     throw error;
@@ -383,84 +288,22 @@ export function readLocal(folder: string, file: string): string {
 
 function localFilePath(folder: string, file: string): string {
   if (file !== LOCAL_ENV && file !== LOCAL_COMPOSE) throw new Error(`Not a local file: ${file}`);
-  return resolveInsideOrThrow(folder, file);
+  return composePath(folder, file);
 }
 
 /** Write one, making `.crux/` if this is the first. */
 export function writeLocal(folder: string, file: string, text: string): void {
-  const at = localFilePath(folder, file);
-  fs.mkdirSync(path.dirname(at), { recursive: true });
-  fs.writeFileSync(at, text.endsWith('\n') ? text : `${text}\n`);
-}
-
-/**
- * The `-f` and `--env-file` arguments for a run.
- *
- * Compose finds `compose.yaml` and its override by itself, but naming them
- * explicitly is what lets the machine-local file be merged last. Likewise
- * `--env-file` turns off the automatic `.env`, so it is named too — and only
- * files that exist are named, because Compose fails on one that does not.
- */
-export function fileArgs(folder: string): string[] {
-  const args: string[] = [];
-  const files = [...composeFiles(folder), LOCAL_COMPOSE];
-  for (const file of files) if (fs.existsSync(path.join(folder, file))) args.push('-f', file);
-  for (const file of ['.env', LOCAL_ENV])
-    if (fs.existsSync(path.join(folder, file))) args.push('--env-file', file);
-  return args;
-}
-
-/**
- * The files Compose will actually read, base first.
- *
- * Compose merges an override file over the base without being told to, which
- * is exactly how a stack carries sensible defaults and a machine carries its
- * own changes — and exactly why every one of them must be checked. A refusal
- * that only reads the base would let an override mount the disk.
- */
-export function composeFiles(folder: string, includeLocal = false): string[] {
-  const bases = ['compose.yaml', 'compose.yml', 'docker-compose.yaml', 'docker-compose.yml'];
-  const overrides = [
-    'compose.override.yaml',
-    'compose.override.yml',
-    'docker-compose.override.yaml',
-    'docker-compose.override.yml',
-  ];
-  const found: string[] = [];
-  const base = bases.find((name) => fs.existsSync(path.join(folder, name)));
-  if (base) found.push(base);
-  const override = overrides.find((name) => fs.existsSync(path.join(folder, name)));
-  if (override) found.push(override);
-  if (includeLocal && fs.existsSync(path.join(folder, LOCAL_COMPOSE))) found.push(LOCAL_COMPOSE);
-  return found;
-}
-
-/**
- * The names set in the Crux's `.env`, which Compose reads by itself. Only the
- * names: a value there is the person's business, and the bench says whether a
- * setting is set, never what it is.
- */
-function envNames(folder: string): Set<string> {
-  const at = path.join(folder, '.env');
-  if (!fs.existsSync(at)) return new Set();
-  const names = new Set<string>();
-  try {
-    for (const line of fs.readFileSync(at, 'utf8').split('\n')) {
-      const name = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line)?.[1];
-      if (name) names.add(name);
-    }
-  } catch {
-    /* unreadable is the same as unset */
-  }
-  return names;
+  localFilePath(folder, file);
+  if (Buffer.byteLength(text) > 1024 * 1024) throw new Error('Local configuration exceeds 1 MiB.');
+  writeComposeFile(folder, file, text.endsWith('\n') ? text : `${text}\n`);
 }
 
 /** Every `${NAME}` and `${NAME:-default}` the files read. */
 function variablesIn(text: string, into: Map<string, ComposeVariable>, set: Set<string>): void {
-  for (const match of text.matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::?-([^}]*))?\}/g)) {
+  for (const match of text.matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?:(:?[?+-])([^}]*))?\}/g)) {
     const name = match[1]!;
     const existing = into.get(name);
-    const fallback = match[2];
+    const fallback = match[2]?.endsWith('-') ? match[3] : undefined;
     if (existing) {
       if (existing.fallback === undefined && fallback !== undefined) existing.fallback = fallback;
       continue;
@@ -471,18 +314,19 @@ function variablesIn(text: string, into: Map<string, ComposeVariable>, set: Set<
 
 /** The project name a Crux's containers carry, so nothing else is ever touched. */
 export function projectName(cruxId: string): string {
-  return `crux-${cruxId
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .slice(0, 24)
-    .toLowerCase()}`;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cruxId))
+    throw new Error('Compose needs a Crux UUID.');
+  // This namespace also owns existing named volumes; do not rename it during
+  // a runner refactor. Changing it requires an explicit data migration.
+  return `crux-${cruxId.replaceAll('-', '').slice(0, 24).toLowerCase()}`;
 }
 
 /** One service as Compose itself resolves it, after every file and `.env`. */
-export interface ResolvedService {
+export interface ResolvedService extends Omit<ComposeService, 'ports'> {
   name: string;
   image?: string;
   /** Published ports: what the machine answers on, and what it reaches. */
-  ports: { host: string; container: number; protocol?: string }[];
+  ports: { host: string; container: number; protocol?: string; hostIp?: string }[];
   /** The environment it will actually get, resolved. */
   environment: Record<string, string>;
   profiles: string[];
@@ -494,73 +338,105 @@ export interface ComposeResolution {
   error?: string;
 }
 
-/**
- * Ask Compose what the stack actually comes to.
- *
- * Our own reader describes the file — including the comments, which Compose
- * throws away — but only Compose knows what the ports and environment are
- * after `.env`, the override file and the active profiles have all been
- * applied. So the page shows what Compose says, and describes it with what the
- * file says.
- *
- * The Crux's secrets are deliberately **not** passed here: a secret is for the
- * run, not for a panel, and this way a `${PASSWORD}` shows as empty rather
- * than being printed on screen.
- */
+function redactSecrets(text: string, secrets: Record<string, string>): string {
+  for (const value of Object.values(secrets)
+    .filter((value) => typeof value === 'string' && value.length > 0)
+    .sort((a, b) => b.length - a.length))
+    text = text.replaceAll(value, () => '[secret]');
+  return text;
+}
+
+const PRIVATE_METADATA_ERROR =
+  'A secret is used in public service metadata. Keep secrets in container environment or commands.';
+
+function privateConfigurationError(error: Error, secrets: Record<string, string>): string {
+  // CLI diagnostics can quote or otherwise transform values. Do not attempt
+  // to recognize every representation of a secret in an arbitrary diagnostic.
+  return Object.keys(secrets).length && error.message !== PRIVATE_METADATA_ERROR
+    ? 'Cannot resolve this stack with its private settings. Check the configuration and required secrets.'
+    : error.message;
+}
+
+function requirePublicMetadata(value: unknown, secrets: Record<string, string>): void {
+  if (value && typeof value === 'object') {
+    for (const [key, child] of Object.entries(value)) {
+      requirePublicMetadata(key, secrets);
+      requirePublicMetadata(child, secrets);
+    }
+  } else if (typeof value === 'string' || typeof value === 'number') {
+    const text = String(value);
+    if (redactSecrets(text, secrets) !== text) throw new Error(PRIVATE_METADATA_ERROR);
+  }
+}
+
+/** Resolve with the execution inputs, but never expose private values to the bench. */
 export async function composeConfig(
   folder: string,
   profiles: string[] = [],
+  secrets: Record<string, string> = {},
 ): Promise<ComposeResolution> {
   const runner = await composeRunner();
   if (!runner) return { services: [], error: 'No container runner on this machine.' };
-  const args = ['compose', ...fileArgs(folder)];
-  for (const profile of profiles) {
-    if (!/^[\w.-]{1,64}$/.test(profile)) throw new Error(`Not a profile name: ${profile}`);
-    args.push('--profile', profile);
-  }
-  args.push('config', '--format', 'json');
-  const answer = await new Promise<{ code: number; out: string; err: string }>((resolve) => {
-    const proc = spawn(runner.program, args, { cwd: folder });
-    let out = '';
-    let err = '';
-    proc.stdout?.on('data', (c: Buffer) => (out += String(c)));
-    proc.stderr?.on('data', (c: Buffer) => (err += String(c)));
-    proc.on('close', (code) => resolve({ code: code ?? -1, out, err }));
-    proc.on('error', (error) => resolve({ code: -1, out: '', err: String(error) }));
-  });
-  if (answer.code !== 0)
-    return { services: [], error: answer.err.trim().slice(0, 600) || 'Compose refused the file.' };
   try {
-    const parsed = JSON.parse(answer.out) as {
-      services?: Record<
-        string,
-        {
-          image?: string;
-          profiles?: string[];
-          environment?: Record<string, string | null>;
-          ports?: { target?: number; published?: string | number; protocol?: string }[];
-        }
-      >;
-    };
-    return {
-      services: Object.entries(parsed.services ?? {}).map(([name, service]) => ({
+    const project = await prepareComposeProject(
+      runner.program,
+      folder,
+      'crux-preview',
+      profiles,
+      secrets,
+    );
+    try {
+      for (const [name, service] of Object.entries(project.model.services)) {
+        requirePublicMetadata(name, secrets);
+        // Check raw values before serializing mount descriptions: escaping a
+        // newline or quote must not hide a private value from this check.
+        requirePublicMetadata(
+          Object.fromEntries(
+            Object.entries(service).filter(
+              ([key]) => !['environment', 'command', 'entrypoint', 'healthcheck'].includes(key),
+            ),
+          ),
+          secrets,
+        );
+      }
+      const services = Object.entries(project.model.services).map(([name, service]) => ({
+        ...describeService(name, service),
         name,
-        image: service.image,
-        profiles: service.profiles ?? [],
-        ports: (service.ports ?? [])
+        image: service.image as string,
+        profiles: (service.profiles ?? []) as string[],
+        ports: (
+          (service.ports ?? []) as {
+            published?: string | number;
+            target: number;
+            protocol?: string;
+            host_ip?: string;
+          }[]
+        )
           .filter((port) => port.published !== undefined)
           .map((port) => ({
             host: String(port.published),
-            container: Number(port.target ?? 0),
+            container: Number(port.target),
             protocol: port.protocol,
+            hostIp: port.host_ip,
           })),
         environment: Object.fromEntries(
-          Object.entries(service.environment ?? {}).map(([key, value]) => [key, value ?? '']),
+          Object.entries((service.environment ?? {}) as Record<string, unknown>).map(
+            ([key, value]) => [key, redactSecrets(String(value ?? ''), secrets)],
+          ),
         ),
-      })),
-    };
+      }));
+      for (const service of services) {
+        requirePublicMetadata(
+          Object.fromEntries(Object.entries(service).filter(([key]) => key !== 'environment')),
+          secrets,
+        );
+      }
+      return { services };
+    } finally {
+      project.dispose();
+    }
   } catch (error) {
-    return { services: [], error: `Could not read Compose's answer — ${(error as Error).message}` };
+    return { services: [], error: privateConfigurationError(error as Error, secrets) };
   }
 }
 
@@ -620,6 +496,13 @@ export function connectionsFor(services: ResolvedService[]): Record<string, stri
     // The shapes a neighbour actually asks for, for the services people run.
     const env = service.environment ?? {};
     if (/postgres/.test(image)) {
+      // A copied connection string must not pretend redacted credentials work.
+      if (
+        ['POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'].some((key) =>
+          env[key]?.includes('[secret]'),
+        )
+      )
+        continue;
       const user = env.POSTGRES_USER || 'postgres';
       const password = env.POSTGRES_PASSWORD || '';
       const database = env.POSTGRES_DB || user;
@@ -654,63 +537,155 @@ export interface OverrideWish {
  * Changing a port or a setting must never touch `compose.yaml` — that file is
  * the one everyone shares, and rewriting someone's YAML by hand loses their
  * comments and their formatting. So the app owns a second file and writes it
- * whole, from what the panel says.
+ * whole, merging the panel’s changes into the existing managed settings.
  *
  * If that file was written by hand, the app will not touch it: it hands back
  * the snippet instead, and the person pastes it where they want. Silently
  * reformatting someone's file is worse than asking.
  */
-export function writeOverride(
+export async function writeOverride(
   folder: string,
   wishes: OverrideWish[],
   file = 'compose.override.yaml',
-): { written: boolean; snippet: string } {
-  const lines: string[] = [];
-  for (const wish of wishes) {
-    const ports = Object.entries(wish.ports ?? {}).filter(([, host]) => host);
-    const env = Object.entries(wish.environment ?? {});
-    if (!ports.length && !env.length) continue;
-    lines.push(`  ${wish.service}:`);
-    if (ports.length) {
-      lines.push('    ports:');
-      for (const [container, host] of ports) lines.push(`      - "${host}:${container}"`);
-    }
-    if (env.length) {
-      lines.push('    environment:');
-      for (const [key, value] of env) lines.push(`      ${key}: ${JSON.stringify(value)}`);
-    }
-  }
-  const snippet = lines.length ? `services:\n${lines.join('\n')}\n` : '';
-  const at = path.join(folder, file);
-  const body = [
-    OVERRIDE_HEADER,
-    '# what you wrote and stops managing this file. Compose merges it over',
-    '# compose.yaml, so the stack everyone shares is untouched.',
-    '',
-    snippet || '# Nothing overridden.',
-  ].join('\n');
+  secrets: Record<string, string> = {},
+): Promise<{ written: boolean; snippet: string }> {
+  const at = overridePath(folder, file);
+  if (!Array.isArray(wishes) || wishes.length > 100)
+    throw new Error('Choose at most 100 service overrides.');
+  const existing = fs.existsSync(at) ? readComposeFile(folder, file) : '';
+  const managed = !existing || existing.startsWith(OVERRIDE_HEADER);
+  const services =
+    managed && existing
+      ? mapping(parseCompose(existing).model.services ?? {}, 'services')
+      : (Object.create(null) as Record<string, unknown>);
 
-  if (fs.existsSync(at)) {
-    const existing = fs.readFileSync(at, 'utf8');
-    if (!existing.startsWith(OVERRIDE_HEADER)) return { written: false, snippet };
+  // The panel sends changes, not a replacement document. Validate all of them
+  // before resolving or writing, then retain the other managed settings.
+  const seen = new Set<string>();
+  for (const wish of wishes) {
+    if (!wish || typeof wish !== 'object') throw new Error('Invalid service override.');
+    composeName(wish.service, 'service name');
+    if (seen.has(wish.service)) throw new Error('Choose one override per service.');
+    seen.add(wish.service);
+    for (const [container, host] of Object.entries(mapping(wish.ports ?? {}, 'ports'))) {
+      for (const value of [container, host])
+        if (
+          typeof value !== 'string' ||
+          !/^[0-9]{1,5}$/.test(value) ||
+          Number(value) < 1 ||
+          Number(value) > 65535
+        )
+          throw new Error('Choose port numbers between 1 and 65535.');
+    }
+    for (const [key, value] of Object.entries(mapping(wish.environment ?? {}, 'environment')))
+      if (
+        !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(key) ||
+        typeof value !== 'string' ||
+        value.includes('\0') ||
+        value.length > 64_000
+      )
+        throw new Error(`Invalid environment override: ${key}`);
   }
-  fs.writeFileSync(at, body.endsWith('\n') ? body : `${body}\n`);
-  return { written: true, snippet };
+  const portChanges = wishes.some((wish) => Object.keys(wish.ports ?? {}).length);
+  const runner = portChanges ? await composeRunner() : null;
+  if (portChanges && !runner)
+    throw new Error('A Compose runner is needed to preserve existing ports.');
+  const prepared = runner
+    ? await prepareComposeProject(runner.program, folder, 'crux-preview', [], secrets).catch(
+        (error: Error) => {
+          throw new Error(privateConfigurationError(error, secrets));
+        },
+      )
+    : null;
+  try {
+    for (const wish of wishes) {
+      const previous = Object.hasOwn(services, wish.service)
+        ? mapping(services[wish.service], wish.service)
+        : {};
+      const service = { ...previous };
+      if (Object.keys(wish.ports ?? {}).length) {
+        const resolved = prepared!.model.services[wish.service];
+        if (!resolved) throw new Error(`The stack has no service named ${wish.service}.`);
+        const ports = ((resolved.ports ?? []) as Record<string, unknown>[]).map((port) => ({
+          ...mapping(port, 'resolved port'),
+        }));
+        for (const [container, host] of Object.entries(wish.ports!)) {
+          const matches = ports.filter((port) => Number(port.target) === Number(container));
+          if (!matches.length)
+            throw new Error(`Service ${wish.service} does not publish port ${container}.`);
+          for (const port of matches) {
+            port.published = host;
+            port.host_ip = '127.0.0.1';
+          }
+        }
+        service.ports = ports;
+      }
+      if (Object.keys(wish.environment ?? {}).length) {
+        service.environment = {
+          ...mapping(service.environment ?? {}, 'environment'),
+          ...Object.fromEntries(
+            Object.entries(wish.environment!).map(([key, value]) => [
+              key,
+              value.replaceAll('$', () => '$$'),
+            ]),
+          ),
+        };
+      }
+      Object.defineProperty(services, wish.service, {
+        value: service,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+    requirePublicMetadata(services, secrets);
+    const document = new Document({ services });
+    for (const name of Object.keys(services)) {
+      const ports = document.getIn(['services', name, 'ports'], true);
+      if (isSeq(ports)) ports.tag = '!override';
+    }
+    const snippet = Object.keys(services).length ? document.toString() : '';
+    if (Buffer.byteLength(snippet) > 1024 * 1024) throw new Error('Overrides exceed 1 MiB.');
+    if (!managed) return { written: false, snippet };
+    const body = [
+      OVERRIDE_HEADER,
+      '# what you wrote and stops managing this file. Compose merges it over',
+      '# compose.yaml, so the stack everyone shares is untouched.',
+      '',
+      snippet || '# Nothing overridden.',
+    ].join('\n');
+    // Resolution may take time. Do not overwrite an intervening editor's work.
+    const current = fs.existsSync(at) ? readComposeFile(folder, file) : '';
+    if (current !== existing)
+      throw new Error('The override file changed while saving. Refresh and try again.');
+    writeComposeFile(folder, file, body.endsWith('\n') ? body : `${body}\n`);
+    return { written: true, snippet };
+  } finally {
+    prepared?.dispose();
+  }
+}
+
+function overridePath(folder: string, file: string): string {
+  if (file !== 'compose.override.yaml' && file !== LOCAL_COMPOSE)
+    throw new Error('Not a managed Compose override file.');
+  return composePath(folder, file);
 }
 
 /** What the app previously wrote there, so the panel opens with it filled in. */
 export function readOverride(folder: string, file = 'compose.override.yaml'): OverrideWish[] {
-  const at = path.join(folder, file);
+  const at = overridePath(folder, file);
   if (!fs.existsSync(at)) return [];
-  const text = fs.readFileSync(at, 'utf8');
+  const text = readComposeFile(folder, file);
   if (!text.startsWith(OVERRIDE_HEADER)) return [];
-  const { services } = scanYaml(text);
-  return services.map((service) => ({
-    service: service.name,
-    ports: Object.fromEntries(
-      service.ports.map((port) => [String(port.container ?? port.host), String(port.host)]),
-    ),
-  }));
+  const parsed = parseCompose(text);
+  return Object.entries(mapping(parsed.model.services ?? {}, 'services'))
+    .map(([name, raw]) => describeService(name, mapping(raw, name)))
+    .map((service) => ({
+      service: service.name,
+      ports: Object.fromEntries(
+        service.ports.map((port) => [String(port.container ?? port.host), String(port.host)]),
+      ),
+    }));
 }
 
 export interface ComposeRunOptions {
@@ -750,79 +725,59 @@ export async function runCompose(
   opts: ComposeRunOptions,
   onLine: (line: string) => void,
 ): Promise<{ code: number; output: string }> {
-  const runner = await composeRunner();
-  if (!runner)
-    throw new Error(
-      'Docker is not on this machine. Install Docker Desktop (docker.com) or Podman, then look again.',
-    );
   if (!COMPOSE_VERBS.includes(opts.verb)) throw new Error(`Not allowed: ${opts.verb}`);
-  if (opts.service && !/^[\w.-]{1,64}$/.test(opts.service))
-    throw new Error(`Not a service name: ${opts.service}`);
+  const name = projectName(opts.cruxId);
+  if (opts.service !== undefined) composeName(opts.service, 'service name');
   if ((opts.verb === 'run' || opts.verb === 'exec') && !opts.service)
     throw new Error(`${opts.verb} needs a service to run in.`);
-  for (const part of opts.command ?? [])
-    if (typeof part !== 'string' || part.includes('\0')) throw new Error('Bad command.');
-  for (const profile of opts.profiles ?? [])
-    if (!/^[\w.-]{1,64}$/.test(profile)) throw new Error(`Not a profile name: ${profile}`);
-  for (const name of Object.keys(opts.env ?? {}))
-    if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name)) throw new Error(`Not a setting name: ${name}`);
-
-  // `run` builds a container from the same file, so it is checked like a start.
-  if (opts.verb === 'up' || opts.verb === 'start' || opts.verb === 'run') {
-    const reading = inspectCompose(opts.folder);
-    if (reading.refusals.length)
-      throw new Error(`This stack was not started.\n- ${reading.refusals.join('\n- ')}`);
-  }
-
-  return new Promise((resolve, reject) => {
-    const args = ['compose', ...fileArgs(opts.folder), '--project-name', projectName(opts.cruxId)];
-    for (const profile of opts.profiles ?? []) args.push('--profile', profile);
+  if (
+    opts.command &&
+    (!Array.isArray(opts.command) ||
+      opts.command.length > 256 ||
+      opts.command.some(
+        (part) => typeof part !== 'string' || part.includes('\0') || part.length > 16_000,
+      ))
+  )
+    throw new Error('Choose a bounded command argument list.');
+  if (
+    opts.tail !== undefined &&
+    (!Number.isInteger(opts.tail) || opts.tail < 0 || opts.tail > 2000)
+  )
+    throw new Error('Choose a log tail between 0 and 2000.');
+  const runner = await composeRunner();
+  if (!runner) throw new Error('Install Docker Desktop or Podman to run a Stack.');
+  const controlOnly = ['stop', 'down', 'ps', 'logs'].includes(opts.verb);
+  const project = controlOnly
+    ? await prepareComposeControl(runner.program, name, opts.verb === 'down')
+    : await prepareComposeProject(runner.program, opts.folder, name, opts.profiles, opts.env);
+  try {
+    if (['up', 'start', 'exec', 'run'].includes(opts.verb))
+      await verifyComposeResources(runner.program, name, project);
+    if (['start', 'exec', 'run'].includes(opts.verb))
+      await verifyExistingCompose(runner.program, name, project);
+    if (opts.service && !Object.hasOwn(project.model.services, opts.service))
+      throw new Error(`The stack has no service named ${opts.service}.`);
+    const args = [...project.args];
     if (opts.verb === 'up') {
       args.push('up', '--detach', '--remove-orphans');
-      // Compose waits for healthchecks itself, which is more reliable than
-      // polling `ps` from out here.
       if (opts.wait) args.push('--wait');
-      // `-T` because there is no terminal here: without it Compose tries to
-      // allocate one and the command fails or hangs.
     } else if (opts.verb === 'run') args.push('run', '--rm', '-T');
     else if (opts.verb === 'exec') args.push('exec', '-T');
     else if (opts.verb === 'down') args.push('down', '--remove-orphans');
     else if (opts.verb === 'logs')
-      args.push('logs', '--no-color', '--tail', String(Math.min(opts.tail ?? 200, 2000)));
-    else if (opts.verb === 'ps') args.push('ps', '--format', 'json');
+      args.push('logs', '--no-color', '--tail', String(opts.tail ?? 200));
+    else if (opts.verb === 'ps') args.push('ps', '--all', '--format', 'json');
     else args.push(opts.verb);
     if (opts.service && opts.verb !== 'down') args.push(opts.service);
-    // Everything after the service name is the command, passed as arguments.
     if (opts.verb === 'run' || opts.verb === 'exec') args.push(...(opts.command ?? []));
-
-    const proc = spawn(runner.program, args, {
-      cwd: opts.folder,
-      env: {
-        ...process.env,
-        ...(opts.env ?? {}),
-        COMPOSE_PROJECT_NAME: projectName(opts.cruxId),
-      },
+    const result = await composeProcess(runner.program, args, {
+      cwd: project.directory,
+      env: project.env,
+      timeoutMs: opts.timeoutMs ?? 10 * 60_000,
+      onLine,
     });
-    let output = '';
-    const feed = (chunk: Buffer) => {
-      const text = String(chunk);
-      output += text;
-      if (output.length > 400_000) output = output.slice(-200_000);
-      for (const line of text.split('\n')) if (line.trim()) onLine(line.trim());
-    };
-    proc.stdout?.on('data', feed);
-    proc.stderr?.on('data', feed);
-    const timer = setTimeout(
-      () => proc.kill('SIGTERM'),
-      Math.min(opts.timeoutMs ?? 10 * 60_000, 30 * 60_000),
-    );
-    proc.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ code: code ?? -1, output });
-    });
-    proc.on('error', (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-  });
+    return { code: result.code, output: (result.stdout + result.stderr).slice(-200_000) };
+  } finally {
+    project.dispose();
+  }
 }
