@@ -86,6 +86,7 @@ function changed(key: string) {
 
 /** Read a setting synchronously from the in-memory cache. */
 export function getSetting(key: string): string | null {
+  if (isSecretSettingKey(key)) return null;
   // Cache is authoritative once a value is present (covers pre-init writes)
   if (cache.has(key)) return cache.get(key)!;
   if (ready) return null;
@@ -161,27 +162,14 @@ export function removeSetting(key: string): void {
 export async function initSettings(): Promise<void> {
   const store = table();
 
-  // 1. Load existing settings into cache
-  for (const row of await store.list()) cache.set(row.key, row.value);
-
-  // 2. Purge secrets from SQLite. API keys were historically swept into the
-  // settings table (and thus into every garden backup via db.export()) —
-  // lift them back to localStorage, then delete the rows so no export
-  // surface can ever contain them.
-  for (const [key, value] of [...cache.entries()]) {
-    if (!isSecretSettingKey(key)) continue;
-    if (typeof localStorage !== 'undefined') {
-      // Preserve under the canonical prefixed name; never clobber a newer value
-      const canonical = key === 'apiKey:anthropic' ? SettingsKey.ApiKeyAnthropic : key;
-      if (key !== SettingsKey.LegacyAnthropicApiKey && !localStorage.getItem(canonical)) {
-        localStorage.setItem(canonical, value);
-      }
-    }
-    cache.delete(key);
-    await store.remove(key);
+  // Credentials are not preferences. Ignore misplaced rows without moving
+  // them into plaintext or deleting user data; the native owner excludes them
+  // from both settings reads and exported database images.
+  for (const row of await store.list()) {
+    if (!isSecretSettingKey(row.key)) cache.set(row.key, row.value);
   }
 
-  // 3. Migrate localStorage → SQLite (one-time: only if key isn't already in SQLite)
+  // Migrate localStorage → SQLite (one-time: only if key isn't already in SQLite)
   if (typeof localStorage !== 'undefined') {
     const toMigrate: [string, string][] = [];
 
