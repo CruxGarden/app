@@ -28,10 +28,13 @@ export function runNativeProcess(
     timeoutMs: options.timeoutMs ?? 10 * 60_000,
     onData: (text, stream) => {
       if (stream !== 'stderr') return;
-      tail = (tail + text).slice(-2000);
-      const total = tail.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
+      // Parse the complete new chunk before retaining only a diagnostic tail.
+      // A fast conversion can write duration and final progress in one chunk.
+      const received = tail + text;
+      tail = received.slice(-2000);
+      const total = received.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
       if (total && !duration) duration = seconds(total);
-      const current = tail
+      const current = received
         .match(/time=(\d+):(\d+):(\d+\.\d+)/g)
         ?.at(-1)
         ?.match(/time=(\d+):(\d+):(\d+\.\d+)/);
