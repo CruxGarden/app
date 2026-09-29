@@ -2,6 +2,7 @@ import { _electron as electron, type ElectronApplication, type Page } from '@pla
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fixtureKeychain } from './secret-storage-fixture';
 
 /**
  * Launch the desktop app isolated from the developer's real data: a fresh
@@ -18,6 +19,8 @@ export async function launchApp(
     ai?: boolean;
     /** The app's own tooltips over `title=` (off in the suite; see CRUX_PLAIN_TITLES). */
     titleTips?: boolean;
+    /** Opt in only for a deliberate real OS-vault check; ordinary journeys use fixture encryption. */
+    systemKeychain?: boolean;
   } = {},
 ): Promise<{ app: ElectronApplication; page: Page; dir: string }> {
   // Pass a previous run's `dir` to relaunch on the same garden (restart tests).
@@ -58,6 +61,8 @@ export async function launchApp(
     env,
     ...(executablePath ? { executablePath } : {}),
   });
+  // Install before waiting for the renderer so restart reads use the same fixture key.
+  if (!opts.systemKeychain) await fixtureKeychain(app, true);
   // Keep what the main process prints: when no window ever appears, this is
   // the only evidence of why (a native module built for the wrong ABI, a
   // missing shared library, a thrown error before createWindow).

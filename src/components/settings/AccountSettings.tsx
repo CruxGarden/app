@@ -113,7 +113,6 @@ export default function AccountSettings() {
 
   return (
     <SettingsSection title="Account" testId="account-settings">
-
       {/* Avatar */}
       <div className="mb-4">
         <AvatarUpload />
@@ -238,14 +237,26 @@ function ApiAddress() {
     if (next) {
       try {
         const u = new URL(next);
-        if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
+        if (
+          !['http:', 'https:'].includes(u.protocol) ||
+          u.username ||
+          u.password ||
+          u.search ||
+          u.hash
+        )
+          throw new Error();
       } catch {
         setError('Enter an http or https address, like http://localhost:3001.');
         return;
       }
     }
     setError('');
-    if (isAuthenticated) await useAuthStore.getState().disconnectAccount();
+    try {
+      if (isAuthenticated) await useAuthStore.getState().disconnectAccount();
+    } catch {
+      setError('Could not remove the saved connection. Restore credential storage and retry.');
+      return;
+    }
     if (next) setSetting(SettingsKey.ApiUrl, next);
     else removeSetting(SettingsKey.ApiUrl);
     setValue(next ?? '');
@@ -254,7 +265,9 @@ function ApiAddress() {
   };
   return (
     <div className="mt-4" data-testid="api-address">
-      <SectionLabel as="p" tone="muted" className="mb-1">API address</SectionLabel>
+      <SectionLabel as="p" tone="muted" className="mb-1">
+        API address
+      </SectionLabel>
       {launched ? (
         <p className="text-xs text-text-muted">
           Pinned for this launch: <span className="font-mono text-text">{current}</span>

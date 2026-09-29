@@ -31,14 +31,16 @@ export default function ConnectAccount({
   compact,
   autoFocus,
 }: ConnectAccountProps) {
-  const { isAuthenticated, account, connectAccount, disconnectAccount } = useAuthStore(
-    useShallow((s) => ({
-      isAuthenticated: s.isAuthenticated,
-      account: s.account,
-      connectAccount: s.connectAccount,
-      disconnectAccount: s.disconnectAccount,
-    })),
-  );
+  const { isAuthenticated, account, connectAccount, disconnectAccount, connectionError } =
+    useAuthStore(
+      useShallow((s) => ({
+        isAuthenticated: s.isAuthenticated,
+        account: s.account,
+        connectionError: s.connectionError,
+        connectAccount: s.connectAccount,
+        disconnectAccount: s.disconnectAccount,
+      })),
+    );
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -77,17 +79,24 @@ export default function ConnectAccount({
       // A deliberate refusal (a different account than this garden's) says why;
       // anything else is the code or the connection.
       const msg = err instanceof Error ? err.message : '';
-      setError(msg.startsWith('Not connected') ? msg : 'Invalid code or connection failed');
+      setError(
+        msg.startsWith('Not connected') || msg.startsWith('Could not save the account connection')
+          ? msg
+          : 'Invalid code or connection failed',
+      );
     } finally {
       setConnecting(false);
     }
   };
 
   const handleDisconnect = async () => {
+    setError('');
     setConnecting(true);
     try {
       await disconnectAccount();
       onDisconnected?.();
+    } catch {
+      setError('Could not remove the saved connection. Restore credential storage and retry.');
     } finally {
       setConnecting(false);
     }
@@ -95,17 +104,28 @@ export default function ConnectAccount({
 
   if (isAuthenticated) {
     return (
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-text-muted">
-          Connected — <span className="text-text font-mono ml-1">{account?.email}</span>
-        </p>
-        <button
-          onClick={handleDisconnect}
-          disabled={connecting}
-          className={buttonClass('ghost', 'xs', 'text-error hover:text-error hover:bg-error-muted')}
-        >
-          {connecting ? 'Disconnecting...' : 'Disconnect'}
-        </button>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-text-muted">
+            Connected — <span className="text-text font-mono ml-1">{account?.email}</span>
+          </p>
+          <button
+            onClick={handleDisconnect}
+            disabled={connecting}
+            className={buttonClass(
+              'ghost',
+              'xs',
+              'text-error hover:text-error hover:bg-error-muted',
+            )}
+          >
+            {connecting ? 'Disconnecting...' : 'Disconnect'}
+          </button>
+        </div>
+        {(error || connectionError) && (
+          <p role="alert" className="text-xs text-error">
+            {error || connectionError}
+          </p>
+        )}
       </div>
     );
   }
@@ -170,7 +190,16 @@ export default function ConnectAccount({
           </button>
         </div>
       )}
-      {error && <p className="text-xs text-error">{error}</p>}
+      {(error || connectionError) && (
+        <p role="alert" className="text-xs text-error">
+          {error || connectionError}
+        </p>
+      )}
+      {connectionError && (
+        <button className={btnClass} onClick={() => void useAuthStore.getState().checkAuth()}>
+          Retry saved connection
+        </button>
+      )}
     </div>
   );
 }

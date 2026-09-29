@@ -40,7 +40,12 @@ export default function UserMenu() {
     // The account is the connection to crux.garden; the author is who you are
     // in your own garden, and it is kept — signing out is not forgetting. The
     // work in front stays in front (it used to jump to Home, and not always).
-    await disconnectAccount();
+    try {
+      await disconnectAccount();
+    } catch {
+      // The shared account form displays the persisted-removal failure and retry.
+      useUIStore.getState().setSettingsOpen(true);
+    }
   };
 
   return (

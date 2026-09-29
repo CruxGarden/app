@@ -10,14 +10,17 @@ const auth = vi.hoisted(() => ({
   refreshToken: null as string | null,
 }));
 vi.mock('./client', () => ({
-  apiBaseUrl: () => 'https://api.example.test',
-  getStoredTokens: () => auth,
   default: {
     get: vi.fn(async () => {
       auth.accessToken = 'refreshed-jwt';
       return { data: {} };
     }),
   },
+}));
+vi.mock('./session', () => ({
+  captureAuth: () => ({ endpoint: 'https://api.example.test', revision: 1 }),
+  assertAuthCurrent: () => {},
+  getStoredTokens: async () => auth,
 }));
 vi.mock('@/lib/usage-events', () => ({ notifyUsageChanged: vi.fn() }));
 function sse() {

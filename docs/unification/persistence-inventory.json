@@ -94,6 +94,13 @@
       "ledger": "cruxgarden:app-appearance:"
     },
     {
+      "key": "cruxgarden:authSession",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:authSession"
+    },
+    {
       "key": "cruxgarden:autoBackup",
       "sources": [
         "src/lib/constants.ts"

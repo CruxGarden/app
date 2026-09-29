@@ -80,7 +80,10 @@ test('a garden with people: plant, share, invite from the directory, accept, sha
     await expect(page.getByText('Up to date')).toBeVisible({ timeout: 120_000 });
 
     // The owner, as the API knows them.
-    const token = await page.evaluate(() => localStorage.getItem('cruxgarden:accessToken'));
+    const token = await page.evaluate(async () => {
+      const raw = await window.electronAPI!.secrets.get('cruxgarden:authSession');
+      return raw ? (JSON.parse(raw) as { accessToken: string }).accessToken : null;
+    });
     expect(token).toBeTruthy();
     const owner = await request.newContext({
       baseURL: LOCAL_API,

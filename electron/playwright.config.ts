@@ -5,6 +5,7 @@ const gateSpecs = [
   '**/ipc-security.spec.ts',
   '**/secrets.spec.ts',
   '**/function-secrets.spec.ts',
+  '**/auth-credentials.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',
   '**/typst-offline.spec.ts',

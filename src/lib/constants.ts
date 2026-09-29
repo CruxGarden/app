@@ -19,6 +19,7 @@ export function isSecretSettingKey(key: string): boolean {
     key === 'apiKey:anthropic' || // legacy unprefixed SQLite row
     key === SettingsKey.AccessToken ||
     key === SettingsKey.RefreshToken ||
+    key === SettingsKey.AuthSession ||
     key === SettingsKey.LegacyAnthropicApiKey
   );
 }
@@ -34,7 +35,8 @@ export enum SettingsKey {
   /** Crux Tools installed into this garden: tool id → its Template Crux (JSON; ADR 0050) */
   InstalledTools = 'cruxgarden:installedTools',
 
-  // Auth tokens (localStorage only, not in SQLite)
+  // Account credentials are one encrypted record. Old unbound keys are never used.
+  AuthSession = 'cruxgarden:authSession',
   AccessToken = 'cruxgarden:accessToken',
   RefreshToken = 'cruxgarden:refreshToken',
 

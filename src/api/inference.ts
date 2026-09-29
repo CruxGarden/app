@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/stores/authStore';
-import client, { apiBaseUrl, getStoredTokens } from './client';
+import client from './client';
+import { captureAuth, assertAuthCurrent, getStoredTokens } from './session';
 import { notifyUsageChanged } from '@/lib/usage-events';
 export const INCLUDED_MODEL = 'garden-included';
 export interface IncludedUsage {
@@ -36,10 +37,14 @@ export async function includedUsage(): Promise<IncludedUsage> {
 export const includedFetch: typeof fetch = async (_input, init) => {
   const requestId = crypto.randomUUID();
   const accountId = useAuthStore.getState().account?.id;
-  const accountToken = getStoredTokens().accessToken;
+  const context = captureAuth();
+  const accountToken = (await getStoredTokens(context)).accessToken;
   if (!accountToken) throw new Error('Sign in to use your included collaborator.');
-  const send = (token: string) =>
-    fetch(`${apiBaseUrl()}/inference/v1/messages`, {
+  const send = (token: string) => {
+    assertAuthCurrent(context);
+    return fetch(`${context.endpoint}/inference/v1/messages`, {
+      redirect: 'error',
+      credentials: 'omit',
       method: 'POST',
       body: init?.body,
       signal: init?.signal,
@@ -49,16 +54,18 @@ export const includedFetch: typeof fetch = async (_input, init) => {
         'X-Request-Id': requestId,
       },
     });
+  };
   let response = await send(accountToken);
+  assertAuthCurrent(context);
   // A rejected JWT never starts inference. Reuse the request ID after the existing
   // API client's deduplicated token refresh; never retry transport/allowance errors.
-  if (response.status === 401 && getStoredTokens().refreshToken) {
+  if (response.status === 401 && (await getStoredTokens(context)).refreshToken) {
     if (useAuthStore.getState().account?.id !== accountId)
       throw new Error('The connected account changed. Start a new turn.');
-    await includedUsage();
+    await client.get<IncludedUsage>('/inference/usage', { authContext: context });
     if (useAuthStore.getState().account?.id !== accountId)
       throw new Error('The connected account changed. Start a new turn.');
-    const refreshed = getStoredTokens().accessToken;
+    const refreshed = (await getStoredTokens(context)).accessToken;
     if (refreshed) response = await send(refreshed);
   }
   if (!response.ok) {

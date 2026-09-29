@@ -631,6 +631,13 @@
       "target": "device presentation",
       "preservation": "Which panels keep a top-bar square while closed, one set for Crux workspaces and one for Garden Home; presentation only, never Garden content or exported.",
       "status": "implemented"
+    },
+    {
+      "key": "cruxgarden:authSession",
+      "group": "secrets",
+      "target": "OS secret store / memory-only public browser session",
+      "preservation": "Never transfer in Garden/Crux content. Paired credentials belong to their API endpoint.",
+      "status": "implemented"
     }
   ]
 }

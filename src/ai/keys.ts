@@ -7,7 +7,8 @@ import { getSecret, setSecret, deleteSecret } from '@/services/secrets';
 
 /** Get an API key from the encrypted native store. */
 export async function getApiKey(providerId: string): Promise<string | null> {
-  if (providerId === 'included') return getStoredTokens().accessToken ? 'included-session' : null;
+  if (providerId === 'included')
+    return (await getStoredTokens()).accessToken ? 'included-session' : null;
   // Local inference authenticates nothing — never blocks on a missing key
   if (providerId === 'ollama' || providerId === 'lmstudio') return LOCAL_API_KEY;
 

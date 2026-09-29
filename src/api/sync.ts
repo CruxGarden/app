@@ -1,4 +1,3 @@
-import { isAxiosError } from 'axios';
 import client from './client';
 
 export interface GardenStatus {
@@ -39,7 +38,7 @@ export async function getGardenStatus(): Promise<GardenStatus | null> {
     const res = await client.get<GardenStatus>('/sync/garden/status');
     return res.data;
   } catch (e: unknown) {
-    if (isAxiosError(e) && e.response?.status === 404) return null;
+    if ((e as { response?: { status?: number } })?.response?.status === 404) return null;
     throw e;
   }
 }
