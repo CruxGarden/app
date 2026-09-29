@@ -1,3 +1,4 @@
+import { localSecrets } from './function-secrets';
 import { getSqliteClient } from './sqlite/client';
 import { SettingsKey } from '@/lib/constants';
 import { compileToCjs } from './function-compiler';
@@ -5,13 +6,7 @@ export { compileToCjs } from './function-compiler';
 import type { Artifact } from '@/api/types';
 import { getServices } from '@/services';
 import { pathOf } from '@/lib/artifact-path';
-import {
-  egressAllowed,
-  egressHosts,
-  functionFiles,
-  localSecrets,
-  type CallResult,
-} from './crux-functions';
+import { egressAllowed, egressHosts, functionFiles, type CallResult } from './crux-functions';
 
 function findArtifactByPath(artifacts: Artifact[], path: string): Artifact | null {
   const normalized = path.replace(/^\//, '');
@@ -148,7 +143,7 @@ export async function runLocalHandler(
   const { store } = getServices();
   const ownerId = await functionOwnerId(cruxId);
   const egress = /ctx\.fetch/.test(code) ? await egressHosts(cruxId) : [];
-  const secrets = /ctx\.secrets/.test(code) ? localSecrets(cruxId) : {};
+  const secrets = /ctx\.secrets/.test(code) ? await localSecrets(cruxId) : {};
   const url = URL.createObjectURL(new Blob([WORKER_PRELUDE], { type: 'text/javascript' }));
   const worker = new Worker(url);
   const visitorId = input.visitorId ?? null;

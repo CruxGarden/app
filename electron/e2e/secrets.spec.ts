@@ -1,31 +1,10 @@
-import { test, expect, type ElectronApplication } from '@playwright/test';
+import { fixtureKeychain } from './secret-storage-fixture';
+import { test, expect } from '@playwright/test';
 import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
 import { hidePane } from './panel-helpers';
-
-async function keychain(app: ElectronApplication, unlocked: boolean) {
-  await app.evaluate(({ safeStorage }, unlocked) => {
-    // Substitute only the OS vault: use authenticated encryption with a fixture
-    // key. Production IPC, filesystem and UI remain real; no OS prompt or secret.
-    const crypto = process.getBuiltinModule('crypto');
-    const key = Buffer.alloc(32, 42);
-    safeStorage.isEncryptionAvailable = () => unlocked;
-    safeStorage.getSelectedStorageBackend = () => 'gnome_libsecret';
-    safeStorage.encryptString = (value: string) => {
-      const nonce = crypto.randomBytes(12);
-      const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce);
-      const bytes = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
-      return Buffer.concat([nonce, cipher.getAuthTag(), bytes]);
-    };
-    safeStorage.decryptString = (bytes: Buffer) => {
-      const cipher = crypto.createDecipheriv('aes-256-gcm', key, bytes.subarray(0, 12));
-      cipher.setAuthTag(bytes.subarray(12, 28));
-      return Buffer.concat([cipher.update(bytes.subarray(28)), cipher.final()]).toString('utf8');
-    };
-  }, unlocked);
-}
 
 test('Settings preserves keys and input through vault, disk and file failures, then retries', async () => {
   const { app, page, dir } = await launchApp({ ai: true });
@@ -35,7 +14,7 @@ test('Settings preserves keys and input through vault, disk and file failures, t
   const first = 'sk-ant-fixture-first-abcd';
   const second = 'sk-ant-fixture-second-efgh';
   try {
-    await keychain(app, false);
+    await fixtureKeychain(app, false);
     await enterGarden(page);
     const openSettings = async () => {
       await page.keyboard.press('ControlOrMeta+,');
@@ -53,7 +32,7 @@ test('Settings preserves keys and input through vault, disk and file failures, t
     await expect(input).toHaveValue(first);
     expect(await page.evaluate((key) => localStorage.getItem(key), secretName)).toBeNull();
 
-    await keychain(app, true);
+    await fixtureKeychain(app, true);
     await save.click();
     await expect(provider.getByText('sk-ant-...abcd', { exact: true })).toBeVisible();
     await expect(input).toHaveValue('');
@@ -76,14 +55,14 @@ test('Settings preserves keys and input through vault, disk and file failures, t
     const replacement = readFileSync(file, 'utf8');
 
     await hidePane(page, 'Settings');
-    await keychain(app, false);
+    await fixtureKeychain(app, false);
     await openSettings();
     await expect(provider.getByRole('alert')).toContainText('Could not read saved key');
     await expect(provider.getByText('Not configured', { exact: true })).toHaveCount(0);
     expect(readFileSync(file, 'utf8')).toBe(replacement);
 
     await hidePane(page, 'Settings');
-    await keychain(app, true);
+    await fixtureKeychain(app, true);
     writeFileSync(file, '{damaged');
     await openSettings();
     await expect(provider.getByRole('alert')).toContainText('Could not read saved key');

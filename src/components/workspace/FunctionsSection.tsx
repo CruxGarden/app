@@ -1,3 +1,4 @@
+import { localSecrets, setLocalSecret, SECRET_NAME_RE } from '@/services/function-secrets';
 import { useMemo, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -11,12 +12,9 @@ import {
   callFunction,
   emitEvent,
   listPublishedFunctions,
-  localSecrets,
-  setLocalSecret,
   listRemoteSecrets,
   putRemoteSecret,
   deleteRemoteSecret,
-  SECRET_NAME_RE,
   validateEventName,
   type FunctionFile,
   type WhenThen,
@@ -67,8 +65,9 @@ export default function FunctionsSection({
   );
   const [when, setWhen] = useState<'event' | 'schedule'>('event');
   // Secrets (F1): names here and, once shared, at the API; values never shown again.
-  const [secretNames, setSecretNames] = useState<string[]>(() => Object.keys(localSecrets(cruxId)));
+  const [secretNames, setSecretNames] = useState<string[]>([]);
   const [remoteSecrets, setRemoteSecrets] = useState<string[]>([]);
+  const [secretsLoading, setSecretsLoading] = useState(true);
   const [secretName, setSecretName] = useState('');
   const [secretValue, setSecretValue] = useState('');
   useEffect(() => {
@@ -87,7 +86,7 @@ export default function FunctionsSection({
       if (!SECRET_NAME_RE.test(name))
         throw new Error('A secret name is letters, digits and underscores.');
       if (!secretValue) throw new Error('Give the secret a value.');
-      setSecretNames(Object.keys(setLocalSecret(cruxId, name, secretValue)));
+      setSecretNames(Object.keys(await setLocalSecret(cruxId, name, secretValue)));
       let where = 'here';
       if (published && authenticated) {
         await putRemoteSecret(cruxId, name, secretValue);
@@ -100,9 +99,9 @@ export default function FunctionsSection({
     });
   const removeSecret = (name: string) =>
     act(`secret:${name}`, async () => {
-      setSecretNames(Object.keys(setLocalSecret(cruxId, name, null)));
+      setSecretNames(Object.keys(await setLocalSecret(cruxId, name, null)));
       if (published && authenticated) {
-        await deleteRemoteSecret(cruxId, name).catch(() => undefined);
+        await deleteRemoteSecret(cruxId, name);
         setRemoteSecrets((r) => r.filter((x) => x !== name));
       }
       return `Secret ${name} removed.`;
@@ -110,6 +109,29 @@ export default function FunctionsSection({
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    setSecretNames([]);
+    setSecretsLoading(local.length > 0);
+    if (local.length > 0) {
+      void localSecrets(cruxId)
+        .then((values) => {
+          if (live) setSecretNames(Object.keys(values));
+        })
+        .catch(() => {
+          if (live)
+            setError(
+              'Could not load local secrets. Unlock your system keychain and reopen this pane.',
+            );
+        })
+        .finally(() => {
+          if (live) setSecretsLoading(false);
+        });
+    }
+    return () => {
+      live = false;
+    };
+  }, [cruxId, local.length]);
   const [results, setResults] = useState<Record<string, CallResult>>({});
   const [building, setBuilding] = useState(false);
   const [event, setEvent] = useState('');
@@ -418,7 +440,7 @@ export default function FunctionsSection({
           <div className="flex flex-col gap-1.5" data-testid="function-secrets">
             <span className="text-2xs text-text-muted">
               Secrets — read by handlers as <code className="font-mono">ctx.secrets.get(name)</code>
-              ; never in a file, an export or a log.
+              ; stored encrypted on this device and excluded from Crux exports.
             </span>
             {[...new Set([...secretNames, ...remoteSecrets])].sort().map((name) => (
               <div key={name} className="flex items-center gap-2 text-xs">
@@ -448,6 +470,7 @@ export default function FunctionsSection({
             >
               <Input
                 aria-label="Secret name"
+                disabled={secretsLoading || busy !== null}
                 placeholder="STRIPE_KEY"
                 value={secretName}
                 onChange={(e) => setSecretName(e.target.value)}
@@ -455,6 +478,7 @@ export default function FunctionsSection({
               />
               <Input
                 aria-label="Secret value"
+                disabled={secretsLoading || busy !== null}
                 type="password"
                 placeholder="the value"
                 value={secretValue}
@@ -462,7 +486,7 @@ export default function FunctionsSection({
                 className="flex-1"
                 autoComplete="off"
               />
-              <Button size="sm" type="submit" disabled={busy !== null}>
+              <Button size="sm" type="submit" disabled={secretsLoading || busy !== null}>
                 Set
               </Button>
             </form>

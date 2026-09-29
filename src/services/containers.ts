@@ -109,8 +109,10 @@ export async function compose(
     wait?: boolean;
   } = {},
 ): Promise<{ code: number; output: string }> {
-  const { localSecrets } = await import('./crux-functions');
-  return api().compose({ cruxId, verb, env: localSecrets(cruxId), ...opts });
+  const { localSecrets } = await import('./function-secrets');
+  // Existing-resource controls must remain usable when the keychain is locked.
+  const env = ['stop', 'down', 'ps', 'logs'].includes(verb) ? {} : await localSecrets(cruxId);
+  return api().compose({ cruxId, verb, env, ...opts });
 }
 
 /** One service as Compose resolves it, after every file, `.env` and profiles. */
@@ -154,8 +156,8 @@ export async function resolveCompose(
   cruxId: string,
   profiles: string[] = [],
 ): Promise<ComposeResolution> {
-  const { localSecrets } = await import('./crux-functions');
-  return api().resolve({ cruxId, profiles, env: localSecrets(cruxId) });
+  const { localSecrets } = await import('./function-secrets');
+  return api().resolve({ cruxId, profiles, env: await localSecrets(cruxId) });
 }
 
 /** Write this machine's ports and settings into the override file. */
@@ -163,8 +165,8 @@ export async function writeOverride(
   cruxId: string,
   wishes: OverrideWish[],
 ): Promise<{ written: boolean; snippet: string }> {
-  const { localSecrets } = await import('./crux-functions');
-  return api().override({ cruxId, wishes, env: localSecrets(cruxId) });
+  const { localSecrets } = await import('./function-secrets');
+  return api().override({ cruxId, wishes, env: await localSecrets(cruxId) });
 }
 
 /** A free host port, for offering a way out of a collision. */

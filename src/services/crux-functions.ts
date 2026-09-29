@@ -2,8 +2,6 @@ import type { Artifact } from '@/api/types';
 import client from '@/api/client';
 import { pathOf } from '@/lib/artifact-path';
 import { getServices } from './index';
-import { getSetting, setSetting } from './settings';
-import { FN_SECRETS_PREFIX } from '@/lib/constants';
 
 /**
  * Crux Functions (CRUX-FUNCTIONS-PLAN, F0 + F6): the small handlers in a
@@ -295,38 +293,8 @@ export async function emitEvent(
 }
 
 // ── Secrets (F1) ────────────────────────────────────────────────────────
-// Locally a crux's secrets live in the garden's settings (a secret key:
-// never exported, never backed up) so the preview runner's ctx.secrets works;
-// once shared they are set at the API too, encrypted, for the handlers there.
-
-export function localSecrets(cruxId: string): Record<string, string> {
-  try {
-    // A secret setting lives in localStorage only (settings.ts keeps secrets
-    // out of the SQLite table that backups carry), so read it from there.
-    const key = `${FN_SECRETS_PREFIX}${cruxId}`;
-    const raw =
-      (typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null) ?? getSetting(key);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, string>) : {};
-  } catch {
-    return {};
-  }
-}
-
-/** Set (or with null, remove) a local secret; returns the map as it now is. */
-export function setLocalSecret(
-  cruxId: string,
-  name: string,
-  value: string | null,
-): Record<string, string> {
-  const next = localSecrets(cruxId);
-  if (value === null) delete next[name];
-  else next[name] = value;
-  setSetting(`${FN_SECRETS_PREFIX}${cruxId}`, JSON.stringify(next));
-  return next;
-}
-
-export const SECRET_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+// Local credentials belong to function-secrets.ts. Published handlers use a
+// separate encrypted copy at the API, set explicitly by the owner.
 
 export async function listRemoteSecrets(
   cruxId: string,

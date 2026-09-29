@@ -7,6 +7,7 @@
  * Existing plaintext values are removed only after encrypted persistence succeeds.
  */
 
+import { createKeyedQueue } from '@/lib/keyed-queue';
 import type { SecretsBridge } from '@/lib/platform';
 
 function electronSecrets(): SecretsBridge | null {
@@ -14,7 +15,7 @@ function electronSecrets(): SecretsBridge | null {
   return window.electronAPI?.secrets ?? null;
 }
 
-export async function getSecret(key: string): Promise<string | null> {
+async function readSecret(key: string): Promise<string | null> {
   // Native get checks the local entry before touching safeStorage. Probing
   // availability first can open a blocking macOS Keychain prompt even when
   // this installation has never saved a key.
@@ -38,7 +39,7 @@ export async function getSecret(key: string): Promise<string | null> {
   return null;
 }
 
-export async function setSecret(key: string, value: string): Promise<void> {
+async function writeSecret(key: string, value: string): Promise<void> {
   const api = electronSecrets();
   if (!api) throw new Error('Secure credential storage requires the desktop app.');
   // The native owner checks encryption on each operation. Never turn a failed
@@ -47,9 +48,22 @@ export async function setSecret(key: string, value: string): Promise<void> {
   if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
 }
 
-export async function deleteSecret(key: string): Promise<void> {
+async function removeSecret(key: string): Promise<void> {
   // Removing ciphertext from disk does not need encryption or decryption.
   const api = electronSecrets();
   if (api) await api.delete(key);
   if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+}
+
+// A delayed transfer of existing plaintext must not undo a later replacement
+// or removal. Keep reads (which may transfer), writes and deletes in one queue.
+const serialize = createKeyedQueue();
+export function getSecret(key: string): Promise<string | null> {
+  return serialize(key, () => readSecret(key));
+}
+export function setSecret(key: string, value: string): Promise<void> {
+  return serialize(key, () => writeSecret(key, value));
+}
+export function deleteSecret(key: string): Promise<void> {
+  return serialize(key, () => removeSecret(key));
 }

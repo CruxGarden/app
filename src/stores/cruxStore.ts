@@ -715,22 +715,31 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       try {
         await flushNotebook(crux.id);
         await saveMeta();
+        const { functionFiles, listPublishedFunctions, putRemoteSecret } =
+          await import('@/services/crux-functions');
+        const { localSecrets } = await import('@/services/function-secrets');
+        const hasFunctions = functionFiles(get().artifacts || []).length > 0;
+        // Unlock before publishing so a local credential failure cannot leave
+        // a newly live handler without the credentials it needs.
+        const secrets = hasFunctions ? await localSecrets(crux.id) : {};
         const mergedCrux = await publishPipeline(get().crux!, get().artifacts || [], {
           messages: get().messages,
           onProgress: (phase) => set({ publishPhase: phase }),
         });
         set({ crux: mergedCrux });
-        void playCue('published', get().crux?.id);
-        // The API declares the crux's schedules when its functions load; ask it
-        // now — and the secrets set here before the first share go with it.
-        void import('@/services/crux-functions').then(
-          async ({ functionFiles, listPublishedFunctions, localSecrets, putRemoteSecret }) => {
-            if (!functionFiles(get().artifacts || []).length) return;
-            for (const [name, value] of Object.entries(localSecrets(mergedCrux.id)))
-              await putRemoteSecret(mergedCrux.id, name, value).catch(() => undefined);
-            await listPublishedFunctions(mergedCrux.id).catch(() => undefined);
-          },
-        );
+        if (hasFunctions) {
+          try {
+            for (const [name, value] of Object.entries(secrets))
+              await putRemoteSecret(mergedCrux.id, name, value);
+            await listPublishedFunctions(mergedCrux.id);
+          } catch {
+            // Do not forward an Axios error that may include a secret request body.
+            throw new Error(
+              'The Crux is published, but Function configuration could not be synchronized. Reconnect and publish again.',
+            );
+          }
+        }
+        void playCue('published', mergedCrux.id);
         return true;
       } catch (err) {
         console.error('[publish] failed:', err);

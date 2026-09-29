@@ -98,11 +98,8 @@ export function getSetting(key: string): string | null {
 
 /** Write a setting to cache + SQLite (async) + localStorage (sync fallback). */
 export function setSetting(key: string, value: string): void {
-  // Secrets never enter the SQLite settings table (it is serialized wholesale
-  // into garden backups/exports) — store in localStorage only. See ai/keys.ts.
   if (isSecretSettingKey(key)) {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
-    return;
+    throw new Error('Secrets must be saved through encrypted credential storage.');
   }
 
   const before = cache.get(key);
@@ -211,7 +208,6 @@ export async function initSettings(): Promise<void> {
 
   ready = true;
 }
-
 
 /** Clear the in-memory cache and remove all cruxgarden: keys from localStorage. */
 export function clearAllSettings(): void {

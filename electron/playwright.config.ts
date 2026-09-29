@@ -4,6 +4,7 @@ const gateSpecs = [
   '**/journeys/*.spec.ts',
   '**/ipc-security.spec.ts',
   '**/secrets.spec.ts',
+  '**/function-secrets.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',
   '**/typst-offline.spec.ts',

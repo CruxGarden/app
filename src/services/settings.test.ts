@@ -77,12 +77,14 @@ describe('Settings secrets exclusion', () => {
 
   it('setSetting refuses to persist a secret to SQLite', async () => {
     await initSettings();
-    setSetting(ANTHROPIC_KEY, 'sk-ant-via-settings');
+    expect(() => setSetting(ANTHROPIC_KEY, 'sk-ant-via-settings')).toThrow(
+      'encrypted credential storage',
+    );
     // Fire-and-forget writes: give the event loop a tick
     await new Promise((r) => setTimeout(r, 10));
 
     expect((await sqliteSettingRows()).has(ANTHROPIC_KEY)).toBe(false);
-    expect(localStorage.getItem(ANTHROPIC_KEY)).toBe('sk-ant-via-settings');
+    expect(localStorage.getItem(ANTHROPIC_KEY)).toBeNull();
   });
 
   it('a garden export after init contains no API key rows', async () => {

@@ -156,6 +156,41 @@ describe('secrets service', () => {
     });
   });
 
+  it.each(['replace', 'delete'] as const)(
+    'a delayed plaintext transfer cannot undo a later %s',
+    async (operation) => {
+      const fake = fakeElectronSecrets();
+      let release!: () => void;
+      let started!: () => void;
+      const transferring = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      installWindow({
+        ...fake.api,
+        set: async (key: string, value: string) => {
+          if (value === 'existing') {
+            started();
+            await blocked;
+          }
+          fake.store.set(key, value);
+        },
+      });
+      localStorage.setItem('key', 'existing');
+      const read = getSecret('key');
+      await transferring;
+      const change =
+        operation === 'replace' ? setSecret('key', 'replacement') : deleteSecret('key');
+      await Promise.resolve();
+      release();
+      await Promise.all([read, change]);
+      expect(await getSecret('key')).toBe(operation === 'replace' ? 'replacement' : null);
+      expect(localStorage.getItem('key')).toBeNull();
+    },
+  );
+
   describe('desktop with keychain unavailable', () => {
     it('reports failure without overwriting either store and allows a later retry', async () => {
       const fake = fakeElectronSecrets(false);
