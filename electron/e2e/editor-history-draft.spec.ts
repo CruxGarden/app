@@ -8,6 +8,8 @@ import { togglePanel } from './panel-helpers';
 test('reading history preserves the live editor draft and undo model without saving history', async () => {
   const { app, page } = await launchApp();
   try {
+    // Editing local files must work without downloading the editor from a CDN.
+    await page.context().setOffline(true);
     await enterGarden(page);
     const id = await createCrux(page, 'Draft and history');
     const meta = await storedCrux(page, id);
@@ -49,6 +51,37 @@ test('reading history preserves the live editor draft and undo model without sav
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect.poll(disk).toBe('Saved beginning with an unsaved ending');
     await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
+  } finally {
+    await app.close();
+  }
+});
+
+test('JSON validation uses the bundled language worker while offline', async () => {
+  const { app, page } = await launchApp();
+  try {
+    await page.context().setOffline(true);
+    await enterGarden(page);
+    const id = await createCrux(page, 'Offline JSON');
+    const [worker] = await Promise.all([
+      page.waitForEvent('worker', {
+        predicate: (candidate) => candidate.url().includes('json.worker'),
+      }),
+      addArtifact(page, 'data.json'),
+    ]);
+    expect(worker.url()).toMatch(/^crux-app:/);
+    const editor = page.locator('.monaco-editor').first();
+    await editor.click();
+    await page.keyboard.type('{"name": }');
+    await expect(editor.locator('.squiggly-error').first()).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type('{"name": "local"}');
+    await expect(editor.locator('.squiggly-error')).toHaveCount(0);
+    await page.keyboard.press('ControlOrMeta+s');
+    const meta = await storedCrux(page, id);
+    await expect
+      .poll(() => readFileSync(join(meta.projectFolder, 'data.json'), 'utf8'))
+      .toBe('{"name": "local"}');
   } finally {
     await app.close();
   }

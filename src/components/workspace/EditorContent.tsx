@@ -7,7 +7,7 @@ import { documentsFor } from '@/services/workspace-documents';
 import { useStore } from 'zustand';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor from '@/lib/monaco-editor';
 
 const FORM_AUTOSAVE_MS = 300;
 import type * as Monaco from 'monaco-editor';

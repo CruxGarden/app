@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.266",
-    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.rf2b648e35a2a.h22256bb7.tgz",
+    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.rb3d0beef1a12.h22256bb7.tgz",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "better-sqlite3": "^12.8.0",
     "chokidar": "^4.0.3",
@@ -51,8 +51,8 @@
     "@electron/rebuild": "^4.0.3",
     "@playwright/test": "^1.62.1",
     "@types/better-sqlite3": "^7.6.13",
-    "electron": "^41.0.2",
-    "electron-builder": "^26.8.1",
+    "electron": "^41.10.7",
+    "electron-builder": "^26.17.0",
     "playwright": "^1.62.1",
     "typescript": "^5.7.0"
   },

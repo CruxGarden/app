@@ -6,6 +6,7 @@ const gateSpecs = [
   '**/native-document-security.spec.ts',
   '**/toolchain-bridge.spec.ts',
   '**/updater-bridge.spec.ts',
+  '**/editor-history-draft.spec.ts',
   '**/garden-membership-bridge.spec.ts',
   '**/www-browser.spec.ts',
 ];

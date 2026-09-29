@@ -40,6 +40,11 @@ and Monaco: both are declared as development dependencies and ship in the app. A
 tools separately as well. A clean audit alone does not establish release readiness. Commit
 both package manifests and lockfiles.
 
+The code editor and its language workers are bundled through `src/lib/monaco-editor.ts`.
+Keep that loader local: the React wrapper's default downloads its own Monaco version from a
+CDN, independently of the package lock. The desktop gate checks offline editing, history,
+undo and JSON validation against the real bundled editor.
+
 Mosaic 6 has a repository patch applied by `postinstall`. Its scoped UUID override uses UUID 11's
 compatible CommonJS `v4()` API, the only UUID API Mosaic calls. This updates the dependency
 without changing persisted panel layouts; Mosaic 7 changes the layout tree and needs a separate
