@@ -25,6 +25,9 @@ permissions:
   contents: write
 
 jobs:
+  native-media:
+    uses: ./.github/workflows/native-media.yml
+
   prepare:
     name: Check version, create draft
     runs-on: ubuntu-latest
@@ -95,7 +98,7 @@ jobs:
 
   mac:
     name: macOS arm64 + x64
-    needs: prepare
+    needs: [prepare, native-media]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -158,6 +161,18 @@ jobs:
           KC=$(ls "$HOME"/Library/Keychains/crux-signing.keychain* | head -1)
           echo "CSC_KEYCHAIN=$KC" >> "$GITHUB_ENV"
           security find-identity -v -p codesigning "$KC"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-darwin-*
+          path: native-media-artifacts
+          merge-multiple: true
+      - name: Restore native binary modes and sources
+        shell: bash
+        run: |
+          mkdir -p electron/.native-tools
+          for archive in native-media-artifacts/*.tar.gz; do
+            tar -xzf "$archive" -C electron/.native-tools
+          done
       - name: Package (both architectures → one latest-mac.yml)
         working-directory: electron
         env:
@@ -182,7 +197,7 @@ jobs:
 
   linux:
     name: Linux x64 (AppImage + deb)
-    needs: prepare
+    needs: [prepare, native-media]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -201,6 +216,18 @@ jobs:
         working-directory: electron
       - run: npm run build:all
         working-directory: electron
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-linux-x64
+          path: native-media-artifacts
+          merge-multiple: true
+      - name: Restore native binary modes and sources
+        shell: bash
+        run: |
+          mkdir -p electron/.native-tools
+          for archive in native-media-artifacts/*.tar.gz; do
+            tar -xzf "$archive" -C electron/.native-tools
+          done
       - name: Package
         working-directory: electron
         env:
@@ -217,7 +244,7 @@ jobs:
 
   windows:
     name: Windows x64 (NSIS)
-    needs: prepare
+    needs: [prepare, native-media]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -253,6 +280,18 @@ jobs:
           else
             echo "No Windows certificate secret: unsigned build"
           fi
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-win32-x64
+          path: native-media-artifacts
+          merge-multiple: true
+      - name: Restore native binary modes and sources
+        shell: bash
+        run: |
+          mkdir -p electron/.native-tools
+          for archive in native-media-artifacts/*.tar.gz; do
+            tar -xzf "$archive" -C electron/.native-tools
+          done
       - name: Package
         working-directory: electron
         shell: bash

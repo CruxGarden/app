@@ -1,7 +1,8 @@
 import { test, expect, _electron as electron } from '@playwright/test';
-import { existsSync, mkdtempSync, realpathSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 /**
  * Packaged-build smoke (opt-in): launches the .app electron-builder produced —
@@ -51,6 +52,28 @@ test.describe('packaged app', () => {
         window.electronAPI!.sqlite.get('SELECT sqlite_version() AS version'),
       );
       expect(database).toEqual({ version: expect.stringMatching(/^\d+\.\d+\.\d+$/) });
+      const nativeTools = await page.evaluate(() => window.electronAPI!.native.tools());
+      const nativeVersion = JSON.parse(
+        readFileSync(join(__dirname, '../scripts/ffmpeg-sources.json'), 'utf8'),
+      ).ffmpeg.version;
+      for (const name of ['ffmpeg', 'ffprobe']) {
+        const tool = nativeTools.find((tool) => tool.tool === name)!;
+        expect(tool.source).toBe('resources');
+        expect(tool.version).toMatch(
+          new RegExp(`^${name} version ${nativeVersion.replaceAll('.', '\\.')}`),
+        );
+        expect(tool.path).toContain('.app/Contents/Resources/bin/');
+        const license = execFileSync(tool.path!, ['-L'], {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        });
+        expect(license).toContain('GNU General Public License');
+        expect(license).not.toContain('not legally redistributable');
+        expect(existsSync(join(dirname(tool.path!), 'corresponding-source.tar.gz'))).toBe(true);
+        expect(readFileSync(join(dirname(tool.path!), 'NOTICE.txt'), 'utf8')).toContain(
+          'GPL-3.0-or-later',
+        );
+      }
       await page.screenshot({ path: 'e2e/.results/packaged-gateway.png' });
     } finally {
       await app.close();

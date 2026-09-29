@@ -1,3 +1,4 @@
+import { nativeFixtureBinary } from './native-binary-fixture';
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -27,7 +28,7 @@ test('the media bench converts with the real tools, and refuses what is outside 
     const folder = (await storedCrux(page, cruxId)).projectFolder as string;
 
     // A source of each kind, made by the bundled ffmpeg — as a person's drop would be.
-    const ffmpeg = join(__dirname, '..', 'node_modules', 'ffmpeg-static', 'ffmpeg');
+    const ffmpeg = nativeFixtureBinary('ffmpeg');
     mkdirSync(join(folder, 'video'), { recursive: true });
     mkdirSync(join(folder, 'images'), { recursive: true });
     execFileSync(ffmpeg, [

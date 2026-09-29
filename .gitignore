@@ -35,3 +35,7 @@ electron/resources/bin/
 # Isolated browser boundary test output
 electron/e2e-browser/.results/
 electron/.web-build/
+
+# Reviewed native source cache and per-target build output
+electron/.native-tools/
+electron/scripts/__pycache__/

@@ -68,6 +68,7 @@ jobs:
       - run: npm ci
       - run: npm ci
         working-directory: electron
+      - uses: ./.github/actions/native-media
       - run: npm run build:all
         working-directory: electron
       - run: npx playwright install chromium
@@ -101,6 +102,7 @@ jobs:
       - run: npm ci
       - run: npm ci
         working-directory: electron
+      - uses: ./.github/actions/native-media
       - run: npm run build:all
         working-directory: electron
       - run: npx playwright install --with-deps chromium
@@ -138,6 +140,7 @@ jobs:
       - run: npm ci
       - run: npm ci
         working-directory: electron
+      - uses: ./.github/actions/native-media
       - run: npm run build:all
         working-directory: electron
       - run: npx playwright test --project=gate

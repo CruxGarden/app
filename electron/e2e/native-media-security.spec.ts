@@ -4,6 +4,25 @@ import { join } from 'node:path';
 import { launchApp } from './launch';
 import { createCrux, enterGarden, storedCrux } from './multi-crux-helpers';
 
+function writeTone(file: string) {
+  const wav = Buffer.alloc(44 + 8000 * 2);
+  wav.write('RIFF');
+  wav.writeUInt32LE(wav.length - 8, 4);
+  wav.write('WAVEfmt ', 8);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(8000, 24);
+  wav.writeUInt32LE(16000, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write('data', 36);
+  wav.writeUInt32LE(wav.length - 44, 40);
+  for (let i = 0; i < 8000; i++)
+    wav.writeInt16LE(Math.round(Math.sin((i * Math.PI * 2 * 440) / 8000) * 4000), 44 + i * 2);
+  writeFileSync(file, wav);
+}
+
 // All outside files are disposable canaries beside an isolated test Garden.
 // No real profile files, network endpoints or capture devices are involved.
 test('FFmpeg refuses files hidden in filter arguments and symlinked inputs', async () => {
@@ -164,23 +183,7 @@ test('admitted native recipes produce real video, frames, audio, GIFs and raster
         join(folder, '.crux/render/clip', `f${String(i).padStart(4, '0')}.ppm`),
         picture,
       );
-    // A tiny PCM fixture keeps this independent of unrestricted CLI generators.
-    const wav = Buffer.alloc(44 + 8000 * 2);
-    wav.write('RIFF');
-    wav.writeUInt32LE(wav.length - 8, 4);
-    wav.write('WAVEfmt ', 8);
-    wav.writeUInt32LE(16, 16);
-    wav.writeUInt16LE(1, 20);
-    wav.writeUInt16LE(1, 22);
-    wav.writeUInt32LE(8000, 24);
-    wav.writeUInt32LE(16000, 28);
-    wav.writeUInt16LE(2, 32);
-    wav.writeUInt16LE(16, 34);
-    wav.write('data', 36);
-    wav.writeUInt32LE(wav.length - 44, 40);
-    for (let i = 0; i < 8000; i++)
-      wav.writeInt16LE(Math.round(Math.sin((i * Math.PI * 2 * 440) / 8000) * 4000), 44 + i * 2);
-    writeFileSync(join(folder, 'tone.wav'), wav);
+    writeTone(join(folder, 'tone.wav'));
     const runs = [
       ['-y', '-i', 'tone.wav', '-ac', '1', '-c:a', 'aac', 'mono.m4a'],
       ['-y', '-i', '.crux/render/clip/f0000.ppm', '-quality', '82', 'fallback.webp'],
@@ -425,6 +428,75 @@ test('standalone Typst confines include paths and does not accept a caller-selec
     );
     expect(failed.code).not.toBe(0);
     expect(readFileSync(join(folder, 'preserved.pdf'), 'utf8')).toBe('Previous PDF bytes.');
+  } finally {
+    await app.close();
+  }
+});
+
+test('the bundled video and audio codecs round-trip through native IPC', async () => {
+  test.setTimeout(180_000);
+  const { app, page } = await launchApp();
+  try {
+    await enterGarden(page);
+    const cruxId = await createCrux(page, 'Codec round trips');
+    const folder = (await storedCrux(page, cruxId)).projectFolder as string;
+    writeFileSync(
+      join(folder, 'frame.ppm'),
+      Buffer.concat([Buffer.from('P6\n64 64\n255\n'), Buffer.alloc(64 * 64 * 3, 96)]),
+    );
+    writeTone(join(folder, 'tone.wav'));
+    const run = async (args: string[]) => {
+      const result = await page.evaluate(
+        ({ cruxId, args }) => window.electronAPI!.native.run({ cruxId, tool: 'ffmpeg', args }),
+        { cruxId, args },
+      );
+      expect(result.code, `${args.join(' ')}\n${result.stderrTail}`).toBe(0);
+    };
+    for (const [codec, extension] of [
+      ['libx264', 'mp4'],
+      ['libx265', 'mp4'],
+      ['libvpx', 'webm'],
+      ['libvpx-vp9', 'webm'],
+      ['libaom-av1', 'mkv'],
+      ['libaom-av1', 'avif'],
+      ['libwebp', 'webp'],
+    ]) {
+      const output = `${codec}.${extension}`;
+      await run([
+        '-y',
+        '-i',
+        'frame.ppm',
+        '-frames:v',
+        '1',
+        '-c:v',
+        codec,
+        '-pix_fmt',
+        'yuv420p',
+        output,
+      ]);
+      await run(['-y', '-i', output, '-frames:v', '1', `${output}.png`]);
+      expect(
+        readFileSync(join(folder, `${output}.png`))
+          .subarray(1, 4)
+          .toString(),
+      ).toBe('PNG');
+    }
+    for (const [codec, extension] of [
+      ['aac', 'm4a'],
+      ['libmp3lame', 'mp3'],
+      ['libopus', 'opus'],
+      ['libvorbis', 'ogg'],
+      ['flac', 'flac'],
+    ]) {
+      const output = `${codec}.${extension}`;
+      await run(['-y', '-i', 'tone.wav', '-c:a', codec, output]);
+      await run(['-y', '-i', output, '-c:a', 'pcm_s16le', `${output}.wav`]);
+      expect(
+        readFileSync(join(folder, `${output}.wav`))
+          .subarray(0, 4)
+          .toString(),
+      ).toBe('RIFF');
+    }
   } finally {
     await app.close();
   }

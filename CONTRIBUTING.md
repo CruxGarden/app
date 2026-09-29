@@ -7,7 +7,7 @@ Thanks for helping. This repo is the desktop app (Electron) and the web app it w
 - Be kind; see `CODE_OF_CONDUCT.md`.
 - Security issues go to keeper@crux.garden, not to a public issue (`SECURITY.md`).
 - Vocabulary matters: use the glossary terms (Crux, Artifact, Collaboration, Growth, Mood, Project
-  Folder, Publish, Plan). The glossary (`CONTEXT.md`) and the Architecture Decision Records
+  Folder, Publish, Plan). The glossary (`NEXT-AGENT-HANDOFF.md`) and the Architecture Decision Records
   (`docs/adr/0001-…` onwards) live one directory above this repo in the Crux Garden workspace
   checkout, not in this repository and not (yet) at a public URL — ask if you need a copy. Propose
   a new ADR rather than silently reversing one.
@@ -20,8 +20,35 @@ Use Node 22.12 or later for development (the repository's `.nvmrc` selects Node 
 ```bash
 nvm use                      # the version in .nvmrc
 npm install && npm run dev   # web app on :8080
-cd electron && npm install && npm run dev   # desktop shell against the dev server
+cd electron && nvm use && npm install && npm run dev   # desktop shell against the dev server
 ```
+
+## Native media binaries
+
+Build the matched FFmpeg/ffprobe pair once with `npm run binaries:build` inside
+`electron/`. This takes several minutes and needs Python 3.12+, a C/C++ compiler,
+make, CMake, pkg-config, git and nasm on x86. On macOS, install the Xcode command
+line tools plus `brew install cmake pkg-config nasm`. Linux uses its distribution's
+build tools; Windows builds use an MSYS2 UCRT64 shell (see the native-media CI action).
+The build targets the machine's architecture. It does not modify system tools.
+
+The source lock is `electron/scripts/ffmpeg-sources.json`; the straight-line build
+recipe is `electron/scripts/build-ffmpeg.py`. Downloads are checked against SHA-256
+before extraction. Unmodified upstream sources and this recipe accompany the binaries
+in `corresponding-source.tar.gz`, with license notices and a build receipt. The receipt
+records pre-signing input checksums; platform signing can change the packaged executables. GPL codecs
+make these separate executables GPL-3.0-or-later. Nonfree builds are refused.
+
+Development reads `electron/.native-tools/<platform>-<arch>/`; build output and source
+caches are ignored by Git. For an intentional rebuild, use a fresh `--output` directory,
+verify it, then replace only the old generated target directory. Packaging validates the
+current recipe, every required file, CPU architecture and notices through `beforePack`;
+this also covers direct electron-builder commands. A missing or stale target fails the
+build. CI builds each release architecture natively, then packages those artifacts.
+
+Source hashes are integrity pins, not proof of an upstream identity. Review upstream
+provenance, license changes and security updates when editing the lock; run both
+verification gates and actual native-media/import/render journeys after rebuilding.
 
 ## The one gate
 
@@ -29,7 +56,9 @@ cd electron && npm install && npm run dev   # desktop shell against the dev serv
 build. UI behaviour is covered by Playwright against the real desktop app:
 
 ```bash
-cd electron && npm run build:all && npm run test:e2e
+cd electron && nvm use
+npm run binaries:build        # first setup only; see rebuild instructions above
+npm run build:all && npm run test:e2e
 ```
 
 Tests run isolated from your real garden (throwaway userData + garden root). A mock API

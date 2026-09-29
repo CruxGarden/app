@@ -1,3 +1,4 @@
+import { nativeFixtureBinary } from './native-binary-fixture';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
@@ -20,7 +21,7 @@ test('a folder of frames becomes a video from the Artifacts pane', async () => {
     const cruxId = await createCrux(page, 'Frames');
     const folder = (await storedCrux(page, cruxId)).projectFolder as string;
     // Thirty test-pattern frames, written by the shell's own ffmpeg (as a page or an agent would).
-    const ffmpeg = join(__dirname, '..', 'node_modules', 'ffmpeg-static', 'ffmpeg');
+    const ffmpeg = nativeFixtureBinary('ffmpeg');
     mkdirSync(join(folder, 'frames'), { recursive: true });
     execFileSync(ffmpeg, [
       '-y',

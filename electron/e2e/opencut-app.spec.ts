@@ -1,3 +1,4 @@
+import { nativeFixtureBinary } from './native-binary-fixture';
 import {
   test,
   expect,
@@ -15,7 +16,7 @@ import type { DownloadItem, Event } from 'electron';
 declare const gardenEditor: any;
 declare const gardenSession: any;
 
-const ffmpeg = resolve(__dirname, '../node_modules/ffmpeg-static/ffmpeg');
+const ffmpeg = nativeFixtureBinary('ffmpeg');
 const validate = (file: string) =>
   execFileSync(
     process.execPath,

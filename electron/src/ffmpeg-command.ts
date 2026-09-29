@@ -5,8 +5,9 @@ import { mediaPath, nativeArguments } from './media-paths';
 // formats (concat, HLS, DASH, lavfi, SVG, …) must never be available to sniffing.
 const formats =
   'mov,matroska,avi,wav,aiff,mp3,aac,flac,ogg,gif,image2,png_pipe,jpeg_pipe,webp_pipe,bmp_pipe,tiff_pipe,ppm_pipe';
+// FFmpeg checks decoder implementation names here (for example mp3float).
 const codecs =
-  'h264,hevc,vp8,vp9,av1,mpeg4,mpeg2video,mjpeg,png,webp,tiff,bmp,gif,ppm,pgm,pbm,pam,aac,mp3,flac,opus,vorbis,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,pcm_s16be,pcm_s24be,pcm_s32be,alac';
+  'h264,hevc,vp8,vp9,av1,libaom-av1,mpeg4,mpeg2video,mjpeg,png,webp,tiff,bmp,gif,ppm,pgm,pbm,pam,aac,mp3,mp3float,flac,opus,vorbis,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,pcm_s16be,pcm_s24be,pcm_s32be,alac';
 const inputPolicy = [
   '-protocol_whitelist',
   'file',

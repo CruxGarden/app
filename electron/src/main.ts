@@ -36,14 +36,6 @@ const { AgentProvider } = require('./agent-provider');
 const { AgentRuntimeRegistry, AgentToolBroker } = require('./agent-runtime');
 const { CodexProvider } = require('./codex-provider');
 
-// ffmpeg-static provides a bundled ffmpeg binary
-let ffmpegPath: string;
-try {
-  ffmpegPath = require('ffmpeg-static');
-} catch {
-  ffmpegPath = '';
-}
-
 let mainWindow: any = null;
 const gardenBridge = gardenIpc(
   () => mainWindow,
@@ -187,9 +179,7 @@ if (process.env.CRUX_USER_DATA) {
 function debugLog(msg: string) {
   appLog.info(msg);
 }
-debugLog(
-  `Starting Crux Garden ${app.getVersion()}. isDev=${isDev}, isPackaged=${app.isPackaged}, ffmpeg=${ffmpegPath}`,
-);
+debugLog(`Starting Crux Garden ${app.getVersion()}. isDev=${isDev}, isPackaged=${app.isPackaged}`);
 
 function getDbPath(): string {
   const userDataPath = app.getPath('userData');
@@ -1521,9 +1511,15 @@ async function setupIpc() {
     }
   });
 
-  fromGarden('ffmpeg:available', () => {
-    return !!(ffmpegPath && fs.existsSync(ffmpegPath));
-  });
+  const ffmpegBinary = () => {
+    const { mediaToolPath } = require('./media-binaries') as typeof import('./media-binaries');
+    return mediaToolPath(
+      'ffmpeg',
+      app.isPackaged ? process.resourcesPath : null,
+      app.getPath('userData'),
+    );
+  };
+  fromGarden('ffmpeg:available', async () => !!(await ffmpegBinary()));
 
   fromGarden(
     'ffmpeg:transcode',
@@ -1535,7 +1531,8 @@ async function setupIpc() {
         isAudio: boolean;
       },
     ) => {
-      if (!ffmpegPath || !fs.existsSync(ffmpegPath)) {
+      const ffmpegPath = await ffmpegBinary();
+      if (!ffmpegPath) {
         throw new Error('FFmpeg not available');
       }
 
@@ -1553,6 +1550,7 @@ async function setupIpc() {
           // Audio: transcode to AAC M4A
           const outputFile = path.join(tmpDir, 'output.m4a');
           await runFfmpeg(
+            ffmpegPath,
             ['-i', inputFile, '-c:a', 'aac', '-b:a', '192k', '-y', outputFile],
             _e.sender,
           );
@@ -1565,6 +1563,7 @@ async function setupIpc() {
           // Video: transcode to H.264 MP4 with faststart
           const outputFile = path.join(tmpDir, 'output.mp4');
           await runFfmpeg(
+            ffmpegPath,
             [
               '-i',
               inputFile,
@@ -1603,7 +1602,7 @@ async function setupIpc() {
   );
 }
 
-function runFfmpeg(args: string[], sender: any): Promise<void> {
+function runFfmpeg(ffmpegPath: string, args: string[], sender: any): Promise<void> {
   return new Promise((resolve, reject) => {
     const proc = execFile(ffmpegPath, args, { maxBuffer: 50 * 1024 * 1024 });
 

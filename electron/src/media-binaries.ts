@@ -1,20 +1,6 @@
-/**
- * The media binaries, resolved per platform (MAKING-THE-AD-PARITY gap 13):
- * ffmpeg, ffprobe and ImageMagick, found in this order —
- *
- *   1. bundled with the app — `ffmpeg-static` and `ffprobe-static` as npm
- *      packages, or a binary staged at `resources/bin/<platform>-<arch>/`
- *      by `scripts/stage-binaries.mjs` (pandoc today),
- *   2. installed by the app at the person's request, under
- *      `<userData>/tools/<platform>-<arch>/` (see `installMediaTool`),
- *   3. the platform's usual install directories (Homebrew on macOS, the
- *      distribution's bin on Linux, Program Files on Windows),
- *   4. whatever `PATH` holds.
- *
- * Every candidate is checked for existence and executability before it is
- * used, the answer is cached, and a missing tool is reported rather than
- * thrown: a garden without ImageMagick still converts video.
- */
+/** Native tool resolution: packaged resources, development builds, requested
+ * installs, then the person's system tools. FFmpeg/ffprobe share one source build;
+ * their provenance and corresponding sources are enforced before packaging. */
 import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -92,10 +78,10 @@ function usable(candidate: string): boolean {
   }
 }
 
-/** A binary packaging dropped beside the app: `resources/bin/<platform>-<arch>/<name>`. */
+/** A binary packaging dropped beside the app: `resources/bin/<name>`. */
 function fromResources(tool: MediaTool, resourcesPath: string | null): string | null {
   if (!resourcesPath) return null;
-  const dir = path.join(resourcesPath, 'bin', `${process.platform}-${process.arch}`);
+  const dir = path.join(resourcesPath, 'bin');
   for (const name of candidateNames(tool)) {
     const candidate = path.join(dir, name);
     if (usable(candidate)) return candidate;
@@ -114,22 +100,17 @@ function fromInstalled(tool: MediaTool, userDataPath: string | null): string | n
   return null;
 }
 
-/** The npm packages that carry a per-platform binary, when they are installed. */
-function fromBundle(tool: MediaTool): string | null {
-  const load = (id: string): string | null => {
-    try {
-      const mod = require(id) as string | { path?: string };
-      const p = typeof mod === 'string' ? mod : (mod?.path ?? '');
-      // In a packaged app the binary is unpacked beside the asar.
-      const real = p.replace('app.asar', 'app.asar.unpacked');
-      return usable(real) ? real : usable(p) ? p : null;
-    } catch {
-      return null;
-    }
-  };
-  if (tool === 'ffmpeg') return load('ffmpeg-static');
-  if (tool === 'ffprobe') return load('ffprobe-static');
-  return null;
+/** Development uses the same binaries that the packaging gate admits. */
+function fromDevelopmentBuild(tool: MediaTool): string | null {
+  if (tool !== 'ffmpeg' && tool !== 'ffprobe') return null;
+  const candidate = path.join(
+    __dirname,
+    '..',
+    '.native-tools',
+    `${process.platform}-${process.arch}`,
+    exe(tool),
+  );
+  return usable(candidate) ? candidate : null;
 }
 
 function fromSystem(tool: MediaTool): string | null {
@@ -169,7 +150,7 @@ export async function mediaTools(
   if (cache && !refresh) return [...cache.values()];
   const found = new Map<MediaTool, ToolInfo>();
   for (const tool of MEDIA_TOOLS) {
-    let binary = fromBundle(tool);
+    let binary = resourcesPath ? null : fromDevelopmentBuild(tool);
     let source: ToolInfo['source'] = binary ? 'bundled' : 'missing';
     if (!binary) {
       binary = fromResources(tool, resourcesPath);

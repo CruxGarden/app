@@ -95,7 +95,7 @@ test.describe('starter cruxes', () => {
       await expect(addMedia).toBeVisible({ timeout: 30_000 });
       await expect(page.getByRole('button', { name: /^(\S+ )?New item$/i })).toBeVisible();
 
-      // A WAV goes through ffmpeg (bundled ffmpeg-static) and lands as M4A
+      // A WAV goes through ffmpeg (the bundled source build) and lands as M4A
       await page.getByTestId('add-media-input').first().setInputFiles({
         name: 'Garden Loop.wav',
         mimeType: 'audio/wav',

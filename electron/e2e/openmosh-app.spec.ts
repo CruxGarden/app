@@ -1,3 +1,4 @@
+import { nativeFixtureBinary } from './native-binary-fixture';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -187,7 +188,7 @@ for (const mode of ['Editor', 'Slideshow'] as const)
     const run = await launchApp();
     try {
       const { execFileSync } = await import('node:child_process');
-      const ffmpeg = (await import('ffmpeg-static')).default;
+      const ffmpeg = nativeFixtureBinary('ffmpeg');
       const video = join(run.dir, 'clip.webm'),
         audio = join(run.dir, 'song.wav');
       execFileSync(
