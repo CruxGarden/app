@@ -64,7 +64,11 @@
       "output": "release"
     },
     "files": [
-      "dist/**/*"
+      "dist/**/*",
+      "!dist/selftest.js",
+      "!dist/selftest.js.map",
+      "!dist/sqlite-native.js",
+      "!dist/sqlite-native.js.map"
     ],
     "asarUnpack": [
       "dist/mcp-stdio.js",
@@ -78,10 +82,6 @@
       {
         "from": "../dist",
         "to": "app"
-      },
-      {
-        "from": "../src/services/sqlite/schema.sql",
-        "to": "schema.sql"
       },
       {
         "from": "resources/bin/${arch}",

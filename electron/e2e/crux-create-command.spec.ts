@@ -76,7 +76,7 @@ test('concurrent creation skips existing folders and symlinks, retains prepared 
     const kept = await launch.app.evaluate(() => {
       const fs = process.getBuiltinModule('fs');
       const path = process.getBuiltinModule('path');
-      const root = process.env.CRUX_GARDEN_ROOT!;
+      const root = path.join(process.env.CRUX_TEST_PROFILE!, 'garden');
       fs.mkdirSync(root, { recursive: true });
       const existing = path.join(root, 'parallel');
       fs.mkdirSync(existing);
@@ -121,7 +121,7 @@ test('concurrent creation skips existing folders and symlinks, retains prepared 
       const fs = process.getBuiltinModule('fs');
       const path = process.getBuiltinModule('path');
       fs.writeFileSync(
-        path.join(process.env.CRUX_GARDEN_ROOT!, 'recover', 'retained.txt'),
+        path.join(path.join(process.env.CRUX_TEST_PROFILE!, 'garden'), 'recover', 'retained.txt'),
         'Retained after rollback',
       );
     });
@@ -167,7 +167,11 @@ test('concurrent creation skips existing folders and symlinks, retains prepared 
         return [
           fs.readFileSync(path.join(kept, 'private.txt'), 'utf8'),
           fs.readFileSync(
-            path.join(process.env.CRUX_GARDEN_ROOT!, 'recover', 'retained.txt'),
+            path.join(
+              path.join(process.env.CRUX_TEST_PROFILE!, 'garden'),
+              'recover',
+              'retained.txt',
+            ),
             'utf8',
           ),
         ];

@@ -26,8 +26,7 @@ export async function launchApp(
   for (const [k, v] of Object.entries(process.env)) {
     if (v !== undefined && k !== 'ELECTRON_RUN_AS_NODE') env[k] = v;
   }
-  env.CRUX_USER_DATA = join(dir, 'userData');
-  env.CRUX_GARDEN_ROOT = join(dir, 'garden');
+  env.CRUX_TEST_PROFILE = dir;
   // Silent by default: the soundscape and cues are distracting while suites run.
   // Tests about sound pass `sound: true`.
   env.CRUX_SILENT = opts.sound ? '0' : '1';
@@ -76,7 +75,7 @@ export async function launchApp(
     // an uncaught error before the window exists lands there, not on stderr.
     let appLog = '(no main.log written)';
     try {
-      appLog = readFileSync(join(env.CRUX_USER_DATA, 'logs', 'main.log'), 'utf8').slice(-4000);
+      appLog = readFileSync(join(dir, 'userData', 'logs', 'main.log'), 'utf8').slice(-4000);
     } catch {
       /* the app never got as far as opening its log */
     }

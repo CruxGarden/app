@@ -26,8 +26,21 @@ test.describe('packaged app', () => {
     const env: Record<string, string> = {};
     for (const [k, v] of Object.entries(process.env))
       if (v !== undefined && k !== 'ELECTRON_RUN_AS_NODE') env[k] = v;
-    env.CRUX_USER_DATA = join(dir, 'userData');
-    env.CRUX_GARDEN_ROOT = join(dir, 'garden');
+    env.CRUX_TEST_PROFILE = dir;
+    env.CRUX_USER_DATA = join(dir, 'ignored-userData');
+    env.CRUX_SELFTEST = '1';
+    env.CRUX_AI_MOCK = '1';
+    env.CRUX_AGENT_MOCK = '1';
+    env.CRUX_FAKE_MEDIA = '1';
+    env.CRUX_DEV_SERVER = 'http://127.0.0.1:1';
+    env.CRUX_API_URL = 'http://127.0.0.1:1';
+    env.CRUX_MEDIA_API = 'http://127.0.0.1:1';
+    env.CRUX_V2 = '1';
+    env.CRUX_AI = 'on';
+    env.CRUX_SILENT = '1';
+    env.CRUX_PLAIN_TITLES = '1';
+    env.CRUX_AUTOBACKUP_QUIET_MS = '1';
+    env.CRUX_GARDEN_ROOT = join(dir, 'ignored-garden');
     const app = await electron.launch({ executablePath: exe, env });
     try {
       const page = await app.firstWindow();
@@ -47,7 +60,46 @@ test.describe('packaged app', () => {
       expect(info.packaged).toBe(true);
       expect(info.name).toBe('Crux Garden');
       expect(info.userData).toBe(join(dir, 'userData'));
+      expect(await page.evaluate(() => window.electronAPI!.desktop.config())).toMatchObject({
+        gardenRoot: join(dir, 'garden'),
+      });
+      expect(existsSync(join(dir, 'ignored-userData'))).toBe(false);
+      expect(existsSync(join(dir, 'ignored-garden'))).toBe(false);
+      const fixtureFiles = await app.evaluate(({ app }) => {
+        const fs = process.getBuiltinModule('fs');
+        const path = process.getBuiltinModule('path');
+        return ['dist/selftest.js', 'dist/sqlite-native.js', 'e2e/agent-mock.cjs'].filter((file) =>
+          fs.existsSync(path.join(app.getAppPath(), file)),
+        );
+      });
+      expect(fixtureFiles).toEqual([]);
+
       expect(existsSync(join(dir, 'userData', 'cruxgarden.db'))).toBe(true);
+      const launch = await page.evaluate(async () => {
+        const api = window.electronAPI!;
+        let write = 'accepted';
+        try {
+          await api.sqlite.run("INSERT INTO settings VALUES ('packaged-fixture', 'refused')");
+        } catch (error) {
+          write = String(error);
+        }
+        return { config: api.config, test: api.test, write };
+      });
+      expect.soft(launch.write).toContain('Raw SQL writes are closed');
+      expect.soft(launch.config).toEqual({ apiUrl: null, v2: false });
+      expect.soft(launch.test).toEqual({
+        mediaApiBase: null,
+        aiMock: false,
+        agentMock: false,
+        silent: false,
+        ai: null,
+        plainTitles: false,
+        autoBackupQuietMs: null,
+      });
+      const fakeMedia = await app.evaluate(({ app }) =>
+        app.commandLine.hasSwitch('use-fake-ui-for-media-stream'),
+      );
+      expect.soft(fakeMedia).toBe(false);
       const database = await page.evaluate(() =>
         window.electronAPI!.sqlite.get('SELECT sqlite_version() AS version'),
       );

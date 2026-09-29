@@ -23,16 +23,14 @@ for (const profilePath of ['direct', 'alias'] as const) {
         await expect(dialog).not.toBeVisible();
       }
       const alias = join(launch.dir, 'profile-alias');
-      symlinkSync(join(launch.dir, 'userData'), alias, 'junction');
+      symlinkSync(launch.dir, alias, 'junction');
       const host = await launch.app.evaluate(({ app, BrowserWindow }) => {
         BrowserWindow.getAllWindows()[0].hide();
         return { executable: process.execPath, packaged: app.isPackaged };
       });
       const childEnv: NodeJS.ProcessEnv = {
         ...process.env,
-        CRUX_USER_DATA: profilePath === 'alias' ? alias : join(launch.dir, 'userData'),
-        // Even a failed handoff must stay inside the disposable Garden.
-        CRUX_GARDEN_ROOT: join(launch.dir, 'garden'),
+        CRUX_TEST_PROFILE: profilePath === 'alias' ? alias : launch.dir,
         CRUX_SILENT: '1',
       };
       delete childEnv.ELECTRON_RUN_AS_NODE;

@@ -1,3 +1,4 @@
+import { readLaunchSettings } from './launch-settings';
 import type { GraphSelection, PrivateGraphImport } from '@cruxgarden/local-api';
 import type {
   LocalWorkingCopyCreate,
@@ -39,11 +40,9 @@ const { AgentProvider } = require('./agent-provider');
 const { AgentRuntimeRegistry, AgentToolBroker } = require('./agent-runtime');
 const { CodexProvider } = require('./codex-provider');
 
+const launchSettings = readLaunchSettings(app.isPackaged);
 let mainWindow: any = null;
-const gardenBridge = gardenIpc(
-  () => mainWindow,
-  app.isPackaged ? undefined : process.env.CRUX_DEV_SERVER,
-);
+const gardenBridge = gardenIpc(() => mainWindow, launchSettings.devServer);
 const fromGarden = gardenBridge.handle;
 // Docked mode (GARDEN-SCHEDULER-PLAN): closing the window hides it; the app
 // lives on in the menu bar until Quit. `quitting` tells the close handler the
@@ -132,16 +131,16 @@ const isDev = !app.isPackaged;
 // ~/Library/Application Support/Crux Garden — where users' gardens live from the
 // first release on. Dev keeps Electron's default (the package name) so a dev
 // database never collides with the installed app's. The name is set before any
-// getPath() call so both paths are stable. CRUX_USER_DATA overrides it so
+// getPath() call so both paths are stable. CRUX_TEST_PROFILE isolates it so
 // automated UI tests (Playwright) run against a throwaway database.
 if (app.isPackaged) app.setName('Crux Garden');
 // Test-only (read like the other CRUX_* knobs): Chromium's fake camera and microphone, and no
 // media prompts, so a recording journey runs without hardware or a permission dialog.
-if (process.env.CRUX_FAKE_MEDIA) {
+if (launchSettings.fakeMedia) {
   app.commandLine.appendSwitch('use-fake-device-for-media-stream');
   app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
 }
-const requestedUserData = process.env.CRUX_USER_DATA || app.getPath('userData');
+const requestedUserData = launchSettings.userData || app.getPath('userData');
 fs.mkdirSync(requestedUserData, { recursive: true });
 // A symlink/path alias must not turn the same profile into a second owner.
 const userDataPath = fs.realpathSync(requestedUserData);
@@ -164,13 +163,13 @@ app.on('second-instance', () => {
 // Garden). Dev and isolated test runs write beside their own userData so they
 // never share a main.log with the installed app. Always on, never sent (ADR 0008).
 const logsDir =
-  isDev || process.env.CRUX_USER_DATA ? path.join(userDataPath, 'logs') : app.getPath('logs');
+  isDev || launchSettings.userData ? path.join(userDataPath, 'logs') : app.getPath('logs');
 const appLog = new AppLog(logsDir);
 appLog.attach(process, app);
 // Isolated runs (Playwright, CI) have nobody to dismiss Electron's error dialog:
 // an uncaught error before the window exists would sit there until the test
 // times out with nothing on stderr. Say it and exit instead.
-if (process.env.CRUX_USER_DATA) {
+if (launchSettings.testing) {
   const fatal = (kind: string) => (err: unknown) => {
     console.error(`[main] ${kind}: ${(err as Error)?.stack || String(err)}`);
     app.exit(1);
@@ -265,6 +264,9 @@ function createWindow() {
     trafficLightPosition: { x: 12, y: 12 },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      additionalArguments: [
+        '--crux-launch-settings=' + encodeURIComponent(JSON.stringify(launchSettings.renderer)),
+      ],
       contextIsolation: true,
       nodeIntegration: false,
       // Schedules tick in the window; a hidden window in docked mode must
@@ -305,7 +307,7 @@ function createWindow() {
   installWorkspacePermissions(
     mainWindow,
     (origin) => previewServer?.ownerForOrigin(origin) ?? devServers?.ownerForOrigin(origin),
-    app.isPackaged ? undefined : process.env.CRUX_DEV_SERVER,
+    launchSettings.devServer,
   );
   let cyclingWorkspaces = false;
   mainWindow.webContents.on('before-input-event', (event: any, input: any) => {
@@ -368,8 +370,7 @@ function createWindow() {
   // window anywhere else would hand `electronAPI` — BYOK secrets, raw SQL,
   // filesystem access, `pnpm dlx` — to that page. Nothing may navigate the
   // shell: in-app routing is client-side, and real links open in the browser.
-  const isAppUrl = (target: string) =>
-    isGardenUrl(target, app.isPackaged ? undefined : process.env.CRUX_DEV_SERVER);
+  const isAppUrl = (target: string) => isGardenUrl(target, launchSettings.devServer);
 
   mainWindow.webContents.on('will-navigate', (event: any, target: string) => {
     if (!isAppUrl(target)) event.preventDefault();
@@ -385,7 +386,7 @@ function createWindow() {
 
   // Default: serve the built web app from dist/ (bundled resources when
   // packaged). A Vite dev server is opt-in via CRUX_DEV_SERVER for HMR work.
-  const devServerUrl = app.isPackaged ? undefined : process.env.CRUX_DEV_SERVER;
+  const devServerUrl = launchSettings.devServer;
   if (devServerUrl) {
     debugLog(`Loading from dev server: ${devServerUrl}`);
     mainWindow.loadURL(devServerUrl);
@@ -522,7 +523,7 @@ async function setupIpc() {
 
   // Raw SQL is a read path for the app and a fixture path for isolated test
   // profiles. Every write the app makes is a named command of the API owner.
-  const testProfile = !!process.env.CRUX_USER_DATA;
+  const testProfile = launchSettings.testing;
   fromGarden(
     'sqlite:run',
     (event: Electron.IpcMainInvokeEvent, sql: string, params?: unknown[]) => {
@@ -597,7 +598,7 @@ async function setupIpc() {
   fromGarden('localai:detect', () => detectLocalAi());
 
   // ── Project Folders (ADR 0001) ──────────────────────────────
-  const desktopConfig = new DesktopConfig(app.getPath('userData'));
+  const desktopConfig = new DesktopConfig(app.getPath('userData'), launchSettings.gardenRoot);
   const projects = new ProjectFolders(desktopConfig);
   localDb.setProjectionHost(
     (folder: string, files: import('@cruxgarden/local-api').FileEntry[]) => {
@@ -968,7 +969,7 @@ async function setupIpc() {
   fromGarden('updates:download', () => updater.download());
   fromGarden('updates:install', () => updater.install());
   fromGarden('updates:set-auto', (_e: any, on: boolean) => updater.setAutoCheck(!!on));
-  if (!process.env.CRUX_USER_DATA) updater.scheduleLaunchCheck();
+  if (!launchSettings.testing) updater.scheduleLaunchCheck();
 
   // ── Agent Host (ADR 0013): one MCP server per switched-on crux ──────
   // Servers live here; every tool call is forwarded to the renderer, which
@@ -1376,7 +1377,7 @@ async function setupIpc() {
     },
     log: debugLog,
     version: app.getVersion(),
-    mock: process.env.CRUX_AGENT_MOCK === '1',
+    mock: launchSettings.renderer.test.agentMock,
   };
   agentProvider = new AgentRuntimeRegistry([
     new AgentProvider(runtimeDeps),
@@ -1627,7 +1628,7 @@ const startup: Promise<void> = app.whenReady().then(async () => {
   if (quitting) return;
 
   // Integration self-test: CRUX_SELFTEST=1 npx electron .  (see selftest.ts)
-  if (process.env.CRUX_SELFTEST) {
+  if (launchSettings.selfTest) {
     const { runSelfTest } = require('./selftest');
     runSelfTest({
       app,

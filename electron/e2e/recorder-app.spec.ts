@@ -1,7 +1,7 @@
 import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page, type ElectronApplication } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
@@ -39,7 +39,7 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
   test.setTimeout(12 * 60_000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1', CRUX_FAKE_MEDIA: '1' } });
   await consentToFakeCamera(first.app);
-  const evidence = resolve(__dirname, '../../docs/recorder');
+  const evidence = test.info().outputDir;
   mkdirSync(evidence, { recursive: true });
   const archive = join(first.dir, 'recordings.crux');
   let folder = '';

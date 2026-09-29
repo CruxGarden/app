@@ -801,12 +801,12 @@ export interface ElectronBridge {
   agent: AgentProviderBridge;
   /** The garden's configuration as launched (ADR 0049). */
   config: {
-    /** CRUX_API_URL — pins the API address for this launch; null lets the garden's setting decide. */
+    /** Development CRUX_API_URL — pins the API address for this launch; null lets the garden's setting decide. */
     apiUrl: string | null;
-    /** CRUX_V2=1 — shows the v2 features (gardens with people) in a v1 build; never set for a release. */
+    /** Development CRUX_V2=1 — shows v2 features; packaged builds ignore it. */
     v2: boolean;
   };
-  /** Test-only overrides, read from the environment the shell was launched with. */
+  /** Test overrides resolved by main; always inert in packaged builds. */
   test: {
     /** CRUX_MEDIA_API — Find media's catalogues and files come from this base instead of the public services. */
     mediaApiBase: string | null;

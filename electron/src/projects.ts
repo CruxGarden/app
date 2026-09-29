@@ -52,14 +52,15 @@ export class DesktopConfig {
   private filePath: string;
   private data: DesktopConfigData | null = null;
 
-  constructor(userDataPath: string) {
+  constructor(
+    userDataPath: string,
+    private initialGardenRoot?: string,
+  ) {
     this.filePath = path.join(userDataPath, 'desktop-config.json');
   }
 
   private defaults(): DesktopConfigData {
-    // CRUX_GARDEN_ROOT: test isolation — UI tests must not create folders in
-    // the developer's real garden.
-    const root = process.env.CRUX_GARDEN_ROOT || path.join(os.homedir(), 'CruxGarden');
+    const root = this.initialGardenRoot || path.join(os.homedir(), 'CruxGarden');
     return { gardenRoot: root, knownRoots: [root], autoUpdate: true };
   }
 

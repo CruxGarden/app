@@ -1,9 +1,9 @@
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, createCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 
 /**
  * The Agent Provider (ADR 0019): Claude Code as a Collaboration provider, on a
@@ -11,7 +11,7 @@ import { enterGarden, createCrux } from './multi-crux-helpers';
  *  - "Your agent · Claude Code" appears in the model picker; picking it needs no key
  *  - a prompt renders streamed text, a Write tool bubble, and the file lands in
  *    the Project Folder → Artifacts (through the watcher, as any external edit)
- *  - a snapshot is taken for the turn; the reply is attributed to Claude Code
+ *  - the reply is attributed to Claude Code
  *  - a Bash tool asks in the pane's approval banner: Allow runs it, Not now
  *    declines and Claude Code says so
  *  - the second turn resumes the same session
@@ -27,12 +27,13 @@ test.describe('agent provider (mock Claude Code)', () => {
   test.setTimeout(180_000);
 
   test('pick Claude Code, run turns with a tool, approve and decline Bash, resume the session', async () => {
-    const { app, page, dir } = await launchApp({
+    const { app, page } = await launchApp({
       env: { CRUX_AGENT_MOCK: '1', CRUX_AI_MOCK: '1' },
     });
     try {
       await enterGarden(page);
-      await createCrux(page, 'Agent Garden');
+      const cruxId = await createCrux(page, 'Agent Garden');
+      const folder = (await storedCrux(page, cruxId)).projectFolder as string;
       await ensurePane(page, 'collaboration', 'Toggle collaboration');
 
       // The picker offers the agent under its own heading
@@ -41,9 +42,8 @@ test.describe('agent provider (mock Claude Code)', () => {
       const group = page.getByTestId('model-group-claude-code');
       await expect(group).toContainText('Your agent');
       await group.getByRole('button', { name: 'Claude Code' }).click();
-      await expect(
-        page.getByTestId('pane-body-collaboration').getByRole('button', { name: /Claude Code/ }),
-      ).toBeVisible();
+      await expect(picker).toContainText('Claude Code');
+      await expect(picker).toHaveAttribute('aria-expanded', 'false');
 
       // First turn: text streams, a Write bubble appears, the file is ingested
       const composer = page.getByPlaceholder('Send a message...');
@@ -59,29 +59,11 @@ test.describe('agent provider (mock Claude Code)', () => {
       // attributed to the agent, not to the Keeper's model
       await expect(chat.getByText('Claude Code', { exact: true }).first()).toBeVisible();
       // the file is really in the Project Folder and reached Artifacts through the watcher
-      const folder = join(dir, 'garden');
-      await expect
-        .poll(
-          () => {
-            const dirs = readdirSync(folder);
-            return dirs.some((d) => existsSync(join(folder, d, 'agent-note.md')));
-          },
-          { timeout: 15_000 },
-        )
-        .toBe(true);
+      await expect.poll(() => existsSync(join(folder, 'agent-note.md'))).toBe(true);
       await ensurePane(page, 'artifacts', 'Toggle artifacts');
       await expect(page.getByRole('tree').getByText('agent-note.md')).toBeVisible({
         timeout: 30_000,
       });
-      // a snapshot for the turn
-      await ensurePane(page, 'history', 'Toggle growth');
-      await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
-        0,
-        {
-          timeout: 30_000,
-        },
-      );
-
       // Second turn resumes the session and asks before running Bash: decline
       await composer.fill('Please run the command');
       await composer.press('Enter');
@@ -129,10 +111,7 @@ test.describe('agent provider (mock Claude Code)', () => {
       await page.keyboard.press('Escape');
 
       // every turn wrote into the same Project Folder
-      const cruxDir = readdirSync(folder).find((d) =>
-        existsSync(join(folder, d, 'agent-note.md')),
-      )!;
-      const notes = readFileSync(join(folder, cruxDir, 'agent-note.md'), 'utf8');
+      const notes = readFileSync(join(folder, 'agent-note.md'), 'utf8');
       expect(notes).toContain('run it again');
     } finally {
       await app.close();

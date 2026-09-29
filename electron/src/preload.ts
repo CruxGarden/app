@@ -37,6 +37,14 @@ function subscribe(channel: string, callback: (...args: any[]) => void): () => v
   return () => ipcRenderer.removeListener(channel, handler);
 }
 
+// Main resolves launch policy once. Sandbox preload receives only the public
+// result, so packaged mocks cannot be re-enabled by reading the environment.
+const prefix = '--crux-launch-settings=';
+const settingsArgument = [...process.argv].reverse().find((arg) => arg.startsWith(prefix));
+const launch = JSON.parse(
+  settingsArgument ? decodeURIComponent(settingsArgument.slice(prefix.length)) : '{}',
+) as Partial<Pick<ElectronBridge, 'config' | 'test'>>;
+
 const api: ElectronBridge = {
   browser: {
     onFocusAddress: (callback) => subscribe('browser:focus-address', callback),
@@ -518,26 +526,15 @@ const api: ElectronBridge = {
     onPermission: (cb: (request: AgentPermissionRequest) => void) =>
       subscribe('agent:permission', cb),
   },
-  // The address of the API this garden meets (ADR 0049): CRUX_API_URL at
-  // launch pins it — the e2e suite's mock API, or a deliberate override;
-  // otherwise the garden's own setting decides (api/client.ts).
-  config: {
-    apiUrl: process.env.CRUX_API_URL ?? null,
-    v2: process.env.CRUX_V2 === '1',
-  },
-  // CRUX_AI_MOCK=1 swaps the language model for a scripted mock (e2e).
-  // CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window (e2e).
-  // CRUX_SILENT=1 keeps the soundscape and cues off (e2e default; sound tests opt out).
-  test: {
-    mediaApiBase: process.env.CRUX_MEDIA_API ?? null,
-    aiMock: process.env.CRUX_AI_MOCK === '1',
-    agentMock: process.env.CRUX_AGENT_MOCK === '1',
-    silent: process.env.CRUX_SILENT === '1',
-    ai: process.env.CRUX_AI === 'on' ? 'on' : process.env.CRUX_AI === 'off' ? 'off' : null,
-    plainTitles: process.env.CRUX_PLAIN_TITLES === '1',
-    autoBackupQuietMs: process.env.CRUX_AUTOBACKUP_QUIET_MS
-      ? Number(process.env.CRUX_AUTOBACKUP_QUIET_MS) || null
-      : null,
+  config: launch.config ?? { apiUrl: null, v2: false },
+  test: launch.test ?? {
+    mediaApiBase: null,
+    aiMock: false,
+    agentMock: false,
+    silent: false,
+    ai: null,
+    plainTitles: false,
+    autoBackupQuietMs: null,
   },
 };
 
