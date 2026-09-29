@@ -12,19 +12,23 @@ This is the actual Tigrana: `src/` is upstream's React app unchanged except one 
 - `scripts/edition.mjs`: the public edition (ADR 0028) with no framework: the chosen notes rendered by remark to static HTML in `dist/` — one searchable page, or one page per note (`separate-pages`, usable without JavaScript) — images inlined, links between chosen notes kept, frontmatter and unchosen notes left out. `npm run build` renders it; `npm run test:garden` covers it. `scripts/epub.mjs`: the book edition (`format: epub` in `notebook/publish.json`) — the same notes as an EPUB 3 with its own ZIP writer, written beside the site and linked from it.
 - `vite.config.ts`: relative paths and `OUT_DIR` for the Workshop runtime; upstream's suites run under Vitest with the Garden script excluded.
 
-Build: `npm install --ignore-scripts` (the lockfile is refreshed here), `npm run build:garden` → `runtime/` for the Workshop, `npm run build` → `dist/` public edition, `npm run check`, `npm test`.
+Build: `npm ci --ignore-scripts` (use the reviewed lockfile), `npm run build:garden` → `runtime/` for the Workshop, `npm run build` → `dist/` public edition, `npm run check`, `npm test`.
 
 ## Tool depth — 2026-09-14
 
 Marked additional upstream seam: `src/editor/NotesEditor.tsx` registers the open editor with the Garden bridge. `src/garden/editor-commands.ts` applies ordinary ProseMirror transactions, keeping native Undo and the existing autosave/fingerprint path. The bridge serializes commands and checks that the requested note is still open after pending edits drain.
 
-| Person's action | App Tool | Native seam |
-| --- | --- | --- |
-| Read the open note | `read_open_note` | Live editor → existing `htmlToMarkdown`; 4,000-character pages |
-| Find and replace a unique phrase | `replace_note_text` | Exact text within a paragraph, including across inline marks; `tr.insertText`; ambiguous/missing matches refused |
-| Type new paragraphs at the end | `append_note_text` | Paragraph/text nodes inserted in one transaction; text stays literal; separate Undo step |
-| Hand the note on as Word | Existing `export_note_docx` | Existing autosave drain and DOCX renderer |
+| Person's action                  | App Tool                    | Native seam                                                                                                      |
+| -------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Read the open note               | `read_open_note`            | Live editor → existing `htmlToMarkdown`; 4,000-character pages                                                   |
+| Find and replace a unique phrase | `replace_note_text`         | Exact text within a paragraph, including across inline marks; `tr.insertText`; ambiguous/missing matches refused |
+| Type new paragraphs at the end   | `append_note_text`          | Paragraph/text nodes inserted in one transaction; text stays literal; separate Undo step                         |
+| Hand the note on as Word         | Existing `export_note_docx` | Existing autosave drain and DOCX renderer                                                                        |
 
 Edits require `activeNote` from `inspect_notebook`, preserve the remaining document and remain editable by the person. This does not add tracked changes or arbitrary document replacement. `editor-commands.test.ts` tests inline formatting, literal text, ambiguity, read-only refusal and Undo. Desktop coverage: `electron/e2e/productivity-depth.spec.ts` in the host app.
 
 These editor handles ship in new Notes Cruxes. Existing Project Folders keep their own runtime; no automatic upgrade is performed.
+
+## Dependency refresh (2026-09-28)
+
+The Garden build uses matching Tiptap 3.31.3 packages, Vite 6.4.3 and Vitest 4.1.11; the unused UUID dependency is removed. The committed runtime is rebuilt from this lockfile. Upstream tests retain two expected failures: invalid-title navigation can discard unsaved body edits, and consecutive quoted lines split into separate blockquotes. These remain tracked release work.

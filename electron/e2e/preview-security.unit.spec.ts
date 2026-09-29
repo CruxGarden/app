@@ -18,6 +18,7 @@ test('static preview serves public files but refuses private paths, symlinks and
   write('index.html', 'public page');
   write('nested/index.html', 'nested page');
   write('runtime/app.js', 'public runtime');
+  write('notebook/Imported/Letter/.assets/Letter 1.png', 'note image');
   write('.cruxignore', 'runtime/\n'); // capture exclusions can be essential preview assets
   for (const name of [
     '.crux/mcp.json',
@@ -27,12 +28,18 @@ test('static preview serves public files but refuses private paths, symlinks and
     '.git/config',
     'nested/.env',
     'private.key',
+    'notebook/.assets/.env',
+    'notebook/.assets/private.key',
+    'notebook/.assets/.crux/token',
+    '.assets-backup/image.png',
   ])
     write(name);
   writeFileSync(join(scratch, 'outside.txt'), 'outside sentinel');
   symlinkSync(join(scratch, 'outside.txt'), join(folder, 'outside.txt'));
   symlinkSync(join(folder, '.crux'), join(folder, 'alias'));
   symlinkSync(join(scratch, 'outside.txt'), join(folder, 'nested/index-link.html'));
+  symlinkSync(join(folder, '.crux'), join(folder, 'notebook/.assets/alias'));
+  symlinkSync(join(scratch, 'outside.txt'), join(folder, 'notebook/.assets/outside.png'));
   const manager = new PreviewServer(resolve);
   try {
     const url = await manager.start(folder);
@@ -51,6 +58,10 @@ test('static preview serves public files but refuses private paths, symlinks and
     expect(await get('/')).toEqual({ status: 200, body: 'public page' });
     expect(await get('/nested/')).toEqual({ status: 200, body: 'nested page' });
     expect(await get('/runtime/app.js')).toEqual({ status: 200, body: 'public runtime' });
+    expect(await get('/notebook/Imported/Letter/.assets/Letter%201.png')).toEqual({
+      status: 200,
+      body: 'note image',
+    });
     for (const name of [
       '.crux/mcp.json',
       '.crux/local.env',
@@ -59,6 +70,12 @@ test('static preview serves public files but refuses private paths, symlinks and
       '.git/config',
       'nested/.env',
       'private.key',
+      'notebook/.assets/.env',
+      'notebook/.assets/private.key',
+      'notebook/.assets/.crux/token',
+      'notebook/.assets/alias/mcp.json',
+      'notebook/.assets/outside.png',
+      '.assets-backup/image.png',
       '%2ecrux/mcp.json',
       'alias/mcp.json',
       'outside.txt',

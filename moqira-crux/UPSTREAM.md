@@ -11,7 +11,7 @@ This is the actual Moqira: `src/` is the native React app, with the narrow sourc
 - `src/garden/boot.ts`, loaded before `main.tsx` from `index.html`: sets the Tauri marker the app checks, then mounts the bar once the app has rendered.
 - `scripts/edition.mjs`: the public edition (ADR 0029) keeps only the selected wireframes and their links; `npm run build` (`vite build --mode edition`) bakes that into `dist/index.html`, where the same app opens it with saving off and starts in interactive mode.
 
-Build: `npm install --ignore-scripts` (the lockfile is refreshed here; upstream's was out of step with its own manifest), `npm run build:garden` → `runtime/` for the Workshop (relative paths), `npm run build` → `dist/` public edition, `npm run check`, `npm test` (upstream's tests plus the edition test).
+Build: `npm ci --ignore-scripts` (use the reviewed lockfile), `npm run build:garden` → `runtime/` for the Workshop (relative paths), `npm run build` → `dist/` public edition, `npm run check`, `npm test` (upstream's tests plus the edition test).
 
 ## Native tools amendment (2026-09-14)
 
@@ -20,3 +20,7 @@ Build: `npm install --ignore-scripts` (the lockfile is refreshed here; upstream'
 - All command schemas, validation, native binding, image loading, shared lifecycle and save acknowledgement live under `src/garden/`. Shared helpers are canonical in the host `embedded-apps/shared` and copied before builds; copies travel in a complete Crux. Host definitions stay in `src/ai/moqira-tools.ts`, not inside upstream UI.
 
 Upgrade checks: review these two upstream file diffs; retain native commit grouping, Undo/Redo and transient editor flags; verify React state has rendered before reporting results, save failure/revision handling and edits arriving during Save. Run native tests, the real native/public-edition regression and the manual/agent/history/image/export/restart/complete-import depth journey. Confirm portable sources rebuild independently. Existing Project Folders are not automatically changed.
+
+## Dependency refresh (2026-09-28)
+
+The Garden build uses Vite 6.4.3 and Vitest 4.1.11; the unused UUID dependency is removed. The committed runtime is rebuilt from this lockfile.

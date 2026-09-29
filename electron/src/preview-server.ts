@@ -53,17 +53,17 @@ function mimeFor(filePath: string): string {
 
 /** Capture exclusions are not an access policy: bundled runtime/ assets are ignored by history. */
 function privatePreviewPath(relative: string): boolean {
-  return relative
-    .split('/')
-    .some(
-      (part) =>
-        part.startsWith('.') ||
-        part === 'node_modules' ||
-        /\.(pem|key|swp|swx)$/i.test(part) ||
-        part.endsWith('~') ||
-        part.includes('.crux-write-') ||
-        part === 'Thumbs.db',
-    );
+  return relative.split('/').some(
+    (part, index, parts) =>
+      // Notes stores document images in .assets directories. Their contents
+      // are public; nested secrets and symlink destinations still get checked.
+      (part.startsWith('.') && !(part === '.assets' && index < parts.length - 1)) ||
+      part === 'node_modules' ||
+      /\.(pem|key|swp|swx)$/i.test(part) ||
+      part.endsWith('~') ||
+      part.includes('.crux-write-') ||
+      part === 'Thumbs.db',
+  );
 }
 
 interface RunningServer {
