@@ -27,6 +27,8 @@ export interface MockApi {
   url: string;
   state: {
     failPublish: boolean;
+    /** Refuse one recovery listing page to exercise visible retry. */
+    failCruxPage?: number;
     /** This server's own URL (for canned file links). */
     baseUrl: string;
     publishedVersion: number;
@@ -286,7 +288,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     );
     if (pub && method === 'GET') {
       const crux = Object.values(state.cruxes).find((c) => c.slug === pub[2]);
-      if (!crux) return send(404, { statusCode: 404, message: 'Crux not found' });
+      if (!crux || (pub[1] !== crux.authorId && pub[1] !== AUTHOR.username))
+        return send(404, { statusCode: 404, message: 'Crux not found' });
       const files = state.published[crux.id as string] ?? [];
       if (!pub[3]) return send(200, crux);
       if (!pub[4])
@@ -503,7 +506,22 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     if (path.startsWith('/authors/') && path.endsWith('/avatar')) return send(200, AUTHOR);
 
     // The account's cruxes (what publish upserted) — the Recover section reads this
-    if (path === '/cruxes' && method === 'GET') return send(200, Object.values(state.cruxes));
+    if (path === '/cruxes' && method === 'GET') {
+      const page = Number(parsedUrl.searchParams.get('page') || 1);
+      const perPage = Math.min(Number(parsedUrl.searchParams.get('perPage') || 25), 100);
+      if (state.failCruxPage === page) return send(503, { message: 'Account listing unavailable' });
+      const items = Object.values(state.cruxes);
+      res.setHeader(
+        'Pagination',
+        JSON.stringify({
+          currentPage: page,
+          perPage,
+          total: items.length,
+          lastPage: Math.max(1, Math.ceil(items.length / perPage)),
+        }),
+      );
+      return send(200, items.slice((page - 1) * perPage, page * perPage));
+    }
 
     if (path === '/cruxes' && method === 'POST') {
       const body = bodyJson();

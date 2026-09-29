@@ -1,4 +1,5 @@
 import client from './client';
+import { captureAuth, type AuthContext } from './session';
 
 export interface GardenStatus {
   syncedAt: string;
@@ -73,8 +74,10 @@ export async function pullCrux(cruxId: string): Promise<Blob> {
   return res.data;
 }
 
-export async function listSyncedCruxes(): Promise<SyncedCrux[]> {
-  const res = await client.get<SyncedCrux[]>('/sync/crux');
+export async function listSyncedCruxes(
+  context: AuthContext = captureAuth(),
+): Promise<SyncedCrux[]> {
+  const res = await client.get<SyncedCrux[]>('/sync/crux', { authContext: context });
   return res.data;
 }
 

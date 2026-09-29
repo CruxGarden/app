@@ -8,6 +8,7 @@ import { captureGardenId } from '@/stores/gardenContext';
  *   built output, and it says so).
  * Reads go through the API modules; writes through the local services.
  */
+import { captureAuth } from '@/api/session';
 import * as cruxesApi from '@/api/cruxes';
 import * as syncApi from '@/api/sync';
 import * as publicApi from '@/api/public';
@@ -28,12 +29,10 @@ export interface CloudOnlyCrux {
 
 /** Everything the account holds that the garden does not, newest first. */
 export async function listCloudOnlyCruxes(localIds: Set<string>): Promise<CloudOnlyCrux[]> {
+  const context = captureAuth();
   const [synced, mine] = await Promise.all([
-    syncApi.listSyncedCruxes().catch(() => []),
-    cruxesApi.list({ limit: 200 }).then(
-      (r) => r.data,
-      () => [] as Crux[],
-    ),
+    syncApi.listSyncedCruxes(context),
+    cruxesApi.listAll(context),
   ]);
   const byId = new Map<string, CloudOnlyCrux>();
   for (const s of synced) {
@@ -101,15 +100,14 @@ export async function restoreSyncedCrux(
  */
 export async function recoverPublishedCrux(
   remote: Crux,
-  username: string,
   onProgress?: (msg: string) => void,
 ): Promise<{ cruxId: string; title: string; files: number }> {
   const { crux: cruxService, artifact } = getServices();
+  const gardenId = captureGardenId();
   onProgress?.('Reading the published site…');
-  const arts = await publicApi.getArtifacts(username, remote.slug);
+  const arts = await publicApi.getArtifacts(remote.authorId, remote.slug);
   const meta = (remote.meta ?? {}) as Record<string, unknown>;
   const isSite = remote.kind === 'site' || meta.template === 'astro' || !!meta.site;
-  const gardenId = captureGardenId();
   const created = await cruxService.create({
     ...(gardenId ? { gardenId } : {}),
     id: remote.id,
@@ -139,7 +137,7 @@ export async function recoverPublishedCrux(
   for (const a of arts) {
     const path = (a.meta?.path as string | undefined) || a.filename || a.id;
     onProgress?.(`Recovering ${path}…`);
-    const blob = await publicApi.downloadArtifact(username, remote.slug, a.id);
+    const blob = await publicApi.downloadArtifact(remote.authorId, remote.slug, a.id);
     await artifact.upload({
       resourceId: created.id,
       resourceType: 'crux',
