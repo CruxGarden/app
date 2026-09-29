@@ -61,3 +61,11 @@ Crux Garden code is MIT — see `LICENSE`. Dependencies, fonts and bundled Crux 
 their own licenses. The package includes renderer/worker notices, font notices and native media
 licenses with corresponding sources. See `CONTRIBUTING.md` for the inventory and platform
 acceptance limits; GSAP uses its own Standard No Charge license.
+
+## Learn by playing
+
+[Crux Garden: The Zen of Vibecoding](examples/zen-vibecoding/README.md) is an
+interactive Crux that grows a small garden as you try real Tasks, different
+collaborators, attention requests and handoffs through Notes, Media Tools and
+Calendar. It includes copyable prompts, file checks and a private field journal
+for recording what feels clear, confusing or fun.
