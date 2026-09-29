@@ -38,6 +38,10 @@ test('concurrent static starts deduplicate one folder and isolate different fold
   const manager = new PreviewServer((f) => resolve(f));
   try {
     const [ua, ua2, ub] = await Promise.all([manager.start(a), manager.start(a), manager.start(b)]);
+    const owner = manager.ownerForOrigin(ua);
+    expect(owner).toBeTruthy();
+    expect(manager.ownerForOrigin(ua2)).toBe(owner);
+    expect(manager.ownerForOrigin(ub)).not.toBe(owner);
     expect(ua).toBe(ua2);
     expect(new URL(ua).port).not.toBe(new URL(ub).port);
     expect(await (await fetch(ua)).text()).toBe('A sentinel');
@@ -45,6 +49,10 @@ test('concurrent static starts deduplicate one folder and isolate different fold
     await manager.stop(a);
     expect(await (await fetch(ub)).text()).toBe('B sentinel');
     await expect(fetch(ua)).rejects.toThrow();
+    expect(manager.ownerForOrigin(ua)).toBeUndefined();
+    const restarted = await manager.start(a);
+    expect(manager.ownerForOrigin(restarted)).toBeTruthy();
+    expect(manager.ownerForOrigin(restarted)).not.toBe(owner);
   } finally {
     await manager.stopAll();
     rmSync(root, { recursive: true, force: true });
@@ -67,13 +75,21 @@ test('simultaneous dev requests for the same preferred port get distinct owned e
       manager.start('A', { port: preferred }),
       manager.start('B', { port: preferred }),
     ]);
+    const owner = manager.ownerForOrigin(a);
+    expect(owner).toBeTruthy();
+    expect(manager.ownerForOrigin(again)).toBe(owner);
+    expect(manager.ownerForOrigin(b)).not.toBe(owner);
     expect(a).toBe(again);
     expect(a).not.toBe(b);
     expect(spawned).toBe(2);
     expect(await (await fetch(a)).text()).toBe('A');
     expect(await (await fetch(b)).text()).toBe('B');
     await manager.stop('A');
+    expect(manager.ownerForOrigin(a)).toBeUndefined();
     expect(await (await fetch(b)).text()).toBe('B');
+    const restarted = await manager.start('A');
+    expect(manager.ownerForOrigin(restarted)).toBeTruthy();
+    expect(manager.ownerForOrigin(restarted)).not.toBe(owner);
   } finally {
     await manager.stopAll();
   }

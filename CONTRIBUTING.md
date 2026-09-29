@@ -32,6 +32,12 @@ cd electron && npm run build:all && npm run test:e2e
 Tests run isolated from your real garden (throwaway userData + garden root). A mock API
 (`e2e/api-mock.ts`) and a scripted model (`CRUX_AI_MOCK=1`) mean no accounts or keys are needed.
 
+The named desktop gate (`npm run test:e2e -- --project=gate` in `electron/`) includes
+workspace permission tests. They use Chromium's fake camera and mocked display sources;
+keep them independent of real hardware, OS privacy settings and desktop capture. Consent,
+origin refusal and browser cancellation must be checked through real Electron requests as well
+as source-picker checks: Electron's callback behavior differs from its TypeScript declaration.
+
 ## Dependency updates
 
 Run full `npm audit` checks in both this directory and `electron/`, then run their gates and

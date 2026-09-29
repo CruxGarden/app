@@ -118,6 +118,13 @@ export class DevServerManager {
     return dev ? { status: dev.status, url: dev.url } : { status: 'idle', url: null };
   }
 
+  /** Pending reservations are not origins that may request workspace permissions. */
+  ownerForOrigin(origin: string): object | undefined {
+    return [...this.running.values()].find(
+      (server) => server.status === 'ready' && server.url === origin,
+    )?.owner;
+  }
+
   /** Start (or reuse) the project's dev server. Resolves when it answers HTTP. */
   start(folder: string, opts: DevStartOptions | number = {}): Promise<string> {
     const cwd = this.resolveKnownFolder(folder);

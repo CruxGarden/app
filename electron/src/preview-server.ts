@@ -80,6 +80,11 @@ export class PreviewServer {
 
   constructor(private resolveKnownFolder: (folder: string) => string) {}
 
+  /** An active server identity, renewed on restart so a reused port inherits no consent. */
+  ownerForOrigin(origin: string): object | undefined {
+    return [...this.running.values()].find((server) => server.url === origin)?.owner;
+  }
+
   /** Start (or reuse) a static server for a Project Folder. Returns its URL. */
   start(folder: string): Promise<string> {
     const base = this.resolveKnownFolder(folder);
