@@ -379,7 +379,7 @@ export function AddMediaButton({
                   inputName: file.name,
                   isAudio: kind === 'audio',
                 },
-                (p) => setStatus(`Converting ${file.name} — ${Math.round(p)}%`),
+                (p) => setStatus(`Converting ${file.name} — ${Math.round(p * 100)}%`),
               );
               const out = outputs[0];
               // No output is a failure, not a reason to ship the unplayable original.

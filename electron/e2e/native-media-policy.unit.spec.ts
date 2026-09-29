@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { planFfmpegRun, planFfprobeRun } from '../src/ffmpeg-command';
@@ -119,4 +119,23 @@ test('native processes bound runtime and output and report compiler refusals', a
       cwd: tmpdir(),
     }),
   ).rejects.toThrow();
+});
+
+test('native timeout also stops descendants before returning control', async () => {
+  test.skip(process.platform === 'win32', 'Windows taskkill requires its own platform run');
+  const directory = mkdtempSync(join(tmpdir(), 'crux-native-descendants-'));
+  try {
+    const marker = join(directory, 'descendant-canary');
+    const child = `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'escaped'), 700)`;
+    const parent = `require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(child)}]); setInterval(() => {}, 1000)`;
+    const result = await runNativeProcess(process.execPath, ['-e', parent], {
+      cwd: directory,
+      timeoutMs: 300,
+    });
+    expect(result.code).not.toBe(0);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    expect(existsSync(marker)).toBe(false);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

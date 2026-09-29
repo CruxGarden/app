@@ -69,6 +69,7 @@ const choices: Record<string, string[]> = {
     'pcm_s24le',
     'pcm_f32le',
   ],
+  '-preset': ['fast'],
   '-profile:v': ['baseline', 'main', 'high'],
   '-pix_fmt': ['yuv420p', 'yuv422p', 'yuv444p', 'rgb24', 'rgba', 'gray'],
   '-movflags': ['+faststart', 'faststart'],
@@ -114,6 +115,7 @@ export function allowedMediaFilter(filter: string, audio: boolean): boolean {
 }
 
 function optionValue(option: string, value: string): boolean {
+  if (option === '-fs') return /^[1-9]\d{0,8}$/.test(value) && Number(value) <= 500 * 1024 * 1024;
   if (choices[option]) return choices[option].includes(value);
   if (numbers[option]) {
     const [min, max] = numbers[option];

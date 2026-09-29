@@ -20,6 +20,8 @@ import type {
   AgentPermissionRequest,
   AgentEvent,
   InstallationBridge,
+  TranscodeRequest,
+  TranscodeProgress,
 } from './bridge';
 
 /**
@@ -468,11 +470,12 @@ const api: ElectronBridge = {
   },
   ffmpeg: {
     available: () => ipcRenderer.invoke('ffmpeg:available') as Promise<boolean>,
-    transcode: (opts: { inputData: Uint8Array; inputName: string; isAudio: boolean }) =>
+    transcode: (opts: TranscodeRequest) =>
       ipcRenderer.invoke('ffmpeg:transcode', opts) as Promise<
         Array<{ name: string; data: Uint8Array; mimeType: string }>
       >,
-    onProgress: (callback: (progress: number) => void) => subscribe('ffmpeg:progress', callback),
+    onProgress: (callback: (event: TranscodeProgress) => void) =>
+      subscribe('ffmpeg:progress', callback),
   },
   // Agent Host (ADR 0013): per-crux MCP servers in main; tool calls run here.
   agentHost: {

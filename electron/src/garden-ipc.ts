@@ -29,6 +29,29 @@ export function gardenIpc(getWindow: () => BrowserWindow | null, devServer?: str
     );
   };
   return {
+    /** A reply belongs to this document; a replacement document cannot inherit it. */
+    replies(event: IpcMainInvokeEvent) {
+      let live = trusted(event);
+      const navigated = (_event: unknown, _url: string, inPlace: boolean, mainFrame: boolean) => {
+        if (mainFrame && !inPlace) live = false;
+      };
+      event.sender.on('did-start-navigation', navigated);
+      return {
+        send(channel: string, data: unknown) {
+          if (!live || event.sender.isDestroyed()) return;
+          try {
+            if (trusted(event)) event.senderFrame?.send(channel, data);
+          } catch {
+            // A frame can disappear between the ownership check and delivery.
+            live = false;
+          }
+        },
+        dispose() {
+          live = false;
+          event.sender.removeListener('did-start-navigation', navigated);
+        },
+      };
+    },
     handle(channel: string, listener: (event: IpcMainInvokeEvent, ...args: any[]) => unknown) {
       ipcMain.handle(channel, (event, ...args) => {
         if (!trusted(event)) throw new Error(`${channel} is only available to Crux Garden`);

@@ -10,6 +10,8 @@ import type {
   GrowthContentRestore,
   EditCheckpointCapture,
 } from '@cruxgarden/local-api';
+import { transcodeMedia } from './media-transcode';
+import type { TranscodeRequest } from './bridge';
 import { lookupProjectCrux } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
@@ -20,7 +22,6 @@ const { app, BrowserWindow, protocol, dialog, shell, net } = require('electron')
 const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
-const { execFile } = require('child_process');
 const { SqliteApi } = require('./sqlite-api');
 const { SecretStore } = require('./secrets');
 const { DesktopConfig, ProjectFolders } = require('./projects');
@@ -1227,58 +1228,58 @@ async function setupIpc() {
   fromGarden(
     'native:run',
     async (e: any, opts: { cruxId: string; tool: string; args: unknown[]; timeoutMs?: number }) => {
-      const { MEDIA_TOOLS, mediaToolPath } =
-        require('./media-binaries') as typeof import('./media-binaries');
-      const tool = opts.tool as (typeof MEDIA_TOOLS)[number];
-      if (!MEDIA_TOOLS.includes(tool)) throw new Error(`Unknown native tool: ${opts.tool}`);
-      const binary = await mediaToolPath(
-        tool,
-        app.isPackaged ? process.resourcesPath : null,
-        app.getPath('userData'),
-      );
-      if (!binary)
-        throw new Error(
-          tool === 'magick'
-            ? 'ImageMagick is not on this machine. Install it (brew install imagemagick, apt install imagemagick, or imagemagick.org) and look again.'
-            : tool === 'pandoc'
-              ? 'Pandoc is not on this machine. Install it (brew install pandoc, apt install pandoc, or pandoc.org) and look again.'
-              : tool === 'typst'
-                ? 'Typst is not on this machine. Install it (brew install typst, or typst.app) and look again.'
-                : `${tool} is not available on this machine`,
+      const replies = gardenBridge.replies(e);
+      try {
+        const { MEDIA_TOOLS, mediaToolPath } =
+          require('./media-binaries') as typeof import('./media-binaries');
+        const tool = opts.tool as (typeof MEDIA_TOOLS)[number];
+        if (!MEDIA_TOOLS.includes(tool)) throw new Error(`Unknown native tool: ${opts.tool}`);
+        const binary = await mediaToolPath(
+          tool,
+          app.isPackaged ? process.resourcesPath : null,
+          app.getPath('userData'),
         );
-      const crux = await requireCruxFolder(opts.cruxId);
-      const folder = path.resolve(crux.folder);
-      if (tool === 'typst') {
-        const { runTypst } = require('./typst-command') as typeof import('./typst-command');
-        return runTypst(binary, folder, opts.args, opts.timeoutMs);
+        if (!binary)
+          throw new Error(
+            tool === 'magick'
+              ? 'ImageMagick is not on this machine. Install it (brew install imagemagick, apt install imagemagick, or imagemagick.org) and look again.'
+              : tool === 'pandoc'
+                ? 'Pandoc is not on this machine. Install it (brew install pandoc, apt install pandoc, or pandoc.org) and look again.'
+                : tool === 'typst'
+                  ? 'Typst is not on this machine. Install it (brew install typst, or typst.app) and look again.'
+                  : `${tool} is not available on this machine`,
+          );
+        const crux = await requireCruxFolder(opts.cruxId);
+        const folder = path.resolve(crux.folder);
+        if (tool === 'typst') {
+          const { runTypst } = require('./typst-command') as typeof import('./typst-command');
+          return runTypst(binary, folder, opts.args, opts.timeoutMs);
+        }
+        if (tool === 'magick') {
+          const { runMagick } = require('./magick-command') as typeof import('./magick-command');
+          return runMagick(binary, folder, opts.args, opts.timeoutMs);
+        }
+        const { planPandocRun } = require('./pandoc-command') as typeof import('./pandoc-command');
+        const { planFfmpegRun, planFfprobeRun } =
+          require('./ffmpeg-command') as typeof import('./ffmpeg-command');
+        const { runNativeProcess } =
+          require('./native-process') as typeof import('./native-process');
+        const plan =
+          tool === 'pandoc'
+            ? planPandocRun(folder, opts.args)
+            : tool === 'ffmpeg'
+              ? planFfmpegRun(folder, opts.args)
+              : planFfprobeRun(folder, opts.args);
+        for (const output of plan.outputs) fs.mkdirSync(path.dirname(output), { recursive: true });
+        return await runNativeProcess(binary, plan.args, {
+          cwd: folder,
+          timeoutMs: opts.timeoutMs,
+          onProgress: (progress) =>
+            replies.send('native:progress', { cruxId: opts.cruxId, tool, progress }),
+        });
+      } finally {
+        replies.dispose();
       }
-      if (tool === 'magick') {
-        const { runMagick } = require('./magick-command') as typeof import('./magick-command');
-        return runMagick(binary, folder, opts.args, opts.timeoutMs);
-      }
-      const { planPandocRun } = require('./pandoc-command') as typeof import('./pandoc-command');
-      const { planFfmpegRun, planFfprobeRun } =
-        require('./ffmpeg-command') as typeof import('./ffmpeg-command');
-      const { runNativeProcess } = require('./native-process') as typeof import('./native-process');
-      const plan =
-        tool === 'pandoc'
-          ? planPandocRun(folder, opts.args)
-          : tool === 'ffmpeg'
-            ? planFfmpegRun(folder, opts.args)
-            : planFfprobeRun(folder, opts.args);
-      for (const output of plan.outputs) fs.mkdirSync(path.dirname(output), { recursive: true });
-      return runNativeProcess(binary, plan.args, {
-        cwd: folder,
-        timeoutMs: opts.timeoutMs,
-        onProgress: (progress) => {
-          if (!e.sender.isDestroyed())
-            e.sender.send('native:progress', {
-              cruxId: opts.cruxId,
-              tool,
-              progress,
-            });
-        },
-      });
     },
   );
 
@@ -1527,118 +1528,17 @@ async function setupIpc() {
   };
   fromGarden('ffmpeg:available', async () => !!(await ffmpegBinary()));
 
-  fromGarden(
-    'ffmpeg:transcode',
-    async (
-      _e: any,
-      opts: {
-        inputData: Uint8Array;
-        inputName: string;
-        isAudio: boolean;
-      },
-    ) => {
-      const ffmpegPath = await ffmpegBinary();
-      if (!ffmpegPath) {
-        throw new Error('FFmpeg not available');
-      }
-
-      const tmpDir = path.join(app.getPath('temp'), 'crux-transcode-' + Date.now());
-      fs.mkdirSync(tmpDir, { recursive: true });
-
-      const inputExt = path.extname(opts.inputName) || (opts.isAudio ? '.wav' : '.mp4');
-      const inputFile = path.join(tmpDir, 'input' + inputExt);
-      fs.writeFileSync(inputFile, Buffer.from(opts.inputData));
-
-      const results: Array<{ name: string; data: Uint8Array; mimeType: string }> = [];
-
-      try {
-        if (opts.isAudio) {
-          // Audio: transcode to AAC M4A
-          const outputFile = path.join(tmpDir, 'output.m4a');
-          await runFfmpeg(
-            ffmpegPath,
-            ['-i', inputFile, '-c:a', 'aac', '-b:a', '192k', '-y', outputFile],
-            _e.sender,
-          );
-          results.push({
-            name: path.basename(opts.inputName, inputExt) + '.m4a',
-            data: new Uint8Array(fs.readFileSync(outputFile)),
-            mimeType: 'audio/mp4',
-          });
-        } else {
-          // Video: transcode to H.264 MP4 with faststart
-          const outputFile = path.join(tmpDir, 'output.mp4');
-          await runFfmpeg(
-            ffmpegPath,
-            [
-              '-i',
-              inputFile,
-              '-c:v',
-              'libx264',
-              '-preset',
-              'fast',
-              '-crf',
-              '28',
-              '-c:a',
-              'aac',
-              '-b:a',
-              '128k',
-              '-movflags',
-              '+faststart',
-              '-y',
-              outputFile,
-            ],
-            _e.sender,
-          );
-          results.push({
-            name: path.basename(opts.inputName, inputExt) + '.mp4',
-            data: new Uint8Array(fs.readFileSync(outputFile)),
-            mimeType: 'video/mp4',
-          });
-        }
-      } finally {
-        // Clean up temp files
-        try {
-          fs.rmSync(tmpDir, { recursive: true, force: true });
-        } catch {}
-      }
-
-      return results;
-    },
-  );
-}
-
-function runFfmpeg(ffmpegPath: string, args: string[], sender: any): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const proc = execFile(ffmpegPath, args, { maxBuffer: 50 * 1024 * 1024 });
-
-    let stderr = '';
-    let duration = 0;
-
-    proc.stderr?.on('data', (chunk: string) => {
-      stderr += chunk;
-      // Parse duration from FFmpeg output
-      const durMatch = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
-      if (durMatch && !duration) {
-        duration =
-          parseInt(durMatch[1]!) * 3600 + parseInt(durMatch[2]!) * 60 + parseFloat(durMatch[3]!);
-      }
-      // Parse progress
-      const timeMatch = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
-      if (timeMatch && duration > 0) {
-        const current =
-          parseInt(timeMatch[1]!) * 3600 + parseInt(timeMatch[2]!) * 60 + parseFloat(timeMatch[3]!);
-        const progress = Math.min(current / duration, 1);
-        sender.send('ffmpeg:progress', progress);
-      }
-    });
-
-    proc.on('close', (code: number) => {
-      if (code === 0) resolve();
-      else reject(new Error(`FFmpeg exited with code ${code}: ${stderr.slice(-500)}`));
-    });
-
-    proc.on('error', reject);
+  fromGarden('ffmpeg:transcode', async (event, input: TranscodeRequest) => {
+    const replies = gardenBridge.replies(event);
+    try {
+      const binary = await ffmpegBinary();
+      if (!binary) throw new Error('FFmpeg not available');
+      return await transcodeMedia(binary, app.getPath('temp'), input, (progress) => {
+        replies.send('ffmpeg:progress', { requestId: input.requestId, progress });
+      });
+    } finally {
+      replies.dispose();
+    }
   });
 }
 

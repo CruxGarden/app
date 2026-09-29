@@ -2,7 +2,7 @@
  * Project variables are namespaced interpolation data, never runner settings.
  * Docker owns merge/interpolation semantics; this module owns host access.
  */
-import { execFile, spawn } from 'node:child_process';
+import { boundedProcess, ProcessOutputLimitError } from './bounded-process';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -382,94 +382,23 @@ export function composeProcess(
     onLine?: (line: string) => void;
   },
 ): Promise<{ code: number; stdout: string; stderr: string }> {
-  const timeout = options.timeoutMs ?? 30_000;
-  if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 30 * 60_000)
-    throw new Error('Choose a Compose timeout of at most 30 minutes.');
-  return new Promise((resolve, reject) => {
-    const child = spawn(program, args, {
-      cwd: options.cwd,
-      env: options.env,
-      windowsHide: true,
-      detached: process.platform !== 'win32',
-      stdio: ['ignore', 'pipe', 'pipe'],
+  return boundedProcess(program, args, {
+    ...options,
+    timeoutMs: options.timeoutMs ?? 30_000,
+    onData: (text) => {
+      for (const line of text.split('\n'))
+        if (line.trim()) options.onLine?.(line.trim().slice(0, 4000));
+    },
+  })
+    .then(({ code, stdout, stderr, timedOut }) => {
+      if (timedOut) throw new Error('Compose exceeded its time/output limits.');
+      return { code, stdout, stderr };
+    })
+    .catch((error: unknown) => {
+      if (error instanceof ProcessOutputLimitError)
+        throw new Error('Compose exceeded its time/output limits.', { cause: error });
+      throw error;
     });
-    let failure: Error | undefined;
-    let bytes = 0;
-    let stdout = '';
-    let stderr = '';
-    let settled = false;
-    const terminate = () => {
-      if (!child.pid) return;
-      if (process.platform === 'win32') {
-        const taskkill = path.join(
-          process.env.SystemRoot ?? 'C:\\Windows',
-          'System32',
-          'taskkill.exe',
-        );
-        execFile(
-          taskkill,
-          ['/pid', String(child.pid), '/T', '/F'],
-          { windowsHide: true, timeout: 5000 },
-          () => {
-            child.kill('SIGKILL');
-          },
-        );
-      } else {
-        try {
-          process.kill(-child.pid, 'SIGKILL');
-        } catch {
-          child.kill('SIGKILL');
-        }
-      }
-    };
-    const fail = (error: Error) => {
-      if (failure) return;
-      failure = error;
-      terminate();
-      // A broken provider must not retain the caller indefinitely through pipes.
-      child.stdout.destroy();
-      child.stderr.destroy();
-    };
-    const timer = setTimeout(
-      () => fail(new Error('Compose exceeded its time/output limits.')),
-      timeout,
-    );
-    const finish = (code: number) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      if (failure) reject(failure);
-      else resolve({ code, stdout, stderr });
-    };
-    for (const [stream, kind] of [
-      [child.stdout, 'out'],
-      [child.stderr, 'err'],
-    ] as const) {
-      stream.setEncoding('utf8');
-      stream.on('data', (chunk: string) => {
-        if (failure) return;
-        bytes += Buffer.byteLength(chunk);
-        if (bytes > 2 * LIMIT) return fail(new Error('Compose exceeded its time/output limits.'));
-        const text = chunk;
-        if (kind === 'out') stdout += text;
-        else stderr += text;
-        for (const line of text.split('\n'))
-          if (line.trim()) {
-            try {
-              options.onLine?.(line.trim().slice(0, 4000));
-            } catch (error) {
-              fail(error instanceof Error ? error : new Error(String(error)));
-              return;
-            }
-          }
-      });
-    }
-    child.on('error', (error) => {
-      failure = error;
-      finish(-1);
-    });
-    child.on('close', (code) => finish(code ?? -1));
-  });
 }
 
 export async function prepareComposeProject(

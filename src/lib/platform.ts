@@ -12,6 +12,8 @@
  * below — there is exactly one declaration of what Desktop Mode provides.
  */
 
+export { MAX_TRANSCODE_BYTES } from '../../electron/src/bridge';
+
 import type { ElectronBridge } from '../../electron/src/bridge';
 
 export type {

@@ -588,14 +588,25 @@ export interface ProjectRunnerBridge {
   stop(opts: { cruxId: string }): Promise<boolean>;
 }
 
+/** Shared renderer/main admission limit; IPC currently copies complete files. */
+export const MAX_TRANSCODE_BYTES = 500 * 1024 * 1024;
+
+export interface TranscodeRequest {
+  requestId: string;
+  inputData: Uint8Array;
+  inputName: string;
+  isAudio: boolean;
+}
+
+export interface TranscodeProgress {
+  requestId: string;
+  progress: number;
+}
+
 export interface FfmpegBridge {
   available(): Promise<boolean>;
-  transcode(opts: {
-    inputData: Uint8Array;
-    inputName: string;
-    isAudio: boolean;
-  }): Promise<TranscodeOutput[]>;
-  onProgress(callback: (progress: number) => void): () => void;
+  transcode(opts: TranscodeRequest): Promise<TranscodeOutput[]>;
+  onProgress(callback: (event: TranscodeProgress) => void): () => void;
 }
 
 // ── agent host (MCP server per crux, ADR 0013) ──────────────────────────────

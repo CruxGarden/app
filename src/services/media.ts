@@ -26,9 +26,14 @@ export async function transcode(
 ): Promise<TranscodeOutput[]> {
   const api = ffmpegBridge();
   if (!api) throw new Error('Transcoding is not available on this platform');
-  const unsubscribe = onProgress ? api.onProgress(onProgress) : null;
+  const requestId = crypto.randomUUID();
+  const unsubscribe = onProgress
+    ? api.onProgress((event) => {
+        if (event.requestId === requestId) onProgress(event.progress);
+      })
+    : null;
   try {
-    return await api.transcode(input);
+    return await api.transcode({ ...input, requestId });
   } finally {
     unsubscribe?.();
   }
