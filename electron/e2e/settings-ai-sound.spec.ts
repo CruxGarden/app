@@ -1,8 +1,9 @@
 import { hidePane, showPane } from './panel-helpers';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { enterGarden } from './multi-crux-helpers';
 
 type AudioState = {
   playing: boolean;
@@ -19,13 +20,6 @@ type SecretsApi = {
 
 const KEY_NAME = 'cruxgarden:apiKey:anthropic';
 const KEY_VALUE = 'sk-ant-e2e-test-key-0000abcd';
-
-async function plantGarden(page: Page) {
-  await page.getByRole('button', { name: /enter/i }).click();
-  await page.getByText('Plant a new garden').click();
-  await page.getByRole('button', { name: 'Welcome' }).click();
-  await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 30_000 });
-}
 
 /**
  * Settings → AI (keys live in the platform secret store, never in SQLite or
@@ -49,7 +43,7 @@ test.describe('settings AI, mood sound & persona', () => {
         key,
       );
     try {
-      await plantGarden(page);
+      await enterGarden(page);
 
       // ── Cmd+, opens Settings; the AI section is collapsed until clicked ──
       await page.keyboard.press('ControlOrMeta+,');
@@ -76,7 +70,7 @@ test.describe('settings AI, mood sound & persona', () => {
       await expect(page.getByPlaceholder('sk-ant-...')).toBeVisible();
       await expect(
         page.getByText(
-          'Your keys are stored locally in this browser and never sent to our servers.',
+          'Your keys are encrypted on this device using system credential storage and sent only to the AI provider you choose.',
         ),
       ).toBeVisible();
 
@@ -99,17 +93,11 @@ test.describe('settings AI, mood sound & persona', () => {
         ).electronAPI.secrets.available(),
       );
       await expect.poll(() => secret(KEY_NAME)).toBe(KEY_VALUE);
-      if (encrypted) {
-        // Desktop: safeStorage ciphertext in userData/secrets.json; the
-        // localStorage copy is removed on save
-        expect(await storageKeys()).toEqual([]);
-        const onDisk = readFileSync(join(dir, 'userData', 'secrets.json'), 'utf8');
-        expect(onDisk).toContain(`"${KEY_NAME}"`);
-        expect(onDisk).not.toContain(KEY_VALUE);
-      } else {
-        // No keychain on this runner: the web fallback keeps it in localStorage
-        expect(await storageKeys()).toEqual([KEY_NAME]);
-      }
+      expect(encrypted).toBe(true);
+      expect(await storageKeys()).toEqual([]);
+      const onDisk = readFileSync(join(dir, 'userData', 'secrets.json'), 'utf8');
+      expect(onDisk).toContain(`"${KEY_NAME}"`);
+      expect(onDisk).not.toContain(KEY_VALUE);
 
       // ── The hint survives closing and reopening Settings ─────────────────
       await hidePane(page, 'Settings');
@@ -147,7 +135,7 @@ test.describe('settings AI, mood sound & persona', () => {
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
       );
     try {
-      await plantGarden(page);
+      await enterGarden(page);
       await (await showPane(page, 'Mood'))
         .getByRole('button', { name: 'Sound', exact: true })
         .click();
@@ -174,7 +162,7 @@ test.describe('settings AI, mood sound & persona', () => {
     const { app, page } = await launchApp({ sound: true });
     const greeting = 'Fern here. What shall we grow?';
     try {
-      await plantGarden(page);
+      await enterGarden(page);
 
       await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Persona', exact: true }).click();

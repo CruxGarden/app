@@ -56,9 +56,13 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
 
   const checkApiKeys = async () => {
     for (const id of Object.keys(PROVIDERS)) {
-      if (await getApiKey(id)) {
-        setKeysConfigured(true);
-        return;
+      try {
+        if (await getApiKey(id)) {
+          setKeysConfigured(true);
+          return;
+        }
+      } catch {
+        // ApiKeySetup displays the provider's storage failure and retry advice.
       }
     }
     setKeysConfigured(false);

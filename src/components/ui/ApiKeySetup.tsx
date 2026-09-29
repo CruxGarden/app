@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { getApiKey, setApiKey, removeApiKey } from '@/ai/keys';
 import { isLocalModel } from '@/ai/local';
@@ -43,19 +43,32 @@ export default function ApiKeySetup({
   const [hints, setHints] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
 
-  // Load existing key hints on mount
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const pending = useRef(new Set<string>());
+
+  // Load each provider independently: one locked key must not hide the others.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const newHints: Record<string, string> = {};
+      const newErrors: Record<string, string> = {};
       for (const id of providerIds) {
         if (isLocalModel(PROVIDERS[id]!.defaultModel) || isAgentModel(id)) continue; // no key
-        const key = await getApiKey(id);
-        if (key) {
-          newHints[id] = `${key.slice(0, 7)}...${key.slice(-4)}`;
+        try {
+          const key = await getApiKey(id);
+          if (key) newHints[id] = `${key.slice(0, 7)}...${key.slice(-4)}`;
+        } catch {
+          newErrors[id] =
+            'Could not read saved key. Unlock your system keychain and reopen Settings. If the credential file is damaged, restore it from your device backup.';
         }
       }
-      if (!cancelled) setHints(newHints);
+      if (!cancelled) {
+        setHints(newHints);
+        setErrors(newErrors);
+        setLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -63,25 +76,41 @@ export default function ApiKeySetup({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSave = async (providerId: string) => {
-    const trimmed = (inputs[providerId] || '').trim();
-    if (!trimmed) return;
-    await setApiKey(providerId, trimmed);
-    setHints((h) => ({ ...h, [providerId]: `${trimmed.slice(0, 7)}...${trimmed.slice(-4)}` }));
-    setInputs((v) => ({ ...v, [providerId]: '' }));
-    onKeySaved?.();
+  const changeKey = async (providerId: string, value: string | null) => {
+    if (loading || pending.current.has(providerId)) return;
+    pending.current.add(providerId);
+    setBusy((current) => ({ ...current, [providerId]: true }));
+    try {
+      if (value === null) await removeApiKey(providerId);
+      else await setApiKey(providerId, value);
+      setHints((current) => {
+        const next = { ...current };
+        if (value === null) delete next[providerId];
+        else next[providerId] = `${value.slice(0, 7)}...${value.slice(-4)}`;
+        return next;
+      });
+      setInputs((current) => ({ ...current, [providerId]: '' }));
+      setErrors((current) => ({ ...current, [providerId]: '' }));
+    } catch {
+      setErrors((current) => ({
+        ...current,
+        [providerId]:
+          value === null
+            ? 'Could not remove key. Check profile permissions and try again.'
+            : 'Could not save key. Unlock your system keychain, check disk space and profile permissions, then try again.',
+      }));
+      return;
+    } finally {
+      pending.current.delete(providerId);
+      setBusy((current) => ({ ...current, [providerId]: false }));
+    }
+    if (value !== null) onKeySaved?.();
     onKeyChange?.();
   };
 
-  const handleRemove = async (providerId: string) => {
-    await removeApiKey(providerId);
-    setHints((h) => {
-      const next = { ...h };
-      delete next[providerId];
-      return next;
-    });
-    setInputs((v) => ({ ...v, [providerId]: '' }));
-    onKeyChange?.();
+  const handleSave = (providerId: string) => {
+    const trimmed = (inputs[providerId] || '').trim();
+    if (trimmed) void changeKey(providerId, trimmed);
   };
 
   return (
@@ -133,7 +162,13 @@ export default function ApiKeySetup({
                     {hint}
                   </span>
                 ) : (
-                  <span className="text-xs font-mono text-text-muted/50">Not configured</span>
+                  <span className="text-xs font-mono text-text-muted/50">
+                    {loading
+                      ? 'Loading…'
+                      : errors[providerId]
+                        ? 'Key unavailable'
+                        : 'Not configured'}
+                  </span>
                 )}
               </div>
             </div>
@@ -156,6 +191,7 @@ export default function ApiKeySetup({
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="password"
+                  disabled={loading || busy[providerId]}
                   value={input}
                   autoFocus={autoFocus && idx === 0}
                   onChange={(e) => setInputs((v) => ({ ...v, [providerId]: e.target.value }))}
@@ -175,7 +211,7 @@ export default function ApiKeySetup({
                 />
                 <button
                   onClick={() => handleSave(providerId)}
-                  disabled={!input.trim()}
+                  disabled={loading || busy[providerId] || !input.trim()}
                   className={cn(
                     'shrink-0 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                     'bg-surface border border-border text-text hover:bg-accent-muted  cursor-pointer',
@@ -186,7 +222,8 @@ export default function ApiKeySetup({
                 </button>
                 {hint && (
                   <button
-                    onClick={() => handleRemove(providerId)}
+                    onClick={() => void changeKey(providerId, null)}
+                    disabled={loading || busy[providerId]}
                     className={cn(
                       'shrink-0 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                       'text-error hover:bg-error-muted  cursor-pointer',
@@ -197,13 +234,19 @@ export default function ApiKeySetup({
                 )}
               </div>
             )}
+            {errors[providerId] && (
+              <p role="alert" className="text-xs text-error">
+                {errors[providerId]}
+              </p>
+            )}
           </div>
         );
       })}
 
       {!compact && (
         <p className="text-xxs text-text-muted/60 mt-2">
-          Your keys are stored locally in this browser and never sent to our servers.
+          Your keys are encrypted on this device using system credential storage and sent only to
+          the AI provider you choose.
         </p>
       )}
     </div>

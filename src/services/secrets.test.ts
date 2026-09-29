@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getSecret, setSecret, deleteSecret, __resetSecretsBackendForTests } from './secrets';
+import { getSecret, setSecret, deleteSecret } from './secrets';
 
 /** In-memory fake of the Electron safeStorage IPC bridge. */
 function fakeElectronSecrets(available = true) {
@@ -9,7 +9,10 @@ function fakeElectronSecrets(available = true) {
     api: {
       available: async () => available,
       get: async (key: string) => store.get(key) ?? null,
-      set: async (key: string, value: string) => void store.set(key, value),
+      set: async (key: string, value: string) => {
+        if (!available) throw new Error('Secure credential storage is unavailable');
+        store.set(key, value);
+      },
       delete: async (key: string) => void store.delete(key),
     },
   };
@@ -21,24 +24,24 @@ function installWindow(secrets: object | undefined) {
 
 describe('secrets service', () => {
   beforeEach(() => {
-    __resetSecretsBackendForTests();
     localStorage.clear();
   });
 
   afterEach(() => {
     delete (globalThis as Record<string, unknown>).window;
-    __resetSecretsBackendForTests();
   });
 
   describe('web (no Electron bridge)', () => {
-    it('stores and reads via localStorage', async () => {
+    it('refuses new plaintext and preserves existing data without using it', async () => {
       installWindow(undefined);
-      await setSecret('cruxgarden:apiKey:anthropic', 'sk-web');
-      expect(localStorage.getItem('cruxgarden:apiKey:anthropic')).toBe('sk-web');
-      expect(await getSecret('cruxgarden:apiKey:anthropic')).toBe('sk-web');
-
-      await deleteSecret('cruxgarden:apiKey:anthropic');
-      expect(await getSecret('cruxgarden:apiKey:anthropic')).toBeNull();
+      await expect(setSecret('key', 'new')).rejects.toThrow('desktop app');
+      expect(localStorage.getItem('key')).toBeNull();
+      expect(await getSecret('key')).toBeNull();
+      localStorage.setItem('key', 'existing');
+      await expect(getSecret('key')).rejects.toThrow('desktop app');
+      expect(localStorage.getItem('key')).toBe('existing');
+      await deleteSecret('key');
+      expect(await getSecret('key')).toBeNull();
     });
   });
 
@@ -93,6 +96,24 @@ describe('secrets service', () => {
       expect(fake.store.has('key')).toBe(false);
     });
 
+    it('does not fall back or remove plaintext when native reads or deletes fail', async () => {
+      const fake = fakeElectronSecrets();
+      localStorage.setItem('key', 'existing');
+      installWindow({
+        ...fake.api,
+        get: async () => {
+          throw new Error('Cannot unlock stored credentials');
+        },
+        delete: async () => {
+          throw new Error('Could not save credentials');
+        },
+      });
+      await expect(getSecret('key')).rejects.toThrow('Cannot unlock');
+      await expect(deleteSecret('key')).rejects.toThrow('Could not save');
+      expect(localStorage.getItem('key')).toBe('existing');
+      expect(fake.store.size).toBe(0);
+    });
+
     it('stores via safeStorage, never localStorage', async () => {
       const fake = fakeElectronSecrets();
       installWindow(fake.api);
@@ -136,14 +157,19 @@ describe('secrets service', () => {
   });
 
   describe('desktop with keychain unavailable', () => {
-    it('falls back to localStorage', async () => {
+    it('reports failure without overwriting either store and allows a later retry', async () => {
       const fake = fakeElectronSecrets(false);
       installWindow(fake.api);
-
-      await setSecret('cruxgarden:apiKey:anthropic', 'sk-fallback');
+      localStorage.setItem('key', 'existing');
+      await expect(setSecret('key', 'new')).rejects.toThrow('unavailable');
+      await expect(getSecret('key')).rejects.toThrow('unavailable');
       expect(fake.store.size).toBe(0);
-      expect(localStorage.getItem('cruxgarden:apiKey:anthropic')).toBe('sk-fallback');
-      expect(await getSecret('cruxgarden:apiKey:anthropic')).toBe('sk-fallback');
+      expect(localStorage.getItem('key')).toBe('existing');
+      const recovered = fakeElectronSecrets();
+      installWindow(recovered.api);
+      expect(await getSecret('key')).toBe('existing');
+      expect(recovered.store.get('key')).toBe('existing');
+      expect(localStorage.getItem('key')).toBeNull();
     });
   });
 });

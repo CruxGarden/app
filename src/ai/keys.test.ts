@@ -1,8 +1,24 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getApiKey, setApiKey, removeApiKey, getDefaultModel, setDefaultModel } from './keys';
 import { DEFAULT_MODEL } from './providers';
 
 describe('API Key Management', () => {
+  beforeEach(() => {
+    const values = new Map<string, string>();
+    // Exercise provider key naming through the renderer/native boundary.
+    (globalThis as Record<string, unknown>).window = {
+      electronAPI: {
+        secrets: {
+          get: async (key: string) => values.get(key) ?? null,
+          set: async (key: string, value: string) => void values.set(key, value),
+          delete: async (key: string) => void values.delete(key),
+        },
+      },
+    };
+  });
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).window;
+  });
   it('returns null when no key is stored', async () => {
     const key = await getApiKey('anthropic');
     expect(key).toBeNull();
@@ -12,6 +28,7 @@ describe('API Key Management', () => {
     await setApiKey('anthropic', 'sk-ant-test-key');
     const key = await getApiKey('anthropic');
     expect(key).toBe('sk-ant-test-key');
+    expect(localStorage.getItem('cruxgarden:apiKey:anthropic')).toBeNull();
   });
 
   it('stores keys per provider independently', async () => {

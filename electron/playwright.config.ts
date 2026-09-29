@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test';
 const gateSpecs = [
   '**/journeys/*.spec.ts',
   '**/ipc-security.spec.ts',
+  '**/secrets.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',
   '**/typst-offline.spec.ts',
