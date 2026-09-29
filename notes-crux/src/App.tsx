@@ -2688,7 +2688,8 @@ export default function App() {
       validateNoteTitle(titleDraft);
     } catch (error) {
       setAppError(error instanceof Error ? error.message : String(error));
-      return;
+      // Callers must distinguish a refused save from a completed save before navigating.
+      throw error;
     }
 
     const snapshot = {

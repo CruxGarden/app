@@ -31,4 +31,8 @@ These editor handles ship in new Notes Cruxes. Existing Project Folders keep the
 
 ## Dependency refresh (2026-09-28)
 
-The Garden build uses matching Tiptap 3.31.3 packages, Vite 6.4.3 and Vitest 4.1.11; the unused UUID dependency is removed. The committed runtime is rebuilt from this lockfile. Upstream tests retain two expected failures: invalid-title navigation can discard unsaved body edits, and consecutive quoted lines split into separate blockquotes. These remain tracked release work.
+The Garden build uses matching Tiptap 3.31.3 packages, Vite 6.4.3 and Vitest 4.1.11; the unused UUID dependency is removed. The committed runtime is rebuilt from this lockfile. The consecutive-quoted-lines Markdown case remains an expected failure tracked for a separate block. Invalid-title navigation is fixed below.
+
+## Save refusal and navigation (2026-09-29)
+
+Narrow upstream correction in `src/App.tsx`: title validation now rejects the save promise after showing its error. Navigation already cancels on a rejected save; previously validation returned successfully and the next note replaced unsaved body edits. The existing lifecycle and editor remain authoritative. `App.navigation.test.tsx` now requires blank and invalid titles to retain the draft, then verifies correction, save, navigation and reopening. The Garden desktop regression drives the actual editor, checks file contents and reopens the saved note after an app restart. New Notes Cruxes include the rebuilt runtime; existing Project Folders retain their runtime without automatic upgrades.

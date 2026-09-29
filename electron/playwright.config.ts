@@ -8,6 +8,7 @@ const gateSpecs = [
   '**/auth-credentials.spec.ts',
   '**/settings-secrets.spec.ts',
   '**/folder-authorization.spec.ts',
+  '**/notes-save-navigation.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',
   '**/typst-offline.spec.ts',
