@@ -1241,7 +1241,8 @@ async function runGardenToolInner(
           c.id,
           services.artifact,
         );
-        if (/^No matches/i.test(r) || r.startsWith('Error')) continue;
+        if (r.startsWith('Error')) return r;
+        if (/^No matches/i.test(r)) continue;
         const block = `## "${c.title}" (${c.id})\n${r}`;
         out.push(block.slice(0, budget));
         budget -= block.length;

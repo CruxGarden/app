@@ -38,6 +38,7 @@ export async function withCaptureWindow<T>(
   size: { width: number; height: number },
   fn: (win: any) => Promise<T>,
   loadTimeoutMs = LOAD_TIMEOUT_MS,
+  operationTimeoutMs = 30000,
 ): Promise<T> {
   if (!isLoopbackHttp(url)) {
     throw new Error('capture is limited to local preview URLs');
@@ -64,9 +65,10 @@ export async function withCaptureWindow<T>(
   captureSession.webRequest.onBeforeRequest((details: any, callback: any) => {
     callback({ cancel: !isLoopbackHttp(details.url) });
   });
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('capture timed out')), loadTimeoutMs),
-  );
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('capture timed out')), loadTimeoutMs);
+  });
   try {
     await Promise.race([win.loadURL(url), timeout]);
     await Promise.race([new Promise((resolve) => setTimeout(resolve, SETTLE_MS)), timeout]);
@@ -74,8 +76,16 @@ export async function withCaptureWindow<T>(
     if (finalUrl && !isLoopbackHttp(finalUrl)) {
       throw new Error('capture aborted: preview navigated off the local server');
     }
-    return await fn(win);
+    clearTimeout(timer!);
+    const operationTimeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error('capture operation timed out')),
+        operationTimeoutMs,
+      );
+    });
+    return await Promise.race([fn(win), operationTimeout]);
   } finally {
+    clearTimeout(timer!);
     if (!win.isDestroyed()) win.destroy();
   }
 }
@@ -125,9 +135,10 @@ async function capturePreviewUrlLegacy(url: string): Promise<Buffer> {
     callback({ cancel: !isLoopbackHttp(details.url) });
   });
 
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('capture timed out')), LOAD_TIMEOUT_MS),
-  );
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('capture timed out')), LOAD_TIMEOUT_MS);
+  });
 
   try {
     await Promise.race([win.loadURL(url), timeout]);
@@ -146,6 +157,7 @@ async function capturePreviewUrlLegacy(url: string): Promise<Buffer> {
     // (and their fingerprints) don't differ per machine.
     return image.resize({ width: 1280, height: 900 }).toJPEG(85);
   } finally {
+    clearTimeout(timer!);
     if (!win.isDestroyed()) win.destroy();
   }
 }

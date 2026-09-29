@@ -10,6 +10,7 @@ const gateSpecs = [
   '**/folder-authorization.spec.ts',
   '**/notes-save-navigation.spec.ts',
   '**/composer-paste.spec.ts',
+  '**/workload-limits.spec.ts',
   '**/account-recovery.spec.ts',
   '**/publication-teardown.spec.ts',
   '**/workspace-permissions.spec.ts',

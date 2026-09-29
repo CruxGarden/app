@@ -1311,6 +1311,14 @@ export function getMockLanguageModel(): LanguageModel {
           if (step) return toolCallStream(step[0], step[1]);
           return textStream('Opened Growth, showed the page, and hello answered with the echo.');
         }
+        if (lastUserText(prompt).includes('[garden:search-limits]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('search_garden', { query: '(a+)+$', regex: true });
+          if (rounds.length === 1)
+            return toolCallStream('search_garden', { query: 'search-recovered' });
+          return textStream(rounds.join('\n'));
+        }
         if (lastUserText(prompt).includes('[garden:operate]')) {
           // The Keeper reads the screen and the garden, chooses a collaborator, exports (keeper-operates.spec).
           const rounds = toolResultsThisTurn(prompt);

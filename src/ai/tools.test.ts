@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
+import { SearchTestWorker } from '@/test/search-worker';
 import {
   createToolExecutor,
   TOOL_DEFINITIONS,
@@ -449,6 +450,20 @@ describe('createToolExecutor', () => {
   });
 
   describe('search_files', () => {
+    beforeAll(() => vi.stubGlobal('Worker', SearchTestWorker));
+    afterAll(() => vi.unstubAllGlobals());
+    it('times out pathological regex without blocking and recovers', async () => {
+      await execute('write_file', { path: 'bad.txt', content: 'a'.repeat(100) + '!' });
+      let responsive = false;
+      const tick = setTimeout(() => {
+        responsive = true;
+      }, 25);
+      const refused = await execute('search_files', { query: '(a+)+$', regex: true });
+      clearTimeout(tick);
+      expect(responsive).toBe(true);
+      expect(refused).toContain('Search timed out');
+      expect(await execute('search_files', { query: '!' })).toContain('bad.txt:1:');
+    });
     it('finds matching lines across files as path:line: text', async () => {
       await execute('write_file', {
         path: 'src/a.js',

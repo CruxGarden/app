@@ -20,43 +20,75 @@ export interface RecordOptions {
   height: number;
 }
 
+export const MAX_RECORD_BYTES = 256 * 1024 * 1024;
+let recording = false;
+
+export function validateRecordOptions(opts: RecordOptions): void {
+  const ranges = { width: 3840, height: 2160, fps: 60, maxSeconds: 180 } as const;
+  for (const [key, maximum] of Object.entries(ranges)) {
+    const value = opts[key as keyof typeof ranges];
+    if (!Number.isFinite(value) || value < 1 || value > maximum || !Number.isInteger(value))
+      throw new Error(`Recording ${key} must be an integer from 1 to ${maximum}.`);
+  }
+}
+
 export async function recordPreviewUrl(
   url: string,
   opts: RecordOptions,
   onProgress?: (frames: number, seconds: number) => void,
 ): Promise<{ frames: number; seconds: number; lastPoll: string }> {
-  const fps = Math.min(60, Math.max(1, Math.round(opts.fps)));
-  const maxFrames = Math.min(60 * 180, Math.round(opts.maxSeconds * fps));
-  fs.mkdirSync(opts.dir, { recursive: true });
-  for (const f of fs.readdirSync(opts.dir))
-    if (/^f\d{4}\.png$/.test(f)) fs.unlinkSync(path.join(opts.dir, f));
-  return withCaptureWindow(url, { width: opts.width, height: opts.height }, async (win) => {
-    const start = Date.now();
-    let frames = 0;
-    let lastPoll: unknown = 'never';
-    const done = async () => {
-      try {
-        lastPoll = await win.webContents.executeJavaScript(
-          '(function(){ try { return JSON.stringify({ href: location.href, state: document.readyState, done: document.body && document.body.dataset.done, two: 1 + 1 }); } catch (e) { return "throw: " + e.message; } })()',
-        );
-      } catch (err) {
-        lastPoll = `error: ${(err as Error).message}`;
-      }
-      return typeof lastPoll === 'string' && /"done":"1"/.test(lastPoll);
-    };
-    while (frames < maxFrames) {
-      const due = start + (frames * 1000) / fps;
-      const wait = due - Date.now();
-      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-      const image = await win.webContents.capturePage();
-      const png = image.resize({ width: opts.width, height: opts.height }).toPNG();
-      fs.writeFileSync(path.join(opts.dir, `f${String(frames).padStart(4, '0')}.png`), png);
-      frames += 1;
-      if (frames % fps === 0) {
-        onProgress?.(frames, frames / fps);
-        if (await done()) break;
-      }
-    }
-    return { frames, seconds: frames / fps, lastPoll: String(lastPoll) };
-  });
+  validateRecordOptions(opts);
+  if (recording) throw new Error('A preview recording is already running; retry when it finishes.');
+  recording = true;
+  try {
+    const fps = opts.fps;
+    const maxFrames = opts.maxSeconds * fps;
+    fs.mkdirSync(opts.dir, { recursive: true });
+    for (const f of fs.readdirSync(opts.dir))
+      if (/^f\d{4}\.png$/.test(f)) fs.unlinkSync(path.join(opts.dir, f));
+    return await withCaptureWindow(
+      url,
+      { width: opts.width, height: opts.height },
+      async (win) => {
+        const start = Date.now();
+        let frames = 0;
+        let outputBytes = 0;
+        let lastPoll: unknown = 'never';
+        const done = async () => {
+          try {
+            lastPoll = await win.webContents.executeJavaScript(
+              '(function(){ try { return JSON.stringify({ href: location.href, state: document.readyState, done: document.body && document.body.dataset.done, two: 1 + 1 }); } catch (e) { return "throw: " + e.message; } })()',
+            );
+          } catch (err) {
+            lastPoll = `error: ${(err as Error).message}`;
+          }
+          return typeof lastPoll === 'string' && /"done":"1"/.test(lastPoll);
+        };
+        while (frames < maxFrames) {
+          const due = start + (frames * 1000) / fps;
+          const wait = due - Date.now();
+          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+          const image = await win.webContents.capturePage();
+          const png = image.resize({ width: opts.width, height: opts.height }).toPNG();
+          if (win.isDestroyed()) throw new Error('Recording stopped.');
+          outputBytes += png.length;
+          if (outputBytes > MAX_RECORD_BYTES)
+            throw new Error(
+              'Recording exceeds 256 MiB of frames; use a shorter duration or smaller dimensions.',
+            );
+          fs.writeFileSync(path.join(opts.dir, `f${String(frames).padStart(4, '0')}.png`), png);
+          frames += 1;
+          if (frames % fps === 0) {
+            onProgress?.(frames, frames / fps);
+            if (await done()) break;
+          }
+        }
+        return { frames, seconds: frames / fps, lastPoll: String(lastPoll) };
+      },
+      undefined,
+      opts.maxSeconds * 1000 + 10000,
+    );
+  } finally {
+    recording = false;
+  }
 }

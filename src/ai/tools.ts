@@ -1,3 +1,4 @@
+import { searchFileLines, SEARCH_TOTAL_CHAR_LIMIT } from './search-lines';
 import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from './garden-access';
 import { addGuestbook, describeAddGuestbook } from '@/services/guestbook';
 import {
@@ -1551,13 +1552,8 @@ export async function toolSearchFiles(
   const useRegex = (input.regex as boolean) ?? false;
   const caseSensitive = (input.case_sensitive as boolean) ?? false;
 
-  let pattern: RegExp;
-  try {
-    const source = useRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    pattern = new RegExp(source, caseSensitive ? '' : 'i');
-  } catch (err: unknown) {
-    return formatToolError('search_files', `Invalid regular expression: ${(err as Error).message}`);
-  }
+  if (typeof query !== 'string' || query.length > 2048)
+    return formatToolError('search_files', 'Use a search query of at most 2048 characters.');
 
   const artifacts = await artifactService.findByResource('crux', cruxId);
   const files = artifacts.filter(
@@ -1565,7 +1561,10 @@ export async function toolSearchFiles(
       a.type === 'artifact' && a.encoding !== 'binary' && !isBinaryMime(a.mimeType || ''),
   );
 
+  if (files.length > 1000)
+    return formatToolError('search_files', 'Search supports at most 1000 text files per Crux.');
   const matches: string[] = [];
+  let characters = 0;
   let truncated = false;
   for (const file of files) {
     const path = file.meta?.path || file.filename;
@@ -1575,15 +1574,29 @@ export async function toolSearchFiles(
     } catch {
       continue; // unreadable file — skip, don't fail the whole search
     }
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (pattern.test(lines[i]!)) {
-        if (matches.length >= MAX_SEARCH_MATCHES) {
+    characters += content.length;
+    if (characters > SEARCH_TOTAL_CHAR_LIMIT)
+      return formatToolError(
+        'search_files',
+        'Search exceeds 16 Mi characters; narrow the files before searching.',
+      );
+    try {
+      const found = await searchFileLines({
+        content,
+        query,
+        regex: useRegex,
+        caseSensitive,
+        limit: MAX_SEARCH_MATCHES + 1 - matches.length,
+      });
+      for (const match of found) {
+        if (matches.length === MAX_SEARCH_MATCHES) {
           truncated = true;
           break;
         }
-        matches.push(`${path}:${i + 1}: ${lines[i]!.trim().slice(0, 200)}`);
+        matches.push(`${path}:${match.line}: ${match.text}`);
       }
+    } catch (error) {
+      return formatToolError('search_files', (error as Error).message);
     }
     if (truncated) break;
   }

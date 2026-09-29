@@ -1325,7 +1325,7 @@ async function setupIpc() {
         {
           dir,
           fps: opts.fps ?? 30,
-          maxSeconds: Math.min(opts.maxSeconds ?? 60, 180),
+          maxSeconds: opts.maxSeconds ?? 60,
           width: opts.width ?? 1280,
           height: opts.height ?? 720,
         },
