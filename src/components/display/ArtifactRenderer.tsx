@@ -1,3 +1,4 @@
+import { useStoreApiProxy } from '@/hooks/useStoreApiProxy';
 import { apiBaseUrl } from '@/api/client';
 import { useObjectUrl } from '@/hooks/useBlobUrl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -93,6 +94,7 @@ function HtmlRenderer({
   );
   const iframeOrigin = published?.origin;
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  useStoreApiProxy(cruxId, iframeOrigin, iframeRef);
 
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
@@ -173,7 +175,19 @@ function HtmlRenderer({
     }
 
     window.addEventListener('message', handler);
+    const sendCurrentSession = () => {
+      const source = iframeRef.current?.contentWindow;
+      if (source && !useAuthStore.getState().isLoading) sendWhenReady(source);
+    };
+    const stopAuthor = useAppStore.subscribe((state, previous) => {
+      if (state.author !== previous.author) sendCurrentSession();
+    });
+    const stopAuth = useAuthStore.subscribe((state, previous) => {
+      if (state.isLoading !== previous.isLoading) sendCurrentSession();
+    });
     return () => {
+      stopAuthor();
+      stopAuth();
       window.removeEventListener('message', handler);
       for (const unsub of pendingUnsubs) unsub();
       pendingUnsubs.clear();

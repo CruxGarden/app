@@ -168,6 +168,10 @@ test('Guestbook: added from the Share pane, signed in the preview, added by the 
       await site.getByRole('button', { name: 'Sign in' }).click();
       await expect(site.getByLabel('Name')).toHaveValue('tester');
       await site.getByLabel('Message').fill('Hello from afar.');
+      await site
+        .getByLabel('Message')
+        .evaluate(() => window.dispatchEvent(new Event('crux:authchange')));
+      await expect(site.getByLabel('Message')).toHaveValue('Hello from afar.', { timeout: 3000 });
       await site.getByRole('button', { name: 'Sign the guestbook' }).click();
       await expect(site.getByRole('status')).toHaveText('Thank you, tester.');
       await expect(site.getByRole('listitem')).toHaveCount(1);

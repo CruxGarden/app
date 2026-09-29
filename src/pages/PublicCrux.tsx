@@ -7,8 +7,6 @@ import { publicApi } from '@/api';
 import type { Crux, Artifact } from '@/api/types';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
-import { useStoreApiProxy } from '@/hooks/useStoreApiProxy';
-import { publishOriginFor } from '@/lib/public-url';
 import MetadataContent from '@/components/workspace/MetadataContent';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
@@ -44,12 +42,6 @@ export default function PublicCrux() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [metadataOpen, setMetadataOpen] = useState(false);
-
-  // Proxy store postMessages to the API when running locally
-  // (browser blocks published iframe from fetching localhost directly)
-  // Store calls from the published page are always proxied through this
-  // window so the visitor's credentials never reach third-party crux code.
-  useStoreApiProxy(crux?.id ?? null, crux ? publishOriginFor(crux.id) : null);
 
   const hasMetadata = !!crux;
 

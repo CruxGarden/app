@@ -437,7 +437,13 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       if (!file) return send(404, { message: 'Not found' });
       let bytes = file.bytes;
       if (file.path.endsWith('.html')) {
-        const tag = `<script data-crux-inject>window.crux=window.crux||{};window.crux.publish={cruxId:${JSON.stringify(servedPublished[1])},apiBase:${JSON.stringify(state.baseUrl)}};</script>`;
+        const tag = `<script data-crux-inject>window.crux=window.crux||{};window.crux.publish={cruxId:${JSON.stringify(servedPublished[1])},apiBase:${JSON.stringify(state.baseUrl)}};(function(){
+          var base=${JSON.stringify(state.baseUrl)},id=${JSON.stringify(servedPublished[1])},token=null;
+          function call(path,method,body){return fetch(base+path,{method:method||'GET',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})}).then(function(r){if(!r.ok)throw new Error('Request refused');return r.status===204?null:r.json();});}
+          window.crux.auth={requestCode:function(email){return call('/published-auth/'+id+'/code','POST',{email:email});},login:function(email,code){return call('/published-auth/'+id+'/login','POST',{email:email,code:code}).then(function(s){token=s.accessToken;window.crux.visitor=s.visitor;return s.visitor;});},profile:function(){return Promise.resolve(window.crux.visitor||null);}};
+          window.crux.store={get:function(k){return call('/store/'+id+'/'+encodeURIComponent(k)).then(function(d){return d.value;});},set:function(k,v,o){return call('/store/'+id+'/'+encodeURIComponent(k),'PUT',{value:v,mode:o.mode});}};
+          window.crux.whenReady=function(){return Promise.resolve();};
+        })();</script>`;
         const html = bytes.toString('utf8');
         bytes = Buffer.from(
           html.includes('</head>') ? html.replace('</head>', `${tag}</head>`) : tag + html,
@@ -450,6 +456,13 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       res.end(bytes);
       return;
     }
+    if (/^\/published-auth\/[^/]+\/code$/.test(path) && method === 'POST')
+      return send(200, { message: 'sent' });
+    if (/^\/published-auth\/[^/]+\/login$/.test(path) && method === 'POST')
+      return send(200, {
+        accessToken: 'pv_fixture',
+        visitor: { id: 'visitor', username: 'tester', name: 'Tester' },
+      });
     if (path === '/auth/code' && method === 'POST') return send(200, { message: 'sent' });
     if (path === '/auth/login' && method === 'POST') {
       const body = bodyJson();

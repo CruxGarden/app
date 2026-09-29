@@ -4,14 +4,9 @@
  * "guestbook" ({ entries: [{ name, message, at }] }), so a fork of the site
  * carries its own book and Crux Garden runs no other backend for it.
  *
- * Three ways to the store, tried in this order (the 5Ws board's pattern):
- *   1. the API directly, when the publish injection told the page which
- *      crux it is (window.crux.publish) — writes need the visitor's sign-in
- *      by email code, done here on the page;
- *   2. window.crux.store, where a host injected the SDK (a web preview);
- *   3. the host frame (the Workshop preview): the SDK's own crux:store:*
- *      postMessage protocol, answered by the author's local store.
- * A page opened on its own with none of these shows the book read-only.
+ * Published pages use the embedded Crux Garden library for visitor sign-in
+ * and Store access. Hosted pages inherit the parent's sign-in. The Workshop
+ * preview uses its local Store bridge. Account credentials never live here.
  *
  * Put <section data-guestbook></section> where the book should appear and
  * load this file after it (the Share pane's "Add a guestbook" does both).
@@ -22,74 +17,12 @@
   var CAP = 200;
   var NAME_MAX = 40;
   var MESSAGE_MAX = 500;
-  var TOKEN_KEY = 'crux:guestbook:token';
   var NAME_KEY = 'crux:guestbook:name';
-
-  // ── Where the store is ────────────────────────────────────────────────────
-
-  function apiConfig() {
-    var pub = window.crux && window.crux.publish;
-    var fromHost = /^([^.]+)\.publish\./.exec(location.hostname);
-    var cruxId = (pub && pub.cruxId) || (fromHost && fromHost[1]) || null;
-    var apiBase = ((pub && pub.apiBase) || 'https://api.crux.garden').replace(/\/$/, '');
-    return cruxId ? { cruxId: cruxId, apiBase: apiBase } : null;
-  }
-
-  function apiStore(cfg, token) {
-    var url = function (key) {
-      return (
-        cfg.apiBase + '/store/' + encodeURIComponent(cfg.cruxId) + '/' + encodeURIComponent(key)
-      );
-    };
-    var headers = function (json) {
-      var h = { Accept: 'application/json' };
-      if (json) h['Content-Type'] = 'application/json';
-      if (token) h.Authorization = 'Bearer ' + token;
-      return h;
-    };
-    return {
-      via: 'api',
-      needsSignIn: !token,
-      get: function (key) {
-        return fetch(url(key), { headers: headers(false) })
-          .then(function (r) {
-            return r.ok ? r.json() : null;
-          })
-          .then(function (d) {
-            return d && d.value !== undefined ? d.value : null;
-          })
-          .catch(function () {
-            return null;
-          });
-      },
-      set: function (key, value) {
-        return fetch(url(key), {
-          method: 'PUT',
-          headers: headers(true),
-          body: JSON.stringify({ value: value, mode: 'public' }),
-        }).then(function (r) {
-          if (r.ok) return;
-          return r
-            .json()
-            .catch(function () {
-              return {};
-            })
-            .then(function (d) {
-              throw new Error(
-                r.status === 401
-                  ? 'Your sign-in has expired.'
-                  : (d && d.message) || 'The store did not take that (' + r.status + ').',
-              );
-            });
-        });
-      },
-    };
-  }
 
   function sdkStore(sdk) {
     return {
       via: 'sdk',
-      needsSignIn: false,
+      needsSignIn: !!window.crux.auth && !window.crux.visitor,
       get: function (key) {
         return sdk.get(key);
       },
@@ -136,64 +69,10 @@
     };
   }
 
-  function storeFor(token) {
-    var cfg = apiConfig();
-    if (cfg) return apiStore(cfg, token);
+  function storeFor() {
     if (window.crux && window.crux.store) return sdkStore(window.crux.store);
     if (window.parent && window.parent !== window) return hostStore();
     return null;
-  }
-
-  // ── Sign-in (the API's email-code flow) ───────────────────────────────────
-
-  function call(url, init) {
-    var headers = { Accept: 'application/json' };
-    if (init.body) headers['Content-Type'] = 'application/json';
-    if (init.token) headers.Authorization = 'Bearer ' + init.token;
-    return fetch(url, { method: init.method || 'GET', headers: headers, body: init.body }).then(
-      function (r) {
-        return r.text().then(function (text) {
-          var data;
-          try {
-            data = text ? JSON.parse(text) : null;
-          } catch {
-            data = null;
-          }
-          if (!r.ok) {
-            var msg = (data && data.message) || 'Request failed (' + r.status + ')';
-            throw new Error(Array.isArray(msg) ? msg.join('; ') : String(msg));
-          }
-          return data;
-        });
-      },
-    );
-  }
-
-  function requestCode(cfg, email) {
-    return call(cfg.apiBase + '/auth/code', {
-      method: 'POST',
-      body: JSON.stringify({ email: email }),
-    });
-  }
-
-  function signIn(cfg, email, code) {
-    return call(cfg.apiBase + '/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: email, code: code }),
-    }).then(function (data) {
-      if (!data || !data.accessToken) throw new Error('No token came back.');
-      return data.accessToken;
-    });
-  }
-
-  function profileName(cfg, token) {
-    return call(cfg.apiBase + '/auth/profile', { token: token })
-      .then(function (data) {
-        return (data && data.author && data.author.username) || '';
-      })
-      .catch(function () {
-        return '';
-      });
   }
 
   // ── The book ──────────────────────────────────────────────────────────────
@@ -281,14 +160,14 @@
     root.setAttribute('aria-label', 'Guestbook');
     root.innerHTML = '';
 
-    var token = null;
-    try {
-      token = sessionStorage.getItem(TOKEN_KEY);
-    } catch {
-      token = null;
+    var store = storeFor();
+    var renderedVisitor;
+    function visitorKey() {
+      return (
+        (window.crux && window.crux.visitor && window.crux.visitor.id) ||
+        (store.needsSignIn ? 'anonymous' : 'local')
+      );
     }
-    var store = storeFor(token);
-    var cfg = apiConfig();
 
     var heading = el('h2', { text: root.getAttribute('data-guestbook') || 'Guestbook' });
     var status = el('div', { role: 'status' });
@@ -325,6 +204,7 @@
 
     // A fresh form each time: the old one's submit listener goes with it.
     function freshForm() {
+      renderedVisitor = visitorKey();
       var next = el('form');
       root.replaceChild(next, form);
       form = next;
@@ -342,7 +222,6 @@
       var code = el('input', {
         type: 'text',
         name: 'code',
-        inputmode: 'numeric',
         autocomplete: 'one-time-code',
       });
       var send = el('button', { type: 'button', text: 'Send code' });
@@ -355,7 +234,7 @@
         if (!email.value) return say('Enter your email first.');
         send.disabled = true;
         say('Sending a code…');
-        requestCode(cfg, email.value).then(
+        window.crux.auth.requestCode(email.value).then(
           function () {
             say('Check your email for the code.');
             enter.disabled = false;
@@ -371,26 +250,19 @@
         ev.preventDefault();
         enter.disabled = true;
         say('Signing in…');
-        signIn(cfg, email.value, code.value).then(
-          function (t) {
-            token = t;
-            try {
-              sessionStorage.setItem(TOKEN_KEY, t);
-            } catch {
-              /* a private window keeps it for this page only */
-            }
-            store = storeFor(token);
-            profileName(cfg, token).then(function (name) {
-              if (name) {
-                try {
-                  sessionStorage.setItem(NAME_KEY, name);
-                } catch {
-                  /* same */
-                }
+        window.crux.auth.login(email.value, code.value).then(
+          function (visitor) {
+            store = storeFor();
+            var name = visitor && (visitor.username || visitor.name);
+            if (name) {
+              try {
+                sessionStorage.setItem(NAME_KEY, name);
+              } catch {
+                /* page-only name */
               }
-              say('');
-              entryForm();
-            });
+            }
+            say('');
+            entryForm();
           },
           function (err) {
             enter.disabled = false;
@@ -448,13 +320,7 @@
             submit.disabled = false;
             say(err.message || 'That did not go through.');
             if (/expired/.test(String(err.message))) {
-              token = null;
-              try {
-                sessionStorage.removeItem(TOKEN_KEY);
-              } catch {
-                /* same */
-              }
-              store = storeFor(null);
+              store = storeFor();
               signInForm();
             }
           },
@@ -468,9 +334,26 @@
       render([]);
       return;
     }
-    if (store.needsSignIn) signInForm();
-    else entryForm();
-    readBook(store).then(render);
+    var ready = window.crux && window.crux.whenReady ? window.crux.whenReady() : Promise.resolve();
+    ready.then(function () {
+      store = storeFor();
+      function showSignInState() {
+        store = storeFor();
+        if (renderedVisitor === visitorKey()) return;
+        if (store.needsSignIn && window.crux.auth.isHosted && window.crux.auth.isHosted()) {
+          freshForm();
+          form.appendChild(
+            el('p', {
+              text: 'Sign in to Crux Garden using the page header to sign this guestbook.',
+            }),
+          );
+        } else if (store.needsSignIn) signInForm();
+        else entryForm();
+      }
+      showSignInState();
+      window.addEventListener('crux:authchange', showSignInState);
+      readBook(store).then(render);
+    });
   }
 
   function boot() {
