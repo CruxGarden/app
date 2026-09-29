@@ -43,10 +43,15 @@ function rememberFocus(id: string | null, target = document.activeElement) {
 let focusGeneration = 0;
 function restoreFocus(id: string) {
   const generation = ++focusGeneration;
+  const initialFocus = document.activeElement;
   const saved = focusByCrux.get(id);
   let frames = 0;
   const restore = () => {
     if (generation !== focusGeneration) return;
+    // Navigation may leave focus on body while the destination mounts. A new
+    // focused control means the person has moved on; do not steal it back.
+    const currentFocus = document.activeElement;
+    if (currentFocus && currentFocus !== document.body && currentFocus !== initialFocus) return;
     if (useWorkspaceRegistry.getState().activeId !== id) {
       if (++frames < 120) requestAnimationFrame(restore);
       return;
