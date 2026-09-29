@@ -19,9 +19,57 @@ Use Node 22.12 or later for development (the repository's `.nvmrc` selects Node 
 
 ```bash
 nvm use                      # the version in .nvmrc
-npm install && npm run dev   # web app on :8080
-cd electron && nvm use && npm install && npm run dev   # desktop shell against the dev server
+npm ci && npm run dev   # web app on :8080
+cd electron && nvm use && npm ci && npm run dev   # desktop shell against the dev server
 ```
+
+The app repository is sufficient to install the desktop: its pinned local API package
+is committed under `electron/vendor/`, with provenance and a license. A sibling API
+checkout is needed only when changing that runtime. Build a fresh checkout with
+`npm run build` from the app directory; the prebuild installs/builds the bundled tools.
+Do not copy another checkout's `node_modules` or generated `dist`.
+
+For public API configuration, use the documented values in `.env.example`; `VITE_*`
+values are public build inputs, never credentials. A local development API is optional
+for local creation and editing. Publishing/authentication need a running API with the
+matching release changes; a local desktop build does not deploy it.
+
+### Platform acceptance
+
+The current manual-testing target is **macOS Apple Silicon**, with an unsigned/ad-hoc
+local package exercised on macOS 26.6.2. The declared minimum is macOS 13; that older
+OS has not been exercised in this acceptance run. Intel Mac, Linux x64 and Windows x64
+have release build targets, but this Mac run is not evidence of their UI, hardware,
+keychain, installer or update behavior. Validate each target on its own host before
+advertising it as tested. Signed/notarized distribution and real-provider/hardware
+acceptance remain separate release operations.
+
+To stage without publishing or signing with an account, after the normal build/gates:
+
+```bash
+cd electron
+CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --dir --mac --arm64 --publish never
+CRUX_PACKAGED=1 npx playwright test --project=desktop e2e/packaged.spec.ts
+```
+
+The packaged test uses an isolated profile and proves that development mocks, API
+overrides and raw SQL writes are disabled. For a manual session, launch the executable
+with `CRUX_TEST_PROFILE` set to a new absolute directory; the packaged build uses that
+storage location without granting test privileges. Keep that directory if you want to
+resume your testing. Do not point automated tests at your personal Garden.
+
+### Notices and source materials
+
+`vite-plugin-notices.ts` emits `dist/THIRD-PARTY-NOTICES.txt` from packages loaded by the
+renderer and its workers. Missing npm notices require reviewed, version-pinned copies
+in `licenses/renderer/sources.json`; hash/version mismatches fail the build. Some upstream
+packages supply only a notice and an external license reference; these are identified
+in that manifest. GSAP uses its own Standard No Charge license, not an OSI license:
+https://gsap.com/standard-license/. The app's MIT license does not relicense dependencies.
+Fonts retain their OFL notices under `public/fonts/`. Crux Tools retain their own
+LICENSE/UPSTREAM files. The staged desktop carries the app LICENSE, renderer/font/tool
+notices and the native media corresponding-source archive described below. This is a
+record of the materials shipped, not a claim that all dependencies use the same license.
 
 ## Native media binaries
 
@@ -78,6 +126,11 @@ and Monaco: both are declared as development dependencies and ship in the app. A
 tools separately as well. A clean audit alone does not establish release readiness. Commit
 both package manifests and lockfiles.
 
+The desktop/API pin `@nestjs/swagger`'s `js-yaml` dependency to 5.4.2 with a scoped
+root override (GHSA-r3ph-w7gj-g6xm). Swagger 11.4.7 pins the affected 5.3.0 exactly,
+so a lock refresh alone does not fix it. Keep the override until upstream adopts a
+fixed version; preserve the builder/updater's separate 4.x dependency.
+
 Keep Electron on a supported stable major: npm audit does not check Chromium's support
 window. Electron 42+ downloads its binary on first CLI use; this repository's desktop
 `postinstall` explicitly downloads it before rebuilding native dependencies, so Playwright
@@ -116,3 +169,11 @@ model). Publishing and sync send only what the user asked to publish or back up,
 Update checks ask GitHub Releases for the latest version and can be turned off. There are no
 analytics and no crash reporting unless the user opts in; logs stay on disk. Changing this stance
 is a product decision (ADR 0008) — not a PR.
+
+## Catalog test scope
+
+The default verify gate builds and checks the bundled Crux Tools. Runtime packaging
+assertions in `src/templates/*-app.test.ts` and the native stylesheet cases use the
+same manifest scope; host, service and manifest tests still cover every tool. Use
+`CRUX_BUNDLE_TOOLS=all npm run verify` for the complete prepared catalog (also run
+by the weekly CI job). This is explicit scope, never a skip based on missing files.

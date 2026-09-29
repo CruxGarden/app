@@ -3,11 +3,25 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import cruxTools from './vite-plugin-crux-tools';
 import cruxAssets from './vite-plugin-crux-assets';
+import notices from './vite-plugin-notices';
+const thirdPartyNotices = notices(__dirname);
+// Runtime packaging checks follow the same manifest selection as prebuild and
+// verify-tools. Host/service tests still cover the entire catalog. Never select
+// tests based on whether an ignored runtime happens to exist on this machine.
+const toolTestMode = process.env.CRUX_BUNDLE_TOOLS || 'bundled';
+const excludedToolPackages = readdirSync(__dirname)
+  .filter((name) => name.endsWith('-crux'))
+  .map((name) => path.join(__dirname, name, 'crux-tool.json'))
+  .filter((file) => existsSync(file))
+  .map((file) => JSON.parse(readFileSync(file, 'utf8')) as { id: string; bundled?: boolean })
+  .filter((tool) => toolTestMode !== 'all' && !(toolTestMode === 'bundled' && tool.bundled))
+  .map((tool) => `src/templates/${tool.id}.test.ts`);
 
 export default defineConfig({
-  plugins: [cruxAssets(), react(), tailwindcss(), cruxTools(__dirname)],
+  plugins: [cruxAssets(), react(), tailwindcss(), cruxTools(__dirname), thirdPartyNotices.main],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -34,6 +48,7 @@ export default defineConfig({
   },
   worker: {
     format: 'es',
+    plugins: () => [thirdPartyNotices.worker()],
   },
   esbuild: {
     // These Template Cruxes travel as text - the template globs pull them in
@@ -44,7 +59,9 @@ export default defineConfig({
     // depended on having installed each template's own dependencies.
     // None of them are imported as TypeScript, so nothing needs to compile.
     // Add a directory here if a new template's tsconfig `extends` something.
-    exclude: [/(?:blog|digital-garden|homepage|recipes|storefront|mermaid)-crux\/.*\.tsx?$/],
+    exclude: [
+      /(?:blog|digital-garden|homepage|recipes|storefront|mermaid|business|resume|photo-gallery)-crux\/.*\.tsx?$/,
+    ],
   },
   build: {
     outDir: 'dist',
@@ -61,6 +78,7 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.ts'],
+    exclude: excludedToolPackages,
     // Template stylesheets must remain text, rather than Vitest's default CSS stub.
     css: {
       include: [

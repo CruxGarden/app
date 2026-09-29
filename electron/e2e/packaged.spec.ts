@@ -130,6 +130,17 @@ test.describe('packaged app', () => {
           'GPL-3.0-or-later',
         );
       }
+      const resources = join(dirname(dirname(exe)), 'Resources');
+      expect(readFileSync(join(resources, 'LICENSE'), 'utf8')).toContain('MIT License');
+      const notices = readFileSync(join(resources, 'app', 'THIRD-PARTY-NOTICES.txt'), 'utf8');
+      expect(notices).toContain('react@19.');
+      expect(notices).toContain('monaco-editor@');
+      expect(notices).toContain('wa-sqlite@');
+      expect(notices).toContain('Permission is hereby granted');
+      for (const font of ['Inter', 'Outfit', 'JetBrainsMono', 'CormorantGaramond'])
+        expect(readFileSync(join(resources, 'app', 'fonts', `${font}-OFL.txt`), 'utf8')).toContain(
+          'SIL OPEN FONT LICENSE',
+        );
       await page.screenshot({ path: 'e2e/.results/packaged-gateway.png' });
     } finally {
       await app.close();

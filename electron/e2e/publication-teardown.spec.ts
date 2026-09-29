@@ -40,7 +40,7 @@ test('failed Unshare preserves published state and local content; retry removes 
     await share.getByRole('button', { name: 'Share', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Share without a backup' }).click();
     await expect(share.getByText('Up to date')).toBeVisible();
-    expect(api.state.published[id]).toBeDefined();
+    await expect.poll(() => api.state.published[id]).toBeDefined();
   } finally {
     await app.close();
     await api.close();

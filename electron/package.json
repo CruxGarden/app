@@ -80,6 +80,10 @@
     ],
     "extraResources": [
       {
+        "from": "../LICENSE",
+        "to": "LICENSE"
+      },
+      {
         "from": "../dist",
         "to": "app"
       },
@@ -182,5 +186,10 @@
       "deleteAppDataOnUninstall": false
     },
     "beforePack": "build/stage-native.js"
+  },
+  "overrides": {
+    "@nestjs/swagger": {
+      "js-yaml": "5.4.2"
+    }
   }
 }

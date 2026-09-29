@@ -15,7 +15,8 @@ local model. Publishing, sync and included collaboration use our servers as desc
 
 ```bash
 nvm use                       # Node 22
-npm install
+npm ci
+npm --prefix electron ci
 npm run dev:site              # the web app in the browser, http://localhost:8080
 npm run dev:app               # the desktop app on that dev server (HMR); starts it if needed
 npm run dev:app --live        # the same, against the production API — publishes are real
@@ -56,5 +57,7 @@ See `CONTRIBUTING.md`. Security reports: keeper@crux.garden (`SECURITY.md`).
 
 ## License
 
-MIT — see `LICENSE`. Bundled Astro templates are original; adapted open-source themes carry their
-own attribution inside the template.
+Crux Garden code is MIT — see `LICENSE`. Dependencies, fonts and bundled Crux Tools retain
+their own licenses. The package includes renderer/worker notices, font notices and native media
+licenses with corresponding sources. See `CONTRIBUTING.md` for the inventory and platform
+acceptance limits; GSAP uses its own Standard No Charge license.

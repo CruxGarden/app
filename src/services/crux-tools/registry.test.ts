@@ -45,8 +45,8 @@ describe('crux-tool.json manifests (ADR 0050)', () => {
   });
 
   it('a template definition is assembled from the manifest and the module files', async () => {
-    const m = toolManifest('kan-app')!;
-    const def = (await loadTemplate('kan-app'))!;
+    const m = toolManifest('eventcalendar-app')!;
+    const def = (await loadTemplate('eventcalendar-app'))!;
     expect(def.greeting).toBe(m.greeting);
     expect(def.context).toBe(m.context);
     expect((def.meta?.settings as { entryFile: string }).entryFile).toBe(m.entryFile);
@@ -54,7 +54,7 @@ describe('crux-tool.json manifests (ADR 0050)', () => {
     expect(def.layout?.panes).toContain('workshop');
     const seed = def.files.find((f) => f.path === m.document!.path);
     expect(seed && JSON.parse(seed.content)).toEqual(m.document!.seed);
-    expect(def.files.some((f) => f.path === 'runtime/index.html')).toBe(true);
+    expect(def.files.some((f) => f.path === 'vendor/event-calendar.min.js')).toBe(true);
   }, 60_000);
 
   it('rejects a manifest that would let a tool escape its Crux or lie about itself', () => {

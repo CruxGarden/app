@@ -1,0 +1,84 @@
+{
+  "@react-dnd/invariant": {
+    "version": "4.0.2",
+    "file": "react-dnd-invariant.txt",
+    "source": "https://raw.githubusercontent.com/react-dnd/react-dnd/641fd36c130e42c3cf08987924151efa1452bca7/LICENSE",
+    "sha256": "10c8da64ecfa3067cf9231e0ba19b8d7730e7fed3ac5eaa37ccb97c3c5e71336"
+  },
+  "@react-dnd/shallowequal": {
+    "version": "4.0.2",
+    "file": "react-dnd-shallowequal.txt",
+    "source": "https://raw.githubusercontent.com/react-dnd/react-dnd/641fd36c130e42c3cf08987924151efa1452bca7/LICENSE",
+    "sha256": "10c8da64ecfa3067cf9231e0ba19b8d7730e7fed3ac5eaa37ccb97c3c5e71336"
+  },
+  "rdndmb-html5-to-touch": {
+    "version": "8.1.2",
+    "file": "rdndmb-html5-to-touch.txt",
+    "source": "https://raw.githubusercontent.com/LouisBrunner/dnd-multi-backend/c9d018e523f5ad98dc4fe1606b3a08c181b115c8/LICENSE",
+    "sha256": "4b8cb29bfb6eaab0bf73d1eb61b75fba6eeca044758168a8fd77371e200c3051"
+  },
+  "react-arborist": {
+    "version": "3.4.3",
+    "file": "react-arborist.txt",
+    "source": "https://raw.githubusercontent.com/brimdata/react-arborist/c851c6f76ad5878f3ea7b68602e9b2f970df142e/LICENSE",
+    "sha256": "f1dcfe846608164333e4662013cd41adcee862327ca0b93228fbc11418b299c8"
+  },
+  "react-force-graph-2d": {
+    "version": "1.29.1",
+    "file": "react-force-graph-2d.txt",
+    "source": "https://raw.githubusercontent.com/vasturiano/react-force-graph/5ee21b693d83f62da569cba6e3cdf31e028406e1/LICENSE",
+    "sha256": "5b6dc9ce44c7b73620b191c567339212bd00537af46fdedaf98304c34214cc9c"
+  },
+  "react-force-graph-3d": {
+    "version": "1.29.1",
+    "file": "react-force-graph-3d.txt",
+    "source": "https://raw.githubusercontent.com/vasturiano/react-force-graph/5ee21b693d83f62da569cba6e3cdf31e028406e1/LICENSE",
+    "sha256": "5b6dc9ce44c7b73620b191c567339212bd00537af46fdedaf98304c34214cc9c"
+  },
+  "dingbat-to-unicode": {
+    "version": "1.0.1",
+    "file": "dingbat-to-unicode.txt",
+    "source": "https://raw.githubusercontent.com/mwilliamson/dingbat-to-unicode/9eb2d1d8b8463b7bd3cd125597eabcfa9df42128/js/LICENSE",
+    "kind": "license",
+    "sha256": "1013cef4b629a3c7eaf737c110fb5bebbf3abbc16e154d769468d71c3653fa37"
+  },
+  "@ai-sdk/provider-utils": {
+    "version": "5.0.18",
+    "file": "ai-sdk-provider-utils.txt",
+    "source": "Vercel AI SDK shared license, installed @ai-sdk/provider/LICENSE",
+    "kind": "license",
+    "sha256": "b4f9adb7c568904834d0dd6cc98d16c390d21ca32fc17ae7a267715269bd5529"
+  },
+  "gsap": {
+    "version": "3.15.0",
+    "file": "gsap.txt",
+    "source": "gsap@3.15.0/gsap-core.js; https://gsap.com/standard-license",
+    "kind": "upstream-notice",
+    "sha256": "2c4f56ad55f21529fdbbc50e78f0ab1f082e67efcea997bf1acacdc281c06f64"
+  },
+  "bezier-js": {
+    "version": "6.1.4",
+    "file": "bezier-js.txt",
+    "source": "https://raw.githubusercontent.com/Pomax/bezierjs/a41f3e08e9724c9973eca0eb5c1304120e72fc70/src/bezier.js",
+    "kind": "upstream-notice",
+    "sha256": "85716c4e96079405d91dc634c9addc140bc32c68615aec7f9a7bfffe1ee98f10"
+  },
+  "dnd-multi-backend": {
+    "version": "8.1.2",
+    "file": "rdndmb-html5-to-touch.txt",
+    "source": "https://raw.githubusercontent.com/LouisBrunner/dnd-multi-backend/c9d018e523f5ad98dc4fe1606b3a08c181b115c8/LICENSE",
+    "sha256": "4b8cb29bfb6eaab0bf73d1eb61b75fba6eeca044758168a8fd77371e200c3051"
+  },
+  "react-dnd-multi-backend": {
+    "version": "8.1.2",
+    "file": "rdndmb-html5-to-touch.txt",
+    "source": "https://raw.githubusercontent.com/LouisBrunner/dnd-multi-backend/c9d018e523f5ad98dc4fe1606b3a08c181b115c8/LICENSE",
+    "sha256": "4b8cb29bfb6eaab0bf73d1eb61b75fba6eeca044758168a8fd77371e200c3051"
+  },
+  "react-dnd-preview": {
+    "version": "8.1.2",
+    "file": "rdndmb-html5-to-touch.txt",
+    "source": "https://raw.githubusercontent.com/LouisBrunner/dnd-multi-backend/c9d018e523f5ad98dc4fe1606b3a08c181b115c8/LICENSE",
+    "sha256": "4b8cb29bfb6eaab0bf73d1eb61b75fba6eeca044758168a8fd77371e200c3051"
+  }
+}
