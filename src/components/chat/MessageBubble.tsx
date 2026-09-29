@@ -194,7 +194,7 @@ export default function MessageBubble({
       {/* The reply's border is a rule beside it (transparent unless the Mood colours it). */}
       <div className="min-w-0 flex-1 pl-2 border-l-2 border-chat-ai-bubble-border text-chat-ai-bubble-text">
         {personaName && <div className="text-2xs font-mono text-accent mb-1">{personaName}</div>}
-        <div className="font-body text-[0.95rem] leading-[1.6] break-words">
+        <div className="font-body text-sm leading-[1.6] break-words">
           <MarkdownRenderer content={message.content} />
         </div>
 

@@ -35,7 +35,7 @@ export function Reply({
       <div className="pt-0.5">{avatar}</div>
       <div className="min-w-0 flex-1 pl-2 border-l-2 border-chat-ai-bubble-border text-chat-ai-bubble-text">
         {name && <div className="text-2xs font-mono text-accent mb-1">{name}</div>}
-        <div className="font-body text-[0.95rem] leading-[1.6] break-words">
+        <div className="font-body text-sm leading-[1.6] break-words">
           <MarkdownRenderer content={content} />
           {streaming && (
             <span className="inline-block w-1.5 h-4 bg-accent/60 motion-attention ml-0.5 align-text-bottom" />

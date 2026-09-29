@@ -66,7 +66,9 @@ for (const origin of ['Main', 'Task'] as const) {
       await expect(
         launch.page.getByRole('button', { name: 'Navigator', exact: true }),
       ).toBeVisible();
-      await launch.page.goto(`crux-app://app/c/${main}${source === main ? '' : `?task=${source}`}`);
+      await launch.page.goto(
+        new URL(`/c/${main}${source === main ? '' : `?task=${source}`}`, launch.page.url()).href,
+      );
       let merge = launch.page.getByTestId('merge');
       await expect(merge).toHaveAttribute('data-status', 'pending');
       await merge
@@ -88,7 +90,7 @@ for (const origin of ['Main', 'Task'] as const) {
         await expect(
           launch.page.getByRole('button', { name: 'Navigator', exact: true }),
         ).toBeVisible();
-        await launch.page.goto(`crux-app://app/c/${main}?task=${source}`);
+        await launch.page.goto(new URL(`/c/${main}?task=${source}`, launch.page.url()).href);
         await expect(
           launch.page.getByText('Parent task is protected', { exact: false }),
         ).toBeVisible();

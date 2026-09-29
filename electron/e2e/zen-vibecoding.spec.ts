@@ -14,8 +14,14 @@ async function preview(page: Page) {
   await openPanel(page, 'artifacts', 'Toggle artifacts');
   await page.getByRole('tree').getByText('index.html', { exact: true }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  // Keep Workshop usable after Task controls and archive export opened panes.
+  for (const panel of ['export', 'collaboration', 'artifacts']) {
+    if (await page.getByTestId(`pane-body-${panel}`).isVisible())
+      await togglePanel(page, `Toggle ${panel}`);
+  }
+  await page.getByRole('button', { name: 'Clean', exact: true }).click();
   const frame = page.frameLocator('iframe[data-crux-id]').first();
-  await expect(frame.getByRole('heading', { name: 'The Zen of Vibecoding' })).toBeVisible();
+  await expect(frame.getByRole('heading', { name: 'Plant one small idea' })).toBeVisible();
   return frame;
 }
 
@@ -23,7 +29,7 @@ test.describe.serial('Zen of Vibecoding', () => {
   test('real Task isolation, validation, review/merge, journal and portable export', async () => {
     test.setTimeout(180_000);
     mkdirSync(delivery, { recursive: true });
-    const { app, page } = await launchApp();
+    const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     try {
       await enterGarden(page);
       const main = await createCrux(page, title);
@@ -51,21 +57,34 @@ test.describe.serial('Zen of Vibecoding', () => {
       await page.getByRole('button', { name: 'Save and start task' }).click();
       await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();
       const task = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
-      const folder = await page.evaluate(async (id) => {
-        const row = (await window.electronAPI!.sqlite.get(
-          'SELECT project_folder FROM working_copies WHERE id = ?',
-          [id],
-        )) as { project_folder: string };
-        return row.project_folder;
-      }, task);
-      // Fixture output uses the same watcher path as an outside agent; no live
-      // provider is called and this is not evidence of real provider behavior.
-      writeFileSync(
-        join(folder, 'garden/seed.json'),
-        JSON.stringify({ name: 'Mosslight', color: '#dbb37e' }),
-      );
-      await expect.poll(() => storedFingerprint(page, task, 'garden/seed.json')).toBeTruthy();
+      // Only the provider is scripted. The real Collaboration turn runs the
+      // write_file tool and reports back while the player visits Main.
+      await openPanel(page, 'collaboration', 'Toggle collaboration');
+      await page.evaluate(() => {
+        document.documentElement.dataset.seedPaused = '';
+        window.addEventListener(
+          'crux:mock-pause',
+          () => {
+            document.documentElement.dataset.seedPaused = 'yes';
+          },
+          { once: true },
+        );
+      });
+      const input = page
+        .getByTestId('pane-body-collaboration')
+        .getByPlaceholder('Send a message...');
+      await input.fill('[zen:seed] Plant Mosslight in garden/seed.json');
+      await input.press('Enter');
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.dataset.seedPaused))
+        .toBe('yes');
       await page.getByTestId('task-bar').getByRole('link', { name: 'Main', exact: true }).click();
+      const seedTask = page.getByTestId('task-bar').getByRole('link', { name: /^Plant a seed/ });
+      await expect(seedTask).toContainText('Working');
+      await page.evaluate(() => window.dispatchEvent(new Event('crux:mock-continue')));
+      await expect.poll(() => storedFingerprint(page, task, 'garden/seed.json')).toBeTruthy();
+      await expect(seedTask).not.toContainText('Working');
+      await expect(page.getByText(/^Seed turn returned:/)).toHaveCount(0);
       const mainFrame = await preview(page);
       await mainFrame.getByRole('button', { name: 'Check my garden', exact: true }).click();
       await expect(mainFrame.getByRole('status').first()).toContainText('Not in this preview yet');
@@ -73,6 +92,8 @@ test.describe.serial('Zen of Vibecoding', () => {
         .getByTestId('task-bar')
         .getByRole('link', { name: /^Plant a seed/ })
         .click();
+      await openPanel(page, 'collaboration', 'Toggle collaboration');
+      await expect(page.getByText(/^Seed turn returned:/)).toBeVisible();
       await page.getByRole('button', { name: 'Review changes', exact: true }).click();
       const review = page.getByRole('dialog', { name: 'Review changes for Main' });
       await review.getByRole('button', { name: 'Check combined result' }).click();
@@ -133,8 +154,6 @@ test.describe.serial('Zen of Vibecoding', () => {
           2,
         ),
       );
-      await togglePanel(page, 'Toggle artifacts');
-      await page.getByRole('button', { name: 'Clean', exact: true }).click();
       await frame.locator('body').evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({ path: join(delivery, 'zen-ready.png') });
     } finally {

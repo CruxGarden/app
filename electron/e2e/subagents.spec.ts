@@ -93,7 +93,7 @@ test('Stop cancels all Task workers, retaining their independent work across res
     launch = await launchApp({ dir, env });
     await launch.page.getByRole('button', { name: 'Enter', exact: true }).click();
     await expect(launch.page.getByRole('button', { name: 'Navigator', exact: true })).toBeVisible();
-    await launch.page.goto(`crux-app://app/c/${main}?task=${source}`);
+    await launch.page.goto(new URL(`/c/${main}?task=${source}`, launch.page.url()).href);
     await expect(launch.page.getByTestId('turn-job')).toHaveAttribute('data-status', 'interrupted');
     const state = await launch.page.evaluate(
       async ({ main, source }) => {

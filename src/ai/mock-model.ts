@@ -98,6 +98,18 @@ export function getMockLanguageModel(): LanguageModel {
           });
         };
 
+        // The tutorial journey exercises the real turn/tool pipeline with a
+        // deterministic provider. Pause so it can verify background feedback.
+        if (lastUserText(prompt).includes('[zen:seed]')) {
+          if (!toolResultsThisTurn(prompt).length) {
+            await waitForMockHandoff(abortSignal);
+            return toolCallStream('write_file', {
+              path: 'garden/seed.json',
+              content: JSON.stringify({ name: 'Mosslight', color: '#dbb37e' }),
+            });
+          }
+          return textStream('Seed turn returned: ' + toolResultText(prompt, 'write_file'));
+        }
         if (lastUserText(prompt).includes('[garden:owned-turn]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) {

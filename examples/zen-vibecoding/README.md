@@ -25,9 +25,9 @@ its artifacts and Task history. PNG checks accept images up to 5 MiB; text lesso
 are limited to 64 KiB.
 
 The app's `electron/e2e/zen-vibecoding.spec.ts` exercises the first mission through
-real Task creation, watcher ingestion, preview, review/Merge and archive export.
-Its direct fixture file writes represent an agent's output; real provider behavior
-is left to the hands-on lessons. `node --test examples/zen-vibecoding/game.test.mjs`
+real Task creation, a collaborator turn calling `write_file`, background Working
+feedback, the returned reply, preview, review/Merge and archive export. Only the
+provider is scripted; real provider behavior is left to the hands-on lessons. `node --test examples/zen-vibecoding/game.test.mjs`
 checks lesson validation and journal admission. Source is MIT under the parent
 repository license; artwork is original inline SVG/CSS.
 
