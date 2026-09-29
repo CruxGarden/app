@@ -8,11 +8,25 @@ const fixture = vi.hoisted(() => ({
   download: vi.fn(),
   create: vi.fn(),
   upload: vi.fn(),
+  blob: vi.fn(),
+  assertCurrent: vi.fn(),
+  finishProjection: vi.fn(),
 }));
 vi.mock('@/api/client', () => ({ default: { get: fixture.get } }));
 vi.mock('@/api/session', () => ({
   captureAuth: () => ({ endpoint: 'https://api.test', revision: 1 }),
+  assertAuthCurrent: fixture.assertCurrent,
 }));
+vi.mock('./sqlite/client', () => ({
+  getSqliteClient: () => ({
+    createCrux: fixture.create,
+    fileContent: { finishProjection: fixture.finishProjection },
+  }),
+}));
+vi.mock('./sqlite/identity', () => ({
+  getLocalIdentity: async () => ({ authorId: 'local', homeId: 'home' }),
+}));
+vi.mock('./blobs', () => ({ putBlob: fixture.blob }));
 vi.mock('@/api/public', () => ({
   getArtifacts: fixture.artifacts,
   downloadArtifact: fixture.download,
@@ -39,7 +53,8 @@ const remote = (n: number): Crux => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
-  fixture.create.mockImplementation(async (dto) => dto);
+  fixture.create.mockImplementation(async (dto) => dto.id);
+  fixture.blob.mockResolvedValue('fingerprint');
   fixture.artifacts.mockResolvedValue([
     { id: 'html', filename: 'index.html', mimeType: 'text/html' },
   ]);
@@ -114,7 +129,59 @@ it('recovers published files using the remote author identity and captured desti
   expect(fixture.create).toHaveBeenCalledWith(
     expect.objectContaining({ id: 'crux-4', gardenId: 'destination' }),
   );
-  expect(fixture.upload).toHaveBeenCalledWith(
-    expect.objectContaining({ resourceId: 'crux-4', meta: { path: 'index.html' } }),
+  expect(fixture.create).toHaveBeenCalledWith(
+    expect.objectContaining({
+      authorId: 'local',
+      initialFiles: [
+        expect.objectContaining({
+          put: expect.objectContaining({ path: 'index.html', fingerprint: 'fingerprint' }),
+        }),
+      ],
+    }),
   );
+  expect(fixture.upload).not.toHaveBeenCalled();
+});
+
+it('does not create a partial Crux when a later published download fails, and can retry', async () => {
+  fixture.artifacts.mockResolvedValue([
+    { id: 'html', filename: 'index.html', mimeType: 'text/html' },
+    { id: 'css', filename: 'style.css', mimeType: 'text/css' },
+  ]);
+  fixture.download
+    .mockResolvedValueOnce(new Blob(['<h1>Recovered</h1>']))
+    .mockRejectedValueOnce(new Error('Download interrupted'));
+  await expect(recoverPublishedCrux(remote(4))).rejects.toThrow('Download interrupted');
+  expect(fixture.create).not.toHaveBeenCalled();
+  await recoverPublishedCrux(remote(4));
+  expect(fixture.create).toHaveBeenCalledTimes(1);
+});
+
+it('does not create a partial Crux on a refused Blob Store write', async () => {
+  fixture.blob.mockRejectedValueOnce(new Error('Disk write refused'));
+  await expect(recoverPublishedCrux(remote(4))).rejects.toThrow('Disk write refused');
+  expect(fixture.create).not.toHaveBeenCalled();
+  await expect(recoverPublishedCrux(remote(4))).resolves.toMatchObject({
+    cruxId: 'crux-4',
+    files: 1,
+  });
+});
+
+it('refuses admission after the account connection changes during a download', async () => {
+  fixture.download.mockImplementationOnce(async () => {
+    fixture.assertCurrent.mockImplementation(() => {
+      throw new Error('Account changed');
+    });
+    return new Blob(['old account file']);
+  });
+  await expect(recoverPublishedCrux(remote(4))).rejects.toThrow('Account changed');
+  expect(fixture.create).not.toHaveBeenCalled();
+});
+
+it('reports saved content and restart recovery when the Project Folder write is refused', async () => {
+  fixture.finishProjection.mockRejectedValueOnce(new Error('Folder write refused'));
+  await expect(recoverPublishedCrux(remote(4))).rejects.toThrow(
+    'Your recovered files are saved in Garden',
+  );
+  expect(fixture.create).toHaveBeenCalledTimes(1);
+  expect(fixture.finishProjection).toHaveBeenCalledWith('crux-4');
 });

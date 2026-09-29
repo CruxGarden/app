@@ -28,6 +28,7 @@ export interface MockApi {
   state: {
     failPublish: boolean;
     failUnpublish?: boolean;
+    failPublishedDownloadPath?: string;
     /** Refuse one recovery listing page to exercise visible retry. */
     failCruxPage?: number;
     /** This server's own URL (for canned file links). */
@@ -306,6 +307,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       const idx = parseInt(pub[4].replace('art-', ''), 10);
       const f = files[idx];
       if (!f) return send(404, { statusCode: 404, message: 'No file' });
+      if (state.failPublishedDownloadPath === f.path)
+        return send(503, { message: 'Published download interrupted' });
       return sendRaw(200, f.mime, f.bytes);
     }
 
