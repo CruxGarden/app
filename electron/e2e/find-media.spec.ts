@@ -1,10 +1,10 @@
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 import { indexedFiles } from './content-helpers';
 
 /**
@@ -27,16 +27,12 @@ test('Find media: an image, a sound and a video from the catalogues land in the 
   const { app, page } = await launchApp({
     env: { CRUX_API_URL: api.url, CRUX_MEDIA_API: api.url },
   });
-  const evidence = resolve(__dirname, '../../docs/find-media');
+  const evidence = test.info().outputDir;
   try {
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
     await enterGarden(page);
-    await page.getByRole('button', { name: 'Add Crux' }).click();
-    await page.getByRole('button', { name: /^miniPaint/ }).click();
-    await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
-    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const id = await createCrux(page, 'Media catalogue');
     const folder = (await storedCrux(page, id)).projectFolder as string;
 
     await test.step('open Find media and bring an image in', async () => {

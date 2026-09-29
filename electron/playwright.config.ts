@@ -7,6 +7,7 @@ const gateSpecs = [
   '**/native-document-security.spec.ts',
   '**/native-media-security.spec.ts',
   '**/media-import.spec.ts',
+  '**/media-download.spec.ts',
   '**/toolchain-bridge.spec.ts',
   '**/updater-bridge.spec.ts',
   '**/editor-history-draft.spec.ts',

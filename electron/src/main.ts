@@ -10,6 +10,8 @@ import type {
   GrowthContentRestore,
   EditCheckpointCapture,
 } from '@cruxgarden/local-api';
+import { downloadMedia } from './media-download';
+import { requestMedia } from './media-transport';
 import { transcodeMedia } from './media-transcode';
 import type { TranscodeRequest } from './bridge';
 import { lookupProjectCrux } from './native-storage';
@@ -18,7 +20,7 @@ import { registerBrowserPanel } from './www-browser';
 import { gardenIpc, isGardenUrl } from './garden-ipc';
 import { installWorkspacePermissions } from './workspace-permissions';
 import { INSTALLATION_COMMANDS, type InstallationCommand } from './bridge';
-const { app, BrowserWindow, protocol, dialog, shell, net } = require('electron');
+const { app, BrowserWindow, protocol, dialog, shell } = require('electron');
 const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
@@ -411,16 +413,6 @@ function createWindow() {
 }
 
 // ── SQLite IPC handlers ──────────────────────────────────────
-
-/** localhost, loopback, RFC 1918 ranges and .local names: the person's own machines. */
-function isPrivateHost(host: string): boolean {
-  const h = host.replace(/^\[|\]$/g, '').toLowerCase();
-  if (h === 'localhost' || h === '::1' || h.endsWith('.local')) return true;
-  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h);
-  if (!m) return false;
-  const [a, b] = [Number(m[1]), Number(m[2])];
-  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
-}
 
 async function setupIpc() {
   registerBrowserPanel(() => mainWindow, gardenBridge);
@@ -1468,55 +1460,15 @@ async function setupIpc() {
   fromGarden('devserver:status', (_e: any, folder: string) => devServers.status(folder));
   fromGarden('devserver:log', (_e: any, folder: string) => devServers.lastLog(folder));
 
-  // ── FFmpeg transcode handler ──────────────────────────────
-  // Find media (V1-GAPS-PLAN.md §2.7): the renderer asks the main process to fetch a public
-  // catalogue or a file, so no page origin or CORS rule stands between a person and a result.
-  // https only, a size cap, a timeout; the caller checks the type of what came back.
-  fromGarden('media:fetch', async (_e: any, url: string, options?: { maxBytes?: number }) => {
-    let target: URL;
-    try {
-      target = new URL(url);
-    } catch {
-      throw new Error('Not a URL.');
-    }
-    const base = process.env.CRUX_MEDIA_API;
-    // https anywhere; plain http only to this machine or the local network (a
-    // weather station of one's own), never file: and never the app's scheme.
-    if (
-      target.protocol !== 'https:' &&
-      !(base && url.startsWith(base)) &&
-      !(target.protocol === 'http:' && isPrivateHost(target.hostname))
-    )
-      throw new Error(
-        'Only https sources are fetched (http only on this machine or your network).',
-      );
-    const cap = Math.min(options?.maxBytes ?? 64_000_000, 512_000_000);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 90_000);
-    try {
-      const response = await net.fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': `CruxGarden/${app.getVersion()} (https://crux.garden)`,
-          Accept: '*/*',
-        },
-      });
-      const length = Number(response.headers.get('content-length') || 0);
-      if (length > cap)
-        throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
-      const buffer = Buffer.from(await response.arrayBuffer());
-      if (buffer.byteLength > cap)
-        throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
-      return {
-        ok: response.ok,
-        status: response.status,
-        mimeType: (response.headers.get('content-type') || '').split(';')[0].trim(),
-        bytes: new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength),
-      };
-    } finally {
-      clearTimeout(timer);
-    }
-  });
+  // Public catalogues and media files use the same bounded desktop transport.
+  fromGarden('media:fetch', (_event, url: string, options?: { maxBytes?: number }) =>
+    downloadMedia(
+      url,
+      options?.maxBytes,
+      requestMedia,
+      `CruxGarden/${app.getVersion()} (https://crux.garden)`,
+    ),
+  );
 
   const ffmpegBinary = () => {
     const { mediaToolPath } = require('./media-binaries') as typeof import('./media-binaries');
