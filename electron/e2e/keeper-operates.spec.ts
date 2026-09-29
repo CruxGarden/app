@@ -1,6 +1,6 @@
 import { togglePanel, enableAi, showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
-import { writeFileSync, readdirSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
@@ -15,7 +15,7 @@ import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
  */
 test('the Keeper looks, searches, reads, chooses a collaborator and exports', async () => {
   test.setTimeout(180_000);
-  const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+  const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   // The Keeper's trail: every tool result logs as [garden-tool].
   const trail: string[] = [];
   page.on('console', (m) => {
@@ -25,8 +25,7 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     await enterGarden(page);
     const id = await createCrux(page, 'Tour stop');
     // The page, written into the folder as any editor would; the watcher brings it in.
-    const garden = join(dir, 'garden');
-    const folder = join(garden, readdirSync(garden)[0]!);
+    const folder = (await storedCrux(page, id)).projectFolder;
     writeFileSync(join(folder, 'index.html'), '<h1>Tour stop</h1>\n<p>Every gate locked.</p>\n');
     await togglePanel(page, 'Toggle artifacts');
     await expect(page.getByRole('tree').getByText('index.html', { exact: true })).toBeVisible({
@@ -41,7 +40,7 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     await expect(console_.getByText('chose Claude Sonnet 5 for Tour stop').first()).toBeVisible({
       timeout: 60_000,
     });
-    await expect(console_.getByText('Used 6 tools').first()).toBeVisible();
+    await expect.poll(() => trail.length).toBe(6);
 
     // The crux's collaborator changed, and the export was handed over.
     const log = trail.join('\n');

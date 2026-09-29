@@ -4,6 +4,7 @@ import { DEFAULT_PANE_LABELS, PANE_TYPES } from '@/components/workspace/paneConf
 import { pathOf } from '@/lib/artifact-path';
 import type { PaneType } from '@/stores/uiStore';
 import { getServices } from '@/services';
+import { isAiMock } from '@/lib/platform';
 
 /**
  * The crux collaborator's operating tools (MAKING-IT-POSSIBLE step 10, the
@@ -84,7 +85,7 @@ export async function runWorkspaceTool(
   ctx: { cruxId: string },
 ): Promise<string> {
   const result = await runInner(name, input, ctx);
-  console.info('[workspace-tool]', name, result.slice(0, 200).replace(/\n/g, ' '));
+  if (isAiMock()) console.info('[workspace-tool]', name, result.slice(0, 200).replace(/\n/g, ' '));
   return result;
 }
 

@@ -5,6 +5,7 @@ import { getSqliteClient } from '@/services/sqlite/client';
 import { useGardenContext, gardenPath, cruxPath } from '@/stores/gardenContext';
 import type { ToolDefinition } from './tools';
 import { getServices } from '@/services';
+import { isAiMock } from '@/lib/platform';
 import {
   createCruxspace,
   getCruxspace,
@@ -658,8 +659,8 @@ export async function runGardenTool(
   if (!v.valid) return `Error: ${v.error}`;
   try {
     const result = await runGardenToolInner(name, input, requestedBy);
-    // The Keeper's actions leave a trail in the console (journeys read it too).
-    console.info('[garden-tool]', name, result.slice(0, 200).replace(/\n/g, ' '));
+    // Scripted desktop journeys inspect this trace; ordinary sessions keep file contents private.
+    if (isAiMock()) console.info('[garden-tool]', name, result.slice(0, 200).replace(/\n/g, ' '));
     return result;
   } finally {
     // The garden changed under the person: the Home lists follow.

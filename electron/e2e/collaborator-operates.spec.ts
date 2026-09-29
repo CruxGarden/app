@@ -1,9 +1,9 @@
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, createCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 
 /**
  * The crux collaborator operates its own workspace (the parity rule, step
@@ -13,16 +13,15 @@ import { enterGarden, createCrux } from './multi-crux-helpers';
  */
 test('the collaborator shows its work and tests a function in its crux', async () => {
   test.setTimeout(180_000);
-  const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+  const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   const trail: string[] = [];
   page.on('console', (m) => {
     if (m.text().startsWith('[workspace-tool]')) trail.push(m.text());
   });
   try {
     await enterGarden(page);
-    await createCrux(page, 'Backend');
-    const garden = join(dir, 'garden');
-    const folder = join(garden, readdirSync(garden)[0]!);
+    const id = await createCrux(page, 'Backend');
+    const folder = (await storedCrux(page, id)).projectFolder;
     mkdirSync(join(folder, 'functions'), { recursive: true });
     writeFileSync(join(folder, 'index.html'), '<h1>Backend</h1>\n');
     writeFileSync(
