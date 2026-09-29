@@ -55,6 +55,7 @@ import {
 import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
 import { useUIStore, type UIState } from '@/stores/uiStore';
 import { playCue } from '@/services/cues';
+import { toast } from './toastStore';
 
 function liveArtifactPatch(state: CruxState, artifacts: Artifact[]): Partial<CruxState> {
   return state.workspaceArtifacts ? { workspaceArtifacts: artifacts } : { artifacts };
@@ -155,6 +156,8 @@ export interface CruxState {
   // File CRUD actions
   createFile: (path: string, content?: string) => Promise<Artifact>;
   uploadFile: (file: File, parentPath?: string) => Promise<Artifact>;
+  /** Save a paste in this workspace; retain the text in its draft if storage refuses. */
+  pasteAsArtifact: (text: string) => Promise<void>;
   uploadFiles: (files: { file: File; path: string }[]) => Promise<void>;
   moveArtifact: (id: string, newParentPath: string | null) => Promise<void>;
   renameArtifact: (id: string, newPath: string) => Promise<void>;
@@ -778,6 +781,48 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         artifacts: [...state.artifacts.filter((file) => file.id !== newArtifact.id), newArtifact],
       }));
       return newArtifact;
+    },
+
+    pasteAsArtifact: async (text) => {
+      const { crux } = get();
+      const appendToDraft = (addition: string) => {
+        // Read after the await: typing, Send and other pastes may have changed this draft.
+        const { composerDraft, setComposerDraft } = ui.getState();
+        setComposerDraft(composerDraft ? `${composerDraft}\n${addition}` : addition);
+      };
+      let created: Artifact;
+      let path: string;
+      try {
+        if (!crux) throw new Error('No active crux');
+        const firstLine = text.split('\n').find((line) => line.trim()) ?? '';
+        const slug =
+          firstLine
+            .replace(/^#+\s*/, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 40) || 'pasted';
+        // Repeated pastes must never overwrite another brief with the same first line.
+        path = `notes/${slug}-${crypto.randomUUID()}.md`;
+        created = await getServices().artifact.create({
+          resourceId: crux.id,
+          resourceType: 'crux',
+          content: text,
+          mimeType: 'text/markdown',
+          meta: { path },
+        });
+      } catch {
+        appendToDraft(text);
+        toast(
+          `Could not save the pasted file${crux ? ` in “${crux.title}”` : ''}. The text is kept in your draft.`,
+          { tone: 'error' },
+        );
+        return;
+      }
+      appendToDraft(`Read ${path} first (pasted, ${text.length.toLocaleString()} characters).`);
+      // The saved Artifact is already authoritative; a second read must not turn a
+      // successful write into a reported failure. Keep snapshot views unchanged.
+      if (crux && get().crux?.id === crux.id) get().upsertArtifact(created);
     },
 
     uploadFile: async (file: File, parentPath?: string) => {

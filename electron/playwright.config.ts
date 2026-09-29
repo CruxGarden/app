@@ -9,6 +9,7 @@ const gateSpecs = [
   '**/settings-secrets.spec.ts',
   '**/folder-authorization.spec.ts',
   '**/notes-save-navigation.spec.ts',
+  '**/composer-paste.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',
   '**/typst-offline.spec.ts',
