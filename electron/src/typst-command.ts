@@ -5,7 +5,8 @@ import * as path from 'node:path';
 import { documentFile } from './pandoc-command';
 import { resolveInsideOrThrow } from './paths';
 import { inTypesetFolder } from './typeset-folder';
-import { runNativeProcess, type NativeResult } from './native-process';
+import type { NativeResult } from './native-process';
+import { runTypstOffline } from './typst-offline';
 
 /** Typst's command surface is deliberately smaller than its unrestricted CLI. */
 export function planTypstRun(folder: string, input: unknown): { input: string; output: string } {
@@ -27,8 +28,7 @@ export function planTypstRun(folder: string, input: unknown): { input: string; o
 /**
  * Both Make PDF and standalone Typst use this boundary. Typst receives a
  * private copy without symlinks, an app-selected root, and empty package paths.
- * The CLI may still download public packages; these paths isolate local caches,
- * not the network. They must never be described as an offline sandbox.
+ * The reviewed compiler adapter separately refuses package downloads.
  */
 export async function compileTypstPdf(
   binary: string,
@@ -49,11 +49,7 @@ export async function compileTypstPdf(
     const resultPath = path.join(root, '.result.pdf');
     const packages = path.join(root, '.packages');
     await fs.mkdir(packages);
-    // Caller environment must not add package/font roots or experimental modes.
-    const env = Object.fromEntries(
-      Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith('TYPST_')),
-    );
-    const result = await runNativeProcess(
+    const result = await runTypstOffline(
       binary,
       [
         'compile',
@@ -67,7 +63,8 @@ export async function compileTypstPdf(
         local,
         resultPath,
       ],
-      { cwd: root, env, timeoutMs },
+      root,
+      timeoutMs,
     );
     if (result.code !== 0) return result;
     const target = resolveInsideOrThrow(folder, out);

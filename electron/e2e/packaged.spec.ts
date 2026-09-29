@@ -53,6 +53,10 @@ test.describe('packaged app', () => {
       );
       expect(database).toEqual({ version: expect.stringMatching(/^\d+\.\d+\.\d+$/) });
       const nativeTools = await page.evaluate(() => window.electronAPI!.native.tools());
+      // Optional document compilers belong to the person, not an unchecked
+      // copy from whichever machine happened to build the release.
+      for (const name of ['pandoc', 'typst'])
+        expect(nativeTools.find((tool) => tool.tool === name)?.source).not.toBe('resources');
       const nativeVersion = JSON.parse(
         readFileSync(join(__dirname, '../scripts/ffmpeg-sources.json'), 'utf8'),
       ).ffmpeg.version;
