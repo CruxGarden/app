@@ -1,4 +1,5 @@
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { tendingPath } from '@/services/tending-actions';
 import { copyIdentity } from '@/services/working-copies';
 import { documentsFor } from '@/services/workspace-documents';
 import { getWorkspace } from '@/stores/workspaceRegistry';
@@ -169,7 +170,8 @@ export default function WorkspaceSwitcher() {
   }, [busy]);
   const choose = useCallback(
     (id: string) => {
-      if (!entries.some((e) => e.id === id) && !members.some((m) => m.id === id) && !picker) {
+      const entry = entries.find((e) => e.id === id);
+      if (!entry && !members.some((m) => m.id === id) && !picker) {
         cancel();
         return;
       }
@@ -177,7 +179,7 @@ export default function WorkspaceSwitcher() {
       setOpen(false);
       setRecent(null);
       recentRef.current = null;
-      navigate(`/c/${id}`);
+      navigate(tendingPath({ cruxId: entry?.cruxId ?? id, copyId: id }));
       restoreFocus(id);
     },
     [entries, members, navigate, picker, cancel],
@@ -303,7 +305,8 @@ export default function WorkspaceSwitcher() {
       const state = useWorkspaceRegistry.getState();
       if (closing === activeId) {
         const next = state.mru.find((id) => scopedEntries.some((entry) => entry.id === id));
-        navigate(next ? `/c/${next}` : '/home');
+        const entry = state.entries.find((e) => e.id === next);
+        navigate(next ? tendingPath({ cruxId: entry?.cruxId ?? next, copyId: next }) : '/home');
         if (next) restoreFocus(next);
       }
       setClosing(null);

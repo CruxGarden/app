@@ -3,6 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { closeWorkspace } from './journeys/journey-helpers';
 import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 async function newTask(page: Page, title: string) {
   await (await newTaskButton(page)).click();
@@ -79,8 +80,20 @@ test('two tasks own separate disk files and previews, merge into Main, and survi
         .getByRole('dialog', { name: 'Switch Crux workspace' })
         .getByRole('button', { name: /^Parallel web app · Experiment/ }),
     ).toBeVisible();
-    await page.keyboard.press('Escape');
-    await page.goto(`crux-app://app/c/${main}?task=${b.id}`);
+    // The Task row survives restart under its original Crux identity. The
+    // switcher must route with that parent, not treat the Task id as a Crux.
+    expect(
+      await page.evaluate(
+        async (id) =>
+          window.electronAPI!.sqlite.get('SELECT crux_id FROM working_copies WHERE id = ?', [id]),
+        b.id,
+      ),
+    ).toEqual({ crux_id: main });
+    await page
+      .getByRole('dialog', { name: 'Switch Crux workspace' })
+      .getByRole('button', { name: /^Parallel web app · Experiment/ })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/c/${main}\\?task=${b.id}`));
     await expect(
       page.getByTestId('task-bar').getByRole('link', { name: /^Experiment/ }),
     ).toHaveAttribute('aria-current', 'page');
@@ -88,6 +101,10 @@ test('two tasks own separate disk files and previews, merge into Main, and survi
     await expect(
       page.getByTestId('task-bar').getByRole('link', { name: /^Redesign/ }),
     ).toContainText('merged');
+    await page.getByTestId('task-bar').getByRole('link', { name: 'Main', exact: true }).click();
+    await closeWorkspace(page, 'Parallel web app');
+    await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', b.id);
+    expect(readFileSync(join(b.folder, 'index.html'), 'utf8')).toBe('<h1>Experiment</h1>');
   } finally {
     await app.close();
   }
