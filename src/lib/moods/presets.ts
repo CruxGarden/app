@@ -916,8 +916,8 @@ function plasmaOverrides(t: SoftTone): Record<string, string> {
     radiusLg: '18px',
     chipRadius: '10px',
     paneHeaderLabelSize: '13px',
-    paneHeaderHeight: '44px',
-    paneHeaderPadding: '8px 16px',
+    paneHeaderHeight: '32px',
+    paneHeaderPadding: '12px 16px 8px',
     paneBodyPadding: '16px',
     dialogTitleSize: '1.25rem',
     paneGap: '14px',
@@ -1067,7 +1067,7 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       // Tigrana's type and sizing (Daniel, 2026-09-19: "copy this design …
       // subtler with better sizing and white space … I like the font as
       // well"): Inter for the body, the Mood's display face for titles,
-      // a taller header with a full inset, wider gutters between
+      // a slim header with a full inset, wider gutters between
       // and around the panes. The wordmark keeps its serif.
       fontBody: "'Inter', sans-serif",
       fontScale: '1.04',
@@ -1076,8 +1076,8 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       paneHeaderLabelWeight: '600',
       paneHeaderLabelCase: 'none',
       paneHeaderLabelTracking: '0',
-      paneHeaderHeight: '44px',
-      paneHeaderPadding: '8px 16px',
+      paneHeaderHeight: '32px',
+      paneHeaderPadding: '12px 16px 8px',
       dialogTitleFont: 'var(--font-display)',
       dialogTitleSize: '1.25rem',
       workspacePadding: '12px',

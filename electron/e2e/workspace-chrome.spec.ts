@@ -18,6 +18,7 @@ test('panel chrome stays rounded and command controls remain aligned at compact 
         const handle = page.locator(`.pane-${pane} .pane-toolbar`);
         await expect(handle).toBeVisible();
         await handle.hover();
+        expect((await handle.boundingBox())!.height).toBeLessThanOrEqual(34);
         expect(
           await handle.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius)),
         ).toBeGreaterThan(0);

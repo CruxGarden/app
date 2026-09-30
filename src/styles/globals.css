@@ -1420,6 +1420,7 @@ html.palette-transition *::after {
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
   height: auto;
   padding: var(--pane-header-padding);
+  padding-top: 12px;
   background: var(--panel);
   border-radius: var(--pane-inner-radius) var(--pane-inner-radius) 0 0;
   border-bottom: none;
@@ -1434,8 +1435,8 @@ html.palette-transition *::after {
   align-items: center;
   justify-content: var(--pane-header-justify);
   width: 100%;
-  min-height: max(32px, var(--pane-header-height));
-  padding: 4px 12px;
+  min-height: max(28px, var(--pane-header-height));
+  padding: 0 12px;
   border-radius: max(var(--pane-header-radius), var(--pane-inner-radius));
   border: none;
   transition:
