@@ -1,10 +1,12 @@
-import { defineConfig } from 'astro/config';
+import { defineConfig, passthroughImageService } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import settings from './src/config.json' with { type: 'json' };
 
 export default defineConfig({
   base: process.env.CRUX_DOCS_BASE || '/',
   trailingSlash: 'ignore',
+  // Keep documentation copies portable in the desktop toolchain without native Sharp.
+  image: { service: passthroughImageService() },
   integrations: [starlight({
     title: settings.title,
     description: settings.description,

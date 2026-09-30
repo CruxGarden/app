@@ -9,7 +9,7 @@ sidebar:
 
 When you plant a new Garden, leave **Include a first home page walkthrough** checked. Open **Hello, world**. The four-step guide stays inside your workspace; it will not appear on your published site.
 
-Already have a Garden? Create a Crux with **Astro Home Page**. You can use the same name, photo, preview, Growth, and Share controls.
+Already have a Garden? Choose **Add Crux → Hello, world → Create** for the same walkthrough. **Astro Home Page** is a larger starter with a blog and works collection when you want more.
 
 ## Make it yours
 

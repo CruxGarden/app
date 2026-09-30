@@ -30,7 +30,7 @@ export default function CruxResultCard({
         aria-label={title}
         className="block focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]"
       >
-        <div className="relative aspect-[16/10] overflow-hidden bg-garden-card-thumbnail">
+        <div className="relative aspect-video overflow-hidden bg-garden-card-thumbnail">
           {failedCover !== cover ? (
             <img
               src={cover}

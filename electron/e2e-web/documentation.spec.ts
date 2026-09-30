@@ -73,6 +73,7 @@ test('phone layouts retain navigation and readable content', async ({ page }) =>
       .toBeGreaterThan(0);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: resolve(evidence, 'first-home-phone.png'), fullPage: true });
   await page.goto('/blog/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);

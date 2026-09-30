@@ -5,7 +5,7 @@ export default function DocumentationCard({ local }: { local: boolean }) {
   return (
     <section
       aria-label="Crux Garden field guide"
-      className="mb-4 rounded-[var(--radius)] border border-border bg-panel p-4"
+      className="rounded-[var(--radius)] border border-border bg-panel p-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

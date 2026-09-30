@@ -40,6 +40,7 @@ test('a tool not in the build installs from Explore and then creates', async () 
       await expect(bundled).toBeVisible();
       await expect(bundled).not.toContainText('not installed');
     }
+    await page.getByRole('checkbox', { name: /Include tools to install/ }).check();
     const row = page.locator(`[data-template-id="${TOOL}"]`);
     await expect(row).toContainText('not installed');
     await row.click();

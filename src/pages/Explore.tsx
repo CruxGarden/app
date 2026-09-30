@@ -394,7 +394,7 @@ export default function Explore({
     </div>
   );
   const cruxList = (list: ExploreCrux[]) => (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-5 p-3 sm:p-4">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-5 p-3 pt-2 sm:p-4 sm:pt-2">
       {list.map((crux) => (
         <CruxResultCard
           key={crux.id}
@@ -417,7 +417,7 @@ export default function Explore({
   const group = (title: string, to: ExploreView, count: number, body: React.ReactNode) =>
     count > 0 ? (
       <section aria-label={title} className="mb-4">
-        <div className="flex items-baseline justify-between px-4 pt-3 pb-1">
+        <div className="flex items-baseline justify-between px-4 pt-2 pb-1">
           <SectionLabel>{title}</SectionLabel>
           <button
             type="button"
@@ -452,24 +452,21 @@ export default function Explore({
         } as React.CSSProperties
       }
     >
-      {!appReady && (
-        <header className="rounded-[var(--radius)] border border-border bg-panel p-5 mb-4">
-          <p className="text-xs font-medium tracking-wide text-accent mb-2">THE GARDEN, SHARED</p>
-          <h2 className="text-2xl @md:text-3xl font-display font-medium text-text">
-            Find your next spark.
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-text-muted">
-            Explore what people are making. Find a creator, follow a curiosity, make it your own.
-          </p>
-        </header>
-      )}
-      {view === 'all' && !q && !author && activeTags.length === 0 && (
-        <DocumentationCard local={appReady} />
-      )}
+      <div className="mb-3 @xl:flex @xl:items-center @xl:justify-between @xl:gap-4">
+        {!appReady && (
+          <header className="py-1 mb-2 @xl:mb-0">
+            <h2 className="text-2xl font-display font-medium text-text">Find your next spark.</h2>
+            <p className="mt-1 text-sm text-text-muted">Explore what people are making.</p>
+          </header>
+        )}
+        {view === 'all' && !q && !author && activeTags.length === 0 && (
+          <DocumentationCard local={appReady} />
+        )}
+      </div>
       {recentTags.length > 0 && (
         <section
           aria-label="Your recent tags"
-          className="rounded-[var(--radius)] border border-border bg-panel p-5 mb-4"
+          className="rounded-[var(--radius)] border border-border bg-panel p-3 mb-3"
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-text">Pick up a thread</h3>
@@ -485,7 +482,6 @@ export default function Explore({
               Clear history
             </button>
           </div>
-          <p className="text-xs text-text-muted mb-2">Tags you explored recently</p>
           <div className="flex flex-wrap gap-2">
             {recentTags.map((tag) => (
               <TagChip
@@ -498,7 +494,7 @@ export default function Explore({
           </div>
         </section>
       )}
-      <Panel padding="sm" className="sm:p-5 mb-4">
+      <Panel padding="sm" className="mb-2">
         {/* One search for everything */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">

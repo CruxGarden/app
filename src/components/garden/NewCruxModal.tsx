@@ -5,7 +5,7 @@ import { plainError } from '@/lib/error-text';
 import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
 import { isEmbeddedApp } from '@/services/embedded-app';
-import { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react';
+import { lazy, Suspense, Fragment, useEffect, useState, useRef, useCallback } from 'react';
 const Undertakings = lazy(() => import('./Undertakings'));
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -62,6 +62,17 @@ interface Template {
 
 /** Entries the app itself owns; every Crux Tool comes from its manifest (ADR 0050). */
 const OWN_TEMPLATES: Template[] = [
+  {
+    order: 0.5,
+    id: 'hello-world',
+    label: 'Hello, world',
+    description: 'Make your first home page with a name and photo. No AI needed.',
+    icon: <HomeIcon />,
+    thumb: <HomeThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Home Page',
+    desktopOnly: true,
+  },
   {
     order: 0,
     id: 'blank',
@@ -414,6 +425,28 @@ export function templateCatalog(): {
   }));
 }
 
+const START_HERE = [
+  'blank',
+  'hello-world',
+  'notes',
+  'whiteboard',
+  'zen-vibecoding',
+  'documentation',
+];
+function startingPointGroup(template: Template): string {
+  if (START_HERE.includes(template.id)) return 'Start here';
+  if (!isToolAvailable(template.id)) return 'Tools to install';
+  return 'More starting points';
+}
+function startingPointKind(template: Template): string {
+  if (template.id.startsWith('astro-') || ['hello-world', 'documentation'].includes(template.id))
+    return 'Websites';
+  if (template.kind === 'notes' || template.kind === 'document') return 'Writing';
+  if (template.kind === 'image') return 'Visual';
+  if (template.kind === 'page') return 'Websites';
+  return 'Apps and tools';
+}
+
 // ── Component ────────────────────────────────────────────
 
 interface NewCruxModalProps {
@@ -433,6 +466,9 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   const refresh = useGardenStore((s) => s.load);
 
   const [title, setTitle] = useState('My Crux');
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
+  const [includeUninstalled, setIncludeUninstalled] = useState(false);
   // Until the user types a title, it follows the selected template's default
   const [titleEdited, setTitleEdited] = useState(false);
   const [idea, setIdea] = useState('');
@@ -451,6 +487,25 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   // Installed tools count as available; re-render as one arrives (Explore → Install).
   useInstalledTools();
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
+  const supported = TEMPLATES.filter(
+    (item) => (!item.desktopOnly || can(Capability.Build)) && (!item.v2 || can(Capability.V2)),
+  );
+  const choices = supported
+    .filter(
+      (item) =>
+        (includeUninstalled || isToolAvailable(item.id)) &&
+        (category === 'All' || startingPointKind(item) === category) &&
+        `${item.label} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()),
+    )
+    .sort((a, b) => {
+      const groups = ['Start here', 'More starting points', 'Tools to install'];
+      return (
+        groups.indexOf(startingPointGroup(a)) - groups.indexOf(startingPointGroup(b)) ||
+        a.order - b.order
+      );
+    });
+  const selectionVisible = choices.some((item) => item.id === selectedTemplate);
+  const uninstalledCount = supported.filter((item) => !isToolAvailable(item.id)).length;
 
   // One question: the idea picks where the Crux starts and what it is called,
   // until the person picks or names it themselves (lib/infer-starting-point).
@@ -478,6 +533,9 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
     setIdea('');
     setCreateError(null);
     setSelectedTemplate('blank');
+    setSearch('');
+    setCategory('All');
+    setIncludeUninstalled(false);
     setCreating(false);
   };
 
@@ -620,7 +678,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   const handleCreate = async (quickStart = false) => {
     const origin = window.location.href;
     const gardenId = captureGardenId();
-    if (creating || importing) return;
+    if (creating || importing || (!quickStart && !selectionVisible)) return;
     if (!quickStart && !isToolAvailable(template.id)) {
       setCreateError(`${template.label} is not included in this build.`);
       return;
@@ -775,67 +833,111 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           <SectionLabel as="label" tone="muted" className="mb-2 shrink-0">
             Or choose where it starts
           </SectionLabel>
+          <div className="flex flex-wrap gap-2 mb-2 shrink-0">
+            <input
+              aria-label="Find a starting point"
+              placeholder="Search starting points…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className={fieldClass(undefined, 'flex-1 min-w-32')}
+            />
+            <select
+              aria-label="Starting point category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className={fieldClass(undefined, 'w-auto')}
+            >
+              {['All', 'Websites', 'Writing', 'Visual', 'Apps and tools'].map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+          {uninstalledCount > 0 && (
+            <label className="mb-2 flex items-center gap-2 text-xs text-text-muted shrink-0">
+              <input
+                type="checkbox"
+                checked={includeUninstalled}
+                onChange={(event) => setIncludeUninstalled(event.target.checked)}
+              />
+              Include tools to install ({uninstalledCount})
+            </label>
+          )}
           <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
             <div className="flex flex-col">
-              {TEMPLATES.filter(
-                (t) => (!t.desktopOnly || can(Capability.Build)) && (!t.v2 || can(Capability.V2)),
-              ).map((t) => (
-                <button
-                  key={t.id}
-                  data-template-id={t.id}
-                  onClick={() => {
-                    setSelectedTemplate(t.id);
-                    setPickedByHand(true);
-                    if (!titleEdited && !idea.trim() && t.defaultTitle) {
-                      setTitle(t.defaultTitle);
-                    }
-                  }}
-                  disabled={creating}
-                  aria-pressed={selectedTemplate === t.id}
-                  className={cn(
-                    'w-full px-3 py-2.5 text-left cursor-pointer rounded-[var(--radius-sm)]',
-                    'flex items-center gap-3 transition-colors',
-                    'disabled:cursor-not-allowed',
-                    selectedTemplate === t.id
-                      ? 'bg-accent-muted/40'
-                      : 'hover:bg-action-button-hover',
+              {choices.length === 0 && (
+                <p className="p-3 text-sm text-text-muted">
+                  No starting points match. Try another search or include tools to install.
+                </p>
+              )}
+              {choices.map((t, index) => (
+                <Fragment key={t.id}>
+                  {(!choices[index - 1] ||
+                    startingPointGroup(choices[index - 1]!) !== startingPointGroup(t)) && (
+                    <h3 className="px-3 pt-3 pb-1 text-xs font-medium text-text-muted">
+                      {startingPointGroup(t)}
+                    </h3>
                   )}
-                >
-                  <div
+                  <button
+                    data-template-id={t.id}
+                    onClick={() => {
+                      setSelectedTemplate(t.id);
+                      setPickedByHand(true);
+                      if (!titleEdited && !idea.trim() && t.defaultTitle) {
+                        setTitle(t.defaultTitle);
+                      }
+                    }}
+                    disabled={creating}
+                    aria-pressed={selectedTemplate === t.id}
                     className={cn(
-                      'w-10 h-10 shrink-0 rounded-[var(--radius-sm)] flex items-center justify-center',
+                      'w-full px-3 py-2.5 text-left cursor-pointer rounded-[var(--radius-sm)]',
+                      'flex items-center gap-3 transition-colors',
+                      'disabled:cursor-not-allowed',
                       selectedTemplate === t.id
-                        ? 'bg-accent-muted text-accent'
-                        : 'bg-surface text-text-muted',
+                        ? 'bg-accent-muted/40'
+                        : 'hover:bg-action-button-hover',
                     )}
-                    aria-hidden
                   >
-                    {t.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span
+                    <div
                       className={cn(
-                        'text-sm font-body font-medium block truncate',
-                        selectedTemplate === t.id ? 'text-accent' : 'text-text',
+                        'w-10 h-10 shrink-0 rounded-[var(--radius-sm)] flex items-center justify-center',
+                        selectedTemplate === t.id
+                          ? 'bg-accent-muted text-accent'
+                          : 'bg-surface text-text-muted',
                       )}
+                      aria-hidden
                     >
-                      {t.label}
-                      {!isToolAvailable(t.id) && (
-                        <span className="ml-2 text-2xs font-mono text-text-muted">
-                          not installed
+                      {t.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className={cn(
+                          'text-sm font-body font-medium block truncate',
+                          selectedTemplate === t.id ? 'text-accent' : 'text-text',
+                        )}
+                      >
+                        {t.label}
+                        {!isToolAvailable(t.id) && (
+                          <span className="ml-2 text-2xs font-mono text-text-muted">
+                            not installed
+                          </span>
+                        )}
+                      </span>
+                      {t.description && (
+                        <span className="text-xs text-text-muted block truncate">
+                          {t.description}
                         </span>
                       )}
-                    </span>
-                    {t.description && (
-                      <span className="text-xs text-text-muted block truncate">
-                        {t.description}
-                      </span>
-                    )}
-                  </div>
-                </button>
+                    </div>
+                  </button>
+                </Fragment>
               ))}
             </div>
           </div>
+          {!selectionVisible && (
+            <p className="mt-2 text-xs text-text-muted">
+              Choose a starting point from these results.
+            </p>
+          )}
           {!isToolAvailable(template.id) ? (
             <p className="text-xxs text-text-muted mt-1.5 shrink-0" data-testid="tool-not-bundled">
               {template.label} is not installed. Install it from Explore, or from its .crux package,
@@ -934,7 +1036,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
               className="ml-auto min-w-24"
               onClick={() => handleCreate()}
               loading={creating}
-              disabled={importing}
+              disabled={importing || !selectionVisible}
             >
               Create
             </Button>

@@ -248,3 +248,54 @@ test('the deployed teaser player loads on demand, pauses, rewinds and remembers 
   await expect(volume).toHaveValue('0.3');
   await expect(play).toBeVisible();
 });
+
+test('public creations explain their purpose and published process, and creator pages stay readable on a phone', async ({
+  page,
+}) => {
+  await page.goto('/@tester/garden-notes');
+  await page.getByRole('button', { name: 'Details', exact: true }).click();
+  const details = page.getByRole('complementary', { name: 'About this creation' });
+  await expect(details.getByRole('heading', { name: 'Garden Notes' })).toBeVisible();
+  await expect(details.getByRole('link', { name: 'By @tester' })).toHaveAttribute(
+    'href',
+    '/@tester',
+  );
+  await expect(details.getByText('Slug', { exact: true })).not.toBeVisible();
+  await expect(details.getByRole('link', { name: 'Get started with Crux Garden' })).toHaveAttribute(
+    'href',
+    '/docs/start/get-started/',
+  );
+  await details.getByText('How this was made', { exact: true }).click();
+  await expect(details.getByText('write me a notes page', { exact: true })).toBeVisible();
+  await expect(details.getByText('Here are your notes.', { exact: true })).toBeVisible();
+  await page.screenshot({ path: '../docs/product-review/2026-09-30/polished-public-details.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.route('**/authors/tester', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      json: {
+        ...(await response.json()),
+        displayName: 'River Moss',
+        bio: 'I make little places for ideas, drawings and things worth sharing. '.repeat(15),
+        meta: {},
+      },
+    });
+  });
+  await page.goto('/@tester');
+  await expect(page.getByRole('heading', { name: 'River Moss', exact: true })).toBeVisible();
+  await expect(page.getByText('R', { exact: true }).first()).toBeVisible();
+  const more = page.getByRole('button', { name: 'Read full bio', exact: true });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.click();
+  await expect(page.getByRole('button', { name: 'Show less' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Show less' }).click();
+  const creation = page.getByTestId(`explore-crux-${ID}`);
+  expect((await creation.boundingBox())!.width).toBeGreaterThan(300);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: '../docs/product-review/2026-09-30/polished-creator-phone.png' });
+});

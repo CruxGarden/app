@@ -125,6 +125,16 @@ test('help returns to the current work and the tutorial starts as a fresh Crux',
       .click();
     await goHome(page);
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Start here', exact: true })).toBeVisible();
+    await expect(page.getByText('not installed', { exact: true })).toHaveCount(0);
+    await page.screenshot({ path: '../docs/product-review/2026-09-30/polished-creation-picker.png' });
+    await page.getByRole('combobox', { name: 'Starting point category' }).selectOption('Websites');
+    await expect(page.locator('[data-template-id="hello-world"]')).toBeVisible();
+    await expect(page.locator('[data-template-id="notes"]')).toHaveCount(0);
+    await page.getByRole('combobox', { name: 'Starting point category' }).selectOption('All');
+    await page.getByRole('textbox', { name: 'Find a starting point', exact: true }).fill('Zen');
+    await expect(page.locator('[data-template-id="blank"]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: /^Zen of Vibecoding/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     const game = page.frameLocator('iframe[data-crux-id]').first();

@@ -65,6 +65,7 @@ test('discovery shows large previews and creators, remembers topics, and support
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="#ba8061"/><circle cx="40" cy="31" r="17" fill="#ffddbb"/><ellipse cx="40" cy="79" rx="29" ry="28" fill="#333344"/></svg>',
     }),
   );
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/explore');
   await expect(page.getByRole('heading', { name: 'Find your next spark.' })).toBeVisible();
   await expect(page.getByTestId('explore-tags')).toContainText('Popular tags');
@@ -77,6 +78,8 @@ test('discovery shows large previews and creators, remembers topics, and support
   const box = await preview.boundingBox();
   expect(box!.width).toBeGreaterThan(300);
   expect(box!.height).toBeGreaterThan(190);
+  const authorBox = await card.getByRole('link', { name: "Visit Tester's Garden" }).boundingBox();
+  expect(authorBox!.y + authorBox!.height).toBeLessThanOrEqual(720);
   await expect(card.getByRole('link', { name: "Visit Tester's Garden" })).toHaveAttribute(
     'href',
     '/tester',
@@ -93,7 +96,7 @@ test('discovery shows large previews and creators, remembers topics, and support
         .evaluate((el: HTMLImageElement) => el.naturalWidth),
     )
     .toBeGreaterThan(0);
-  await page.screenshot({ path: 'e2e-web/.results/explore-desktop.png', fullPage: true });
+  await page.screenshot({ path: '../docs/product-review/2026-09-30/polished-explore.png' });
   await card.getByRole('button', { name: '#worlds', exact: true }).click();
   await expect(page.getByTestId('active-filters')).toContainText('#worlds');
   await expect(page.getByTestId('explore-crux-discovery-1')).toHaveCount(0);
@@ -139,7 +142,7 @@ test('phone discovery handles broken previews and avatars without horizontal ove
   await expect(creator.getByText('T', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   expect((await card.boundingBox())!.width).toBeGreaterThan(280);
-  await page.screenshot({ path: 'e2e-web/.results/explore-phone.png', fullPage: true });
+  await page.screenshot({ path: '../docs/product-review/2026-09-30/polished-explore-phone.png' });
   await page.getByRole('tab', { name: 'People', exact: true }).click();
   await expect(page.getByRole('link').filter({ hasText: '@tester' })).toBeVisible();
 });

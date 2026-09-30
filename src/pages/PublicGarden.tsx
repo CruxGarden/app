@@ -1,14 +1,14 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import PublicLoading from '@/components/display/PublicLoading';
 import { PublicApiError } from '@/api/public';
 import DeadEnd from '@/components/layout/DeadEnd';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
-import { GardenGrid } from '@/components/garden';
-import { Button, Panel, SegmentedControl, fieldClass, buttonClass } from '@/components/ui';
+import CruxResultCard from '@/components/explore/CruxResultCard';
+import { Avatar, Button, Panel, SegmentedControl, fieldClass, buttonClass } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
@@ -16,6 +16,7 @@ type SortField = 'created' | 'updated';
 
 export default function PublicGarden() {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
 
   const [author, setAuthor] = useState<Author | null>(null);
   const [cruxes, setCruxes] = useState<Crux[]>([]);
@@ -27,6 +28,7 @@ export default function PublicGarden() {
   const request = useRef<AbortController | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [search, setSearch] = useState('');
+  const [fullBio, setFullBio] = useState(false);
   const [sortBy, setSortBy] = useState<SortField>('created');
 
   useEffect(() => {
@@ -43,6 +45,7 @@ export default function PublicGarden() {
     setAuthor(null);
     setCruxes([]);
     setSearch('');
+    setFullBio(false);
 
     // Load from API only — no local database access on public pages
     Promise.all([
@@ -105,8 +108,6 @@ export default function PublicGarden() {
     };
   }, [author?.username]);
 
-  const linkBuilder = useCallback((crux: Crux) => `/${username}/${crux.slug}`, [username]);
-
   // Client-side search + sort
   const filteredCruxes = useMemo(() => {
     const needle = search.toLowerCase();
@@ -152,25 +153,47 @@ export default function PublicGarden() {
     <div className="flex flex-col min-h-screen">
       <PublicTopBar username={username || ''} />
 
-      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
+      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-6xl mx-auto w-full">
         {/* Header + Search panel */}
         <Panel padding="sm" className="sm:p-5 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20 bg-surface">
-              {avatarUrl && <img src={avatarUrl} alt="" className="w-full h-full object-cover" />}
-            </div>
+            <Avatar
+              url={avatarUrl}
+              initial={(author?.displayName || author?.username || username || '?')
+                .slice(0, 1)
+                .toUpperCase()}
+              className="!w-14 !h-14 !rounded-full"
+            />
             <div className="min-w-0">
               <h1 className="font-display text-lg font-medium text-text truncate">
-                {author?.username || username}
+                {author?.displayName || author?.username || username}
               </h1>
-              <p className="text-sm text-text-muted">Public Garden</p>
+              <p className="text-sm text-text-muted">
+                @{(author?.username || username || '').replace(/^@/, '')} · Public Garden
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 mt-6">
+          {author?.bio && (
+            <p
+              className={`mt-3 text-sm leading-relaxed text-text-muted whitespace-pre-wrap break-words ${fullBio ? '' : 'line-clamp-3'}`}
+            >
+              {author.bio}
+            </p>
+          )}
+          {(author?.bio?.length ?? 0) > 160 && (
+            <button
+              className={buttonClass('ghost', 'xs', 'mt-1')}
+              aria-expanded={fullBio}
+              onClick={() => setFullBio((value) => !value)}
+            >
+              {fullBio ? 'Show less' : 'Read full bio'}
+            </button>
+          )}
+          <div className="flex flex-wrap items-center gap-3 mt-4">
             <div className="flex-1">
               <input
-                aria-label="Search loaded Cruxes"
-                placeholder="Search loaded Cruxes…"
+                aria-label="Find a creation on this page"
+                placeholder="Find a creation on this page…"
                 className={fieldClass()}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -189,13 +212,14 @@ export default function PublicGarden() {
           </div>
         </Panel>
 
-        <p className="text-sm text-text-muted mb-4">
-          {cruxes.length} loaded · search and sorting apply to these Cruxes.{' '}
+        <p className="text-sm text-text-muted bg-panel border border-panel-border rounded-[var(--radius-md)] px-3 py-2 mb-4">
+          {filteredCruxes.length} {filteredCruxes.length === 1 ? 'creation' : 'creations'} shown.{' '}
+          {currentPage < totalPages && 'Load more below, or search this creator’s whole Garden.'}{' '}
           <Link
             className={buttonClass('ghost', 'sm')}
             to={`/explore?author=${encodeURIComponent(username?.replace(/^@/, '') ?? '')}`}
           >
-            Search this author in Explore
+            Search all by this creator
           </Link>
         </p>
         {/* Content */}
@@ -211,7 +235,31 @@ export default function PublicGarden() {
             )}
           </Panel>
         ) : (
-          <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} hideMenu />
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-5">
+            {filteredCruxes.map((crux) => (
+              <CruxResultCard
+                key={crux.id}
+                crux={{
+                  ...crux,
+                  kind: crux.kind ?? undefined,
+                  title: crux.title ?? undefined,
+                  description: crux.description ?? undefined,
+                  author_username: (author?.username || username || '').replace(/^@/, ''),
+                  author_display_name: author?.displayName || '',
+                  author_meta: author?.meta,
+                  tags: Array.isArray(crux.meta?.tags)
+                    ? crux.meta.tags.filter((tag): tag is string => typeof tag === 'string')
+                    : [],
+                }}
+                activeTags={[]}
+                onTag={(tag) =>
+                  navigate(
+                    `/explore?author=${encodeURIComponent((username || '').replace(/^@/, ''))}&tag=${encodeURIComponent(tag)}`,
+                  )
+                }
+              />
+            ))}
+          </div>
         )}
         {currentPage < totalPages && (
           <div className="flex flex-col items-center gap-2 mt-6">
