@@ -1,4 +1,4 @@
-import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import { test, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -93,7 +93,30 @@ export async function launchApp(
   // the real close request explicitly; ordinary finally blocks must still
   // stop Electron and its managed servers after a failed assertion.
   const close = app.close.bind(app);
+  const rendererErrors: string[] = [];
+  page.on('pageerror', (error) => rendererErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') rendererErrors.push(message.text().slice(0, 1000));
+    if (rendererErrors.length > 20) rendererErrors.shift();
+  });
   app.close = async () => {
+    if (process.env.CRUX_E2E_DIAGNOSTICS) {
+      let mainLog = '';
+      try {
+        mainLog = readFileSync(join(dir, 'userData', 'logs', 'main.log'), 'utf8')
+          .split('\n')
+          .filter((line) => /^\[.*\] (INFO|WARN|ERROR) /.test(line))
+          .slice(-25)
+          .map((line) => line.slice(0, 1500))
+          .join('\n');
+      } catch {
+        /* No boot log was produced. */
+      }
+      await test.info().attach('isolated-runtime-diagnostics', {
+        body: JSON.stringify({ rendererErrors, mainLog }, null, 2),
+        contentType: 'application/json',
+      });
+    }
     await app
       .evaluate(({ ipcMain, BrowserWindow }) => {
         const window = BrowserWindow.getAllWindows().find((w) => {

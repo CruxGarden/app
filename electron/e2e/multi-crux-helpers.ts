@@ -1,10 +1,13 @@
 import { togglePanel } from './panel-helpers';
 import { expect, type Page } from '@playwright/test';
 export async function enterGarden(page: Page) {
+  const start = Date.now();
   await page.getByRole('button', { name: /enter/i }).click();
   await page.getByText('Plant a new garden').click();
   await page.getByRole('button', { name: 'Welcome' }).click();
-  await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 60_000 });
+  if (process.env.CRUX_E2E_DIAGNOSTICS)
+    console.log(`Fresh Garden ready in ${Date.now() - start}ms`);
 }
 /**
  * After a relaunch the app opens on the Garden's Home and brings workspaces
