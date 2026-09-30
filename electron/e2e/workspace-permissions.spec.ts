@@ -35,6 +35,15 @@ test('only live workspace frames can ask for media, and every request needs cons
         document.querySelector('#permission-proof')?.remove();
         const frame = document.createElement('iframe');
         frame.id = 'permission-proof';
+        // This fixture lives outside the app's layout. Keep its real controls
+        // above the full-screen entry so clicks exercise media user activation.
+        Object.assign(frame.style, {
+          position: 'fixed',
+          inset: '16px',
+          width: '400px',
+          height: '200px',
+          zIndex: '2147483647',
+        });
         frame.allow = 'camera; microphone; geolocation; display-capture';
         frame.src = url;
         document.body.append(frame);
