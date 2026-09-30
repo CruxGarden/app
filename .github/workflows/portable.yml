@@ -11,6 +11,10 @@ on:
       - '.github/workflows/portable.yml'
       - '.github/actions/native-media/**'
       - 'electron/**'
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite*.ts'
       - 'scripts/**'
       - 'package*.json'
 permissions:

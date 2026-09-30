@@ -196,7 +196,11 @@ test.describe('packaged app', () => {
       }
       try {
         messages.push(
-          readFileSync(join(dir, 'userData', 'logs', 'main.log'), 'utf8').slice(-12000),
+          readFileSync(join(dir, 'userData', 'logs', 'main.log'), 'utf8')
+            .split('\n')
+            .filter((line) => /^\[\d{4}-.*\] (INFO|WARN|ERROR)/.test(line))
+            .slice(-20)
+            .join('\n'),
         );
       } catch {
         /* boot may precede the logger */

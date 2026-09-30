@@ -34,6 +34,8 @@ const files = import.meta.glob('./*.md', {
 }) as Record<string, string>;
 
 function parseSkill(path: string, text: string): Skill {
+  // Raw imports retain checkout line endings; Windows must load the same registry.
+  text = text.replace(/\r\n/g, '\n');
   const [first = '', second = ''] = text.split('\n');
   const name = /^# Skill:\s*(\S+)\s*$/.exec(first)?.[1];
   const summary = /^Use when:\s*(.+)$/.exec(second)?.[1]?.trim();
