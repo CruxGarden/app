@@ -22,6 +22,7 @@ export function lastCodeFor(email: string): string | null {
 export async function useLocalApi(page: Page) {
   await page.keyboard.press('ControlOrMeta+,');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await page.getByText('Advanced connection settings', { exact: true }).click();
   await page.getByRole('textbox', { name: 'API address' }).fill(LOCAL_API!);
   await page.getByRole('button', { name: 'Use this address' }).click();
   await expect(page.getByTestId('api-address')).toContainText(`Talking to ${LOCAL_API}`);

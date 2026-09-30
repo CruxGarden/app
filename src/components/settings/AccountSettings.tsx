@@ -205,7 +205,15 @@ export default function AccountSettings() {
         Connection{isAuthenticated ? ` (${hostOf(apiBaseUrl())})` : ''}
       </h3>
       <ConnectAccount description="Connect to your crux.garden account to enable sync and sharing." />
-      <ApiAddress />
+      <details className="mt-4 text-sm">
+        <summary className="text-text-muted cursor-pointer hover:text-text">
+          Advanced connection settings
+        </summary>
+        <p className="mt-3 text-xs text-text-muted">
+          Only change this if you run your own Crux Garden API.
+        </p>
+        <ApiAddress />
+      </details>
     </SettingsSection>
   );
 }

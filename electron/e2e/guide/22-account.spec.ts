@@ -239,6 +239,7 @@ test.describe('guide 22 · Account and Names', () => {
       const { page } = free;
       await enterGarden(page);
       const account = await accountSection(page);
+      await account.getByText('Advanced connection settings', { exact: true }).click();
       const address = account.getByTestId('api-address');
       await expect(address).toContainText(/Talking to .*\(the default\)/);
       const box = address.getByRole('textbox', { name: 'API address' });
@@ -269,6 +270,7 @@ test.describe('guide 22 · Account and Names', () => {
       const { page } = pinned;
       await enterGarden(page);
       const account = await accountSection(page);
+      await account.getByText('Advanced connection settings', { exact: true }).click();
       const address = account.getByTestId('api-address');
       await expect(address).toContainText(`Pinned for this launch: ${api.url}`);
       await expect(address.getByRole('textbox', { name: 'API address' })).toHaveCount(0);
