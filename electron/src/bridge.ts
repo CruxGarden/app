@@ -656,6 +656,7 @@ export interface AgentHostResponse {
 }
 
 export interface AgentHostBridge {
+  installCli(): Promise<{ path: string; instructions: string }>;
   list(): Promise<AgentHostServer[]>;
   /** Start (or restart) the crux's server with a fresh token. */
   enable(cruxId: string): Promise<AgentHostServer>;

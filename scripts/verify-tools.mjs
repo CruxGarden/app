@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { runNpm } from './run-npm.mjs';
 import { bundledTools } from './prebuild.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -31,7 +31,7 @@ const suites = names.map((n) => `test:${n}`).filter((s) => scripts[s]);
 console.log(`verify-tools (${mode}): ${suites.length} suites\n  ${suites.join(' ')}`);
 for (const script of suites) {
   console.log(`\n▶ npm run ${script}`);
-  const r = spawnSync('npm', ['run', script], { cwd: root, stdio: 'inherit' });
+  const r = runNpm(['run', script], { cwd: root, stdio: 'inherit' });
   if (r.status !== 0) {
     console.error(`verify-tools: npm run ${script} failed`);
     process.exit(r.status ?? 1);

@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test';
 const gateSpecs = [
   '**/journeys/*.spec.ts',
   '**/ipc-security.spec.ts',
+  '**/desktop-cli.spec.ts',
   '**/secrets.spec.ts',
   '**/function-secrets.spec.ts',
   '**/auth-credentials.spec.ts',

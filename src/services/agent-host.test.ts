@@ -5,6 +5,7 @@ import {
   agentToolDefinitions,
   connectSnippets,
   serverKey,
+  toMcpResult,
 } from './agent-host';
 import { TOOL_DEFINITIONS } from '@/ai/tools';
 
@@ -67,4 +68,14 @@ describe('connect snippets', () => {
     });
     expect(s.stdio).toBe(server.stdioCommand);
   });
+});
+
+it('reports a refused action as a tool error so external scripts do not mistake it for completion', () => {
+  const refused =
+    'The user DECLINED the deletion of notes.txt. The file still exists — do not retry unless asked again.';
+  expect(toMcpResult(refused)).toEqual({
+    content: [{ type: 'text', text: refused }],
+    isError: true,
+  });
+  expect(toMcpResult('Deleted file: notes.txt (approved by user)').isError).toBe(false);
 });

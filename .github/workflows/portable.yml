@@ -1,0 +1,71 @@
+# Native platform acceptance, including unpacked production packaging; never publishes.
+name: Portable desktop
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - '.github/workflows/portable.yml'
+      - '.github/actions/native-media/**'
+      - 'electron/**'
+      - 'scripts/**'
+      - 'package*.json'
+permissions:
+  contents: read
+concurrency:
+  group: portable-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  portable:
+    name: Packaged runtime (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: electron/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+        working-directory: electron
+      - run: npm ci
+      - run: npm run verify
+        working-directory: electron
+      - uses: ./.github/actions/native-media
+      - run: npm run build:all
+        working-directory: electron
+      - run: npx playwright install --with-deps chromium
+        working-directory: electron
+      - name: Package without publishing
+        run: npx electron-builder --dir --publish never
+        working-directory: electron
+      - name: Run packaged and companion CLI checks
+        working-directory: electron
+        env:
+          CRUX_PACKAGED: '1'
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts
+          else
+            npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-${{ matrix.os }}
+          path: electron/e2e/.results
+          if-no-files-found: ignore

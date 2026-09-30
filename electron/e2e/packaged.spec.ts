@@ -5,22 +5,29 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 /**
- * Packaged-build smoke (opt-in): launches the .app electron-builder produced —
+ * Packaged-build smoke (opt-in): launches the app electron-builder produced —
  * asar, unpacked native modules, bundled web app, crux-app:// protocol — on a
  * throwaway garden, and checks the Gateway renders. This is the check that
- * `npx electron .` cannot give. Run after `npm run dist:mac`:
+ * `npx electron .` cannot give. Run after packaging for the current platform:
  *   CRUX_PACKAGED=1 npx playwright test e2e/packaged.spec.ts
  * CRUX_PACKAGED_APP overrides the executable path.
  */
 const arch = process.arch === 'arm64' ? 'mac-arm64' : 'mac';
-const exe =
-  process.env.CRUX_PACKAGED_APP ||
-  join(__dirname, '..', 'release', arch, 'Crux Garden.app', 'Contents', 'MacOS', 'Crux Garden');
+const defaultExecutable =
+  process.platform === 'win32'
+    ? join('win-unpacked', 'Crux Garden.exe')
+    : process.platform === 'linux'
+      ? join('linux-unpacked', 'crux-garden-desktop')
+      : join(arch, 'Crux Garden.app', 'Contents', 'MacOS', 'Crux Garden');
+const exe = process.env.CRUX_PACKAGED_APP || join(__dirname, '..', 'release', defaultExecutable);
 
 test.describe('packaged app', () => {
-  test.skip(!process.env.CRUX_PACKAGED, 'set CRUX_PACKAGED=1 after npm run dist:mac');
+  test.skip(
+    !process.env.CRUX_PACKAGED && process.env.npm_lifecycle_event !== 'test:packaged',
+    'run npm run test:packaged after packaging for this platform',
+  );
 
-  test('the built .app launches, serves the bundled web app, and opens SQLite', async () => {
+  test('the packaged app launches, serves its web app, opens SQLite and runs its CLI', async () => {
     expect(existsSync(exe), `no packaged app at ${exe}`).toBe(true);
     const dir = realpathSync(mkdtempSync(join(tmpdir(), 'crux-packaged-')));
     const env: Record<string, string> = {};
@@ -41,7 +48,11 @@ test.describe('packaged app', () => {
     env.CRUX_PLAIN_TITLES = '1';
     env.CRUX_AUTOBACKUP_QUIET_MS = '1';
     env.CRUX_GARDEN_ROOT = join(dir, 'ignored-garden');
-    const app = await electron.launch({ executablePath: exe, env });
+    const app = await electron.launch({
+      executablePath: exe,
+      env,
+      args: process.platform === 'linux' && process.env.CI ? ['--no-sandbox'] : [],
+    });
     try {
       const page = await app.firstWindow();
       await page.waitForLoadState('domcontentloaded');
@@ -118,7 +129,12 @@ test.describe('packaged app', () => {
         expect(tool.version).toMatch(
           new RegExp(`^${name} version ${nativeVersion.replaceAll('.', '\\.')}`),
         );
-        expect(tool.path).toContain('.app/Contents/Resources/bin/');
+        expect(tool.path!.replaceAll('\\', '/')).toContain(
+          '/resources/bin/'.replace(
+            'resources',
+            process.platform === 'darwin' ? 'Resources' : 'resources',
+          ),
+        );
         const license = execFileSync(tool.path!, ['-L'], {
           encoding: 'utf8',
           stdio: ['ignore', 'pipe', 'ignore'],
@@ -130,7 +146,16 @@ test.describe('packaged app', () => {
           'GPL-3.0-or-later',
         );
       }
-      const resources = join(dirname(dirname(exe)), 'Resources');
+      const resources = await app.evaluate(() => process.resourcesPath);
+      const cliScript = join(resources, 'app.asar.unpacked', 'dist', 'desktop-cli.js');
+      const cli = JSON.parse(
+        execFileSync(exe, [cliScript, 'help', '--json'], {
+          encoding: 'utf8',
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        }),
+      );
+      expect(cli.ok).toBe(true);
+      expect(cli.result.help).toContain('call NAME');
       expect(readFileSync(join(resources, 'LICENSE'), 'utf8')).toContain('MIT License');
       const notices = readFileSync(join(resources, 'app', 'THIRD-PARTY-NOTICES.txt'), 'utf8');
       expect(notices).toContain('react@19.');

@@ -15,7 +15,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { runNpm } from './run-npm.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const mode = process.env.CRUX_BUNDLE_TOOLS || 'bundled';
@@ -38,7 +38,7 @@ export function bundledTools(dir = root, want = mode) {
 
 function run(script) {
   console.log(`\n▶ npm run ${script}`);
-  const r = spawnSync('npm', ['run', script], { cwd: root, stdio: 'inherit' });
+  const r = runNpm(['run', script], { cwd: root, stdio: 'inherit' });
   if (r.status !== 0) {
     console.error(`prebuild: npm run ${script} failed`);
     process.exit(r.status ?? 1);

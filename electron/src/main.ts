@@ -1,3 +1,4 @@
+import { installDesktopCli } from './desktop-cli-install';
 import { readLaunchSettings } from './launch-settings';
 import type { GraphSelection, PrivateGraphImport } from '@cruxgarden/local-api';
 import type {
@@ -1367,6 +1368,16 @@ async function setupIpc() {
   agentHost
     .resumeGarden()
     .catch((err: Error) => debugLog(`Garden agent host resume failed: ${err.message}`));
+  fromGarden('agent-host:install-cli', () =>
+    installDesktopCli({
+      home: app.getPath('home'),
+      executable: process.execPath,
+      script: path
+        .join(__dirname, 'desktop-cli.js')
+        .replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep),
+      profile: app.getPath('userData'),
+    }),
+  );
   fromGarden('agent-host:list', () => agentHost.list());
   fromGarden('agent-host:enable', (_e: any, cruxId: string) => agentHost.enable(cruxId));
   fromGarden('agent-host:disable', (_e: any, cruxId: string) => agentHost.disable(cruxId));

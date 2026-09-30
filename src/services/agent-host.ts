@@ -33,6 +33,7 @@ import {
   createToolExecutor,
   defaultToolDefinitions,
   didMutate,
+  DELETE_DECLINED,
   type ToolDefinition,
 } from '@/ai/tools';
 import { resolveModel } from '@/ai/providers';
@@ -514,12 +515,12 @@ async function readResource(
     }
     case 'crux://growth': {
       const timeline = (await listGrowths(cruxId)).map((g) => ({
-          id: g.id,
-          snapshotCruxId: g.targetId,
-          label: (g.meta?.label as string | undefined) ?? null,
-          requestedBy: (g.meta?.requestedBy as string | undefined) ?? null,
-          created: g.created,
-        }));
+        id: g.id,
+        snapshotCruxId: g.targetId,
+        label: (g.meta?.label as string | undefined) ?? null,
+        requestedBy: (g.meta?.requestedBy as string | undefined) ?? null,
+        created: g.created,
+      }));
       return json({ cruxId, snapshots: timeline });
     }
     case 'crux://preview': {
@@ -557,9 +558,12 @@ function resultText(result: string | ToolResultContent): string {
     .join('\n');
 }
 
-function toMcpResult(result: string | ToolResultContent): McpToolResult {
+export function toMcpResult(result: string | ToolResultContent): McpToolResult {
   if (typeof result === 'string') {
-    return { content: [{ type: 'text', text: result }], isError: result.startsWith('Error') };
+    return {
+      content: [{ type: 'text', text: result }],
+      isError: result.startsWith('Error') || result.startsWith(DELETE_DECLINED),
+    };
   }
   return {
     content: result.map((b) =>

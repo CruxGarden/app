@@ -487,6 +487,11 @@ const api: ElectronBridge = {
   },
   // Agent Host (ADR 0013): per-crux MCP servers in main; tool calls run here.
   agentHost: {
+    installCli: () =>
+      ipcRenderer.invoke('agent-host:install-cli') as Promise<{
+        path: string;
+        instructions: string;
+      }>,
     list: () => ipcRenderer.invoke('agent-host:list') as Promise<AgentHostServer[]>,
     enable: (cruxId: string) =>
       ipcRenderer.invoke('agent-host:enable', cruxId) as Promise<AgentHostServer>,
