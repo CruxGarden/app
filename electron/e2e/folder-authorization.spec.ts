@@ -25,7 +25,8 @@ test('only allocated Project Folders remain accessible across a Garden root chan
     );
     const nextId = await createCrux(instance.page, 'New project');
     const nextFolder = (await storedCrux(instance.page, nextId)).projectFolder as string;
-    expect(dirname(nextFolder)).toBe(realpathSync(nextRoot));
+    // Native realpath resolves Windows 8.3 aliases (RUNNER~1) as well as symlinks.
+    expect(realpathSync.native(dirname(nextFolder))).toBe(realpathSync.native(nextRoot));
 
     const check = async () => {
       const results = await instance.page.evaluate(

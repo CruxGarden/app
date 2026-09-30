@@ -144,4 +144,17 @@ attribute and releases its temporary context. A refusal selects Glass for a
 requested Plasma workspace and a static branded entry panel. Saved appearance
 choices remain untouched. Hardware-capable entry/workspace rendering continues
 normally. Unit and injected-refusal desktop tests establish the policy; the
-ordinary native Windows rerun is still required to establish its platform result.
+native Windows run36768996887 at `31a6fc113` confirms the fallback selects Glass.
+`windows-rendering-after.json` preserves the raw artifact11123531210. The same
+ordinary/off/restored samples take2.053/0.632/2.163seconds, with median frame
+intervals78.05/15.6/78.1ms. This is substantially improved but still slower than
+solid rendering; it is not a60fps claim.
+
+Linux acceptance passes. Windows passes7 of8 checks, including CLI,
+create/version/publish, keyboard and packaged SQLite/native-tools smoke. Fresh
+Garden entry takes3.694–4.047seconds. The remaining folder-authorization test
+compares short (`RUNNER~1`) and long (`runneradmin`) spellings of one directory.
+Canonicalizing both sides with native realpath fixes the assertion; the full
+Electron gate passes76 tests with one platform skip, and the focused macOS
+root-switch/restart test passes in13.4seconds. The next Windows run must confirm
+that final test correction; these results do not yet claim a fully green Windows gate.
