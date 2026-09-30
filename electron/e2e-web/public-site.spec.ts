@@ -86,6 +86,7 @@ test.describe('public site', () => {
     await page.goto('/');
     await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Notify me' })).toBeInViewport();
+    await page.screenshot({ path: 'e2e-web/.results/public-entry-mobile.png' });
   });
 
   test('Plans: Free has no domain line, Gardener does; billing return pages read right', async ({
@@ -116,4 +117,82 @@ test.describe('public site', () => {
     await expect(page.getByText('tester').first()).toBeVisible();
     await expect(page.getByText('Garden Notes').first()).toBeVisible();
   });
+});
+
+test('entry leads to Explore; loading, failure and retry stay useful', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Explore the garden →' }).click();
+  await expect(page.getByText('Garden Notes').first()).toBeVisible();
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/authors/tester/cruxes/garden-notes', async (route) => {
+    await waiting;
+    await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' });
+  });
+  await page.getByRole('link', { name: 'Garden Notes', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Loading creation…');
+  release();
+  await expect(page.getByRole('heading', { name: 'Something went wrong' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Not found', exact: true })).toHaveCount(0);
+  await page.unroute('**/authors/tester/cruxes/garden-notes');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.frameLocator('iframe').first().getByText('Garden Notes live')).toBeVisible();
+  await page.goto('/@nobody/missing');
+  await expect(page.getByRole('heading', { name: 'Not found', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Explore', exact: true }).first().click();
+  await expect(page.getByText('Garden Notes').first()).toBeVisible();
+});
+
+test('Garden outages offer retry, and Explore clears pending search', async ({ page }) => {
+  await page.route('**/authors/tester', (route) => route.fulfill({ status: 500, body: '{}' }));
+  await page.goto('/@tester');
+  await expect(page.getByRole('heading', { name: "Couldn't reach this garden" })).toBeVisible();
+  await page.unroute('**/authors/tester');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByText('Garden Notes').first()).toBeVisible();
+  await page.goto('/explore?q=old');
+  const search = page.getByPlaceholder(/search/i).first();
+  await search.fill('pending');
+  await page.getByRole('button', { name: 'Clear search', exact: true }).click();
+  await page.waitForTimeout(400);
+  await expect(search).toHaveValue('');
+  expect(new URL(page.url()).searchParams.get('q')).toBeNull();
+});
+
+test('public Gardens load another page on demand and preserve results on refusal', async ({
+  page,
+}) => {
+  let failMore = true;
+  await page.route('**/authors/tester/cruxes?*', async (route) => {
+    const currentPage = Number(new URL(route.request().url()).searchParams.get('page'));
+    expect(new URL(route.request().url()).searchParams.get('perPage')).toBe('24');
+    if (currentPage === 2 && failMore) return route.fulfill({ status: 503, body: '{}' });
+    const crux = {
+      ...api.state.cruxes[ID],
+      id: currentPage === 1 ? ID : 'other',
+      title: currentPage === 1 ? 'First page' : 'Second page',
+      slug: currentPage === 1 ? 'first' : 'second',
+    };
+    await route.fulfill({
+      contentType: 'application/json',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'Pagination',
+        Pagination: JSON.stringify({ lastPage: 2, currentPage }),
+      },
+      body: JSON.stringify([crux]),
+    });
+  });
+  await page.goto('/@tester');
+  await expect(page.getByText('First page', { exact: true })).toBeVisible();
+  await expect(page.getByText('Second page', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Load more Cruxes' }).click();
+  await expect(page.getByRole('alert')).toContainText('Couldn’t load more');
+  await expect(page.getByText('First page', { exact: true })).toBeVisible();
+  failMore = false;
+  await page.getByRole('button', { name: 'Try loading more again' }).click();
+  await expect(page.getByText('Second page', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Load more Cruxes' })).toHaveCount(0);
 });

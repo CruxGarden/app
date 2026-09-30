@@ -4,7 +4,7 @@
 .teaser {
   position: fixed;
   inset: 0;
-  overflow: hidden;
+  overflow-y: auto;
   /* The field paints over this; it only shows for the first frame and behind
      the shader if WebGL is unavailable. */
   background: #04111c;
@@ -15,6 +15,7 @@
   inset: 0;
   display: grid;
   place-items: center;
+  overflow-y: auto;
   padding: 24px;
 }
 
@@ -146,4 +147,31 @@
   font-size: 0.95rem;
   line-height: 1.5;
   color: #f7a8d8;
+}
+
+.teaser-description {
+  max-width: 32ch;
+  margin: 1rem auto;
+  color: #d1dde2;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.teaser-explore {
+  display: inline-block;
+  padding: 0.8rem 1.2rem;
+  border: 1px solid #ffffff66;
+  border-radius: 999px;
+  background: #ffffff18;
+  color: white;
+  font:
+    500 1rem/1.4 Inter,
+    sans-serif;
+  text-decoration: none;
+}
+.teaser-explore:hover {
+  background: #ffffff30;
+}
+.teaser-explore:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 4px;
 }

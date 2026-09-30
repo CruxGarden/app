@@ -145,7 +145,16 @@ export default function App() {
       <Toaster />
       <PlasmaStage>
         <PlasmaSurfaces />
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <div
+              role="status"
+              className="min-h-screen flex items-center justify-center text-text-muted"
+            >
+              Loading Crux Garden…
+            </div>
+          }
+        >
           <RouterProvider router={router} />
         </Suspense>
       </PlasmaStage>

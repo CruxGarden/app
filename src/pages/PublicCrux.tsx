@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import PublicLoading from '@/components/display/PublicLoading';
+import { PublicApiError } from '@/api/public';
 import DeadEnd from '@/components/layout/DeadEnd';
 import { buttonClass } from '@/components/ui/button-class';
-import { SectionLabel } from '@/components/ui';
+import { SectionLabel, Button } from '@/components/ui';
 import { Link, useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Artifact } from '@/api/types';
@@ -41,6 +43,7 @@ export default function PublicCrux() {
   const [crux, setCrux] = useState<Crux | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [state, setState] = useState<LoadState>('loading');
+  const [attempt, setAttempt] = useState(0);
   const [metadataOpen, setMetadataOpen] = useState(false);
 
   const hasMetadata = !!crux;
@@ -60,18 +63,23 @@ export default function PublicCrux() {
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
     setState('loading');
-    Promise.all([publicApi.getCruxBySlug(username, slug), publicApi.getArtifacts(username, slug)])
+    setCrux(null);
+    setMetadataOpen(false);
+    Promise.all([
+      publicApi.getCruxBySlug(username, slug, controller.signal),
+      publicApi.getArtifacts(username, slug, controller.signal),
+    ])
       .then(([cruxData, artifactsData]) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setCrux(cruxData);
         setArtifacts(artifactsData);
         setState('ready');
       })
       .catch((err) => {
-        if (cancelled) return;
-        if (err.message?.includes('404') || err.message?.includes('not found')) {
+        if (controller.signal.aborted) return;
+        if (err instanceof PublicApiError && err.status === 404) {
           setState('not-found');
         } else {
           setState('error');
@@ -79,9 +87,9 @@ export default function PublicCrux() {
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [username, slug]);
+  }, [username, slug, attempt]);
 
   // Set document title
   useEffect(() => {
@@ -94,7 +102,7 @@ export default function PublicCrux() {
   }, [crux?.title]);
 
   if (state === 'loading') {
-    return <div className="min-h-screen bg-bg" />;
+    return <PublicLoading label="Loading creation…" username={username} />;
   }
 
   if (state === 'not-found') {
@@ -108,6 +116,7 @@ export default function PublicCrux() {
   if (state === 'error') {
     return (
       <DeadEnd title="Something went wrong" body="We couldn't load this creation">
+        <Button onClick={() => setAttempt((value) => value + 1)}>Try again</Button>
         <WayBack username={username} />
       </DeadEnd>
     );

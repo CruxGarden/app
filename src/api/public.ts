@@ -10,26 +10,39 @@ import type { Author, Crux, Artifact } from './types';
 
 const base = () => apiBaseUrl();
 
-function authorPath(username: string): string {
-  const clean = username.startsWith('@') ? username.slice(1) : username;
-  return `${base()}/authors/${clean}`;
+export class PublicApiError extends Error {
+  constructor(public readonly status: number) {
+    super(`Public request failed (HTTP ${status})`);
+  }
 }
 
-export async function getAuthor(username: string): Promise<Author> {
-  const res = await fetch(`${authorPath(username)}`);
-  if (!res.ok) throw new Error(`Author not found (${res.status})`);
+/** No auth, bounded wait, and cancellation when visitors leave a page. */
+async function request(url: string, signal?: AbortSignal): Promise<Response> {
+  const timeout = AbortSignal.timeout(20_000);
+  const res = await fetch(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
+  if (!res.ok) throw new PublicApiError(res.status);
+  return res;
+}
+
+function authorPath(username: string): string {
+  const clean = username.startsWith('@') ? username.slice(1) : username;
+  return `${base()}/authors/${encodeURIComponent(clean)}`;
+}
+
+export async function getAuthor(username: string, signal?: AbortSignal): Promise<Author> {
+  const res = await request(authorPath(username), signal);
   return res.json();
 }
 
 export async function getAuthorCruxes(
   username: string,
   params?: { page?: number; perPage?: number },
+  signal?: AbortSignal,
 ): Promise<{ cruxes: Crux[]; totalPages: number; currentPage: number }> {
   const url = new URL(`${authorPath(username)}/cruxes`);
   if (params?.page) url.searchParams.set('page', String(params.page));
   if (params?.perPage) url.searchParams.set('perPage', String(params.perPage));
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Failed to load cruxes (${res.status})`);
+  const res = await request(url.toString(), signal);
   const cruxes = await res.json();
   const pagination = JSON.parse(res.headers.get('Pagination') || '{}');
   return {
@@ -39,29 +52,38 @@ export async function getAuthorCruxes(
   };
 }
 
-export async function getCruxBySlug(username: string, slug: string): Promise<Crux> {
-  const res = await fetch(`${authorPath(username)}/cruxes/${slug}`);
-  if (!res.ok) throw new Error(`Crux not found (${res.status})`);
+export async function getCruxBySlug(
+  username: string,
+  slug: string,
+  signal?: AbortSignal,
+): Promise<Crux> {
+  const res = await request(`${authorPath(username)}/cruxes/${encodeURIComponent(slug)}`, signal);
   return res.json();
 }
 
-export async function getArtifacts(username: string, slug: string): Promise<Artifact[]> {
-  const res = await fetch(`${authorPath(username)}/cruxes/${slug}/artifacts`);
-  if (!res.ok) throw new Error(`Attachments not found (${res.status})`);
+export async function getArtifacts(
+  username: string,
+  slug: string,
+  signal?: AbortSignal,
+): Promise<Artifact[]> {
+  const res = await request(
+    `${authorPath(username)}/cruxes/${encodeURIComponent(slug)}/artifacts`,
+    signal,
+  );
   return res.json();
 }
 
 export function getDownloadUrl(username: string, slug: string, artifactId: string): string {
-  return `${authorPath(username)}/cruxes/${slug}/artifacts/${artifactId}/download`;
+  return `${authorPath(username)}/cruxes/${encodeURIComponent(slug)}/artifacts/${encodeURIComponent(artifactId)}/download`;
 }
 
 export async function downloadArtifact(
   username: string,
   slug: string,
   artifactId: string,
+  signal?: AbortSignal,
 ): Promise<Blob> {
-  const res = await fetch(getDownloadUrl(username, slug, artifactId));
-  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const res = await request(getDownloadUrl(username, slug, artifactId), signal);
   return res.blob();
 }
 
@@ -113,6 +135,7 @@ export interface ExploreTag {
 
 export async function explore(
   params?: ExploreParams,
+  signal?: AbortSignal,
 ): Promise<{ items: (ExploreCrux | ExploreAuthor)[]; totalPages: number; currentPage: number }> {
   const url = new URL(`${base()}/explore`);
   if (params?.q) url.searchParams.set('q', params.q);
@@ -125,8 +148,7 @@ export async function explore(
   if (params?.tag) {
     for (const t of params.tag) url.searchParams.append('tag', t);
   }
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Explore failed (${res.status})`);
+  const res = await request(url.toString(), signal);
   const items = await res.json();
   const pagination = JSON.parse(res.headers.get('Pagination') || '{}');
   return {
@@ -136,12 +158,15 @@ export async function explore(
   };
 }
 
-export async function exploreTags(limit?: number, kind?: string): Promise<ExploreTag[]> {
+export async function exploreTags(
+  limit?: number,
+  kind?: string,
+  signal?: AbortSignal,
+): Promise<ExploreTag[]> {
   const url = new URL(`${base()}/explore/tags`);
   if (kind) url.searchParams.set('kind', kind);
   if (limit) url.searchParams.set('limit', String(limit));
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Tags failed (${res.status})`);
+  const res = await request(url.toString(), signal);
   const body = await res.json();
   return body.data;
 }

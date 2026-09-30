@@ -192,16 +192,22 @@ export default function Explore({
   // The tags people use, for the view in front (a Mood's tags are not a site's).
   const tagKind = view === 'tools' ? 'tool' : view === 'moods' ? 'mood' : kind || undefined;
   useEffect(() => {
+    const controller = new AbortController();
     publicApi
-      .exploreTags(60, tagKind)
-      .then(setTags)
-      .catch(() => setTags([]));
+      .exploreTags(60, tagKind, controller.signal)
+      .then((tags) => {
+        if (!controller.signal.aborted) setTags(tags);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setTags([]);
+      });
+    return () => controller.abort();
   }, [tagKind]);
 
   // Fetch results: one request per view; All asks for Cruxes and, when there
   // is something to match, people too.
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     const base: ExploreParams = { sort, page, perPage: view === 'all' ? 12 : 24 };
     if (q) base.q = q;
@@ -220,14 +226,19 @@ export default function Explore({
       return none;
     };
     Promise.all([
-      wantCruxes ? publicApi.explore(cruxParams).catch(failedAs) : Promise.resolve(none),
+      wantCruxes
+        ? publicApi.explore(cruxParams, controller.signal).catch(failedAs)
+        : Promise.resolve(none),
       wantPeople
         ? publicApi
-            .explore({ ...base, type: 'authors', perPage: view === 'all' ? 4 : 24 })
+            .explore(
+              { ...base, type: 'authors', perPage: view === 'all' ? 4 : 24 },
+              controller.signal,
+            )
             .catch(failedAs)
         : Promise.resolve(none),
     ]).then(([c, p]) => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       const cruxItems = c.items as (ExploreCrux | ExploreAuthor)[];
       const peopleItems = p.items as (ExploreCrux | ExploreAuthor)[];
       setCruxes(cruxItems.filter(isCrux));
@@ -238,9 +249,11 @@ export default function Explore({
       setLoadedOnce(true);
     });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [q, view, sort, activeTags, kind, author, page, attempt]);
+
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -256,6 +269,7 @@ export default function Explore({
   }, []);
 
   const handleClear = useCallback(() => {
+    clearTimeout(debounceRef.current);
     if (inputRef.current) inputRef.current.value = '';
     setQ('');
     setSort((prev) => (prev === 'relevant' ? 'recent' : prev));
@@ -281,6 +295,7 @@ export default function Explore({
   }, []);
 
   const clearFilters = useCallback(() => {
+    clearTimeout(debounceRef.current);
     if (inputRef.current) inputRef.current.value = '';
     setQ('');
     setActiveTags([]);

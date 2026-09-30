@@ -1,24 +1,18 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import PublicLoading from '@/components/display/PublicLoading';
+import { PublicApiError } from '@/api/public';
 import DeadEnd from '@/components/layout/DeadEnd';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
-import { GardenGrid, GardenSearch } from '@/components/garden';
-import { Button, Panel, SegmentedControl } from '@/components/ui';
+import { GardenGrid } from '@/components/garden';
+import { Button, Panel, SegmentedControl, fieldClass, buttonClass } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
-
-async function loadAuthorData(username: string): Promise<{ author: Author; cruxes: Crux[] }> {
-  const [author, cruxData] = await Promise.all([
-    publicApi.getAuthor(username),
-    publicApi.getAuthorCruxes(username, { page: 1, perPage: 1000 }),
-  ]);
-  return { author, cruxes: cruxData.cruxes };
-}
 
 export default function PublicGarden() {
   const { username } = useParams<{ username: string }>();
@@ -26,6 +20,12 @@ export default function PublicGarden() {
   const [author, setAuthor] = useState<Author | null>(null);
   const [cruxes, setCruxes] = useState<Crux[]>([]);
   const [state, setState] = useState<LoadState>('loading');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
+  const request = useRef<AbortController | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortField>('created');
 
@@ -35,19 +35,31 @@ export default function PublicGarden() {
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
+    request.current = controller;
+    setMoreLoading(false);
+    setMoreFailed(false);
+    setState('loading');
+    setAuthor(null);
+    setCruxes([]);
+    setSearch('');
 
     // Load from API only — no local database access on public pages
-    loadAuthorData(username)
-      .then((data) => {
-        if (cancelled) return;
-        setAuthor(data.author);
+    Promise.all([
+      publicApi.getAuthor(username, controller.signal),
+      publicApi.getAuthorCruxes(username, { page: 1, perPage: 24 }, controller.signal),
+    ])
+      .then(([author, data]) => {
+        if (controller.signal.aborted) return;
+        setAuthor(author);
         setCruxes(data.cruxes);
+        setCurrentPage(data.currentPage);
+        setTotalPages(data.totalPages);
         setState('ready');
       })
       .catch((err) => {
-        if (cancelled) return;
-        if (err.message?.includes('404') || err.message?.includes('not found')) {
+        if (controller.signal.aborted) return;
+        if (err instanceof PublicApiError && err.status === 404) {
           setState('not-found');
         } else {
           setState('error');
@@ -55,9 +67,34 @@ export default function PublicGarden() {
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [username]);
+  }, [username, attempt]);
+
+  const loadMore = async () => {
+    const controller = request.current;
+    if (!username || !controller || controller.signal.aborted || moreLoading) return;
+    setMoreLoading(true);
+    setMoreFailed(false);
+    try {
+      const data = await publicApi.getAuthorCruxes(
+        username,
+        { page: currentPage + 1, perPage: 24 },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      if (data.currentPage !== currentPage + 1) throw new Error('Unexpected page');
+      setCruxes((previous) => [
+        ...new Map([...previous, ...data.cruxes].map((c) => [c.id, c])).values(),
+      ]);
+      setCurrentPage(data.currentPage);
+      setTotalPages(data.totalPages);
+    } catch {
+      if (!controller.signal.aborted) setMoreFailed(true);
+    } finally {
+      if (!controller.signal.aborted) setMoreLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (author?.username) {
@@ -88,7 +125,7 @@ export default function PublicGarden() {
 
   const avatarUrl = resolveAvatarUrl(author);
   if (state === 'loading') {
-    return <div className="min-h-screen bg-bg" />;
+    return <PublicLoading label="Loading garden…" username={username} />;
   }
 
   if (state === 'not-found') {
@@ -102,10 +139,12 @@ export default function PublicGarden() {
 
   if (state === 'error') {
     return (
-      <Missing
-        title="Couldn't reach this garden"
-        body="crux.garden did not answer. Check your connection and try again."
-      />
+      <DeadEnd title="Couldn't reach this garden" body="Check your connection and try again.">
+        <Button onClick={() => setAttempt((value) => value + 1)}>Try again</Button>
+        <Link to="/explore" className={buttonClass('ghost', 'sm')}>
+          Explore
+        </Link>
+      </DeadEnd>
     );
   }
 
@@ -129,7 +168,13 @@ export default function PublicGarden() {
           </div>
           <div className="flex items-center gap-3 mt-6">
             <div className="flex-1">
-              <GardenSearch value={search} onChange={setSearch} />
+              <input
+                aria-label="Search loaded Cruxes"
+                placeholder="Search loaded Cruxes…"
+                className={fieldClass()}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
             </div>
             <SegmentedControl
               label="Sort by"
@@ -144,6 +189,15 @@ export default function PublicGarden() {
           </div>
         </Panel>
 
+        <p className="text-sm text-text-muted mb-4">
+          {cruxes.length} loaded · search and sorting apply to these Cruxes.{' '}
+          <Link
+            className={buttonClass('ghost', 'sm')}
+            to={`/explore?author=${encodeURIComponent(username?.replace(/^@/, '') ?? '')}`}
+          >
+            Search this author in Explore
+          </Link>
+        </p>
         {/* Content */}
         {filteredCruxes.length === 0 ? (
           <Panel padding="md" className="flex flex-col items-center py-10">
@@ -158,6 +212,20 @@ export default function PublicGarden() {
           </Panel>
         ) : (
           <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} hideMenu />
+        )}
+        {currentPage < totalPages && (
+          <div className="flex flex-col items-center gap-2 mt-6">
+            {moreFailed && (
+              <p role="alert">Couldn’t load more Cruxes. Your current results are still here.</p>
+            )}
+            <Button disabled={moreLoading} onClick={() => void loadMore()}>
+              {moreLoading
+                ? 'Loading…'
+                : moreFailed
+                  ? 'Try loading more again'
+                  : 'Load more Cruxes'}
+            </Button>
+          </div>
         )}
       </div>
     </div>
