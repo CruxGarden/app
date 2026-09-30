@@ -8,6 +8,8 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e-web',
+  // Worker integration imports source modules; it runs in the separate dev fixture.
+  testIgnore: '**/recovery-content.spec.ts',
   timeout: 60_000,
   expect: { timeout: 15_000 },
   workers: 1,
