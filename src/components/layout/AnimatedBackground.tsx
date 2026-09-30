@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
@@ -26,17 +26,31 @@ export default function AnimatedBackground() {
     }
     return getDefault();
   });
+  const selectedType = useRef(bgType);
 
   // Watch for external changes to --background-type (e.g. mood system)
   useEffect(() => {
+    const root = document.documentElement;
+    let previousInline = root.style.getPropertyValue(BG_CSS_VAR);
+    let previousClass = root.className;
     const observer = new MutationObserver(() => {
-      const val = (getComputedStyle(document.documentElement).getPropertyValue(BG_CSS_VAR).trim() ||
+      const inline = root.style.getPropertyValue(BG_CSS_VAR);
+      const classes = root.className;
+      // Flow/audio animate other root properties every frame. Avoid a computed
+      // style read and a same-value React update for each of those mutations.
+      if (inline === previousInline && classes === previousClass) return;
+      previousInline = inline;
+      previousClass = classes;
+      const val = (getComputedStyle(root).getPropertyValue(BG_CSS_VAR).trim() ||
         getSetting(SettingsKey.BackgroundType) ||
         BgType.Bloom) as BgType;
-      setBgType((prev) => (prev !== val ? val : prev));
+      if (selectedType.current !== val) {
+        selectedType.current = val;
+        setBgType(val);
+      }
     });
 
-    observer.observe(document.documentElement, {
+    observer.observe(root, {
       attributes: true,
       attributeFilter: ['style', 'class'],
     });
