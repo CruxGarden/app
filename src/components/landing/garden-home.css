@@ -7,8 +7,6 @@
   --border: #2c3735;
   --surface: #1a2524;
   --accent: #ceff5f;
-  --gateway-title: #eff3e9;
-  --gateway-subtitle: #a3ada8;
   background: var(--bg);
   color: var(--text);
   font-family: Inter, system-ui, sans-serif;

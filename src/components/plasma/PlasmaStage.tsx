@@ -52,8 +52,15 @@ function useInWorkspace(): boolean {
 /** `<html data-plasma-chrome="flat">` while the Mood keeps the chrome — bar, menus, dialogs — out of the material. */
 export const CHROME_ATTR = 'data-plasma-chrome';
 
-export default function PlasmaStage({ children }: { children: ReactNode }) {
-  const on = usePlasmaOn();
+export default function PlasmaStage({
+  children,
+  enabled = true,
+}: {
+  children: ReactNode;
+  enabled?: boolean;
+}) {
+  const requested = usePlasmaOn();
+  const on = enabled && requested;
   const tier = usePlasmaTier();
   const optics = usePlasmaOptics();
   const stillPanels = can(Capability.DesktopChrome);

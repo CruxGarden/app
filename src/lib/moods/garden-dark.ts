@@ -64,11 +64,6 @@ export const GARDEN_DARK = {
   growthCardLabel: 'var(--accent)',
   growthDotActive: 'var(--accent)',
   settingsLabel: 'var(--accent)',
-  // The Enter button: just the glyph in the accent; the quiet accent-tinted
-  // square appears on hover (Daniel, 2026-09-07).
-  gatewayButton: 'transparent',
-  gatewayButtonHover: 'color-mix(in srgb, var(--accent) 18%, var(--surface))',
-  gatewayButtonText: 'var(--accent)',
   flowColor: 'var(--accent)',
   flowBg: 'var(--bg)',
   iconButtonIconHover: 'var(--accent)',
@@ -102,7 +97,6 @@ export const GARDEN_DARK = {
   commandPaletteItemText: 'var(--text)',
   publicTopBarText: 'var(--text)',
   tooltipText: 'var(--text)',
-  gatewayTitle: 'var(--text)',
   settingsValue: 'var(--text)',
   growthCardText: 'var(--text)',
   fileTreeItemText: 'var(--text)',
@@ -119,7 +113,6 @@ export const GARDEN_DARK = {
   publicTopBarTextMuted: 'var(--text-muted)',
   publicTopBarLink: 'var(--text-muted)',
   publicTopBarLinkHover: 'var(--text)',
-  gatewaySubtitle: 'var(--text-muted)',
   actionButtonText: 'var(--text-muted)',
   iconButtonIcon: 'var(--text-muted)',
   profileButtonIcon: 'var(--text-muted)',

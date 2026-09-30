@@ -3,14 +3,16 @@ import { isPublicSite } from '@/lib/site';
 import BackButton from '@/components/gateway/BackButton';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { applyMood, type MoodPackage } from '@/lib/moods/packages';
-import MoodBar from '@/components/mood/MoodBar';
+import { TeaserMaterial, TeaserPanel, TeaserBrand } from '@/components/landing/TeaserMaterial';
+import PlasmaSurfaces from '@/components/plasma/PlasmaSurfaces';
+import '@/components/landing/teaser.css';
 import Draggable from '@/components/gateway/Draggable';
 import { BgType } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton } from '@/components/ui';
-import { PlusIcon, CloudIcon, FileUploadIcon, SproutIcon } from '@/components/ui/icons';
+import { PlusCircleIcon, CloudIcon, FileUploadIcon, SproutIcon } from '@/components/ui/icons';
 import ConnectAccount from '@/components/auth/ConnectAccount';
-import { APP_NAME, SettingsKey } from '@/lib/constants';
+import { SettingsKey } from '@/lib/constants';
 import { getSetting } from '@/services/settings';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -34,11 +36,9 @@ enum Step {
 // ── Main Component ─────────────────────────────────────
 
 /**
- * The Gateway wears a Mood too. First run: The Keeper's look (theme and the
- * vista from its shipped URL — no garden yet, so no sound and nothing to
- * ingest). Returning: the theme is already painted from the synced settings;
- * a bundled Mood's background image is shown from its URL until the garden's
- * own copy resolves after Enter.
+ * Prepare the workspace's Mood before Enter. The entry surface has the shared
+ * teaser design; it does not replace the person's saved Mood. A bundled
+ * background remains ready until the Garden's own copy resolves after Enter.
  */
 async function wearGatewayMood(): Promise<void> {
   const { bundledMood } = await import('@/lib/moods/bundled-moods');
@@ -107,12 +107,9 @@ export default function Gateway() {
     void wearGatewayMood().catch(() => {});
   }, []);
 
-  // Arrival: the music starts and the background fades in; the banner and the
-  // player wait until the person stirs — mouse, click, key — or half a minute
-  // — or ten seconds pass — then rise out of the image (a fade with a lift
-  // and a clearing blur). On the banner step they sink away again after ten
-  // seconds without movement, to let the room be looked at; any stir brings
-  // them back (Daniel, 2026-09-07). A curtain in the page colour lifts first.
+  // The curtain lifts first, then the banner arrives. After fifteen idle
+  // seconds it rests; pointer or keyboard activity brings it back immediately.
+  // Setup forms remain visible until the person finishes them.
   const [curtain, setCurtain] = useState<'down' | 'lifting' | 'gone'>('down');
   const [visible, setVisible] = useState(false);
   const visibleRef = useRef(false);
@@ -166,58 +163,54 @@ export default function Gateway() {
   }, [step]);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4">
-      {/* Desktop: Gateway renders outside the Shell (no TopBar), so provide a
+    <div className="teaser gateway">
+      <TeaserMaterial>
+        <PlasmaSurfaces />
+        <div className="relative min-h-screen flex items-center justify-center p-6">
+          {/* Desktop: Gateway renders outside the Shell (no TopBar), so provide a
           drag region or the frameless window can't be moved */}
-      {can(Capability.DesktopChrome) && (
-        <div
-          className="fixed top-0 left-0 right-0 h-10 z-50"
-          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-        />
-      )}
-      {curtain !== 'gone' && (
-        <div
-          aria-hidden
-          data-testid="gateway-curtain"
-          className={cn(
-            'fixed inset-0 z-30 bg-bg pointer-events-none transition-opacity duration-[1000ms] ease-out',
-            curtain === 'lifting' ? 'opacity-0' : 'opacity-100',
+          {can(Capability.DesktopChrome) && (
+            <div
+              className="fixed top-0 left-0 right-0 h-10 z-50"
+              style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+            />
           )}
-        />
-      )}
-      {/* The banner with the Mood's player directly below it, centred. Both can be
-          dragged anywhere; the place is remembered. Hidden until the person stirs. */}
-      <div
-        data-testid="gateway-stage"
-        data-visible={visible ? 'true' : 'false'}
-        data-entrance={entrance ? 'true' : undefined}
-        onClickCapture={guardHiddenClick}
-        className="gateway-stage relative w-full max-w-md flex flex-col items-center"
-      >
-        <Draggable id="banner" label="Banner" className="w-full">
-          <div className="w-full flex flex-col items-center gap-6">
-            {(step === Step.Banner || step === Step.Checking) && (
-              <BannerStep
-                checking={step === Step.Checking}
-                onSetStep={setStep}
-                onNavigateHome={() => navigate('/home', { replace: true })}
-              />
-            )}
-            {step === Step.Choose && <ChooseStep onChoice={setStep} />}
-            {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
-            {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
-            {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
-          </div>
-        </Draggable>
-        {/* The banner keeps the exact centre of the window; the player hangs below it */}
-        {!can(Capability.DesktopChrome) && (
-          <div className="absolute inset-x-0 top-full mt-5 flex justify-center">
-            <Draggable id="player" label="Player" handle riseDelayMs={55} anchorId="banner">
-              <MoodBar gateway />
+          {curtain !== 'gone' && (
+            <div
+              aria-hidden
+              data-testid="gateway-curtain"
+              className={cn(
+                'fixed inset-0 z-30 bg-bg pointer-events-none transition-opacity duration-[1000ms] ease-out',
+                curtain === 'lifting' ? 'opacity-0' : 'opacity-100',
+              )}
+            />
+          )}
+          {/* The entry panel can be dragged; a new launch starts centred. */}
+          <div
+            data-testid="gateway-stage"
+            data-visible={visible ? 'true' : 'false'}
+            data-entrance={entrance ? 'true' : undefined}
+            onClickCapture={guardHiddenClick}
+            className="gateway-stage relative w-full max-w-[30rem] flex flex-col items-center"
+          >
+            <Draggable id="banner" label="Banner" className="w-full">
+              <div className="w-full flex flex-col items-center gap-6">
+                {(step === Step.Banner || step === Step.Checking) && (
+                  <BannerStep
+                    checking={step === Step.Checking}
+                    onSetStep={setStep}
+                    onNavigateHome={() => navigate('/home', { replace: true })}
+                  />
+                )}
+                {step === Step.Choose && <ChooseStep onChoice={setStep} />}
+                {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
+                {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
+                {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
+              </div>
             </Draggable>
           </div>
-        )}
-      </div>
+        </div>
+      </TeaserMaterial>
     </div>
   );
 }
@@ -253,9 +246,8 @@ function BannerStep({
   };
 
   return (
-    <Panel padding="lg" className="w-fit flex flex-col items-center px-8 py-6">
-      <h1 className="font-wordmark text-5xl font-semibold text-gateway-title">{APP_NAME}</h1>
-      <p className="text-gateway-subtitle text-lg mt-1">grow anything</p>
+    <TeaserPanel>
+      <TeaserBrand />
 
       <div className="mt-6">
         <IconButton
@@ -263,12 +255,12 @@ function BannerStep({
           size="lg"
           onClick={onEnter}
           disabled={checking}
-          className="!w-14 !h-14 bg-gateway-button !text-gateway-button-text hover:bg-gateway-button-hover hover:!text-gateway-button-text"
+          className="!w-14 !h-14 rounded-full !text-accent hover:bg-accent/15 hover:!text-accent"
         >
-          {checking ? <Spinner size={20} /> : <PlusIcon size={40} />}
+          {checking ? <Spinner size={20} /> : <PlusCircleIcon size={40} />}
         </IconButton>
       </div>
-    </Panel>
+    </TeaserPanel>
   );
 }
 

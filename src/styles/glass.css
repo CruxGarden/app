@@ -304,7 +304,7 @@ html[data-surface-style='glass']
   );
   border-color: var(--glass-highlight);
 }
-html[data-surface-style='glass'] :is(.bg-primary-button, .bg-chat-send-button, .bg-gateway-button) {
+html[data-surface-style='glass'] :is(.bg-primary-button, .bg-chat-send-button) {
   color: var(--text);
   background: color-mix(
     in srgb,
@@ -317,7 +317,7 @@ html[data-surface-style='glass'] :is(.bg-primary-button, .bg-chat-send-button, .
     0 1px 2px rgb(0 0 0 / 0.22);
 }
 html[data-surface-style='glass']
-  :is(.bg-primary-button, .bg-chat-send-button, .bg-gateway-button):hover:not(:disabled) {
+  :is(.bg-primary-button, .bg-chat-send-button):hover:not(:disabled) {
   background: color-mix(
     in srgb,
     var(--accent) 26%,

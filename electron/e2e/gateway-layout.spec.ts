@@ -13,6 +13,24 @@ test.describe('gateway layout', () => {
       await expect(stage).toHaveAttribute('data-visible', 'true', { timeout: 5_000 });
       await page.waitForTimeout(2300); // the entrance finishes before we measure
       await expect(page.getByTestId('gateway-player')).toHaveCount(0);
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      // The entry shares the site's type, with gray copy so the mint mark leads.
+      await expect(page.locator('.teaser-title')).toHaveCSS('font-family', /Cormorant Garamond/);
+      await expect(page.locator('.teaser-title')).toHaveCSS('font-weight', '500');
+      await expect(page.locator('.teaser-line')).toHaveCSS('font-family', /Outfit/);
+      await expect(page.locator('.teaser-line')).toHaveCSS('color', 'rgb(184, 184, 184)');
+      await expect(page.getByRole('button', { name: 'Enter' })).toHaveCSS(
+        'color',
+        'rgb(159, 243, 228)',
+      );
+      await expect(page.locator('input[type="email"], .teaser-track')).toHaveCount(0);
+      // The workspace material is dormant while the entry material is visible.
+      await expect(page.locator('canvas.plasma-ground')).toHaveCount(0);
+      await expect(page.locator('.gateway canvas')).toHaveCount(1);
+      await expect(
+        page.getByRole('button', { name: 'Enter' }).locator('[data-icon="plusCircle"]'),
+      ).toHaveCount(1);
+      await page.screenshot({ path: 'e2e/.results/gateway-teaser.png' });
       const before = (await box('gateway-banner'))!;
       // drag by the panel's top edge (not the button)
       await page.mouse.move(before.x + before.width / 2, before.y + 12);

@@ -130,20 +130,24 @@ const router = createBrowserRouter(
 registerNavigator((path) => router.navigate(path));
 
 const subscribeRoute = (changed: () => void) => router.subscribe(changed);
-const onPublicHomepage = () => publicSite && router.state.location.pathname === '/';
+// Entry pages own the teaser material; keep the workspace provider mounted,
+// but give its canvas no work until the person enters the app.
+const onEntryPage = () =>
+  router.state.location.pathname === '/' ||
+  (publicSite && router.state.location.pathname === '/subscribed');
 
 export default function App() {
-  const homepage = useSyncExternalStore(subscribeRoute, onPublicHomepage);
+  const entry = useSyncExternalStore(subscribeRoute, onEntryPage);
   return (
     <ErrorBoundary>
-      {!homepage && <AnimatedBackground />}
+      {!entry && <AnimatedBackground />}
       {/* Above the router, not inside Shell. Only two routes are Shell's
           children — /home and /c/:id — so a material mounted
           there left the Gateway, Explore, Plans, the public pages and the
-          404 flat. The Gateway is the first screen anyone ever sees. */}
+          404 flat. Entry pages supply their own shared teaser material. */}
       <TitleTooltips />
       <Toaster />
-      <PlasmaStage>
+      <PlasmaStage enabled={!entry}>
         <PlasmaSurfaces />
         <Suspense fallback={null}>
           <RouterProvider router={router} />
