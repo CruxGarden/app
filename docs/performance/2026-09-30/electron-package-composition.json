@@ -1,0 +1,11 @@
+{
+  "source": "20c01c247",
+  "logicalBytes": {
+    "_CodeSignature": 361336,
+    "MacOS": 51904,
+    "Resources": 733366076,
+    "Frameworks": 300012715,
+    "Info.plist": 3892,
+    "PkgInfo": 8
+  }
+}

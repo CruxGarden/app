@@ -1,0 +1,176 @@
+[
+  {
+    "trial": 0,
+    "mode": "fresh",
+    "gatewayMs": 1439,
+    "gardenMs": 3785,
+    "packaged": true,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 251664
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 131200
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 54320
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 206240
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 84848
+      }
+    ]
+  },
+  {
+    "trial": 0,
+    "mode": "restart",
+    "gatewayMs": 1342,
+    "gardenMs": 865,
+    "packaged": true,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 250800
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 114816
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 53696
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 203072
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 84784
+      }
+    ]
+  },
+  {
+    "trial": 1,
+    "mode": "fresh",
+    "gatewayMs": 1418,
+    "gardenMs": 4001,
+    "packaged": true,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 251552
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 138928
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 54384
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 210176
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 84864
+      }
+    ]
+  },
+  {
+    "trial": 1,
+    "mode": "restart",
+    "gatewayMs": 1319,
+    "gardenMs": 865,
+    "packaged": true,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 251312
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 119296
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 53664
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 203328
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 84768
+      }
+    ]
+  },
+  {
+    "trial": 2,
+    "mode": "fresh",
+    "gatewayMs": 1331,
+    "gardenMs": 3720,
+    "packaged": true,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 251728
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 140368
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 54272
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 208880
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 84832
+      }
+    ]
+  },
+  {
+    "trial": 2,
+    "mode": "restart",
+    "gatewayMs": 1358,
+    "gardenMs": 3191,
+    "packaged": true,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 251472
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 121152
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 53648
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 205616
+      },
+      {
+        "type": "Tab",
+        "workingSetKB": 84800
+      }
+    ]
+  }
+]

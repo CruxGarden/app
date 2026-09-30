@@ -15,7 +15,10 @@ async function files(page: Page, cruxId: string) {
       const head = await api.head(cruxId);
       return head
         ? (await api.list({ cruxId, expected: head })).entries
-            .filter((f) => f.path.startsWith('notes/'))
+            // Empty directory placeholders may arrive before their files in another watcher batch.
+            .filter(
+              (f) => f.path.startsWith('notes/') && !(f.path.endsWith('/.keep') && f.size === 0),
+            )
             .map((f) => [f.path, f.fingerprint])
             .sort(([a], [b]) => a!.localeCompare(b!))
         : [];
@@ -32,7 +35,9 @@ for (const count of (process.env.CRUX_PERF_FILES ?? '1000,10000').split(',').map
     test.setTimeout(15 * 60_000);
     const out = process.env.CRUX_PERF_OUT ?? 'performance/.results';
     mkdirSync(out, { recursive: true });
-    const archive = join(out, `project-${count}.crux`);
+    // Reuse a previously verified export to measure an import fix in isolation.
+    const sourceArchive = process.env.CRUX_PERF_IMPORT_ARCHIVE;
+    const archive = sourceArchive ?? join(out, `project-${count}.crux`);
     let instance = await launchApp();
     const phases: { name: string; ms: number }[] = [];
     const measure = async (name: string, work: () => Promise<void>) => {
@@ -46,66 +51,76 @@ for (const count of (process.env.CRUX_PERF_FILES ?? '1000,10000').split(',').map
     try {
       let { page } = instance;
       await enterGarden(page);
-      const id = await createCrux(page, `Scale ${count}`);
-      const { projectFolder } = await storedCrux(page, id);
       const expected = Array.from({ length: count }, (_, i) => [
         pathFor(i),
         hash(contentFor(i, 0)),
       ]).sort(([a], [b]) => a!.localeCompare(b!));
-      if (process.env.CRUX_CPU_PROFILE)
-        await instance.app.evaluate(async () => {
-          const session = new (process.getBuiltinModule('inspector').Session)();
-          session.connect();
-          (globalThis as unknown as { perfSession: typeof session }).perfSession = session;
-          await new Promise<void>((resolve) => session.post('Profiler.enable', () => resolve()));
-          await new Promise<void>((resolve) => session.post('Profiler.start', () => resolve()));
+      if (!sourceArchive) {
+        const id = await createCrux(page, `Scale ${count}`);
+        const { projectFolder } = await storedCrux(page, id);
+        if (process.env.CRUX_CPU_PROFILE)
+          await instance.app.evaluate(async () => {
+            const session = new (process.getBuiltinModule('inspector').Session)();
+            session.connect();
+            (globalThis as unknown as { perfSession: typeof session }).perfSession = session;
+            await new Promise<void>((resolve) => session.post('Profiler.enable', () => resolve()));
+            await new Promise<void>((resolve) => session.post('Profiler.start', () => resolve()));
+          });
+        await measure('write-fixture', async () => {
+          for (let i = 0; i < count; i++) {
+            const file = join(projectFolder, pathFor(i));
+            mkdirSync(dirname(file), { recursive: true });
+            writeFileSync(file, contentFor(i, 0));
+          }
         });
-      await measure('write-and-ingest', async () => {
-        for (let i = 0; i < count; i++) {
-          const file = join(projectFolder, pathFor(i));
-          mkdirSync(dirname(file), { recursive: true });
-          writeFileSync(file, contentFor(i, 0));
+        // Give the opt-in 50k case time to report its real duration. Passing this
+        // integrity journey is not a latency target; retain and compare the timings.
+        await measure('wait-for-ingestion', async () => {
+          await expect
+            .poll(async () => (await files(page, id)).length, {
+              timeout: Math.max(180_000, count * 10),
+              intervals: [1000],
+            })
+            .toBe(count);
+          expect(await files(page, id)).toEqual(expected);
+        });
+        if (process.env.CRUX_CPU_PROFILE) {
+          const profile = await instance.app.evaluate(
+            () =>
+              new Promise((resolve) => {
+                const session = (
+                  globalThis as unknown as { perfSession: import('node:inspector').Session }
+                ).perfSession;
+                session.post('Profiler.stop', (_error, result) => {
+                  session.disconnect();
+                  resolve(result);
+                });
+              }),
+          );
+          writeFileSync(join(out, `main-${count}.cpuprofile`), JSON.stringify(profile));
         }
-        await expect
-          .poll(() => files(page, id), { timeout: 180_000, intervals: [1000] })
-          .toEqual(expected);
-      });
-      if (process.env.CRUX_CPU_PROFILE) {
-        const profile = await instance.app.evaluate(
-          () =>
-            new Promise((resolve) => {
-              const session = (
-                globalThis as unknown as { perfSession: import('node:inspector').Session }
-              ).perfSession;
-              session.post('Profiler.stop', (_error, result) => {
-                session.disconnect();
-                resolve(result);
-              });
-            }),
+        await measure('browse-and-open', async () => {
+          await openPanel(page, 'artifacts', 'Toggle artifacts');
+          const tree = page.getByRole('tree');
+          for (const name of ['notes', 'shelf-000', 'chapter-000'])
+            await tree.getByText(name, { exact: true }).click();
+          await tree.getByText('note-000001.md', { exact: true }).click();
+          await expect(page.locator('.monaco-editor').first()).toContainText('Note 000001');
+          expect(await tree.getByRole('treeitem').count()).toBeLessThan(100);
+        });
+        await measure('snapshot', async () => {
+          await markVersion(page, 'Scale checkpoint');
+        });
+        await measure('export', () =>
+          exportNativeCrux(page, archive, instance.app, async () => {
+            await openPanel(page, 'export', 'Toggle export');
+          }),
         );
-        writeFileSync(join(out, `main-${count}.cpuprofile`), JSON.stringify(profile));
+        await instance.app.close();
+        instance = await launchApp();
+        page = instance.page;
+        await enterGarden(page);
       }
-      await measure('browse-and-open', async () => {
-        await openPanel(page, 'artifacts', 'Toggle artifacts');
-        const tree = page.getByRole('tree');
-        for (const name of ['notes', 'shelf-000', 'chapter-000'])
-          await tree.getByText(name, { exact: true }).click();
-        await tree.getByText('note-000001.md', { exact: true }).click();
-        await expect(page.locator('.monaco-editor').first()).toContainText('Note 000001');
-        expect(await tree.getByRole('treeitem').count()).toBeLessThan(100);
-      });
-      await measure('snapshot', async () => {
-        await markVersion(page, 'Scale checkpoint');
-      });
-      await measure('export', () =>
-        exportNativeCrux(page, archive, instance.app, async () => {
-          await openPanel(page, 'export', 'Toggle export');
-        }),
-      );
-      await instance.app.close();
-      instance = await launchApp();
-      page = instance.page;
-      await enterGarden(page);
       await measure('fresh-import', async () => {
         await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
         const [chooser] = await Promise.all([

@@ -1,0 +1,30 @@
+{
+  "status": "Interrupted diagnostic, not an hour-long acceptance result",
+  "source": "6bcf4871c",
+  "runtime": "fc0fff4",
+  "elapsedMinutes": 18.5,
+  "heapSnapshots": [
+    {
+      "at": "2026-09-30T16:58:03.741Z",
+      "backgroundSelectionCallbacks": 63873
+    },
+    {
+      "at": "2026-09-30T17:00:43.344Z",
+      "backgroundSelectionCallbacks": 76195
+    }
+  ],
+  "callsite": "AnimatedBackground.tsx MutationObserver functional setBgType updater",
+  "acceleratedReproduction": {
+    "rootStyleMutations": 30000,
+    "retainedBytes": 2721808,
+    "result": "Failed the 1 MiB retained-growth bound",
+    "testSecondsApprox": 108
+  },
+  "profiling": "Two CDP heap snapshots were captured during the run; full heaps remain scratch output.",
+  "acceleratedAfterFix": {
+    "retainedBytes": 33008,
+    "testSeconds": 8.6,
+    "backgroundSelection": "Blank/Bloom, class override and rapid return pass",
+    "runtime": "Source desktop against production renderer build; packaged repetition pending"
+  }
+}
