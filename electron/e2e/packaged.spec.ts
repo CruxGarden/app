@@ -167,6 +167,45 @@ test.describe('packaged app', () => {
           'SIL OPEN FONT LICENSE',
         );
       await page.screenshot({ path: 'e2e/.results/packaged-gateway.png' });
+    } catch (error) {
+      // A blank packaged window used to leave only a timeout and screenshot.
+      // Replay this isolated boot with listeners installed so CI retains the
+      // actual renderer/module failure; preserve the original failed assertion.
+      const messages: string[] = [];
+      try {
+        const page = await app.firstWindow();
+        page.on('pageerror', (err) => messages.push(`renderer: ${err.message}`));
+        page.on('console', (msg) => messages.push(`${msg.type()}: ${msg.text()}`));
+        page.on('requestfailed', (req) =>
+          messages.push(`request: ${req.url()} ${req.failure()?.errorText}`),
+        );
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(2000);
+        messages.push(
+          JSON.stringify(
+            await page.evaluate(() => ({
+              url: location.href,
+              body: document.body.innerText.slice(0, 2000),
+              scripts: Array.from(document.scripts, (s) => s.src),
+              bridge: typeof window.electronAPI,
+            })),
+          ),
+        );
+      } catch (diagnosticError) {
+        messages.push(String(diagnosticError));
+      }
+      try {
+        messages.push(
+          readFileSync(join(dir, 'userData', 'logs', 'main.log'), 'utf8').slice(-12000),
+        );
+      } catch {
+        /* boot may precede the logger */
+      }
+      console.error('Packaged boot diagnostics:', messages.join('\n'));
+      await test
+        .info()
+        .attach('packaged-boot', { body: messages.join('\n'), contentType: 'text/plain' });
+      throw error;
     } finally {
       await app.close();
     }
