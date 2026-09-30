@@ -249,12 +249,18 @@ async function toolSetBackground(
   }
 
   if (prompt) {
-    const { generateImageBlob } = await import('./tools');
     const size = typeof input.size === 'string' ? input.size : '1536x1024';
-    const generated = await generateImageBlob(prompt, size, ctx.chatModel);
-    if ('error' in generated) return `set_background: ${generated.error}`;
-    await setBackgroundFromBlob(generated.blob);
-    return `Generated a ${size} background with ${generated.provider} and set it. The user can change or clear it in Mood → Background.`;
+    let provider = '';
+    const applied = await setBackgroundFromBlob(
+      import('./tools').then(async ({ generateImageBlob }) => {
+        const generated = await generateImageBlob(prompt, size, ctx.chatModel);
+        if ('error' in generated) throw new Error(generated.error);
+        provider = generated.provider;
+        return generated.blob;
+      }),
+    );
+    if (!applied) return 'A newer background was selected; the generated image was not applied.';
+    return `Generated a ${size} background with ${provider} and set it. The user can change or clear it in Mood → Background.`;
   }
 
   return 'set_background: give a prompt (generate), a path (workspace image), or a type (bloom/drift/flow/blank).';

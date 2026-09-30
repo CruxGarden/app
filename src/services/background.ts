@@ -58,10 +58,13 @@ export async function setBackgroundImage(fingerprint: string, url?: string): Pro
   return resolveImage(fingerprint, request, url);
 }
 
-/** An upload finishing after a later selection must not change that selection. */
-export async function setBackgroundFromBlob(blob: Blob | File): Promise<string> {
+/** Claim the selection before generation/upload; a later choice always wins. */
+export async function setBackgroundFromBlob(source: Blob | Promise<Blob>): Promise<string> {
   const request = ++selection;
+  const blob = await source;
+  if (request !== selection) return '';
   const { putBlob } = await import('./blobs');
+  if (request !== selection) return '';
   const fingerprint = await putBlob(blob);
   if (request !== selection) return '';
   return setBackgroundImage(fingerprint);

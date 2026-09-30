@@ -1,3 +1,4 @@
+import { setBackgroundFromBlob } from '@/services/background';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useEffect } from 'react';
 import { segmentClass, segmentGroupClass } from '@/components/ui/button-class';
@@ -144,14 +145,13 @@ export default function MoodEditor() {
     setBgGenerating(true);
     setBgError(null);
     try {
-      const { generateImageBlob } = await import('@/ai/tools');
-      const result = await generateImageBlob(prompt, '1536x1024');
-      if ('error' in result) {
-        setBgError(result.error);
-        return;
-      }
-      const { setBackgroundFromBlob } = await import('@/services/background');
-      await setBackgroundFromBlob(result.blob);
+      await setBackgroundFromBlob(
+        import('@/ai/tools').then(async ({ generateImageBlob }) => {
+          const result = await generateImageBlob(prompt, '1536x1024');
+          if ('error' in result) throw new Error(result.error);
+          return result.blob;
+        }),
+      );
     } catch (err) {
       setBgError((err as Error).message || 'Could not generate a backdrop');
     } finally {
@@ -167,7 +167,6 @@ export default function MoodEditor() {
   const handleBgImageSelect = async (file: File) => {
     setBgGenerating(true);
     try {
-      const { setBackgroundFromBlob } = await import('@/services/background');
       await setBackgroundFromBlob(file);
     } finally {
       setBgGenerating(false);

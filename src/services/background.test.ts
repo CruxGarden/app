@@ -96,3 +96,42 @@ it('never revokes a borrowed bundled URL', async () => {
   await clearBackgroundImage();
   expect(URL.revokeObjectURL).not.toHaveBeenCalledWith('/bundled/background.jpg');
 });
+
+it('does not store or apply generation that finishes after a later selection', async () => {
+  let finish!: (blob: Blob) => void;
+  const generated = new Promise<Blob>((resolve) => {
+    finish = resolve;
+  });
+  const pending = setBackgroundFromBlob(generated);
+  await setBackgroundType(BgType.Blank);
+  finish(new Blob(['late image']));
+  expect(await pending).toBe('');
+  expect(fixtures.put).not.toHaveBeenCalled();
+  expect(fixtures.settings.get(SettingsKey.BackgroundType)).toBe(BgType.Blank);
+});
+
+it('applies the newest generation even when an older one finishes last', async () => {
+  let finish!: (blob: Blob) => void;
+  const old = setBackgroundFromBlob(
+    new Promise<Blob>((resolve) => {
+      finish = resolve;
+    }),
+  );
+  fixtures.put.mockResolvedValue('new');
+  fixtures.load.mockResolvedValue('blob:new');
+  expect(await setBackgroundFromBlob(Promise.resolve(new Blob(['new'])))).toBe('blob:new');
+  finish(new Blob(['old']));
+  expect(await old).toBe('');
+  expect(fixtures.put).toHaveBeenCalledTimes(1);
+  expect(useMoodStore.getState().backgroundUrl).toBe('blob:new');
+});
+
+it('leaves the displayed image intact when generation fails', async () => {
+  await setBackgroundImage('current', 'blob:current');
+  await expect(
+    setBackgroundFromBlob(Promise.reject(new Error('provider refused'))),
+  ).rejects.toThrow('provider refused');
+  expect(useMoodStore.getState().backgroundUrl).toBe('blob:current');
+  expect(fixtures.settings.get(SettingsKey.BackgroundImage)).toBe('current');
+  expect(fixtures.put).not.toHaveBeenCalled();
+});
