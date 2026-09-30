@@ -119,9 +119,10 @@ test.describe('public site', () => {
   });
 });
 
-test('entry leads to Explore; loading, failure and retry stay useful', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('link', { name: 'Explore the garden →' }).click();
+test('direct Explore links load; creation loading, failure and retry stay useful', async ({
+  page,
+}) => {
+  await page.goto('/explore');
   await expect(page.getByText('Garden Notes').first()).toBeVisible();
   let release!: () => void;
   const waiting = new Promise<void>((resolve) => {

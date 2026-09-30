@@ -15,7 +15,8 @@ permissions:
   contents: read
 concurrency:
   group: portable-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve expensive native builds so their verified bundles reach the cache.
+  cancel-in-progress: false
 jobs:
   portable:
     name: Packaged runtime (${{ matrix.os }})

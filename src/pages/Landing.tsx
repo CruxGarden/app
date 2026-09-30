@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { PlasmaProvider, Plasma } from '@cruxgarden/plasma-ui';
 import { APP_NAME } from '@/lib/constants';
@@ -89,16 +88,6 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
           <Plasma className="teaser-panel" radius={24} tint="#061016" opacity={0.55} frost={0.5}>
             <h1 className="teaser-title">{APP_NAME}</h1>
             <p className="teaser-line">Grow Anything</p>
-            <p className="teaser-description">
-              Talk to an AI. Make something. Share it with the world.
-            </p>
-            <Link className="teaser-explore" to="/explore" data-plasma-nodrag>
-              Explore the garden →
-            </Link>
-            <p className="teaser-description">
-              Discover creations, creative tools and Moods. Get notified when the desktop app
-              launches.
-            </p>
 
             {answered ? (
               <p className="teaser-sent" role="status">
