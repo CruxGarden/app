@@ -18,7 +18,7 @@ runs:
           *) exit 1 ;;
         esac
         echo "id=$platform-$arch" >> "$GITHUB_OUTPUT"
-    - uses: actions/cache@v4
+    - uses: actions/cache/restore@v4
       id: cache
       with:
         path: electron/.native-tools/${{ steps.target.outputs.id }}
@@ -49,3 +49,9 @@ runs:
       shell: bash
       run: |
         node --input-type=module -e 'import { verifyFfmpegBundle } from "./electron/scripts/ffmpeg-bundle.mjs"; verifyFfmpegBundle(`electron/.native-tools/${process.platform}-${process.arch}`, process.platform, process.arch);'
+    # Persist a verified bundle even if a later app build or runtime check fails.
+    - uses: actions/cache/save@v4
+      if: steps.cache.outputs.cache-hit != 'true'
+      with:
+        path: electron/.native-tools/${{ steps.target.outputs.id }}
+        key: ${{ steps.cache.outputs.cache-primary-key }}

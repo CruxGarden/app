@@ -24,3 +24,7 @@ Upgrade checks: review these two upstream file diffs; retain native commit group
 ## Dependency refresh (2026-09-28)
 
 The Garden build uses Vite 6.4.3 and Vitest 4.1.11; the unused UUID dependency is removed. The committed runtime is rebuilt from this lockfile.
+
+## Portable Garden build (2026-09-29)
+
+`build:garden` passes Vite `--outDir runtime` directly so the same command works in Windows cmd and POSIX shells. Public edition output remains `dist/`.
