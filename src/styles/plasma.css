@@ -133,13 +133,6 @@ html[data-surface-style='plasma']
   background: transparent;
   border-color: transparent;
 }
-html[data-surface-style='plasma']
-  .mosaic.crux-mosaic-theme
-  .mosaic-window
-  .mosaic-window-toolbar
-  > .pane-toolbar:hover {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-}
 
 /* The top bar and the task strip as standalone docks. Under the other themes
    they are strips welded to the top of the window, with a bottom border doing

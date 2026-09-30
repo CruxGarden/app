@@ -1434,19 +1434,18 @@ html.palette-transition *::after {
   align-items: center;
   justify-content: var(--pane-header-justify);
   width: 100%;
-  height: var(--pane-header-height);
-  padding: 0 10px;
-  border-radius: var(--pane-header-radius);
+  min-height: max(32px, var(--pane-header-height));
+  padding: 4px 12px;
+  border-radius: max(var(--pane-header-radius), var(--pane-inner-radius));
   border: none;
-  transition: filter 150ms;
-}
-.mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
-  filter: brightness(var(--pane-header-hover-brightness));
+  transition:
+    background-color 150ms,
+    filter 150ms;
 }
 /* The header is the handle: under the pointer it lights as a panel of its
    own and the cursor says it can be moved (Daniel, 2026-09-19). */
 .mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar:hover {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+  filter: brightness(var(--pane-header-hover-brightness));
   cursor: grab;
 }
 .mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar:active {

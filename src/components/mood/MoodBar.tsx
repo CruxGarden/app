@@ -141,8 +141,7 @@ export default function MoodBar({
       role="region"
       aria-label="Mood Bar"
       className={cn(
-        'group/mood relative flex items-center gap-1 h-7 pl-0.5 pr-1 select-none',
-        'bg-mood-bar border border-mood-bar-border text-mood-bar-text rounded-[var(--mood-bar-radius)] shadow-mood-bar',
+        'group/mood relative flex items-center gap-2 h-8 px-1 select-none text-mood-bar-text rounded-[var(--mood-bar-radius)] shadow-mood-bar',
         className,
       )}
     >

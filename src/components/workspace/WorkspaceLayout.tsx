@@ -289,6 +289,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
                   // header); passed as properties so a header token may be a gradient.
                   '--pane-header-bg': `var(${prefix}-header)`,
                   '--pane-header-border-color': `var(${prefix}-header-border)`,
+                  '--pane-header-hover-bg': `var(${prefix}-button-active)`,
                 } as CSSProperties
               }
             >

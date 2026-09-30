@@ -63,7 +63,7 @@ export default function TopBar() {
   return (
     <header
       className={cn(
-        'flex flex-wrap items-center gap-x-2 gap-y-1 px-3 border-b border-toolbar-border bg-toolbar',
+        'flex flex-wrap items-center gap-x-4 gap-y-1 px-3 border-b border-toolbar-border bg-toolbar',
         desktopChrome && 'pl-24', // left padding for macOS traffic lights
       )}
       style={{
@@ -72,7 +72,7 @@ export default function TopBar() {
       }}
     >
       {/* Left: where you are */}
-      <div className="flex flex-1 basis-60 min-w-0">
+      <div className="flex flex-1 basis-60 min-w-0 items-center">
         <nav
           aria-label="Workspace breadcrumbs"
           className="flex items-center gap-1.5 min-w-0"
@@ -101,7 +101,7 @@ export default function TopBar() {
 
       {/* Middle: one command bar — ⌘K, the panel squares, the picker */}
       <div
-        className="flex items-center min-h-8 pl-1 pr-0.5 bg-mood-bar border border-mood-bar-border rounded-[var(--mood-bar-radius)] shadow-mood-bar"
+        className="flex items-center gap-3 min-h-8 px-1"
         data-testid="command-bar"
         style={noDrag}
       >
@@ -111,23 +111,22 @@ export default function TopBar() {
           aria-keyshortcuts="Meta+K Control+K"
           onClick={() => openCommandPalette()}
           className={cn(
-            'group/cmd flex items-center gap-2 h-7 pl-2 pr-1.5 rounded-[var(--radius-sm)] cursor-pointer',
+            'group/cmd flex items-center gap-2 h-8 px-2 rounded-[var(--radius-sm)] cursor-pointer',
             'text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover',
             'transition-[color,background-color] motion-press',
           )}
         >
           <SearchIcon size={14} />
           <span className="hidden lg:inline text-xs pr-6">Search or run a command</span>
-          <kbd className="hidden sm:inline text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors">
+          <kbd className="hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors">
             {COMMAND_SHORTCUT}
           </kbd>
         </button>
         {enabledPanes.length > 0 && (
           <>
-            <div className="hidden md:block w-px h-4 bg-toolbar-divider mx-1" />
             {/* The builder's lane: open and pinned panels as square toggles. */}
             <div
-              className="hidden md:flex flex-wrap items-center gap-0.5"
+              className="hidden md:flex flex-wrap items-center gap-1.5"
               aria-label="Open panels"
               data-testid="builder-lane"
             >
@@ -171,13 +170,12 @@ export default function TopBar() {
             </div>
           </>
         )}
-        <div className="w-px h-4 bg-toolbar-divider mx-1" />
         <PanelPicker key={activeCruxId || garden?.id} />
       </div>
 
       {/* Right: what is yours */}
-      <div className="flex flex-1 basis-60 min-w-0 justify-end">
-        <div className="flex items-center gap-1" style={noDrag}>
+      <div className="flex flex-1 basis-60 min-w-0 items-center justify-end">
+        <div className="flex items-center gap-3" style={noDrag}>
           <AlertsBell />
           <MoodBar />
           {aiEnabled && (

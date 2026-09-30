@@ -60,6 +60,16 @@
   border: 1px solid var(--pane-header-border-color);
 }
 
+/* Use the same muted panel color as its active top-bar icon. Keyboard focus
+   inside the header receives the same cue as pointing at the drag handle. */
+.mosaic.crux-mosaic-theme
+  .mosaic-tile
+  .mosaic-window
+  .mosaic-window-toolbar
+  > .pane-toolbar:is(:hover, :focus-within) {
+  background: var(--pane-header-hover-bg);
+}
+
 /* ── Concave corners keep their frame ──
    The frame is a ring: the window paints the border colour, the header and body
    paint --panel on top, inset by the frame width, with a corner radius reduced
