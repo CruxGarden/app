@@ -60,6 +60,13 @@ jobs:
       - name: Package without publishing
         run: npx electron-builder --publish never
         working-directory: electron
+      - name: Diagnose Windows rendering cost
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        working-directory: electron
+        env:
+          CRUX_PERF_OUT: performance/.results/rendering-probe
+        run: npx playwright test -c playwright.performance.config.ts performance/rendering-probe.spec.ts
       - name: Run packaged and companion CLI checks
         working-directory: electron
         env:
@@ -75,6 +82,8 @@ jobs:
         if: always()
         with:
           name: portable-${{ matrix.os }}
-          path: electron/e2e/.results
+          path: |
+            electron/e2e/.results
+            electron/performance/.results/rendering-probe/rendering-probe.json
           if-no-files-found: ignore
           include-hidden-files: true

@@ -94,6 +94,8 @@ export async function launchApp(
   // stop Electron and its managed servers after a failed assertion.
   const close = app.close.bind(app);
   const diagnostics = !!process.env.CRUX_E2E_DIAGNOSTICS;
+  // Capture while the test is live: its timeout can expire before finally runs.
+  const diagnosticInfo = diagnostics ? test.info() : undefined;
   if (diagnostics)
     await app.context().tracing.start({ screenshots: true, snapshots: true, sources: false });
   let diagnosticsSaved = false;
@@ -119,7 +121,7 @@ export async function launchApp(
       }
       try {
         // Persist before attaching: a timed-out test may reject attachment work.
-        const info = test.info();
+        const info = diagnosticInfo!;
         const log = info.outputPath(`electron-${basename(dir)}.json`);
         writeFileSync(log, JSON.stringify({ rendererErrors, mainLog }, null, 2));
         const trace = info.outputPath(`electron-${basename(dir)}.zip`);
