@@ -1,7 +1,7 @@
 import { test, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { fixtureKeychain } from './secret-storage-fixture';
 
 /**
@@ -93,6 +93,10 @@ export async function launchApp(
   // the real close request explicitly; ordinary finally blocks must still
   // stop Electron and its managed servers after a failed assertion.
   const close = app.close.bind(app);
+  const diagnostics = !!process.env.CRUX_E2E_DIAGNOSTICS;
+  if (diagnostics)
+    await app.context().tracing.start({ screenshots: true, snapshots: true, sources: false });
+  let diagnosticsSaved = false;
   const rendererErrors: string[] = [];
   page.on('pageerror', (error) => rendererErrors.push(error.message));
   page.on('console', (message) => {
@@ -100,7 +104,8 @@ export async function launchApp(
     if (rendererErrors.length > 20) rendererErrors.shift();
   });
   app.close = async () => {
-    if (process.env.CRUX_E2E_DIAGNOSTICS) {
+    if (diagnostics && !diagnosticsSaved) {
+      diagnosticsSaved = true;
       let mainLog = '';
       try {
         mainLog = readFileSync(join(dir, 'userData', 'logs', 'main.log'), 'utf8')
@@ -112,10 +117,22 @@ export async function launchApp(
       } catch {
         /* No boot log was produced. */
       }
-      await test.info().attach('isolated-runtime-diagnostics', {
-        body: JSON.stringify({ rendererErrors, mainLog }, null, 2),
-        contentType: 'application/json',
-      });
+      try {
+        // Persist before attaching: a timed-out test may reject attachment work.
+        const info = test.info();
+        const log = info.outputPath(`electron-${basename(dir)}.json`);
+        writeFileSync(log, JSON.stringify({ rendererErrors, mainLog }, null, 2));
+        const trace = info.outputPath(`electron-${basename(dir)}.zip`);
+        await app.context().tracing.stop({ path: trace });
+        await info.attach('isolated-runtime-diagnostics', {
+          path: log,
+          contentType: 'application/json',
+        });
+        await info.attach('electron-runtime-trace', { path: trace });
+      } catch (error) {
+        // Diagnostics must never prevent closing the isolated runtime.
+        console.warn('Could not retain all runtime diagnostics:', error);
+      }
     }
     await app
       .evaluate(({ ipcMain, BrowserWindow }) => {
