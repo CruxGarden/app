@@ -286,3 +286,15 @@
   outline: 2px solid #9ff3e4;
   outline-offset: 3px;
 }
+
+/* Keep the same type and colors on devices without accelerated graphics. */
+.teaser:has(.teaser-panel-fallback) {
+  background: radial-gradient(ellipse at 30% 20%, #0f5e46, #04111c 70%);
+}
+.teaser-panel-fallback,
+.teaser:has(.teaser-panel-fallback) .teaser-track {
+  border: 1px solid rgb(159 243 228 / 0.35);
+  border-radius: 24px;
+  background: rgb(6 16 22 / 0.9);
+  box-shadow: 0 12px 48px rgb(0 0 0 / 0.3);
+}

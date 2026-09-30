@@ -1,6 +1,6 @@
 # Packaged desktop measurements — September 30, 2026
 
-Measured on macOS 26.6.2 (25G83), Apple M3 Pro, 36 GiB RAM. This is a shared
+Except for the Windows rendering section below, measured on macOS 26.6.2 (25G83), Apple M3 Pro, 36 GiB RAM. This is a shared
 development machine, not a controlled benchmark host. Other applications were
 left running. Do not generalize these timings to every supported machine.
 
@@ -120,3 +120,28 @@ lifetime, Garden Mood, CLI and keyboard pass in 44.0 s. The rebuilt clean-source
 Switching and checking each saved draft takes **222.5 ms median, 256 ms p95, 284 ms maximum**. The main renderer's sampled working set rises from 429.9 MiB at warmup to 497.5 MiB at the last cycle and settles to 494.1 MiB after closing; this is not private RAM and is not identical to retained JavaScript. The test asserts draft continuity and no renderer errors; memory conclusions come from the recorded measurements and the separate accelerated regression.
 
 Reproduce with `CRUX_PACKAGED=1 CRUX_MEMORY_CYCLES=60 CRUX_MEMORY_DWELL_MS=60000 npx playwright test -c playwright.performance.config.ts performance/workspace-memory.spec.ts`, setting the executable and output directory as above.
+
+## Windows software rendering
+
+Native run36761648753 at app `b2783d5dd` reports Microsoft Basic Render Driver,
+software compositing/rasterization and unavailable/software WebGL. The same
+Home, sampled for30 animation frames per phase, isolates the Plasma material:
+
+| Phase           | Median frame | Sample elapsed |
+| --------------- | -----------: | -------------: |
+| Ordinary Plasma |     890.6 ms |       28.814 s |
+| Plasma off      |      15.6 ms |        0.469 s |
+| Plasma restored |     890.6 ms |       28.319 s |
+
+`windows-rendering-before.json` retains GPU details, frame timestamps, CDP
+metrics and process samples from artifact11120875546. ScriptDuration is2.021 /
+0.002 /2.186seconds; LayoutDuration is0 in all three phases. The actual graphics
+fallback is required; increasing test deadlines would leave an unusable app.
+
+The browser capability probe uses WebGL's
+[`failIfMajorPerformanceCaveat`](https://registry.khronos.org/webgl/specs/latest/1.0/#5.2)
+attribute and releases its temporary context. A refusal selects Glass for a
+requested Plasma workspace and a static branded entry panel. Saved appearance
+choices remain untouched. Hardware-capable entry/workspace rendering continues
+normally. Unit and injected-refusal desktop tests establish the policy; the
+ordinary native Windows rerun is still required to establish its platform result.

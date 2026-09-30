@@ -13,6 +13,7 @@
  * The resolved style lands on <html data-surface-style>. The Mood keeps its
  * accent, text, fonts and shapes in every case; the theme takes its surfaces.
  */
+import { canRenderPlasma } from '@/lib/graphics';
 import { SettingsKey } from '@/lib/constants';
 import { getSetting, setSetting } from '@/services/settings';
 
@@ -41,15 +42,17 @@ export function normalizeSurfaceTheme(raw: string | null | undefined): SurfaceTh
 export function resolveSurfaceStyle(
   theme: string | null | undefined,
   moodDefault: string | null | undefined,
+  plasmaSupported = true,
 ): SurfaceStyle {
-  if (theme === 'plasma') return 'plasma';
+  const plasma: SurfaceStyle = plasmaSupported ? 'plasma' : 'glass';
+  if (theme === 'plasma') return plasma;
   if (theme === 'glass' || theme === 'on') return 'glass';
   // `off` predates the three-way switch and meant "no glass, whatever the
   // Mood says". The picker no longer offers it, but someone who chose it is
   // still owed a solid surface - mapping it onto Custom would hand a glass
   // Mood straight back to them. Choosing any theme replaces it.
   if (theme === 'off') return 'solid';
-  if (moodDefault === 'plasma') return 'plasma';
+  if (moodDefault === 'plasma') return plasma;
   return moodDefault === 'glass' ? 'glass' : 'solid';
 }
 
@@ -70,7 +73,7 @@ export function applySurfaceTheme(root: HTMLElement = document.documentElement):
     (typeof getComputedStyle === 'function'
       ? getComputedStyle(root).getPropertyValue('--surface-style').trim()
       : '');
-  const style = resolveSurfaceStyle(surfaceTheme(), moodDefault);
+  const style = resolveSurfaceStyle(surfaceTheme(), moodDefault, canRenderPlasma());
   root.dataset.surfaceStyle = style;
   return style;
 }

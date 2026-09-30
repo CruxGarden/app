@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { PlasmaProvider, Plasma } from '@cruxgarden/plasma-ui';
+import { canRenderPlasma } from '@/lib/graphics';
 import { APP_NAME } from '@/lib/constants';
 
 /**
@@ -16,6 +17,7 @@ const FIELD = {
 
 /** The website and app entry share the same field, optics and motion. */
 export function TeaserMaterial({ children }: { children: ReactNode }) {
+  if (!canRenderPlasma()) return <>{children}</>;
   return (
     <PlasmaProvider
       theme="dark"
@@ -50,6 +52,8 @@ export function TeaserPanel({
   children: ReactNode;
   draggable?: boolean;
 }) {
+  if (!canRenderPlasma())
+    return <div className="teaser-panel teaser-panel-fallback">{children}</div>;
   return (
     <Plasma
       className="teaser-panel"

@@ -13,6 +13,14 @@ describe('resolveSurfaceStyle', () => {
 });
 
 describe('surface themes', () => {
+  it('uses Glass when Plasma cannot render, preserving non-Plasma choices', () => {
+    expect(resolveSurfaceStyle('plasma', 'solid', false)).toBe('glass');
+    expect(resolveSurfaceStyle('custom', 'plasma', false)).toBe('glass');
+    expect(resolveSurfaceStyle('custom', 'solid', false)).toBe('solid');
+    expect(resolveSurfaceStyle('glass', 'plasma', false)).toBe('glass');
+    expect(resolveSurfaceStyle('plasma', 'solid', true)).toBe('plasma');
+  });
+
   it('Plasma and Glass take every surface; Custom leaves it to the Mood', () => {
     expect(resolveSurfaceStyle('plasma', 'solid')).toBe('plasma');
     expect(resolveSurfaceStyle('glass', 'solid')).toBe('glass');
