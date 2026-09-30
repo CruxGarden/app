@@ -16,6 +16,7 @@ import {
   type ComponentType,
   type CSSProperties,
   useEffect,
+  useRef,
   type ReactNode,
 } from 'react';
 import { DndProvider } from 'react-dnd';
@@ -232,6 +233,35 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
   const mobileActivePane = useUIStore((s) => s.mobileActivePane);
   const isDesktopLayout = useIsDesktopLayout();
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const setWorkspaceGeometry = useUIStore((s) => s.setWorkspaceGeometry);
+  useEffect(() => {
+    const container = layoutRef.current;
+    if (!container || !isDesktopLayout) return;
+    const measure = () => {
+      const root = container.querySelector<HTMLElement>('.mosaic-root');
+      const tile = container.querySelector<HTMLElement>('.mosaic-tile');
+      const window = container.querySelector<HTMLElement>('.mosaic-window');
+      if (!root || !tile || !window) return;
+      const tileStyle = getComputedStyle(tile);
+      const windowStyle = getComputedStyle(window);
+      const frameWidth = [
+        tileStyle.marginLeft,
+        tileStyle.marginRight,
+        windowStyle.paddingLeft,
+        windowStyle.paddingRight,
+      ].reduce((sum, value) => sum + (parseFloat(value) || 0), 0);
+      setWorkspaceGeometry(root.getBoundingClientRect().width, frameWidth);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    document.addEventListener('palette-change', measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('palette-change', measure);
+    };
+  }, [isDesktopLayout, setWorkspaceGeometry]);
   const handleChange = useCallback(
     (newNode: MosaicNode<PaneType> | null) => {
       setMosaicLayout(newNode);
@@ -301,7 +331,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
   // double-mounted every pane: two chat trees (two useChat loops, two
   // auto-snapshot policies), duplicate DOM, and 2× re-renders per streamed token.
   return isDesktopLayout ? (
-    <div className="h-full min-h-0">
+    <div ref={layoutRef} className="h-full min-h-0">
       {mosaicLayout ? (
         <MosaicWithoutDragDropContext<PaneType>
           renderTile={renderTile}

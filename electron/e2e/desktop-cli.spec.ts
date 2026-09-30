@@ -9,6 +9,10 @@ import { enterGarden, storedCrux } from './multi-crux-helpers';
 test('desktop CLI discovers tools, operates on real Cruxes and retains app approvals', async () => {
   test.setTimeout(120_000);
   const { app, page, dir } = await launchApp();
+  // A smaller desktop window must still open usable Settings.
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0]!.setContentSize(1008, 655),
+  );
   const executable = await app.evaluate(() => process.execPath);
   const profile = join(dir, 'userData');
   const cli = (args: string[], input?: string) =>
@@ -30,6 +34,20 @@ test('desktop CLI discovers tools, operates on real Cruxes and retains app appro
     await enterGarden(page);
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
+    const connectBounds = await page.getByTestId('agents-connect').boundingBox();
+    for (const name of ['Claude Code', 'Codex', 'Cursor', 'stdio']) {
+      const bounds = await page
+        .getByTestId('agents-connect')
+        .getByRole('button', { name, exact: true })
+        .boundingBox();
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(
+        connectBounds!.x + connectBounds!.width,
+      );
+    }
+    await page.screenshot({
+      path: test.info().outputPath('small-window-settings.png'),
+      mask: [page.getByTestId('agents-snippet')],
+    });
     await expect
       .poll(() => existsSync(join(profile, 'garden-agent-host/.crux/mcp.json')))
       .toBe(true);

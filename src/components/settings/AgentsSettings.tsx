@@ -214,7 +214,7 @@ function CruxRow({
   const title = crux.title || crux.slug;
   return (
     <li className="py-2 flex flex-col gap-2" data-testid={`agents-crux-${crux.slug}`}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-text truncate">{title}</div>
           <div className="text-2xs font-mono text-text-muted truncate">
@@ -228,7 +228,7 @@ function CruxRow({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
           {server && (
             <Button size="sm" variant="ghost" onClick={onToggleExpanded}>
               {expanded ? 'Hide' : 'Connect'}
@@ -278,8 +278,8 @@ function ConnectPanel({
       className="rounded-[var(--radius-sm)] border border-border bg-surface p-3 flex flex-col gap-2"
       data-testid="agents-connect"
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1 min-w-0">
           {(Object.keys(labels) as Array<keyof typeof snippets>).map((k) => (
             <button
               key={k}

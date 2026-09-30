@@ -82,6 +82,9 @@ export interface UIState {
   cancelApprovals: () => void;
   dispose: () => void;
   // Pane system
+  /** Measured by the mounted layout; not persisted with the person's arrangement. */
+  workspaceGeometry: { width: number; frameWidth: number };
+  setWorkspaceGeometry: (width: number, frameWidth: number) => void;
   paneOrder: PaneType[];
   paneVisibility: Record<PaneType, boolean>;
   mosaicLayout: MosaicNode<PaneType> | null;
@@ -265,11 +268,11 @@ const scopeDefaults = (scope: WorkspaceScope) =>
 const TYPICAL_WORKSPACE_PX = 1400;
 
 /** The least width a tile tree needs: side by side the panes add up, stacked the widest counts. */
-function leastWidth(node: MosaicNode<PaneType>): number {
-  if (typeof node === 'string') return PANE_MIN_WIDTH[node];
+function leastWidth(node: MosaicNode<PaneType>, frameWidth = 0): number {
+  if (typeof node === 'string') return PANE_MIN_WIDTH[node] + frameWidth;
   return node.direction === 'row'
-    ? leastWidth(node.first) + leastWidth(node.second)
-    : Math.max(leastWidth(node.first), leastWidth(node.second));
+    ? leastWidth(node.first, frameWidth) + leastWidth(node.second, frameWidth)
+    : Math.max(leastWidth(node.first, frameWidth), leastWidth(node.second, frameWidth));
 }
 
 /** Garden-wide panes open as a full-height column on the right, beside the work. */
@@ -279,7 +282,12 @@ const SIDE_PANES = new Set<PaneType>(['mood', 'settings', 'explore', 'console'])
  * Where a newly opened pane goes: the Navigator docks left, Garden-wide panes
  * dock right, anything else shares the largest tile. All stay resizable.
  */
-function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<PaneType> {
+function addPane(
+  tree: MosaicNode<PaneType> | null,
+  pane: PaneType,
+  widthPx = TYPICAL_WORKSPACE_PX,
+  frameWidth = 0,
+): MosaicNode<PaneType> {
   if (tree === null) return pane;
   if (getMosaicLeaves(tree).includes(pane)) return tree;
   const sideOnly = (node: MosaicNode<PaneType>) =>
@@ -332,12 +340,14 @@ function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<
       // About a third of the window, but never so much that the work beside it
       // drops below its panes' least widths (then only what the work spares,
       // down to the side pane's own least width).
-      const width = share * TYPICAL_WORKSPACE_PX;
-      const spare = width - leastWidth(node);
-      const sidePx = Math.max(
-        PANE_MIN_WIDTH[pane],
-        Math.min((Math.min(60, 32 / share) / 100) * width, spare),
-      );
+      const width = share * widthPx;
+      const spare = width - leastWidth(node, frameWidth);
+      const minimum = PANE_MIN_WIDTH[pane] + frameWidth;
+      // If two readable columns cannot fit, share height instead of hiding
+      // the newly requested controls behind “Widen the pane”.
+      if (spare < minimum)
+        return { direction: 'column', first: node, second: pane, splitPercentage: 50 };
+      const sidePx = Math.max(minimum, Math.min((Math.min(60, 32 / share) / 100) * width, spare));
       return {
         direction: 'row',
         first: node,
@@ -347,7 +357,7 @@ function addPane(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<
     };
     return side(tree, 1);
   }
-  return addPaneToMosaic(tree, pane, RAILS, (p) => PANE_MIN_WIDTH[p] / TYPICAL_WORKSPACE_PX);
+  return addPaneToMosaic(tree, pane, RAILS, (p) => (PANE_MIN_WIDTH[p] + frameWidth) / widthPx);
 }
 
 // ── Mosaic layout helpers ────────────────────────────────
@@ -682,6 +692,14 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
       if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
     },
     // ── Initial state ──
+    workspaceGeometry: { width: TYPICAL_WORKSPACE_PX, frameWidth: 0 },
+    setWorkspaceGeometry: (width, frameWidth) => {
+      if (width <= 0 || !Number.isFinite(width) || frameWidth < 0 || !Number.isFinite(frameWidth))
+        return;
+      const previous = get().workspaceGeometry;
+      if (previous.width !== width || previous.frameWidth !== frameWidth)
+        set({ workspaceGeometry: { width, frameWidth } });
+    },
     paneOrder: initialLayout.paneOrder,
     paneVisibility: initialLayout.paneVisibility,
     mosaicLayout: initialLayout.mosaicLayout,
@@ -886,7 +904,12 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
         // Update mosaic tree: add or remove the pane
         let newMosaic: MosaicNode<PaneType> | null;
         if (!wasVisible) {
-          newMosaic = addPane(prev.mosaicLayout, pane);
+          newMosaic = addPane(
+            prev.mosaicLayout,
+            pane,
+            prev.workspaceGeometry.width,
+            prev.workspaceGeometry.frameWidth,
+          );
         } else {
           newMosaic = prev.mosaicLayout ? removePaneFromMosaic(prev.mosaicLayout, pane) : null;
         }
@@ -922,7 +945,12 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
       const prev = get();
       let newMosaic = prev.mosaicLayout;
       if (visible && !prev.paneVisibility[pane]) {
-        newMosaic = addPane(newMosaic, pane);
+        newMosaic = addPane(
+          newMosaic,
+          pane,
+          prev.workspaceGeometry.width,
+          prev.workspaceGeometry.frameWidth,
+        );
       } else if (!visible && prev.paneVisibility[pane]) {
         newMosaic = newMosaic ? removePaneFromMosaic(newMosaic, pane) : null;
       }

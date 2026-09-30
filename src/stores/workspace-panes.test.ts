@@ -128,3 +128,24 @@ it('a Garden-wide pane takes less than a third when the work beside it needs the
   expect(share(tree, 'explore') * 1400).toBeGreaterThanOrEqual(300 - 1);
   expect((1 - share(tree, 'explore')) * 1400).toBeGreaterThanOrEqual(810 - 1);
 });
+
+it('opens readable Settings using the actual smaller workspace and its frame gutters', () => {
+  const ui = createUIStore('garden-small', 'garden');
+  ui.getState().setWorkspaceGeometry(980, 26);
+  ui.getState().setPaneVisible('settings', true);
+  expect(share(ui.getState().mosaicLayout, 'settings') * 980 - 26).toBeGreaterThanOrEqual(
+    360 - 0.01,
+  );
+  expect(share(ui.getState().mosaicLayout, 'home') * 980 - 26).toBeGreaterThanOrEqual(300);
+});
+
+it('stacks a new side pane when two readable columns cannot fit', () => {
+  const ui = createUIStore('garden-narrow', 'garden');
+  ui.getState().setWorkspaceGeometry(600, 26);
+  ui.getState().setPaneVisible('settings', true);
+  expect(ui.getState().mosaicLayout).toMatchObject({
+    direction: 'column',
+    first: 'home',
+    second: 'settings',
+  });
+});
