@@ -209,6 +209,13 @@
       "ledger": "cruxgarden:editor-tabs:"
     },
     {
+      "key": "cruxgarden:exploreRecentTags",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:exploreRecentTags"
+    },
+    {
       "key": "cruxgarden:export-runtime-mode",
       "sources": [
         "src/services/archive-runtimes.ts"

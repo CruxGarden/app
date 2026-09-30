@@ -1,3 +1,4 @@
+import ExploreCreator from './ExploreCreator';
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
@@ -90,10 +91,11 @@ export default function MoodResultCard({
             {crux.title || crux.slug}
           </div>
           <div className="text-2xs font-mono text-text-muted truncate">
-            Mood · {s?.section ?? '—'} · {s?.track ? `plays “${s.track}”` : 'quiet'} · by{' '}
-            {crux.author_username}
+            Mood · {s?.section ?? '—'} · {s?.track ? `plays “${s.track}”` : 'quiet'}
           </div>
         </div>
+
+        <ExploreCreator crux={crux} />
 
         {canInstall && (
           <div className="flex items-center gap-1.5 pt-1">

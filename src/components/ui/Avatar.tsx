@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from '@/lib/cn';
 
 /**
@@ -20,18 +21,31 @@ export default function Avatar({
   fallbackClassName?: string;
   alt?: string;
 }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const visibleUrl = url && url !== failedUrl ? url : null;
   const dim = size === 'lg' ? 'w-12 h-12' : size === 'md' ? 'w-10 h-10' : 'w-6 h-6';
   return (
     <div
       className={cn(
         dim,
         'shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center',
-        !url && 'text-2xs font-body font-bold',
-        !url && fallbackClassName,
+        !visibleUrl && 'text-2xs font-body font-bold',
+        !visibleUrl && fallbackClassName,
         className,
       )}
     >
-      {url ? <img src={url} alt={alt} className="w-full h-full object-cover" /> : initial}
+      {visibleUrl ? (
+        <img
+          src={visibleUrl}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailedUrl(visibleUrl)}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        initial
+      )}
     </div>
   );
 }

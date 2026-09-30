@@ -1,3 +1,4 @@
+import ExploreCreator from './ExploreCreator';
 import { useState } from 'react';
 import { Button } from '@/components/ui';
 import type { ExploreCrux } from '@/api/public';
@@ -65,10 +66,7 @@ export default function ToolResultCard({
             : (crux.description ?? '')}
         </p>
       </button>
-      <p className="text-2xs font-mono text-text-muted">
-        by @{crux.author_username}
-        {manifest ? ` · ${manifest.kind}` : ''}
-      </p>
+      <ExploreCreator crux={crux} />
       <div className="flex items-center gap-2 mt-auto">
         {!manifest ? (
           <span className="text-xs text-text-muted">Not a tool this app knows</span>

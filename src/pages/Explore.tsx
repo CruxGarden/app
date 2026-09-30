@@ -14,8 +14,8 @@ import {
 } from '@/components/ui';
 import { SearchIcon, CloseIcon } from '@/components/ui/icons';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { publicApi, apiBaseUrl } from '@/api';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { publicApi } from '@/api';
 import type {
   ExploreCrux,
   ExploreAuthor,
@@ -30,7 +30,13 @@ import MoodResultCard from '@/components/explore/MoodResultCard';
 import ToolResultCard from '@/components/explore/ToolResultCard';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
-import { publicCoverUrl } from '@/lib/public-cover';
+import CruxResultCard from '@/components/explore/CruxResultCard';
+import { resolveExploreAvatar } from '@/components/explore/author';
+import {
+  recentExploreTags,
+  rememberExploreTag,
+  clearExploreTags,
+} from '@/components/explore/recent-tags';
 import { APP_NAME } from '@/lib/constants';
 import PageHeader from '@/components/layout/PageHeader';
 
@@ -71,30 +77,7 @@ const SORTS: { id: ExploreSort; label: string }[] = [
   { id: 'newest', label: 'Newest' },
   { id: 'alpha', label: 'A-Z' },
 ];
-const TAGS_SHOWN = 18;
-
-/** A listed author's picture: the API's URL, or a data URL it stored. */
-function resolveAvatarUrl(meta?: Record<string, unknown>): string | null {
-  const url = meta?.avatarUrl || meta?.avatar_url;
-  if (!url || typeof url !== 'string') return null;
-  if (url.startsWith('data:')) return url;
-  return `${apiBaseUrl()}${url}`;
-}
-
-/** The published site's cover (shipped as _crux/cover.jpg); hidden when the publish predates covers. */
-function CoverThumb({ cruxId }: { cruxId: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return null;
-  return (
-    <img
-      src={publicCoverUrl(cruxId)}
-      alt=""
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="w-16 h-10 rounded-card object-cover shrink-0 bg-garden-card-thumbnail border border-garden-card-border"
-    />
-  );
-}
+const TAGS_SHOWN = 8;
 
 /** One tag as a chip: quiet when available, filled when it is filtering. */
 function TagChip({
@@ -120,6 +103,33 @@ function TagChip({
       #{label}
       {count !== undefined && <span className="ml-1 opacity-50">{count}</span>}
     </button>
+  );
+}
+
+function AuthorCard({ author }: { author: ExploreAuthor }) {
+  const avatarUrl = resolveExploreAvatar(author.meta);
+  return (
+    <Link
+      to={`/${author.username}`}
+      className="w-full px-3 py-2.5 text-left rounded-[var(--radius-sm)] hover:bg-action-button-hover transition-colors cursor-pointer group flex items-center gap-3 motion-enter-card"
+    >
+      <Avatar
+        url={avatarUrl}
+        initial={(author.display_name || author.username).slice(0, 1).toUpperCase()}
+        size="md"
+        className="ring-1 ring-text-muted/20"
+        fallbackClassName="bg-surface"
+      />
+      <div className="flex-1 min-w-0">
+        <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
+          {author.display_name || author.username}
+        </div>
+        <div className="text-xs font-mono text-text-muted truncate">@{author.username}</div>
+      </div>
+      <div className="text-2xs text-text-muted font-mono shrink-0">
+        Joined {formatDate(author.created)}
+      </div>
+    </Link>
   );
 }
 
@@ -170,6 +180,7 @@ export default function Explore({
   const [activeTags, setActiveTags] = useState<string[]>(initial?.tags ?? []);
   const [page, setPage] = useState(initial?.page ?? 1);
   const [allTags, setAllTags] = useState(false);
+  const [recentTags, setRecentTags] = useState(recentExploreTags);
 
   // Mirror state outward (the public page writes it to the URL so searches are links)
   useEffect(() => {
@@ -276,13 +287,8 @@ export default function Explore({
     setPage(1);
   }, []);
 
-  const filterByAuthor = useCallback((username: string) => {
-    setAuthor(username);
-    setView((v) => (v === 'people' ? 'all' : v));
-    setPage(1);
-  }, []);
-
   const toggleTag = useCallback((label: string) => {
+    setRecentTags(rememberExploreTag(label));
     setActiveTags((prev) =>
       prev.includes(label) ? prev.filter((t) => t !== label) : [...prev, label],
     );
@@ -327,107 +333,8 @@ export default function Explore({
   const empty =
     view === 'people' ? people.length === 0 : cruxes.length === 0 && people.length === 0;
 
-  const CruxCard = ({ crux }: { crux: ExploreCrux }) => {
-    const href = `/${crux.author_username}/${crux.slug}`;
-    const avatarUrl = resolveAvatarUrl(crux.author_meta);
-    // A div, not a <button>: the tag and author chips inside are real buttons,
-    // and a button inside a button is invalid HTML with unreliable click routing.
-    return (
-      <div
-        role="link"
-        tabIndex={0}
-        aria-label={crux.title || crux.slug}
-        onClick={() => handleNavigate(href)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') handleNavigate(href);
-        }}
-        className="w-full px-3 py-2.5 text-left rounded-[var(--radius-sm)] hover:bg-action-button-hover focus-visible:bg-action-button-hover transition-colors cursor-pointer group flex items-start gap-3 motion-enter-card"
-      >
-        {/* The cover needs room; a narrow pane shows the person's face alone. */}
-        <div className="hidden @md:block">
-          <CoverThumb cruxId={crux.id} />
-        </div>
-        <Avatar
-          url={avatarUrl}
-          className="ring-1 ring-text-muted/20 mt-0.5"
-          fallbackClassName="bg-surface"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
-              {crux.title}
-            </div>
-            {crux.kind && KIND_LABEL[crux.kind] && (
-              <span className="text-3xs font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border shrink-0">
-                {KIND_LABEL[crux.kind]}
-              </span>
-            )}
-          </div>
-          {crux.description && (
-            <p className="text-xs text-text-muted truncate">{crux.description}</p>
-          )}
-          {crux.tags && crux.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {crux.tags.slice(0, 6).map((t) => (
-                <span key={t} onClick={(e) => e.stopPropagation()}>
-                  <TagChip
-                    label={t}
-                    size="xs"
-                    active={activeTags.includes(t)}
-                    onClick={() => toggleTag(t)}
-                  />
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="flex items-center gap-2 mt-1.5 text-2xs font-mono text-text-muted">
-            <button
-              type="button"
-              aria-label={`Only cruxes by ${crux.author_username}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                filterByAuthor(crux.author_username);
-              }}
-              className="hover:text-accent transition-colors cursor-pointer"
-            >
-              @{crux.author_username}
-            </button>
-            <span aria-hidden>·</span>
-            <span>{formatDate(crux.created)}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const AuthorCard = ({ author }: { author: ExploreAuthor }) => {
-    const avatarUrl = resolveAvatarUrl(author.meta);
-    return (
-      <button
-        onClick={() => handleNavigate(`/${author.username}`)}
-        className="w-full px-3 py-2.5 text-left rounded-[var(--radius-sm)] hover:bg-action-button-hover transition-colors cursor-pointer group flex items-center gap-3 motion-enter-card"
-      >
-        <Avatar
-          url={avatarUrl}
-          size="md"
-          className="ring-1 ring-text-muted/20"
-          fallbackClassName="bg-surface"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
-            {author.display_name || author.username}
-          </div>
-          <div className="text-xs font-mono text-text-muted truncate">@{author.username}</div>
-        </div>
-        <div className="text-2xs text-text-muted font-mono shrink-0">
-          Joined {formatDate(author.created)}
-        </div>
-      </button>
-    );
-  };
-
   const moodGrid = (list: ExploreCrux[]) => (
-    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] p-3">
+    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] p-3">
       {list.map((crux) => (
         <MoodResultCard
           key={crux.id}
@@ -463,7 +370,7 @@ export default function Explore({
     </div>
   );
   const toolGrid = (list: ExploreCrux[]) => (
-    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] p-3">
+    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] p-3">
       {list.map((crux) => (
         <ToolResultCard
           key={crux.id}
@@ -486,9 +393,15 @@ export default function Explore({
     </div>
   );
   const cruxList = (list: ExploreCrux[]) => (
-    <div className="flex flex-col gap-0.5 px-1.5">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-5 p-3 sm:p-4">
       {list.map((crux) => (
-        <CruxCard key={crux.id} crux={crux} />
+        <CruxResultCard
+          key={crux.id}
+          crux={crux}
+          kindLabel={KIND_LABEL[crux.kind ?? '']}
+          activeTags={activeTags}
+          onTag={toggleTag}
+        />
       ))}
     </div>
   );
@@ -514,7 +427,7 @@ export default function Explore({
               '-mr-2.5 min-h-6 py-0.5 px-2.5 text-xxs text-text-muted',
             )}
           >
-            All {title.toLowerCase()} →
+            {to === 'cruxes' ? 'All cruxes' : `All ${title.toLowerCase()}`} →
           </button>
         </div>
         {body}
@@ -538,6 +451,49 @@ export default function Explore({
         } as React.CSSProperties
       }
     >
+      {!appReady && (
+        <header className="rounded-[var(--radius)] border border-border bg-panel p-5 mb-4">
+          <p className="text-xs font-medium tracking-wide text-accent mb-2">THE GARDEN, SHARED</p>
+          <h2 className="text-2xl @md:text-3xl font-display font-medium text-text">
+            Find your next spark.
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-text-muted">
+            Explore what people are making. Find a creator, follow a curiosity, make it your own.
+          </p>
+        </header>
+      )}
+      {recentTags.length > 0 && (
+        <section
+          aria-label="Your recent tags"
+          className="rounded-[var(--radius)] border border-border bg-panel p-5 mb-4"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-text">Pick up a thread</h3>
+            <button
+              type="button"
+              onClick={() => {
+                clearExploreTags();
+                setRecentTags([]);
+              }}
+              className={buttonClass('ghost', 'xs')}
+              aria-label="Clear recent tags"
+            >
+              Clear history
+            </button>
+          </div>
+          <p className="text-xs text-text-muted mb-2">Tags you explored recently</p>
+          <div className="flex flex-wrap gap-2">
+            {recentTags.map((tag) => (
+              <TagChip
+                key={tag}
+                label={tag}
+                active={activeTags.includes(tag)}
+                onClick={() => toggleTag(tag)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
       <Panel padding="sm" className="sm:p-5 mb-4">
         {/* One search for everything */}
         <div className="relative">
@@ -560,7 +516,6 @@ export default function Explore({
             placeholder="Search cruxes, people, tools, moods and authors… (@name, #tag)"
             aria-label="Search Explore"
             className={fieldClass(undefined, 'pl-10 pr-9')}
-            autoFocus
           />
           {q && (
             <button
@@ -662,7 +617,7 @@ export default function Explore({
         {view !== 'people' && tags.length > 0 && (
           <div className="mt-3" data-testid="explore-tags">
             <div className="flex items-baseline justify-between mb-1.5">
-              <SectionLabel>Browse by tag</SectionLabel>
+              <SectionLabel>Popular tags</SectionLabel>
               {tags.length > TAGS_SHOWN && (
                 <button
                   type="button"
@@ -743,6 +698,8 @@ export default function Explore({
                     active={activeTags.includes(tag.label)}
                     onClick={() => {
                       if (!activeTags.includes(tag.label)) setActiveTags([tag.label]);
+                      clearTimeout(debounceRef.current);
+                      setRecentTags(rememberExploreTag(tag.label));
                       setQ('');
                       if (inputRef.current) inputRef.current.value = '';
                       setPage(1);
@@ -767,7 +724,12 @@ export default function Explore({
           {view === 'all' && (
             <>
               {group('People', 'people', people.length, peopleList(people))}
-              {group('Cruxes', 'cruxes', byKind.rest.length, cruxList(byKind.rest))}
+              {group(
+                hasFilters ? 'Cruxes' : 'Fresh creations',
+                'cruxes',
+                byKind.rest.length,
+                cruxList(byKind.rest),
+              )}
               {group('Tools', 'tools', byKind.tools.length, toolGrid(byKind.tools))}
               {group('Moods', 'moods', byKind.moods.length, moodGrid(byKind.moods))}
             </>
@@ -858,7 +820,7 @@ export function ExplorePage() {
     <div className="flex flex-col min-h-screen">
       <PageHeader title="Explore" />
 
-      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
+      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-7xl mx-auto w-full">
         <Explore key={epoch} initial={initial} onStateChange={onStateChange} />
       </div>
     </div>

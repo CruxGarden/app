@@ -638,6 +638,13 @@
       "target": "OS secret store / memory-only public browser session",
       "preservation": "Never transfer in Garden/Crux content. Paired credentials belong to their API endpoint.",
       "status": "implemented"
+    },
+    {
+      "key": "cruxgarden:exploreRecentTags",
+      "group": "presentation",
+      "target": "installation/settings",
+      "preservation": "Last eight explicitly selected Explore topics. Clearable preference; no account credentials or passive activity.",
+      "status": "retained"
     }
   ]
 }
