@@ -60,17 +60,17 @@ test.describe('public site', () => {
     await expect(page.getByRole('heading', { name: 'Crux Garden', exact: true })).toBeVisible();
     const email = page.getByRole('textbox', { name: 'Email address' });
     await email.fill('invalid');
-    await page.getByRole('button', { name: 'Notify me' }).click();
+    await page.getByRole('button', { name: 'Notify', exact: true }).click();
     expect(await email.evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
     expect(submissions).toHaveLength(0);
     await email.fill('reader@example.invalid');
-    await page.getByRole('button', { name: 'Notify me' }).click();
+    await page.getByRole('button', { name: 'Notify', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('Thank you, we will notify you at launch');
     expect(submissions).toHaveLength(1);
     expect(submissions[0].get('EMAIL')).toBe('reader@example.invalid');
     await page.goto('/');
     await expect(page.getByRole('status')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Notify me' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Notify', exact: true })).toHaveCount(0);
   });
 
   test('direct subscription return is remembered on a fresh visit', async ({ page }) => {
@@ -85,7 +85,10 @@ test.describe('public site', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Notify me' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'Notify', exact: true })).toBeInViewport();
+    await expect(
+      page.getByRole('button', { name: 'Play Sagittarius A*', exact: true }),
+    ).toBeInViewport();
     await page.screenshot({ path: 'e2e-web/.results/public-entry-mobile.png' });
   });
 
@@ -196,4 +199,52 @@ test('public Gardens load another page on demand and preserve results on refusal
   await page.getByRole('button', { name: 'Try loading more again' }).click();
   await expect(page.getByText('Second page', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Load more Cruxes' })).toHaveCount(0);
+});
+
+test('the deployed teaser player loads on demand, pauses, rewinds and remembers volume', async ({
+  page,
+}) => {
+  // A short valid WAV exercises browser playback without streaming the remote song.
+  const audio = Buffer.alloc(44 + 16000);
+  audio.write('RIFF');
+  audio.writeUInt32LE(audio.length - 8, 4);
+  audio.write('WAVEfmt ', 8);
+  audio.writeUInt32LE(16, 16);
+  audio.writeUInt16LE(1, 20);
+  audio.writeUInt16LE(1, 22);
+  audio.writeUInt32LE(8000, 24);
+  audio.writeUInt32LE(16000, 28);
+  audio.writeUInt16LE(2, 32);
+  audio.writeUInt16LE(16, 34);
+  audio.write('data', 36);
+  audio.writeUInt32LE(16000, 40);
+  let requests = 0;
+  await page.route('**/sagittarius-a-star.m4a', async (route) => {
+    requests++;
+    await route.fulfill({ contentType: 'audio/wav', body: audio });
+  });
+  await page.goto('/');
+  const play = page.getByRole('button', { name: 'Play Sagittarius A*', exact: true });
+  await expect(play).toBeVisible();
+  await expect(page.getByRole('link', { name: /Explore/ })).toHaveCount(0);
+  expect(requests).toBe(0);
+  await play.click();
+  await expect(
+    page.getByRole('button', { name: 'Pause Sagittarius A*', exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() => page.locator('audio').evaluate((el: HTMLAudioElement) => el.currentTime))
+    .toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Pause Sagittarius A*', exact: true }).click();
+  await expect(play).toBeVisible();
+  const volume = page.getByRole('slider', { name: 'Sagittarius A* volume' });
+  await volume.fill('0.3');
+  expect(await page.locator('audio').evaluate((el: HTMLAudioElement) => el.volume)).toBeCloseTo(
+    0.3,
+  );
+  await page.getByRole('button', { name: 'Stop Sagittarius A*', exact: true }).click();
+  expect(await page.locator('audio').evaluate((el: HTMLAudioElement) => el.currentTime)).toBe(0);
+  await page.reload();
+  await expect(volume).toHaveValue('0.3');
+  await expect(play).toBeVisible();
 });

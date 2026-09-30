@@ -1,7 +1,17 @@
+/* Preserve the deployed teaser's typeface without changing the desktop UI. */
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Regular.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* crux.garden teaser: Plasma UI's aurora field and one glass panel over it.
    The panel is tinted and frosted in the component itself rather than wrapping
    a solid card, so the whole thing reads as a single surface. */
 .teaser {
+  --font-body: 'Outfit', system-ui, sans-serif;
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -13,8 +23,16 @@
 .teaser-stage {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Close enough that the two rims reach for each other — the panel's lower
+     edge bulges down, the player's upper edge bulges up, and as the field
+     moves they sometimes touch — but far enough that they never settle into
+     one shape. Measured against plasma-ui 0.2.3: at 36px they latch into a
+     single blob with a neck, and by 60px they stop reaching. */
+  gap: 48px;
   padding: 24px;
 }
 
@@ -43,11 +61,11 @@
 
 .teaser-line {
   margin: 0;
-  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
   font-size: clamp(0.9rem, 2vw, 1.15rem);
   letter-spacing: 0.34em;
   text-indent: 0.34em; /* letter-spacing pads the right edge; this recentres it */
-  text-transform: uppercase;
+  text-transform: lowercase;
   color: #9ff3e4;
 }
 
@@ -70,7 +88,7 @@
 
 .teaser-email,
 .teaser-submit {
-  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
   font-size: 0.95rem;
   border: 0;
   border-radius: 0;
@@ -142,8 +160,118 @@
 /* Shown in the form's place after Mailchimp sends them back. */
 .teaser-sent {
   margin: clamp(1.25rem, 3vw, 1.75rem) 0 0;
-  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
   font-size: 0.95rem;
   line-height: 1.5;
   color: #f7a8d8;
+}
+
+/* ── The track ──────────────────────────────────────────────────────────────
+   Its own surface in the top-left corner: play/pause, stop, the name and
+   volume on one row. Sits above the centred panel in the stacking order but
+   never near it, and never drags. */
+.teaser-track {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Room for the rippling outline: at this size the flow wobble comes several
+     pixels inward, and the controls were sitting right against it. */
+  padding: 14px 22px 14px 14px;
+}
+
+/* The only part of the row that is not a control, so the only part that can
+   start a drag. */
+.teaser-grip {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 0 2px;
+  color: rgb(207 230 238 / 0.32);
+  cursor: grab;
+}
+.teaser-grip:hover {
+  color: rgb(207 230 238 / 0.6);
+}
+.teaser-track[data-plasma-dragging] .teaser-grip {
+  cursor: grabbing;
+}
+.teaser-grip svg {
+  display: block;
+}
+
+.teaser-track-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: #cfe6ee;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+.teaser-track-btn:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+}
+.teaser-track-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.teaser-track-btn svg {
+  display: block;
+}
+
+/* A slim track with a single round thumb, the same in both engines. */
+.teaser-volume {
+  flex: 0 0 84px;
+  width: 84px;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.teaser-volume:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.teaser-volume::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+}
+.teaser-volume::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+}
+.teaser-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 999px;
+  background: #9ff3e4;
+}
+.teaser-volume::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 999px;
+  background: #9ff3e4;
+}
+.teaser-volume:focus-visible {
+  outline: 2px solid #9ff3e4;
+  outline-offset: 3px;
 }
