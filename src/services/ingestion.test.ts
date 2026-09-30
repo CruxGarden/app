@@ -93,6 +93,52 @@ describe('Ingestion (external edits → history)', () => {
     return artifact.findByResource('crux', cruxId);
   }
 
+  it('admits the first external batch as one manifest, including a previously empty Crux', async () => {
+    const { crux, folder } = await makeCrux('Initially empty');
+    const db = getSqliteClient();
+    const edit = vi.fn(async () => ({
+      cruxId: crux.id,
+      root: 'a'.repeat(64),
+      revision: 1,
+      formatVersion: 1,
+    }));
+    Object.defineProperty(db, 'fileContent', {
+      configurable: true,
+      value: { head: async () => null, edit },
+    });
+    const individual = vi
+      .spyOn(getServices().artifact, 'create')
+      .mockRejectedValue(new Error('Must not commit files individually'));
+    try {
+      bridge.externalWrite(folder, 'one.txt', 'One');
+      bridge.externalWrite(folder, 'two.txt', 'Two');
+      bridge.emit({
+        folder,
+        events: [
+          { type: 'write', relPath: 'one.txt' },
+          { type: 'write', relPath: 'two.txt' },
+        ],
+      });
+      await flushIngestion();
+      expect(individual).not.toHaveBeenCalled();
+      expect(edit).toHaveBeenCalledTimes(1);
+      expect(edit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cruxId: crux.id,
+          expected: null,
+          changes: [
+            expect.objectContaining({ put: expect.objectContaining({ path: 'one.txt' }) }),
+            expect.objectContaining({ put: expect.objectContaining({ path: 'two.txt' }) }),
+          ],
+        }),
+      );
+      expect(bridge.writeLog).toEqual([]);
+    } finally {
+      individual.mockRestore();
+      delete (db as { fileContent?: unknown }).fileContent;
+    }
+  });
+
   it.each([false, true])(
     'commits external manifest edits without Artifact rows or write-back (refused first: %s)',
     async (refuseFirst) => {

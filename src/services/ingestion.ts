@@ -223,8 +223,10 @@ async function processBatch(batch: ChangeBatch, strict = false): Promise<void> {
 
   const db = getSqliteClient();
   const selected = await selectCruxFiles(cruxId);
-  if (selected) {
-    await ingestSelectedFiles(cruxId, selected, batch, api, strict);
+  if (db.fileContent) {
+    // A new empty Crux has no head yet. It still belongs to the manifest API;
+    // falling through would create one manifest (and history entry) per file.
+    await ingestSelectedFiles(cruxId, selected ?? { head: null, entries: [] }, batch, api, strict);
     return;
   }
   const { artifact } = getServices();
@@ -340,7 +342,7 @@ async function processBatch(batch: ChangeBatch, strict = false): Promise<void> {
 /** One version-bound commit for an external change batch; never writes Artifact rows. */
 async function ingestSelectedFiles(
   cruxId: string,
-  selected: SelectedFiles,
+  selected: { head: SelectedFiles['head'] | null; entries: SelectedFiles['entries'] },
   batch: ChangeBatch,
   api: ProjectBridge,
   strict: boolean,

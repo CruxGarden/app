@@ -30,3 +30,33 @@ test('content-addressed writes verify bytes and never replace an existing blob',
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('async durable writes leave the event loop available and admit shared bytes once', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crux-blob-async-'));
+  const store = new NativeBlobStore(dir);
+  const bytes = Buffer.from('shared async content');
+  const fingerprint = createHash('sha256').update(bytes).digest('hex');
+  try {
+    const writes = Promise.all([
+      store.blobWriteAsync(fingerprint, bytes),
+      store.blobWriteAsync(fingerprint, bytes),
+    ]);
+    let done = false;
+    void writes.then(() => {
+      done = true;
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(done).toBe(false);
+    await writes;
+    expect(Buffer.from(store.blobRead(fingerprint))).toEqual(bytes);
+    const inode = statSync(join(dir, fingerprint)).ino;
+    await store.blobWriteAsync(fingerprint, bytes);
+    expect(statSync(join(dir, fingerprint)).ino).toBe(inode);
+    await expect(store.blobWriteAsync(fingerprint, Buffer.from('wrong'))).rejects.toThrow(
+      'fingerprint',
+    );
+    expect(readdirSync(dir)).toEqual([fingerprint]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

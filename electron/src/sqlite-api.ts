@@ -102,9 +102,7 @@ export class SqliteApi implements NativeStorage {
       ? LocalGraphRuntime.open(filename, {
           contentStore: {
             read: async (fp) => (blobs.blobExists(fp) ? blobs.blobRead(fp) : null),
-            write: async (fp, bytes) => {
-              blobs.blobWrite(fp, bytes);
-            },
+            write: (fp, bytes) => blobs.blobWriteAsync(fp, bytes),
           },
         })
       : LocalGraphRuntime.create(filename));
@@ -114,9 +112,7 @@ export class SqliteApi implements NativeStorage {
   private contentStore() {
     return {
       read: async (fp: string) => (this.blobs.blobExists(fp) ? this.blobs.blobRead(fp) : null),
-      write: async (fp: string, bytes: Uint8Array) => {
-        this.blobs.blobWrite(fp, bytes);
-      },
+      write: (fp: string, bytes: Uint8Array) => this.blobs.blobWriteAsync(fp, bytes),
     };
   }
 

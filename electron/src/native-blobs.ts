@@ -20,13 +20,38 @@ export class NativeBlobStore {
     return path.join(this.blobDir, fingerprint);
   }
 
-  blobWrite(fingerprint: string, data: Uint8Array): void {
+  private prepareWrite(fingerprint: string, data: Uint8Array) {
     const destination = this.blobPath(fingerprint);
     const bytes = Buffer.from(data);
     if (createHash('sha256').update(bytes).digest('hex') !== fingerprint)
       throw new Error('Blob bytes do not match their fingerprint');
-    if (fs.existsSync(destination)) return;
+    if (fs.existsSync(destination)) return null;
     const staging = path.join(this.blobDir, `.${fingerprint}.${randomUUID()}.tmp`);
+    return { destination, bytes, staging };
+  }
+
+  /** Keep durable flushing off the Electron main thread. The API awaits this
+   * before admitting any manifest that references the new bytes. */
+  async blobWriteAsync(fingerprint: string, data: Uint8Array): Promise<void> {
+    const write = this.prepareWrite(fingerprint, data);
+    if (!write) return;
+    const { destination, bytes, staging } = write;
+    try {
+      await fs.promises.writeFile(staging, bytes, { flag: 'wx', mode: 0o600, flush: true });
+      try {
+        await fs.promises.link(staging, destination);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      }
+    } finally {
+      await fs.promises.rm(staging, { force: true }).catch(() => {});
+    }
+  }
+
+  blobWrite(fingerprint: string, data: Uint8Array): void {
+    const write = this.prepareWrite(fingerprint, data);
+    if (!write) return;
+    const { destination, bytes, staging } = write;
     try {
       // Never truncate a committed blob: snapshots and other Cruxes may share
       // it. A hard link admits the flushed bytes atomically without replacing

@@ -1,0 +1,2967 @@
+{
+  "samples": [
+    {
+      "phase": "warm",
+      "actionMs": 0,
+      "heap": {
+        "usedSize": 28892680,
+        "totalSize": 30457856,
+        "embedderHeapUsedSize": 6766472,
+        "backingStorageSize": 10922016
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 2401,
+        "jsEventListeners": 572
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 259520,
+          "cpu": 0
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 151504,
+          "cpu": 0
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54256,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 440208,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84736,
+          "cpu": 0
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46016,
+          "cpu": 0
+        }
+      ]
+    },
+    {
+      "phase": "cycle-0",
+      "actionMs": 143,
+      "heap": {
+        "usedSize": 29288496,
+        "totalSize": 30457856,
+        "embedderHeapUsedSize": 7130976,
+        "backingStorageSize": 10922950
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 259792,
+          "cpu": 0.2557686237477588
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149952,
+          "cpu": 4.440494603105491
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54288,
+          "cpu": 0.0036643988440114134
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 485248,
+          "cpu": 9.022811106993956
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84736,
+          "cpu": 0.003260199583747242
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 45936,
+          "cpu": 0.08905942828631593
+        }
+      ]
+    },
+    {
+      "phase": "cycle-1",
+      "actionMs": 187,
+      "heap": {
+        "usedSize": 29898860,
+        "totalSize": 31244288,
+        "embedderHeapUsedSize": 6930720,
+        "backingStorageSize": 10924459
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 259808,
+          "cpu": 0.24745899415671302
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149888,
+          "cpu": 4.4162120387740815
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54288,
+          "cpu": 0.0001656146387341642
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 480144,
+          "cpu": 8.903837452456036
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84736,
+          "cpu": 0.0031169983371634132
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 45936,
+          "cpu": 0.08514951998850569
+        }
+      ]
+    },
+    {
+      "phase": "cycle-2",
+      "actionMs": 205,
+      "heap": {
+        "usedSize": 30120024,
+        "totalSize": 31506432,
+        "embedderHeapUsedSize": 6811768,
+        "backingStorageSize": 10924506
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 517
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 259824,
+          "cpu": 0.25341878153530034
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150288,
+          "cpu": 4.418136374507037
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54288,
+          "cpu": 0.001348959378659619
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 481392,
+          "cpu": 8.580125732416304
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84736,
+          "cpu": 0.0036607933286152555
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46032,
+          "cpu": 0.08662263960067522
+        }
+      ]
+    },
+    {
+      "phase": "cycle-3",
+      "actionMs": 141,
+      "heap": {
+        "usedSize": 30211108,
+        "totalSize": 31506432,
+        "embedderHeapUsedSize": 6872536,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 259840,
+          "cpu": 0.23647628515317787
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150112,
+          "cpu": 4.279675248464068
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54288,
+          "cpu": 9.982736520976392e-05
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 486256,
+          "cpu": 8.457966935420796
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84736,
+          "cpu": 0.0028886504022497188
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46048,
+          "cpu": 0.08738679125095787
+        }
+      ]
+    },
+    {
+      "phase": "cycle-4",
+      "actionMs": 165,
+      "heap": {
+        "usedSize": 30273096,
+        "totalSize": 31768576,
+        "embedderHeapUsedSize": 7164056,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 240720,
+          "cpu": 0.3736805117702701
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150176,
+          "cpu": 4.4334181237965895
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54304,
+          "cpu": 0.00015079442271748137
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 481472,
+          "cpu": 9.008210204765978
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84736,
+          "cpu": 0.0029326412362846795
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46048,
+          "cpu": 0.08825101483247873
+        }
+      ]
+    },
+    {
+      "phase": "cycle-5",
+      "actionMs": 176,
+      "heap": {
+        "usedSize": 30393384,
+        "totalSize": 32030720,
+        "embedderHeapUsedSize": 6958624,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 521
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 241232,
+          "cpu": 0.25318358260186824
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150048,
+          "cpu": 4.387294524047196
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54304,
+          "cpu": 0.00010079240468755236
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 482656,
+          "cpu": 8.675317431684602
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.002556038184281187
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46064,
+          "cpu": 0.08611322880873429
+        }
+      ]
+    },
+    {
+      "phase": "cycle-6",
+      "actionMs": 157,
+      "heap": {
+        "usedSize": 30494652,
+        "totalSize": 32030720,
+        "embedderHeapUsedSize": 6866536,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 241648,
+          "cpu": 0.24858293499616527
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150096,
+          "cpu": 4.371039762184034
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54304,
+          "cpu": 6.671503661972845e-05
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 475440,
+          "cpu": 7.611917669594804
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0028780540420042604
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46064,
+          "cpu": 0.08459148466201015
+        }
+      ]
+    },
+    {
+      "phase": "cycle-7",
+      "actionMs": 223,
+      "heap": {
+        "usedSize": 30549396,
+        "totalSize": 32030720,
+        "embedderHeapUsedSize": 6938472,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242096,
+          "cpu": 0.2529139515959039
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150384,
+          "cpu": 4.447930027222967
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54304,
+          "cpu": 0.00011941532519832714
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 487392,
+          "cpu": 8.915706365841784
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.004207452435781528
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46064,
+          "cpu": 0.08606126113920526
+        }
+      ]
+    },
+    {
+      "phase": "cycle-8",
+      "actionMs": 190,
+      "heap": {
+        "usedSize": 30637744,
+        "totalSize": 32030720,
+        "embedderHeapUsedSize": 6879776,
+        "backingStorageSize": 10924506
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 517
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242480,
+          "cpu": 0.25484004852001035
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150400,
+          "cpu": 4.4705539540806365
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54304,
+          "cpu": 9.374487332723993e-05
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 490944,
+          "cpu": 8.806423263636495
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0031560791772145334
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46064,
+          "cpu": 0.08804053079867101
+        }
+      ]
+    },
+    {
+      "phase": "cycle-9",
+      "actionMs": 271,
+      "heap": {
+        "usedSize": 30708124,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 7026520,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 510
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242624,
+          "cpu": 0.27193243030430475
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150064,
+          "cpu": 4.550499538975622
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54352,
+          "cpu": 0.0013138696013651936
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 491776,
+          "cpu": 8.82562591628406
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.004564690105081105
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46064,
+          "cpu": 0.09207988381851313
+        }
+      ]
+    },
+    {
+      "phase": "cycle-10",
+      "actionMs": 267,
+      "heap": {
+        "usedSize": 30772736,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 6948632,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242656,
+          "cpu": 0.2546651877624052
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150112,
+          "cpu": 4.544208150259874
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54352,
+          "cpu": 0.0006221507798544813
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 492288,
+          "cpu": 9.093089064160415
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.004299753960059572
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46064,
+          "cpu": 0.08818878594052493
+        }
+      ]
+    },
+    {
+      "phase": "cycle-11",
+      "actionMs": 215,
+      "heap": {
+        "usedSize": 30808448,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 7116768,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 521
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242096,
+          "cpu": 0.2545302492685039
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150384,
+          "cpu": 4.433584592128017
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0024897708398039244
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 484544,
+          "cpu": 8.779957691673618
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003202477808188553
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.0890505185392189
+        }
+      ]
+    },
+    {
+      "phase": "cycle-12",
+      "actionMs": 216,
+      "heap": {
+        "usedSize": 30892220,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 7098976,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 508
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 241792,
+          "cpu": 0.2540863885258285
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150064,
+          "cpu": 4.479611346183984
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0003996238082512819
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 483056,
+          "cpu": 8.594892502489733
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003229898839756397
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08496302811460528
+        }
+      ]
+    },
+    {
+      "phase": "cycle-13",
+      "actionMs": 270,
+      "heap": {
+        "usedSize": 30932756,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 6895976,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242192,
+          "cpu": 0.2564405927597754
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150128,
+          "cpu": 4.542701612957804
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0003245403508862597
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 490752,
+          "cpu": 8.926474332164004
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0032961579625947752
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.0885395133187644
+        }
+      ]
+    },
+    {
+      "phase": "cycle-14",
+      "actionMs": 222,
+      "heap": {
+        "usedSize": 31012608,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 6986584,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 521
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242256,
+          "cpu": 0.2492491510109979
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150384,
+          "cpu": 4.474464389684139
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0006168757002941188
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 489232,
+          "cpu": 8.891785194080384
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0031949823417640986
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08828644018729592
+        }
+      ]
+    },
+    {
+      "phase": "cycle-15",
+      "actionMs": 219,
+      "heap": {
+        "usedSize": 31032996,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 6510728,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242416,
+          "cpu": 0.2437863706283526
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150160,
+          "cpu": 4.435573713648406
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00027137952727733326
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 494224,
+          "cpu": 9.070886334589558
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003414734271333855
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08851644576013667
+        }
+      ]
+    },
+    {
+      "phase": "cycle-16",
+      "actionMs": 236,
+      "heap": {
+        "usedSize": 31089324,
+        "totalSize": 32292864,
+        "embedderHeapUsedSize": 7006288,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 241936,
+          "cpu": 0.2496529649381434
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150144,
+          "cpu": 4.495293685719164
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00017611892247887165
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 490208,
+          "cpu": 8.411575289674941
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0030828575477298975
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.09012597936762502
+        }
+      ]
+    },
+    {
+      "phase": "cycle-17",
+      "actionMs": 221,
+      "heap": {
+        "usedSize": 31126924,
+        "totalSize": 32555008,
+        "embedderHeapUsedSize": 7402096,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 518
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242304,
+          "cpu": 0.2440121701069841
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150368,
+          "cpu": 4.43899873810053
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0001875335739342591
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 504704,
+          "cpu": 9.39220326741773
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0032345606685481986
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.09120923954401146
+        }
+      ]
+    },
+    {
+      "phase": "cycle-18",
+      "actionMs": 203,
+      "heap": {
+        "usedSize": 31186876,
+        "totalSize": 32555008,
+        "embedderHeapUsedSize": 7198264,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242320,
+          "cpu": 0.24849360789622596
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148560,
+          "cpu": 4.50138474519665
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0001410948526427066
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 498960,
+          "cpu": 9.18833915822826
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0034948109654578097
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08851770475033542
+        }
+      ]
+    },
+    {
+      "phase": "cycle-19",
+      "actionMs": 215,
+      "heap": {
+        "usedSize": 31264088,
+        "totalSize": 32555008,
+        "embedderHeapUsedSize": 7195344,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242544,
+          "cpu": 0.24717804627321915
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148608,
+          "cpu": 4.407547655147419
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00015714683467450455
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 483408,
+          "cpu": 7.474154631706429
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003290829862247341
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08618094985956655
+        }
+      ]
+    },
+    {
+      "phase": "cycle-20",
+      "actionMs": 206,
+      "heap": {
+        "usedSize": 31279048,
+        "totalSize": 32555008,
+        "embedderHeapUsedSize": 6814944,
+        "backingStorageSize": 10924506
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242096,
+          "cpu": 0.24840479848592312
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148928,
+          "cpu": 4.383669696099227
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00023236215310201916
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 490896,
+          "cpu": 9.028046918465702
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003596173372110874
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08709574996319612
+        }
+      ]
+    },
+    {
+      "phase": "cycle-21",
+      "actionMs": 133,
+      "heap": {
+        "usedSize": 31440204,
+        "totalSize": 32817152,
+        "embedderHeapUsedSize": 7095072,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242416,
+          "cpu": 0.24447539390802933
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148816,
+          "cpu": 4.489449013777509
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00030759604305913334
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 490928,
+          "cpu": 9.108438894270234
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.002655790577959012
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.0889411696061093
+        }
+      ]
+    },
+    {
+      "phase": "cycle-22",
+      "actionMs": 240,
+      "heap": {
+        "usedSize": 31431024,
+        "totalSize": 32817152,
+        "embedderHeapUsedSize": 6742400,
+        "backingStorageSize": 10924558
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 515
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242448,
+          "cpu": 0.24936048337697858
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148688,
+          "cpu": 4.51082733210261
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0001485566875473046
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 483056,
+          "cpu": 7.696106196793724
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003410679018256184
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.09359539369702495
+        }
+      ]
+    },
+    {
+      "phase": "cycle-23",
+      "actionMs": 238,
+      "heap": {
+        "usedSize": 31502864,
+        "totalSize": 32817152,
+        "embedderHeapUsedSize": 7136040,
+        "backingStorageSize": 10924506
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242720,
+          "cpu": 0.2439561470220631
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148912,
+          "cpu": 4.399809911749772
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0001853555406570891
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 503536,
+          "cpu": 9.172793741711914
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0032066466927795213
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08722801023752118
+        }
+      ]
+    },
+    {
+      "phase": "cycle-24",
+      "actionMs": 166,
+      "heap": {
+        "usedSize": 31582796,
+        "totalSize": 33079296,
+        "embedderHeapUsedSize": 8161720,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 515
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242272,
+          "cpu": 0.2458269877552712
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148736,
+          "cpu": 4.3295595067560635
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00015539810640343796
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 502560,
+          "cpu": 8.957785006240718
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003545895567018368
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08728818225786268
+        }
+      ]
+    },
+    {
+      "phase": "cycle-25",
+      "actionMs": 236,
+      "heap": {
+        "usedSize": 31630256,
+        "totalSize": 33079296,
+        "embedderHeapUsedSize": 7205272,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 486,
+        "jsEventListeners": 513
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242752,
+          "cpu": 0.2454121472777099
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148608,
+          "cpu": 4.381239139541996
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00014996844541485251
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 487760,
+          "cpu": 7.843272550738217
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003883883097138762
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08490990362329592
+        }
+      ]
+    },
+    {
+      "phase": "cycle-26",
+      "actionMs": 257,
+      "heap": {
+        "usedSize": 31681180,
+        "totalSize": 33079296,
+        "embedderHeapUsedSize": 8233272,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242816,
+          "cpu": 0.24421799133066183
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148928,
+          "cpu": 4.437754594196716
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.0002967545933613322
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 500176,
+          "cpu": 9.250880592835436
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003465727826522455
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.08700909391717437
+        }
+      ]
+    },
+    {
+      "phase": "cycle-27",
+      "actionMs": 142,
+      "heap": {
+        "usedSize": 31719476,
+        "totalSize": 33079296,
+        "embedderHeapUsedSize": 8220152,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 515
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242864,
+          "cpu": 0.24230816137070596
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148784,
+          "cpu": 4.4094234441818845
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00015712998744864707
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 502864,
+          "cpu": 8.499964129922057
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0028584971231551664
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.0859612788244865
+        }
+      ]
+    },
+    {
+      "phase": "cycle-28",
+      "actionMs": 182,
+      "heap": {
+        "usedSize": 31734008,
+        "totalSize": 33079296,
+        "embedderHeapUsedSize": 8151696,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 518
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242272,
+          "cpu": 0.2490424638948925
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148672,
+          "cpu": 4.535725899857378
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00015734296322618025
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 500912,
+          "cpu": 8.999036807679557
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0034316584511410193
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46112,
+          "cpu": 0.09038595534579784
+        }
+      ]
+    },
+    {
+      "phase": "cycle-29",
+      "actionMs": 165,
+      "heap": {
+        "usedSize": 31795892,
+        "totalSize": 33079296,
+        "embedderHeapUsedSize": 8233760,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242704,
+          "cpu": 0.2335276590134198
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148976,
+          "cpu": 4.356855606129534
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.000155536153860511
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 492288,
+          "cpu": 8.815136388322152
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0032379707736139036
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08781791161757273
+        }
+      ]
+    },
+    {
+      "phase": "cycle-30",
+      "actionMs": 154,
+      "heap": {
+        "usedSize": 31829672,
+        "totalSize": 33079296,
+        "embedderHeapUsedSize": 7105656,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243088,
+          "cpu": 0.2493477127061651
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148656,
+          "cpu": 4.540669764494052
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00021022703634759071
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 497968,
+          "cpu": 8.898450263779507
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0032735359011891014
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.0882290347214398
+        }
+      ]
+    },
+    {
+      "phase": "cycle-31",
+      "actionMs": 151,
+      "heap": {
+        "usedSize": 31915456,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 6790512,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 486,
+        "jsEventListeners": 522
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243552,
+          "cpu": 0.24468645005160397
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148816,
+          "cpu": 4.501430713339135
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00015365973448991905
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 500688,
+          "cpu": 9.019182459578731
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0026518210311648853
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08919243210197592
+        }
+      ]
+    },
+    {
+      "phase": "cycle-32",
+      "actionMs": 171,
+      "heap": {
+        "usedSize": 31924708,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7082600,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242720,
+          "cpu": 0.24353974340400308
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148720,
+          "cpu": 4.425911590285053
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00026218602987426124
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 496432,
+          "cpu": 9.244106397736475
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0033911390666567947
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08890409454316502
+        }
+      ]
+    },
+    {
+      "phase": "cycle-33",
+      "actionMs": 226,
+      "heap": {
+        "usedSize": 31974052,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7044104,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 486,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242848,
+          "cpu": 0.24775799723271807
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148832,
+          "cpu": 4.435552358820455
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00044312702520711756
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 503408,
+          "cpu": 8.74572406142052
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0036942759060631463
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08500580450082973
+        }
+      ]
+    },
+    {
+      "phase": "cycle-34",
+      "actionMs": 204,
+      "heap": {
+        "usedSize": 32016924,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 6066920,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 486,
+        "jsEventListeners": 518
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243040,
+          "cpu": 0.24468455579922258
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148784,
+          "cpu": 4.526659961368295
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 9.255396743405515e-05
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 497632,
+          "cpu": 9.144820921014214
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0031138978169646787
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09063251787127362
+        }
+      ]
+    },
+    {
+      "phase": "cycle-35",
+      "actionMs": 247,
+      "heap": {
+        "usedSize": 32078508,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7015512,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 242960,
+          "cpu": 0.24191134503228398
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149040,
+          "cpu": 4.34838388273921
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.000206049476290398
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 495968,
+          "cpu": 8.745861365248134
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0030457970757993232
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08846428346347197
+        }
+      ]
+    },
+    {
+      "phase": "cycle-36",
+      "actionMs": 223,
+      "heap": {
+        "usedSize": 32110868,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 6903768,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 515
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243328,
+          "cpu": 0.2558471741872888
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148752,
+          "cpu": 4.478449740179344
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00016359751496309614
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 503952,
+          "cpu": 8.712001736069887
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0041055339419059
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08774627759589815
+        }
+      ]
+    },
+    {
+      "phase": "cycle-37",
+      "actionMs": 269,
+      "heap": {
+        "usedSize": 32146440,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7472424,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 518
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243296,
+          "cpu": 0.24965264581969404
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148848,
+          "cpu": 4.531307238256471
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00016611988613773846
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 510848,
+          "cpu": 9.552365287856253
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003859223168062601
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09309821749660761
+        }
+      ]
+    },
+    {
+      "phase": "cycle-38",
+      "actionMs": 292,
+      "heap": {
+        "usedSize": 32246836,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 6960216,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 509
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243376,
+          "cpu": 0.250156186504639
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149024,
+          "cpu": 4.498698106067162
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00023169190512673733
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 509088,
+          "cpu": 9.186768478571683
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0038666477876054053
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09175476652501825
+        }
+      ]
+    },
+    {
+      "phase": "cycle-39",
+      "actionMs": 186,
+      "heap": {
+        "usedSize": 32301548,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 7243608,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243168,
+          "cpu": 0.23220630334883285
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149008,
+          "cpu": 4.24509874028857
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00015632988689393378
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 497184,
+          "cpu": 8.006367539004712
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.002936207615912716
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08890494076140854
+        }
+      ]
+    },
+    {
+      "phase": "cycle-40",
+      "actionMs": 170,
+      "heap": {
+        "usedSize": 32329336,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 6899672,
+        "backingStorageSize": 10924535
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 522
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243440,
+          "cpu": 0.24149635443334536
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148800,
+          "cpu": 4.424151584789752
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00019051333045390543
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 498064,
+          "cpu": 8.69392940766288
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.002830935760619851
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08496587666854409
+        }
+      ]
+    },
+    {
+      "phase": "cycle-41",
+      "actionMs": 253,
+      "heap": {
+        "usedSize": 32375068,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 6986728,
+        "backingStorageSize": 10924502
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243552,
+          "cpu": 0.24642939945495246
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149040,
+          "cpu": 4.483392637757768
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00020926293777344973
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 509536,
+          "cpu": 9.365288686904757
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0032251177091028762
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09124814263207022
+        }
+      ]
+    },
+    {
+      "phase": "cycle-42",
+      "actionMs": 200,
+      "heap": {
+        "usedSize": 32441352,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 6815384,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243552,
+          "cpu": 0.2560579796770388
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148736,
+          "cpu": 4.4770961760986285
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54400,
+          "cpu": 0.00015703093446596607
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 505584,
+          "cpu": 8.600562548149655
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003215996567928663
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08925178995087375
+        }
+      ]
+    },
+    {
+      "phase": "cycle-43",
+      "actionMs": 124,
+      "heap": {
+        "usedSize": 32441896,
+        "totalSize": 33865728,
+        "embedderHeapUsedSize": 7195864,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 518
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243328,
+          "cpu": 0.23521854749613724
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148784,
+          "cpu": 4.309863396745417
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.0006486319017772896
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 499760,
+          "cpu": 8.388778579197611
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0026771912715170504
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08317565903025757
+        }
+      ]
+    },
+    {
+      "phase": "cycle-44",
+      "actionMs": 187,
+      "heap": {
+        "usedSize": 32528796,
+        "totalSize": 33865728,
+        "embedderHeapUsedSize": 7176936,
+        "backingStorageSize": 10924506
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 515
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243600,
+          "cpu": 0.23947468481069992
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149024,
+          "cpu": 4.340595667687147
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.0003372177712584414
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 508368,
+          "cpu": 9.43606115532747
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0030256280485883233
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08941684922995217
+        }
+      ]
+    },
+    {
+      "phase": "cycle-45",
+      "actionMs": 153,
+      "heap": {
+        "usedSize": 32551148,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 7102848,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243616,
+          "cpu": 0.25148642149038253
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148800,
+          "cpu": 4.434830561822229
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.0003660618141637198
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 502672,
+          "cpu": 7.4613062954528475
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0033397336587330548
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08835655009870287
+        }
+      ]
+    },
+    {
+      "phase": "cycle-46",
+      "actionMs": 164,
+      "heap": {
+        "usedSize": 32646488,
+        "totalSize": 33865728,
+        "embedderHeapUsedSize": 7170792,
+        "backingStorageSize": 10924539
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243712,
+          "cpu": 0.24497106848210948
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148816,
+          "cpu": 4.339406035093043
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.00028601609477353466
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 499248,
+          "cpu": 9.155252249857181
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0036692279204920976
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.0915047291954935
+        }
+      ]
+    },
+    {
+      "phase": "cycle-47",
+      "actionMs": 146,
+      "heap": {
+        "usedSize": 31714856,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7065112,
+        "backingStorageSize": 10918014
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243216,
+          "cpu": 0.2448162519125234
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149072,
+          "cpu": 4.411873240846911
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.0001972939477792909
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 511472,
+          "cpu": 9.092049808211415
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003112502245989197
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08761399763273324
+        }
+      ]
+    },
+    {
+      "phase": "cycle-48",
+      "actionMs": 109,
+      "heap": {
+        "usedSize": 31659532,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7068272,
+        "backingStorageSize": 10918006
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243648,
+          "cpu": 0.24710656454534066
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148800,
+          "cpu": 4.492095415950419
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.00017132838511575135
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 498256,
+          "cpu": 7.247832551916814
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0022812126685416395
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08944810306248985
+        }
+      ]
+    },
+    {
+      "phase": "cycle-49",
+      "actionMs": 236,
+      "heap": {
+        "usedSize": 31758060,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7331144,
+        "backingStorageSize": 10918006
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 515
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243632,
+          "cpu": 0.23620045280600963
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148800,
+          "cpu": 4.293098531498217
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.00019868370801665787
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 509440,
+          "cpu": 8.680691697976448
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0029911200212442476
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08271755399675886
+        }
+      ]
+    },
+    {
+      "phase": "cycle-50",
+      "actionMs": 203,
+      "heap": {
+        "usedSize": 31880780,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 6921248,
+        "backingStorageSize": 10917977
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243936,
+          "cpu": 0.24280408637566386
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149104,
+          "cpu": 4.283528854662675
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54560,
+          "cpu": 0.0008041605055839537
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 505456,
+          "cpu": 9.033567109082325
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003121761580662213
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09091220178377556
+        }
+      ]
+    },
+    {
+      "phase": "cycle-51",
+      "actionMs": 166,
+      "heap": {
+        "usedSize": 31884476,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 6980856,
+        "backingStorageSize": 10918010
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 486,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243456,
+          "cpu": 0.25454287431713485
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148976,
+          "cpu": 4.505800538483828
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.0003298466222497992
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 497552,
+          "cpu": 8.026091841393686
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0031497941762814365
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08821430279280303
+        }
+      ]
+    },
+    {
+      "phase": "cycle-52",
+      "actionMs": 160,
+      "heap": {
+        "usedSize": 31916592,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7248592,
+        "backingStorageSize": 10918006
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 515
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243840,
+          "cpu": 0.25171361042457857
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148848,
+          "cpu": 4.536911469275926
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.0004175712736080827
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 513008,
+          "cpu": 9.307879019641272
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0031569087574564113
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09159277362434548
+        }
+      ]
+    },
+    {
+      "phase": "cycle-53",
+      "actionMs": 290,
+      "heap": {
+        "usedSize": 32020768,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 7131800,
+        "backingStorageSize": 10917977
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243920,
+          "cpu": 0.24590131145109528
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149152,
+          "cpu": 4.471117665869313
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.00018155212543073242
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 512480,
+          "cpu": 8.814835636890892
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.003486417526593242
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09090067069650769
+        }
+      ]
+    },
+    {
+      "phase": "cycle-54",
+      "actionMs": 193,
+      "heap": {
+        "usedSize": 32066160,
+        "totalSize": 33341440,
+        "embedderHeapUsedSize": 6934504,
+        "backingStorageSize": 10918006
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 518
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 243984,
+          "cpu": 0.25374968360829364
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148800,
+          "cpu": 4.549128246367002
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54512,
+          "cpu": 0.0006793530468676753
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 500240,
+          "cpu": 8.585710009345565
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.002957184941915908
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09296844000657589
+        }
+      ]
+    },
+    {
+      "phase": "cycle-55",
+      "actionMs": 212,
+      "heap": {
+        "usedSize": 32100420,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 6917008,
+        "backingStorageSize": 10918006
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 511
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 244400,
+          "cpu": 0.2504722719529284
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148816,
+          "cpu": 4.5527207964645315
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54496,
+          "cpu": 0.0005562797116045401
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 497584,
+          "cpu": 8.868795547155681
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.00363697174043185
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09189742563729765
+        }
+      ]
+    },
+    {
+      "phase": "cycle-56",
+      "actionMs": 180,
+      "heap": {
+        "usedSize": 32113788,
+        "totalSize": 33865728,
+        "embedderHeapUsedSize": 7113792,
+        "backingStorageSize": 10917973
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 516
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 244736,
+          "cpu": 0.2317276346292921
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149088,
+          "cpu": 4.26039786668449
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54496,
+          "cpu": 0.0002691022043288031
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 510560,
+          "cpu": 8.989118195257932
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.002611230110609142
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09005846086739118
+        }
+      ]
+    },
+    {
+      "phase": "cycle-57",
+      "actionMs": 180,
+      "heap": {
+        "usedSize": 32150860,
+        "totalSize": 33603584,
+        "embedderHeapUsedSize": 6912768,
+        "backingStorageSize": 10918010
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 486,
+        "jsEventListeners": 521
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 244768,
+          "cpu": 0.25470283259798804
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148816,
+          "cpu": 4.594905420336938
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54496,
+          "cpu": 0.00037575220403036533
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 511968,
+          "cpu": 9.076165034302752
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0035451807583121203
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09063006865114902
+        }
+      ]
+    },
+    {
+      "phase": "cycle-58",
+      "actionMs": 178,
+      "heap": {
+        "usedSize": 32183012,
+        "totalSize": 33865728,
+        "embedderHeapUsedSize": 7069328,
+        "backingStorageSize": 10918006
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 507
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 244240,
+          "cpu": 0.25173315128051077
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 148864,
+          "cpu": 4.623962042342195
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54496,
+          "cpu": 0.00017101609226911243
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 511200,
+          "cpu": 9.399909413041824
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0031583812895797894
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09265310197891109
+        }
+      ]
+    },
+    {
+      "phase": "cycle-59",
+      "actionMs": 222,
+      "heap": {
+        "usedSize": 32279036,
+        "totalSize": 33865728,
+        "embedderHeapUsedSize": 6749008,
+        "backingStorageSize": 10917977
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 496,
+        "jsEventListeners": 512
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 244336,
+          "cpu": 0.2550304452505902
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 149120,
+          "cpu": 4.644862608792079
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54496,
+          "cpu": 0.0001358028853898573
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 500688,
+          "cpu": 9.182587171287595
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.0033763495564197842
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.09670919610917823
+        }
+      ]
+    },
+    {
+      "phase": "paused",
+      "actionMs": 0,
+      "heap": {
+        "usedSize": 32423940,
+        "totalSize": 34127872,
+        "embedderHeapUsedSize": 6070968,
+        "backingStorageSize": 10926560
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 2388,
+        "jsEventListeners": 577
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 244320,
+          "cpu": 0.4324162791609756
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150160,
+          "cpu": 4.510416400235312
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54496,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 499744,
+          "cpu": 11.560141561714564
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.049331987973609465
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.08527836640667529
+        }
+      ]
+    },
+    {
+      "phase": "closed",
+      "actionMs": 0,
+      "heap": {
+        "usedSize": 32326280,
+        "totalSize": 33865728,
+        "embedderHeapUsedSize": 5553960,
+        "backingStorageSize": 10926912
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 480,
+        "jsEventListeners": 494
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "workingSetKB": 244032,
+          "cpu": 0.11881042982959984
+        },
+        {
+          "type": "GPU",
+          "workingSetKB": 150192,
+          "cpu": 4.363927762724855
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 54496,
+          "cpu": 0.00015706124939980165
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 495408,
+          "cpu": 3.8984693843971328
+        },
+        {
+          "type": "Tab",
+          "workingSetKB": 84752,
+          "cpu": 0.015365880729353179
+        },
+        {
+          "type": "Utility",
+          "workingSetKB": 46128,
+          "cpu": 0.06429811468982685
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "scope": "macOS arm64 development desktop; ordinary Synth audio and three workspaces; 60 switches, five-second dwell; forced GC for retained heap. Not an hours-long soak."
+}

@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
-import { appAppearanceSnapshot, setAppearanceChoice } from '@/services/app-appearance';
+import {
+  appAppearanceSnapshot,
+  appAppearanceState,
+  setAppearanceChoice,
+} from '@/services/app-appearance';
 import { isPreviewOrigin } from './useStoreProxy';
 
 /** Opt-in appearance only; never inject CSS or disclose a Mood to arbitrary previews. */
@@ -10,6 +14,7 @@ export function useAppAppearance(cruxId: string | null, enabled: boolean) {
     let live = true;
     let revision = 0;
     let scheduled = 0;
+    let lastKey: string | null = null;
     function valid(source: MessageEventSource, origin: string) {
       return [...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].some(
         (frame) =>
@@ -19,9 +24,17 @@ export function useAppAppearance(cruxId: string | null, enabled: boolean) {
       );
     }
     async function send() {
+      // Audio and Flow update root CSS frequently. Only material changes belong
+      // in this bridge, and no snapshot is needed until a preview subscribes.
+      for (const [source, origin] of peers) if (!valid(source, origin)) peers.delete(source);
+      if (!peers.size) return;
+      const state = appAppearanceState(cruxId!);
+      const key = JSON.stringify(state);
       const current = ++revision;
-      const appearance = await appAppearanceSnapshot(cruxId!);
+      if (key === lastKey) return;
+      const appearance = await appAppearanceSnapshot(cruxId!, state);
       if (!live || current !== revision) return;
+      lastKey = key;
       for (const [source, origin] of peers) {
         if (!valid(source, origin)) {
           peers.delete(source);
@@ -47,6 +60,7 @@ export function useAppAppearance(cruxId: string | null, enabled: boolean) {
         return;
       if (event.data.op !== 'get' && event.data.op !== 'set') return;
       peers.set(event.source, event.origin);
+      lastKey = null; // New/reloaded peers and explicit requests need a reply.
       if (event.data.op === 'set') {
         void setAppearanceChoice(cruxId!, event.data.choice)
           .then(schedule)
