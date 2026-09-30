@@ -1,4 +1,4 @@
-# Native platform acceptance, including unpacked production packaging; never publishes.
+# Native platform acceptance, including distribution packages; never publishes.
 name: Portable desktop
 on:
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: electron
       - name: Package without publishing
-        run: npx electron-builder --dir --publish never
+        run: npx electron-builder --publish never
         working-directory: electron
       - name: Run packaged and companion CLI checks
         working-directory: electron
@@ -69,3 +69,4 @@ jobs:
           name: portable-${{ matrix.os }}
           path: electron/e2e/.results
           if-no-files-found: ignore
+          include-hidden-files: true

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { join } from 'node:path';
 
 /** Pure Agent Host rules (compiled to dist/mcp-server.js by `npm run build`) — no Electron needed. */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -47,7 +48,7 @@ test.describe('Agent Host request rules', () => {
     expect(a).not.toBe(b);
     expect(a.length).toBeGreaterThanOrEqual(40);
     expect(a).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(mcp.mcpConfigPath('/g/blog')).toBe('/g/blog/.crux/mcp.json');
+    expect(mcp.mcpConfigPath('/g/blog')).toBe(join('/g/blog', '.crux', 'mcp.json'));
     expect(mcp.CRUX_RESOURCES.map((r) => r.uri)).toEqual([
       'crux://files',
       'crux://growth',

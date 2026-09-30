@@ -113,7 +113,8 @@ test('replacing a registered directory with a link revokes file access and its r
     const outside = join(root, 'outside');
     mkdirSync(outside);
     writeFileSync(join(outside, 'index.html'), 'private');
-    renameSync(folder, folder + '-saved');
+    // The HTTP body may arrive before the file stream closes its Windows handle.
+    await expect(() => renameSync(folder, folder + '-saved')).toPass({ timeout: 5000 });
     symlinkSync(outside, folder, 'dir');
     expect(() => projects.readFile(folder, 'index.html')).toThrow();
     expect(() => projects.writeFile(folder, 'index.html', Buffer.from('wrong'))).toThrow();

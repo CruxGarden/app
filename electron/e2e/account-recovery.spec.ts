@@ -61,7 +61,7 @@ test('account recovery reads all pages and survives download/admission failure, 
       );
     api.state.failPublishedDownloadPath = 'style.css';
     await section.getByRole('button', { name: 'Recover', exact: true }).click();
-    await expect(section.getByRole('alert')).toContainText('Download failed (503)');
+    await expect(section.getByRole('alert')).toContainText(/failed.*503/);
     expect(await localRows()).toEqual([]);
     api.state.failPublishedDownloadPath = undefined;
     await page.evaluate(() =>

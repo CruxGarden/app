@@ -62,20 +62,23 @@ test('failed replacements and deletions preserve committed credentials, and retr
     store.set('__proto__', 'first');
     store.set('other', 'keep');
     const original = readFileSync(file);
-    chmodSync(folder, 0o500);
+    // Windows exposes a file read-only flag, not POSIX directory permissions.
+    const windows = process.platform === 'win32';
+    chmodSync(windows ? file : folder, windows ? 0o400 : 0o500);
     expect(() => store.set('__proto__', 'replacement')).toThrow('Could not save credentials');
     expect(() => store.delete('other')).toThrow('Could not save credentials');
     expect(readFileSync(file)).toEqual(original);
     expect(store.get('__proto__')).toBe('first');
-    chmodSync(folder, 0o700);
+    chmodSync(windows ? file : folder, windows ? 0o600 : 0o700);
     store.set('__proto__', 'replacement');
     store.delete('other');
     const reopened = new SecretStore(folder, cipher);
     expect(reopened.get('__proto__')).toBe('replacement');
     expect(reopened.get('other')).toBeNull();
-    expect(statSync(file).mode & 0o777).toBe(0o600);
+    if (!windows) expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(readdirSync(folder)).toEqual(['secrets.json']);
   } finally {
+    chmodSync(file, 0o600);
     chmodSync(folder, 0o700);
     rmSync(folder, { recursive: true, force: true });
   }

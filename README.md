@@ -25,7 +25,15 @@ npm run dev:app --live        # the same, against the production API — publish
 `dev:app` is `scripts/desktop.sh --dev`; the script also builds and launches the
 bundled app (`npm run desktop`, `desktop:live`, `desktop:rebuild`, `desktop:selftest`).
 
-Build a DMG without a certificate: `cd electron && npm run dist:mac:unsigned`.
+The shell helpers above are for macOS/Linux. On Windows, use two terminals:
+`npm run dev:site` and `npm --prefix electron run dev`. For a bundled build on
+any platform, use the Node version in `electron/.nvmrc`, then
+`npm --prefix electron run build:all` and `npm --prefix electron start`.
+
+Package on the target OS with `electron` scripts `dist:win`, `dist:linux`, or
+`dist:mac:unsigned` (ad-hoc Mac testing). `npm run test:packaged` in `electron/`
+checks the unpacked package in `release/` using a fresh, isolated garden.
+Native Windows/Linux CI must pass before those builds are considered verified.
 
 ## Verify
 
@@ -33,6 +41,34 @@ Build a DMG without a certificate: `cd electron && npm run dist:mac:unsigned`.
 npm run verify                # typecheck + lint + unit tests + build
 cd electron && npm run verify && npm run build:all && npm run test:e2e   # Playwright against the real app
 ```
+
+## Desktop command line
+
+In **Settings → Agents**, install the CLI launcher and follow the displayed PATH
+instructions, then enable the access you want. The companion uses Electron's
+bundled runtime, so it needs neither Docker nor a separate Node installation.
+The app must remain open; individual Crux tools also require that Crux to be open.
+
+```sh
+crux help
+crux status
+crux list
+crux open <crux-id>
+crux tools --json
+crux --folder ./my-project call read_file '{"path":"index.html"}'
+```
+
+Use `crux call NAME - --json` to read a JSON object from stdin, particularly in
+shells with different quoting rules. Tool discovery includes input schemas for
+agents. JSON replies contain `ok` and either `result` or `error`; exit codes are
+0 for success, 1 for connection/tool failure or refusal, and 2 for invalid usage.
+The app's normal approvals still apply. `--timeout` limits waiting; a timed-out
+write may still complete, so inspect before retrying. The installed launcher
+selects its app profile; `--folder`, `--profile`, or `--config` can select another
+existing Agent Host. Reinstall the launcher if you move the app.
+
+The optional Docker Nursery is a separate developer CLI; use its `crux-nursery`
+alias to avoid a PATH collision with this companion.
 
 ## What the app sends over the network
 
@@ -44,10 +80,12 @@ cd electron && npm run verify && npm run build:all && npm run test:e2e   # Playw
 - **Publishing and sync** send only what you ask to publish or back up, to crux.garden.
 - **Update checks** ask GitHub Releases for the latest version. You can turn them off in Settings →
   Desktop.
-- **Agents you connect** (Settings → Agents) talk to a per-crux MCP server on `127.0.0.1` only, off
-  by default. The token lives in the crux's `.crux/mcp.json`, never leaves your machine, and is never
-  published or versioned. A connected agent sees that one crux — not your keys or your account — and
-  everything it does is recorded in the Collaboration under its name.
+- **Agents you connect** (Settings → Agents) use authenticated loopback MCP hosts, off
+  by default. Choose access to one Crux or the whole Garden. Per-Crux connection
+  tokens live in `.crux/mcp.json`; whole-Garden connection details live under the
+  app profile. They are never published or versioned. Connected agents use the
+  same tool and approval rules as the app; enabling whole-Garden access grants
+  discovery and delegation across Cruxes. Keep connection tokens private.
 - **Nothing else.** No analytics. No crash reporting unless you opt in. Logs stay on your disk
   (`~/Library/Logs/Crux Garden`).
 

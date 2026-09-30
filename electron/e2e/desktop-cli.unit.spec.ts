@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { mkdtempSync, readFileSync, writeFileSync, unlinkSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { installDesktopCli } from '../src/desktop-cli-install';
 
 test('launcher quotes paths, preserves other commands and can be updated', () => {
@@ -46,4 +46,27 @@ test('Windows launcher disables delayed expansion and rejects expandable paths',
   const installed = installDesktopCli(options);
   expect(readFileSync(installed.path, 'utf8')).toContain('setlocal DisableDelayedExpansion');
   expect(() => installDesktopCli({ ...options, profile: 'C:\\%PATH%' })).toThrow('safely');
+});
+
+test('Windows command launcher executes paths with spaces and preserves exit codes', () => {
+  test.skip(process.platform !== 'win32', 'Requires the native Windows command processor');
+  const home = mkdtempSync(join(tmpdir(), 'crux cli install '));
+  const script = join(home, 'command test.js');
+  writeFileSync(script, 'console.log(JSON.stringify(process.argv.slice(2)))');
+  const profile = join(home, 'profile!');
+  const installed = installDesktopCli({ home, executable: process.execPath, script, profile });
+  const command = `"${installed.path}" tools --json`;
+  expect(JSON.parse(execSync(command, { encoding: 'utf8' }))).toEqual([
+    '--profile',
+    profile,
+    'tools',
+    '--json',
+  ]);
+  writeFileSync(script, 'process.exit(7)');
+  try {
+    execSync(command, { stdio: 'pipe' });
+    throw new Error('The launcher lost the failure exit code');
+  } catch (error) {
+    expect((error as { status?: number }).status).toBe(7);
+  }
 });
