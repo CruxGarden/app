@@ -33,6 +33,7 @@ const websiteSchema = {
   <StructuredData slot="head" schema={websiteSchema} />
   <section class="hero section">
     <p class="eyebrow">{SITE.description}</p>
+    {SITE.photo && <img src={/^https?:\/\//.test(SITE.photo) ? SITE.photo : withBase(SITE.photo)} alt={`Portrait of ${SITE.title}`} width="160" height="160" style="border-radius:50%;object-fit:cover;aspect-ratio:1" />}
     <h1>{SITE.title}</h1>
     {SITE.about && <p class="lead">{SITE.about}</p>}
     <div class="action-row" aria-label={t('home.primaryLinks')}>

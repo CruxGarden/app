@@ -1,3 +1,5 @@
+import FirstProjectGuide from './FirstProjectGuide';
+import type { ContentModel } from '@/templates';
 import { requiresLivePreview, settingsPathOf } from '@/lib/preview-decision';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { isSiteCrux } from '@/services/site';
@@ -161,6 +163,7 @@ function AdvancedEditor() {
 /** Clean preview owns no editor tabs: changing views preserves their buffers and selection. */
 export default function EditorPane() {
   const crux = useCruxStore((s) => s.crux);
+  const viewingHistory = useCruxStore((s) => !!s.viewingSnapshotId);
   const historicalNotebook = useCruxStore((s) => isEmbeddedApp(s.crux) && !!s.viewingSnapshotId);
   const exitSnapshot = useCruxStore((s) => s.exitSnapshotView);
   const artifacts = useCruxStore((s) => s.artifacts);
@@ -186,6 +189,9 @@ export default function EditorPane() {
   };
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="workshop-view" data-view={view}>
+      {!viewingHistory && (crux?.meta?.contentModel as ContentModel | undefined)?.guide && (
+        <FirstProjectGuide key={crux!.id} model={crux!.meta!.contentModel as ContentModel} />
+      )}
       <div className="flex items-center gap-1 px-1.5 py-1.5 border-b border-border shrink-0 flex-wrap">
         <div role="group" aria-label="Workshop view" className={segmentGroupClass()}>
           {(['clean', 'advanced'] as const).map((mode) => (

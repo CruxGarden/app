@@ -9,6 +9,8 @@ import { SettingsKey } from '@/lib/constants';
 import { PROVIDERS } from '@/ai/providers';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting } from '@/services/settings';
+import { seedWelcomeCrux } from '@/services/welcome-crux';
+import { captureGardenId } from '@/stores/gardenContext';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -32,6 +34,7 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
   const [username, setUsername] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [includeWelcome, setIncludeWelcome] = useState(() => can(Capability.Build));
   const [openSection, setOpenSection] = useState<SetupSection | null>(SetupSection.Username);
   const [aiEnabled, setAiEnabled] = useState(() => getSetting(SettingsKey.AiEnabled) === 'true');
   const [keysConfigured, setKeysConfigured] = useState(false);
@@ -166,9 +169,15 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
         /* the garden still opens; the Mood can be applied from the Mood pane */
       }
 
+      if (includeWelcome && can(Capability.Build)) {
+        const id = await seedWelcomeCrux(captureGardenId());
+        useUIStore.getState().seedCruxLayout(id, 22);
+      }
       navigate('/home', { replace: true });
-    } catch {
-      setUsernameError('Something went wrong');
+    } catch (error) {
+      setUsernameError(
+        error instanceof Error ? error.message : 'Your Garden could not be set up. Try again.',
+      );
       setSaving(false);
     }
   };
@@ -338,12 +347,27 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
         )}
       </div>
 
+      {can(Capability.Build) && (
+        <label className="flex items-start gap-2 mt-5 text-xs text-text-muted">
+          <input
+            type="checkbox"
+            checked={includeWelcome}
+            disabled={saving}
+            onChange={(event) => setIncludeWelcome(event.target.checked)}
+          />
+          <span>
+            Include a first home page walkthrough{' '}
+            <span className="block">Add your name and photo, then share. No AI required.</span>
+          </span>
+        </label>
+      )}
+
       {/* Continue */}
       <div className="mt-6">
         <Button
           onClick={handleFinish}
           loading={saving}
-          disabled={!!usernameError}
+          disabled={!!validateFormat(username.trim())}
           fullWidth
           size="md"
         >

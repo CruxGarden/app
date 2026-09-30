@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 import { Input, Select, Textarea } from '@/components/ui';
+import TemplateImageField from './TemplateImageField';
 import type { FormField, FormSchema, RepeaterFormField } from '@/templates';
 
 interface TemplateFormProps {
   schema: FormSchema;
+  disabled?: boolean;
   data: Record<string, unknown>;
   onChange: (data: Record<string, unknown>) => void;
 }
@@ -12,10 +14,12 @@ interface TemplateFormProps {
  * Renders a form schema as editable fields.
  * Supports text, textarea, color, number, select, image, and nested repeaters.
  */
-export default function TemplateForm({ schema, data, onChange }: TemplateFormProps) {
+export default function TemplateForm({ schema, data, onChange, disabled }: TemplateFormProps) {
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4">
-      <FieldList fields={schema.fields} data={data} onChange={onChange} />
+      <fieldset disabled={disabled} className="min-w-0 border-0 p-0 space-y-4">
+        <FieldList fields={schema.fields} data={data} onChange={onChange} />
+      </fieldset>
     </div>
   );
 }
@@ -86,11 +90,13 @@ function FieldRenderer({
         <label className="block">
           <span className={labelClass}>{field.label}</span>
           <Textarea
+            aria-label={field.label}
             value={String(value ?? '')}
             placeholder={field.placeholder}
             rows={3}
             onChange={(e) => onChange(e.target.value)}
-            fieldSize="sm" className={'resize-y'}
+            fieldSize="sm"
+            className={'resize-y'}
           />
         </label>
       );
@@ -111,16 +117,7 @@ function FieldRenderer({
 
     case 'image':
       return (
-        <label className="block">
-          <span className={labelClass}>{field.label}</span>
-          <Input
-            type="text"
-            value={String(value ?? '')}
-            placeholder={field.placeholder || 'Image URL'}
-            onChange={(e) => onChange(e.target.value)}
-            fieldSize="sm"
-          />
-        </label>
+        <TemplateImageField label={field.label} value={String(value ?? '')} onChange={onChange} />
       );
 
     case 'select':
@@ -281,4 +278,3 @@ function RepeaterField({
 // ── Shared styles ──
 
 const labelClass = 'block text-xs font-mono text-text-muted mb-1';
-

@@ -223,6 +223,13 @@
       "ledger": "cruxgarden:export-runtime-mode"
     },
     {
+      "key": "cruxgarden:first-project:",
+      "sources": [
+        "src/components/workspace/FirstProjectGuide.tsx"
+      ],
+      "ledger": "cruxgarden:first-project:"
+    },
+    {
       "key": "cruxgarden:fn-secrets:",
       "sources": [
         "src/lib/constants.ts"

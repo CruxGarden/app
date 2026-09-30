@@ -18,6 +18,8 @@ export const SITE = {
   ogImage: '/og.jpg',
   author: (config.name || '') as string,
   footerText: (config.footerText || '') as string,
+  /** Optional portrait, uploaded through the settings form. */
+  photo: (config.photo || '') as string,
   /** The home page's about paragraph. */
   about: (config.about || '') as string,
 } as const;
@@ -35,7 +37,9 @@ export interface SocialLink {
 
 /** Social profiles rendered as inline SVG icons in the footer.
  *  Add or remove entries here — no template edits needed. */
-export const SOCIAL_LINKS: readonly SocialLink[] = [{ label: 'RSS feed', href: '/rss.xml', icon: 'rss' }];
+export const SOCIAL_LINKS: readonly SocialLink[] = [
+  { label: 'RSS feed', href: '/rss.xml', icon: 'rss' },
+];
 
 /** Giscus — GitHub Discussions-backed comments on blog posts.
  *  See `GISCUS` below; values come from https://giscus.app. */

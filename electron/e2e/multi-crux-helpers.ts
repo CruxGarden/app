@@ -4,6 +4,7 @@ export async function enterGarden(page: Page) {
   const start = Date.now();
   await page.getByRole('button', { name: /enter/i }).click();
   await page.getByText('Plant a new garden').click();
+  await page.getByRole('checkbox', { name: /Include a first home page walkthrough/ }).uncheck();
   await page.getByRole('button', { name: 'Welcome' }).click();
   await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 60_000 });
   if (process.env.CRUX_E2E_DIAGNOSTICS)

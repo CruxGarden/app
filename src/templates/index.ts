@@ -192,6 +192,8 @@ export interface BuilderAction {
 }
 
 export interface ContentModel {
+  /** Optional first-project guidance; workspace-only, never part of the site. */
+  guide?: { title: string; introduction: string };
   collections: ContentCollection[];
   /** Site identity file (imported by the site's pages), edited as a form */
   settings?: { path: string; fields: FormField[] };
@@ -254,6 +256,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition | Tool
     'tool-playcanvas': () =>
       import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('playcanvas') })),
     'astro-homepage': () => import('./astro-homepage'),
+    'hello-world': () => import('./hello-world'),
     'astro-blog': () => import('./astro-blog'),
     'digital-garden': () => import('./digital-garden'),
     'photo-gallery': () => import('./photo-gallery'),

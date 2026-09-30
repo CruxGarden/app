@@ -84,6 +84,7 @@ const template: TemplateDefinition = {
         { key: 'name', label: 'Your Name', type: 'text', placeholder: 'Ada Lovelace' },
         { key: 'tagline', label: 'Tagline', type: 'text', placeholder: 'What you do, in one line' },
         { key: 'about', label: 'About', type: 'textarea', placeholder: 'A few lines about you' },
+        { key: 'photo', label: 'Your photo', type: 'image' },
         {
           key: 'url',
           label: 'Public address',

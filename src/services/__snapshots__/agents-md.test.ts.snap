@@ -267,7 +267,7 @@ publishDate: {today}T12:00:00Z
 - Listed in descending order by "publishDate".
 
 ### Settings file: src/config.json
-Fields: name ("Your Name"), tagline ("Tagline"), about ("About"), url ("Public address"), footerText ("Footer line")
+Fields: name ("Your Name"), tagline ("Tagline"), about ("About"), photo ("Your photo"), url ("Public address"), footerText ("Footer line")
 The user edits this file as a form — keep it valid JSON with exactly these keys.
 
 ### Builder actions

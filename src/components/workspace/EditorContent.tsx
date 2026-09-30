@@ -553,7 +553,12 @@ export default function EditorContent({
         // If JSON is malformed, show an error hint
       }
       mainContent = formSchema ? (
-        <TemplateForm schema={formSchema} data={parsedData} onChange={handleFormChange} />
+        <TemplateForm
+          schema={formSchema}
+          data={parsedData}
+          onChange={handleFormChange}
+          disabled={readOnlyTask}
+        />
       ) : null;
       break;
     }

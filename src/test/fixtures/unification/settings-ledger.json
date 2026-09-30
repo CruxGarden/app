@@ -645,6 +645,13 @@
       "target": "installation/settings",
       "preservation": "Last eight explicitly selected Explore topics. Clearable preference; no account credentials or passive activity.",
       "status": "retained"
+    },
+    {
+      "prefix": "cruxgarden:first-project:",
+      "group": "dynamic",
+      "target": "Crux local presentation",
+      "preservation": "Preserve the selected walkthrough step locally without changing project content or publication.",
+      "status": "retained"
     }
   ]
 }

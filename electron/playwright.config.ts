@@ -15,6 +15,7 @@ const gateSpecs = [
   '**/workload-limits.spec.ts',
   '**/parallel-tasks.spec.ts',
   '**/zen-vibecoding.spec.ts',
+  '**/welcome-crux.spec.ts',
   '**/renderer-reload.spec.ts',
   '**/account-recovery.spec.ts',
   '**/publication-teardown.spec.ts',
