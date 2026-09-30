@@ -265,6 +265,9 @@ def build(work, cache, jobs):
             "--disable-ffplay",
             "--disable-debug",
             "--pkg-config-flags=--static",
+            # MinGW's x265 pkg-config metadata can omit the C++ runtime.
+            # FFmpeg links with the C driver; place this after codec archives.
+            *(["--extra-libs=-lstdc++"] if TARGET_OS == "win32" else []),
             "--enable-zlib",
             *[
                 f"--enable-lib{name}"
