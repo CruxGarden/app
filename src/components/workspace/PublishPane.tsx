@@ -1,3 +1,4 @@
+import GuideLink from '@/components/explore/GuideLink';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { buttonClass, linkClass } from '@/components/ui/button-class';
@@ -504,6 +505,7 @@ export default function PublishPane() {
           )}
 
           {/* Visibility */}
+          <GuideLink page="guides/sharing/">What happens when I share?</GuideLink>
           <PaneSection label="Visibility">
             <div className="flex flex-col gap-0.5">
               <Toggle

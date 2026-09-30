@@ -11,6 +11,15 @@ test('public docs deep links, search and journal work with local assets', async 
   await expect(
     page.getByRole('heading', { name: 'Your first home page', exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Explore creations', exact: true })).toHaveAttribute(
+    'href',
+    '/explore',
+  );
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Crux Garden links' })
+      .getByRole('link', { name: 'Get started', exact: true }),
+  ).toHaveAttribute('href', '/docs/start/get-started/');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search', { exact: true }).fill('Growth');
   await page

@@ -1,4 +1,5 @@
 ---
+import PublicLinks from './PublicLinks.astro';
 import '../styles/garden.css';
 import settings from '../config.json';
 const { title, description } = Astro.props;
@@ -10,7 +11,7 @@ const docs = process.env.CRUX_DOCS_GUIDE_BASE || base;
   <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content={description} /><title>{title} · {settings.title}</title><link rel="icon" href={`${base}/mark.svg`} /></head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
-    <header class="journal-header"><a class="garden-brand" href={`${base}/blog/`}><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13"/><path d="M16 9v14M9 16h14"/></svg><span>{settings.title}</span></a><nav aria-label="Main"><a href={`${base}/blog/`} aria-current="page">Journal</a><a href={`${docs}/`}>Field guide ↗</a></nav></header>
+    <header class="journal-header"><a class="garden-brand" href={`${base}/blog/`}><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13"/><path d="M16 9v14M9 16h14"/></svg><span>{settings.title}</span></a><nav aria-label="Main"><a href={`${base}/blog/`} aria-current="page">Journal</a><a href={`${docs}/`}>Field guide ↗</a></nav><PublicLinks /></header>
     <main id="main"><slot /></main>
     <footer class="journal-footer"><span>{settings.footer}</span><a href={`${docs}/`}>Explore the guide →</a></footer>
   </body>

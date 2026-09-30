@@ -1,3 +1,4 @@
+import { openFieldGuide } from '@/stores/fieldGuide';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -208,6 +209,14 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
       });
 
     // ── Actions ──
+    out.push({
+      id: 'field-guide',
+      section: 'Actions',
+      label: 'Help and field guide',
+      keywords: 'help documentation docs tutorial learn onboarding getting started',
+      icon: <HomeIcon size={14} />,
+      run: () => openFieldGuide(),
+    });
     out.push({
       id: 'new-crux',
       section: 'Actions',

@@ -1,3 +1,4 @@
+import FieldGuide from '@/components/explore/FieldGuide';
 import CommandPalette from './CommandPalette';
 import { useCommandPalette } from '@/stores/commandPalette';
 import { gardenPath, useGardenContext } from '@/stores/gardenContext';
@@ -222,6 +223,7 @@ export default function Shell() {
       <div className="flex flex-col h-screen overflow-hidden">
         <WorkspaceLifecycle />
         {servicesReady && <CommandPalette />}
+        {servicesReady && <FieldGuide />}
         {servicesReady && <TendingNotifications />}
         <MoodTextureLayers />
         {/* Top bar */}

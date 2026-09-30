@@ -1,3 +1,4 @@
+import GuideLink from '@/components/explore/GuideLink';
 import TaskProgress from '@/components/chat/TaskProgress';
 import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
@@ -259,6 +260,7 @@ export default function TaskBar() {
           >
             New task
           </Button>
+          <GuideLink page="guides/tasks/">Learn Tasks · try the game</GuideLink>
           {current?.phase === 'ready' && (
             <>
               <Button

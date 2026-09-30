@@ -1,3 +1,4 @@
+import { openFieldGuide } from '@/stores/fieldGuide';
 import { useGardenContext } from '@/stores/gardenContext';
 import GardenLocation from './GardenLocation';
 import NavigationHistory from './NavigationHistory';
@@ -176,6 +177,13 @@ export default function TopBar() {
       {/* Right: what is yours */}
       <div className="flex flex-1 basis-60 min-w-0 items-center justify-end">
         <div className="flex items-center gap-3" style={noDrag}>
+          <button
+            onClick={() => openFieldGuide()}
+            aria-label="Help and field guide"
+            className="h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover"
+          >
+            Help
+          </button>
           <AlertsBell />
           <MoodBar />
           {aiEnabled && (

@@ -240,6 +240,17 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 51.4,
+    id: 'zen-vibecoding',
+    label: 'Zen of Vibecoding',
+    description: 'Learn Tasks and agents through a small playable garden',
+    icon: <HomeIcon />,
+    thumb: <HomeThumb />,
+    kind: 'webapp',
+    defaultTitle: 'Crux Garden: The Zen of Vibecoding',
+    desktopOnly: true,
+  },
+  {
     order: 51.5,
     id: 'documentation',
     label: 'Documentation',

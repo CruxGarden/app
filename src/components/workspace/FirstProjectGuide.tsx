@@ -1,3 +1,4 @@
+import GuideLink from '@/components/explore/GuideLink';
 import { useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useWorkspaceUIStore } from '@/stores/uiStore';
@@ -81,6 +82,7 @@ export default function FirstProjectGuide({ model }: { model: ContentModel }) {
         <button className={buttonClass('secondary', 'sm')} onClick={run}>
           {current.action}
         </button>
+        <GuideLink page="start/first-home/">Step-by-step help</GuideLink>
         {!!crux.meta?.publishedAt && (
           <p role="status" className="text-sm text-accent">
             Your page has been shared. Open Share to copy its link or publish your next changes.

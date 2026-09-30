@@ -11,7 +11,7 @@ function build(base, extra) {
   const result = runNpm(['run', 'build'], {
     cwd: project,
     stdio: 'inherit',
-    env: { ...process.env, CRUX_DOCS_BASE: base, ...extra },
+    env: { ...process.env, CRUX_DOCS_BASE: base, CRUX_DOCS_APP_LINKS: '1', ...extra },
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

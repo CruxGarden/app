@@ -2,8 +2,14 @@ import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
-import { showPane } from './panel-helpers';
-import { storedCrux, reenterWorkspace } from './multi-crux-helpers';
+import { showPane, togglePanel, panelPressed } from './panel-helpers';
+import {
+  storedCrux,
+  reenterWorkspace,
+  enterGarden,
+  createCrux,
+  goHome,
+} from './multi-crux-helpers';
 
 test('offline field guide has working search and creates an editable ordinary Crux without AI', async () => {
   test.setTimeout(300_000);
@@ -88,5 +94,44 @@ test('offline field guide has working search and creates an editable ordinary Cr
     ).toBeVisible();
   } finally {
     await again.app.close();
+  }
+});
+
+test('help returns to the current work and the tutorial starts as a fresh Crux', async () => {
+  const { app, page } = await launchApp({ ai: false });
+  try {
+    await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, (route) => route.abort());
+    await enterGarden(page);
+    const id = await createCrux(page, 'Keep my place');
+    await page.getByRole('button', { name: 'Search or run a command', exact: true }).click();
+    await page.getByRole('combobox').fill('help');
+    await page.getByRole('combobox').press('Enter');
+    const guide = page.frameLocator('iframe[title="Crux Garden documentation"]');
+    await expect(
+      guide.getByRole('heading', { name: 'A little space for your ideas.', exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole('dialog', { name: 'Field guide', exact: true })
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
+    await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', id);
+    if ((await panelPressed(page, 'Toggle tasks')) !== 'true')
+      await togglePanel(page, 'Toggle tasks');
+    await page.getByRole('button', { name: 'Learn Tasks · try the game', exact: true }).click();
+    await expect(guide.getByRole('heading', { name: 'Try the game', exact: true })).toBeVisible();
+    await page
+      .getByRole('dialog', { name: 'Field guide', exact: true })
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
+    await goHome(page);
+    await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
+    await page.getByRole('button', { name: /^Zen of Vibecoding/ }).click();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    const game = page.frameLocator('iframe[data-crux-id]').first();
+    await expect(game.getByRole('heading', { name: 'Plant one small idea' })).toBeVisible();
+    await game.getByRole('button', { name: 'Check my garden', exact: true }).click();
+    await expect(game.getByRole('status').first()).toContainText('garden/seed.json');
+  } finally {
+    await app.close();
   }
 });

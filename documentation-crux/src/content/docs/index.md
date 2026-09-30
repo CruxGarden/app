@@ -9,6 +9,8 @@ You don’t need a finished idea. Or an AI key. Start with something small and l
 
 Crux Garden is a local-first creative workspace. A **Crux** holds your creation, its files, and its history. A **Garden** brings your Cruxes together.
 
+New to the app? [Get started: installation and first launch](./start/get-started/).
+
 ## Your first five minutes
 
 1. **Make a home page.** Start with Hello, world, add your name and a photo, and see a real site take shape.
