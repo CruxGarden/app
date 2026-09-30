@@ -6,6 +6,8 @@ on:
   push:
     branches: [main, 'codex/**']
     paths:
+      - '.gitattributes'
+      - 'licenses/**'
       - '.github/workflows/portable.yml'
       - '.github/actions/native-media/**'
       - 'electron/**'

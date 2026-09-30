@@ -1,0 +1,3 @@
+# Upstream license receipts are hashed as exact bytes. Git must not rewrite
+# their line endings on Windows checkouts before renderer notice verification.
+licenses/** -text
