@@ -101,7 +101,13 @@ export function getMockLanguageModel(): LanguageModel {
         // The tutorial journey exercises the real turn/tool pipeline with a
         // deterministic provider. Pause so it can verify background feedback.
         if (lastUserText(prompt).includes('[zen:seed]')) {
-          if (!toolResultsThisTurn(prompt).length) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('report_progress', {
+              percent: 25,
+              message: 'Preparing your seed',
+            });
+          if (rounds.length === 1) {
             await waitForMockHandoff(abortSignal);
             return toolCallStream('write_file', {
               path: 'garden/seed.json',

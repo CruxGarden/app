@@ -39,7 +39,7 @@ is pre-created; mission outputs must be made by the player.
 After installing the app/Electron dependencies and building the app, run
 `node --test examples/zen-vibecoding/*.test.mjs` (the browser test also needs the
 Playwright Chromium binary). Run the desktop spec from `electron/` with
-`npx playwright test e2e/zen-vibecoding.spec.ts --project=desktop`. It creates a
+`npx playwright test e2e/zen-vibecoding.spec.ts --project=gate`. It creates a
 portable archive under the OS temporary directory’s `crux-zen-delivery/`; set
 `CRUX_ZEN_DELIVERY` to choose a durable output directory. Only set
 `CRUX_ZEN_PROFILE` when deliberately installing into a **new isolated profile**.

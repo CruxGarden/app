@@ -1,3 +1,4 @@
+import { progressInput } from '@/services/task-progress';
 import { searchFileLines, SEARCH_TOTAL_CHAR_LIMIT } from './search-lines';
 import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from './garden-access';
 import { addGuestbook, describeAddGuestbook } from '@/services/guestbook';
@@ -54,6 +55,30 @@ export interface ToolDefinition {
 }
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'report_progress',
+    description:
+      'Update the progress bar for your current turn or worker. Report your best honest estimate at meaningful milestones and when the scope changes; estimates may go backward. Use null when you cannot estimate. This does not finish the turn, pass verification, or merge a Task.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        percent: {
+          type: ['number', 'null'],
+          minimum: 0,
+          maximum: 100,
+          description: 'Estimated percentage of the requested work complete, or null if unknown.',
+        },
+        message: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 160,
+          description: 'Short current activity or explanation of the revised estimate.',
+        },
+      },
+      required: ['percent', 'message'],
+      additionalProperties: false,
+    },
+  },
   {
     name: 'write_file',
     description:
@@ -723,6 +748,7 @@ export function defaultToolDefinitions(cruxId?: string, gardenAccess = true): To
  * delegate (no fan-out from a fan-out).
  */
 const SUBAGENT_TOOL_NAMES = [
+  'report_progress',
   'write_file',
   'edit_file',
   'read_file',
@@ -886,6 +912,9 @@ export function createToolExecutor(
             break;
           case 'delete_file':
             result = await toolDeleteFile(input, cruxId, artifactService, onDeleteRequest);
+            break;
+          case 'report_progress':
+            result = JSON.stringify(progressInput(input));
             break;
           case 'list_files':
             result = await toolListFiles(cruxId, artifactService);

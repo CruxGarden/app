@@ -1,5 +1,5 @@
 const boundaries =
-  '\nWork only on the named output files in this Task and any automatic provenance metadata their tools create. Read existing files first. Do not edit the game, mark a mission complete, fabricate another agent’s work, publish, install tools or use paid services beyond this conversation. If a capability is unavailable, report it clearly. End with the exact paths changed.';
+  '\nWork only on the named output files in this Task and any automatic provenance metadata their tools create. Read existing files first. Do not edit the game, mark a mission complete, fabricate another agent’s work, publish, install tools or use paid services beyond this conversation. If a capability is unavailable, report it clearly. Use report_progress at meaningful milestones with your best estimate and current activity; use null when uncertain. End with the exact paths changed.';
 const json = (path, fields, brief) =>
   `${brief}\nWrite ${path} as valid JSON with these fields: ${fields}.${boundaries}`;
 export const missions = [
@@ -37,7 +37,7 @@ export const missions = [
       'Give two Tasks different jobs. Start the second while the first is still working, if you can.',
     steps: [
       'From Main, create “Shape the pond”. Send its prompt. Switch back to Main and create “Grow the tree”; send the second prompt.',
-      'Switch between the two Tasks while they work. Look for “Working”, completion feedback and the conversation attached to each Task. If a turn finishes too quickly, that is useful feedback too.',
+      'Switch between the two Tasks while they work. Look for “Working”, the agent’s progress bar and short status, completion feedback and the conversation attached to each Task. A percentage is an estimate; it may change when the agent learns more. If a turn finishes too quickly, that is useful feedback too.',
       'Review and merge each Task separately. Both add different files, so neither needs to overwrite the other’s work. Check the garden from Main.',
     ],
     tip: 'Parallel work is easiest when ownership is explicit: one agent owns the pond file; the other owns the tree file. No shared file to fight over.',

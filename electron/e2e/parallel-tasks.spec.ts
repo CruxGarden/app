@@ -210,7 +210,7 @@ test('Claude Code task turns use separate sessions and directories and route hid
     };
     const input = page.getByPlaceholder('Send a message...');
     await choose('Alpha');
-    await input.fill('run Alpha command');
+    await input.fill('[progress] run Alpha command');
     await input.press('Enter');
     await expect(page.getByTestId('agent-approvals')).toBeVisible();
     await choose('Beta');
@@ -220,6 +220,12 @@ test('Claude Code task turns use separate sessions and directories and route hid
       timeout: 30000,
     });
     await expect(page.getByTestId('agent-approvals')).toHaveCount(0);
+    await expect(
+      page
+        .getByTestId('task-bar')
+        .getByRole('link', { name: /^Alpha/ })
+        .getByRole('progressbar', { name: 'Alpha progress' }),
+    ).toHaveAttribute('value', '50');
     await choose('Alpha');
     await page.getByTestId('agent-approvals').getByRole('button', { name: 'Not now' }).click();
     await expect(page.getByText(/Skipped the command, as you asked/)).toBeVisible();

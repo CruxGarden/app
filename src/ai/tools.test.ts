@@ -15,8 +15,8 @@ import { initServices } from '@/services';
 import { GROWTH_TOOL_DEFINITIONS } from './growth-tools';
 
 describe('TOOL_DEFINITIONS', () => {
-  it('defines 8 universal tools', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(8);
+  it('defines 9 universal tools', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(9);
   });
 
   it('includes all expected tool names', () => {
@@ -205,6 +205,7 @@ describe('write scope (B5)', () => {
   it('delegate is offered to the workspace but refused without a runner, and validated first', async () => {
     expect(defaultToolDefinitions().map((t) => t.name)).toContain('delegate');
     expect(subagentToolDefinitions().map((t) => t.name)).toEqual([
+      'report_progress',
       'write_file',
       'edit_file',
       'read_file',
@@ -247,6 +248,14 @@ describe('createToolExecutor', () => {
     const services = (await import('@/services')).getServices();
     await services.crux.create({ title: 'Test' });
     execute = createToolExecutor(cruxId);
+  });
+
+  it('admits bounded progress reports without mutating files and refuses invalid estimates', async () => {
+    expect(await execute('report_progress', { percent: 35, message: 'Checking the result' })).toBe(
+      JSON.stringify({ percent: 35, message: 'Checking the result' }),
+    );
+    expect(didMutate('report_progress', 'Recorded')).toBe(false);
+    expect(await execute('report_progress', { percent: 101, message: 'Done' })).toMatch(/^Error/);
   });
 
   describe('write_file', () => {

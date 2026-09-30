@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 
-exports.scriptedQuery = async function* (opts, signal, askPermission) {
+exports.scriptedQuery = async function* (opts, signal, askPermission, callTool) {
   const sessionId = opts.sessionId || randomUUID();
   const resumed = !!opts.sessionId;
   const say = (text) => ({
@@ -24,6 +24,37 @@ exports.scriptedQuery = async function* (opts, signal, askPermission) {
   yield { type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_start' } };
   yield say(resumed ? 'Resuming our session. ' : 'Starting fresh. ');
   yield say('Planting a note in the folder.');
+  if (opts.prompt.includes('[progress]')) {
+    await callTool('garden_search_tools', { query: 'report_progress' });
+    const input = {
+      name: 'report_progress',
+      input: { percent: 50, message: 'Preparing the command' },
+    };
+    yield {
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', id: 'progress-1', name: 'mcp__crux_garden__garden_call_tool', input },
+        ],
+      },
+    };
+    const result = await callTool('garden_call_tool', input);
+    yield {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'progress-1',
+            content: result.content,
+            is_error: result.isError,
+          },
+        ],
+      },
+    };
+  }
   const file = path.join(opts.cwd, 'agent-note.md');
   const content = `# Agent note\n\n${opts.prompt}\n`;
   yield {

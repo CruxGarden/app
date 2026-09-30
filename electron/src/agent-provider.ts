@@ -369,6 +369,8 @@ export class AgentProvider {
       opts,
       run.controller.signal,
       (name: string, input: Record<string, unknown>) => this.askPermission(opts, name, input),
+      (name: string, input: Record<string, unknown>) =>
+        this.deps.callTool(opts, name, input, run.controller.signal),
     );
   }
 }

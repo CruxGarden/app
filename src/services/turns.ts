@@ -1,3 +1,4 @@
+import { PROGRESS_PROMPT } from './task-progress';
 import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { captureEditCheckpoint } from './edit-history';
 import { createTaskSlots } from './task-slots';
@@ -504,9 +505,15 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
           crux?.meta?.settings?.agentSessions?.[provider] ??
           (provider === 'claude-code' ? crux?.meta?.settings?.agentSessionId : null) ??
           null,
-        appendSystemPrompt: persona.systemPrompt
-          ? `You are working inside Crux Garden as "${persona.name}". ${persona.systemPrompt}`
-          : undefined,
+        appendSystemPrompt: [
+          persona.systemPrompt
+            ? `You are working inside Crux Garden as "${persona.name}". ${persona.systemPrompt}`
+            : '',
+          PROGRESS_PROMPT,
+          'Discover report_progress with garden_search_tools, then use garden_call_tool to report progress for this turn.',
+        ]
+          .filter(Boolean)
+          .join('\n'),
         signal: controller.signal,
         onSession: (sessionId) => {
           if (!stillHere()) return;

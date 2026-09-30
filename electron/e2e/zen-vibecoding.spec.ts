@@ -81,6 +81,11 @@ test.describe.serial('Zen of Vibecoding', () => {
       await page.getByTestId('task-bar').getByRole('link', { name: 'Main', exact: true }).click();
       const seedTask = page.getByTestId('task-bar').getByRole('link', { name: /^Plant a seed/ });
       await expect(seedTask).toContainText('Working');
+      await expect(
+        seedTask.getByRole('progressbar', { name: 'Plant a seed progress' }),
+      ).toHaveAttribute('value', '25');
+      await expect(seedTask).toContainText('Preparing your seed');
+      await page.screenshot({ path: join(delivery, 'zen-task-progress.png') });
       await page.evaluate(() => window.dispatchEvent(new Event('crux:mock-continue')));
       await expect.poll(() => storedFingerprint(page, task, 'garden/seed.json')).toBeTruthy();
       await expect(seedTask).not.toContainText('Working');

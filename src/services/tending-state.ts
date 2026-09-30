@@ -1,3 +1,4 @@
+import { progressDisplay, type ProgressDisplay } from './task-progress';
 import { getSetting, setSetting } from './settings';
 import type { TurnJob } from './turn-jobs';
 
@@ -27,6 +28,7 @@ export interface TendingState {
   runId: string | null;
   model?: string;
   activity: Activity;
+  progress?: ProgressDisplay;
   attention: Attention[];
   verification: {
     status: 'not-checked' | 'checking' | 'passed' | 'failed';
@@ -147,6 +149,10 @@ export function tendingState(input: TendingInput): TendingState {
     runId: job?.id ?? null,
     model: job?.model,
     activity,
+    progress: progressDisplay(
+      interrupted ? 'interrupted' : activity === 'waiting' ? 'paused' : job?.status,
+      job?.progress,
+    ),
     attention,
     verification,
     evidence,

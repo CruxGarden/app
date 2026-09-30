@@ -1,3 +1,4 @@
+import { progressFromCall, type ReportedProgress } from './task-progress';
 import type { Artifact, ToolCall } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
 import { didMutate } from '@/ai/tools';
@@ -33,6 +34,7 @@ export type SubagentStatus = 'pending' | 'running' | 'done' | 'failed' | 'interr
 export interface SubagentRun {
   title: string;
   status: SubagentStatus;
+  progress?: ReportedProgress;
   scope: WriteScope;
   /** The worker workspace: a native Working Copy, or a parked Web snapshot. */
   branchId?: string;
@@ -429,7 +431,12 @@ export async function runSubagents(
             break;
           case 'tool_result': {
             const tc = toolCalls.find((t) => t.id === event.id);
-            if (tc) tc.result = event.result;
+            if (tc) {
+              tc.result = event.result;
+              tc.error = event.error;
+            }
+            const progress = progressFromCall(tc);
+            if (progress) await publish(index, { progress });
             if (didMutate(event.name, event.result)) {
               const p =
                 event.name === 'rename_file' ? undefined : (tc?.input.path as string | undefined);

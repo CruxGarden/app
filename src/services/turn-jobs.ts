@@ -1,3 +1,4 @@
+import { PROGRESS_PROMPT, progressFromCall, type ReportedProgress } from './task-progress';
 import { reportFlowActivity } from '@/lib/moods/flow';
 import type { ChatMessage, ToolCall, TurnCheckSummary, TurnJobSummary } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
@@ -84,6 +85,7 @@ export interface TurnJob {
   model?: string;
   cruxId: string;
   status: TurnJobStatus;
+  progress?: ReportedProgress;
   plan: TurnPlan;
   /** Index into plan.steps of the step in progress (or last touched). */
   currentStep: number;
@@ -111,7 +113,8 @@ export type { TurnJobSummary };
  * before acting. The fence is the whole convention — no tool, no schema.
  */
 export const PLAN_PROMPT_LINE =
-  'For any task that takes more than one file change, begin your reply with a short plan in a ```plan fenced block — one numbered line per step, no prose inside the fence — then carry it out. Skip the plan for one-line answers and single edits.';
+  'For any task that takes more than one file change, begin your reply with a short plan in a ```plan fenced block — one numbered line per step, no prose inside the fence — then carry it out. Skip the plan for one-line answers and single edits. ' +
+  PROGRESS_PROMPT;
 
 export const MAX_PLAN_STEPS = 12;
 const PROMPT_PREVIEW_LENGTH = 72;
@@ -384,7 +387,6 @@ export function continueJobForFix(job: TurnJob, problems: string[]): TurnJob {
   };
 }
 
-
 /** The Growth dimension meta entry a verified snapshot carries. */
 export interface SnapshotVerification {
   status: 'passed' | 'problems';
@@ -534,6 +536,8 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
             tc.result = event.result;
             if (event.error !== undefined) tc.error = event.error;
           }
+          const progress = progressFromCall(tc);
+          if (progress) await publish({ ...job, progress });
           deps.onToolCalls?.(toolCalls.map((t) => ({ ...t })));
           deps.onToolDone?.();
           if (didMutate(event.name, event.result)) {

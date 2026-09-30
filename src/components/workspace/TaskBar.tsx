@@ -1,3 +1,4 @@
+import TaskProgress from '@/components/chat/TaskProgress';
 import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import TaskDetails from './TaskDetails';
@@ -199,6 +200,7 @@ export default function TaskBar() {
         {/* A pane like any other: Main and the tasks as a list, the actions below. */}
         <nav className="task-pane-list flex flex-col gap-0.5" aria-label="Crux tasks">
           <Link
+            aria-label="Main"
             aria-current={!identity ? 'page' : undefined}
             className={rowClass(
               !identity,
@@ -210,7 +212,13 @@ export default function TaskBar() {
             to={url()}
             {...MOOD_LINK}
           >
-            <span className="truncate">Main</span>
+            <div className="min-w-0 flex-1">
+              <span className="truncate">Main</span>
+              <TaskProgress
+                progress={entries.find((e) => e.id === mainId)?.tending?.progress}
+                label="Main progress"
+              />
+            </div>
           </Link>
           {tasks.map((t) => (
             <Link
@@ -226,7 +234,13 @@ export default function TaskBar() {
                 ),
               )}
             >
-              <span className="truncate">{t.title}</span>
+              <div className="min-w-0 flex-1">
+                <span className="truncate">{t.title}</span>
+                <TaskProgress
+                  progress={entries.find((e) => e.id === t.id)?.tending?.progress}
+                  label={`${t.title} progress`}
+                />
+              </div>
               <span className="text-xxs shrink-0">
                 {t.phase === 'ready'
                   ? (entries.find((e) => e.id === t.id)?.status ?? 'Ready')

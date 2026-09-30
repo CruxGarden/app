@@ -1,3 +1,4 @@
+import TaskProgress from '@/components/chat/TaskProgress';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import {
   useTendingNotifications,
@@ -227,6 +228,7 @@ export default function Tending() {
                       {row.state.lifetimeId ? 'Open workspace' : 'Closed workspace'}
                       {['merged', 'archived'].includes(row.phase) ? ` · ${row.phase}` : ''}
                     </p>
+                    <TaskProgress progress={row.state.progress} label={`${row.title} progress`} />
                   </div>
                   <div className="flex items-center gap-2">
                     {' '}

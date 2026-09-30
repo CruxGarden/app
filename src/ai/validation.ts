@@ -1,3 +1,4 @@
+import { progressInput } from '@/services/task-progress';
 import { validateGardenAccess } from './garden-access';
 import { validateWorkspaceTool } from './workspace-tools';
 import { hasSkill, skillNames } from './skills';
@@ -18,6 +19,14 @@ export function validateToolInput(
   input: Record<string, unknown>,
 ): ValidationResult {
   switch (toolName) {
+    case 'report_progress':
+      return progressInput(input)
+        ? { valid: true }
+        : {
+            valid: false,
+            error:
+              'percent must be null or a finite number from 0 to 100; message must be 1–160 characters.',
+          };
     case 'list_garden_tools':
     case 'call_garden_tool':
       return validateGardenAccess(toolName, input);

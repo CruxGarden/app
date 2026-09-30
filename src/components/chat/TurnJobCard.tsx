@@ -1,3 +1,5 @@
+import TaskProgress from './TaskProgress';
+import { progressDisplay } from '@/services/task-progress';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { copyIdentity, TASKS_CHANGED } from '@/services/working-copies';
@@ -162,7 +164,13 @@ function SubagentRows({ runs, now }: { runs: SubagentRun[]; now: number }) {
           title={run.error ?? run.reply ?? undefined}
         >
           <StepMark status={subagentMark(run.status)} />
-          <span className="truncate flex-1">{run.title}</span>
+          <div className="min-w-0 flex-1">
+            <span className="truncate">{run.title}</span>
+            <TaskProgress
+              progress={progressDisplay(run.status, run.progress)}
+              label={`${run.title} progress`}
+            />
+          </div>
           <span className="shrink-0 font-mono text-2xs text-text-muted">
             {subagentStatusWord(run.status)} · {run.files.length} file
             {run.files.length === 1 ? '' : 's'} ·{' '}
@@ -350,7 +358,8 @@ export default function TurnJobCard() {
   const reveal =
     !!job &&
     ((job.status !== 'done' &&
-      (job.plan.explicit ||
+      (job.progress ||
+        job.plan.explicit ||
         job.status === 'interrupted' ||
         job.status === 'failed' ||
         job.status === 'checking' ||
@@ -424,6 +433,7 @@ export default function TurnJobCard() {
             </div>
           </div>
 
+          <TaskProgress progress={progressDisplay(job.status, job.progress)} />
           {job.plan.explicit && (
             <ol className="space-y-0.5" aria-label="Plan">
               {job.plan.steps.map((step, i) => (

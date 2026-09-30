@@ -12,6 +12,8 @@ const gateSpecs = [
   '**/composer-paste.spec.ts',
   '**/workload-limits.spec.ts',
   '**/parallel-tasks.spec.ts',
+  '**/zen-vibecoding.spec.ts',
+  '**/renderer-reload.spec.ts',
   '**/account-recovery.spec.ts',
   '**/publication-teardown.spec.ts',
   '**/workspace-permissions.spec.ts',
