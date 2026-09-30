@@ -7,6 +7,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import cruxTools from './vite-plugin-crux-tools';
 import cruxAssets from './vite-plugin-crux-assets';
 import notices from './vite-plugin-notices';
+import documentation from './vite-plugin-documentation';
 const thirdPartyNotices = notices(__dirname);
 // Runtime packaging checks follow the same manifest selection as prebuild and
 // verify-tools. Host/service tests still cover the entire catalog. Never select
@@ -21,7 +22,14 @@ const excludedToolPackages = readdirSync(__dirname)
   .map((tool) => `src/templates/${tool.id}.test.ts`);
 
 export default defineConfig({
-  plugins: [cruxAssets(), react(), tailwindcss(), cruxTools(__dirname), thirdPartyNotices.main],
+  plugins: [
+    documentation(),
+    cruxAssets(),
+    react(),
+    tailwindcss(),
+    cruxTools(__dirname),
+    thirdPartyNotices.main,
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -60,7 +68,7 @@ export default defineConfig({
     // None of them are imported as TypeScript, so nothing needs to compile.
     // Add a directory here if a new template's tsconfig `extends` something.
     exclude: [
-      /(?:blog|digital-garden|homepage|recipes|storefront|mermaid|business|resume|photo-gallery)-crux\/.*\.tsx?$/,
+      /(?:documentation|blog|digital-garden|homepage|recipes|storefront|mermaid|business|resume|photo-gallery)-crux\/.*\.tsx?$/,
     ],
   },
   build: {
@@ -83,7 +91,7 @@ export default defineConfig({
     css: {
       include: [
         /5ws-site\/src\/styles\//,
-        /(kan|web-synth|hextris|pptist|wick-editor|bentopdf|eventcalendar|formjs|pdfme|maps|p5|glsl|glyphr|fmg|abc|signal|jscad|timeline|digital-garden|blog|homepage|recipes|storefront|recorder|opencut|playcanvas-editor|gdevelop|blockbench|svgedit|twine|ketcher|gephi|jupyterlite|rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//,
+        /(documentation|kan|web-synth|hextris|pptist|wick-editor|bentopdf|eventcalendar|formjs|pdfme|maps|p5|glsl|glyphr|fmg|abc|signal|jscad|timeline|digital-garden|blog|homepage|recipes|storefront|recorder|opencut|playcanvas-editor|gdevelop|blockbench|svgedit|twine|ketcher|gephi|jupyterlite|rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//,
       ],
     },
   },

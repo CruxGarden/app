@@ -26,7 +26,7 @@ export default defineConfig({
     // templates. Build first: development dependency discovery can reload a
     // page mid-journey, and these checks should exercise what visitors receive.
     command:
-      'CRUX_BUNDLE_TOOLS=none VITE_PUBLIC_SITE=1 VITE_API_URL=http://127.0.0.1:8124 VITE_PREVIEW_ORIGIN= VITE_PUBLISH_ORIGIN_TEMPLATE= VITE_PUBLISHED_CONTENT_URL=http://127.0.0.1:8124/published npx vite build --outDir electron/.web-build && npx vite preview --outDir electron/.web-build --host 127.0.0.1 --port 8123 --strictPort',
+      'npm run build:documentation && CRUX_BUNDLE_TOOLS=none VITE_PUBLIC_SITE=1 VITE_API_URL=http://127.0.0.1:8124 VITE_PREVIEW_ORIGIN= VITE_PUBLISH_ORIGIN_TEMPLATE= VITE_PUBLISHED_CONTENT_URL=http://127.0.0.1:8124/published npx vite build --outDir electron/.web-build && npx vite preview --outDir electron/.web-build --host 127.0.0.1 --port 8123 --strictPort',
     cwd: '..',
     url: 'http://127.0.0.1:8123',
     reuseExistingServer: false,

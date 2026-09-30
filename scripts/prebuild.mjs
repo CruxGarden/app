@@ -46,6 +46,7 @@ function run(script) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  run('build:documentation');
   // The Astro editors (Notes, Moqira) are always in the app.
   if (mode !== 'none') run('prepare:astro-editors');
   const tools = mode === 'none' ? [] : bundledTools();

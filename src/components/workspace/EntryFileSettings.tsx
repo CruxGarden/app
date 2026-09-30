@@ -1,3 +1,4 @@
+import type { ContentModel } from '@/templates';
 import { useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { copyIdentity } from '@/services/working-copies';
@@ -13,7 +14,10 @@ export default function EntryFileSettings() {
   const [saving, setSaving] = useState(false);
   if (!crux) return null;
   const copy = copyIdentity(crux);
-  const candidates = entryCandidates(artifacts);
+  const candidates = entryCandidates(
+    artifacts,
+    (crux.meta?.contentModel as ContentModel | undefined)?.collections,
+  );
   const entry = workshopEntry(crux, artifacts);
   const selected = crux.meta?.settings?.entryFile ?? '';
   return (

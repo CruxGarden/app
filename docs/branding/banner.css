@@ -1,0 +1,52 @@
+@font-face {
+  font-family: 'Cormorant Garamond';
+  src: url('/fonts/CormorantGaramond-Latin.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+.teaser-panel {
+  width: 940px;
+  height: 306px;
+  padding: 24px;
+  gap: 0;
+}
+.teaser-title {
+  font-size: 106px;
+  line-height: 1.1;
+  margin-top: 6px;
+}
+.teaser-line {
+  font-size: 22px;
+  letter-spacing: 0.42em;
+  color: #c2d1cd;
+  margin-top: -4px;
+}
+.repo-label {
+  font-family: 'Outfit', sans-serif;
+  color: #9ff3d1;
+  font-size: 27px;
+  font-weight: 400;
+  letter-spacing: 0.13em;
+  text-indent: 0.13em;
+  padding: 4px 30px 8px;
+  border: 1px solid #9ff3d14a;
+  border-radius: 100px;
+  margin-top: 17px;
+  background: #071b163a;
+}
+html[data-repo='api'] .repo-label {
+  color: #b0d6ff;
+  border-color: #74adf34a;
+  background: #0c1a353a;
+}
+html[data-repo='cli'] .repo-label {
+  color: #ffc0ba;
+  border-color: #f391884a;
+  background: #3211173a;
+}

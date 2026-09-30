@@ -21,6 +21,13 @@ const component = (name: string, repo: string, relationship: string): ToolInfo =
 });
 /** The app's own entries; every Crux Tool's provenance comes from its manifest (ADR 0050). */
 export const TOOL_INFO: Record<string, ToolInfo> = {
+  documentation: {
+    name: 'Starlight',
+    upstream: 'https://github.com/withastro/starlight',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'Astro Starlight documentation with local search, Markdown pages and a matching journal. Crux Garden supplies the content, typography and brand styling; Starlight supplies the documentation interface.',
+  },
   notes: native('Tigrana', 'downcastsystems/tigrana'),
   moqira: native('Moqira', 'downcastsystems/moqira'),
   'digital-garden': {

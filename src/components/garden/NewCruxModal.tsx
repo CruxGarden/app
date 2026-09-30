@@ -240,6 +240,17 @@ const OWN_TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 51.5,
+    id: 'documentation',
+    label: 'Documentation',
+    description: 'A Starlight field guide — readable pages, navigation, search and a journal',
+    icon: <PencilIcon />,
+    thumb: <BlogThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Field Guide',
+    desktopOnly: true,
+  },
+  {
     order: 52,
     id: 'astro-blog',
     label: 'Astro Blog',

@@ -105,7 +105,10 @@
     "build:recorder": "npm --prefix recorder-crux run build:garden",
     "build:moqira": "npm --prefix moqira-crux run build:garden",
     "build:notes": "npm --prefix notes-crux run build:garden",
-    "audit:unification": "node scripts/audit-unification.mjs"
+    "audit:unification": "node scripts/audit-unification.mjs",
+    "build:documentation": "npm --prefix documentation-crux ci --ignore-scripts && node scripts/build-documentation.mjs",
+    "preverify": "npm run build:documentation",
+    "prebuild:public": "npm run build:documentation"
   },
   "browserslist": [
     "Chrome >= 120",

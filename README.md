@@ -1,10 +1,11 @@
+<img src=".github/banner.jpg" alt="Crux Garden App — grow anything" width="100%">
+
 # Crux Garden
 
-**Talk to an AI. Make something. Publish it at your own address.** Every version is kept, and
-visitors can open "How was this made?" to read the conversation.
+**Make something, with or without AI. Keep its story. Share when you’re ready.**
+Crux Garden brings files, creative tools, optional AI collaboration, and version history into one workspace.
 
-Crux Garden is a local-first creative workspace for the Mac (Windows and Linux builds are in
-progress). Your work lives in ordinary folders on your disk; AI uses your own key, an included subscription allowance, or a
+Crux Garden is a local-first creative workspace for macOS, Windows, and Linux. Your work lives in ordinary folders on your disk; AI uses your own key, an included subscription allowance, or a
 local model. Publishing, sync and included collaboration use our servers as described below.
 
 - Website and downloads: https://crux.garden
@@ -33,7 +34,7 @@ any platform, use the Node version in `electron/.nvmrc`, then
 Package on the target OS with `electron` scripts `dist:win`, `dist:linux`, or
 `dist:mac:unsigned` (ad-hoc Mac testing). `npm run test:packaged` in `electron/`
 checks the unpacked package in `release/` using a fresh, isolated garden.
-Native Windows/Linux CI must pass before those builds are considered verified.
+Native Windows and Linux packaged-runtime CI checks pass. Signed installers, updates, older OS versions and real hardware still need release acceptance; see CONTRIBUTING.md.
 
 ## Verify
 
@@ -41,6 +42,18 @@ Native Windows/Linux CI must pass before those builds are considered verified.
 npm run verify                # typecheck + lint + unit tests + build
 cd electron && npm run verify && npm run build:all && npm run test:e2e   # Playwright against the real app
 ```
+
+## Field guide and first project
+
+New Gardens offer an AI-free home page walkthrough: add a name and photo, preview,
+mark a version in Growth, and use Share when ready. Explore includes a field guide
+with offline navigation and search. Make a copy to edit the guide as an ordinary
+Starlight Crux. The same source in `documentation-crux/` builds the public docs and journal.
+
+`npm run build:documentation` installs its locked build dependencies and prepares the
+bundled reading copy. Normal build and verify commands include this step. Reading the
+bundled guide needs neither AI nor network access. An editable site’s first dependency
+installation and hosted publication do need a connection.
 
 ## Desktop command line
 

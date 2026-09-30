@@ -38,6 +38,7 @@ import {
   clearExploreTags,
 } from '@/components/explore/recent-tags';
 import { APP_NAME } from '@/lib/constants';
+import DocumentationCard from '@/components/explore/DocumentationCard';
 import PageHeader from '@/components/layout/PageHeader';
 
 /**
@@ -461,6 +462,9 @@ export default function Explore({
             Explore what people are making. Find a creator, follow a curiosity, make it your own.
           </p>
         </header>
+      )}
+      {view === 'all' && !q && !author && activeTags.length === 0 && (
+        <DocumentationCard local={appReady} />
       )}
       {recentTags.length > 0 && (
         <section

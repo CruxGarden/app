@@ -38,10 +38,11 @@ matching release changes; a local desktop build does not deploy it.
 
 The current manual-testing target is **macOS Apple Silicon**, with an unsigned/ad-hoc
 local package exercised on macOS 26.6.2. The declared minimum is macOS 13; that older
-OS has not been exercised in this acceptance run. Intel Mac, Linux x64 and Windows x64
-have release build targets, but this Mac run is not evidence of their UI, hardware,
-keychain, installer or update behavior. Validate each target on its own host before
-advertising it as tested. Signed/notarized distribution and real-provider/hardware
+OS has not been exercised in this acceptance run. Native Windows x64 and Linux x64
+packaged-runtime CI also passes at welcome source f09ae6938 (run 36773598438).
+That covers startup, bundled runtime/CLI and the workflow’s named interaction/security
+checks; it does not establish every hardware, keychain, installer or update behavior.
+Intel Mac and older OS versions still need their own acceptance. Signed/notarized distribution and real-provider/hardware
 acceptance remain separate release operations.
 
 To stage without publishing or signing with an account, after the normal build/gates:

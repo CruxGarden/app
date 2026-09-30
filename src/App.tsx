@@ -19,6 +19,7 @@ const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
 const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
 const PublicGarden = lazy(() => import('@/pages/PublicGarden'));
 const ExplorePage = lazy(() => import('@/pages/Explore').then((m) => ({ default: m.ExplorePage })));
+const StaticPublication = lazy(() => import('@/pages/StaticPublication'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // When running inside a workspace preview iframe, the preview system injects
@@ -34,6 +35,8 @@ const publicSite = isPublicSite();
 const router = createBrowserRouter(
   [
     // Public
+    { path: '/docs/*', element: <StaticPublication /> },
+    { path: '/blog/*', element: <StaticPublication /> },
     {
       path: '/',
       element: <ErrorBoundary>{publicSite ? <Landing /> : <Gateway />}</ErrorBoundary>,

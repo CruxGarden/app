@@ -1554,8 +1554,12 @@ function registerAppProtocol() {
       return new Response('Forbidden', { status: 403 });
     }
 
-    // SPA fallback: if the file doesn't exist, serve index.html
-    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    // Built publications (the offline guide) have their own directory index.
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(filePath, 'index.html');
+    }
+    // Ordinary workspace routes still use the SPA entry.
+    if (!fs.existsSync(filePath)) {
       filePath = path.join(root, 'index.html');
     }
 

@@ -42,3 +42,11 @@ electron/scripts/__pycache__/
 
 # Browser SQLite worker fixture output
 electron/e2e-web/.storage-results/
+
+# Documentation publication, built from the source Crux
+documentation-crux/.astro/
+documentation-crux/dist/
+public/docs/
+public/blog/
+public/_astro/
+public/mark.svg

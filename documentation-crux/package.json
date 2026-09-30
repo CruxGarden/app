@@ -1,0 +1,17 @@
+{
+  "name": "crux-garden-documentation",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.4",
+    "@astrojs/markdown-remark": "7.3.0",
+    "astro": "7.3.5"
+  }
+}

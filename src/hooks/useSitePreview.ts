@@ -11,9 +11,8 @@ import {
 } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
 import { useCruxStore } from '@/stores/cruxStore';
-import { resolveRelativePath as normalizePath } from '@/lib/artifact-path';
 import { setActivePreview } from '@/lib/preview-registry';
-import { globToRegex } from '@/lib/frontmatter';
+import { siteRouteFor } from '@/lib/site-routes';
 import type { ContentModel } from '@/templates';
 
 export type SitePreviewPhase = 'idle' | 'installing' | 'starting' | 'ready' | 'error';
@@ -39,34 +38,6 @@ export function portOf(base: string | null): number | null {
   if (!base) return null;
   const m = /:(\d+)\/?$/.exec(base);
   return m ? Number(m[1]) : null;
-}
-
-/** A content collection with a served route: the glob's fixed prefix maps onto `routeBase`. */
-export interface RoutedCollection {
-  glob: string;
-  routeBase?: string;
-}
-
-/**
- * Map a source file to its dev-server route: the Astro pages convention, or a
- * template's content collection (`src/content/wiki/**\/*.md` served at `/wiki/`
- * puts `src/content/wiki/notes/a.md` at `/wiki/notes/a`, `index` at the base).
- */
-export function siteRouteFor(filePath: string, collections: RoutedCollection[] = []): string {
-  const norm = normalizePath(filePath);
-  for (const collection of collections) {
-    if (!collection.routeBase || !globToRegex(collection.glob).test(norm)) continue;
-    const prefix = collection.glob.slice(0, collection.glob.indexOf('*'));
-    if (!norm.startsWith(prefix)) continue;
-    let route = norm.slice(prefix.length).replace(/\.(astro|md|mdx|html)$/, '');
-    if (route === 'index' || route.endsWith('/index')) route = route.slice(0, -'index'.length);
-    return (collection.routeBase.replace(/\/$/, '') + '/' + route).replace(/\/$/, '') || '/';
-  }
-  const match = norm.match(/^src\/pages\/(.+)$/);
-  if (!match) return '/';
-  let route = match[1]!.replace(/\.(astro|md|mdx|html)$/, '');
-  if (route === 'index' || route.endsWith('/index')) route = route.slice(0, -'index'.length);
-  return '/' + route.replace(/\/$/, '');
 }
 
 /**

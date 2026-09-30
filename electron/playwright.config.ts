@@ -16,6 +16,7 @@ const gateSpecs = [
   '**/parallel-tasks.spec.ts',
   '**/zen-vibecoding.spec.ts',
   '**/welcome-crux.spec.ts',
+  '**/documentation.spec.ts',
   '**/renderer-reload.spec.ts',
   '**/account-recovery.spec.ts',
   '**/publication-teardown.spec.ts',
