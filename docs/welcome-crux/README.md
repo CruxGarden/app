@@ -21,7 +21,10 @@ a named Growth version, restarts the app, resumes the same walkthrough step,
 signs in through the API fixture and shares through the ordinary UI. The test
 checks the built HTML and exact published photo bytes, upstream LICENSE and
 absence of the private guide in the output. Returning Home shows one welcome
-Crux. This journey passes in 30.9 seconds; screenshots here record that run.
+Crux. The focused journey passes in 30.9 seconds. The combined desktop gate
+passes **59/59 in 10.4 minutes**, including this journey (28.8 seconds) and both
+Zen game journeys; the screenshots here record that combined run. The earlier
+intermittent Zen click failure did not reproduce; no production fix is claimed.
 
 The seeding tests use the real service/database layer to check concurrent setup,
 preservation of edited files on retry, no invented conversation, and retrying a

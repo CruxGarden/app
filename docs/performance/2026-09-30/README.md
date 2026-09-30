@@ -158,3 +158,5 @@ Canonicalizing both sides with native realpath fixes the assertion; the full
 Electron gate passes76 tests with one platform skip, and the focused macOS
 root-switch/restart test passes in13.4seconds. The next Windows run must confirm
 that final test correction; these results do not yet claim a fully green Windows gate.
+
+The follow-up native run [36771713583](https://github.com/CruxGarden/app/actions/runs/36771713583) at `bdf644b97` passes **8/8 Windows and 8/8 Linux checks**, each in1.3minutes. Both include actual packaged startup, SQLite, bundled CLI and native tools, folder-root switch/restart, IPC security, ordinary creation/versioning/publication and keyboard access. Artifacts11124373926 (Windows) and11124159748 (Linux) retain diagnostics. This closes the recorded path-assertion failure. It predates the welcome-walkthrough feature, whose native CI rerun is tracked separately.
