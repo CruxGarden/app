@@ -23,7 +23,7 @@ export function useObjectUrl(
       .then((result) => {
         const next = result instanceof Blob ? URL.createObjectURL(result) : result;
         if (cancelled) {
-          if (next && next !== result) URL.revokeObjectURL(next);
+          if (next) URL.revokeObjectURL(next);
           return;
         }
         // A string result is a URL the service already made; it is ours to revoke too.

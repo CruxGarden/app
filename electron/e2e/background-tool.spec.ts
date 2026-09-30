@@ -31,11 +31,20 @@ test.describe('background tool (mock AI)', () => {
       await expect(page.getByRole('tree').getByText('backdrop.png', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
-      // A new garden already wears The Keeper's vista; the tool must replace it
+      // A fresh Garden may use a procedural background. Record whichever
+      // layer it has; the tool must select and display the workspace image.
       const bgBefore = await page
         .getByTestId('mood-background-image')
-        .evaluate((el) => getComputedStyle(el).backgroundImage);
-      expect(bgBefore).toMatch(/blob:/);
+        .evaluateAll((elements) =>
+          elements[0] ? getComputedStyle(elements[0]).backgroundImage : 'none',
+        );
+
+      // Plasma deliberately replaces Mood image layers with its own field.
+      // Select the user-facing Glass surface to exercise image presentation.
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+      await mood.getByRole('combobox', { name: 'Surface theme' }).selectOption('glass');
+      await hidePane(page, 'Mood');
 
       const input = page.getByPlaceholder('Send a message...');
       await input.fill('give me a new backdrop');

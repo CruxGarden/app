@@ -1,5 +1,5 @@
 import { useAiEnabled } from '@/hooks/useAiEnabled';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { SectionLabel } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
@@ -22,8 +22,8 @@ import SurfaceThemeControl from './SurfaceThemeControl';
 import MoodBrowser from './MoodBrowser';
 import GardenMoodLine, { KeepLook } from './GardenMoodLine';
 import AssetsTab from './AssetsTab';
-import { useMoodStore } from '@/stores/moodStore';
-import { getSetting, setSetting } from '@/services/settings';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { getSetting, setSetting, onSettingChange } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { BgType, ThemeMode } from '@/lib/types';
 import { getResolvedMode } from './mood-helpers';
@@ -128,32 +128,16 @@ export default function MoodEditor() {
       return saved as BgType;
     return BgType.Bloom;
   });
-  const [bgImagePreview, setBgImagePreview] = useState<string | null>(null);
-  // Object URL created for the preview — revoked when replaced or on unmount
-  const bgObjectUrlRef = useRef<string | null>(null);
-  const releaseBgObjectUrl = () => {
-    const url = bgObjectUrlRef.current;
-    if (!url) return;
-    bgObjectUrlRef.current = null;
-    // Don't revoke a URL the app background is still displaying
-    if (useMoodStore.getState().backgroundUrl !== url) URL.revokeObjectURL(url);
-  };
-  // Resolve background image fingerprint to blob URL on mount
-  useEffect(() => {
-    const fp = getSetting(SettingsKey.BackgroundImage) as string | null;
-    if (!fp) return;
-    (async () => {
-      const { blobObjectUrl } = await import('@/services/blobs');
-      const url = await blobObjectUrl(fp).catch(() => null);
-      if (url) {
-        releaseBgObjectUrl();
-        bgObjectUrlRef.current = url;
-        setBgImagePreview(url);
-      }
-    })();
-    // Revoke the created object URL on unmount
-    return () => releaseBgObjectUrl();
-  }, []);
+  const [bgFingerprint, setBgFingerprint] = useState(() => getSetting(SettingsKey.BackgroundImage));
+  const bgImagePreview = useBlobUrl(bgFingerprint);
+  useEffect(
+    () =>
+      onSettingChange((key) => {
+        if (key === SettingsKey.BackgroundImage) setBgFingerprint(getSetting(key));
+        if (key === SettingsKey.BackgroundType) setBgType(getSetting(key) as BgType);
+      }),
+    [],
+  );
   const [bgGenerating, setBgGenerating] = useState(false);
   const [bgError, setBgError] = useState<string | null>(null);
   const handleBgGenerate = async (prompt: string) => {
@@ -166,10 +150,8 @@ export default function MoodEditor() {
         setBgError(result.error);
         return;
       }
-      const { setBackgroundFromBlob, setBackgroundType } = await import('@/services/background');
-      await setBackgroundType(BgType.Image);
+      const { setBackgroundFromBlob } = await import('@/services/background');
       await setBackgroundFromBlob(result.blob);
-      setBgType(BgType.Image);
     } catch (err) {
       setBgError((err as Error).message || 'Could not generate a backdrop');
     } finally {
@@ -180,30 +162,21 @@ export default function MoodEditor() {
   const handleBgChange = (type: BgType) => {
     setBgType(type);
     void import('@/services/background').then(({ setBackgroundType }) => setBackgroundType(type));
-    if (type === 'image' && bgImagePreview) {
-      useMoodStore.setState({ backgroundUrl: bgImagePreview });
-    }
   };
 
   const handleBgImageSelect = async (file: File) => {
     setBgGenerating(true);
     try {
       const { setBackgroundFromBlob } = await import('@/services/background');
-      const url = await setBackgroundFromBlob(file);
-      releaseBgObjectUrl();
-      bgObjectUrlRef.current = url || null;
-      setBgImagePreview(url || null);
-      setBgType(BgType.Image);
+      await setBackgroundFromBlob(file);
     } finally {
       setBgGenerating(false);
     }
   };
 
   const handleBgImageClear = () => {
-    setBgImagePreview(null);
     void import('@/services/background').then(({ clearBackgroundImage }) => clearBackgroundImage());
     setBgType(BgType.Bloom);
-    releaseBgObjectUrl();
   };
 
   const handleSelect = (preset: MoodPresetDef) => {

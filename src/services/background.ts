@@ -1,51 +1,81 @@
-/**
- * The Mood background: bloom / drift / flow / blank, or an image in the Blob
- * Store. One place for the three writes that must agree (setting, CSS var,
- * mood store) — the Background tab and the AI's set_background both use it.
- */
-import { setSetting } from './settings';
+/** The background selection owns its displayed URL and pending image reads. */
+import { getSetting, setSetting } from './settings';
 import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
 import { BgType } from '@/lib/types';
+import { useMoodStore } from '@/stores/moodStore';
 
-async function applyToStore(patch: { backgroundUrl: string | null }) {
-  const { useMoodStore } = await import('@/stores/moodStore');
-  useMoodStore.setState(patch);
+let selection = 0;
+let ownedUrl: string | null = null;
+
+function display(url: string | null, owned = false) {
+  const previous = ownedUrl;
+  ownedUrl = owned ? url : null;
+  useMoodStore.setState({ backgroundUrl: url });
+  if (previous && previous !== url) URL.revokeObjectURL(previous);
 }
 
-/** Switch to a generated background (bloom/drift/flow/blank). */
-export async function setBackgroundType(type: BgType): Promise<void> {
+function saveType(type: BgType) {
   setSetting(SettingsKey.BackgroundType, type);
   if (typeof document !== 'undefined') document.documentElement.style.setProperty(BG_CSS_VAR, type);
-  if (type !== BgType.Image) await applyToStore({ backgroundUrl: null });
 }
 
-/**
- * Use an image already in the Blob Store as the background. `url` may be a
- * ready object/data URL (avoids a re-read); otherwise it is resolved here.
- */
-export async function setBackgroundImage(fingerprint: string, url?: string): Promise<string> {
-  setSetting(SettingsKey.BackgroundImage, fingerprint);
-  setSetting(SettingsKey.BackgroundType, BgType.Image);
-  if (typeof document !== 'undefined') {
-    document.documentElement.style.setProperty(BG_CSS_VAR, BgType.Image);
-  }
-  let resolved = url ?? null;
-  if (!resolved && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+async function resolveImage(
+  fingerprint: string,
+  request: number,
+  borrowedUrl?: string,
+): Promise<string> {
+  let resolved = borrowedUrl ?? null;
+  if (!resolved && fingerprint && typeof URL.createObjectURL === 'function') {
     const { blobObjectUrl } = await import('./blobs');
+    if (request !== selection) return '';
     resolved = await blobObjectUrl(fingerprint).catch(() => null);
   }
-  await applyToStore({ backgroundUrl: resolved });
+  const owned = !!resolved && borrowedUrl === undefined;
+  if (request !== selection) {
+    if (owned) URL.revokeObjectURL(resolved!);
+    return '';
+  }
+  display(resolved, owned);
   return resolved ?? '';
 }
 
-/** Store image bytes and make them the background. */
+/** Switch background type; image restores the saved selection with its own URL. */
+export async function setBackgroundType(type: BgType): Promise<void> {
+  const request = ++selection;
+  saveType(type);
+  if (type !== BgType.Image) display(null);
+  else {
+    const fingerprint = getSetting(SettingsKey.BackgroundImage);
+    if (fingerprint) await resolveImage(fingerprint, request);
+  }
+}
+
+/** Optional ready URLs are borrowed (bundled/data URLs); the caller retains ownership. */
+export async function setBackgroundImage(fingerprint: string, url?: string): Promise<string> {
+  const request = ++selection;
+  setSetting(SettingsKey.BackgroundImage, fingerprint);
+  saveType(BgType.Image);
+  return resolveImage(fingerprint, request, url);
+}
+
+/** An upload finishing after a later selection must not change that selection. */
 export async function setBackgroundFromBlob(blob: Blob | File): Promise<string> {
+  const request = ++selection;
   const { putBlob } = await import('./blobs');
   const fingerprint = await putBlob(blob);
+  if (request !== selection) return '';
   return setBackgroundImage(fingerprint);
 }
 
-/** Back to bloom, forgetting the stored image reference. */
+/** Paint a shipped URL while the saved image loads; never supersede that read. */
+export function showBackgroundFallback(url: string): void {
+  if (
+    !useMoodStore.getState().backgroundUrl &&
+    getSetting(SettingsKey.BackgroundType) === BgType.Image
+  )
+    display(url);
+}
+
 export async function clearBackgroundImage(): Promise<void> {
   setSetting(SettingsKey.BackgroundImage, '');
   await setBackgroundType(BgType.Bloom);

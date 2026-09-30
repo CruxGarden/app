@@ -1,7 +1,8 @@
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { applyActiveMood } from '@/lib/moods/active';
-import { useMoodStore } from '@/stores/moodStore';
+import { setBackgroundType } from '@/services/background';
+import { BgType } from '@/lib/types';
 
 // Persona identity lives in the service layer (services/persona) — the AI core
 // reads it every turn and must not import from components/. Re-exported here so
@@ -19,7 +20,6 @@ export function getResolvedMode(): 'Dark' | 'Light' {
   return document.documentElement.classList.contains('light') ? 'Light' : 'Dark';
 }
 
-
 /**
  * Apply saved mood preset for the current mode.
  * Restores palette, background image, and cleans up legacy keys.
@@ -35,16 +35,8 @@ export function applySavedMoodSettings() {
 
   applyActiveMood(getResolvedMode());
 
-  // Restore background image from OPFS if saved
-  const savedBgType = getSetting(SettingsKey.BackgroundType) as string | null;
-  if (savedBgType === 'image') {
-    const savedFingerprint = getSetting(SettingsKey.BackgroundImage) as string | null;
-    if (savedFingerprint) {
-      // Async resolution — background loads after initial paint
-      import('@/services/blobs')
-        .then(({ blobObjectUrl }) => blobObjectUrl(savedFingerprint))
-        .then((url) => useMoodStore.setState({ backgroundUrl: url }))
-        .catch(() => {});
-    }
+  // The background service owns loading order and the displayed URL's lifetime.
+  if (getSetting(SettingsKey.BackgroundType) === BgType.Image) {
+    void setBackgroundType(BgType.Image);
   }
 }

@@ -74,7 +74,9 @@ export function parseCron(expr: string): CronFields {
   if (parts.length !== 5)
     throw new Error('A cron expression has five fields: minute hour day month weekday');
   const [mi, h, d, mo, w] = parts as [string, string, string, string, string];
-  const dow = parseField(names(w, DAYS, 0).replace(/\b7\b/g, '0'), 0, 6, 'weekday');
+  // Sunday is both 0 and 7. Normalize values after ranges/steps expand;
+  // rewriting the input would turn 5-7 into 5-0 and */7 into */0.
+  const dow = new Set([...parseField(names(w, DAYS, 0), 0, 7, 'weekday')].map((day) => day % 7));
   return {
     minute: parseField(mi, 0, 59, 'minute'),
     hour: parseField(h, 0, 23, 'hour'),

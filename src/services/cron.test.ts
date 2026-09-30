@@ -4,6 +4,12 @@ import { cronError, describeCron, nextCron, parseCron } from './cron';
 const local = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi);
 
 describe('cron', () => {
+  it('normalizes Sunday only after expanding weekday ranges and steps', () => {
+    expect([...parseCron('0 9 * * 5-7').dow]).toEqual([5, 6, 0]);
+    expect([...parseCron('0 9 * * 0-7').dow]).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect([...parseCron('0 9 * * */7').dow]).toEqual([0]);
+    expect(nextCron('0 9 * * 5-7', local(2026, 9, 19, 10))).toEqual(local(2026, 9, 20, 9));
+  });
   it('parses stars, lists, ranges, steps and names', () => {
     const f = parseCron('*/15 9-17 1,15 jan-mar mon-fri');
     expect([...f.minute]).toEqual([0, 15, 30, 45]);

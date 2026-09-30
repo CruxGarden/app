@@ -1,3 +1,4 @@
+import { showBackgroundFallback } from '@/services/background';
 import { isPublicSite } from '@/lib/site';
 import BackButton from '@/components/gateway/BackButton';
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -49,9 +50,7 @@ async function wearGatewayMood(): Promise<void> {
   } else {
     const pkg = worn ? bundledMood(worn) : undefined;
     if (pkg?.bundled?.background && getSetting(SettingsKey.BackgroundType) === BgType.Image) {
-      const { useMoodStore } = await import('@/stores/moodStore');
-      if (!useMoodStore.getState().backgroundUrl)
-        useMoodStore.setState({ backgroundUrl: pkg.bundled.background });
+      showBackgroundFallback(pkg.bundled.background);
     }
   }
   await startGatewaySound(fresh ? keeper : worn ? bundledMood(worn) : undefined);

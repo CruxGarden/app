@@ -101,7 +101,7 @@ async function loadThumbnails(): Promise<Record<string, string>> {
 let loadGeneration = 0;
 
 /** The Garden's lists as one read: its Cruxes (or every Crux without a Garden), the Trash, thumbnails. */
-async function fetchLists({ search, sortBy }: { search: string; sortBy: SortField }) {
+async function fetchLists() {
   const gardenId = captureGardenId();
   const { crux: cruxService } = getServices();
   const [data, trashed, thumbnails] = await Promise.all([
@@ -111,73 +111,85 @@ async function fetchLists({ search, sortBy }: { search: string; sortBy: SortFiel
     cruxService.listTrashed(),
     loadThumbnails(),
   ]);
-  return { allCruxes: data, cruxList: filterAndSort(data, search, sortBy), trashed, thumbnails };
+  return { allCruxes: data, trashed, thumbnails };
 }
 
-export const useGardenStore = create<GardenState>((set, get) => ({
-  allCruxes: [],
-  cruxList: [],
-  trashed: [],
-  thumbnails: {},
-  loading: true,
-  error: null,
-  search: '',
-  sortBy: 'created',
+export const useGardenStore = create<GardenState>((set, get) => {
+  // Read the controls when results arrive: typing during a refresh must win.
+  const acceptLists = (patch: Awaited<ReturnType<typeof fetchLists>>) =>
+    set((state) => ({
+      ...patch,
+      cruxList: filterAndSort(patch.allCruxes, state.search, state.sortBy),
+      loading: false,
+      error: null,
+    }));
+  return {
+    allCruxes: [],
+    cruxList: [],
+    trashed: [],
+    thumbnails: {},
+    loading: true,
+    error: null,
+    search: '',
+    sortBy: 'created',
 
-  deleteCrux: async (id: string) => {
-    if (allWorkspaces().some((w) => w.cruxId === id))
-      throw new Error('Close this Crux workspace before deleting it.');
-    const { crux: cruxService } = getServices();
-    await cruxService.trash(id);
-    await get().load();
-  },
+    deleteCrux: async (id: string) => {
+      if (allWorkspaces().some((w) => w.cruxId === id))
+        throw new Error('Close this Crux workspace before deleting it.');
+      const { crux: cruxService } = getServices();
+      await cruxService.trash(id);
+      await get().load();
+    },
 
-  restoreCrux: async (id: string) => {
-    await getServices().crux.restore(id);
-    await get().load();
-  },
+    restoreCrux: async (id: string) => {
+      await getServices().crux.restore(id);
+      await get().load();
+    },
 
-  destroyCrux: async (id: string) => {
-    await getServices().crux.delete(id);
-    await get().load();
-  },
+    destroyCrux: async (id: string) => {
+      await getServices().crux.delete(id);
+      await get().load();
+    },
 
-  load: async () => {
-    const generation = ++loadGeneration;
-    set({ loading: true, error: null });
-    try {
-      await getServices().crux.purgeTrash(TRASH_RETENTION_MS).catch((err) => {
-        console.warn('[gardenStore] trash purge skipped:', err);
+    load: async () => {
+      const generation = ++loadGeneration;
+      set({ loading: true, error: null });
+      try {
+        await getServices()
+          .crux.purgeTrash(TRASH_RETENTION_MS)
+          .catch((err) => {
+            console.warn('[gardenStore] trash purge skipped:', err);
+          });
+        const patch = await fetchLists();
+        if (generation === loadGeneration) acceptLists(patch);
+      } catch (err) {
+        if (generation === loadGeneration) set({ loading: false, error: (err as Error).message });
+      }
+    },
+
+    setSearch: (query: string) => {
+      const { allCruxes, sortBy } = get();
+      set({
+        search: query,
+        cruxList: filterAndSort(allCruxes, query, sortBy),
       });
-      const patch = await fetchLists(get());
-      if (generation === loadGeneration) set({ ...patch, loading: false, error: null });
-    } catch (err) {
-      if (generation === loadGeneration) set({ loading: false, error: (err as Error).message });
-    }
-  },
+    },
 
-  setSearch: (query: string) => {
-    const { allCruxes, sortBy } = get();
-    set({
-      search: query,
-      cruxList: filterAndSort(allCruxes, query, sortBy),
-    });
-  },
+    setSortBy: (field: SortField) => {
+      const { allCruxes, search } = get();
+      set({ sortBy: field, cruxList: filterAndSort(allCruxes, search, field) });
+    },
 
-  setSortBy: (field: SortField) => {
-    const { allCruxes, search } = get();
-    set({ sortBy: field, cruxList: filterAndSort(allCruxes, search, field) });
-  },
-
-  /** Reload the lists in place: no `loading` flip, so the Home Garden stays mounted. */
-  refresh: async () => {
-    const generation = ++loadGeneration;
-    try {
-      const patch = await fetchLists(get());
-      if (generation === loadGeneration) set({ ...patch, loading: false, error: null });
-    } catch (err) {
-      console.error('[gardenStore] Failed to refresh cruxes:', err);
-      if (generation === loadGeneration) set({ loading: false, error: (err as Error).message });
-    }
-  },
-}));
+    /** Reload the lists in place: no `loading` flip, so the Home Garden stays mounted. */
+    refresh: async () => {
+      const generation = ++loadGeneration;
+      try {
+        const patch = await fetchLists();
+        if (generation === loadGeneration) acceptLists(patch);
+      } catch (err) {
+        console.error('[gardenStore] Failed to refresh cruxes:', err);
+        if (generation === loadGeneration) set({ loading: false, error: (err as Error).message });
+      }
+    },
+  };
+});
