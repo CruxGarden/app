@@ -12,35 +12,36 @@ test('compare the same Home with and without the Plasma material', async () => {
   const { app, page } = await launchApp();
   const cdp = await page.context().newCDPSession(page);
   const samples: unknown[] = [];
-  const gpu = await app.evaluate(async ({ app }) => ({
-    features: app.getGPUFeatureStatus(),
-    info: await app.getGPUInfo('basic'),
-  }));
-  await cdp.send('Performance.enable');
-  const sample = async (phase: string) => {
-    const before = await cdp.send('Performance.getMetrics');
-    const started = Date.now();
-    const frames = await page.evaluate(async () => {
-      const times: number[] = [];
-      let previous = performance.now();
-      for (let i = 0; i < 30; i++) {
-        const now = await new Promise<number>(requestAnimationFrame);
-        times.push(now - previous);
-        previous = now;
-      }
-      return {
-        times,
-        width: innerWidth,
-        height: innerHeight,
-        material: document.documentElement.dataset.surfaceStyle,
-      };
-    });
-    const after = await cdp.send('Performance.getMetrics');
-    const processes = await app.evaluate(({ app }) => app.getAppMetrics());
-    samples.push({ phase, elapsedMs: Date.now() - started, frames, before, after, processes });
-    writeFileSync(join(out, 'rendering-probe.json'), JSON.stringify({ gpu, samples }, null, 2));
-  };
   try {
+    const gpu = await app.evaluate(async ({ app }) => ({
+      features: app.getGPUFeatureStatus(),
+      info: await app.getGPUInfo('basic').catch((error: Error) => ({ error: error.message })),
+    }));
+    writeFileSync(join(out, 'rendering-probe.json'), JSON.stringify({ gpu, samples }, null, 2));
+    await cdp.send('Performance.enable');
+    const sample = async (phase: string) => {
+      const before = await cdp.send('Performance.getMetrics');
+      const started = Date.now();
+      const frames = await page.evaluate(async () => {
+        const times: number[] = [];
+        let previous = performance.now();
+        for (let i = 0; i < 30; i++) {
+          const now = await new Promise<number>(requestAnimationFrame);
+          times.push(now - previous);
+          previous = now;
+        }
+        return {
+          times,
+          width: innerWidth,
+          height: innerHeight,
+          material: document.documentElement.dataset.surfaceStyle,
+        };
+      });
+      const after = await cdp.send('Performance.getMetrics');
+      const processes = await app.evaluate(({ app }) => app.getAppMetrics());
+      samples.push({ phase, elapsedMs: Date.now() - started, frames, before, after, processes });
+      writeFileSync(join(out, 'rendering-probe.json'), JSON.stringify({ gpu, samples }, null, 2));
+    };
     await enterGarden(page);
     await sample('ordinary');
     const original = await page.evaluate(() => {
@@ -59,7 +60,7 @@ test('compare the same Home with and without the Plasma material', async () => {
     }, original);
     await sample('restored');
   } finally {
-    await cdp.detach();
+    await cdp.detach().catch(() => {});
     await app.close();
   }
 });
