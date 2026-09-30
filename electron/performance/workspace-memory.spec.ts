@@ -14,8 +14,9 @@ test('sustained sound and workspace switching release closed workspaces', async 
   test.setTimeout(120_000 + cycles * (dwell + 10_000));
   const out = process.env.CRUX_PERF_OUT ?? 'performance/.results';
   mkdirSync(out, { recursive: true });
-  const { app, page } = await launchApp({ sound: true, args: ['--mute-audio'] });
+  const { app, page } = await launchApp({ sound: true, ai: false, args: ['--mute-audio'] });
   const samples: unknown[] = [];
+  const startedAt = Date.now();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const cdp = await page.context().newCDPSession(page);
@@ -33,7 +34,15 @@ test('sustained sound and workspace switching release closed workspaces', async 
         cpu: p.cpu.percentCPUUsage,
       })),
     );
-    const value = { phase, actionMs, heap, dom, metrics, processes };
+    const value = {
+      phase,
+      elapsedMs: Date.now() - startedAt,
+      actionMs,
+      heap,
+      dom,
+      metrics,
+      processes,
+    };
     samples.push(value);
     console.log(JSON.stringify({ phase, actionMs, heap: heap.usedSize, ...dom }));
     writeFileSync(join(out, 'workspace-memory.json'), JSON.stringify({ samples, errors }, null, 2));
@@ -41,6 +50,12 @@ test('sustained sound and workspace switching release closed workspaces', async 
   };
   try {
     await enterGarden(page);
+    const settings = await showPane(page, 'Settings');
+    await settings.locator('h2', { hasText: /^AI$/ }).click();
+    const aiSwitch = settings.getByRole('switch', { name: 'Enable AI Tools' });
+    await expect(aiSwitch).toHaveAttribute('aria-checked', 'false');
+    await aiSwitch.click();
+    await hidePane(page, 'Settings');
     for (const name of ['Memory A', 'Memory B', 'Memory C']) {
       await createCrux(page, name);
       await openPanel(page, 'collaboration', 'Toggle collaboration');
@@ -84,6 +99,11 @@ test('sustained sound and workspace switching release closed workspaces', async 
     }
     await page.waitForTimeout(2000);
     await sample('closed');
+    // Observe delayed cleanup separately from the immediate close checkpoint.
+    for (let settle = 1; settle <= 4; settle++) {
+      await page.waitForTimeout(15_000);
+      await sample(`closed-${settle * 15}s`);
+    }
     expect(errors).toEqual([]);
   } finally {
     await cdp.detach();

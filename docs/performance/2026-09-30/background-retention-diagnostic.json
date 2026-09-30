@@ -25,6 +25,14 @@
     "retainedBytes": 33008,
     "testSeconds": 8.6,
     "backgroundSelection": "Blank/Bloom, class override and rapid return pass",
-    "runtime": "Source desktop against production renderer build; packaged repetition pending"
+    "runtime": "Source desktop against production renderer build"
+  },
+  "acceleratedPackagedAfterFix": {
+    "source": "901195588",
+    "runtime": "fc0fff4",
+    "retainedBytes": 1336,
+    "testSeconds": 6.6,
+    "backgroundSelection": "Blank/Bloom, class override and rapid return pass",
+    "scope": "Accelerated regression; separate hour-long ordinary workload still running"
   }
 }

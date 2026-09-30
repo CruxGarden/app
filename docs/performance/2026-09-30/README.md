@@ -113,5 +113,10 @@ regression, not a claim that every interaction is proportionally faster.
 
 Full app gate: 1,634 tests / 256 files, 18 scoped skips and build. Electron:
 76 tests / one Windows-only skip. Four desktop journeys covering background
-lifetime, Garden Mood, CLI and keyboard pass in 44.0 s. A rebuilt packaged
-one-hour repeat remains pending. No audio/Flow suppression is used.
+lifetime, Garden Mood, CLI and keyboard pass in 44.0 s. The rebuilt clean-source package at `901195588` passes actual SQLite/CLI/native-tools smoke (1/7.4 s) and the accelerated regression (1/6.6 s), retaining only 1,336 bytes. The ordinary repeat now passes **61.95 minutes** with 60 one-minute dwell/switch cycles and a further minute after closing the workspaces. No audio/Flow suppression is used; only speaker output is muted.
+
+`packaged-memory-hour-after.json` preserves all 67 checkpoints. Mean retained JS is **28.67 MiB in the first ten cycles** and **29.37 MiB in the last ten**, compared with the previous rapid continuous growth. The last cycle is 29.42 MiB; 60 seconds after pausing sound and closing all three workspaces it is 29.43 MiB. Workspace DOM nodes fall from 501 to 484 and listeners from 517 to 500; the post-close samples remain steady. This supports bounded retention in this workload, not a claim that the whole app is leak-free or that all memory returns to the initial baseline.
+
+Switching and checking each saved draft takes **222.5 ms median, 256 ms p95, 284 ms maximum**. The main renderer's sampled working set rises from 429.9 MiB at warmup to 497.5 MiB at the last cycle and settles to 494.1 MiB after closing; this is not private RAM and is not identical to retained JavaScript. The test asserts draft continuity and no renderer errors; memory conclusions come from the recorded measurements and the separate accelerated regression.
+
+Reproduce with `CRUX_PACKAGED=1 CRUX_MEMORY_CYCLES=60 CRUX_MEMORY_DWELL_MS=60000 npx playwright test -c playwright.performance.config.ts performance/workspace-memory.spec.ts`, setting the executable and output directory as above.
