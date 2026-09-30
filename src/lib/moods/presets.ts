@@ -22,7 +22,7 @@ function ghostPanes(panes: Record<string, string>, headerBg: string, closeMuted:
     result[`${prefix}HeaderText`] = color;
     result[`${prefix}HeaderIcon`] = color;
     result[`${prefix}HeaderClose`] = closeMuted;
-    result[`${prefix}ButtonActive`] = headerBg;
+    result[`${prefix}ButtonActive`] = `color-mix(in srgb, ${color} 15%, transparent)`;
     result[`${prefix}ButtonIconActive`] = color;
     result[`${prefix}ButtonBorderActive`] = 'transparent';
   }

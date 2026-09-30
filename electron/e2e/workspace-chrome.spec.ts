@@ -14,6 +14,7 @@ test('panel chrome stays rounded and command controls remain aligned at compact 
       );
       const bar = page.getByTestId('command-bar');
       await expect(bar).toBeInViewport({ ratio: 1 });
+      const panelColors = new Set<string>();
       for (const pane of ['collaboration', 'workshop']) {
         const handle = page.locator(`.pane-${pane} .pane-toolbar`);
         await expect(handle).toBeVisible();
@@ -28,8 +29,10 @@ test('panel chrome stays rounded and command controls remain aligned at compact 
           .getByRole('button', { name: `Toggle ${pane}` });
         const color = await icon.evaluate((el) => getComputedStyle(el).backgroundColor);
         await expect(handle).toHaveCSS('background-color', color);
+        panelColors.add(color);
         await page.screenshot({ path: testInfo.outputPath(`header-${width}-${pane}.png`) });
       }
+      expect(panelColors.size).toBe(2);
       const geometry = await bar.evaluate((el) =>
         Array.from(el.children)
           .filter((child) => child.getBoundingClientRect().width)

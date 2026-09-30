@@ -34,4 +34,4 @@ on the real host after deployment. No deployment or hosted acceptance is claimed
 
 Final test results and any remaining limitations are recorded in the root living documents.
 
-Desktop acceptance: 1 passed in30.7s; app verify1,644 tests/259 files +18 scoped skips/build, host76/one skip. Public docs/blog checks pass2/1.2min, including the production build and390px layout. The combined desktop gate and clean package refresh are still in progress; the root handoff records final results.
+Desktop acceptance: 1 passed in30.7s; app verify1,644 tests/259 files +18 scoped skips/build, host76/one skip. Public docs/blog checks pass2/1.2min, including the production build and390px layout. The combined desktop gate passed59/60 in9.9min. The welcome journey’s loaded-photo observation raced an Astro iframe reload; its assertion now retries the complete observation. The corrected welcome journey and pane-color/geometry desktop check pass together2/41.0s; the complete app verify passes again1,644/259 +18 skips/build. Clean package refresh is recorded in the root handoff. The two Zen game journeys passed in that combined run.

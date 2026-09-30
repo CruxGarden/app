@@ -59,13 +59,14 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
         timeout: 8 * 60_000,
       });
       await expect(frame.getByRole('img', { name: 'Portrait of River Moss' })).toBeVisible();
-      await expect
-        .poll(() =>
-          frame
-            .getByRole('img', { name: 'Portrait of River Moss' })
-            .evaluate((node) => (node as HTMLImageElement).naturalWidth),
-        )
-        .toBeGreaterThan(0);
+      // Astro may reload the preview after the config/photo writes. Retry the
+      // whole observation so a replaced frame cannot abort the loaded-image check.
+      await expect(async () => {
+        const width = await frame
+          .getByRole('img', { name: 'Portrait of River Moss' })
+          .evaluate((node) => (node as HTMLImageElement).naturalWidth);
+        expect(width).toBeGreaterThan(0);
+      }).toPass({ timeout: 15_000 });
       await page.screenshot({ path: join(evidence, 'preview.png') });
       await page.getByRole('button', { name: '3. Watch it grow', exact: true }).click();
       await page.getByRole('button', { name: 'Open Growth', exact: true }).click();
