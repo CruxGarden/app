@@ -63,6 +63,17 @@ test('phone layouts retain navigation and readable content', async ({ page }) =>
     page.getByRole('heading', { name: 'Tasks and multiple agents', exact: true }),
   ).toBeVisible();
   await page.screenshot({ path: resolve(evidence, 'docs-phone.png'), fullPage: true });
+  await page.goto('/docs/start/first-home/');
+  const illustrations = page.locator('.sl-markdown-content img');
+  await expect(illustrations).toHaveCount(3);
+  for (const illustration of await illustrations.all()) {
+    await illustration.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => illustration.evaluate((node: HTMLImageElement) => node.naturalWidth))
+      .toBeGreaterThan(0);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: resolve(evidence, 'first-home-phone.png'), fullPage: true });
   await page.goto('/blog/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await expect(page.getByRole('heading', { name: 'A practice of making things.' })).toBeVisible();

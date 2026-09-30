@@ -369,7 +369,13 @@ export default function EditorContent({
     disposedRef.current = false;
     return () => {
       disposedRef.current = true;
-      if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
+      if (formSaveTimerRef.current) {
+        clearTimeout(formSaveTimerRef.current);
+        formSaveTimerRef.current = null;
+        // A form promises autosave: moving straight to preview must not cancel
+        // the last keystroke's pending write. Source drafts stay manual-save.
+        saveHandlerRef.current();
+      }
       if (scrollRafRef.current) {
         cancelAnimationFrame(scrollRafRef.current);
         scrollRafRef.current = null;

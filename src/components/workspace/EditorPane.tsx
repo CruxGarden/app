@@ -181,6 +181,14 @@ export default function EditorPane() {
   );
   const entry = workshopEntry(crux, artifacts, entryFile);
   const hasBuilder = !!crux?.meta?.contentModel;
+  const [editingHome, setEditingHome] = useState<string | null>(null);
+  const homeSettings = artifacts.find((file) => pathOf(file) === settingsPathOf(crux?.meta));
+  const showHomeForm =
+    view === 'clean' && !viewingHistory && editingHome === crux?.id && !!homeSettings;
+  const previewHome = () => {
+    setEditingHome(null);
+    setView('clean');
+  };
   const aiEnabled = useAiEnabled();
   const button = buttonClass('ghost', 'xs', 'text-text-muted hover:text-text');
   const settings = () => {
@@ -190,7 +198,15 @@ export default function EditorPane() {
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="workshop-view" data-view={view}>
       {!viewingHistory && (crux?.meta?.contentModel as ContentModel | undefined)?.guide && (
-        <FirstProjectGuide key={crux!.id} model={crux!.meta!.contentModel as ContentModel} />
+        <FirstProjectGuide
+          key={crux!.id}
+          model={crux!.meta!.contentModel as ContentModel}
+          onEdit={() => {
+            setEditingHome(crux!.id);
+            setView('clean');
+          }}
+          onPreview={previewHome}
+        />
       )}
       <div className="flex items-center gap-1 px-1.5 py-1.5 border-b border-border shrink-0 flex-wrap">
         <div role="group" aria-label="Workshop view" className={segmentGroupClass()}>
@@ -202,7 +218,10 @@ export default function EditorPane() {
               onClick={() => {
                 if (mode === 'advanced' && !hasTabs && entry.artifact && !hasBuilder) {
                   openFile(entry.artifact.id, pathOf(entry.artifact));
-                } else setView(mode);
+                } else {
+                  setEditingHome(null);
+                  setView(mode);
+                }
               }}
             >
               {mode === 'clean' ? (isEmbeddedApp(crux) ? 'Use app' : 'Clean') : 'Advanced'}
@@ -238,7 +257,23 @@ export default function EditorPane() {
         </button>
         <CruxspaceAssetsButton />
       </div>
-      {view === 'clean' && crux?.meta?.template === 'figma' ? (
+      {showHomeForm && crux && homeSettings ? (
+        <div className="flex flex-col flex-1 min-h-0">
+          <EditorContent
+            key={documentIdentity(homeSettings)}
+            cruxId={crux.id}
+            artifact={homeSettings}
+            tab={{
+              id: homeSettings.id,
+              path: pathOf(homeSettings),
+              name: 'Your home page',
+              viewMode: 'form',
+              dirty: false,
+              scrollTop: 0,
+            }}
+          />
+        </div>
+      ) : view === 'clean' && crux?.meta?.template === 'figma' ? (
         <FigmaPane key={crux.id} />
       ) : view === 'clean' && crux?.meta?.template === 'blender' ? (
         <BlenderPane key={crux.id} />

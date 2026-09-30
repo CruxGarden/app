@@ -15,6 +15,8 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
     let folder = '';
     const evidence = resolve(__dirname, '../../docs/welcome-crux');
     mkdirSync(evidence, { recursive: true });
+    const illustrations = resolve(__dirname, '../../documentation-crux/src/assets');
+    mkdirSync(illustrations, { recursive: true });
     const photo = readFileSync(resolve(__dirname, 'fixtures/glow-garden/seed.png'));
     try {
       const { page } = first;
@@ -33,6 +35,9 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       await expect(page.getByTestId('pane-body-collaboration')).toHaveCount(0);
       await expect(page.getByText('Your first home page', { exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'Edit my home page', exact: true }).click();
+      await expect(page.getByTestId('workshop-view')).toHaveAttribute('data-view', 'clean');
+      await expect(page.getByLabel('Public address', { exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Source', exact: true })).toHaveCount(0);
       await page.getByLabel('Your Name', { exact: true }).fill('River Moss');
       await page.getByLabel('Tagline', { exact: true }).fill('Small things, thoughtfully made');
       await page.getByLabel('About', { exact: true }).fill('A home for my experiments.');
@@ -52,12 +57,22 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       expect(config.name).toBe('River Moss');
       expect(readFileSync(join(folder, 'public', config.photo))).toEqual(photo);
       await page.screenshot({ path: join(evidence, 'personalize.png') });
+      await page
+        .getByTestId('workshop-view')
+        .screenshot({ path: join(illustrations, 'first-home-form.png') });
       await page.getByRole('button', { name: '2. See your page', exact: true }).click();
+      // Switching immediately after typing must flush the form's pending save.
+      await page
+        .getByLabel('About', { exact: true })
+        .fill('A home for my experiments, always growing.');
       await page.getByRole('button', { name: 'Preview my page', exact: true }).click();
       const frame = page.frameLocator('iframe[data-crux-id]').first();
       await expect(frame.getByRole('heading', { name: 'River Moss', exact: true })).toBeVisible({
         timeout: 8 * 60_000,
       });
+      await expect(
+        frame.getByText('A home for my experiments, always growing.', { exact: true }),
+      ).toBeVisible();
       await expect(frame.getByRole('img', { name: 'Portrait of River Moss' })).toBeVisible();
       // Astro may reload the preview after the config/photo writes. Retry the
       // whole observation so a replaced frame cannot abort the loaded-image check.
@@ -67,7 +82,15 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
           .evaluate((node) => (node as HTMLImageElement).naturalWidth);
         expect(width).toBeGreaterThan(0);
       }).toPass({ timeout: 15_000 });
+      await expect(
+        frame.getByText('A home for my experiments, always growing.', { exact: true }),
+      ).toBeInViewport({ ratio: 1 });
+      await expect(frame.locator('astro-dev-toolbar')).toHaveCount(0);
+      await expect(frame.getByRole('link', { name: 'Works', exact: true })).toHaveCount(0);
       await page.screenshot({ path: join(evidence, 'preview.png') });
+      await page
+        .getByTestId('workshop-view')
+        .screenshot({ path: join(illustrations, 'first-home-preview.png') });
       await page.getByRole('button', { name: '3. Watch it grow', exact: true }).click();
       await page.getByRole('button', { name: 'Open Growth', exact: true }).click();
       const growth = page.getByTestId('pane-body-history');
@@ -91,6 +114,18 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
         'step',
       );
       await page.getByRole('button', { name: 'Open Share', exact: true }).click();
+      const share = page.getByTestId('pane-body-publish');
+      await expect(share.getByTestId('functions-section')).not.toBeVisible();
+      await expect(share.getByText('Optional enhancements', { exact: true })).toBeVisible();
+      await page.screenshot({ path: join(evidence, 'before-sharing.png') });
+      const shareBox = (await share.boundingBox())!;
+      const helpBox = (await share
+        .getByRole('button', { name: 'What happens when I share?' })
+        .boundingBox())!;
+      await page.screenshot({
+        path: join(illustrations, 'first-home-share.png'),
+        clip: { ...shareBox, height: helpBox.y + helpBox.height + 12 - shareBox.y },
+      });
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
@@ -109,6 +144,10 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       ).toString('utf8');
       expect(html).toContain('River Moss');
       expect(html).not.toContain('Your first home page');
+      expect(
+        published.filter((file) => file.path.endsWith('.html')).map((file) => file.path),
+      ).toEqual(['index.html']);
+      expect(html).not.toContain('This page is yours to write');
       const config = JSON.parse(readFileSync(join(folder, 'src/config.json'), 'utf8'));
       expect(
         Buffer.from(published.find((file) => file.path === config.photo.slice(1))!.bytes),

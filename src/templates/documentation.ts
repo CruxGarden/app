@@ -5,11 +5,11 @@ const sources = import.meta.glob(
     '../../documentation-crux/{astro.config.mjs,package.json,package-lock.json,tsconfig.json,.nvmrc,.cruxignore,LICENSE,README.md,UPSTREAM.md}',
     '../../documentation-crux/src/**/*',
     '../../documentation-crux/public/**/*',
-    '!../../documentation-crux/public/**/*.woff2',
+    '!../../documentation-crux/{src,public}/**/*.{woff2,png,jpg,webp}',
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const assets = import.meta.glob('../../documentation-crux/public/**/*.woff2', {
+const assets = import.meta.glob('../../documentation-crux/{src,public}/**/*.{woff2,png,jpg,webp}', {
   query: '?url',
   import: 'default',
   eager: true,

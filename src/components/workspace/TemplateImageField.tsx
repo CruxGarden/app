@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { pathOf } from '@/lib/artifact-path';
+import { buttonClass } from '@/components/ui/button-class';
 import { Input } from '@/components/ui';
-import { useCruxStoreApi } from '@/stores/cruxStore';
+import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 
 /** Upload into this project's Artifacts, then use its public path in the form. */
 export default function TemplateImageField({
@@ -13,6 +16,11 @@ export default function TemplateImageField({
   onChange: (value: string) => void;
 }) {
   const store = useCruxStoreApi();
+  const photo = useCruxStore((state) =>
+    state.artifacts.find((file) => pathOf(file) === `public${value}`),
+  );
+  const localPhoto = useBlobUrl(photo?.fingerprint, photo?.mimeType);
+  const preview = localPhoto || (/^https?:\/\//i.test(value) ? value : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const change = useRef(onChange);
@@ -56,29 +64,50 @@ export default function TemplateImageField({
   };
   return (
     <div className="space-y-2">
-      <label className="block text-xs text-text-muted">
-        {label}
-        <Input
-          value={value}
-          disabled={busy}
-          placeholder="Image path or URL"
-          onChange={(event) => onChange(event.target.value)}
-          fieldSize="sm"
-        />
-      </label>
-      <label className="block text-xs text-text-muted">
-        Upload {label.toLowerCase()}
-        <input
-          className="block mt-1 text-xs max-w-full"
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          disabled={busy}
-          onChange={(event) => {
-            void upload(event.target.files?.[0]);
-            event.target.value = '';
-          }}
-        />
-      </label>
+      <p className="text-xs text-text-muted">{label}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        {preview && (
+          <img
+            src={preview}
+            alt={label}
+            className="w-16 h-16 rounded-full object-cover border border-border"
+          />
+        )}
+        <label
+          className={buttonClass(
+            'secondary',
+            'sm',
+            'cursor-pointer focus-within:outline-2 focus-within:outline-accent',
+          )}
+        >
+          {value ? 'Replace photo' : 'Choose photo'}
+          <input
+            className="sr-only"
+            aria-label={`Upload ${label.toLowerCase()}`}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            disabled={busy}
+            onChange={(event) => {
+              void upload(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
+        </label>
+      </div>
+      <p className="text-xs text-text-muted">PNG, JPEG, WebP or GIF · up to 10 MB. Optional.</p>
+      <details className="text-xs text-text-muted">
+        <summary className="cursor-pointer">Use an image path or URL</summary>
+        <label className="block mt-2">
+          {label}
+          <Input
+            value={value}
+            disabled={busy}
+            placeholder="Image path or URL"
+            onChange={(event) => onChange(event.target.value)}
+            fieldSize="sm"
+          />
+        </label>
+      </details>
       {busy && (
         <p role="status" className="text-xs text-text-muted">
           Saving photo…

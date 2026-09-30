@@ -36,6 +36,7 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
 
     // Share pane → Functions: a starter, then a rule "when ping, write last-ping".
     await togglePanel(page, 'Toggle share');
+    await page.getByText('Optional enhancements', { exact: true }).click();
     const fns = page.getByTestId('functions-section');
     await expect(fns).toBeVisible();
     await fns.getByRole('button', { name: 'Add a starter function' }).click();

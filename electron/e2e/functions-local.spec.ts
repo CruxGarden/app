@@ -63,6 +63,7 @@ test('a page calls its functions, hears events and is refused by a Store hook, a
 
     // Share pane → Functions: the starter, which brings crux.js with it.
     await togglePanel(page, 'Toggle share');
+    await page.getByText('Optional enhancements', { exact: true }).click();
     const fns = page.getByTestId('functions-section');
     await expect(fns.getByTestId('function-on-store')).toBeVisible({ timeout: 30_000 });
     await fns.getByRole('button', { name: 'Add a starter function' }).click();

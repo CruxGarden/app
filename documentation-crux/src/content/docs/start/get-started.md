@@ -2,7 +2,7 @@
 title: Get started
 description: Get the app, plant your first Garden, and know what needs an account or AI.
 sidebar:
-  order: 1
+  order: 0
 ---
 
 ## Get the desktop app

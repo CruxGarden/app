@@ -30,9 +30,16 @@ const steps = [
 ];
 
 /** Template-declared guidance uses the ordinary form, preview, Growth and Share. */
-export default function FirstProjectGuide({ model }: { model: ContentModel }) {
+export default function FirstProjectGuide({
+  model,
+  onEdit,
+  onPreview,
+}: {
+  model: ContentModel;
+  onEdit: () => void;
+  onPreview: () => void;
+}) {
   const crux = useCruxStore((state) => state.crux)!;
-  const artifacts = useCruxStore((state) => state.artifacts);
   const ui = useWorkspaceUIStore((state) => state);
   const key = `cruxgarden:first-project:${crux.id}`;
   const [step, setStep] = useState(() =>
@@ -40,16 +47,8 @@ export default function FirstProjectGuide({ model }: { model: ContentModel }) {
   );
   const current = steps[step]!;
   const run = () => {
-    if (step === 0) {
-      const path = model.settings?.path;
-      const file = artifacts.find(
-        (artifact) => (artifact.meta?.path || artifact.filename) === path,
-      );
-      if (file && path) {
-        ui.openFile(file.id, path);
-        ui.setTabViewMode(file.id, 'form');
-      }
-    } else if (step === 1) ui.setWorkshopView('clean');
+    if (step === 0) onEdit();
+    else if (step === 1) onPreview();
     else {
       const pane = step === 2 ? 'history' : 'publish';
       ui.setPaneVisible(pane, true);
@@ -79,10 +78,12 @@ export default function FirstProjectGuide({ model }: { model: ContentModel }) {
           ))}
         </nav>
         <p className="text-sm text-text-muted">{current.text}</p>
-        <button className={buttonClass('secondary', 'sm')} onClick={run}>
-          {current.action}
-        </button>
-        <GuideLink page="start/first-home/">Step-by-step help</GuideLink>
+        <div className="flex flex-wrap items-center gap-3">
+          <button className={buttonClass('secondary', 'sm')} onClick={run}>
+            {current.action}
+          </button>
+          <GuideLink page="start/first-home/">Step-by-step help</GuideLink>
+        </div>
         {!!crux.meta?.publishedAt && (
           <p role="status" className="text-sm text-accent">
             Your page has been shared. Open Share to copy its link or publish your next changes.

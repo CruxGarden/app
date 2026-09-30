@@ -21,6 +21,8 @@ describe('Documentation Crux package', () => {
     expect(paths).toContain('src/content/docs/start/first-home.md');
     expect(paths.some((p) => /(^|\/)(node_modules|dist|\.astro)\//.test(p))).toBe(false);
     expect(new Set(paths).size).toBe(paths.length);
-    expect(template.files.filter((f) => f.encoding === 'asset-url')).toHaveLength(2);
+    expect(template.files.filter((file) => file.path.endsWith('.woff2'))).toHaveLength(2);
+    for (const file of template.files.filter((file) => /\.(woff2|png|jpg|webp)$/.test(file.path)))
+      expect(file.encoding, file.path).toBe('asset-url');
   });
 });

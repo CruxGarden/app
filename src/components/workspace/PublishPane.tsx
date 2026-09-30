@@ -335,13 +335,17 @@ export default function PublishPane() {
             </PaneSection>
           ) : (
             <PaneSection label="Status" tone="dashed">
-              <p className="text-xxs text-text-muted">
+              <p className="text-sm text-text-muted leading-relaxed">
                 {isEmbeddedApp(crux)
                   ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content stays here.'
-                  : aiEnabled
-                    ? 'Not shared yet. Sharing publishes this crux at its own address, with its conversation open to visitors.'
-                    : 'Not shared yet. Sharing publishes this crux at its own address.'}
+                  : 'Private for now. Sharing puts this creation and its conversation on the web. Review your page and conversation before sharing.'}
               </p>
+              {!isAuthenticated && (
+                <p className="mt-2 text-xs text-text-muted">
+                  You’ll connect a crux.garden account to publish. Your account’s plan and storage
+                  limits apply. Editing and previewing here do not require an account.
+                </p>
+              )}
             </PaneSection>
           )}
 
@@ -493,17 +497,6 @@ export default function PublishPane() {
           {isPublished && isAuthenticated && publicUrl && can(Capability.V2) && (
             <GardenShelfSection cruxId={crux.id} title={crux.title ?? 'A crux'} url={publicUrl} />
           )}
-          {!isEmbeddedApp(crux) && <GuestbookSection cruxId={crux.id} artifacts={artifacts} />}
-          {!isEmbeddedApp(crux) && (
-            <FunctionsSection
-              cruxId={crux.id}
-              artifacts={artifacts}
-              published={isPublished}
-              authenticated={isAuthenticated}
-              changesToShare={hasUnpublishedChanges}
-            />
-          )}
-
           {/* Visibility */}
           <GuideLink page="guides/sharing/">What happens when I share?</GuideLink>
           <PaneSection label="Visibility">
@@ -521,10 +514,32 @@ export default function PublishPane() {
               <span className="text-xxs text-text-muted">
                 {crux.discoverable
                   ? 'Listed in search on crux.garden'
-                  : 'Only people with the link can find it'}
+                  : 'Not listed in Explore. Anyone with the link can view it.'}
               </span>
             </div>
           </PaneSection>
+
+          {!isEmbeddedApp(crux) && (
+            <details className="rounded-[var(--radius-sm)] border border-border p-3">
+              <summary className="cursor-pointer text-sm font-medium">
+                Optional enhancements
+              </summary>
+              <p className="mt-2 text-xs text-text-muted">
+                Add a guestbook or API functions when your creation needs them. Your first page does
+                not need either.
+              </p>
+              <div className="mt-3 space-y-4">
+                <GuestbookSection cruxId={crux.id} artifacts={artifacts} />
+                <FunctionsSection
+                  cruxId={crux.id}
+                  artifacts={artifacts}
+                  published={isPublished}
+                  authenticated={isAuthenticated}
+                  changesToShare={hasUnpublishedChanges}
+                />
+              </div>
+            </details>
+          )}
 
           <div className="flex-1" />
 

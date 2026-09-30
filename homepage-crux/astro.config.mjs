@@ -8,6 +8,8 @@ import config from './src/config.json' with { type: 'json' };
 
 // https://astro.build/config
 export default defineConfig({
+  // Turn this on deliberately when developing the site itself.
+  devToolbar: { enabled: false },
   // Crux Garden: the public address once shared (src/config.json → url); unset until then.
   ...(config.url ? { site: config.url } : {}),
   integrations: [mdx(), ...(config.url ? [sitemap()] : [])],

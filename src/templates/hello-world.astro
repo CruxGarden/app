@@ -1,0 +1,147 @@
+---
+import '@fontsource/public-sans/400.css';
+import '@fontsource/public-sans/600.css';
+import '@fontsource-variable/fraunces';
+import profile from '../config.json';
+const name = profile.name || 'Hello, world';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={profile.about || profile.tagline || name} />
+    <title>{name}</title>
+  </head>
+  <body>
+    <main>
+      <article aria-labelledby="name">
+        {
+          profile.photo && (
+            <img
+              class="portrait"
+              src={profile.photo}
+              alt={`Portrait of ${name}`}
+              width="160"
+              height="160"
+            />
+          )
+        }
+        {profile.tagline && <p class="tagline">{profile.tagline}</p>}
+        <h1 id="name">{name}</h1>
+        {profile.about && <p class="about">{profile.about}</p>}
+        {profile.footerText && <footer>{profile.footerText}</footer>}
+      </article>
+    </main>
+  </body>
+</html>
+<style>
+  :global(*) {
+    box-sizing: border-box;
+  }
+  :global(body) {
+    margin: 0;
+    color: #243b34;
+    background: #f4f1e9;
+    font-family: 'Public Sans', sans-serif;
+  }
+  main {
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: clamp(1.25rem, 5vw, 4rem);
+    background: radial-gradient(ellipse at top left, #dfe9dc 0, transparent 65%);
+  }
+  article {
+    width: min(100%, 48rem);
+    padding: clamp(2rem, 7vw, 5rem);
+    border: 1px solid #cbd6c9;
+    border-radius: 2rem;
+    background: #fffef8d9;
+    box-shadow: 0 2rem 6rem #29402b0a;
+  }
+  .portrait {
+    border-radius: 50%;
+    width: 8rem;
+    height: 8rem;
+    object-fit: cover;
+    margin-bottom: 1.5rem;
+  }
+  .tagline {
+    margin: 0 0 1rem;
+    color: #4f6d5d;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.6;
+  }
+  h1 {
+    margin: 0;
+    font-family: 'Fraunces Variable', Georgia, serif;
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-weight: 400;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+  .about {
+    max-width: 36rem;
+    margin: 1.5rem 0 0;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    line-height: 1.8;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dce3d8;
+    color: #5c6c61;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  @media (max-height: 650px) {
+    main {
+      padding: 1.25rem;
+    }
+    article {
+      padding: 2rem;
+    }
+    .portrait {
+      width: 5rem;
+      height: 5rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(2.3rem, 5vw, 3.5rem);
+    }
+    .about {
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+    footer {
+      margin-top: 1.5rem;
+    }
+  }
+  @media (prefers-color-scheme: dark) {
+    :global(body) {
+      background: #15241f;
+      color: #e9eee7;
+    }
+    main {
+      background: radial-gradient(ellipse at top left, #29443a 0, transparent 65%);
+    }
+    article {
+      background: #1a2e27e6;
+      border-color: #395647;
+    }
+    .tagline,
+    footer {
+      color: #a9c2b0;
+    }
+    footer {
+      border-color: #395647;
+    }
+  }
+</style>
