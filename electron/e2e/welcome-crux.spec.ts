@@ -15,7 +15,10 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
     let folder = '';
     const evidence = resolve(__dirname, '../../docs/welcome-crux');
     mkdirSync(evidence, { recursive: true });
-    const illustrations = resolve(__dirname, '../../documentation-crux/src/assets');
+    const illustrations =
+      process.env.CRUX_REFRESH_GUIDE_IMAGES === '1'
+        ? resolve(__dirname, '../../documentation-crux/src/assets')
+        : test.info().outputPath('guide-illustrations');
     mkdirSync(illustrations, { recursive: true });
     const photo = readFileSync(resolve(__dirname, 'fixtures/glow-garden/seed.png'));
     try {
