@@ -132,7 +132,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       const [chooser] = await Promise.all([
         page.waitForEvent('filechooser'),
-        page.getByRole('button', { name: 'Import .crux file' }).click(),
+        page.getByRole('button', { name: 'Import Crux, tool or Mood' }).click(),
       ]);
       await chooser.setFiles(cruxFile);
       await expect(page.getByRole('button', { name: 'Add panel' })).toBeVisible({

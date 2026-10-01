@@ -1,3 +1,4 @@
+import { exportCreation, creationExportLabel } from '@/services/export-creation';
 import RuntimeExportChoice from './RuntimeExportChoice';
 import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
 import { Spinner, Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
-import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
+import { exportArtifactsZip } from '@/services/crux-io';
 import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/api/types';
 
@@ -36,7 +37,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
     setExporting('crux');
     setProgress('Fetching data...');
     try {
-      const result = await exportCrux({
+      const result = await exportCreation({
         cruxId: crux.id,
         messages: (crux.meta?.messages as unknown[]) || [],
         summary: crux.meta?.summary || null,
@@ -94,11 +95,13 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <RuntimeExportChoice
-            template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
-            artifacts={artifacts}
-            disabled={busy}
-          />
+          {crux.kind !== 'tool' && crux.kind !== 'mood' && (
+            <RuntimeExportChoice
+              template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
+              artifacts={artifacts}
+              disabled={busy}
+            />
+          )}
           <div className="flex flex-col gap-1.5">
             <Button
               onClick={handleExportCrux}
@@ -106,10 +109,12 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
               disabled={busy}
               fullWidth
             >
-              Export Crux
+              {creationExportLabel(crux.kind)}
             </Button>
             <p className="text-xxs text-text-muted text-center">
-              Full archive — artifacts, collaboration, and snapshot history
+              {crux.kind === 'tool' || crux.kind === 'mood'
+                ? 'Installable package — editor or Mood assets; no private conversation or history'
+                : 'Full archive — artifacts, collaboration, and snapshot history'}
             </p>
           </div>
 

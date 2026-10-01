@@ -1,4 +1,3 @@
-import { publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
 import {
   Avatar,
   Panel,
@@ -26,8 +25,7 @@ import type {
 import { parseExploreParams, type ExploreView } from './explore-params';
 import { useAppStore } from '@/stores/appStore';
 import { useUIStore } from '@/stores/uiStore';
-import MoodResultCard from '@/components/explore/MoodResultCard';
-import ToolResultCard from '@/components/explore/ToolResultCard';
+import PublishedCreationCard from '@/components/explore/PublishedCreationCard';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
 import CruxResultCard from '@/components/explore/CruxResultCard';
@@ -334,65 +332,20 @@ export default function Explore({
   const empty =
     view === 'people' ? people.length === 0 : cruxes.length === 0 && people.length === 0;
 
-  const moodGrid = (list: ExploreCrux[]) => (
+  const specialGrid = (list: ExploreCrux[]) => (
     <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] p-3">
       {list.map((crux) => (
-        <MoodResultCard
+        <PublishedCreationCard
           key={crux.id}
           crux={crux}
-          canInstall={appReady}
-          onOpen={() => handleNavigate(`/${crux.author_username}/${crux.slug}`)}
-          onInstall={async (apply) => {
-            const [{ installMoodFromPublished }, { chooseMood }, { putBlob }] = await Promise.all([
-              import('@/lib/moods/publish-mood'),
-              import('@/services/garden-mood'),
-              import('@/services/blobs'),
-            ]);
-            const pkg = await installMoodFromPublished(crux, {
-              publishBaseUrl: publishBaseUrlFor,
-              fetchBlob: async (url) => {
-                // No publish origin configured (dev, tests): the URL would be
-                // relative to the app shell, which answers everything with index.html.
-                if (!hasRemotePublishOrigin()) return null;
-                const r = await fetch(url);
-                if (!r.ok) return null;
-                const type = r.headers.get('content-type') || '';
-                return type.startsWith('text/html') ? null : r.blob();
-              },
-              apiArtifacts: publicApi.getArtifacts,
-              apiDownload: publicApi.downloadArtifact,
-              putBlob,
-            });
-            if (!pkg) throw new Error('No package found');
-            if (apply) await chooseMood(pkg);
-          }}
+          onNavigate={handleNavigate}
+          onTag={toggleTag}
         />
       ))}
     </div>
   );
-  const toolGrid = (list: ExploreCrux[]) => (
-    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] p-3">
-      {list.map((crux) => (
-        <ToolResultCard
-          key={crux.id}
-          crux={crux}
-          canInstall={appReady}
-          onOpen={() => handleNavigate(`/${crux.author_username}/${crux.slug}`)}
-          onInstall={async (report) => {
-            const [{ installToolFromPublished }, { putBlob }] = await Promise.all([
-              import('@/services/crux-tools/installed'),
-              import('@/services/blobs'),
-            ]);
-            await installToolFromPublished(crux, {
-              apiDownload: publicApi.downloadArtifact,
-              putBlob,
-              onProgress: report,
-            });
-          }}
-        />
-      ))}
-    </div>
-  );
+  const moodGrid = specialGrid;
+  const toolGrid = specialGrid;
   const cruxList = (list: ExploreCrux[]) => (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-5 p-3 pt-2 sm:p-4 sm:pt-2">
       {list.map((crux) => (

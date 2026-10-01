@@ -1,3 +1,4 @@
+import { exportCreation, creationExportLabel } from '@/services/export-creation';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
 import { downloadBlob } from '@/lib/download';
@@ -5,7 +6,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { isEmbeddedApp, isCardinal, samplerType } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
-import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
+import { exportArtifactsZip } from '@/services/crux-io';
 import { formatBytes } from '@/lib/format';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
@@ -72,7 +73,7 @@ export default function ExportPane() {
     setProgress('Fetching data...');
 
     try {
-      const result = await exportCrux({
+      const result = await exportCreation({
         cruxId: crux.id,
         messages,
         summary,
@@ -128,6 +129,7 @@ export default function ExportPane() {
   }, [crux, artifacts]);
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
+  const installable = crux?.kind === 'tool' || crux?.kind === 'mood';
   const messageCount = messages.length;
   const hasContent = artifacts.length > 0 || messageCount > 0;
 
@@ -171,7 +173,7 @@ export default function ExportPane() {
           )}
           <PaneSection label="Archive" aside={formatBytes(totalSize)}>
             <ul className="text-xxs font-mono text-text-muted flex flex-col gap-0.5">
-              {(aiEnabled || messageCount > 0) && (
+              {!installable && (aiEnabled || messageCount > 0) && (
                 <li className="flex justify-between gap-2">
                   <span className="text-text">conversation</span>
                   <span>
@@ -179,12 +181,14 @@ export default function ExportPane() {
                   </span>
                 </li>
               )}
-              <li className="flex justify-between gap-2">
-                <span className="text-text">history</span>
-                <span>
-                  {growthCount} snapshot{growthCount === 1 ? '' : 's'}
-                </span>
-              </li>
+              {!installable && (
+                <li className="flex justify-between gap-2">
+                  <span className="text-text">history</span>
+                  <span>
+                    {growthCount} snapshot{growthCount === 1 ? '' : 's'}
+                  </span>
+                </li>
+              )}
               <li className="flex justify-between gap-2">
                 <span className="text-text">files</span>
                 <span>
@@ -204,11 +208,13 @@ export default function ExportPane() {
             </ul>
           </PaneSection>
 
-          <RuntimeExportChoice
-            template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
-            artifacts={artifacts}
-            disabled={exporting || exportingZip}
-          />
+          {!installable && (
+            <RuntimeExportChoice
+              template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
+              artifacts={artifacts}
+              disabled={exporting || exportingZip}
+            />
+          )}
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap gap-1.5 [&>*]:flex-1 [&>*]:min-w-[132px]">
               <PaneAction
@@ -216,7 +222,7 @@ export default function ExportPane() {
                 busy={exporting && 'Exporting...'}
                 icon={<ExportIcon />}
               >
-                Export Crux
+                {creationExportLabel(crux.kind)}
               </PaneAction>
               {artifacts.length > 0 && (
                 <PaneAction
@@ -231,8 +237,9 @@ export default function ExportPane() {
               )}
             </div>
             <PaneHint align="left">
-              The .crux archive carries the files{aiEnabled ? ', the conversation' : ''} and every
-              snapshot; Export Artifacts is a plain zip of the files.
+              {installable
+                ? 'Installable package: editor or Mood assets, without private conversation or history. Tools start with the seed declared in crux-tool.json. Review other files before sharing. Export Artifacts is a plain zip.'
+                : `The .crux archive carries the files${aiEnabled ? ', the conversation' : ''} and every snapshot; Export Artifacts is a plain zip of the files.`}
             </PaneHint>
           </div>
 

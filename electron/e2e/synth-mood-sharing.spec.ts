@@ -68,10 +68,17 @@ test('a custom Synth preset travels in a Mood to a clean garden, survives restar
   try {
     let page = second.page;
     await enterGarden(page);
+    const beforeImport = (await audio(page)).synth;
+    await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Add Crux', exact: true })
+      .locator('input[type=file][accept*=".cruxmood"]')
+      .setInputFiles(archive);
+    await expect(page.getByRole('alertdialog', { name: 'Mood installed' })).toBeVisible();
+    await page.getByRole('button', { name: 'OK', exact: true }).click();
+    expect((await audio(page)).synth).toEqual(beforeImport);
+    await page.keyboard.press('Escape');
     await showPane(page, 'Mood');
-
-    await page.getByLabel('Import a Mood file', { exact: true }).setInputFiles(archive);
-    await expect(page.getByRole('status')).toContainText('Imported "Shared atmosphere"');
     await page.getByRole('button', { name: 'Apply Shared atmosphere', exact: true }).click();
     await expect.poll(async () => (await audio(page)).synth).toEqual(expected!);
     expect((await audio(page)).playing).toBe(false);

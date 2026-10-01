@@ -36,12 +36,13 @@ export async function getAuthor(username: string, signal?: AbortSignal): Promise
 
 export async function getAuthorCruxes(
   username: string,
-  params?: { page?: number; perPage?: number },
+  params?: { page?: number; perPage?: number; kind?: string },
   signal?: AbortSignal,
 ): Promise<{ cruxes: Crux[]; totalPages: number; currentPage: number }> {
   const url = new URL(`${authorPath(username)}/cruxes`);
   if (params?.page) url.searchParams.set('page', String(params.page));
   if (params?.perPage) url.searchParams.set('perPage', String(params.perPage));
+  if (params?.kind && params.kind !== 'all') url.searchParams.set('kind', params.kind);
   const res = await request(url.toString(), signal);
   const cruxes = await res.json();
   const pagination = JSON.parse(res.headers.get('Pagination') || '{}');

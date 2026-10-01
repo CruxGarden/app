@@ -79,6 +79,19 @@ const bool = (id: string, o: Record<string, unknown>, key: string, fallback: boo
   return v;
 };
 
+function relativePath(id: string, label: string, value: string, directory = false): string {
+  const path = directory ? value.replace(/\/$/, '') : value;
+  if (
+    !path ||
+    path.includes('\\') ||
+    path.includes(':') ||
+    Array.from(path).some((char) => char.charCodeAt(0) < 32) ||
+    path.split('/').some((part) => !part || part === '.' || part === '..')
+  )
+    fail(id, `${label} must stay inside the Crux`);
+  return value;
+}
+
 /** Parse and validate a manifest; throws a message naming the tool and the field. */
 export function parseManifest(raw: unknown): CruxToolManifest {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('', 'must be an object');
@@ -94,7 +107,7 @@ export function parseManifest(raw: unknown): CruxToolManifest {
   if (!LAYOUTS.includes(layout)) fail(id, `layout must be one of ${LAYOUTS.join(', ')}`);
   const order = typeof o.order === 'number' && Number.isFinite(o.order) ? o.order : 1000;
   const entryFile = req(id, o, 'entryFile');
-  if (entryFile.startsWith('/') || entryFile.includes('..')) fail(id, 'entryFile must be relative');
+  relativePath(id, 'entryFile', entryFile);
 
   const info = o.toolInfo;
   if (!info || typeof info !== 'object') fail(id, 'toolInfo is required');
@@ -113,7 +126,7 @@ export function parseManifest(raw: unknown): CruxToolManifest {
   if (o.document !== undefined) {
     if (!o.document || typeof o.document !== 'object') fail(id, 'document must be an object');
     const d = o.document as Record<string, unknown>;
-    const path = req(id, d, 'path');
+    const path = relativePath(id, 'document.path', req(id, d, 'path'));
     if (!Object.hasOwn(d, 'seed')) fail(id, 'document.seed is required');
     document = { path, seed: d.seed };
   }
@@ -131,7 +144,7 @@ export function parseManifest(raw: unknown): CruxToolManifest {
           fail(id, `route extension ${String(e)} must look like ".ext"`);
       routes.push({
         extensions: rr.extensions as string[],
-        folder: opt(id, rr, 'folder') ?? '',
+        folder: rr.folder ? relativePath(id, 'route.folder', req(id, rr, 'folder'), true) : '',
       });
     }
   }
@@ -150,7 +163,7 @@ export function parseManifest(raw: unknown): CruxToolManifest {
     bundled: bool(id, o, 'bundled', false),
     app: req(id, o, 'app'),
     entryFile,
-    contentRoot: opt(id, o, 'contentRoot') ?? 'data/',
+    contentRoot: relativePath(id, 'contentRoot', opt(id, o, 'contentRoot') ?? 'data/', true),
     layout,
     document,
     share: bool(id, o, 'share', false),
@@ -163,6 +176,6 @@ export function parseManifest(raw: unknown): CruxToolManifest {
     routes,
     greeting: req(id, o, 'greeting'),
     context: opt(id, o, 'context') ?? '',
-    host: opt(id, o, 'host'),
+    host: o.host ? relativePath(id, 'host', req(id, o, 'host')) : undefined,
   };
 }

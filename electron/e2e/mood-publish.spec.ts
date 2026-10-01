@@ -78,7 +78,10 @@ test.describe('publish + discover moods (mocked API)', () => {
       const card = page.getByTestId(`explore-mood-${moodCrux!.id as string}`);
       await expect(card).toBeVisible({ timeout: 30_000 });
       await expect(card).toContainText('Sea Glass');
-      await expect(card).toContainText('by tester');
+      await expect(card.getByRole('link', { name: "Visit Tester's Garden" })).toHaveAttribute(
+        'href',
+        '/tester',
+      );
       await page.screenshot({ path: 'e2e/.results/mood-publish-1-explore.png' });
       await card.getByRole('button', { name: 'Install', exact: true }).click();
       await expect(card).toContainText('Installed', { timeout: 30_000 });

@@ -7,7 +7,8 @@ import {
 } from './embedded-app';
 import { portableMeta } from './task-archive';
 import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
-import { toolManifest } from './crux-tools/registry';
+import { manifestFor } from './crux-tools/registry';
+import { parseManifest } from './crux-tools/manifest';
 import { assertCopyWritable } from './working-copies';
 /**
  * Publish module — the whole publish/unpublish pipeline behind one interface.
@@ -301,6 +302,27 @@ export async function publishPipeline(
       throw new Error('A selected public wireframe is missing. Update the publication settings.');
   }
 
+  // A creator-owned manifest takes precedence over the build's catalogue.
+  // Resolve before any remote mutation so invalid authoring fails locally.
+  let publishedToolManifest = crux.kind === 'tool' ? manifestFor(crux) : null;
+  if (crux.kind === 'tool') {
+    const definition = artifacts.find((a) => pathOf(a) === 'crux-tool.json');
+    if (definition)
+      publishedToolManifest = parseManifest(
+        JSON.parse(await (await deps.local.downloadBlob(definition)).text()),
+      );
+    if (!publishedToolManifest)
+      throw new Error('Add a valid crux-tool.json before sharing a Tool template.');
+    crux = {
+      ...crux,
+      meta: {
+        ...crux.meta,
+        template: publishedToolManifest.id,
+        toolManifest: publishedToolManifest,
+      },
+    };
+  }
+
   // 1. Upsert crux to API (create if not exists, update if it does).
   // A transient failure here aborts the publish: `exists` throwing is the
   // guard that stops us taking the destructive create path (see PublishDeps).
@@ -398,8 +420,7 @@ export async function publishPipeline(
 
   // Tools are one portable version entity; their internal files are not API Artifacts.
   if (crux.kind === 'tool') {
-    const manifest = toolManifest(crux.meta?.template as string);
-    if (!manifest) throw new Error('Choose a known Crux Tool before publishing its package.');
+    const manifest = publishedToolManifest!;
     const existing = filesToPublish.find((file) => file.path === TOOL_PACKAGE_PATH);
     let blob: Blob;
     if (existing) {

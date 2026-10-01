@@ -68,7 +68,7 @@ test.describe('guide 11 · History', () => {
       await enterGarden(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       const chooser = page.waitForEvent('filechooser');
-      await page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+      await page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click();
       await (await chooser).setFiles(filename);
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;

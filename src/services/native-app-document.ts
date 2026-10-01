@@ -156,7 +156,16 @@ export async function validateNativeDocument(
   else if (app === 'bitsy') validateBitsy(doc);
   else if (app === 'audiomass') validateAudioMass(doc);
   else if (app === 'minipaint') validateMiniPaint(doc);
-  else {
+  else if (app !== 'openmosh') {
+    if (
+      !doc ||
+      typeof doc !== 'object' ||
+      Array.isArray(doc) ||
+      doc.version !== 1 ||
+      doc.app !== app
+    )
+      throw new Error('Choose a version 1 document for this tool.');
+  } else {
     if (
       !doc ||
       doc.version !== 1 ||

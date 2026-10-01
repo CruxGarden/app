@@ -1,59 +1,54 @@
 import { TYPES, validateProject } from '../../tool-cruxes/shared/model.js';
 import { validateDocument } from '../../cardinal-crux/model.js';
-import { manifestFor, nativeAppTypes } from '@/services/crux-tools/registry';
+import { manifestFor } from '@/services/crux-tools/registry';
 
-/** Template id → native app type, from every tool's manifest (ADR 0050). */
-const NATIVE_TEMPLATES: Record<string, string> = nativeAppTypes();
-/** Native adapters share the owner-bound document and binary bridge. */
+/** Use the project's own manifest snapshot, even after its installation is removed. */
 export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  const template = crux?.meta?.template;
-  return typeof template === 'string' && Object.hasOwn(NATIVE_TEMPLATES, template)
-    ? NATIVE_TEMPLATES[template]!
-    : null;
+  return manifestFor(crux)?.app ?? null;
 }
 
 export function isOpenMosh(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'openmosh-app';
+  return nativeAppType(crux) === 'openmosh';
 }
 
 export function isWickEditor(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'wick-editor-app';
+  return nativeAppType(crux) === 'wick-editor';
 }
 
 export function isBentoPDF(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'bentopdf-app';
+  return nativeAppType(crux) === 'bentopdf';
 }
 
 export function isAM1(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'am-1-app';
+  return nativeAppType(crux) === 'am-1';
 }
 
 export function isEventCalendar(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'eventcalendar-app';
+  return nativeAppType(crux) === 'eventcalendar';
 }
 
 export function isPPTist(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'pptist-app';
+  return nativeAppType(crux) === 'pptist';
 }
 
 export function isHextris(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'hextris-app';
+  return nativeAppType(crux) === 'hextris';
 }
 
 export function isBeepBox(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'beepbox-app';
+  return nativeAppType(crux) === 'beepbox';
 }
 
 export function isWebSynth(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'web-synth-app';
+  return nativeAppType(crux) === 'web-synth';
 }
 
 export function isAudioMass(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'audiomass-app';
+  return nativeAppType(crux) === 'audiomass';
 }
 
 export function isMiniPaint(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'minipaint-app';
+  return nativeAppType(crux) === 'minipaint';
 }
 
 /** Built-in apps with editable data owned by the Crux. */

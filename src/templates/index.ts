@@ -259,6 +259,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition | Tool
     documentation: () => import('./documentation'),
     'zen-vibecoding': () => import('./zen-vibecoding'),
     'hello-world': () => import('./hello-world'),
+    'tool-starter': () => import('./tool-starter'),
     'astro-blog': () => import('./astro-blog'),
     'digital-garden': () => import('./digital-garden'),
     'photo-gallery': () => import('./photo-gallery'),
@@ -294,7 +295,11 @@ export function templateFromManifest(
         ]
       : files,
     layout: LAYOUTS[manifest.layout],
-    meta: { settings: { entryFile: manifest.entryFile }, toolInfo: { ...manifest.toolInfo } },
+    meta: {
+      settings: { entryFile: manifest.entryFile },
+      toolInfo: { ...manifest.toolInfo },
+      toolManifest: manifest,
+    },
     greeting: manifest.greeting,
     context: manifest.context || undefined,
   };

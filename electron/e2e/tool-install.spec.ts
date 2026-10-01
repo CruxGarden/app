@@ -74,8 +74,9 @@ test('a tool not in the build installs from Explore and then creates', async () 
 
     // Installed: Create works, and the Workshop shows the tool.
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
-    await expect(page.locator(`[data-template-id="${TOOL}"]`)).not.toContainText('not installed');
-    await page.locator(`[data-template-id="${TOOL}"]`).click();
+    const installedChoice = page.locator('[data-template-id^="installed-"]');
+    await expect(installedChoice).not.toContainText('not installed');
+    await installedChoice.click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 600000 });
     await expect(page.locator('iframe[data-crux-id]')).toBeVisible({ timeout: 60000 });

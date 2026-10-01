@@ -47,7 +47,7 @@ export default function InstalledTools() {
     <div data-testid="installed-tools">
       <h3 className="font-display text-sm font-medium text-text mb-2">Installed tools</h3>
       <p className="text-xs text-text-muted mb-3">
-        Crux Tools this garden installed from Explore or a .crux package. The build's own tools are
+        Crux Tools this garden installed from Explore or a .cruxtool file. The build's own tools are
         not listed; they cannot be removed.
       </p>
       {list.length === 0 ? (
@@ -65,7 +65,7 @@ export default function InstalledTools() {
                 <div className="min-w-0">
                   <p className="text-text truncate">{m?.name ?? t.id}</p>
                   <p className="text-xs text-text-muted truncate">
-                    {t.author ? `from @${t.author} · ` : 'from a .crux package · '}
+                    {t.author ? `from @${t.author} · ` : 'from a .cruxtool file · '}
                     {formatDateTime(t.installedAt)}
                   </p>
                 </div>

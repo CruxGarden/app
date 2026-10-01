@@ -117,7 +117,7 @@ export async function importNativeCrux(page: Page, path: string) {
   await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
   const [chooser] = await Promise.all([
     page.waitForEvent('filechooser'),
-    page.getByRole('button', { name: 'Import .crux file', exact: true }).click(),
+    page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click(),
   ]);
   await chooser.setFiles(path);
   // A big tool Crux (GDevelop: 14,000 files) takes as long to import as to create.

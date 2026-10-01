@@ -246,7 +246,7 @@ test.describe('guide 03 · Add Crux', () => {
       writeFileSync(empty, await zip.generateAsync({ type: 'nodebuffer' }));
       await page.getByRole('button', { name: 'Add Crux' }).click();
       const chooser = page.waitForEvent('filechooser');
-      await page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+      await page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click();
       await (await chooser).setFiles(empty);
       await expect(page.getByRole('alert').or(page.getByRole('alertdialog')).first()).toContainText(
         /invalid|missing|not a|archive/i,

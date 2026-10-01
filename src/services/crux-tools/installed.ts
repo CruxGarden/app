@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { SettingsKey } from '@/lib/constants';
-import { getSetting, setSetting } from '@/services/settings';
+import { getSetting, setSetting, setSettingDurably } from '@/services/settings';
 import { getServices } from '@/services';
+import { getSqliteClient } from '../sqlite/client';
 import { toolManifest } from './registry';
-import { openToolPackage, TOOL_PACKAGE_PATH, type ToolPackageReference } from './package';
+import { parseManifest, type CruxToolManifest } from './manifest';
+import { openToolPackage, packTool, TOOL_PACKAGE_PATH, type ToolPackageReference } from './package';
 
 /**
  * Crux Tools installed into this garden (CRUX-TOOLS-DISTRIBUTION-PLAN §3,
@@ -15,7 +17,7 @@ import { openToolPackage, TOOL_PACKAGE_PATH, type ToolPackageReference } from '.
  * This registry maps tool id → that Template Crux.
  */
 export interface InstalledTool {
-  /** The tool's manifest id (`meta.template`). */
+  /** Local installation identity, scoped to the publication or file fingerprint. */
   id: string;
   /** The Template Crux in this garden, `kind: 'tool'`. */
   cruxId: string;
@@ -24,6 +26,14 @@ export interface InstalledTool {
   author?: string;
   slug?: string;
   installedAt: string;
+  /** Package identity; the local id is scoped to its publication. */
+  manifest?: CruxToolManifest;
+  fingerprint?: string;
+}
+
+/** Publication UUID prevents two creators using the same manifest id from replacing each other. */
+export function publishedToolId(cruxId: string): string {
+  return `installed-${cruxId}`;
 }
 
 export const INSTALLED_TOOLS_CHANGED = 'crux-tools:installed-changed';
@@ -96,9 +106,9 @@ export async function installToolFromPublished(
   crux: PublishedToolCrux,
   deps: InstallToolDeps,
 ): Promise<InstalledTool> {
+  const owner = getSqliteClient();
   const id = typeof crux.meta?.template === 'string' ? crux.meta.template : null;
-  const manifest = id ? toolManifest(id) : null;
-  if (!id || !manifest) throw new Error('This Crux is not a Crux Tool this app knows.');
+  if (!id) throw new Error('This publication does not declare a tool identity.');
   const reference = crux.meta?.toolPackage as ToolPackageReference | undefined;
   if (
     !reference ||
@@ -109,9 +119,13 @@ export async function installToolFromPublished(
     throw new Error(
       'This tool needs to be republished as a single package before it can be installed.',
     );
+  const previous = installedTool(publishedToolId(crux.id));
   deps.onProgress?.(0, 1);
   const blob = await deps.apiDownload(crux.author_username, crux.slug, reference.artifactId);
-  await openToolPackage(blob, id, reference.fingerprint);
+  const { manifest } = await openToolPackage(blob, id, reference.fingerprint);
+  if (getSqliteClient() !== owner)
+    throw new Error('The local connection changed. Retry this installation.');
+  if (previous?.fingerprint === reference.fingerprint) return previous;
   const fingerprint = await deps.putBlob(blob);
   const services = getServices();
   const holder = await services.crux.create({
@@ -119,6 +133,7 @@ export async function installToolFromPublished(
     kind: 'tool',
     meta: {
       template: id,
+      toolManifest: manifest,
       toolPackage: { ...reference, fingerprint },
       toolInfo: { ...manifest.toolInfo },
       installedFrom: { cruxId: crux.id, author: crux.author_username, slug: crux.slug },
@@ -142,14 +157,20 @@ export async function installToolFromPublished(
   }
   deps.onProgress?.(1, 1);
   const tool: InstalledTool = {
-    id,
+    id: publishedToolId(crux.id),
+    manifest,
+    fingerprint,
     cruxId: holder.id,
     publishedCruxId: crux.id,
     author: crux.author_username,
     slug: crux.slug,
     installedAt: new Date().toISOString(),
   };
-  recordInstalledTool(tool);
+  await setSettingDurably(
+    SettingsKey.InstalledTools,
+    JSON.stringify({ ...installedTools(), [tool.id]: tool }),
+  );
+  announce();
   return tool;
 }
 
@@ -161,7 +182,7 @@ export async function installedToolPackage(tool: InstalledTool) {
   if (!file) return null;
   return openToolPackage(
     await service.downloadBlob(file),
-    tool.id,
+    tool.manifest?.id ?? tool.id,
     file.fingerprint || undefined,
   );
 }
@@ -174,11 +195,54 @@ export async function installedToolPackage(tool: InstalledTool) {
 export async function installToolFromCrux(cruxId: string): Promise<InstalledTool | null> {
   const services = getServices();
   const crux = await services.crux.findById(cruxId);
-  const id = typeof crux?.meta?.template === 'string' ? crux.meta.template : null;
-  if (!id || !toolManifest(id)) return null;
+  if (crux.kind !== 'tool') return null;
+  const artifacts = await services.artifact.findByResource('crux', cruxId);
+  const definition = artifacts.find((f) => (f.meta?.path || f.filename) === 'crux-tool.json');
+  const declared = definition
+    ? parseManifest(JSON.parse(await services.artifact.readContent(definition)))
+    : null;
+  const id = declared?.id ?? (typeof crux.meta?.template === 'string' ? crux.meta.template : null);
+  if (!id) return null;
   const tool: InstalledTool = { id, cruxId, installedAt: new Date().toISOString() };
-  await installedToolPackage(tool);
-  await services.crux.update(cruxId, { kind: 'tool' });
-  recordInstalledTool(tool);
+  const pkg = await installedToolPackage(tool);
+  if (!pkg) {
+    const manifest = declared ?? toolManifest(id);
+    if (!manifest) throw new Error('This tool needs a valid crux-tool.json.');
+    const blob = await packTool(
+      manifest,
+      await Promise.all(
+        artifacts.map(async (file) => ({
+          path: String(file.meta?.path || file.filename),
+          blob: await services.artifact.downloadBlob(file),
+          mimeType: file.mimeType || 'application/octet-stream',
+        })),
+      ),
+    );
+    const { putBlob } = await import('../blobs');
+    const { hashContent } = await import('../sqlite/helpers');
+    return installToolFromPublished(
+      {
+        id: cruxId,
+        slug: crux.slug,
+        author_username: '',
+        meta: {
+          template: id,
+          toolPackage: {
+            version: 1,
+            artifactId: 'local-package',
+            fingerprint: await hashContent(blob),
+          },
+        },
+      },
+      { apiDownload: async () => blob, putBlob },
+    );
+  }
+  tool.manifest = pkg.manifest;
+  tool.id = publishedToolId(cruxId);
+  await setSettingDurably(
+    SettingsKey.InstalledTools,
+    JSON.stringify({ ...installedTools(), [tool.id]: tool }),
+  );
+  announce();
   return tool;
 }

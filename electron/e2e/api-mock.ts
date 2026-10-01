@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -275,7 +276,13 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         return send(404, { statusCode: 404, message: 'Author not found' });
       if (!pubAuthor[2]) return send(200, AUTHOR);
       const list = Object.values(state.cruxes).filter(
-        (c) => (c.meta as Record<string, unknown> | undefined)?.publishedAt,
+        (c) =>
+          (c.meta as Record<string, unknown> | undefined)?.publishedAt &&
+          c.visibility === 'public' &&
+          (!parsedUrl.searchParams.get('kind') ||
+            (parsedUrl.searchParams.get('kind') === 'creations'
+              ? !['tool', 'mood'].includes(String(c.kind))
+              : c.kind === parsedUrl.searchParams.get('kind'))),
       );
       res.setHeader(
         'Pagination',
@@ -1019,10 +1026,24 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
           bytes: f.bytes,
         }));
         state.publishedVersion++;
+        const toolIndex = state.published[id]!.findIndex(
+          (file) => file.path === '_crux/tool-package.zip',
+        );
+        const toolFile = state.published[id]![toolIndex];
         const meta = {
           ...(((current ?? {}).meta as Record<string, unknown>) ?? {}),
           publishedAt: new Date().toISOString(),
           publishedVersion: state.publishedVersion,
+          ...(toolFile
+            ? {
+                toolPackage: {
+                  version: 1,
+                  artifactId: `art-${toolIndex}`,
+                  fingerprint: createHash('sha256').update(toolFile.bytes).digest('hex'),
+                  size: toolFile.bytes.length,
+                },
+              }
+            : {}),
         };
         const updated = { ...(current ?? { id }), meta, visibility: 'public' };
         state.cruxes[id] = updated;

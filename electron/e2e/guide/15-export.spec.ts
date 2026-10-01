@@ -22,12 +22,12 @@ async function captureDownload(
   await expect.poll(() => existsSync(filename), { timeout: 60_000 }).toBe(true);
 }
 
-/** Add Crux → Import .crux file → the imported workspace's id. */
+/** Add Crux → Import Crux, tool or Mood → the imported workspace's id. */
 async function importCruxFile(page: Page, filename: string) {
   await goHome(page);
   await page.getByRole('button', { name: 'Add Crux' }).click();
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+  await page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click();
   await (await chooser).setFiles(filename);
   await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
   return (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
@@ -191,7 +191,7 @@ test.describe('guide 15 · Export', () => {
       await goHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       const chooser = page.waitForEvent('filechooser');
-      await page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+      await page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click();
       await (await chooser).setFiles(truncated);
       await expect(page.getByRole('alertdialog')).toContainText(/[a-z]/, { timeout: 60_000 });
       await page.keyboard.press('Escape');

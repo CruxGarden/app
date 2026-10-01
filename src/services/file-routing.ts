@@ -58,7 +58,7 @@ export const ROUTES: { test: RegExp; route: FileRoute }[] = [
     route: { templateId: 'moqira', kind: 'webapp', tool: 'Moqira', folder: 'inbox' },
   },
   // Every Crux Tool declares the files it takes in its manifest (ADR 0050).
-  ...toolRoutes(),
+
   {
     test: /\.html?$/i,
     route: { templateId: 'blank', kind: 'webapp', tool: 'a Blank Crux', folder: '' },
@@ -76,7 +76,11 @@ export const stem = (name: string) =>
 
 /** The route for a dropped file, or null when no tool takes it. */
 export function routeFile(name: string): FileRoute | null {
-  return ROUTES.find((r) => r.test.test(name))?.route ?? null;
+  return (
+    [...ROUTES.slice(0, -1), ...toolRoutes(), ROUTES[ROUTES.length - 1]!].find((r) =>
+      r.test.test(name),
+    )?.route ?? null
+  );
 }
 /** A dropped folder: a notebook when it holds Markdown, a Blank Crux with the files otherwise. */
 export function routeFolder(files: DroppedFile[]): FileRoute | null {
@@ -90,7 +94,7 @@ export function routeFolder(files: DroppedFile[]): FileRoute | null {
     };
   return { templateId: 'blank', kind: 'webapp', tool: 'a Blank Crux', folder: '' };
 }
-export const isArchive = (name: string) => /\.(crux|cruxspace)$/i.test(name);
+export const isArchive = (name: string) => /\.(crux|cruxspace|cruxtool|cruxmood)$/i.test(name);
 
 const safeSegment = (s: string) =>
   s

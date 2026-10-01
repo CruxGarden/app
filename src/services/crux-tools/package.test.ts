@@ -104,12 +104,10 @@ describe('single-entity tool packages', () => {
     expect(artifacts.map((file) => file.meta?.path)).toEqual([TOOL_PACKAGE_PATH]);
     vi.spyOn(templates, 'loadTemplate').mockResolvedValue(null);
     const project = await services.crux.create({ title: 'Editable sketch' });
-    await applyTemplateToCrux(project, manifest.id, 'webapp');
+    await applyTemplateToCrux(project, tool.id, 'webapp');
     const files = await services.artifact.findByResource('crux', project.id);
     expect(files.map((file) => file.meta?.path).sort()).toEqual(
-      inputs()
-        .map((file) => file.path)
-        .sort(),
+      [...inputs().map((file) => file.path), manifest.document!.path].sort(),
     );
     const source = files.find((file) => file.meta?.path === 'src/editor.ts')!;
     expect(await services.artifact.readContent(source.id)).toBe('export const editor = true;');

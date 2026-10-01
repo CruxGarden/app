@@ -1,3 +1,5 @@
+import { installToolFile } from '@/services/crux-tools/files';
+import { installMoodFile, installImportedCreation } from '@/services/import-installation';
 import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import {
@@ -94,9 +96,30 @@ export default function HomeGarden() {
       setDropNotice('');
       try {
         const single = dt.files.length === 1 ? dt.files[0]! : null;
+        if (single && /\.(cruxtool|cruxmood)$/i.test(single.name)) {
+          const isTool = /\.cruxtool$/i.test(single.name);
+          const item = isTool
+            ? await installToolFile(single)
+            : await installMoodFile(single, gardenId);
+          refresh();
+          setDropNotice(
+            isTool
+              ? 'Tool installed. Open Add Crux to create with it.'
+              : `Mood installed: ${'name' in item ? item.name : ''}. Open Moods to preview it.`,
+          );
+          return;
+        }
         if (single && /\.crux$/i.test(single.name)) {
           setDropNotice(`Importing ${single.name}…`);
           const result = await importCrux({ data: single, mode: 'clone', gardenId });
+          const installed = await installImportedCreation(result.cruxId, gardenId);
+          if (installed) {
+            refresh();
+            setDropNotice(
+              `${installed.name} installed. Open ${installed.kind === 'tool' ? 'Add Crux' : 'Moods'} to use it.`,
+            );
+            return;
+          }
           const imported = await getServices().crux.findById(result.cruxId);
           refresh();
           if (window.location.href === origin) navigate(cruxPath(imported, gardenId));

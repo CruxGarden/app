@@ -350,7 +350,9 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       await enterGarden(restored.page);
       await restored.page.getByRole('button', { name: 'Add Crux', exact: true }).click();
       const chooser = restored.page.waitForEvent('filechooser');
-      await restored.page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+      await restored.page
+        .getByRole('button', { name: 'Import Crux, tool or Mood', exact: true })
+        .click();
       await (await chooser).setFiles(archivePath);
       await expect(restored.page.locator('[data-workspace-id]')).toBeVisible();
       const id = (await restored.page

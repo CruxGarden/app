@@ -1,8 +1,7 @@
 /**
  * Every Crux Tool the app can see, read from the tools' own manifests
- * (ADR 0050). Today that is the `*-crux/crux-tool.json` files compiled into
- * the build; installed tools join the same map when their Template Crux's
- * manifest Artifact is read (CRUX-TOOLS-DISTRIBUTION-PLAN §3).
+ * (ADR 0050): bundled manifests plus installed package manifests persisted
+ * with installation records (CRUX-TOOLS-DISTRIBUTION-PLAN §3).
  *
  * Nothing here knows a tool by name. The picker, the app-type map, the
  * provenance record, the drop routes and the share rule are all views over
@@ -30,19 +29,49 @@ for (const [path, value] of Object.entries(raw)) {
   manifests.set(m.id, m);
 }
 
+/** Installation metadata is cached by the settings service and restored before app readiness.
+ * Never execute a host module from a downloaded package. */
+function installedManifests(): Record<string, CruxToolManifest> {
+  try {
+    const records = JSON.parse(getSetting(SettingsKey.InstalledTools) || '{}');
+    const result: Record<string, CruxToolManifest> = {};
+    for (const [id, record] of Object.entries(records)) {
+      try {
+        const manifest = (record as { manifest?: unknown })?.manifest;
+        if (manifest) result[id] = { ...parseManifest(manifest), id, bundled: false };
+      } catch {
+        /* A damaged record must not hide other installed tools. */
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
 /** Every tool, in creation-menu order. */
 export function toolManifests(): CruxToolManifest[] {
-  return [...manifests.values()].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const all = new Map(manifests);
+  for (const [id, installed] of Object.entries(installedManifests())) all.set(id, installed);
+  return [...all.values()].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 }
 
 export function toolManifest(id: string | null | undefined): CruxToolManifest | null {
-  return (id && manifests.get(id)) || null;
+  return (id && (installedManifests()[id] ?? manifests.get(id))) || null;
 }
 
 /** The manifest behind a Crux, by its template id. */
 export function manifestFor(
   crux: { meta?: Record<string, unknown> } | null | undefined,
 ): CruxToolManifest | null {
+  const snapshot = crux?.meta?.toolManifest;
+  if (snapshot) {
+    try {
+      return parseManifest(snapshot);
+    } catch {
+      return null;
+    }
+  }
   const template = crux?.meta?.template;
   return typeof template === 'string' ? toolManifest(template) : null;
 }
@@ -50,14 +79,14 @@ export function manifestFor(
 /** Template id → native app type, for every tool that has one. */
 export function nativeAppTypes(): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const m of manifests.values()) out[m.id] = m.app;
+  for (const m of toolManifests()) out[m.id] = m.app;
   return out;
 }
 
 /** Template id → provenance, as `TOOL_INFO` used to list it. */
 export function toolInfos(): Record<string, ToolInfo> {
   const out: Record<string, ToolInfo> = {};
-  for (const m of manifests.values()) out[m.id] = { ...m.toolInfo };
+  for (const m of toolManifests()) out[m.id] = { ...m.toolInfo };
   return out;
 }
 
@@ -87,7 +116,6 @@ export function toolRoutes(): {
 export function isToolAvailable(id: string): boolean {
   return !toolManifest(id) || available.has(id) || isToolInstalled(id);
 }
-
 
 /**
  * Installed into this garden as a Template Crux (services/crux-tools/installed.ts

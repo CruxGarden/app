@@ -299,3 +299,35 @@ test('public creations explain their purpose and published process, and creator 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: '../docs/product-review/2026-09-30/polished-creator-phone.png' });
 });
+
+test('a creator Garden presents tools and Moods with their own actions and category filters', async ({
+  page,
+}) => {
+  const ids = ['creator-tool-test', 'creator-mood-test'];
+  for (const [i, kind] of ['tool', 'mood'].entries())
+    api.state.cruxes[ids[i]!] = {
+      ...api.state.cruxes[ID],
+      id: ids[i],
+      kind,
+      title: kind === 'tool' ? 'Pocket Notes Tool' : 'Meadow Mood',
+      slug: ids[i],
+      meta: { publishedAt: '2026-10-01', template: 'unknown-community-tool' },
+    };
+  try {
+    await page.goto('/tester');
+    await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
+    await expect(page.getByTestId('explore-mood-creator-mood-test')).toBeVisible();
+    await expect(page.getByText('Open Crux Garden to install')).toBeVisible();
+    await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
+    await expect(page.getByTestId('explore-mood-creator-mood-test')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Moods', exact: true }).click();
+    await expect(page.getByTestId('explore-mood-creator-mood-test')).toBeVisible();
+    await expect(page.getByTestId('explore-tool-unknown-community-tool')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Creations', exact: true }).click();
+    await expect(page.getByText('Garden Notes', { exact: true }).first()).toBeVisible();
+    expect(api.log.some((l) => l.includes('/authors/tester/cruxes'))).toBe(true);
+  } finally {
+    for (const id of ids) delete api.state.cruxes[id];
+  }
+});

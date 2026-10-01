@@ -78,7 +78,9 @@ test('the visible Crux exporter and importer preserve Main, Tasks, starting stat
     writeFileSync(damaged, await broken.generateAsync({ type: 'nodebuffer' }));
     await destination.page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     const chooser = destination.page.waitForEvent('filechooser');
-    await destination.page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+    await destination.page
+      .getByRole('button', { name: 'Import Crux, tool or Mood', exact: true })
+      .click();
     await (await chooser).setFiles(damaged);
     await expect(destination.page.getByText(/missing|incomplete/i).last()).toBeVisible();
     expect(
@@ -88,7 +90,9 @@ test('the visible Crux exporter and importer preserve Main, Tasks, starting stat
     ).toEqual([]);
     await destination.page.keyboard.press('Escape');
     const retryChooser = destination.page.waitForEvent('filechooser');
-    await destination.page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+    await destination.page
+      .getByRole('button', { name: 'Import Crux, tool or Mood', exact: true })
+      .click();
     await (await retryChooser).setFiles(filename);
     await expect(destination.page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
     const importedId = (await destination.page

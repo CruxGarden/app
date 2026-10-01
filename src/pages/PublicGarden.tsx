@@ -7,7 +7,7 @@ import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
-import CruxResultCard from '@/components/explore/CruxResultCard';
+import PublishedCreationCard from '@/components/explore/PublishedCreationCard';
 import { Avatar, Button, Panel, SegmentedControl, fieldClass, buttonClass } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
 
@@ -28,8 +28,13 @@ export default function PublicGarden() {
   const request = useRef<AbortController | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [search, setSearch] = useState('');
+  const [kind, setKind] = useState('all');
   const [fullBio, setFullBio] = useState(false);
   const [sortBy, setSortBy] = useState<SortField>('created');
+
+  useEffect(() => {
+    setKind('all');
+  }, [username]);
 
   useEffect(() => {
     if (!username) {
@@ -50,7 +55,7 @@ export default function PublicGarden() {
     // Load from API only — no local database access on public pages
     Promise.all([
       publicApi.getAuthor(username, controller.signal),
-      publicApi.getAuthorCruxes(username, { page: 1, perPage: 24 }, controller.signal),
+      publicApi.getAuthorCruxes(username, { page: 1, perPage: 24, kind }, controller.signal),
     ])
       .then(([author, data]) => {
         if (controller.signal.aborted) return;
@@ -72,7 +77,7 @@ export default function PublicGarden() {
     return () => {
       controller.abort();
     };
-  }, [username, attempt]);
+  }, [username, attempt, kind]);
 
   const loadMore = async () => {
     const controller = request.current;
@@ -82,7 +87,7 @@ export default function PublicGarden() {
     try {
       const data = await publicApi.getAuthorCruxes(
         username,
-        { page: currentPage + 1, perPage: 24 },
+        { page: currentPage + 1, perPage: 24, kind },
         controller.signal,
       );
       if (controller.signal.aborted) return;
@@ -111,18 +116,23 @@ export default function PublicGarden() {
   // Client-side search + sort
   const filteredCruxes = useMemo(() => {
     const needle = search.toLowerCase();
+    const matching = cruxes.filter(
+      (c) =>
+        kind === 'all' ||
+        (kind === 'creations' ? c.kind !== 'tool' && c.kind !== 'mood' : c.kind === kind),
+    );
     const filtered = needle
-      ? cruxes.filter(
+      ? matching.filter(
           (c) =>
             (c.title || '').toLowerCase().includes(needle) ||
             (c.slug || '').toLowerCase().includes(needle) ||
             (c.description || '').toLowerCase().includes(needle),
         )
-      : cruxes;
+      : matching;
     return [...filtered].sort(
       (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
     );
-  }, [cruxes, search, sortBy]);
+  }, [cruxes, search, sortBy, kind]);
 
   const avatarUrl = resolveAvatarUrl(author);
   if (state === 'loading') {
@@ -222,11 +232,25 @@ export default function PublicGarden() {
             Search all by this creator
           </Link>
         </p>
+        <SegmentedControl
+          label="Creation kind"
+          value={kind}
+          onChange={setKind}
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'creations', label: 'Creations' },
+            { value: 'tool', label: 'Tools' },
+            { value: 'mood', label: 'Moods' },
+          ]}
+          className="mb-4"
+        />
         {/* Content */}
         {filteredCruxes.length === 0 ? (
           <Panel padding="md" className="flex flex-col items-center py-10">
             <p className="text-text-muted text-sm mb-3">
-              {search ? 'No cruxes match your search' : 'No published cruxes yet'}
+              {search || kind !== 'all'
+                ? 'No matching creations on this page'
+                : 'No published cruxes yet'}
             </p>
             {search && (
               <Button variant="ghost" size="sm" onClick={() => setSearch('')}>
@@ -237,7 +261,7 @@ export default function PublicGarden() {
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-5">
             {filteredCruxes.map((crux) => (
-              <CruxResultCard
+              <PublishedCreationCard
                 key={crux.id}
                 crux={{
                   ...crux,

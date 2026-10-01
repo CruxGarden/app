@@ -12,6 +12,8 @@ import { createCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
+import { installToolFile } from '@/services/crux-tools/files';
+import { installImportedCreation, installMoodFile } from '@/services/import-installation';
 import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Modal, Button, SectionLabel, buttonClass, fieldClass, linkClass } from '@/components/ui';
@@ -22,8 +24,8 @@ import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
 import { alertDialog } from '@/stores/dialogStore';
 import { HomeIcon, LayoutIcon, PencilIcon } from '@/components/ui/icons';
-import { toolManifests, isToolAvailable, toolManifest } from '@/services/crux-tools/registry';
-import { useInstalledTools, installToolFromCrux } from '@/services/crux-tools/installed';
+import { toolManifests, isToolAvailable } from '@/services/crux-tools/registry';
+import { useInstalledTools, forgetInstalledTool } from '@/services/crux-tools/installed';
 import type { ToolIcon } from '@/services/crux-tools/manifest';
 import {
   BlankThumb,
@@ -62,6 +64,18 @@ interface Template {
 
 /** Entries the app itself owns; every Crux Tool comes from its manifest (ADR 0050). */
 const OWN_TEMPLATES: Template[] = [
+  {
+    order: 500,
+    id: 'tool-starter',
+    label: 'Make a tool',
+    description:
+      'Build an editor others can install from Explore. Includes a working example and publishing guide.',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Tool',
+    desktopOnly: true,
+  },
   {
     order: 0.5,
     id: 'hello-world',
@@ -392,20 +406,21 @@ const ICONS: Record<ToolIcon, React.ReactNode> = {
   pencil: <PencilIcon />,
   home: <HomeIcon />,
 };
-const TEMPLATES: Template[] = [
-  ...OWN_TEMPLATES,
-  ...toolManifests().map((m) => ({
-    order: m.order,
-    id: m.id,
-    label: m.name,
-    description: m.description,
-    icon: ICONS[m.icon],
-    thumb: <BlankThumb />,
-    kind: m.kind,
-    defaultTitle: m.defaultTitle,
-    desktopOnly: m.desktopOnly,
-  })),
-].sort((a, b) => a.order - b.order);
+const templates = (): Template[] =>
+  [
+    ...OWN_TEMPLATES,
+    ...toolManifests().map((m) => ({
+      order: m.order,
+      id: m.id,
+      label: m.name,
+      description: m.description,
+      icon: ICONS[m.icon],
+      thumb: <BlankThumb />,
+      kind: m.kind,
+      defaultTitle: m.defaultTitle,
+      desktopOnly: m.desktopOnly,
+    })),
+  ].sort((a, b) => a.order - b.order);
 
 /** The picker's entries as plain data — what plant_crux accepts (the Keeper's list_templates). */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -416,7 +431,7 @@ export function templateCatalog(): {
   description: string;
   desktopOnly: boolean;
 }[] {
-  return TEMPLATES.map((t) => ({
+  return templates().map((t) => ({
     kind: t.kind,
     id: t.id,
     label: t.label,
@@ -456,6 +471,7 @@ interface NewCruxModalProps {
 }
 
 export default function NewCruxModal({ open, onClose, initialView = 'crux' }: NewCruxModalProps) {
+  const TEMPLATES = templates();
   const [view, setView] = useState(initialView);
   useEffect(() => {
     if (open) setView(initialView);
@@ -463,7 +479,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   const [cruxStore] = useState(() => createCruxStore());
   const navigate = useMoodNavigate();
   const createCrux = cruxStore.getState().createCrux;
-  const refresh = useGardenStore((s) => s.load);
+  const refresh = useGardenStore((s) => s.refresh);
 
   const [title, setTitle] = useState('My Crux');
   const [search, setSearch] = useState('');
@@ -485,7 +501,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
 
   // Installed tools count as available; re-render as one arrives (Explore → Install).
-  useInstalledTools();
+  const installed = useInstalledTools();
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
   const supported = TEMPLATES.filter(
     (item) => (!item.desktopOnly || can(Capability.Build)) && (!item.v2 || can(Capability.V2)),
@@ -547,6 +563,25 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
       setImportProgress({ done: 0, total: 0 });
 
       try {
+        if (file.name.toLowerCase().endsWith('.cruxtool')) {
+          const tool = await installToolFile(file);
+          setSelectedTemplate(tool.id);
+          void alertDialog(
+            `${tool.manifest!.name} is installed. Create from it here whenever you like.`,
+            'Tool installed',
+          );
+          refresh();
+          return;
+        }
+        if (file.name.toLowerCase().endsWith('.cruxmood')) {
+          const mood = await installMoodFile(file, gardenId);
+          void alertDialog(
+            `“${mood.name}” is installed. Open Moods to preview and keep it for your Garden.`,
+            'Mood installed',
+          );
+          refresh();
+          return;
+        }
         const result = await importCrux({
           data: file,
           gardenId,
@@ -567,18 +602,17 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           if (window.location.href === origin) navigate(cruxPath(imported, gardenId));
           return;
         }
-        const toolId = typeof imported?.meta?.template === 'string' ? imported.meta.template : null;
-        if (toolId && toolManifest(toolId) && !isToolAvailable(toolId)) {
-          const tool = await installToolFromCrux(result.cruxId);
-          if (tool) {
-            refresh();
-            setSelectedTemplate(toolId);
-            void alertDialog(
-              `${toolManifest(toolId)!.name} is installed. Create from it here whenever you like.`,
-              'Tool installed',
-            );
-            return;
-          }
+        const installation = await installImportedCreation(result.cruxId, gardenId);
+        if (installation) {
+          refresh();
+          if (installation.kind === 'tool') setSelectedTemplate(installation.id);
+          void alertDialog(
+            installation.kind === 'tool'
+              ? `${installation.name} is installed. Create from it here whenever you like.`
+              : `${installation.name} is installed. Open Moods to preview and keep it for your Garden.`,
+            installation.kind === 'tool' ? 'Tool installed' : 'Mood installed',
+          );
+          return;
         }
 
         if (!result.layout && isEmbeddedApp(await getServices().crux.findById(result.cruxId)))
@@ -939,12 +973,31 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
                 Choose a starting point from these results.
               </p>
             )}
+            {installed[template.id] && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={creating || importing}
+                onClick={() => {
+                  forgetInstalledTool(template.id);
+                  setSelectedTemplate('blank');
+                  setSearch('');
+                }}
+              >
+                Remove installed tool
+              </Button>
+            )}
+            {installed[template.id] && (
+              <p className="text-xxs text-text-muted mt-1.5">
+                Removes this starting point. Your existing Cruxes and their files stay intact.
+              </p>
+            )}
             {!isToolAvailable(template.id) ? (
               <p
                 className="text-xxs text-text-muted mt-1.5 shrink-0"
                 data-testid="tool-not-bundled"
               >
-                {template.label} is not installed. Install it from Explore, or from its .crux
+                {template.label} is not installed. Install it from Explore, or from its .cruxtool
                 package, to create from it.
               </p>
             ) : (
@@ -960,7 +1013,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
           <input
             ref={importInputRef}
             type="file"
-            accept=".crux,.zip"
+            accept=".crux,.cruxtool,.cruxmood,.zip"
             className="hidden"
             onChange={handleImportInput}
           />
@@ -1010,7 +1063,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
               onClick={() => importInputRef.current?.click()}
               disabled={creating}
             >
-              Import .crux file
+              Import Crux, tool or Mood
             </Button>
           )}
           <input

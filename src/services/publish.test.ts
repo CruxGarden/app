@@ -10,6 +10,7 @@ import {
   type PublishPhase,
 } from './publish';
 import type { Crux, Artifact } from '@/api/types';
+import { starterManifest } from '@/templates/tool-starter';
 import { toolManifest } from './crux-tools/registry';
 import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
 
@@ -155,6 +156,24 @@ function makeDeps(opts: {
 }
 
 describe('publishPipeline', () => {
+  it('publishes a creator manifest absent from the compiled catalogue', async () => {
+    const { deps, state } = makeDeps({});
+    const download = deps.local.downloadBlob;
+    deps.local.downloadBlob = async (file) =>
+      file.meta?.path === 'crux-tool.json'
+        ? new Blob([JSON.stringify(starterManifest)])
+        : download(file);
+    await publishPipeline(
+      makeCrux({ kind: 'tool' }),
+      [makeArtifact('crux-tool.json', 'manifest'), makeArtifact('index.html', 'entry')],
+      { deps },
+    );
+    const pkg = await openToolPackage(state.publishedFiles![0]!.blob);
+    expect(pkg.manifest.id).toBe('pocket-notes');
+    expect(pkg.files.map((f) => f.path)).toContain('index.html');
+    expect(toolManifest(pkg.manifest.id)).toBeNull();
+  });
+
   it.each([
     ['maps-app', false],
     ['formjs-app', false],

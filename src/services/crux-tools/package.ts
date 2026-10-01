@@ -47,6 +47,17 @@ export async function packTool(
   tool: CruxToolManifest,
   files: { path: string; blob: Blob; mimeType: string }[],
 ): Promise<Blob> {
+  tool = parseManifest(tool);
+  // Publish the declared starter document, never the creator's test-session edits.
+  files = files.map((file) =>
+    file.path === tool.document?.path
+      ? {
+          ...file,
+          blob: new Blob([JSON.stringify(tool.document.seed)], { type: 'application/json' }),
+          mimeType: 'application/json',
+        }
+      : file,
+  );
   const zip = new JSZip();
   const entries: PackageFile[] = [];
   const date = new Date('1980-01-01T00:00:00Z');
@@ -73,7 +84,7 @@ export async function packTool(
   if (bytes.byteLength > TOOL_PACKAGE_LIMIT) throw new Error('The tool package is too large.');
   return new Blob([new Uint8Array(bytes)], { type: 'application/zip' });
 }
-export async function openToolPackage(blob: Blob, expectedId: string, fingerprint?: string) {
+export async function openToolPackage(blob: Blob, expectedId?: string, fingerprint?: string) {
   if (!blob.size || blob.size > TOOL_PACKAGE_LIMIT)
     throw new Error('The tool package is too large or empty.');
   if (fingerprint && (await hashContent(blob)) !== fingerprint)
@@ -96,7 +107,8 @@ export async function openToolPackage(blob: Blob, expectedId: string, fingerprin
   )
     throw new Error('Unsupported tool package.');
   const manifest = parseManifest(header.tool);
-  if (manifest.id !== expectedId) throw new Error('The tool package belongs to a different tool.');
+  if (expectedId && manifest.id !== expectedId)
+    throw new Error('The tool package belongs to a different tool.');
   const seen = new Set<string>();
   let total = 0;
   const files = await Promise.all(

@@ -111,7 +111,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     );
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     const chooser = page.waitForEvent('filechooser');
-    await page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+    await page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click();
     await (await chooser).setFiles(archive.filename);
     await expect(
       page.getByText(/Failed to import.*Garden import temporarily unavailable/),
@@ -124,7 +124,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_garden_import'));
     await page.keyboard.press('Escape');
     const retryChooser = page.waitForEvent('filechooser');
-    await page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
+    await page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click();
     await (await retryChooser).setFiles(archive.filename);
     await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'Fieldwork',

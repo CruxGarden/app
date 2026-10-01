@@ -193,7 +193,8 @@ export async function applyTemplateToCrux(
     const { projectAllArtifacts } = await import('./project-folder');
     await projectAllArtifacts(crux.id);
     // The seeded document is among the cloned files already.
-    def = templateFromManifest({ ...manifest, document: undefined }, []);
+    def = templateFromManifest(packageVersion?.manifest ?? manifest, []);
+    def.meta = { ...def.meta, toolManifest: packageVersion?.manifest ?? manifest };
   }
   if (!def) {
     const updated = await services.crux.update(crux.id, { kind });

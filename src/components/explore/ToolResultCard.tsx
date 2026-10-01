@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui';
 import type { ExploreCrux } from '@/api/public';
 import { toolManifest } from '@/services/crux-tools/registry';
-import { useInstalledTools } from '@/services/crux-tools/installed';
+import { useInstalledTools, publishedToolId } from '@/services/crux-tools/installed';
 
 /**
  * A published Crux Tool in Explore (CRUX-TOOLS-DISTRIBUTION-PLAN §3.4): the
@@ -24,7 +24,11 @@ export default function ToolResultCard({
   const id = typeof crux.meta?.template === 'string' ? crux.meta.template : null;
   const manifest = id ? toolManifest(id) : null;
   const installed = useInstalledTools();
-  const already = id ? !!installed[id] : false;
+  const current = installed[publishedToolId(crux.id)];
+  const packageRef = crux.meta?.toolPackage as { fingerprint?: string } | undefined;
+  const updateAvailable =
+    !!current && !!packageRef?.fingerprint && current.fingerprint !== packageRef.fingerprint;
+  const already = !!current && !updateAvailable;
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -41,7 +45,7 @@ export default function ToolResultCard({
       setProgress(null);
     }
   };
-  const name = manifest?.name ?? crux.title ?? crux.slug;
+  const name = crux.title ?? manifest?.name ?? crux.slug;
   const bytes = typeof crux.meta?.publishedBytes === 'number' ? crux.meta.publishedBytes : null;
   const size =
     bytes === null
@@ -68,9 +72,7 @@ export default function ToolResultCard({
       </button>
       <ExploreCreator crux={crux} />
       <div className="flex items-center gap-2 mt-auto">
-        {!manifest ? (
-          <span className="text-xs text-text-muted">Not a tool this app knows</span>
-        ) : already ? (
+        {already ? (
           <span className="text-xs text-text-muted" data-testid="tool-installed">
             Installed · Add Crux ▸ {name}
           </span>
@@ -78,9 +80,11 @@ export default function ToolResultCard({
           <Button size="sm" onClick={() => void run()} loading={busy}>
             {progress
               ? `Installing ${progress.done}/${progress.total}`
-              : size
-                ? `Install · ${size}`
-                : 'Install'}
+              : updateAvailable
+                ? 'Install update'
+                : size
+                  ? `Install · ${size}`
+                  : 'Install'}
           </Button>
         ) : (
           <span className="text-xs text-text-muted">Open Crux Garden to install</span>
