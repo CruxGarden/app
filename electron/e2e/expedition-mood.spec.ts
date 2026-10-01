@@ -16,7 +16,12 @@ test('paper Moods apply, builder controls reach pixels, and edits survive restar
     const mood = await showPane(page, 'Mood');
     for (const mode of ['Light', 'Dark']) {
       await mood
-        .getByRole('button', { name: `Apply Expedition Sunflower ${mode}`, exact: true })
+        .getByTestId('material-material')
+        .getByRole('button', { name: 'Paper', exact: true })
+        .click();
+      await mood
+        .getByTestId('material-mode')
+        .getByRole('button', { name: mode, exact: true })
         .click();
       await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toHaveCSS(
         'border-width',
@@ -56,6 +61,7 @@ test('paper Moods apply, builder controls reach pixels, and edits survive restar
     }
     await mood.getByRole('combobox', { name: 'Surface theme' }).selectOption('custom');
     await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+    await mood.getByRole('button', { name: 'Full Theme Builder', exact: true }).click();
     await mood.getByRole('button', { name: 'Elevation & motion', exact: true }).click();
     const shadow = mood.getByRole('textbox', {
       name: 'Elevation primary button value',

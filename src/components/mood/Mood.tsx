@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui';
 import { setBackgroundFromBlob } from '@/services/background';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useEffect } from 'react';
@@ -98,6 +99,7 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
 }
 
 export default function MoodEditor() {
+  const [fullBuilder, setFullBuilder] = useState(false);
   const [chosenTab, setTab] = useState<Tab>(() => useUIStore.getState().moodTab ?? 'moods');
   const requested = useUIStore((s) => s.moodTab);
   // The Persona is the collaborator's; without AI tools there is none to dress.
@@ -241,91 +243,111 @@ export default function MoodEditor() {
       >
         {tab === 'theme' && (
           <div className="flex flex-col gap-6">
-            <AppearanceControls />
-            {userPresets.length > 0 && (
-              <div className="mb-4">
-                <SectionLabel as="div" tone="muted" className="mb-2">
-                  Yours
-                </SectionLabel>
-                <div className="grid grid-cols-5 gap-2">
-                  {userPresets.map((preset) => {
-                    const active =
-                      (preset.section === 'Dark' ? activeDarkId : activeLightId) === preset.id;
-                    return (
-                      <div key={preset.id} className="relative group">
-                        <button
-                          onClick={() => handleSelect(preset)}
-                          className="w-full flex flex-col items-center gap-1.5 cursor-pointer"
-                        >
-                          <PresetThumb preset={preset} active={active} />
-                          <span
-                            className={cn(
-                              'text-2xs font-mono transition-colors truncate max-w-full',
-                              active ? 'text-text' : 'text-text-muted group-hover:text-text',
-                            )}
-                          >
-                            {preset.name}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => deleteUserPreset(preset.id)}
-                          aria-label={`Delete preset ${preset.name}`}
-                          title="Delete this preset"
-                          className="reveal-on-hover absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error hover:border-error/50 text-xs leading-none cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-display text-heading">
+                  {fullBuilder ? 'Full Theme Builder' : 'Theme Customizer'}
+                </h3>
+                <p className="text-xs text-text-muted">
+                  {fullBuilder
+                    ? 'Fine-tune individual settings. Your Customizer edits are here too.'
+                    : 'A few choices to make this Mood yours. Changes appear immediately.'}
+                </p>
               </div>
-            )}
-            {(['Dark', 'Light'] as const).map((section) => {
-              const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
-              const activeForSection = section === 'Dark' ? activeDarkId : activeLightId;
-              if (sectionPresets.length === 0) return null;
-              return (
-                <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
+              <Button variant="secondary" size="sm" onClick={() => setFullBuilder(!fullBuilder)}>
+                {fullBuilder ? 'Back to Customizer' : 'Full Theme Builder'}
+              </Button>
+            </div>
+            {!fullBuilder && <AppearanceControls />}
+            {fullBuilder && (
+              <>
+                <div>
                   <SectionLabel as="div" tone="muted" className="mb-2">
-                    {section}
+                    Tokens
                   </SectionLabel>
-                  <div className="grid grid-cols-5 gap-2">
-                    {sectionPresets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        onClick={() => handleSelect(preset)}
-                        className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                      >
-                        <PresetThumb preset={preset} active={activeForSection === preset.id} />
-                        <span
-                          className={cn(
-                            'text-2xs font-mono transition-colors',
-                            activeForSection === preset.id
-                              ? 'text-text'
-                              : 'text-text-muted group-hover:text-text',
-                          )}
-                        >
-                          {preset.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  <ThemeTokensTab />
                 </div>
-              );
-            })}
-            <div>
-              <SectionLabel as="div" tone="muted" className="mb-2">
-                Tokens
-              </SectionLabel>
-              <ThemeTokensTab />
-            </div>
-            <div>
-              <SectionLabel as="div" tone="muted" className="mb-2">
-                Files
-              </SectionLabel>
-              <AssetsTab />
-            </div>
+
+                {userPresets.length > 0 && (
+                  <div className="mb-4">
+                    <SectionLabel as="div" tone="muted" className="mb-2">
+                      Yours
+                    </SectionLabel>
+                    <div className="grid grid-cols-5 gap-2">
+                      {userPresets.map((preset) => {
+                        const active =
+                          (preset.section === 'Dark' ? activeDarkId : activeLightId) === preset.id;
+                        return (
+                          <div key={preset.id} className="relative group">
+                            <button
+                              onClick={() => handleSelect(preset)}
+                              className="w-full flex flex-col items-center gap-1.5 cursor-pointer"
+                            >
+                              <PresetThumb preset={preset} active={active} />
+                              <span
+                                className={cn(
+                                  'text-2xs font-mono transition-colors truncate max-w-full',
+                                  active ? 'text-text' : 'text-text-muted group-hover:text-text',
+                                )}
+                              >
+                                {preset.name}
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => deleteUserPreset(preset.id)}
+                              aria-label={`Delete preset ${preset.name}`}
+                              title="Delete this preset"
+                              className="reveal-on-hover absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error hover:border-error/50 text-xs leading-none cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {(['Dark', 'Light'] as const).map((section) => {
+                  const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
+                  const activeForSection = section === 'Dark' ? activeDarkId : activeLightId;
+                  if (sectionPresets.length === 0) return null;
+                  return (
+                    <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
+                      <SectionLabel as="div" tone="muted" className="mb-2">
+                        {section}
+                      </SectionLabel>
+                      <div className="grid grid-cols-5 gap-2">
+                        {sectionPresets.map((preset) => (
+                          <button
+                            key={preset.id}
+                            onClick={() => handleSelect(preset)}
+                            className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                          >
+                            <PresetThumb preset={preset} active={activeForSection === preset.id} />
+                            <span
+                              className={cn(
+                                'text-2xs font-mono transition-colors',
+                                activeForSection === preset.id
+                                  ? 'text-text'
+                                  : 'text-text-muted group-hover:text-text',
+                              )}
+                            >
+                              {preset.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div>
+                  <SectionLabel as="div" tone="muted" className="mb-2">
+                    Files
+                  </SectionLabel>
+                  <AssetsTab />
+                </div>
+              </>
+            )}
           </div>
         )}
         {tab === 'background' && (

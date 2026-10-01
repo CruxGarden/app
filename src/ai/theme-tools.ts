@@ -1,7 +1,6 @@
 import { NO_INPUT } from './app-tool-schema';
 import { BROWSER_TOOL, runBrowserTool } from './browser-tools';
 import { WORKSPACE_LAYOUT_TOOL, runWorkspaceLayouts } from './layout-tools';
-import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
 /**
  * Theme tools — the AI can restyle the workspace.
  *
@@ -273,14 +272,7 @@ export function isThemeTool(name: string): boolean {
 const base = GARDEN_DARK as Record<string, string>;
 
 function effectiveValue(key: string, saved: ThemeOverrides, preview: ThemeOverrides): string {
-  return (
-    (APP_TYPOGRAPHY as Record<string, string>)[key] ??
-    preview[key] ??
-    saved[key] ??
-    activePreset()?.overrides[key] ??
-    base[key] ??
-    ''
-  );
+  return preview[key] ?? saved[key] ?? activePreset()?.overrides[key] ?? base[key] ?? '';
 }
 
 async function toolGetTheme(input: Record<string, unknown>): Promise<string> {
@@ -336,10 +328,6 @@ function toolSetTheme(input: Record<string, unknown>): string {
   const invalid: string[] = [];
   for (const [k, v] of Object.entries(raw)) {
     if (!(k in GARDEN_DARK)) unknown.push(k);
-    else if (!reset && k in APP_TYPOGRAPHY && v !== (APP_TYPOGRAPHY as Record<string, string>)[k])
-      invalid.push(
-        `${k} is fixed by the app typography: Inter for headings and content, JetBrains Mono for code, Garamond for the wordmark`,
-      );
     else if (typeof v === 'string' && v.trim()) {
       const choices = tokenChoices(k);
       if (choices && !choices.includes(v.trim()))

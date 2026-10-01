@@ -38,6 +38,7 @@ test.describe('mood builder', () => {
       const mood = await showPane(page, 'Mood');
       await mood.getByRole('combobox', { name: 'Surface theme' }).selectOption('custom');
       await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+      await mood.getByRole('button', { name: 'Full Theme Builder', exact: true }).click();
 
       // Shape & layout: gutters can be zeroed completely
       await page.getByRole('button', { name: 'Shape & layout' }).click();

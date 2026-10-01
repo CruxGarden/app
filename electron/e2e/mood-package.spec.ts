@@ -1,3 +1,4 @@
+import { openFullThemeBuilder } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { showPane } from './panel-helpers';
@@ -28,7 +29,7 @@ test.describe('mood packages', () => {
 
       // Shape a look: pane gap 0 + a quieter track
       await showPane(page, 'Mood');
-      await page.getByRole('button', { name: 'Theme', exact: true }).click();
+      await openFullThemeBuilder(page);
       await page.getByRole('button', { name: 'Shape & layout' }).click();
       const gap = page.getByRole('textbox', { name: 'Pane gap value' });
       await gap.fill('0px');
@@ -49,7 +50,7 @@ test.describe('mood packages', () => {
       await page.screenshot({ path: 'e2e/.results/mood-package-1-browser.png' });
 
       // Change everything: preset Ember (gap back to default via preset), volume up
-      await page.getByRole('button', { name: 'Theme', exact: true }).click();
+      await openFullThemeBuilder(page);
       await page.getByRole('button', { name: 'Ember', exact: true }).click();
       await page.getByRole('button', { name: 'Reset all' }).click();
       await expect.poll(() => cssVar('--pane-gap')).toBe('4px');
@@ -68,7 +69,7 @@ test.describe('mood packages', () => {
       expect((await audio()).trackName).toBe('Crux Synth'); // the Keeper's track rode along
 
       // The theme became a preset under Yours as well
-      await page.getByRole('button', { name: 'Theme', exact: true }).click();
+      await openFullThemeBuilder(page);
       await expect(page.getByRole('button', { name: 'Night Shift', exact: true })).toBeVisible();
 
       // Delete the Mood

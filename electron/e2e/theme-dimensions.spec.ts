@@ -37,6 +37,7 @@ test.describe('theme dimensions', () => {
       // The Mood pane → Theme
       const mood = await showPane(page, 'Mood');
       await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+      await mood.getByRole('button', { name: 'Full Theme Builder', exact: true }).click();
 
       // Typography: scale 1.25 → root font 20px
       await page.getByRole('button', { name: 'Typography' }).click();
@@ -98,6 +99,7 @@ test.describe('theme dimensions', () => {
       // The preset is in the Mood pane under Yours and is the active one
       const again = await showPane(page, 'Mood');
       await again.getByRole('button', { name: 'Theme', exact: true }).click();
+      await again.getByRole('button', { name: 'Full Theme Builder', exact: true }).click();
       await expect(page.getByText('Yours', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Big & Loud', exact: true })).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/dimensions-3-yours.png' });

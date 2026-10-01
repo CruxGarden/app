@@ -5,7 +5,7 @@ import { MOOD_PRESETS } from './presets';
  * and a mode name one bundled Mood — the soft suite's tone ids, which the
  * Plasma family prefixes with `plasma-`. Everything deeper is a HyperMood.
  */
-export type Material = 'plasma' | 'soft';
+export type Material = 'plasma' | 'soft' | 'paper';
 export type Mode = 'light' | 'dark';
 
 /** Each hue's light and dark tone id (the soft suite's ids; the Plasma family prefixes them). */
@@ -19,12 +19,25 @@ export const HUES: { id: string; name: string; light: string; dark: string }[] =
   { id: 'lilac', name: 'Lilac', light: 'lilac', dark: 'plum' },
 ];
 
+export const PAPER_HUES = ['sunflower', 'lagoon', 'berry'].map((id) => ({
+  id,
+  name: id[0]!.toUpperCase() + id.slice(1),
+  light: `expedition-${id}-light`,
+  dark: `expedition-${id}-dark`,
+}));
+
+export const huesFor = (material: Material) => (material === 'paper' ? PAPER_HUES : HUES);
+
 /** The three choices a worn material Mood's id encodes, or null for a HyperMood. */
 export function materialChoice(
   wornId: string | null,
 ): { material: Material; hue: string; mode: Mode } | null {
   if (!wornId) return null;
   const id = wornId.replace(/^user-/, '');
+  for (const hue of PAPER_HUES) {
+    if (hue.light === id) return { material: 'paper', hue: hue.id, mode: 'light' };
+    if (hue.dark === id) return { material: 'paper', hue: hue.id, mode: 'dark' };
+  }
   const material: Material = id.startsWith('plasma-') ? 'plasma' : 'soft';
   const tone = material === 'plasma' ? id.slice('plasma-'.length) : id;
   for (const h of HUES) {
@@ -35,14 +48,19 @@ export function materialChoice(
 }
 
 export function moodIdFor(material: Material, hue: string, mode: Mode): string {
-  const h = HUES.find((x) => x.id === hue) ?? HUES[0]!;
+  const hues = huesFor(material);
+  const h = hues.find((x) => x.id === hue) ?? hues[0]!;
   const tone = mode === 'light' ? h.light : h.dark;
   return material === 'plasma' ? `plasma-${tone}` : tone;
 }
 
 /** A hue's swatch colours, read from its presets. */
-export function swatch(hue: string, mode: Mode): { bg: string; accent: string } {
-  const id = moodIdFor('soft', hue, mode);
+export function swatch(
+  hue: string,
+  mode: Mode,
+  material: Material = 'soft',
+): { bg: string; accent: string } {
+  const id = moodIdFor(material, hue, mode);
   const o = MOOD_PRESETS.find((p) => p.id === id)?.overrides ?? {};
   return { bg: o.bg ?? '#888', accent: o.accent ?? '#ccc' };
 }

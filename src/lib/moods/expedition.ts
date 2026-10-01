@@ -152,7 +152,7 @@ function paperPalette(paper: (typeof PAPERS)[number], dark: boolean): Record<str
 export const EXPEDITION_PRESETS: MoodPresetDef[] = PAPERS.flatMap((paper) =>
   [false, true].map((dark) => ({
     id: `expedition-${paper.id}-${dark ? 'dark' : 'light'}`,
-    name: `Expedition ${paper.name} ${dark ? 'Dark' : 'Light'}`,
+    name: `Paper ${paper.name} ${dark ? 'Dark' : 'Light'}`,
     section: dark ? ('Dark' as const) : ('Light' as const),
     overrides: paperPalette(paper, dark),
   })),

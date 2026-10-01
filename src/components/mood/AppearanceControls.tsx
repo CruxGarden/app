@@ -1,3 +1,7 @@
+import { CUSTOMIZER_GROUPS, CUSTOMIZER_KEYS, resetCustomizer } from '@/lib/moods/customizer';
+import { editableColor, colorWithAlpha } from '@/lib/moods/color-controls';
+import { setSurfaceTheme } from '@/lib/moods/surface-theme';
+import { fieldClass } from '@/components/ui/field-class';
 import { useEffect, useId, useState } from 'react';
 import {
   applyActiveMood,
@@ -6,32 +10,35 @@ import {
   setThemeOverrides,
 } from '@/lib/moods/active';
 
-const BASIC_TOKENS = ['fontScale', 'accent', 'bg', 'plasmaBackground'];
-
 function readAppearance() {
   const style = getComputedStyle(document.documentElement);
   const color = (name: string, fallback: string) => {
-    const value = style.getPropertyValue(name).trim();
-    if (/^#[\da-f]{6}$/i.test(value)) return value;
     const probe = document.createElement('span');
     probe.style.color = `var(${name})`;
     probe.hidden = true;
     document.body.append(probe);
-    const rgb = getComputedStyle(probe).color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const resolved = editableColor(getComputedStyle(probe).color);
     probe.remove();
-    return rgb
-      ? '#' +
-          rgb
-            .slice(1, 4)
-            .map((n) => Number(n).toString(16).padStart(2, '0'))
-            .join('')
-      : fallback;
+    return resolved ?? { hex: fallback, alpha: 1 };
   };
   return {
     scale: Math.round((parseFloat(style.getPropertyValue('--font-scale')) || 1) * 100),
     accent: color('--accent', '#6b8e76'),
     background: color('--bg', '#18251f'),
-    customized: BASIC_TOKENS.some((key) => key in getThemeOverrides()),
+    customized: [...CUSTOMIZER_KEYS].some((key) => key in getThemeOverrides()),
+    choices: Object.fromEntries(
+      CUSTOMIZER_GROUPS.map((group) => [
+        group.id,
+        group.choices.findIndex((choice) =>
+          Object.entries(choice.tokens).every(
+            ([key, value]) =>
+              style
+                .getPropertyValue(`--${key.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase())}`)
+                .trim() === value,
+          ),
+        ),
+      ]),
+    ),
   };
 }
 
@@ -47,31 +54,27 @@ export default function AppearanceControls() {
   const change = (tokens: Record<string, string>) => {
     const section = resolvedSection();
     setThemeOverrides(section, { ...getThemeOverrides(section), ...tokens });
+    if ('surfaceStyle' in tokens) setSurfaceTheme('custom');
     applyActiveMood(section);
     setAppearance(readAppearance());
   };
   const reset = () => {
     const section = resolvedSection();
-    setThemeOverrides(
-      section,
-      Object.fromEntries(
-        Object.entries(getThemeOverrides(section)).filter(([key]) => !BASIC_TOKENS.includes(key)),
-      ),
-    );
+    setThemeOverrides(section, resetCustomizer(getThemeOverrides(section)));
     applyActiveMood(section);
     setAppearance(readAppearance());
   };
   return (
     <section aria-label="Appearance" className="flex flex-col gap-4 pb-4 border-b border-border">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-display text-sm text-text">Appearance</h3>
+        <h3 className="font-display text-sm text-text">Quick controls</h3>
         <button
           type="button"
           onClick={reset}
           disabled={!appearance.customized}
           className="text-xs text-text-muted hover:text-text cursor-pointer disabled:cursor-default"
         >
-          Reset appearance
+          Reset quick controls
         </button>
       </div>
       <div>
@@ -97,8 +100,10 @@ export default function AppearanceControls() {
           Accent color
           <input
             type="color"
-            value={appearance.accent}
-            onChange={(e) => change({ accent: e.target.value })}
+            value={appearance.accent.hex}
+            onChange={(e) =>
+              change({ accent: colorWithAlpha(e.target.value, appearance.accent.alpha) })
+            }
             className="h-8 w-10 cursor-pointer rounded border border-border bg-surface p-0.5"
           />
         </label>
@@ -106,12 +111,54 @@ export default function AppearanceControls() {
           Background color
           <input
             type="color"
-            value={appearance.background}
-            onChange={(e) => change({ bg: e.target.value, plasmaBackground: e.target.value })}
+            value={appearance.background.hex}
+            onChange={(e) =>
+              change({
+                bg: colorWithAlpha(e.target.value, appearance.background.alpha),
+                plasmaBackground: colorWithAlpha(e.target.value, appearance.background.alpha),
+              })
+            }
             className="h-8 w-10 cursor-pointer rounded border border-border bg-surface p-0.5"
           />
         </label>
       </div>
+      <div className="grid grid-cols-1 gap-4">
+        {CUSTOMIZER_GROUPS.map((group) => (
+          <div key={group.id} className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <label htmlFor={`${id}-${group.id}`} className="text-xs text-text">
+                {group.label}
+              </label>
+              <p id={`${id}-${group.id}-hint`} className="text-xs text-text-muted">
+                {group.hint}
+              </p>
+            </div>
+            <select
+              id={`${id}-${group.id}`}
+              aria-describedby={`${id}-${group.id}-hint`}
+              value={appearance.choices[group.id]}
+              onChange={(e) => {
+                const choice = group.choices[Number(e.target.value)];
+                if (choice) change(choice.tokens);
+              }}
+              className={fieldClass(undefined, 'w-36', 'sm')}
+            >
+              <option value={-1} disabled>
+                Current custom look
+              </option>
+              {group.choices.map((choice, index) => (
+                <option key={choice.label} value={index}>
+                  {choice.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-text-muted">
+        Reset only affects these quick controls. Use Moods → Save current as Mood to keep or share a
+        named copy.
+      </p>
     </section>
   );
 }

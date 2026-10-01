@@ -17,7 +17,6 @@ import {
   FONT_FACE_FAMILIES,
 } from './assets';
 // ── icons ──
-import { APP_TYPOGRAPHY } from './typography';
 import { applyIconSet } from './icon-set';
 
 export { GARDEN_DARK, type MoodPalette, type MoodPaletteKey };
@@ -78,7 +77,6 @@ function mixHex(bg: string, fg: string, amount: number): string {
 
 export function applyMoodPalette(palette: Partial<MoodPalette>, base: MoodPalette = GARDEN_DARK) {
   const el = document.documentElement;
-  palette = { ...palette, ...APP_TYPOGRAPHY };
 
   // Auto-compute accentMuted if accent and bg are provided but accentMuted is not
   const bg = palette.bg ?? base.bg;
@@ -133,7 +131,6 @@ export function applyMoodPalette(palette: Partial<MoodPalette>, base: MoodPalett
     document.dispatchEvent(new Event('palette-change'));
   });
 }
-
 
 /**
  * Get the CSS var name for a palette key.

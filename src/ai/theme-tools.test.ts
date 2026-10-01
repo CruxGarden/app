@@ -62,6 +62,14 @@ describe('theme tools', () => {
     expect(getThemeOverrides('Dark')).toEqual({});
   });
 
+  it('lets typography and color alpha travel through the same theme API', async () => {
+    const tokens = { fontDisplay: 'Georgia, serif', textSubtle: 'rgba(40, 43, 76, 0.8)' };
+    await runThemeTool('set_theme', { mode: 'persist', tokens });
+    expect(getThemeOverrides('Dark')).toEqual(tokens);
+    expect(await runThemeTool('get_theme', { group: 'typography' })).toContain('Georgia, serif');
+    expect(await runThemeTool('get_theme', { group: 'foundation' })).toContain(tokens.textSubtle);
+  });
+
   it('set_background switches built-in backgrounds and explains bad input', async () => {
     expect(await runThemeTool('set_background', { type: 'drift' })).toBe(
       'Background set to drift.',

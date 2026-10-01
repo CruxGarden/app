@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn';
 import { bundledMood } from '@/lib/moods/bundled-moods';
 import type { MoodPackage } from '@/lib/moods/packages';
 import {
-  HUES,
+  huesFor,
   materialChoice,
   moodIdFor,
   swatch,
@@ -72,6 +72,32 @@ const SWITCHES: Record<
       ],
     },
   ],
+  paper: [
+    {
+      key: 'texture',
+      label: 'Paper',
+      options: [
+        { id: 'plain', label: 'Plain', tokens: { workspaceTexture: 'none' } },
+        {
+          id: 'dotted',
+          label: 'Dotted',
+          tokens: {
+            workspaceTexture:
+              'radial-gradient(color-mix(in srgb, var(--text) 16%, transparent) 1px, transparent 1px)',
+            workspaceTextureSize: '11px 11px',
+          },
+        },
+      ],
+    },
+    {
+      key: 'edge',
+      label: 'Outline',
+      options: [
+        { id: 'fine', label: 'Fine', tokens: { paneBorderWidth: '1px', buttonBorderWidth: '1px' } },
+        { id: 'bold', label: 'Bold', tokens: { paneBorderWidth: '2px', buttonBorderWidth: '2px' } },
+      ],
+    },
+  ],
   soft: [
     {
       key: 'frost',
@@ -118,12 +144,14 @@ function Seg({
   options,
   onChange,
   testId,
+  disabled = false,
 }: {
   label: string;
   value: string | null;
   options: { id: string; label: string }[];
   onChange: (id: string) => void;
   testId: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2" data-testid={testId}>
@@ -133,6 +161,7 @@ function Seg({
           <button
             key={o.id}
             type="button"
+            disabled={disabled}
             aria-pressed={value === o.id}
             onClick={() => onChange(o.id)}
             className={cn(
@@ -187,6 +216,7 @@ export default function MaterialMoods({
   };
 
   const wear = async (m: Material, h: string, md: Mode) => {
+    h = huesFor(m).find((candidate) => candidate.id === h)?.id ?? huesFor(m)[0]!.id;
     setMaterial(m);
     setHue(h);
     setMode(md);
@@ -217,8 +247,10 @@ export default function MaterialMoods({
         options={[
           { id: 'plasma', label: 'Plasma' },
           { id: 'soft', label: 'Soft' },
+          { id: 'paper', label: 'Paper' },
         ]}
         onChange={(id) => void wear(id as Material, hue, mode)}
+        disabled={busy}
         testId="material-material"
       />
       <Seg
@@ -229,13 +261,14 @@ export default function MaterialMoods({
           { id: 'dark', label: 'Dark' },
         ]}
         onChange={(id) => void wear(material, hue, id as Mode)}
+        disabled={busy}
         testId="material-mode"
       />
       <div className="flex items-center gap-2" data-testid="material-hue">
         <SectionLabel className="w-16">Hue</SectionLabel>
         <div className="flex flex-wrap gap-2">
-          {HUES.map((h) => {
-            const sw = swatch(h.id, mode);
+          {huesFor(material).map((h) => {
+            const sw = swatch(h.id, mode, material);
             const active = worn ? hue === h.id : false;
             return (
               <button
@@ -267,6 +300,7 @@ export default function MaterialMoods({
               value={current(sw)}
               options={sw.options}
               onChange={(id) => flip(sw, id)}
+              disabled={busy}
               testId={`material-switch-${sw.key}`}
             />
           ))}

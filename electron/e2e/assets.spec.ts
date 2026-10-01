@@ -1,3 +1,4 @@
+import { openFullThemeBuilder } from './multi-crux-helpers';
 import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
@@ -24,7 +25,7 @@ test.describe('mood assets', () => {
       await page.getByRole('button', { name: 'Welcome' }).click();
       const moodPane = await showPane(page, 'Mood');
       // Files live at the foot of the Theme section, under the tokens
-      await page.getByRole('button', { name: 'Theme', exact: true }).click();
+      await openFullThemeBuilder(page);
 
       await page
         .locator('input[type="file"][aria-label="Add asset files"]')

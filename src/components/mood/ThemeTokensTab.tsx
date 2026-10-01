@@ -1,6 +1,4 @@
 import { editableColor, colorWithAlpha, type EditableColor } from '@/lib/moods/color-controls';
-import { useAiEnabled } from '@/hooks/useAiEnabled';
-import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
 import ContrastCheck from './ContrastCheck';
 import { fieldClass } from '@/components/ui/field-class';
 import { downloadBlob } from '@/lib/download';
@@ -22,7 +20,6 @@ import {
 } from '@/lib/moods/active';
 import {
   groupTokens,
-  isAiToken,
   isDerived,
   tokenKind,
   tokenChoices,
@@ -227,8 +224,16 @@ function TokenRow({
             type="range"
             aria-label={`${label} slider`}
             min={0}
-            max={/Density$/.test(tokenKey) ? 1000 : /^react/.test(tokenKey) ? 1 : 2}
-            step={/Density$/.test(tokenKey) ? 10 : /^react/.test(tokenKey) ? 0.05 : 0.05}
+            max={
+              /Density$/.test(tokenKey)
+                ? 1000
+                : /^react|Opacity$/.test(tokenKey)
+                  ? 1
+                  : /Weight$/.test(tokenKey)
+                    ? 900
+                    : 2
+            }
+            step={/Density$/.test(tokenKey) ? 10 : /Weight$/.test(tokenKey) ? 100 : 0.05}
             value={Number(value) || 0}
             onChange={(e) => onChange(e.target.value)}
             className="w-24 accent-accent"
@@ -280,19 +285,8 @@ function TokenRow({
 export default function ThemeTokensTab() {
   const section: MoodSection = resolvedSection();
   const preset = activePreset(section);
-  // With AI tools off, what dresses only the collaborator is not offered.
-  const aiEnabled = useAiEnabled();
-  const groups = useMemo(
-    () =>
-      groupTokens()
-        .filter(({ group }) => aiEnabled || !group.ai)
-        .map(({ group, keys }) => ({
-          group: aiEnabled ? group : { ...group, hint: group.plainHint ?? group.hint },
-          keys: keys.filter((key) => !(key in APP_TYPOGRAPHY) && (aiEnabled || !isAiToken(key))),
-        }))
-        .filter(({ keys }) => keys.length > 0),
-    [aiEnabled],
-  );
+  // The full builder exposes every registered token, even when a feature is off.
+  const groups = useMemo(() => groupTokens(), []);
   const [groupId, setGroupId] = useState(groups[0]!.group.id);
   const [query, setQuery] = useState('');
   const [overrides, setOverrides] = useState<ThemeOverrides>(() => getThemeOverrides(section));

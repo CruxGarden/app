@@ -511,7 +511,7 @@ export function tokenKind(key: string): TokenKind {
   )
     return 'number';
   if (/Weight$/.test(key)) return 'number';
-  if (/^font(Display|Body|Mono)$|LabelFont$|TitleFont$/.test(key)) return 'font';
+  if (/^font(Display|Body|Mono|Reading)$|LabelFont$|TitleFont$/.test(key)) return 'font';
   if (LAYOUT_KEYS.has(key)) return 'length';
   if (
     /(Radius|RadiusSm|Height|Padding|Width|Gap|Size|Blur|Tracking|Spacing)$|^letterSpacing|^gardenGridGap|Aspect$/.test(

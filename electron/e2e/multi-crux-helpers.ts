@@ -165,3 +165,10 @@ export async function setAutoCheck(page: Page, on: boolean) {
     await expect(body).toBeHidden({ timeout: 30_000 });
   }
 }
+
+/** Customization starts guided; detailed journeys explicitly enter the full builder. */
+export async function openFullThemeBuilder(page: Page) {
+  await page.getByRole('button', { name: 'Theme', exact: true }).click();
+  const full = page.getByRole('button', { name: 'Full Theme Builder', exact: true });
+  if (await full.isVisible()) await full.click();
+}
