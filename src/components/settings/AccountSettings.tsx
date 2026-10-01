@@ -1,3 +1,4 @@
+import CloseAccount from './CloseAccount';
 import { useState, useRef, useEffect } from 'react';
 import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
@@ -214,6 +215,7 @@ export default function AccountSettings() {
         </p>
         <ApiAddress />
       </details>
+      {isAuthenticated && <CloseAccount />}
     </SettingsSection>
   );
 }

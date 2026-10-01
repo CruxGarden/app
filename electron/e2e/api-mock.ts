@@ -29,6 +29,9 @@ export interface MockApi {
   state: {
     failPublish: boolean;
     failUnpublish?: boolean;
+    failAccountClosure?: boolean;
+    accountClosed?: boolean;
+    accountClosureSupported?: boolean;
     failPublishedDownloadPath?: string;
     publishedDownloadDelayMs?: number;
     /** Refuse one recovery listing page to exercise visible retry. */
@@ -494,6 +497,23 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         accessToken: 'pv_fixture',
         visitor: { id: 'visitor', username: 'tester', name: 'Tester' },
       });
+    if (path === '/account/closure' && method === 'GET')
+      return state.accountClosureSupported === false
+        ? send(404, {})
+        : send(200, { version: 1, confirmationText: 'DELETE MY ACCOUNT' });
+    if (path === '/account' && method === 'DELETE') {
+      if (bodyJson().confirmationText !== 'DELETE MY ACCOUNT')
+        return send(400, { message: 'Confirmation does not match' });
+      if (state.failAccountClosure)
+        return send(503, { message: 'Backup cleanup failed. Retry account closure.' });
+      state.accountClosed = true;
+      state.cruxes = {};
+      state.published = {};
+      state.sync.garden = null;
+      state.sync.cruxes = {};
+      state.billing.status = 'canceled';
+      return send(204, null);
+    }
     if (path === '/auth/code' && method === 'POST') return send(200, { message: 'sent' });
     if (path === '/auth/login' && method === 'POST') {
       const body = bodyJson();
@@ -504,6 +524,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       return send(200, { accessToken: 'test-access', refreshToken: 'test-refresh' });
     }
     if (path === '/auth/profile' && method === 'GET') {
+      if (state.accountClosed) return send(401, { message: 'Account closed' });
       // other@example.com is a second account with its own author (two-machines.spec)
       const other = state.loginEmail === 'other@example.com';
       const author = other
