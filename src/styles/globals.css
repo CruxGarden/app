@@ -1432,6 +1432,8 @@ html.palette-transition *::after {
   cursor: grabbing;
 }
 .mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar {
+  container-type: inline-size;
+  container-name: pane-header;
   display: flex;
   align-items: center;
   justify-content: var(--pane-header-justify);
@@ -1476,6 +1478,26 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .pane-toolbar-close:hover {
   color: var(--pane-header-close-hover);
+}
+
+/* Preserve both actions when the title shares a narrow header. Appearance
+   still comes from the Mood; the compact form only changes its layout. */
+.pane-focus-icon {
+  display: none;
+}
+@container pane-header (max-width: 200px) {
+  .pane-toolbar-focus {
+    width: 24px;
+    min-height: 24px;
+    padding-inline: 0;
+  }
+  .pane-focus-label {
+    display: none;
+  }
+  .pane-focus-icon {
+    display: flex;
+    justify-content: center;
+  }
 }
 
 /* Frame pulse — a pane's --pane-<name>-pulse token is the iteration count:

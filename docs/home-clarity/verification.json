@@ -1,0 +1,21 @@
+{
+  "scope": "Empty Home and narrow panel headers",
+  "reproduction": {
+    "home": "Only 16.46% of collection button visible at1008x700 with Settings beside Home. /tmp/home-clarity-red.log",
+    "headers": "Close clipped twice in900x700/nine panels. Unshrinkable title plus49px Focus overflows102px toolbar; removing only Focus makes original test pass. /tmp/header-clarity-{repro,without-focus}.log"
+  },
+  "changes": [
+    "Empty Home prioritizes both creation choices; search/sort return once work exists and preserve no-results recovery. Garden management remains below the prompt.",
+    "Long creation label can wrap. Narrow headers truncate titles and use accessible compact Focus; Close keeps its size. Mood appearance unchanged."
+  ],
+  "verification": {
+    "app": "npm run verify:1690 passed/268 files,18 skipped, build passed. /tmp/clarity-final-app.log",
+    "electron": "npm run verify:77 passed,1 skipped. /tmp/home-clarity-electron.log",
+    "desktop": "17 passed together in2.8m;21 axe states, Home creation/search, nine narrow panels with both actions hit-tested and actual Focus/Restore, Settings, resume and restart. /tmp/clarity-final-desktop.log"
+  },
+  "limits": [
+    "No universal accessibility or newcomer-study claim.",
+    "Native CI and packaged acceptance recorded separately in root handoff.",
+    "No deployment, merge or real publication."
+  ]
+}

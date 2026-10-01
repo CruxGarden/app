@@ -231,7 +231,13 @@ test.describe('home garden, crux picker, narrow panes', () => {
         await expect(close).toBeInViewport({ ratio: 1 });
         // A real pointer hit test detects overlapping panes as well as clipped headers.
         await close.click({ trial: true });
+        const focus = page.getByRole('button', { name: `Focus ${label}`, exact: true });
+        await expect(focus).toBeInViewport({ ratio: 1 });
+        await focus.click({ trial: true });
       }
+      await page.getByRole('button', { name: 'Focus Sync', exact: true }).click();
+      await expect(page.getByTestId('pane-body-sync')).toBeVisible();
+      await page.getByRole('button', { name: 'Restore panels', exact: true }).click();
       const widen = page.getByText('Widen the pane');
       await expect(widen.first()).toBeVisible();
       // A short tile must allow reading its empty state from the start, not clip its title above the scroll area.

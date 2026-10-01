@@ -68,6 +68,7 @@ export default function HomeGarden() {
     refresh,
   } = useGarden();
   const navigate = useMoodNavigate();
+  const emptyGarden = cruxList.length === 0 && search.length === 0;
 
   const tendingRows = useTendingRows();
   const tendingCounts: Record<string, number> = {};
@@ -310,27 +311,29 @@ export default function HomeGarden() {
             {dropping ? 'Drop a file or folder to start a Crux from it.' : dropNotice}
           </p>
         )}
-        <div className="flex items-center gap-3 mt-4">
-          <div className="flex-1">
-            <GardenSearch value={search} onChange={setSearch} />
+        {!emptyGarden && (
+          <div className="flex items-center gap-3 mt-4">
+            <div className="flex-1">
+              <GardenSearch value={search} onChange={setSearch} />
+            </div>
+            <SegmentedControl
+              label="Sort by"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'created', label: 'Created' },
+                { value: 'updated', label: 'Updated' },
+              ]}
+              className="h-9 shrink-0"
+            />
           </div>
-          <SegmentedControl
-            label="Sort by"
-            value={sortBy}
-            onChange={setSortBy}
-            options={[
-              { value: 'created', label: 'Created' },
-              { value: 'updated', label: 'Updated' },
-            ]}
-            className="h-9 shrink-0"
-          />
-        </div>
+        )}
       </Panel>
 
       {/* Cruxes the account has and this machine does not (RESILIENCE-PLAN §2c) */}
       <RecoverSection />
 
-      {garden && <GardenActions key={garden.id} />}
+      {garden && !emptyGarden && <GardenActions key={garden.id} />}
       {can(Capability.V2) && (
         <details className="mb-4 text-sm text-text-muted">
           <summary className="py-2 hover:text-text">Shared gardens</summary>
@@ -349,17 +352,18 @@ export default function HomeGarden() {
           </Button>
         </Panel>
       ) : cruxList.length === 0 ? (
-        <Panel padding="md" className="flex flex-col items-center text-center py-14 px-6">
+        <Panel padding="md" className="flex flex-col items-center text-center py-6 px-4">
           <div className="w-12 h-12 rounded-full bg-accent-muted text-accent flex items-center justify-center mb-4">
             <PlusIcon size={20} />
           </div>
-          <p className="font-display text-base text-text mb-1">What do you want to make?</p>
+          <h2 className="font-display text-base text-text mb-1">What do you want to make?</h2>
           <p className="text-sm text-text-muted max-w-[34ch] mb-5">
-            A Crux is one project: a page, drawing, song or notebook. An undertaking groups related
-            projects in a Garden
-            {aiEnabled ? '. Work on your own or with a collaborator.' : '.'}
+            Make a page, drawing, song or notebook. Start one project, or explore a guided
+            collection.
+            {aiEnabled && ' Work on your own or with a collaborator.'}
           </p>
           <PlasmaButton
+            className="h-auto min-h-11 max-w-full whitespace-normal py-2"
             onClick={() => {
               setNewCruxView('undertakings');
               setShowNewCrux(true);
@@ -388,6 +392,8 @@ export default function HomeGarden() {
           tendingCounts={tendingCounts}
         />
       )}
+
+      {garden && emptyGarden && <GardenActions key={garden.id} />}
 
       {/* The Garden's shared work: walkthrough, outputs, history, package */}
       {garden && <Cruxspaces key={garden.id} gardenId={garden.id} />}

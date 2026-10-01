@@ -299,13 +299,18 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
               }
             >
               <div
-                className="flex items-center gap-2"
+                className="flex min-w-0 items-center gap-2"
                 style={{ color: `var(${prefix}-header-text)` }}
               >
-                <span className="pane-toolbar-icon" style={{ color: `var(${prefix}-header-icon)` }}>
+                <span
+                  className="pane-toolbar-icon shrink-0"
+                  style={{ color: `var(${prefix}-header-icon)` }}
+                >
                   <PaneIcon type={paneType} size={14} strokeWidth={2} />
                 </span>
-                <span className="pane-toolbar-label">{labels[paneType]}</span>
+                <span className="pane-toolbar-label truncate" title={labels[paneType]}>
+                  {labels[paneType]}
+                </span>
               </div>
               <PaneFocusButton pane={paneType} label={labels[paneType]} />
               {/* Home is the Garden's anchor: it stays. */}
@@ -317,7 +322,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
                   }}
                   // The colour rides on a variable, not an inline `color`, so the
                   // header's hover colour (globals.css) can take over on hover.
-                  className="pane-toolbar-close w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] [color:var(--pt-close)] hover:bg-action-button-hover active-dim motion-press cursor-pointer"
+                  className="pane-toolbar-close shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] [color:var(--pt-close)] hover:bg-action-button-hover active-dim motion-press cursor-pointer"
                   style={{ '--pt-close': `var(${prefix}-header-close)` } as React.CSSProperties}
                   title={`Close ${labels[paneType]}`}
                 >
