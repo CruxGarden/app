@@ -260,12 +260,31 @@ describe('publishPipeline', () => {
     expect(state.publishedFiles).toBeNull();
   });
 
+  it('owns publication bytes before remote I/O can invalidate the selected manifest', async () => {
+    const { deps, state } = makeDeps({});
+    let headAdvanced = false;
+    const read = deps.local.downloadBlob;
+    deps.local.downloadBlob = async (file) => {
+      if (headAdvanced) throw new Error('File content changed; reload before reading');
+      return read(file);
+    };
+    deps.api.exists = async () => {
+      headAdvanced = true;
+      return false;
+    };
+    await publishPipeline(makeCrux(), [makeArtifact('LICENSE', 'fp1')], { deps });
+    expect(headAdvanced).toBe(true);
+    expect(await state.publishedFiles![0]!.blob.text()).toBe('content-of-art-LICENSE');
+  });
+
   it('fails the publish when an artifact blob cannot be read', async () => {
     const artifacts = [makeArtifact('index.html', 'fp1'), makeArtifact('app.js', 'fp2')];
     const { deps, state } = makeDeps({ exists: true, failBlob: 'art-app.js' });
     await expect(publishPipeline(makeCrux(), artifacts, { deps })).rejects.toThrow(
       /nothing was published/,
     );
+    expect(state.created).toHaveLength(0);
+    expect(state.updated).toHaveLength(0);
     // Nothing uploaded, and no fingerprints recorded for a site that never shipped
     expect(state.publishedFiles).toBeNull();
     expect(state.localMetaWrites).toHaveLength(0);
@@ -388,7 +407,7 @@ describe('publishPipeline', () => {
     const { deps } = makeDeps({ exists: true, isSite: true });
     const phases: PublishPhase[] = [];
     await publishPipeline(makeCrux(), [], { deps, onProgress: (p) => phases.push(p) });
-    expect(phases).toEqual(['sync', 'build', 'upload', 'finalize', 'tags']);
+    expect(phases).toEqual(['build', 'sync', 'upload', 'finalize', 'tags']);
   });
 
   it('fails the whole publish when the build fails (nothing half-deploys)', async () => {

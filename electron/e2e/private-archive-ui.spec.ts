@@ -152,6 +152,11 @@ test('the visible Crux exporter and importer preserve Main, Tasks, starting stat
     await expect(
       destination.page.getByRole('button', { name: 'Review changes', exact: true }),
     ).toBeVisible();
+    // Keep the real trusted desktop origin; inventing crux-app://app denies IPC.
+    await destination.page.reload();
+    await expect(
+      destination.page.getByRole('button', { name: 'Review changes', exact: true }),
+    ).toBeVisible();
     expect(readFileSync(join(copies[0].project_folder, 'note.txt'), 'utf8')).toBe('Task text');
   } finally {
     await destination.app.close();

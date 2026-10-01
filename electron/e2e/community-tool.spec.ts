@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
@@ -43,6 +43,32 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
       .getByRole('button', { name: 'Export Tool (.cruxtool)', exact: true })
       .click();
     await expect.poll(() => existsSync(toolFile)).toBe(true);
+    const owner = (await publisher.page
+      .locator('[data-workspace-id]')
+      .getAttribute('data-workspace-id'))!;
+    const project = (await storedCrux(publisher.page, owner)).projectFolder;
+    let advanced = false;
+    await publisher.page.route(`${api.url}/cruxes/${owner}`, async (route) => {
+      if (route.request().method() === 'GET' && !advanced) {
+        advanced = true;
+        const head = await publisher.page.evaluate(
+          async (id) => window.electronAPI!.sqlite.fileContent!.head(id),
+          owner,
+        );
+        // An internal file changes while the remote lookup is in flight. The
+        // publication must already own the bytes it decided to share.
+        writeFileSync(join(project, '.keep'), 'background change');
+        await expect
+          .poll(async () =>
+            publisher.page.evaluate(
+              async (id) => (await window.electronAPI!.sqlite.fileContent!.head(id))?.revision,
+              owner,
+            ),
+          )
+          .not.toBe(head?.revision);
+      }
+      await route.continue();
+    });
     await openPanel(publisher.page, 'publish', 'Toggle share');
     await publisher.page.getByRole('button', { name: 'Share', exact: true }).click();
     await publisher.page.getByPlaceholder('email@example.com').fill('tester@example.com');
@@ -55,6 +81,7 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
     await expect(backup).toBeVisible();
     await backup.getByRole('button', { name: 'Share without a backup' }).click();
     await expect(publisher.page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
+    expect(advanced).toBe(true);
     await publisher.page.getByRole('switch', { name: 'Discoverable' }).click();
     await expect
       .poll(() =>

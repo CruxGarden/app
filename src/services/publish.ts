@@ -323,23 +323,9 @@ export async function publishPipeline(
     };
   }
 
-  // 1. Upsert crux to API (create if not exists, update if it does).
-  // A transient failure here aborts the publish: `exists` throwing is the
-  // guard that stops us taking the destructive create path (see PublishDeps).
-  progress('sync');
-  const cruxExistsOnApi = await deps.api.exists(crux.id);
-  if (cruxExistsOnApi) {
-    await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
-  } else {
-    // The API handles slug conflicts by hard-deleting stale records
-    await deps.api.create({
-      id: crux.id,
-      ...cruxUpsertFields(crux, opts?.messages),
-      data: isEmbeddedApp(crux) ? '' : crux.data || '',
-    });
-  }
-
-  // 2. Collect the files to publish.
+  // 1. Collect immutable publication bytes before any remote request.
+  // Watcher ingestion may advance the selected manifest during network I/O;
+  // reading afterward would reject even an unrelated internal-file update.
   // Site Cruxes (ADR 0005): build in-app and ship dist/ — sources stay in
   // history, visitors get the built output. A failed build fails the
   // publish; nothing half-deploys.
@@ -392,7 +378,7 @@ export async function publishPipeline(
     }
   }
 
-  // 2b. The cover: ship the workspace thumbnail as _crux/cover.jpg so Explore
+  // 1b. The cover: ship the workspace thumbnail as _crux/cover.jpg so Explore
   // and public pages can show it. Best-effort — a missing or unreadable
   // preview never blocks a publish. A file the user (or the site build) put at
   // that path wins; we never overwrite their bytes with ours.
@@ -440,6 +426,22 @@ export async function publishPipeline(
         kind: 'tool-package',
       },
     ];
+  }
+
+  // 2. Upsert crux to API (create if not exists, update if it does).
+  // A transient failure here aborts the publish: `exists` throwing is the
+  // guard that stops us taking the destructive create path (see PublishDeps).
+  progress('sync');
+  const cruxExistsOnApi = await deps.api.exists(crux.id);
+  if (cruxExistsOnApi) {
+    await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
+  } else {
+    // The API handles slug conflicts by hard-deleting stale records
+    await deps.api.create({
+      id: crux.id,
+      ...cruxUpsertFields(crux, opts?.messages),
+      data: isEmbeddedApp(crux) ? '' : crux.data || '',
+    });
   }
 
   // 3. Publish — all files in one multipart request
