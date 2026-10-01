@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { launchApp } from './launch';
-import { expectPanelBarReady } from './panel-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { startMockApi } from './api-mock';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { outputs } from './game-cruxspace-helpers';
@@ -31,11 +31,11 @@ test('Whiteboard: PNG and SVG outputs, and the drawing shares as a view-mode pag
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Whiteboard/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    // Leave room for the tool if Tasks is already open; closed panels have no bar button.
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
     await expectPanelBarReady(page);
-    const tasks = page.locator('header').getByRole('button', { name: 'Toggle tasks', exact: true });
-    if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
+    if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+      await togglePanel(page, 'Toggle tasks');
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(page, id)).projectFolder;
