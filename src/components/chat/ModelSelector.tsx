@@ -2,7 +2,7 @@ import { includedUsage } from '@/api/inference';
 import { SectionLabel, menuItemClass } from '@/components/ui';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useAuthStore } from '@/stores/authStore';
-import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useId } from 'react';
 import { ChevronDownIcon } from '@/components/ui/icons';
 import { PROVIDERS, isAgentModel } from '@/ai/providers';
 import { Capability, can } from '@/lib/platform';
@@ -93,9 +93,21 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
     maxHeight: 0,
   });
 
-  const close = useCallback(() => setOpen(false), []);
+  const pickerId = useId();
+  const close = useCallback(() => {
+    setOpen(false);
+    if (menuRef.current?.contains(document.activeElement)) buttonRef.current?.focus();
+  }, []);
   useDismiss(menuRef, close, open);
   const pickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const picker = pickerRef.current;
+    (
+      picker?.querySelector<HTMLElement>('button[aria-pressed="true"]:not(:disabled)') ??
+      picker?.querySelector<HTMLElement>('button:not(:disabled)')
+    )?.focus();
+  }, [open]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -175,7 +187,8 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
       <button
         ref={buttonRef}
         data-testid="model-selector"
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
+        aria-controls={open ? pickerId : undefined}
         aria-expanded={open}
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
@@ -219,6 +232,31 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
           <motion.div
             key="models"
             data-testid="model-selector-menu"
+            id={pickerId}
+            role="dialog"
+            aria-label="Choose a model"
+            onKeyDown={(event) => {
+              const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+              if (!keys.includes(event.key)) return;
+              const choices = [
+                ...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+              ];
+              if (!choices.length) return;
+              event.preventDefault();
+              const index = choices.indexOf(document.activeElement as HTMLButtonElement);
+              const next =
+                event.key === 'Home'
+                  ? 0
+                  : event.key === 'End'
+                    ? choices.length - 1
+                    : (index + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) %
+                      choices.length;
+              choices[next]?.focus();
+            }}
+            onBlur={(event) => {
+              if (event.relatedTarget && !menuRef.current?.contains(event.relatedTarget))
+                setOpen(false);
+            }}
             data-motion-role="dropdown"
             initial={role.initial}
             animate={role.animate}
@@ -254,9 +292,10 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                     {group.models.map((model) => (
                       <button
                         key={model.id}
+                        aria-pressed={model.id === value}
                         onClick={() => {
                           onChange(model.id);
-                          setOpen(false);
+                          close();
                         }}
                         className={menuItemClass(
                           'default',
@@ -296,13 +335,14 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                       {agentGroup.models.map((model) => (
                         <button
                           key={model.id}
+                          aria-pressed={model.id === value}
                           disabled={!available}
                           title={
                             available ? (agent.version ?? undefined) : (agent.reason ?? undefined)
                           }
                           onClick={() => {
                             onChange(model.id);
-                            setOpen(false);
+                            close();
                           }}
                           className={menuItemClass(
                             'default',
@@ -337,9 +377,10 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                       return (
                         <button
                           key={id}
+                          aria-pressed={id === value}
                           onClick={() => {
                             onChange(id);
-                            setOpen(false);
+                            close();
                           }}
                           className={menuItemClass(
                             'default',

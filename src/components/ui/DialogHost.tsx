@@ -72,7 +72,7 @@ export default function DialogHost() {
         <p className="text-sm text-text whitespace-pre-line">{req.message}</p>
         <div className="flex justify-end gap-2">
           {req.kind === 'confirm' && (
-            <Button variant="ghost" size="sm" onClick={cancel} autoFocus={!req.danger}>
+            <Button variant="ghost" size="sm" onClick={cancel} autoFocus>
               {req.cancelLabel ?? 'Cancel'}
             </Button>
           )}
@@ -80,7 +80,7 @@ export default function DialogHost() {
             size="sm"
             variant={req.danger ? 'danger' : 'primary'}
             onClick={ok}
-            autoFocus={req.kind === 'alert' || !!req.danger}
+            autoFocus={req.kind === 'alert'}
           >
             {req.confirmLabel ?? (req.kind === 'alert' ? 'OK' : 'Confirm')}
           </Button>

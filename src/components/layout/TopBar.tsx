@@ -128,6 +128,7 @@ export default function TopBar() {
             {/* The builder's lane: open and pinned panels as square toggles. */}
             <div
               className="hidden md:flex flex-wrap items-center gap-1.5"
+              role="group"
               aria-label="Open panels"
               data-testid="builder-lane"
             >

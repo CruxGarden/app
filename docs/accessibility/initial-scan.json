@@ -1,0 +1,3033 @@
+[
+  {
+    "screen": "entry",
+    "passes": 18,
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "screen": "Toggle share",
+    "passes": 22,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"flex flex-wrap gap-1.5 pl-8\" aria-label=\"Examples to start from\">",
+            "target": [
+              ".pl-8"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"truncate\" style=\"view-transition-name: crux-378e988f-7490-4384-9fae-8839bf34821f;\">Accessible workspace</span>",
+            "target": [
+              ".max-w-64 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              ".hover\\:text-action-button-text-hover > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".font-bold"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Collaboration</span>",
+            "target": [
+              ".pane-collaboration > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-2xs font-mono text-accent mb-1\">Vel</div>",
+            "target": [
+              ".mb-1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"mb-2 last:mb-0 leading-relaxed text-markdown-text\">Everything here is one material. What shall we grow?</p>",
+            "target": [
+              ".mb-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 0;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 1;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 2;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>info</span>",
+            "target": [
+              ".ml-auto > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Workshop</span>",
+            "target": [
+              ".pane-workshop > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].transition-\\[color\\,background-color\\,box-shadow\\].px-2\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".px-2\\.5.border-transparent.min-h-7:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".px-2\\.5.border-transparent.min-h-7:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-lg font-medium\">Your creation will appear here</h2>",
+            "target": [
+              "h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-sm\">Describe what you want to make in Collaboration. As your files arrive, the preview opens here.</p>",
+            "target": [
+              ".max-w-sm"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".bg-primary-button"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Share</span>",
+            "target": [
+              ".pane-publish > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "workspace",
+    "passes": 21,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"truncate\" style=\"view-transition-name: crux-378e988f-7490-4384-9fae-8839bf34821f;\">Accessible workspace</span>",
+            "target": [
+              ".max-w-64 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              ".hover\\:text-action-button-text-hover > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".text-2xs"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Collaboration</span>",
+            "target": [
+              ".pane-collaboration > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Workshop</span>",
+            "target": [
+              ".pane-workshop > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "models",
+    "passes": 24,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"flex flex-wrap gap-1.5 pl-8\" aria-label=\"Examples to start from\">",
+            "target": [
+              ".pl-8"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "aria-valid-attr-value",
+        "nodes": [
+          {
+            "html": "<button data-testid=\"model-selector\" aria-haspopup=\"dialog\" aria-expanded=\"true\" class=\"flex items-center ga...\" aria-controls=\"_r_1r_\">",
+            "target": [
+              ".ring-accent\\/40"
+            ],
+            "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"_r_1r_\""
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"truncate\" style=\"view-transition-name: crux-378e988f-7490-4384-9fae-8839bf34821f;\">Accessible workspace</span>",
+            "target": [
+              ".max-w-64 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              ".hover\\:text-action-button-text-hover > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".font-bold"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Collaboration</span>",
+            "target": [
+              ".pane-collaboration > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-2xs font-mono text-accent mb-1\">Vel</div>",
+            "target": [
+              ".mb-1.text-accent.text-2xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"mb-2 last:mb-0 leading-relaxed text-markdown-text\">Everything here is one material. What shall we grow?</p>",
+            "target": [
+              ".mb-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 0;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 1;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 2;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-2xs font-mono uppercase tracking-wider text-text-muted px-2.5 pt-2 pb-1 flex items-center gap-1.5\">",
+            "target": [
+              "div:nth-child(1) > .uppercase.tracking-wider.pb-1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(1) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(1) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(1) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(5)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<div class=\"text-2xs font-mono uppercase tracking-wider text-text-muted px-2.5 pt-2 pb-1 flex items-center gap-1.5\">",
+            "target": [
+              "div:nth-child(2) > .uppercase.tracking-wider.pb-1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(2) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(2) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(2) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(2) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(5)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(2) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(6)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(2) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(7)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<div class=\"text-2xs font-mono uppercase tracking-wider text-text-muted px-2.5 pt-2 pb-1 flex items-center gap-1.5\">",
+            "target": [
+              "div:nth-child(3) > .uppercase.tracking-wider.pb-1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(3) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(3) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(3) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(3) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(5)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(3) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(6)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              "div:nth-child(3) > .outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(7)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"w-full flex items-ce...\">",
+            "target": [
+              ".outline-none.text-text.focus-visible\\:bg-action-button-hover:nth-child(8)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span>info</span>",
+            "target": [
+              ".ml-auto > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Workshop</span>",
+            "target": [
+              ".pane-workshop > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].transition-\\[color\\,background-color\\,box-shadow\\].hover\\:text-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".border-b.px-1\\.5.border-border > .border-transparent.min-h-7.rounded-button:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".border-transparent.min-h-7.rounded-button:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-lg font-medium\">Your creation will appear here</h2>",
+            "target": [
+              "h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-sm\">Describe what you want to make in Collaboration. As your files arrive, the preview opens here.</p>",
+            "target": [
+              ".max-w-sm"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".bg-primary-button"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "garden",
+    "passes": 22,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              "button[aria-label=\"Add panel\"] > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".text-2xs"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Home</span>",
+            "target": [
+              ".pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h1 class=\"font-display text-lg font-medium text-text truncate\">My Garden</h1>",
+            "target": [
+              "h1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-label=\"Add a Garden brief\" class=\"mt-0.5 text-left text-sm line-clamp-2 cursor-text text-text-muted/50 hover:text-text-muted\">Add a brief</button>",
+            "target": [
+              ".line-clamp-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted\">Home Garden</p>",
+            "target": [
+              ".mt-0\\.5.gap-1\\.5.flex > p"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".bg-primary-button"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<input placeholder=\"Search cruxes...\" class=\"w-full px-3 pr-8 py-...\" type=\"text\" value=\"\">",
+            "target": [
+              ".pr-8"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".transition-\\[color\\,background-color\\,box-shadow\\].hover\\:text-text.rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".hover\\:text-action-button-text-hover.px-2\\.5.min-h-7:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".hover\\:text-action-button-text-hover.px-2\\.5.min-h-7:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".hover\\:text-action-button-text-hover.px-2\\.5.min-h-7:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"font-display text-base text-text mb-1\">What do you want to make?</p>",
+            "target": [
+              ".text-base"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-[34ch] mb-5\">Choose an undertaking with a worked example, or start with a single Crux. Work on your own or with a collaborator.</p>",
+            "target": [
+              ".max-w-\\[34ch\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"relative inline-flex items-center gap-[inherit]\">Explore undertakings</span>",
+            "target": [
+              ".gap-\\[inherit\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".text-action-button-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "zoomed-command-palette",
+    "passes": 24,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-valid-attr-value",
+        "nodes": [
+          {
+            "html": "<div role=\"group\" aria-labelledby=\"_r_22_-Go to\">",
+            "target": [
+              "div[aria-labelledby=\"_r_22_-Go to\"]"
+            ],
+            "summary": "Fix all of the following:\n  ARIA attribute element ID does not exist on the page: aria-labelledby=\"_r_22_-Go to\""
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<input role=\"combobox\" aria-expanded=\"true\" aria-controls=\"_r_22_-list\" aria-activedescendan...=\"_r_22_-option-0\" aria-autocomplete=\"list\" aria-label=\"Search or run a comm...\" placeholder=\"Go to, open a panel,...\" class=\"flex-1 min-w-0 h-12 ...\" value=\"\">",
+            "target": [
+              ".placeholder\\:text-placeholder"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<div id=\"_r_22_-Go to\" class=\"px-2.5 pt-2 pb-1 text-2xs font-medium uppercase tracking-wide text-text-muted\">Go to</div>",
+            "target": [
+              "#_r_22_-Go\\ to"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex-1 min-w-0 truncate\">My Garden</span>",
+            "target": [
+              "#_r_22_-option-0 > .truncate.flex-1.min-w-0"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"shrink-0 max-w-[45%] truncate text-xs text-text-muted\">Garden Home</span>",
+            "target": [
+              "#_r_22_-option-0 > .max-w-\\[45\\%\\].text-xs.truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<div id=\"_r_22_-Actions\" class=\"px-2.5 pt-2 pb-1 text-2xs font-medium uppercase tracking-wide text-text-muted\">Actions</div>",
+            "target": [
+              "#_r_22_-Actions"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex-1 min-w-0 truncate\">Help and field guide</span>",
+            "target": [
+              "#_r_22_-option-1 > .truncate.flex-1.min-w-0"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex-1 min-w-0 truncate\">New Crux\u2026</span>",
+            "target": [
+              "#_r_22_-option-2 > .truncate.flex-1.min-w-0"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex-1 min-w-0 truncate\">New task\u2026</span>",
+            "target": [
+              "#_r_22_-option-3 > .truncate.flex-1.min-w-0"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex-1 min-w-0 truncate\">Mark a version</span>",
+            "target": [
+              "#_r_22_-option-4 > .truncate.flex-1.min-w-0"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex-1 min-w-0 truncate\">Share this Crux</span>",
+            "target": [
+              "#_r_22_-option-5 > .truncate.flex-1.min-w-0"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex-1 min-w-0 truncate\">Export this Crux</span>",
+            "target": [
+              "#_r_22_-option-6 > .truncate.flex-1.min-w-0"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"flex items-center gap-1\"><kbd class=\"text-3xs font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-border bg-bg\">\u2191</kbd><kbd class=\"text-3xs font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-border bg-bg\">\u2193</kbd> choose</span>",
+            "target": [
+              ".gap-1.items-center.flex:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<kbd class=\"text-3xs font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-border bg-bg\">\u2191</kbd>",
+            "target": [
+              ".gap-1.items-center.flex:nth-child(1) > .bg-bg:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element content contains only non-text characters"
+          },
+          {
+            "html": "<kbd class=\"text-3xs font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-border bg-bg\">\u2193</kbd>",
+            "target": [
+              ".gap-1.items-center.flex:nth-child(1) > .bg-bg:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element content contains only non-text characters"
+          },
+          {
+            "html": "<span class=\"flex items-center gap-1\"><kbd class=\"text-3xs font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-border bg-bg\">\u21b5</kbd> run</span>",
+            "target": [
+              ".gap-1.items-center.flex:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<kbd class=\"text-3xs font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-border bg-bg\">\u21b5</kbd>",
+            "target": [
+              ".gap-1.items-center.flex:nth-child(2) > .bg-bg"
+            ],
+            "summary": "Fix any of the following:\n  Element content contains only non-text characters"
+          },
+          {
+            "html": "<span class=\"ml-auto flex items-center gap-1\"><kbd class=\"text-3xs font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-border bg-bg\">\u2318K</kbd> anywhere</span>",
+            "target": [
+              ".ml-auto"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "settings-Garden and backups",
+    "passes": 30,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              "button[aria-label=\"Add panel\"] > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".bg-profile-button"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Home</span>",
+            "target": [
+              ".pane-home > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h1 class=\"font-display text-lg font-medium text-text truncate\">My Garden</h1>",
+            "target": [
+              "h1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-label=\"Add a Garden brief\" class=\"mt-0.5 text-left text-sm line-clamp-2 cursor-text text-text-muted/50 hover:text-text-muted\">Add a brief</button>",
+            "target": [
+              ".line-clamp-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted\">Home Garden</p>",
+            "target": [
+              ".mt-0\\.5.gap-1\\.5.items-center > p"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".mb-4.gap-3.justify-between > .bg-primary-button.text-primary-button-text.border-primary-button-border"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<input placeholder=\"Search cruxes...\" class=\"w-full px-3 pr-8 py-...\" type=\"text\" value=\"\">",
+            "target": [
+              ".pr-8"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".transition-\\[color\\,background-color\\,box-shadow\\].rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].hover\\:text-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".-ml-2\\.5 > .min-h-7.border-transparent.bg-transparent:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".min-h-7.border-transparent.bg-transparent:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".-ml-2\\.5 > .min-h-7.border-transparent.bg-transparent:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"font-display text-base text-text mb-1\">What do you want to make?</p>",
+            "target": [
+              ".text-base"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-[34ch] mb-5\">Choose an undertaking with a worked example, or start with a single Crux. Work on your own or with a collaborator.</p>",
+            "target": [
+              ".max-w-\\[34ch\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"relative inline-flex items-center gap-[inherit]\">Explore undertakings</span>",
+            "target": [
+              ".gap-\\[inherit\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".py-14 > .border-transparent.bg-transparent.text-action-button-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Settings</span>",
+            "target": [
+              ".pane-settings > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Account</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">AI and agents</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Garden and backups</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Appearance and panels</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted min-w-0\">Keep running in the menu bar when the window closes</span>",
+            "target": [
+              ".max-w-full:nth-child(5) > .min-w-0.text-xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-xxs text-text-muted\">Docked mode: closing the window puts it away and the garden keeps running \u2014 Schedules tick, Alerts collect \u2014 with Open and Quit in the menu bar. Off, closing the window closes the app.</p>",
+            "target": [
+              ".text-xxs:nth-child(6)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-text\">Logs</div>",
+            "target": [
+              ".gap-3.justify-between.items-center:nth-child(8) > .min-w-0 > .text-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-text-muted font-mono break-all\">/private/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-NR0pbK/userData/logs</div>",
+            "target": [
+              ".break-all.font-mono.text-text-muted"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-xxs text-text-muted\">Written locally, never sent. Attach main.log to a GitHub issue when something breaks.</div>",
+            "target": [
+              ".min-w-0 > .text-xxs.text-text-muted"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".gap-3.justify-between.items-center:nth-child(8) > .bg-action-button.border-action-button-border.hover\\:border-action-button-border-hover"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">Garden</h2>",
+            "target": [
+              "section[aria-label=\"Garden\"] > .items-baseline.mb-3.gap-3 > .group.-ml-1\\.5.px-1\\.5 > .text-settings-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-xs text-text-muted mb-4\">Export or import your entire garden \u2014 all cruxes, files, conversations, and settings.</p>",
+            "target": [
+              ".motion-enter-dropdown > div > .mb-4:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-xs text-text-muted\">Includes your files, the tool's own files, conversation, Tasks and Growth. This private backup is self-contained: it opens in any Crux Garden. A tool that is not in the app or installed there still opens; only its commands wait for the tool.</p>",
+            "target": [
+              ".mb-4:nth-child(2) > p"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".motion-enter-dropdown > div > .gap-2.items-center.flex:nth-child(3) > .bg-action-button.border-action-button-border.hover\\:border-action-button-border-hover:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".gap-2.items-center.flex:nth-child(3) > .bg-action-button.border-action-button-border.hover\\:border-action-button-border-hover:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h3 class=\"font-display text-sm font-medium text-text mb-2\">Garden location</h3>",
+            "target": [
+              "div > .mb-2:nth-child(5)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-xs text-text-muted mb-3\">New cruxes create their project folders here. Existing folders stay where they are and keep working.</p>",
+            "target": [
+              ".mb-3:nth-child(6)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "settings-AI and agents",
+    "passes": 30,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              "button[aria-label=\"Add panel\"] > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".bg-profile-button"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Home</span>",
+            "target": [
+              ".pane-home > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h1 class=\"font-display text-lg font-medium text-text truncate\">My Garden</h1>",
+            "target": [
+              "h1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-label=\"Add a Garden brief\" class=\"mt-0.5 text-left text-sm line-clamp-2 cursor-text text-text-muted/50 hover:text-text-muted\">Add a brief</button>",
+            "target": [
+              ".line-clamp-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted\">Home Garden</p>",
+            "target": [
+              ".mt-0\\.5.gap-1\\.5.items-center > p"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".mb-4.gap-3.justify-between > .bg-primary-button.text-primary-button-text.border-primary-button-border"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<input placeholder=\"Search cruxes...\" class=\"w-full px-3 pr-8 py-...\" type=\"text\" value=\"\">",
+            "target": [
+              ".pr-8"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".transition-\\[color\\,background-color\\,box-shadow\\].rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].hover\\:text-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".-ml-2\\.5 > .min-h-7.border-transparent.bg-transparent:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".min-h-7.border-transparent.bg-transparent:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".-ml-2\\.5 > .min-h-7.border-transparent.bg-transparent:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"font-display text-base text-text mb-1\">What do you want to make?</p>",
+            "target": [
+              ".text-base"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-[34ch] mb-5\">Choose an undertaking with a worked example, or start with a single Crux. Work on your own or with a collaborator.</p>",
+            "target": [
+              ".max-w-\\[34ch\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"relative inline-flex items-center gap-[inherit]\">Explore undertakings</span>",
+            "target": [
+              ".gap-\\[inherit\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".py-14 > .text-action-button-text.border-transparent.bg-transparent"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Settings</span>",
+            "target": [
+              ".pane-settings > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Account</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">AI and agents</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Garden and backups</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Appearance and panels</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input placeholder=\"email@example.com\" class=\"flex-1 px-3 py-1.5 text-xs font-body rounded-[var(--radius-sm)] bg-surface border border-border text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active\" type=\"email\" value=\"\">",
+            "target": [
+              ".placeholder\\:text-text-muted"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<summary class=\"text-text-muted cursor-pointer hover:text-text\">Advanced connection settings</summary>",
+            "target": [
+              "summary"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-xs font-medium text-text-muted\">AI and agents</h2>",
+            "target": [
+              "section[aria-label=\"AI and agents\"] > h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">AI</h2>",
+            "target": [
+              ".items-baseline.mb-3.gap-3 > .group.-ml-1\\.5.px-1\\.5 > .text-settings-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted min-w-0\">Enable AI Tools</span>",
+            "target": [
+              ".justify-between.items-center.flex > .max-w-full > .min-w-0.text-xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<a href=\"https://console.anthropic.com/settings/keys\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-sm font-body font-medium text-text hover:text-accent  underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent\">Anthropic</a>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(1) > .justify-between.min-w-0.items-center > .gap-x-2.gap-y-1.flex-wrap > a"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs font-mono text-text-muted/50\">Not configured</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(1) > .justify-between.min-w-0.items-center > .gap-x-2.gap-y-1.flex-wrap > .text-text-muted\\/50.font-mono.text-xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Chat</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Files</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<a href=\"https://claude.com/product/claude-code\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-sm font-body font-medium text-text hover:text-accent  underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent\">Claude Code</a>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(2) > .justify-between.min-w-0.items-center > .gap-x-2.gap-y-1.flex-wrap > a"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs font-mono text-text-muted/70\" data-testid=\"claude-code-status\">Installed \u00b7 2.1.272 (Claude Code) \u2014 uses your Claude Code login, no key here</span>",
+            "target": [
+              "span[data-testid=\"claude-code-status\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Chat</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Files</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<a href=\"https://developers.openai.com/codex/cli/\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-sm font-body font-medium text-text hover:text-accent  underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent\">Codex</a>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(3) > .justify-between.min-w-0.items-center > .gap-x-2.gap-y-1.flex-wrap > a"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs font-mono text-text-muted/70\" data-testid=\"codex-status\">Looking for Codex\u2026</span>",
+            "target": [
+              "span[data-testid=\"codex-status\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Chat</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(3) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Files</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(3) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<a href=\"https://platform.openai.com/api-keys\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-sm font-body font-medium text-text hover:text-accent  underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent\">OpenAI</a>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(4) > .justify-between.min-w-0.items-center > .gap-x-2.gap-y-1.flex-wrap > a"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs font-mono text-text-muted/50\">Not configured</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(4) > .justify-between.min-w-0.items-center > .gap-x-2.gap-y-1.flex-wrap > .text-text-muted\\/50.font-mono.text-xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Chat</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(4) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Files</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(4) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border\">Images</span>",
+            "target": [
+              ".bg-\\[color-mix\\(in_srgb\\,var\\(--surface\\)\\,transparent_50\\%\\)\\].p-4.space-y-3:nth-child(4) > .flex-wrap.gap-1\\.5.items-center > .text-2xs.px-2.py-0\\.5:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "Toggle growth",
+    "passes": 22,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"flex flex-wrap gap-1.5 pl-8\" aria-label=\"Examples to start from\">",
+            "target": [
+              ".pl-8"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"truncate\" style=\"view-transition-name: crux-378e988f-7490-4384-9fae-8839bf34821f;\">Accessible workspace</span>",
+            "target": [
+              ".max-w-64 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              ".hover\\:text-action-button-text-hover > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".font-bold"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Collaboration</span>",
+            "target": [
+              ".pane-collaboration > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-2xs font-mono text-accent mb-1\">Vel</div>",
+            "target": [
+              ".mb-1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"mb-2 last:mb-0 leading-relaxed text-markdown-text\">Everything here is one material. What shall we grow?</p>",
+            "target": [
+              ".mb-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 0;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 1;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 2;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].hover\\:border-action-button-border-hover:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>info</span>",
+            "target": [
+              ".ml-auto > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Workshop</span>",
+            "target": [
+              ".pane-workshop > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].transition-\\[color\\,background-color\\,box-shadow\\].px-2\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".px-2\\.5.border-transparent.min-h-7:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".px-2\\.5.border-transparent.min-h-7:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-lg font-medium\">Your creation will appear here</h2>",
+            "target": [
+              "h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-sm\">Describe what you want to make in Collaboration. As your files arrive, the preview opens here.</p>",
+            "target": [
+              ".max-w-sm"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".bg-primary-button"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Growth</span>",
+            "target": [
+              ".pane-history > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "settings-Appearance and panels",
+    "passes": 30,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              "button[aria-label=\"Add panel\"] > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".bg-profile-button"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Home</span>",
+            "target": [
+              ".pane-home > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h1 class=\"font-display text-lg font-medium text-text truncate\">My Garden</h1>",
+            "target": [
+              "h1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-label=\"Add a Garden brief\" class=\"mt-0.5 text-left text-sm line-clamp-2 cursor-text text-text-muted/50 hover:text-text-muted\">Add a brief</button>",
+            "target": [
+              ".line-clamp-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted\">Home Garden</p>",
+            "target": [
+              ".mt-0\\.5.gap-1\\.5.items-center > p"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".mb-4.gap-3.justify-between > .bg-primary-button.text-primary-button-text.border-primary-button-border"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<input placeholder=\"Search cruxes...\" class=\"w-full px-3 pr-8 py-...\" type=\"text\" value=\"\">",
+            "target": [
+              ".pr-8"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".transition-\\[color\\,background-color\\,box-shadow\\].rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].hover\\:text-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".-ml-2\\.5 > .min-h-7.border-transparent.bg-transparent:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".min-h-7.border-transparent.bg-transparent:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".-ml-2\\.5 > .min-h-7.border-transparent.bg-transparent:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"font-display text-base text-text mb-1\">What do you want to make?</p>",
+            "target": [
+              ".text-base"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-[34ch] mb-5\">Choose an undertaking with a worked example, or start with a single Crux. Work on your own or with a collaborator.</p>",
+            "target": [
+              ".max-w-\\[34ch\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"relative inline-flex items-center gap-[inherit]\">Explore undertakings</span>",
+            "target": [
+              ".gap-\\[inherit\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".py-14 > .border-transparent.bg-transparent.text-action-button-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Settings</span>",
+            "target": [
+              ".pane-settings > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Account</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">AI and agents</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Garden and backups</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Appearance and panels</button>",
+            "target": [
+              ".hover\\:text-text.px-2\\.5.bg-panel:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-xs text-text-muted mb-3\">Permanently delete all cruxes, files, conversations, and settings. Type <span class=\"font-mono text-text\">\"delete me\"</span> to confirm.</p>",
+            "target": [
+              ".mb-3:nth-child(12)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"font-mono text-text\">\"delete me\"</span>",
+            "target": [
+              ".mb-3:nth-child(12) > .text-text.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input placeholder=\"delete me\" class=\"px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)] w-32 bg-surface border border-border text-text placeholder:text-text-muted focus:outline-none focus:border-error\" type=\"text\" value=\"\">",
+            "target": [
+              ".w-32"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-xs font-medium text-text-muted\">Appearance and panels</h2>",
+            "target": [
+              "section[aria-label=\"Appearance and panels\"] > h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">Names</h2>",
+            "target": [
+              "section[aria-label=\"Names\"] > .items-baseline.mb-3.gap-3 > .text-settings-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-xs text-text-muted mb-4\">What this Garden is called, and its panes. Leave a pane empty for the usual word.</p>",
+            "target": [
+              "section[aria-label=\"Names\"] > .mb-4:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"block text-2xs font-mono uppercase tracking-wider text-text-muted\">Garden title</span>",
+            "target": [
+              ".gap-1.mb-4 > .uppercase.tracking-wider.block"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Garden title\" placeholder=\"The Bachelor Pad, Fl...\" value=\"My Garden\">",
+            "target": [
+              "input[aria-label=\"Garden title\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Navigator</span>",
+            "target": [
+              "label:nth-child(1) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Navigator\" placeholder=\"Navigator\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Navigator\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Home</span>",
+            "target": [
+              "label:nth-child(2) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Home\" placeholder=\"Home\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Home\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Tasks</span>",
+            "target": [
+              "label:nth-child(3) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Tasks\" placeholder=\"Tasks\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Tasks\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Collaboration</span>",
+            "target": [
+              "label:nth-child(4) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Collaborati...\" placeholder=\"Collaboration\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Collaboration\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Garden Collaboration</span>",
+            "target": [
+              "label:nth-child(5) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Garden Coll...\" placeholder=\"Garden Collaboration\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Garden Collaboration\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Artifacts</span>",
+            "target": [
+              "label:nth-child(6) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Artifacts\" placeholder=\"Artifacts\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Artifacts\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Workshop</span>",
+            "target": [
+              "label:nth-child(7) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Workshop\" placeholder=\"Workshop\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Workshop\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Details</span>",
+            "target": [
+              "label:nth-child(8) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Details\" placeholder=\"Details\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Details\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Growth</span>",
+            "target": [
+              "label:nth-child(9) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Growth\" placeholder=\"Growth\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Growth\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Export</span>",
+            "target": [
+              "label:nth-child(10) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Export\" placeholder=\"Export\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Export\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Sync</span>",
+            "target": [
+              "label:nth-child(11) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Sync\" placeholder=\"Sync\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Sync\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Share</span>",
+            "target": [
+              "label:nth-child(12) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Share\" placeholder=\"Share\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Share\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Store</span>",
+            "target": [
+              "label:nth-child(13) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Store\" placeholder=\"Store\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Store\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Find media</span>",
+            "target": [
+              "label:nth-child(14) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Find media\" placeholder=\"Find media\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Find media\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Mood</span>",
+            "target": [
+              "label:nth-child(15) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Mood\" placeholder=\"Mood\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Mood\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"w-28 shrink-0 text-xs font-mono text-text-muted\">Crux Synth</span>",
+            "target": [
+              "label:nth-child(16) > .w-28.shrink-0.font-mono"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Name for Crux Synth\" placeholder=\"Crux Synth\" value=\"\">",
+            "target": [
+              "input[aria-label=\"Name for Crux Synth\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "Toggle tasks",
+    "passes": 26,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"flex flex-wrap gap-1.5 pl-8\" aria-label=\"Examples to start from\">",
+            "target": [
+              ".pl-8"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"truncate\" style=\"view-transition-name: crux-378e988f-7490-4384-9fae-8839bf34821f;\">Accessible workspace</span>",
+            "target": [
+              ".max-w-64 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              "button[aria-label=\"Add panel\"] > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".font-bold"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Tasks</span>",
+            "target": [
+              ".pane-tasks > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h3 class=\"block text-2xs font-mono uppercase tracking-wider text-text-muted\">Main</h3>",
+            "target": [
+              "h3"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted\">Name</span>",
+            "target": [
+              "label:nth-child(2) > .text-text-muted.text-xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Crux name\" value=\"Accessible workspace\">",
+            "target": [
+              ".h-10"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<dt class=\"text-text-muted\">Status</dt>",
+            "target": [
+              "dt:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<dd data-testid=\"task-status\">Idle</dd>",
+            "target": [
+              "dd[data-testid=\"task-status\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<dt class=\"text-text-muted\">Model</dt>",
+            "target": [
+              "dt:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<dd class=\"font-mono\">claude-opus-5-5</dd>",
+            "target": [
+              "dd:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted\">Notes</span>",
+            "target": [
+              "label:nth-child(4) > .text-text-muted.text-xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<textarea aria-label=\"Notes\" rows=\"4\" placeholder=\"What this is for, wh...\" class=\"w-full rounded-[var(...\">",
+            "target": [
+              ".h-auto"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".self-start"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".bg-action-button"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"text-xs text-accent hover:underline\">Learn Tasks \u00b7 try the game</button>",
+            "target": [
+              ".hover\\:underline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Collaboration</span>",
+            "target": [
+              ".pane-collaboration > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"text-2xs font-mono text-accent mb-1\">Vel</div>",
+            "target": [
+              ".mb-1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"mb-2 last:mb-0 leading-relaxed text-markdown-text\">Everything here is one material. What shall we grow?</p>",
+            "target": [
+              ".mb-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 0;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].motion-enter-card:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 1;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].motion-enter-card:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"inline-flex items-ce...\" style=\"--enter-index: 2;\">",
+            "target": [
+              ".rounded-chip.transition-\\[color\\,background-color\\,border-color\\].motion-enter-card:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>info</span>",
+            "target": [
+              ".ml-auto > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Workshop</span>",
+            "target": [
+              ".pane-workshop > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.flex.items-center > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].transition-\\[color\\,background-color\\,box-shadow\\].px-2\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".px-2\\.5.min-h-7.border-transparent:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".px-2\\.5.min-h-7.border-transparent:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-lg font-medium\">Your creation will appear here</h2>",
+            "target": [
+              "h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-sm\">Describe what you want to make in Collaboration. As your files arrive, the preview opens here.</p>",
+            "target": [
+              ".max-w-sm"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".bg-primary-button"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "creation",
+    "passes": 24,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<h2 id=\"_r_1_\" class=\"font-medium text-accent leading-tight\" style=\"font-family: var(--dialog-title-font); font-size: var(--dialog-title-size);\">Add Crux</h2>",
+            "target": [
+              "#_r_1_"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<label for=\"new-crux-idea\" class=\"block text-lg font-medium\">What do you want to make?</label>",
+            "target": [
+              "label[for=\"new-crux-idea\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<textarea id=\"new-crux-idea\" placeholder=\"A tiny game, a page ...\" rows=\"2\" class=\"w-full rounded-[var(...\">",
+            "target": [
+              "#new-crux-idea"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<p class=\"text-xs text-text-muted\" data-testid=\"new-crux-starts-as\">Describe it in a few words and press Enter, or choose where it starts below.</p>",
+            "target": [
+              "p[data-testid=\"new-crux-starts-as\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button class=\"text-accent underline decoration-transparent underline-offset-[3px] decoration-1 hover:decoration-current focus-visible:decoration-current cursor-pointer transition-[color,text-decoration-color] text-sm\">Undertakings \u2014 start a Garden</button>",
+            "target": [
+              ".underline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<label class=\"block text-2xs font-mono uppercase tracking-wider text-text-muted mb-2\" for=\"new-crux-name\">Name</label>",
+            "target": [
+              "label[for=\"new-crux-name\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<input id=\"new-crux-name\" placeholder=\"My Crux\" class=\"w-full rounded-[var(...\" type=\"text\" value=\"My Crux\">",
+            "target": [
+              "#new-crux-name"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<label class=\"block text-2xs font-mono uppercase tracking-wider text-text-muted mb-2 shrink-0\">Or choose where it starts</label>",
+            "target": [
+              ".flex-col.flex > .uppercase.tracking-wider.text-2xs"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<input aria-label=\"Find a starting poin...\" placeholder=\"Search starting poin...\" class=\"w-full rounded-[var(...\" value=\"\">",
+            "target": [
+              ".min-w-32"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<select aria-label=\"Starting point categ...\" class=\"rounded-[var(--radiu...\">",
+            "target": [
+              "select"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<label class=\"mb-2 flex items-center gap-2 text-xs text-text-muted shrink-0\"><input type=\"checkbox\">Include tools to install (34)</label>",
+            "target": [
+              "label:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<h3 class=\"px-3 pt-3 pb-1 text-xs font-medium text-text-muted\">Start here</h3>",
+            "target": [
+              "h3:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-sm font-body font-medium block truncate text-accent\">Blank</span>",
+            "target": [
+              ".text-accent.text-sm.font-body"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted block truncate\">Start with your own idea \u2014 no files or setup to choose</span>",
+            "target": [
+              ".bg-accent-muted\\/40 > .flex-1.min-w-0 > .text-xs.truncate.block"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-sm font-body font-medium block truncate text-text\">Hello, world</span>",
+            "target": [
+              "button[data-template-id=\"hello-world\"] > .flex-1.min-w-0 > .text-text.text-sm.font-body"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted block truncate\">Make your first home page with a name and photo. No AI needed.</span>",
+            "target": [
+              "button[data-template-id=\"hello-world\"] > .flex-1.min-w-0 > .text-xs.truncate.block"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-sm font-body font-medium block truncate text-text\">Notes</span>",
+            "target": [
+              "button[data-template-id=\"notes\"] > .flex-1.min-w-0 > .text-text.text-sm.font-body"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted block truncate\">A local Markdown notebook you can customize and publish</span>",
+            "target": [
+              "button[data-template-id=\"notes\"] > .flex-1.min-w-0 > .text-xs.truncate.block"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-sm font-body font-medium block truncate text-text\">Zen of Vibecoding</span>",
+            "target": [
+              "button[data-template-id=\"zen-vibecoding\"] > .flex-1.min-w-0 > .text-text.text-sm.font-body"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted block truncate\">Learn Tasks and agents through a small playable garden</span>",
+            "target": [
+              "button[data-template-id=\"zen-vibecoding\"] > .flex-1.min-w-0 > .text-xs.truncate.block"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-sm font-body font-medium block truncate text-text\">Documentation</span>",
+            "target": [
+              "button[data-template-id=\"documentation\"] > .flex-1.min-w-0 > .text-text.text-sm.font-body"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<span class=\"text-xs text-text-muted block truncate\">A Starlight field guide \u2014 readable pages, navigation, search and a journal</span>",
+            "target": [
+              "button[data-template-id=\"documentation\"] > .flex-1.min-w-0 > .text-xs.truncate.block"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".-ml-3"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" title=\"A document, image, s...\">",
+            "target": [
+              ".text-action-button-text.min-h-8.hover\\:text-action-button-text-hover:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".min-h-10"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "screen": "settings-Account",
+    "passes": 26,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "aria-prohibited-attr",
+        "nodes": [
+          {
+            "html": "<div class=\"flex shrink-0\" aria-label=\"Navigation history\">",
+            "target": [
+              "div[aria-label=\"Navigation history\"]"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          },
+          {
+            "html": "<div class=\"hidden md:flex flex-wrap items-center gap-1.5\" aria-label=\"Open panels\" data-testid=\"builder-lane\">",
+            "target": [
+              ".md\\:flex"
+            ],
+            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "html": "<span class=\"truncate\">My Garden</span>",
+            "target": [
+              ".max-w-48 > .truncate"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"hidden lg:inline text-xs pr-6\">Search or run a command</span>",
+            "target": [
+              ".lg\\:inline"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<kbd class=\"hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors\">\u2318K</kbd>",
+            "target": [
+              ".sm\\:inline-flex"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span>Panels</span>",
+            "target": [
+              "button[aria-label=\"Add panel\"] > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button aria-label=\"Help and field guide\" class=\"h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover\">Help</button>",
+            "target": [
+              "button[aria-label=\"Help and field guide\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<div class=\"w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center text-2xs font-body font-bold bg-profile-button text-profile-button-icon\">W</div>",
+            "target": [
+              ".bg-profile-button"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Home</span>",
+            "target": [
+              ".pane-home > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h1 class=\"font-display text-lg font-medium text-text truncate\">My Garden</h1>",
+            "target": [
+              "h1"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-label=\"Add a Garden brief\" class=\"mt-0.5 text-left text-sm line-clamp-2 cursor-text text-text-muted/50 hover:text-text-muted\">Add a brief</button>",
+            "target": [
+              ".line-clamp-2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted\">Home Garden</p>",
+            "target": [
+              ".mt-0\\.5.gap-1\\.5.items-center > p"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".mb-4.justify-between.gap-3 > .bg-primary-button.text-primary-button-text.border-primary-button-border"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "html": "<input placeholder=\"Search cruxes...\" class=\"w-full px-3 pr-8 py-...\" type=\"text\" value=\"\">",
+            "target": [
+              ".pr-8"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" aria-pressed=\"false\" class=\"relative inline-flex...\">",
+            "target": [
+              ".transition-\\[color\\,background-color\\,box-shadow\\].rounded-\\[calc\\(var\\(--radius-sm\\)-2px\\)\\].hover\\:text-text"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".-ml-2\\.5 > .border-transparent.bg-transparent.min-h-7:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
+            "target": [
+              ".border-transparent.bg-transparent.min-h-7:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".-ml-2\\.5 > .border-transparent.bg-transparent.min-h-7:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"font-display text-base text-text mb-1\">What do you want to make?</p>",
+            "target": [
+              ".text-base"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-sm text-text-muted max-w-[34ch] mb-5\">Choose an undertaking with a worked example, or start with a single Crux. Work on your own or with a collaborator.</p>",
+            "target": [
+              ".max-w-\\[34ch\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"relative inline-flex items-center gap-[inherit]\">Explore undertakings</span>",
+            "target": [
+              ".gap-\\[inherit\\]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".text-action-button-text.border-transparent.bg-transparent"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"pane-toolbar-label\">Settings</span>",
+            "target": [
+              ".pane-settings > .draggable.mosaic-window-toolbar > .pane-toolbar[draggable=\"true\"] > .gap-2.items-center.flex > .pane-toolbar-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Account</button>",
+            "target": [
+              ".py-1\\.5.hover\\:text-text.px-2\\.5:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">AI and agents</button>",
+            "target": [
+              ".py-1\\.5.hover\\:text-text.px-2\\.5:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Garden and backups</button>",
+            "target": [
+              ".py-1\\.5.hover\\:text-text.px-2\\.5:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button type=\"button\" class=\"px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-text-muted bg-panel hover:bg-action-button-hover hover:text-text cursor-pointer\">Appearance and panels</button>",
+            "target": [
+              ".py-1\\.5.hover\\:text-text.px-2\\.5:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-xs font-medium text-text-muted\">Account</h2>",
+            "target": [
+              ".space-y-3[aria-label=\"Account\"] > h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">Account</h2>",
+            "target": [
+              "section[data-testid=\"account-settings\"] > .mb-3.items-baseline.justify-between > .text-settings-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"inline-flex items-ce...\">",
+            "target": [
+              ".gap-3.items-center.flex > .gap-2.items-center.flex > .bg-action-button.border-action-button-border.hover\\:border-action-button-border-hover"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-text-muted\">Username</span>",
+            "target": [
+              ".justify-between.items-center.flex > span"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<button class=\"text-text hover:text-accent transition-colors cursor-pointer flex items-center gap-1.5\">",
+            "target": [
+              ".hover\\:text-accent"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h3 class=\"font-display text-sm font-medium text-accent mb-2\">Connection</h3>",
+            "target": [
+              "h3"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<p class=\"text-xs text-text-muted\">Connect to your crux.garden account to enable sync and sharing.</p>",
+            "target": [
+              ".space-y-3:nth-child(6) > p"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<input placeholder=\"email@example.com\" class=\"flex-1 px-3 py-1.5 text-xs font-body rounded-[var(--radius-sm)] bg-surface border border-border text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active\" type=\"email\" value=\"\">",
+            "target": [
+              ".placeholder\\:text-text-muted"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<summary class=\"text-text-muted cursor-pointer hover:text-text\">Advanced connection settings</summary>",
+            "target": [
+              "summary"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"text-xs font-medium text-text-muted\">AI and agents</h2>",
+            "target": [
+              "section[aria-label=\"AI and agents\"] > h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">AI</h2>",
+            "target": [
+              "section[aria-label=\"AI\"] > .items-baseline.justify-between.gap-3 > .group.-ml-1\\.5.py-0\\.5 > .text-settings-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">Memory</h2>",
+            "target": [
+              "section[data-testid=\"memory-settings\"] > .mb-3.items-baseline.justify-between > .text-settings-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "html": "<span class=\"text-xxs font-mono text-text-muted\" data-testid=\"memory-status\">nothing remembered</span>",
+            "target": [
+              "span[data-testid=\"memory-status\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  }
+]

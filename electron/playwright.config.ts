@@ -10,6 +10,7 @@ const gateSpecs = [
   '**/settings-secrets.spec.ts',
   '**/settings-navigation.spec.ts',
   '**/creation-picker.spec.ts',
+  '**/accessibility.spec.ts',
   '**/folder-authorization.spec.ts',
   '**/graphics-fallback.spec.ts',
   '**/notes-save-navigation.spec.ts',

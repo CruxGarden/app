@@ -24,6 +24,9 @@ export default function Button({
     <button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
+      // React's autofocus runs before a parent modal registers its focus scope.
+      // Preserve the intent when a lower dialog temporarily intercepts that focus.
+      data-autofocus={props.autoFocus ? '' : undefined}
       className={buttonClass(
         variant,
         size,

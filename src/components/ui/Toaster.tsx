@@ -11,7 +11,9 @@ function ToastRow({ toast }: { toast: Toast }) {
   const dismiss = useToastStore((s) => s.dismiss);
   const role = useMotionRole('toast');
   const [busy, setBusy] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const paused = hovered || focused || busy;
   const left = useRef(toast.duration);
   const started = useRef(Date.now());
   useEffect(() => {
@@ -32,8 +34,12 @@ function ToastRow({ toast }: { toast: Toast }) {
       initial={role.initial}
       animate={role.animate}
       exit={role.exit}
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
       className={cn(
         'overlay-plate pointer-events-auto flex items-center gap-3 min-w-64 max-w-md pl-4 pr-1.5 py-1.5',
         'rounded-dropdown border border-dropdown-border shadow-dropdown text-sm',

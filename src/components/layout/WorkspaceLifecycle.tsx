@@ -1,3 +1,4 @@
+import { useModalFocus } from '@/hooks/useModalFocus';
 import { keeperNeedsCloseDecision } from '@/stores/keeperStore';
 import { buttonClass } from '@/components/ui/button-class';
 import { useEffect, useRef, useState } from 'react';
@@ -15,6 +16,8 @@ export default function WorkspaceLifecycle() {
   const [error, setError] = useState('');
   const entries = useWorkspaceRegistry((s) => s.entries);
   const cancelButton = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  useModalFocus(dialog, requested, 110);
   useEffect(() => {
     if (requested) cancelButton.current?.focus();
   }, [requested]);
@@ -88,19 +91,11 @@ export default function WorkspaceLifecycle() {
           e.preventDefault();
           cancel();
         }
-        if (e.key === 'Tab') {
-          const buttons = [
-            ...e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
-          ];
-          const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
-          if ((e.shiftKey && i <= 0) || (!e.shiftKey && i === buttons.length - 1)) {
-            e.preventDefault();
-            buttons[e.shiftKey ? buttons.length - 1 : 0]?.focus();
-          }
-        }
       }}
     >
       <div
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Close Crux Garden"

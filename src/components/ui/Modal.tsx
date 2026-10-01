@@ -1,3 +1,4 @@
+import { useModalFocus } from '@/hooks/useModalFocus';
 import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { iconButtonClass } from './button-class';
 import { createPortal } from 'react-dom';
@@ -66,18 +67,21 @@ export default function Modal({
   role: dialogRole = 'dialog',
 }: ModalProps) {
   const titleId = useId();
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     if (!open) return;
     const token = Symbol('modal');
     openModals.push(token);
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return;
+      if (dialogRef.current?.closest('[inert]')) return;
       if (openModals[openModals.length - 1] !== token) return;
       // This Escape belongs to the modal: don't let global shortcuts (Shell's
       // Escape → Keeper console) or a modal underneath also fire on the same keypress.
       e.stopPropagation();
       e.preventDefault();
-      onClose();
+      closeRef.current();
     };
     // Capture phase on window: first to see the key, ahead of every other handler.
     window.addEventListener('keydown', handler, true);
@@ -86,34 +90,14 @@ export default function Modal({
       const i = openModals.indexOf(token);
       if (i >= 0) openModals.splice(i, 1);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   // The Mood's dialog motion (ADR 0041): Motion plays the enter on mount and the exit before unmount
   const role = useMotionRole('dialog');
   // Under the Plasma theme the panel is drawn by a second canvas above the scrim (PlasmaOverlay).
   const panelRef = useRef<HTMLDivElement>(null);
-  // Focus returns to whatever opened the dialog once it closes (keyboard users
-  // land back on the button they pressed, not on <body>).
-  // Captured while rendering the opening: by the time effects run, a field
-  // inside the dialog may already hold focus (autoFocus), which would name
-  // the wrong opener.
-  const openerRef = useRef<Element | null>(null);
-  const wasOpen = useRef(false);
-  if (open && !wasOpen.current && typeof document !== 'undefined')
-    openerRef.current = document.activeElement;
-  wasOpen.current = open;
-  useEffect(() => {
-    if (!open) return;
-    const opener = openerRef.current;
-    const panel = panelRef.current;
-    return () => {
-      // Only when nothing else has taken focus meanwhile (a field the person
-      // already moved to keeps it): focus is on <body> or was inside the dialog.
-      const active = document.activeElement;
-      const orphaned = !active || active === document.body || (panel?.contains(active) ?? false);
-      if (orphaned && opener instanceof HTMLElement && opener.isConnected) opener.focus();
-    };
-  }, [open]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(dialogRef, open, layer === 'top' ? 70 : 50);
   // Flat chrome: a plain plate, so the contents need not wait for any material.
   const flat = useFlatChrome();
   const plasma = usePlasmaOn() && !flat;
@@ -140,6 +124,8 @@ export default function Modal({
             // the way the scrim traps the pointer, and it is named by its own
             // heading. Panels inside a Modal must not declare the role again —
             // a dialog inside a dialog names neither.
+            ref={dialogRef}
+            tabIndex={-1}
             role={dialogRole}
             aria-modal="true"
             {...(title

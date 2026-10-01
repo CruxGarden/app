@@ -1,3 +1,4 @@
+import { useModalFocus } from '@/hooks/useModalFocus';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { tendingPath } from '@/services/tending-actions';
 import { copyIdentity } from '@/services/working-copies';
@@ -143,6 +144,7 @@ export default function WorkspaceSwitcher() {
     };
   }, [gardenId, revision]);
   const modal = open || !!closing || !!renaming;
+  useModalFocus(dialog, modal, 100);
   const rows = (
     picker
       ? available
@@ -389,6 +391,7 @@ export default function WorkspaceSwitcher() {
           >
             <div
               ref={dialog}
+              tabIndex={-1}
               role="dialog"
               aria-modal="true"
               aria-label={
@@ -406,18 +409,6 @@ export default function WorkspaceSwitcher() {
                   e.preventDefault();
                   e.stopPropagation();
                   cancel();
-                }
-                if (e.key === 'Tab') {
-                  const all = [
-                    ...dialog.current!.querySelectorAll<HTMLElement>(
-                      'button:not(:disabled), input:not(:disabled)',
-                    ),
-                  ];
-                  const i = all.indexOf(document.activeElement as HTMLElement);
-                  if ((e.shiftKey && i <= 0) || (!e.shiftKey && i === all.length - 1)) {
-                    e.preventDefault();
-                    all[e.shiftKey ? all.length - 1 : 0]?.focus();
-                  }
                 }
               }}
             >

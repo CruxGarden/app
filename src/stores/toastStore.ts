@@ -10,7 +10,7 @@ export interface Toast {
   message: string;
   action?: { label: string; run: () => void | Promise<void> };
   tone?: 'default' | 'error';
-  /** ms before it leaves on its own; paused while the pointer is over it. */
+  /** ms before it leaves on its own; paused while hovered, focused or running its action. */
   duration: number;
 }
 

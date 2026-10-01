@@ -3,6 +3,7 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
   forwardRef,
+  useId,
 } from 'react';
 import { cn } from '@/lib/cn';
 import { fieldClass } from './field-class';
@@ -15,10 +16,24 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ error, className, fieldSize = 'md', ...props }, ref) => {
+    const errorId = useId();
     return (
       <div className="flex flex-col gap-1.5">
-        <input ref={ref} className={fieldClass(error, className, fieldSize)} {...props} />
-        {error ? <p className="text-xs text-error">{error}</p> : null}
+        <input
+          ref={ref}
+          className={fieldClass(error, className, fieldSize)}
+          {...props}
+          data-autofocus={props.autoFocus ? '' : undefined}
+          aria-invalid={error ? true : props['aria-invalid']}
+          aria-describedby={
+            [props['aria-describedby'], error && errorId].filter(Boolean).join(' ') || undefined
+          }
+        />
+        {error ? (
+          <p id={errorId} role="alert" className="text-xs text-error">
+            {error}
+          </p>
+        ) : null}
       </div>
     );
   },
@@ -34,16 +49,28 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 
 /** A multi-line field in the Input style; height comes from `rows` or a className. */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ error, className, fieldSize = 'md', ...props }, ref) => (
-    <div className="flex flex-col gap-1.5">
-      <textarea
-        ref={ref}
-        className={cn(fieldClass(error, className, fieldSize), 'h-auto py-2 resize-y')}
-        {...props}
-      />
-      {error ? <p className="text-xs text-error">{error}</p> : null}
-    </div>
-  ),
+  ({ error, className, fieldSize = 'md', ...props }, ref) => {
+    const errorId = useId();
+    return (
+      <div className="flex flex-col gap-1.5">
+        <textarea
+          ref={ref}
+          className={cn(fieldClass(error, className, fieldSize), 'h-auto py-2 resize-y')}
+          {...props}
+          data-autofocus={props.autoFocus ? '' : undefined}
+          aria-invalid={error ? true : props['aria-invalid']}
+          aria-describedby={
+            [props['aria-describedby'], error && errorId].filter(Boolean).join(' ') || undefined
+          }
+        />
+        {error ? (
+          <p id={errorId} role="alert" className="text-xs text-error">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  },
 );
 Textarea.displayName = 'Textarea';
 

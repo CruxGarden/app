@@ -25,7 +25,7 @@ export default function NavigationHistory() {
   // supports this capability, including reload and platform history gestures.
   if (!navigation) return null;
   return (
-    <div className="flex shrink-0" aria-label="Navigation history">
+    <div className="flex shrink-0" role="group" aria-label="Navigation history">
       <IconButton
         label="Back"
         size="sm"

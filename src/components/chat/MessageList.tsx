@@ -83,7 +83,11 @@ export default function MessageList({
       ))}
 
       {!started && !isStreaming && (
-        <div className="flex flex-wrap gap-1.5 pl-8" aria-label="Examples to start from">
+        <div
+          className="flex flex-wrap gap-1.5 pl-8"
+          role="group"
+          aria-label="Examples to start from"
+        >
           {EXAMPLES.map((example, i) => (
             <button
               key={example}

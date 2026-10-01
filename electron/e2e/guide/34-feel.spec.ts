@@ -112,7 +112,7 @@ test.describe('guide 34 · Accessibility, polish and states', () => {
     }
   });
 
-  test('FEEL-02 — at 125% text in a narrow window, Settings either asks for room or shows every section without clipped controls or sideways scrolling; the account menu stays on screen', async () => {
+  test('FEEL-02 — at 125% text in a narrow window, Settings sections remain reachable without clipped controls; the account menu stays on screen', async () => {
     test.setTimeout(150_000);
     const { app, page } = await launchApp();
     const setWindow = (width: number) =>
@@ -128,16 +128,17 @@ test.describe('guide 34 · Accessibility, polish and states', () => {
       await page.keyboard.press('ControlOrMeta+,');
       const body = page.getByTestId('pane-body-settings');
       await expect(body).toBeVisible({ timeout: 30_000 });
-      const pane = page.locator('.mosaic-window.pane-settings');
-      // Too narrow: the pane asks for room rather than clipping. Widen until it shows its controls.
-      let width = 1000;
-      while ((await pane.locator('button').count()) < 10 && width < 1800) {
-        await expect(pane.getByText('Widen the pane')).toBeVisible();
-        width += 200;
-        await setWindow(width);
-        await page.waitForTimeout(500);
+      const pane = body;
+      const navigation = pane.getByRole('navigation', { name: 'Settings sections' });
+      for (const name of [
+        'Account',
+        'AI and agents',
+        'Garden and backups',
+        'Appearance and panels',
+      ]) {
+        await navigation.getByRole('button', { name, exact: true }).click();
+        await expect(pane.getByRole('region', { name, exact: true }).first()).toBeInViewport();
       }
-      console.log(`[FEEL-02] Settings renders its controls from ${width}px at 125%`);
       // Every folded section open.
       const folded = pane.locator('button[aria-expanded="false"]');
       while ((await folded.count()) > 0) await folded.first().click();

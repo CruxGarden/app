@@ -1,3 +1,4 @@
+import { useModalFocus } from '@/hooks/useModalFocus';
 import { openFieldGuide } from '@/stores/fieldGuide';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -110,32 +111,11 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
   });
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
-  // Whatever had focus gets it back: the palette is a detour, not a destination.
-  const opener = useRef<Element | null>(
-    typeof document === 'undefined' ? null : document.activeElement,
-  );
-
   const dialog = useRef<HTMLDivElement>(null);
-  const closing = useRef(false);
+  useModalFocus(dialog, true, 75);
   useEffect(() => {
     input.current?.focus();
     input.current?.select();
-    // The palette is modal: while it is open the keyboard stays in its field,
-    // even if something behind it (a focus a closing menu restores late) reaches for it.
-    const keep = (event: FocusEvent) => {
-      if (closing.current || dialog.current?.contains(event.target as Node)) return;
-      input.current?.focus();
-    };
-    document.addEventListener('focusin', keep);
-    const back = opener.current;
-    // However it closes (Escape, a command, ⌘K again), focus goes back where it was
-    // unless something else has taken it meanwhile.
-    return () => {
-      document.removeEventListener('focusin', keep);
-      const now = document.activeElement;
-      const orphaned = !now || now === document.body || !now.isConnected;
-      if (orphaned && back instanceof HTMLElement && back.isConnected) back.focus();
-    };
   }, []);
 
   // Gardens and Cruxes by name, the Navigator's own search, a beat after typing stops.
@@ -400,10 +380,7 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
   }, [current]);
 
   const dismiss = useCallback(() => {
-    closing.current = true;
     onClose();
-    const back = opener.current;
-    if (back instanceof HTMLElement && back.isConnected) back.focus();
   }, [onClose]);
 
   const run = useCallback(
@@ -427,6 +404,7 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
       <div className="absolute inset-0 modal-scrim" onClick={dismiss} />
       <div
         ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
@@ -478,9 +456,13 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
           className="max-h-[min(60vh,440px)] overflow-y-auto p-1.5"
         >
           {groups.map((group) => (
-            <div key={group.section} role="group" aria-labelledby={`${id}-${group.section}`}>
+            <div
+              key={group.section}
+              role="group"
+              aria-labelledby={`${id}-${encodeURIComponent(group.section)}`}
+            >
               <div
-                id={`${id}-${group.section}`}
+                id={`${id}-${encodeURIComponent(group.section)}`}
                 className="px-2.5 pt-2 pb-1 text-2xs font-medium uppercase tracking-wide text-text-muted"
               >
                 {group.section}
