@@ -595,13 +595,12 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     });
     if (path === '/inference/usage' && method === 'GET') {
       if (state.failIncludedUsage) return send(503, { message: 'Unavailable' });
-      const plus = state.billing.planId === 'gardener_plus';
       const percent = state.includedUsagePercent ?? 25;
       return send(200, {
         available: true,
         eligible: state.billing.planId !== 'free',
         planId: state.billing.planId,
-        model: plus ? 'claude-sonnet-5' : 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-5-5',
         asOf: new Date().toISOString(),
         windows:
           state.billing.planId === 'free'

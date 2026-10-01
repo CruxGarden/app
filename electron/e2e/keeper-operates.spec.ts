@@ -37,7 +37,7 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     const composer = console_.getByPlaceholder('Send a message...');
     await composer.fill('[garden:operate] Look around and get Tour stop ready.');
     await composer.press('Enter');
-    await expect(console_.getByText('chose Claude Sonnet 5 for Tour stop').first()).toBeVisible({
+    await expect(console_.getByText('chose Claude Sonnet 5.5 for Tour stop').first()).toBeVisible({
       timeout: 60_000,
     });
     await expect.poll(() => trail.length).toBe(6);
@@ -50,10 +50,10 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     expect(log).toContain('[garden-tool] read_garden_file <h1>Tour stop</h1>');
     await expect
       .poll(async () => (await storedCrux(page, id)).settings?.model, { timeout: 10_000 })
-      .toBe('claude-sonnet-5');
+      .toBe('claude-sonnet-5-5');
     await hidePane(page, 'Console');
     await expect(page.locator('.pane-toolbar-label', { hasText: 'Collaboration' })).toBeVisible();
-    await expect(page.getByTestId('pane-body-collaboration')).toContainText('Claude Sonnet 5');
+    await expect(page.getByTestId('pane-body-collaboration')).toContainText('Claude Sonnet 5.5');
 
     // The hands: a chip with Stop.
     await showPane(page, 'Console');

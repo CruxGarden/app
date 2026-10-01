@@ -1804,7 +1804,8 @@ async function generateImageOpenAI(apiKey: string, prompt: string, size: string)
   const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
 
   const response = await client.images.generate({
-    model: 'gpt-image-2',
+    // Current everyday image tier; preserves the existing single-image API flow.
+    model: 'gpt-image-2.5-flare',
     prompt,
     n: 1,
     size: size as '1024x1024' | '1536x1024' | '1024x1536',

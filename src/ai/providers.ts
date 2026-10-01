@@ -1,12 +1,12 @@
 /**
  * Provider registry — maps provider IDs to display names, default models,
  * and model metadata. Model IDs, context windows and output limits verified
- * against provider docs 2026-09-18; retired IDs stored in old cruxes are
+ * against provider docs 2026-09-30; retired IDs stored in old cruxes are
  * upgraded via resolveModel().
  *
  * **Defaults follow each provider's own "for most tasks" recommendation, not
- * its flagship.** Anthropic says to start with Opus 5 for most workloads;
- * OpenAI says to choose GPT-5.6 Terra to balance intelligence and cost (Astra
+ * its flagship.** Anthropic says to start with Opus 5.5 for most workloads;
+ * OpenAI says to choose GPT-6.1 Sol to balance intelligence and cost (Astra
  * is the complex-reasoning flagship); Google names no universal default, so
  * the current Flash — the everyday tier — is ours. Someone paying for their
  * own key can pick anything in the list; the default is what they get without
@@ -35,7 +35,7 @@ export interface ProviderInfo {
 }
 
 /** The app-wide default chat model (used when a crux has no model setting). */
-export const DEFAULT_MODEL = 'claude-opus-5';
+export const DEFAULT_MODEL = 'claude-opus-5-5';
 
 /**
  * The Agent Provider (ADR 0019): Claude Code itself, run by the app in the
@@ -70,8 +70,13 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     name: 'Anthropic',
     defaultModel: DEFAULT_MODEL,
     models: [
-      { id: 'claude-opus-5', name: 'Claude Opus 5', contextWindow: 1000000, maxOutput: 128000 },
-      { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', contextWindow: 1000000, maxOutput: 128000 },
+      { id: 'claude-opus-5-5', name: 'Claude Opus 5.5', contextWindow: 1000000, maxOutput: 128000 },
+      {
+        id: 'claude-sonnet-5-5',
+        name: 'Claude Sonnet 5.5',
+        contextWindow: 1000000,
+        maxOutput: 128000,
+      },
       {
         id: 'claude-fable-5-1',
         name: 'Claude Fable 5.1',
@@ -111,8 +116,10 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
   openai: {
     id: 'openai',
     name: 'OpenAI',
-    defaultModel: 'gpt-5.6-terra',
+    defaultModel: 'gpt-6.1-sol',
     models: [
+      { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', contextWindow: 1050000, maxOutput: 128000 },
+      { id: 'gpt-6-luna', name: 'GPT-6 Luna', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-6-astra', name: 'GPT-6 Astra', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', contextWindow: 1050000, maxOutput: 128000 },
@@ -198,18 +205,20 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
  * pass through untouched.
  */
 const RETIRED_MODELS: Record<string, string> = {
-  // Superseded in place: same tier, same price, newer model.
+  // Successors stay in the same tier at the same or lower per-token price.
+  'claude-opus-5': 'claude-opus-5-5',
+  'claude-sonnet-5': 'claude-sonnet-5-5',
   'claude-fable-5': 'claude-fable-5-1',
   // Anthropic (pre-Claude-5)
-  'claude-sonnet-4-20250514': 'claude-sonnet-5',
-  'claude-opus-4-20250514': 'claude-opus-5',
+  'claude-sonnet-4-20250514': 'claude-sonnet-5-5',
+  'claude-opus-4-20250514': 'claude-opus-5-5',
   'claude-haiku-4-20250414': 'claude-haiku-4-5-20251001',
   'claude-haiku-3-5-20241022': 'claude-haiku-4-5-20251001',
-  'claude-3-5-sonnet-20241022': 'claude-sonnet-5',
+  'claude-3-5-sonnet-20241022': 'claude-sonnet-5-5',
   // OpenAI (pre-GPT-5.6)
-  'gpt-4o': 'gpt-5.6-terra',
-  'gpt-4o-mini': 'gpt-5.6-luna',
-  'o3-mini': 'gpt-5.6-sol',
+  'gpt-4o': 'gpt-6.1-sol',
+  'gpt-4o-mini': 'gpt-6-luna',
+  'o3-mini': 'gpt-6.1-sol',
   // Google. 2.5 is still served; these are deliberate upgrades to the
   // current tier rather than forced replacements. 2.0 really is shut down.
   'gemini-2.5-pro': 'gemini-3.1-pro-preview',

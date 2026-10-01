@@ -35,20 +35,20 @@ export const PROVIDERS: readonly ProviderInfo[] = [
   {
     id: 'google',
     label: 'Google',
-    defaultModel: 'gemini-3.6-flash',
+    defaultModel: 'gemini-3.8-flash',
     keysUrl: 'https://aistudio.google.com/apikey',
     free: true,
   },
   {
     id: 'openai',
     label: 'OpenAI',
-    defaultModel: 'gpt-5.6-sol',
+    defaultModel: 'gpt-6.1-sol',
     keysUrl: 'https://platform.openai.com/api-keys',
   },
   {
     id: 'anthropic',
     label: 'Anthropic',
-    defaultModel: 'claude-sonnet-5',
+    defaultModel: 'claude-sonnet-5-5',
     keysUrl: 'https://console.anthropic.com/settings/keys',
   },
 ];

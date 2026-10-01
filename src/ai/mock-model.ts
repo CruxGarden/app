@@ -52,12 +52,17 @@ function toolCallStream(toolName: string, input: Record<string, unknown>) {
   ]);
 }
 
+function userRequestText(message: LanguageModelV4Prompt[number]): string | undefined {
+  if (message.role !== 'user') return undefined;
+  const text = message.content.map((c) => (c.type === 'text' ? c.text : '')).join(' ');
+  // Workspace updates follow tool results; scripts still follow the person's request.
+  return text.startsWith('<workspace_context>') ? undefined : text;
+}
+
 function lastUserText(prompt: LanguageModelV4Prompt): string {
   for (let i = prompt.length - 1; i >= 0; i--) {
-    const m = prompt[i]!;
-    if (m.role === 'user') {
-      return m.content.map((c) => (c.type === 'text' ? c.text : '')).join(' ');
-    }
+    const text = userRequestText(prompt[i]!);
+    if (text !== undefined) return text;
   }
   return '';
 }
@@ -1345,13 +1350,13 @@ export function getMockLanguageModel(): LanguageModel {
             ['list_templates', {}],
             ['search_garden', { query: 'Tour stop' }],
             ['read_garden_file', { title: 'Tour stop', path: 'index.html' }],
-            ['choose_collaborator', { title: 'Tour stop', model: 'claude-sonnet-5' }],
+            ['choose_collaborator', { title: 'Tour stop', model: 'claude-sonnet-5-5' }],
             ['export_crux', { title: 'Tour stop' }],
           ];
           const step = steps[rounds.length];
           if (step) return toolCallStream(step[0], step[1]);
           return textStream(
-            'I looked, searched the garden, read the page, chose Claude Sonnet 5 for Tour stop and exported it with its history.',
+            'I looked, searched the garden, read the page, chose Claude Sonnet 5.5 for Tour stop and exported it with its history.',
           );
         }
         if (lastUserText(prompt).includes('[garden:tour')) {
@@ -3064,12 +3069,12 @@ const LANDING_FIXED = LANDING_BROKEN.replace(
   '<h1>Welcome</h1>\n<p>Welcome to the garden.</p>',
 );
 
-/** Tool results after the most recent user message — this turn's rounds so far. */
+/** Tool results after the person's latest request, including workspace refreshes. */
 function toolResultsThisTurn(prompt: LanguageModelV4Prompt): string[] {
   const names: string[] = [];
   for (let i = prompt.length - 1; i >= 0; i--) {
     const m = prompt[i]!;
-    if (m.role === 'user') break;
+    if (userRequestText(m) !== undefined) break;
     if (m.role === 'tool') {
       for (const c of m.content) if (c.type === 'tool-result') names.unshift(c.toolName);
     }

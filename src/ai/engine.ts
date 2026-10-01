@@ -34,7 +34,7 @@ import type { LanguageModel } from 'ai';
 import type { ToolResultOutput } from '@ai-sdk/provider-utils';
 import type { NormalizedMessage, ToolResultContent } from '@/services/types';
 import { defaultToolDefinitions, didMutate, type ToolDefinition } from './tools';
-import { buildPromptParts, buildWorkspaceContext, CONTEXT_BLOCK_OPEN } from './system-prompt';
+import { buildPromptParts, buildWorkspaceContext } from './system-prompt';
 import { estimateTokens, fitToContextWindow, evictedTranscript, compactionNote } from './context';
 import { getModelInfo, getProviderForModel, resolveModel } from './providers';
 import { isAiMock } from '@/lib/platform';
@@ -92,8 +92,7 @@ let mockModel: LanguageModel | undefined;
  * production bundle carries none of it and `languageModelFor` stays synchronous.
  */
 export async function primeMockModel(): Promise<void> {
-  if (isAiMock() && !mockModel)
-    mockModel = (await import('./mock-model')).getMockLanguageModel();
+  if (isAiMock() && !mockModel) mockModel = (await import('./mock-model')).getMockLanguageModel();
 }
 
 export function languageModelFor(model: string, apiKey: string): LanguageModel {
@@ -365,10 +364,9 @@ export async function* runConversation(
       abortSignal: signal,
       maxOutputTokens: info?.maxOutput ?? 16384,
       ...(model === INCLUDED_MODEL ? { maxRetries: 0 } : {}),
-      // Refresh the workspace context block after mutations so the model sees
-      // the updated file listing — the stable system prompt is untouched, so
-      // the provider cache survives (workspace prompts only; custom prompts
-      // have no context block to refresh).
+      // New Claude thinking signatures cover their preceding conversation.
+      // Append fresh state after tool results; rewriting the initial context
+      // invalidates those signatures (and discards the cached prefix).
       prepareStep: !refreshContext
         ? undefined
         : async ({ messages: stepMessages }) => {
@@ -376,13 +374,7 @@ export async function* runConversation(
             mutatedSinceStep = false;
             const fresh = await refreshContext();
             return {
-              messages: stepMessages.map((m) =>
-                m.role === 'user' &&
-                typeof m.content === 'string' &&
-                m.content.startsWith(CONTEXT_BLOCK_OPEN)
-                  ? { ...m, content: fresh }
-                  : m,
-              ),
+              messages: [...stepMessages, { role: 'user', content: fresh }],
             };
           },
     });

@@ -85,6 +85,20 @@ test.describe('model selector stays on screen', () => {
     const { app, page } = await launchApp();
     try {
       await newBlankCrux(page);
+      await expect(page.getByTestId('model-selector')).toContainText('Claude Opus 5.5');
+      const catalogue = await openMenu(page);
+      for (const name of [
+        'Claude Opus 5.5',
+        'Claude Sonnet 5.5',
+        'GPT-6.1 Sol',
+        'GPT-6 Luna',
+        'GPT-6 Astra',
+        'Gemini 3.8 Flash',
+      ]) {
+        await expect(catalogue.menu.getByRole('button', { name, exact: true })).toBeAttached();
+      }
+      await catalogue.menu.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
+      await expect(page.getByTestId('model-selector')).toContainText('GPT-6.1 Sol');
 
       await resize(app, 1280, 900);
       await page.waitForTimeout(300);

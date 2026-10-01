@@ -66,6 +66,6 @@ describe('Default Model', () => {
 
     // A retired ID stored by an older app version resolves to its successor
     await setDefaultModel('gpt-4o');
-    expect(await getDefaultModel()).toBe('gpt-5.6-terra');
+    expect(await getDefaultModel()).toBe('gpt-6.1-sol');
   });
 });
