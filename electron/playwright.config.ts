@@ -21,6 +21,8 @@ const gateSpecs = [
   '**/documentation.spec.ts',
   '**/renderer-reload.spec.ts',
   '**/account-recovery.spec.ts',
+  '**/account-closure.spec.ts',
+  '**/package-imports.spec.ts',
   '**/publication-teardown.spec.ts',
   '**/workspace-permissions.spec.ts',
   '**/native-document-security.spec.ts',

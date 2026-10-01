@@ -15,6 +15,7 @@ export async function launchApp(
     dir?: string;
     sound?: boolean;
     args?: string[];
+    openFiles?: string[];
     /** A fresh garden starts with AI tools on unless this is false (the product default is off). */
     ai?: boolean;
     /** The app's own tooltips over `title=` (off in the suite; see CRUX_PLAIN_TITLES). */
@@ -51,7 +52,7 @@ export async function launchApp(
   // quality) and at a scale factor of 1 every quality tier draws exactly the
   // same number of pixels — the sweep measures nothing.
   const executablePath = process.env.CRUX_PACKAGED_APP;
-  const args = [...(opts.args ?? []), ...(executablePath ? [] : ['.'])];
+  const args = [...(opts.args ?? []), ...(executablePath ? [] : ['.']), ...(opts.openFiles ?? [])];
   if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox');
   // A journey that records passes CRUX_FAKE_MEDIA=1: the main process adds Chromium's fake camera
   // and microphone switches itself (see src/main.ts).

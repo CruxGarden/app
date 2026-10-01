@@ -46,6 +46,12 @@ const launch = JSON.parse(
 ) as Partial<Pick<ElectronBridge, 'config' | 'test'>>;
 
 const api: ElectronBridge = {
+  packageImports: {
+    pending: () => ipcRenderer.invoke('package-imports:pending'),
+    read: (id) => ipcRenderer.invoke('package-imports:read', id),
+    dismiss: (id) => ipcRenderer.invoke('package-imports:dismiss', id),
+    onChange: (callback) => subscribe('package-imports:changed', callback),
+  },
   browser: {
     onFocusAddress: (callback) => subscribe('browser:focus-address', callback),
     action: (id, action, url) => ipcRenderer.invoke('browser:action', id, action, url),

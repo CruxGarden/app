@@ -135,6 +135,10 @@ test('saving a Mood uses actual content and Garden membership, refuses partial c
       });
     }, result.garden.id);
     await page.getByRole('button', { name: 'Delete Mood Slow dream', exact: true }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Delete locally', exact: true })
+      .click();
     await expect(page.getByRole('button', { name: 'Apply Slow dream', exact: true })).toHaveCount(
       0,
     );

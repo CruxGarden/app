@@ -1,4 +1,4 @@
-import { captureGardenId, cruxPath, inGarden } from '@/stores/gardenContext';
+import { captureGardenId, cruxPath, inGarden, useGardenContext } from '@/stores/gardenContext';
 import { inferStartingPoint, nameFromIdea } from '@/lib/infer-starting-point';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { plainError } from '@/lib/error-text';
@@ -465,12 +465,18 @@ function startingPointKind(template: Template): string {
 // ── Component ────────────────────────────────────────────
 
 interface NewCruxModalProps {
+  requestedImport?: { name: string; read: () => Promise<File> };
   initialView?: 'crux' | 'undertakings';
   open: boolean;
   onClose: () => void;
 }
 
-export default function NewCruxModal({ open, onClose, initialView = 'crux' }: NewCruxModalProps) {
+export default function NewCruxModal({
+  open,
+  onClose,
+  initialView = 'crux',
+  requestedImport,
+}: NewCruxModalProps) {
   const TEMPLATES = templates();
   const [view, setView] = useState(initialView);
   useEffect(() => {
@@ -663,7 +669,7 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
       } catch (err) {
         console.error('Import failed:', err);
         void alertDialog(
-          `Failed to import .crux file: ${plainError(err, 'Make sure it is a valid export.')}`,
+          `Failed to import package: ${plainError(err, 'Make sure it is a valid export.')}`,
           'Import failed',
         );
       } finally {
@@ -794,6 +800,44 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
             }}
           />
         </Suspense>
+      </Modal>
+    );
+  if (requestedImport)
+    return (
+      <Modal open={open} onClose={handleClose} title="Import downloaded package">
+        <div className="space-y-4">
+          <p>
+            Import <strong>{requestedImport.name}</strong> into{' '}
+            <strong>{useGardenContext.getState().garden?.title || 'this Garden'}</strong>?
+          </p>
+          <p className="text-sm text-text-muted">
+            Cruxes become independent projects. Tools and Moods are installed in your library. Your
+            existing work stays here.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" disabled={importing} onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button
+              loading={importing}
+              onClick={() => {
+                setImporting(true);
+                void requestedImport
+                  .read()
+                  .then(handleImport)
+                  .catch((error) =>
+                    alertDialog(plainError(error, 'Could not read this package.'), 'Import failed'),
+                  )
+                  .finally(() => {
+                    setImporting(false);
+                    onClose();
+                  });
+              }}
+            >
+              Import package
+            </Button>
+          </div>
+        </div>
       </Modal>
     );
   return (

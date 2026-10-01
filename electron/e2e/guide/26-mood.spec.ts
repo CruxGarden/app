@@ -197,6 +197,10 @@ test.describe('guide 26 · Mood theme tokens', () => {
         mood.getByRole('button', { name: 'Delete Mood Mine', exact: true }),
       ).toBeEnabled();
       await mood.getByRole('button', { name: 'Delete Mood Mine', exact: true }).click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Delete locally', exact: true })
+        .click();
       await expect(mood.getByRole('button', { name: 'Apply Mine', exact: true })).toHaveCount(0);
     } finally {
       await app.close();

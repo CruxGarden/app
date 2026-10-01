@@ -140,7 +140,7 @@ test.describe('guide 30 · Explore', () => {
       await explore.getByRole('tab', { name: 'All' }).click();
       await explore.getByLabel('Search Explore').fill('');
       await explore
-        .getByRole('link', { name: 'Sunny Recipes' })
+        .getByLabel('Topics in Sunny Recipes')
         .getByRole('button', { name: '#food' })
         .click();
       await expect(explore.getByRole('button', { name: 'Remove tag filter food' })).toBeVisible();
@@ -195,6 +195,10 @@ test.describe('guide 30 · Explore', () => {
         .click();
       await expect.poll(() => cssVar('--accent')).not.toMatch(/#ff8800|255, 136, 0/i);
       await mood.getByRole('button', { name: 'Delete Mood Sea Glass', exact: true }).click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Delete locally', exact: true })
+        .click();
       await expect(mood.getByRole('button', { name: 'Apply Sea Glass', exact: true })).toHaveCount(
         0,
       );

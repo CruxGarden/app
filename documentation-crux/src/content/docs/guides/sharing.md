@@ -46,3 +46,19 @@ Open a tool or Mood's public link to install it in an open Garden, or download i
 To make your own tool, choose **Make a tool** in Add Crux. The starter includes an editor, a manifest and instructions. Review its files before exporting or publishing; other people receive the editor package you share. Downloaded tools cannot add native host commands or AI adapters to the app.
 
 Publishing and making a listing discoverable are separate controls. Enable **Discoverable** when you want a publication to appear in Explore. Verify the shared link in a visitor browser and try installing it in a separate Garden.
+
+## Open a downloaded package
+
+With the desktop app installed, open a `.crux`, `.cruxtool`, or `.cruxmood` file from your file manager. Select or create a Garden, then review the package name and destination before choosing **Import package**. Cancel leaves your Garden unchanged. You can also use **Add Crux → Import Crux, tool or Mood** if your operating system has not associated the file with Crux Garden.
+
+Tool downloads in Explore show received bytes and a **Cancel** button. If a connection stalls or a package is damaged, retry from the listing. Canceling an update keeps the previously installed tool and your existing projects.
+
+In the Mood library, **Unshare** removes public access while keeping your local Mood. **Delete locally** removes your library copy; it does not take down a public listing. Unshare first if you want both removed.
+
+## Close a hosted account
+
+In **Settings → Account**, expand **Close hosted account…**. The app first checks that your server supports the cleanup workflow. Export any hosted Store data you want to keep, read the consequences, type the requested phrase and confirm the account and server.
+
+Closure stops subscriptions, removes public sites and custom-domain routes, and removes hosted backups before closing access. Your local Garden, files, history and installed tools stay on this device. Copies other people downloaded remain theirs; database, operational and billing records may be retained. CDN removal may take time.
+
+If closure reports a failure, some cleanup may already have happened. Retry to finish. Disconnecting an account only removes this device's connection and is a separate action.

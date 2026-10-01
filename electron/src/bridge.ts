@@ -781,6 +781,12 @@ export interface BrowserPanelBridge {
 // ── the whole bridge ────────────────────────────────────────────────────────
 
 export interface ElectronBridge {
+  packageImports?: {
+    pending(): Promise<{ id: string; name: string }[]>;
+    read(id: string): Promise<Uint8Array>;
+    dismiss(id: string): Promise<void>;
+    onChange(callback: () => void): () => void;
+  };
   browser?: BrowserPanelBridge;
   figmaDesktop?: FigmaDesktopBridge;
   blenderDesktop?: FigmaDesktopBridge;

@@ -83,6 +83,10 @@ test.describe('mood packages', () => {
         .click();
       await expect(remove).toBeEnabled();
       await remove.click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Delete locally', exact: true })
+        .click();
       await expect(apply).toHaveCount(0);
     } finally {
       await app.close();

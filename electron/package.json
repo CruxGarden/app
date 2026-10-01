@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.266",
-    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.r8c2b1d2fd1b8.h005adcec.tgz",
+    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.r5dad85425720.h350c0a50.tgz",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "better-sqlite3": "13.0.3",
     "chokidar": "^4.0.3",
@@ -186,7 +186,27 @@
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false
     },
-    "beforePack": "build/stage-native.js"
+    "beforePack": "build/stage-native.js",
+    "fileAssociations": [
+      {
+        "ext": "crux",
+        "name": "Crux Garden project",
+        "role": "Editor",
+        "mimeType": "application/x-crux-garden"
+      },
+      {
+        "ext": "cruxtool",
+        "name": "Crux Garden tool",
+        "role": "Editor",
+        "mimeType": "application/x-crux-tool"
+      },
+      {
+        "ext": "cruxmood",
+        "name": "Crux Garden Mood",
+        "role": "Editor",
+        "mimeType": "application/x-crux-mood"
+      }
+    ]
   },
   "overrides": {
     "@nestjs/swagger": {

@@ -1,3 +1,4 @@
+import { PackageImports } from './package-imports';
 import { installDesktopCli } from './desktop-cli-install';
 import { readLaunchSettings } from './launch-settings';
 import type { GraphSelection, PrivateGraphImport } from '@cruxgarden/local-api';
@@ -45,6 +46,29 @@ const launchSettings = readLaunchSettings(app.isPackaged);
 let mainWindow: any = null;
 const gardenBridge = gardenIpc(() => mainWindow, launchSettings.devServer);
 const fromGarden = gardenBridge.handle;
+const packageImports = new PackageImports(() => {
+  if (mainWindow && !mainWindow.isDestroyed())
+    mainWindow.webContents.send('package-imports:changed');
+});
+packageImports.add(process.argv.slice(1));
+// macOS delivers open-file before ready; retain it until a Garden is selected.
+app.on('open-file', (event: Electron.Event, file: string) => {
+  event.preventDefault();
+  packageImports.add([file]);
+  if (app.isReady())
+    void startup
+      .then(() => {
+        if (!quitting) showMainWindow();
+      })
+      .catch(() => undefined);
+});
+fromGarden('package-imports:pending', () => packageImports.pending());
+fromGarden('package-imports:read', (_event: Electron.IpcMainInvokeEvent, id: string) =>
+  packageImports.read(id),
+);
+fromGarden('package-imports:dismiss', (_event: Electron.IpcMainInvokeEvent, id: string) =>
+  packageImports.dismiss(id),
+);
 // Docked mode (GARDEN-SCHEDULER-PLAN): closing the window hides it; the app
 // lives on in the menu bar until Quit. `quitting` tells the close handler the
 // difference between the red button and Cmd+Q / the tray's Quit.
@@ -149,7 +173,8 @@ app.setPath('userData', userDataPath);
 // Acquire before opening logs, SQLite, watchers or agent servers. Keep the lock
 // through teardown; Electron releases it when this process exits (including crash).
 if (!app.requestSingleInstanceLock()) app.exit(0);
-app.on('second-instance', () => {
+app.on('second-instance', (_event: Electron.Event, argv: string[], cwd: string) => {
+  packageImports.add(argv.slice(1), cwd);
   // Electron emits this after ready, but asynchronous API startup may still be
   // running. Never create a window against an uninitialized storage/IPC host.
   void startup

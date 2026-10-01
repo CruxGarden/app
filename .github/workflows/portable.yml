@@ -74,9 +74,9 @@ jobs:
           CRUX_E2E_DIAGNOSTICS: '1'
         run: |
           if [[ "$RUNNER_OS" == Linux ]]; then
-            xvfb-run -a npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts
+            xvfb-run -a npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts e2e/package-imports.spec.ts
           else
-            npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts
+            npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts e2e/package-imports.spec.ts
           fi
       - uses: actions/upload-artifact@v4
         if: always()

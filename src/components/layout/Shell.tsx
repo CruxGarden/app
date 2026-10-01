@@ -1,3 +1,4 @@
+import PendingPackageImports from '@/components/garden/PendingPackageImports';
 import FieldGuide from '@/components/explore/FieldGuide';
 import CommandPalette from './CommandPalette';
 import { useCommandPalette } from '@/stores/commandPalette';
@@ -321,6 +322,7 @@ export default function Shell() {
 
         {/* App confirm/alert dialogs (replaces window.confirm/alert) */}
         <DialogHost />
+        <PendingPackageImports />
       </div>
     </MotionConfig>
   );
