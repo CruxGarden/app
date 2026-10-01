@@ -314,6 +314,23 @@ test('a creator Garden presents tools and Moods with their own actions and categ
       meta: { publishedAt: '2026-10-01', template: 'unknown-community-tool' },
     };
   try {
+    api.state.published[ids[0]!] = [
+      {
+        path: '_crux/tool-package.zip',
+        mime: 'application/zip',
+        bytes: Buffer.from('download fixture'),
+      },
+    ];
+    await page.goto('/tester/creator-tool-test');
+    await expect(
+      page.getByRole('heading', { name: 'Pocket Notes Tool', exact: true }),
+    ).toBeVisible();
+    const downloaded = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download .cruxtool', exact: true }).click();
+    expect((await downloaded).suggestedFilename()).toBe('creator-tool-test.cruxtool');
+    await page.goto('/tester/creator-mood-test');
+    await expect(page.getByRole('button', { name: 'Download .cruxmood' })).toBeDisabled();
+    await expect(page.getByRole('status')).toContainText('missing its installable file');
     await page.goto('/tester');
     await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
     await expect(page.getByTestId('explore-mood-creator-mood-test')).toBeVisible();
@@ -328,6 +345,9 @@ test('a creator Garden presents tools and Moods with their own actions and categ
     await expect(page.getByText('Garden Notes', { exact: true }).first()).toBeVisible();
     expect(api.log.some((l) => l.includes('/authors/tester/cruxes'))).toBe(true);
   } finally {
-    for (const id of ids) delete api.state.cruxes[id];
+    for (const id of ids) {
+      delete api.state.cruxes[id];
+      delete api.state.published[id];
+    }
   }
 });

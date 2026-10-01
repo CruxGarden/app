@@ -1,6 +1,6 @@
 ---
-title: "Preview and Share"
-description: "Private while you work. Public when you choose."
+title: 'Preview and Share'
+description: 'Private while you work. Public when you choose.'
 sidebar:
   order: 4
 ---
@@ -32,3 +32,17 @@ Use the app’s Unshare action when you want to remove public access. Wait for c
 ## Authentication in published Cruxes
 
 Published Cruxes can use the embedded library’s authentication and permitted Store/Function APIs. Login itself is unmetered; Store and Function work counts toward the publisher’s API usage. Visitor credentials are scoped to the published Crux and approved origin. See [CLI and API](../../reference/cli-api/) for the distinction from account administration.
+
+## Share and install tools and Moods
+
+Explore and public Garden pages distinguish **Creations**, **Tools**, and **Moods**. A tool installs an editor you can use to create your own Cruxes. A Mood installs a look and sound for your Garden. Neither requires AI.
+
+Open a tool or Mood's public link to install it in an open Garden, or download its file for later. In the app, choose **Add Crux → Import Crux, tool or Mood** and select the file:
+
+- **`.cruxtool`** installs a reusable editor. It then appears in Add Crux.
+- **`.cruxmood`** imports a Mood to your library; preview it before keeping it for your Garden.
+- **`.crux`** imports a private project archive for continued editing.
+
+To make your own tool, choose **Make a tool** in Add Crux. The starter includes an editor, a manifest and instructions. Review its files before exporting or publishing; other people receive the editor package you share. Downloaded tools cannot add native host commands or AI adapters to the app.
+
+Publishing and making a listing discoverable are separate controls. Enable **Discoverable** when you want a publication to appear in Explore. Verify the shared link in a visitor browser and try installing it in a separate Garden.

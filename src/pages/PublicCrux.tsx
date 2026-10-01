@@ -1,3 +1,4 @@
+import PublishedPackage from '@/components/explore/PublishedPackage';
 import { useCallback, useEffect, useState } from 'react';
 import PublicLoading from '@/components/display/PublicLoading';
 import { PublicApiError } from '@/api/public';
@@ -147,14 +148,18 @@ export default function PublicCrux() {
 
       <div className="flex-1 min-h-0 relative z-10 flex">
         <div className={`flex-1 min-w-0 ${metadataOpen ? 'hidden sm:block' : ''}`}>
-          <ArtifactRenderer
-            artifacts={artifacts}
-            username={username || ''}
-            slug={slug || ''}
-            cruxId={crux?.id || ''}
-            subPath={subPath}
-            downloadBlob={downloadBlob}
-          />
+          {crux && (crux.kind === 'tool' || crux.kind === 'mood') ? (
+            <PublishedPackage crux={crux} artifacts={artifacts} username={username || ''} />
+          ) : (
+            <ArtifactRenderer
+              artifacts={artifacts}
+              username={username || ''}
+              slug={slug || ''}
+              cruxId={crux?.id || ''}
+              subPath={subPath}
+              downloadBlob={downloadBlob}
+            />
+          )}
         </div>
 
         {metadataOpen && crux && (
