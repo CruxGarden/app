@@ -1,7 +1,7 @@
 {
   "name": "crux-garden-desktop",
   "version": "1.0.0",
-  "description": "Crux Garden — a local-first creative workspace: talk to an AI, make something, publish it.",
+  "description": "Crux Garden \u2014 a local-first creative workspace: talk to an AI, make something, publish it.",
   "license": "MIT",
   "author": {
     "name": "Crux Garden",
@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.266",
-    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.r5dad85425720.h350c0a50.tgz",
+    "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.r919709969ecd.h9a2ff88c.tgz",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "better-sqlite3": "13.0.3",
     "chokidar": "^4.0.3",

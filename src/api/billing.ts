@@ -16,6 +16,7 @@ export interface BillingMe {
   canManage: boolean;
   provider: string;
   canSimulate?: boolean;
+  canMonitor?: boolean;
 }
 
 export interface CatalogPrice {
@@ -146,4 +147,42 @@ export function formatPlanPrice(entry: CatalogPlan, interval: BillingInterval): 
   const price = entry.prices.find((candidate) => candidate.interval === interval);
   if (!price) return 'Unavailable';
   return `${formatPrice(price.amount, price.currency)}/${interval === 'year' ? 'yr' : 'mo'}`;
+}
+
+/** Admin diagnostics deliberately omit email, payment URLs and provider payloads. */
+export interface BillingHealth {
+  provider: string;
+  emailDelivery: 'ses' | 'logging';
+  scheduler: { enabled: boolean; running: boolean; lastRun: string | null; lastRunFailed: boolean };
+  prices: { available: boolean; missing: { planId: string; interval: string }[] | null };
+  counters: {
+    failed: number;
+    stale: number;
+    unchecked: number;
+    due: number;
+    webhookFailures: number;
+    pendingCheckouts: number;
+    ambiguousCheckouts: number;
+    closingAccounts: number;
+    pendingNotifications: number;
+    failedNotifications: number;
+    latestCompletedWebhook: string | null;
+  };
+  problems: {
+    accounts: { account_id: string; failure_code: string }[];
+    deliveries: unknown[];
+    checkouts: unknown[];
+  };
+}
+export async function operations(): Promise<BillingHealth> {
+  return (await client.get<BillingHealth>('/billing/operations')).data;
+}
+export async function reconcileAccount(
+  accountId: string,
+): Promise<{ status: 'busy' | 'failed' | 'verified' }> {
+  return (
+    await client.post<{ status: 'busy' | 'failed' | 'verified' }>('/billing/operations/reconcile', {
+      accountId,
+    })
+  ).data;
 }

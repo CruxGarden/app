@@ -1,3 +1,4 @@
+import BillingHealth from './BillingHealth';
 import { useState } from 'react';
 import { useBillingSettings } from './useBillingSettings';
 import SettingsSection from './SettingsSection';
@@ -243,6 +244,7 @@ function AccountPlanSettings({ accountId }: { accountId: string }) {
           </div>
         </>
       )}
+      {me?.canMonitor && <BillingHealth accountId={accountId} />}
     </SettingsSection>
   );
 }

@@ -13,6 +13,9 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
   let resumed = 0;
   let interval = 'month';
   let unavailable = false;
+  let healthUnavailable = false;
+  let operator = true;
+  let reconciles = 0;
   let graceEndsAt: string | null = null;
   try {
     await app.evaluate(({ shell }) => {
@@ -20,6 +23,40 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
     });
     await page.route('**/billing/**', async (route) => {
       const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/operations/reconcile')) {
+        reconciles++;
+        await route.fulfill({ json: { status: 'verified' } });
+        return;
+      }
+      if (path.endsWith('/operations')) {
+        await route.fulfill(
+          healthUnavailable
+            ? { status: 503, json: { message: 'Fixture database unavailable' } }
+            : {
+                json: {
+                  provider: 'stripe',
+                  emailDelivery: 'logging',
+                  scheduler: { enabled: true, running: false, lastRun: null, lastRunFailed: false },
+                  prices: { available: true, missing: [] },
+                  counters: {
+                    failed: 1,
+                    stale: 2,
+                    unchecked: 3,
+                    due: 1,
+                    webhookFailures: 1,
+                    pendingCheckouts: 0,
+                    ambiguousCheckouts: 0,
+                    closingAccounts: 0,
+                    pendingNotifications: 2,
+                    failedNotifications: 1,
+                    latestCompletedWebhook: null,
+                  },
+                  problems: { accounts: [], deliveries: [], checkouts: [] },
+                },
+              },
+        );
+        return;
+      }
       if (path.endsWith('/checkout/resume')) {
         resumed++;
         await route.fulfill({ json: { url: 'https://checkout.stripe.com/isolated-fixture' } });
@@ -49,6 +86,7 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
           entry.prices = entry.prices.filter((p: { interval: string }) => p.interval === 'month');
       }
       if (path.endsWith('/me') || path.endsWith('/sync')) {
+        data.canMonitor = operator;
         data.pendingCheckout = pending;
         data.interval = interval;
         data.graceEndsAt = graceEndsAt;
@@ -111,6 +149,20 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
     await expect(plan).toContainText('Paid benefits are paused');
     await expect(plan.getByRole('button', { name: 'Choose Gardener', exact: true })).toHaveCount(0);
     await expect(plan.getByRole('button', { name: 'Manage billing' })).toBeVisible();
+    const health = plan.getByTestId('billing-health');
+    await health.getByText('Billing health · operator').click();
+    await health.getByRole('button', { name: 'Refresh billing health' }).click();
+    await expect(health).toContainText('logging only — delivery unconfigured');
+    await expect(health.getByText('Failed account checks').locator('..')).toContainText('1');
+    await health.getByRole('button', { name: 'Reconcile my account' }).click();
+    await expect(health).toContainText('Provider state verified.');
+    expect(reconciles).toBe(1);
+    healthUnavailable = true;
+    await health.getByRole('button', { name: 'Refresh billing health' }).click();
+    await expect(health.getByRole('alert')).toContainText('previous snapshot may be out of date');
+    healthUnavailable = false;
+    await health.getByRole('button', { name: 'Refresh billing health' }).click();
+    await expect(health.getByRole('alert')).toHaveCount(0);
     expect(
       (
         await new AxeBuilder({ page })
@@ -119,6 +171,10 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
           .analyze()
       ).violations,
     ).toEqual([]);
+    await health.screenshot({ path: info.outputPath('billing-health.png') });
+    operator = false;
+    await plan.getByRole('button', { name: 'Check again', exact: true }).click();
+    await expect(plan.getByTestId('billing-health')).toHaveCount(0);
     await plan.screenshot({ path: info.outputPath('billing-recovery.png') });
   } finally {
     await app.close();
