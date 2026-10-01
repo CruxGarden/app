@@ -145,7 +145,10 @@ test('the visible Crux exporter and importer preserve Main, Tasks, starting stat
       'data-workspace-id',
       importedId,
     );
-    await destination.page.goto(`crux-app://app/c/${importedId}?task=${copies[0].id}`);
+    await destination.page
+      .getByTestId('task-bar')
+      .getByRole('link', { name: /Experiment/ })
+      .click();
     await expect(
       destination.page.getByRole('button', { name: 'Review changes', exact: true }),
     ).toBeVisible();

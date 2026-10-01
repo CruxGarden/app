@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
 import { menuItemClass } from '@/components/ui/button-class';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
@@ -22,6 +23,7 @@ interface ContextMenuProps {
   onDeleteMultiple: (ids: string[]) => void;
   onDeleteFolder: (folderPath: string) => void;
   onOpen: (id: string) => void;
+  onCopyToCrux?: (ids: string[]) => void;
   onCopyUrl?: (id: string) => void;
   onTranscode?: (id: string) => void;
   isMediaFile?: (id: string) => boolean;
@@ -37,6 +39,7 @@ export default function ContextMenu({
   onDeleteFolder,
   onOpen,
   onCopyUrl,
+  onCopyToCrux,
   onTranscode,
   isMediaFile,
   ffmpegAvailable,
@@ -65,7 +68,23 @@ export default function ContextMenu({
 
   const items: MenuItem[] = [];
 
-  // Multi-select: only show batch delete
+  const copyIds = isMultiSelect
+    ? selectedIds
+    : isFolder && targetPath
+      ? [`${FOLDER_ID_PREFIX}${targetPath}`]
+      : targetId
+        ? [targetId]
+        : selectedIds;
+  if (onCopyToCrux && copyIds.length)
+    items.push({
+      label: 'Copy to another Crux…',
+      action: () => {
+        onCopyToCrux(copyIds);
+        hideContextMenu();
+      },
+    });
+
+  // Multi-select actions
   if (isMultiSelect) {
     items.push({
       label: `Delete ${selectedIds.length} items`,

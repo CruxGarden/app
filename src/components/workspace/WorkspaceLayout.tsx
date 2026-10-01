@@ -1,3 +1,5 @@
+import CopyArtifactsDialog, { type ArtifactCopySelection } from './CopyArtifactsDialog';
+import { captureGardenId } from '@/stores/gardenContext';
 import DeferredImportNotice from './DeferredImportNotice';
 import { useAppAppearance } from '@/hooks/useAppAppearance';
 import TaskBar from './TaskBar';
@@ -17,6 +19,7 @@ import {
   type CSSProperties,
   useEffect,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 import { DndProvider } from 'react-dnd';
@@ -431,6 +434,14 @@ export default function WorkspaceLayout() {
   useNotebookProxy(crux?.id ?? null);
   useAppAppearance(crux?.id ?? null, crux?.kind === 'notes' || crux?.meta?.template === 'moqira');
 
+  const [copySelection, setCopySelection] = useState<ArtifactCopySelection | null>(null);
+  const handleCopyToCrux = (ids: string[]) => {
+    if (!crux || cruxStore.getState().viewingSnapshotId) return;
+    const files = new Set(expandTreeSelection(ids, artifacts));
+    const paths = artifacts.filter((file) => files.has(file.id)).map(pathOf);
+    if (paths.length) setCopySelection({ sourceId: crux.id, gardenId: captureGardenId(), paths });
+  };
+
   // Context menu handlers
   const handleNewFile = (parentPath: string) => {
     uiStore.getState().startFileOperation({
@@ -563,6 +574,9 @@ export default function WorkspaceLayout() {
           <PaneMosaic Body={PaneBody} />
         </div>
       </div>
+      {copySelection && (
+        <CopyArtifactsDialog selection={copySelection} onClose={() => setCopySelection(null)} />
+      )}
       {/* Context menu overlay */}
       <ContextMenu
         onNewFile={handleNewFile}
@@ -573,6 +587,7 @@ export default function WorkspaceLayout() {
         onDeleteFolder={handleDeleteFolder}
         onOpen={handleOpen}
         onCopyUrl={handleCopyUrl}
+        onCopyToCrux={cruxStore.getState().viewingSnapshotId ? undefined : handleCopyToCrux}
         onTranscode={handleTranscode}
         isMediaFile={isMediaFile}
         ffmpegAvailable={ffmpegAvailable}

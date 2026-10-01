@@ -1,6 +1,6 @@
 ---
-title: "Artifacts and Project Folders"
-description: "Your files, in the workspace and on disk."
+title: 'Artifacts and Project Folders'
+description: 'Your files, in the workspace and on disk.'
 sidebar:
   order: 2
 ---
@@ -26,3 +26,11 @@ Avoid placing API keys, private certificates, or unrelated personal files in a s
 ## Work in another editor
 
 Open the Project Folder in your preferred editor. Save a small change, return to Crux Garden, and confirm the file and preview update. If they do not, check that you are editing the current Crux’s folder, not an exported copy.
+
+## Reuse files in another Crux
+
+Select one or more files or folders in **Artifacts**, then choose **Copy selected to another Crux…**. You can also right-click a selection and choose **Copy to another Crux…**. Choose a receiving Crux in the same Garden and, optionally, a folder inside it.
+
+The app saves current edits first and keeps the original files. Copies keep their source paths beneath the receiving folder. For an Astro website, copy images into `public` to use them on the page. If a destination already exists, choose a different folder; copying never replaces it.
+
+The copies are independent: changing the original later does not change the receiving Crux. No AI or account is needed.

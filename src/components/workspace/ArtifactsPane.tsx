@@ -1,3 +1,5 @@
+import CopyArtifactsDialog, { type ArtifactCopySelection } from './CopyArtifactsDialog';
+import { captureGardenId } from '@/stores/gardenContext';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useCruxStoreApi } from '@/stores/cruxStore';
@@ -169,6 +171,7 @@ export default function ArtifactsPane() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const uploadDropdownRef = useRef<HTMLDivElement>(null);
   const emptyDragCountRef = useRef(0);
+  const [copySelection, setCopySelection] = useState<ArtifactCopySelection | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const uploadMenuRef = useRef<HTMLDivElement>(null);
@@ -653,6 +656,22 @@ export default function ArtifactsPane() {
 
   return (
     <div className="flex flex-col h-full">
+      {copySelection && (
+        <CopyArtifactsDialog selection={copySelection} onClose={() => setCopySelection(null)} />
+      )}
+      {!isViewingSnapshot && selectedIds.length > 0 && cruxId && (
+        <button
+          className="text-xs text-accent text-left px-3 py-2 hover:underline"
+          onClick={() => {
+            const ids = new Set(expandTreeSelection(selectedIds, artifacts));
+            const paths = artifacts.filter((file) => ids.has(file.id)).map(pathOf);
+            if (paths.length)
+              setCopySelection({ sourceId: cruxId, gardenId: captureGardenId(), paths });
+          }}
+        >
+          Copy selected to another Crux…
+        </button>
+      )}
       {/* Desktop: registered Project Folder is missing on disk */}
       {folderMissing && (
         <div className="shrink-0 px-3 py-2 border-b border-border bg-error/10 flex items-center justify-between gap-2">
