@@ -61,7 +61,6 @@ export default function Plans() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {catalog.plans.map(({ plan, prices }) => {
-                const price = prices.find((p) => p.interval === interval) ?? prices[0];
                 return (
                   <div
                     key={plan.id}
@@ -71,9 +70,7 @@ export default function Plans() {
                     <div className="flex items-baseline justify-between">
                       <h2 className="font-display text-lg text-text">{plan.name}</h2>
                       <div className="text-sm font-mono text-text-muted">
-                        {price
-                          ? `${billingApi.formatPrice(price.amount, price.currency)}/${price.interval === 'year' ? 'yr' : 'mo'}`
-                          : 'Free'}
+                        {billingApi.formatPlanPrice({ plan, prices }, interval)}
                       </div>
                     </div>
                     {plan.blurb && <p className="text-xs text-text-muted">{plan.blurb}</p>}

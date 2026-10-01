@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-01",
+  "scope": "Subscription UI recovery, account ownership and truthful pricing/return/grace messages",
+  "checks": {
+    "appGate": "1696 tests / 269 files, 18 skips, build; /tmp/billing-ui-verify-final.log",
+    "electronGate": "77 passed, 1 skipped; /tmp/billing-ui-electron-verify.log",
+    "desktop": "3 passed in 27.3s; /tmp/billing-ui-desktop-accepted.log",
+    "publicWebsite": "11 passed in 2.6m; /tmp/billing-ui-public.log",
+    "focused": "13 passed; /tmp/billing-ui-focused.log",
+    "accessibility": "Plan region: zero axe violations, Electron legacy mode"
+  },
+  "initialFailures": [
+    "Axe default mode tried to open an unsupported Electron target; use the established legacy-mode adapter.",
+    "Existing included-allowance test still expected Haiku after the earlier Sonnet refresh; assertion now checks current Gardener depth."
+  ],
+  "coverage": [
+    "Unavailable interval cannot be purchased or appear Free",
+    "One account owns its requests, timers and external-link response; disposal/account switch rejects stale results",
+    "Interval-only portal changes stop polling; ordinary refresh invalidates usage",
+    "Confirmation timeout/retry/offline and grace deadline/expiry",
+    "Expired grace directs an existing subscriber to Manage billing rather than another checkout",
+    "Publish/unpublish success invalidates account usage",
+    "Return URL does not claim payment success",
+    "Persistent simulation across API and desktop restart"
+  ],
+  "limits": [
+    "No real payment or Stripe dashboard configuration tested",
+    "Durable checkout attempts and operational monitoring are separate active API work",
+    "Cross-account late response is covered by the request-owner fixture, not a full two-account desktop journey"
+  ]
+}

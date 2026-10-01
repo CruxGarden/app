@@ -11,6 +11,7 @@ export interface BillingMe {
   renewsAt: string | null;
   cancelAtPeriodEnd: boolean;
   trialEndsAt: string | null;
+  graceEndsAt: string | null;
   canManage: boolean;
   provider: string;
   canSimulate?: boolean;
@@ -128,4 +129,12 @@ export function formatPrice(amount: number, currency: string): string {
   } catch {
     return `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`;
   }
+}
+
+/** A missing paid price is unavailable, never a free offer or another interval. */
+export function formatPlanPrice(entry: CatalogPlan, interval: BillingInterval): string {
+  if (entry.plan.id === 'free') return 'Free';
+  const price = entry.prices.find((candidate) => candidate.interval === interval);
+  if (!price) return 'Unavailable';
+  return `${formatPrice(price.amount, price.currency)}/${interval === 'year' ? 'yr' : 'mo'}`;
 }

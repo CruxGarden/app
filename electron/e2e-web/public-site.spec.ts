@@ -103,9 +103,11 @@ test.describe('public site', () => {
       page.getByTestId('plans-gardener_plus').getByText(/Your own domains/),
     ).toBeVisible();
     await page.goto('/billing/success?session_id=cs_test_123');
-    await expect(page.getByRole('heading', { name: 'You’re all set' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Return to your Garden' })).toBeVisible();
+    await expect(page.getByText('Your plan is active.', { exact: false })).toHaveCount(0);
+    await expect(page.getByText(/this page alone does not confirm payment/)).toBeVisible();
     await page.goto('/billing/cancel');
-    await expect(page.getByRole('heading', { name: 'No changes made' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Checkout closed' })).toBeVisible();
   });
 
   test('Explore, a public crux page and a public garden page', async ({ page }) => {

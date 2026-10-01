@@ -26,17 +26,17 @@ export default function BillingReturn() {
       <div className="relative z-10 max-w-md w-full bg-panel border border-border rounded-[var(--radius)] p-6 text-center">
         <h1 className="font-display text-2xl text-text">
           {kind === 'success'
-            ? 'You’re all set'
+            ? 'Return to your Garden'
             : kind === 'cancel'
-              ? 'No changes made'
-              : 'Billing updated'}
+              ? 'Checkout closed'
+              : 'Back from billing'}
         </h1>
         <p className="text-sm text-text-muted mt-2">
           {kind === 'success'
-            ? 'Your plan is active. Switch back to Crux Garden — it has already picked it up. A receipt is on its way from Stripe.'
+            ? 'Switch back to Crux Garden and open Settings → Plan to check your subscription. The app verifies your plan with the payment provider; this page alone does not confirm payment.'
             : kind === 'cancel'
-              ? 'Checkout was cancelled. Your plan is unchanged; you can pick one any time from Settings → Plan.'
-              : 'Anything you changed is reflected in the app within a few seconds.'}
+              ? 'Return to Settings → Plan in Crux Garden to check your current plan or start checkout again.'
+              : 'Return to Settings → Plan in Crux Garden to verify any changes. Updates may take a moment to arrive.'}
         </p>
         <div className="mt-5 flex justify-center gap-3 text-xs font-mono">
           <Link to="/" className="text-text-muted hover:text-text">

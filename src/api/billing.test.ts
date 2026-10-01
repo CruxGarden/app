@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, isBillingUrl } from './billing';
+import { formatPrice, formatPlanPrice, isBillingUrl, type CatalogPlan } from './billing';
 
 describe('formatPrice', () => {
   it('formats USD cents in en-US regardless of the runner locale', () => {
@@ -30,5 +30,20 @@ describe('isBillingUrl', () => {
     expect(isBillingUrl('javascript:alert(1)')).toBe(false);
     expect(isBillingUrl('file:///etc/passwd')).toBe(false);
     expect(isBillingUrl('not a url')).toBe(false);
+  });
+});
+
+describe('plan price availability', () => {
+  it('never substitutes a monthly price or Free for an unavailable yearly paid plan', () => {
+    const entry = {
+      plan: { id: 'gardener' },
+      prices: [{ interval: 'month', priceId: 'monthly', amount: 500, currency: 'usd' }],
+    } as CatalogPlan;
+    expect(formatPlanPrice(entry, 'month')).toBe('$5/mo');
+    expect(formatPlanPrice(entry, 'year')).toBe('Unavailable');
+    expect(formatPlanPrice({ ...entry, prices: [] }, 'month')).toBe('Unavailable');
+    expect(
+      formatPlanPrice({ plan: { id: 'free' }, prices: [] } as unknown as CatalogPlan, 'year'),
+    ).toBe('Free');
   });
 });

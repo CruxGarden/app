@@ -1,3 +1,4 @@
+import { notifyUsageChanged } from '@/lib/usage-events';
 import { claimFirstPublication } from '@/services/first-publication';
 import { captureGardenId } from './gardenContext';
 import { uniqueSlug } from '@/lib/slug';
@@ -731,6 +732,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           onProgress: (phase) => set({ publishPhase: phase }),
         });
         set({ crux: mergedCrux });
+        notifyUsageChanged();
         if (hasFunctions) {
           try {
             for (const [name, value] of Object.entries(secrets))
@@ -770,6 +772,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const updated = await unpublishPipeline(crux);
       // A failure from an earlier publish attempt no longer describes anything.
       set({ crux: updated, publishFailure: null });
+      notifyUsageChanged();
     },
 
     // File CRUD actions
