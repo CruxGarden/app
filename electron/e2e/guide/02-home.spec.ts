@@ -116,7 +116,7 @@ test.describe('guide 02 · Home Garden', () => {
       await goHome(page);
       // Connect from Settings → Account.
       const settings = await openPanel(page, 'settings', 'Toggle settings');
-      await settings.locator('h2', { hasText: /^Account$/ }).click();
+      await expect(settings.getByPlaceholder('email@example.com')).toBeVisible();
       await connectAccount(page, settings);
       await expect(settings.getByText(/Connected/)).toBeVisible({ timeout: 30_000 });
       await page.locator('.mosaic-window.pane-settings .pane-toolbar-close').click();

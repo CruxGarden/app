@@ -26,6 +26,7 @@ test('Function secrets recover from failed saves, survive restart and reach only
     }`,
     );
     await openPanel(page, 'publish', 'Toggle share');
+    await page.getByText('Optional enhancements', { exact: true }).click();
     let functions = page.getByTestId('functions-section');
     await expect(functions.getByTestId('function-secret_probe')).toBeVisible();
     let secrets = functions.getByTestId('function-secrets');
@@ -67,6 +68,7 @@ test('Function secrets recover from failed saves, survive restart and reach only
     await fixtureKeychain(app, true);
     await reenterWorkspace(page, 'Function Keys');
     await openPanel(page, 'publish', 'Toggle share');
+    await page.getByText('Optional enhancements', { exact: true }).click();
     functions = page.getByTestId('functions-section');
     secrets = functions.getByTestId('function-secrets');
     await expect(secrets.getByText('TOKEN', { exact: true })).toBeVisible();

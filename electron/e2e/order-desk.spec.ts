@@ -97,6 +97,7 @@ test('Order Desk: orders are numbered, moved by the owner, summarised, and never
 
     // The Share pane knows the backend and runs a handler by hand.
     await togglePanel(page, 'Toggle share');
+    await page.getByText('Optional enhancements', { exact: true }).click();
     const fns = page.getByTestId('functions-section');
     await expect(fns.getByTestId('functions-list').locator('li')).toHaveCount(7);
     await fns.getByTestId('function-orders').getByRole('button', { name: 'Run' }).click();

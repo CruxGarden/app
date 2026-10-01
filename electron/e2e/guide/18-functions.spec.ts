@@ -22,6 +22,7 @@ async function functionsPane(page: Page) {
     timeout: 30_000,
   });
   const share = await openPanel(page, 'publish', 'Toggle share');
+  await share.getByText('Optional enhancements', { exact: true }).click();
   const fns = share.getByTestId('functions-section');
   await expect(fns).toBeVisible({ timeout: 30_000 });
   return fns;

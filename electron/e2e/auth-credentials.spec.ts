@@ -18,12 +18,11 @@ test('account credentials save encrypted, survive restart and recover from refus
   const openAccount = async () => {
     await showPane(page, 'Settings');
     const account = page.getByTestId('account-settings');
-    if (
-      !(await account.getByPlaceholder('email@example.com').isVisible()) &&
-      !(await account.getByRole('button', { name: 'Disconnect', exact: true }).isVisible())
-    ) {
-      await page.locator('h2', { hasText: /^Account$/ }).click();
-    }
+    await expect(
+      account
+        .getByPlaceholder('email@example.com')
+        .or(account.getByRole('button', { name: 'Disconnect', exact: true })),
+    ).toBeVisible();
     return account;
   };
   try {
@@ -98,8 +97,7 @@ test('declining a different account removes its saved session and keeps the loca
     await enterGarden(page);
     await showPane(page, 'Settings');
     const account = page.getByTestId('account-settings');
-    if (!(await account.getByPlaceholder('email@example.com').isVisible()))
-      await page.locator('h2', { hasText: /^Account$/ }).click();
+    await expect(account.getByPlaceholder('email@example.com')).toBeVisible();
     await connectAccount(page, account);
     await expect(account.getByText(/Connected —/)).toContainText('tester@example.com');
     const before = await page.evaluate(() =>

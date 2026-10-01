@@ -764,190 +764,195 @@ export default function NewCruxModal({ open, onClose, initialView = 'crux' }: Ne
     );
   return (
     <Modal open={open} onClose={handleClose} size="screen" title="Add Crux">
-      <div className="flex flex-col h-full gap-5">
-        <div className="shrink-0 space-y-2">
-          <label htmlFor="new-crux-idea" className="block text-lg font-medium">
-            What do you want to make?
-          </label>
-          <textarea
-            id="new-crux-idea"
-            value={idea}
-            onChange={(e) => onIdeaChange(e.target.value)}
-            onKeyDown={(e) => {
-              // Enter creates; Shift+Enter keeps writing.
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                void handleCreate();
-              }
-            }}
-            placeholder="A tiny game, a page for my project, a reading list…"
-            disabled={creating || importing}
-            rows={2}
-            autoFocus
-            className={cn(inputClass, 'h-auto py-2 resize-y')}
-          />
-          <p className="text-xs text-text-muted" data-testid="new-crux-starts-as">
-            {idea.trim() ? (
-              <>
-                Starts as <span className="text-text">{template.label}</span>, named{' '}
-                <span className="text-text">
-                  {title.trim() || template.defaultTitle || 'My Crux'}
-                </span>
-                {aiEnabled ? ' · the idea waits in Collaboration, ready to send.' : '.'}
-              </>
-            ) : (
-              'Describe it in a few words and press Enter, or choose where it starts below.'
-            )}
-          </p>
-          <button
-            disabled={creating || importing}
-            className={linkClass('text-sm')}
-            onClick={() => setView('undertakings')}
-          >
-            Undertakings — start a Garden
-          </button>
-        </div>
-        {/* Name */}
-        <div className="shrink-0">
-          <SectionLabel htmlFor="new-crux-name" as="label" tone="muted" className="mb-2">
-            Name
-          </SectionLabel>
-          <input
-            id="new-crux-name"
-            type="text"
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              setTitleEdited(true);
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-            onFocus={(e) => e.target.select()}
-            placeholder={template.defaultTitle || 'My Crux'}
-            disabled={creating}
-            className={inputClass}
-          />
-        </div>
-
-        {/* Template selector — scrollable */}
-        <div className="flex-1 min-h-0 flex flex-col">
-          <SectionLabel as="label" tone="muted" className="mb-2 shrink-0">
-            Or choose where it starts
-          </SectionLabel>
-          <div className="flex flex-wrap gap-2 mb-2 shrink-0">
-            <input
-              aria-label="Find a starting point"
-              placeholder="Search starting points…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className={fieldClass(undefined, 'flex-1 min-w-32')}
-            />
-            <select
-              aria-label="Starting point category"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className={fieldClass(undefined, 'w-auto')}
-            >
-              {['All', 'Websites', 'Writing', 'Visual', 'Apps and tools'].map((name) => (
-                <option key={name}>{name}</option>
-              ))}
-            </select>
-          </div>
-          {uninstalledCount > 0 && (
-            <label className="mb-2 flex items-center gap-2 text-xs text-text-muted shrink-0">
-              <input
-                type="checkbox"
-                checked={includeUninstalled}
-                onChange={(event) => setIncludeUninstalled(event.target.checked)}
-              />
-              Include tools to install ({uninstalledCount})
+      <div className="flex flex-col min-h-0 h-full gap-4">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-5 pr-1">
+          <div className="shrink-0 space-y-2">
+            <label htmlFor="new-crux-idea" className="block text-lg font-medium">
+              What do you want to make?
             </label>
-          )}
-          <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
-            <div className="flex flex-col">
-              {choices.length === 0 && (
-                <p className="p-3 text-sm text-text-muted">
-                  No starting points match. Try another search or include tools to install.
-                </p>
+            <textarea
+              id="new-crux-idea"
+              value={idea}
+              onChange={(e) => onIdeaChange(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter creates; Shift+Enter keeps writing.
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  void handleCreate();
+                }
+              }}
+              placeholder="A tiny game, a page for my project, a reading list…"
+              disabled={creating || importing}
+              rows={2}
+              autoFocus
+              className={cn(inputClass, 'h-auto py-2 resize-y')}
+            />
+            <p className="text-xs text-text-muted" data-testid="new-crux-starts-as">
+              {idea.trim() ? (
+                <>
+                  Starts as <span className="text-text">{template.label}</span>, named{' '}
+                  <span className="text-text">
+                    {title.trim() || template.defaultTitle || 'My Crux'}
+                  </span>
+                  {aiEnabled ? ' · the idea waits in Collaboration, ready to send.' : '.'}
+                </>
+              ) : (
+                'Describe it in a few words and press Enter, or choose where it starts below.'
               )}
-              {choices.map((t, index) => (
-                <Fragment key={t.id}>
-                  {(!choices[index - 1] ||
-                    startingPointGroup(choices[index - 1]!) !== startingPointGroup(t)) && (
-                    <h3 className="px-3 pt-3 pb-1 text-xs font-medium text-text-muted">
-                      {startingPointGroup(t)}
-                    </h3>
-                  )}
-                  <button
-                    data-template-id={t.id}
-                    onClick={() => {
-                      setSelectedTemplate(t.id);
-                      setPickedByHand(true);
-                      if (!titleEdited && !idea.trim() && t.defaultTitle) {
-                        setTitle(t.defaultTitle);
-                      }
-                    }}
-                    disabled={creating}
-                    aria-pressed={selectedTemplate === t.id}
-                    className={cn(
-                      'w-full px-3 py-2.5 text-left cursor-pointer rounded-[var(--radius-sm)]',
-                      'flex items-center gap-3 transition-colors',
-                      'disabled:cursor-not-allowed',
-                      selectedTemplate === t.id
-                        ? 'bg-accent-muted/40'
-                        : 'hover:bg-action-button-hover',
+            </p>
+            <button
+              disabled={creating || importing}
+              className={linkClass('text-sm')}
+              onClick={() => setView('undertakings')}
+            >
+              Undertakings — start a Garden
+            </button>
+          </div>
+          {/* Name */}
+          <div className="shrink-0">
+            <SectionLabel htmlFor="new-crux-name" as="label" tone="muted" className="mb-2">
+              Name
+            </SectionLabel>
+            <input
+              id="new-crux-name"
+              type="text"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setTitleEdited(true);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              onFocus={(e) => e.target.select()}
+              placeholder={template.defaultTitle || 'My Crux'}
+              disabled={creating}
+              className={inputClass}
+            />
+          </div>
+
+          {/* One scrolling body keeps choices reachable in short windows. */}
+          <div className="flex flex-col">
+            <SectionLabel as="label" tone="muted" className="mb-2 shrink-0">
+              Or choose where it starts
+            </SectionLabel>
+            <div className="flex flex-wrap gap-2 mb-2 shrink-0">
+              <input
+                aria-label="Find a starting point"
+                placeholder="Search starting points…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className={fieldClass(undefined, 'flex-1 min-w-32')}
+              />
+              <select
+                aria-label="Starting point category"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                className={fieldClass(undefined, 'w-auto')}
+              >
+                {['All', 'Websites', 'Writing', 'Visual', 'Apps and tools'].map((name) => (
+                  <option key={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+            {uninstalledCount > 0 && (
+              <label className="mb-2 flex items-center gap-2 text-xs text-text-muted shrink-0">
+                <input
+                  type="checkbox"
+                  checked={includeUninstalled}
+                  onChange={(event) => setIncludeUninstalled(event.target.checked)}
+                />
+                Include tools to install ({uninstalledCount})
+              </label>
+            )}
+            <div className="pr-0.5">
+              <div className="flex flex-col">
+                {choices.length === 0 && (
+                  <p className="p-3 text-sm text-text-muted">
+                    No starting points match. Try another search or include tools to install.
+                  </p>
+                )}
+                {choices.map((t, index) => (
+                  <Fragment key={t.id}>
+                    {(!choices[index - 1] ||
+                      startingPointGroup(choices[index - 1]!) !== startingPointGroup(t)) && (
+                      <h3 className="px-3 pt-3 pb-1 text-xs font-medium text-text-muted">
+                        {startingPointGroup(t)}
+                      </h3>
                     )}
-                  >
-                    <div
+                    <button
+                      data-template-id={t.id}
+                      onClick={() => {
+                        setSelectedTemplate(t.id);
+                        setPickedByHand(true);
+                        if (!titleEdited && !idea.trim() && t.defaultTitle) {
+                          setTitle(t.defaultTitle);
+                        }
+                      }}
+                      disabled={creating}
+                      aria-pressed={selectedTemplate === t.id}
                       className={cn(
-                        'w-10 h-10 shrink-0 rounded-[var(--radius-sm)] flex items-center justify-center',
+                        'w-full px-3 py-2.5 text-left cursor-pointer rounded-[var(--radius-sm)]',
+                        'flex items-center gap-3 transition-colors',
+                        'disabled:cursor-not-allowed',
                         selectedTemplate === t.id
-                          ? 'bg-accent-muted text-accent'
-                          : 'bg-surface text-text-muted',
+                          ? 'bg-accent-muted/40'
+                          : 'hover:bg-action-button-hover',
                       )}
-                      aria-hidden
                     >
-                      {t.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span
+                      <div
                         className={cn(
-                          'text-sm font-body font-medium block truncate',
-                          selectedTemplate === t.id ? 'text-accent' : 'text-text',
+                          'w-10 h-10 shrink-0 rounded-[var(--radius-sm)] flex items-center justify-center',
+                          selectedTemplate === t.id
+                            ? 'bg-accent-muted text-accent'
+                            : 'bg-surface text-text-muted',
                         )}
+                        aria-hidden
                       >
-                        {t.label}
-                        {!isToolAvailable(t.id) && (
-                          <span className="ml-2 text-2xs font-mono text-text-muted">
-                            not installed
+                        {t.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className={cn(
+                            'text-sm font-body font-medium block truncate',
+                            selectedTemplate === t.id ? 'text-accent' : 'text-text',
+                          )}
+                        >
+                          {t.label}
+                          {!isToolAvailable(t.id) && (
+                            <span className="ml-2 text-2xs font-mono text-text-muted">
+                              not installed
+                            </span>
+                          )}
+                        </span>
+                        {t.description && (
+                          <span className="text-xs text-text-muted block truncate">
+                            {t.description}
                           </span>
                         )}
-                      </span>
-                      {t.description && (
-                        <span className="text-xs text-text-muted block truncate">
-                          {t.description}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                </Fragment>
-              ))}
+                      </div>
+                    </button>
+                  </Fragment>
+                ))}
+              </div>
             </div>
+            {!selectionVisible && (
+              <p className="mt-2 text-xs text-text-muted">
+                Choose a starting point from these results.
+              </p>
+            )}
+            {!isToolAvailable(template.id) ? (
+              <p
+                className="text-xxs text-text-muted mt-1.5 shrink-0"
+                data-testid="tool-not-bundled"
+              >
+                {template.label} is not installed. Install it from Explore, or from its .crux
+                package, to create from it.
+              </p>
+            ) : (
+              template.id !== 'blank' && (
+                <p className="text-xxs text-text-muted mt-1.5 shrink-0">{template.description}</p>
+              )
+            )}
           </div>
-          {!selectionVisible && (
-            <p className="mt-2 text-xs text-text-muted">
-              Choose a starting point from these results.
-            </p>
-          )}
-          {!isToolAvailable(template.id) ? (
-            <p className="text-xxs text-text-muted mt-1.5 shrink-0" data-testid="tool-not-bundled">
-              {template.label} is not installed. Install it from Explore, or from its .crux package,
-              to create from it.
-            </p>
-          ) : (
-            template.id !== 'blank' && (
-              <p className="text-xxs text-text-muted mt-1.5 shrink-0">{template.description}</p>
-            )
-          )}
         </div>
 
         {/* Actions — pinned to bottom */}

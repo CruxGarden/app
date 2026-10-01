@@ -44,8 +44,7 @@ test('account recovery reads all pages and survives download/admission failure, 
     await enterGarden(page);
     await showPane(page, 'Settings');
     const account = page.getByTestId('account-settings');
-    if (!(await account.getByPlaceholder('email@example.com').isVisible()))
-      await page.locator('h2', { hasText: /^Account$/ }).click();
+    await expect(account.getByPlaceholder('email@example.com')).toBeVisible();
     await connectAccount(page, account);
     await expect(account.getByText(/Connected —/)).toContainText('tester@example.com');
     let section = page.getByTestId('recover-section');
