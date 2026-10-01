@@ -190,7 +190,7 @@ function useThumbnail(growth: Dimension): string | null {
 function Placeholder({ index }: { index: number }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-      <span className="font-display text-3xl leading-none text-growth-card-label/60 select-none">
+      <span className="font-display text-3xl leading-none text-growth-card-label/(--tint-medium) select-none">
         {index + 1}
       </span>
     </div>
@@ -233,9 +233,9 @@ export default function GrowthCard({
         'group/card relative w-full text-left rounded-[var(--radius)] overflow-hidden cursor-pointer',
         'bg-growth-card border transition-[border-color,transform,box-shadow] duration-200',
         isViewing
-          ? 'border-growth-card-label/60 ring-1 ring-growth-card-label/30'
+          ? 'border-growth-card-label/(--tint-medium) ring-1 ring-growth-card-label/(--tint-quiet)'
           : isActive
-            ? 'border-growth-card-label/40'
+            ? 'border-growth-card-label/(--tint-muted)'
             : 'border-garden-card-border shadow-card hover:border-garden-card-border-hover hover:-translate-y-px hover:shadow-card-hover',
       )}
     >

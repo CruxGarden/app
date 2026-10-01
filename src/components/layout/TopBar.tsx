@@ -197,8 +197,10 @@ export default function TopBar() {
                   aria-pressed={paneVisibility.console}
                   className={cn(
                     'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
-                    'ring-1 hover:ring-2 hover:ring-accent/40 active-dim motion-press cursor-pointer',
-                    paneVisibility.console ? 'ring-accent/60' : 'ring-text-muted/20',
+                    'ring-1 hover:ring-2 hover:ring-accent/(--tint-muted) active-dim motion-press cursor-pointer',
+                    paneVisibility.console
+                      ? 'ring-accent/(--tint-medium)'
+                      : 'ring-text-muted/(--tint-subtle)',
                   )}
                 >
                   <ConsoleAvatar className="w-6 h-6" />

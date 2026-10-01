@@ -42,7 +42,7 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
     <div
       className={cn(
         'w-full rounded-[6px] p-[2px] transition-colors',
-        active ? 'bg-accent' : 'bg-transparent hover:bg-text-muted/30',
+        active ? 'bg-accent' : 'bg-transparent hover:bg-text-muted/(--tint-quiet)',
       )}
     >
       <div className="rounded-[4px] overflow-hidden">
@@ -297,7 +297,7 @@ export default function MoodEditor() {
                               onClick={() => deleteUserPreset(preset.id)}
                               aria-label={`Delete preset ${preset.name}`}
                               title="Delete this preset"
-                              className="reveal-on-hover absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error hover:border-error/50 text-xs leading-none cursor-pointer"
+                              className="reveal-on-hover absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error hover:border-error/(--tint-balanced) text-xs leading-none cursor-pointer"
                             >
                               ×
                             </button>

@@ -400,8 +400,8 @@ export function AccordionHeader({
         'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[var(--radius-sm)]',
         'text-left cursor-pointer',
         open
-          ? 'bg-surface border border-accent/20 text-accent'
-          : 'text-text-muted hover:text-text hover:bg-surface/50',
+          ? 'bg-surface border border-accent/(--tint-subtle) text-accent'
+          : 'text-text-muted hover:text-text hover:bg-surface/(--tint-balanced)',
       )}
     >
       <span className="text-xs font-mono uppercase tracking-wider shrink-0 whitespace-nowrap">

@@ -133,7 +133,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
         {domains.map((d) => (
           <div
             key={d.id}
-            className="rounded-[var(--radius-sm)] border border-border bg-surface/60 p-2.5 flex flex-col gap-2"
+            className="rounded-[var(--radius-sm)] border border-border bg-surface/(--tint-medium) p-2.5 flex flex-col gap-2"
             data-testid={`domain-${d.hostname}`}
           >
             <div className="flex items-center gap-2">

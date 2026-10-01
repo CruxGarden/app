@@ -291,6 +291,12 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     match: (k) => FOUNDATION_KEYS.has(k),
   },
   {
+    id: 'transparency',
+    label: 'Transparency',
+    hint: 'Shared tint strengths used by text, borders and backgrounds. Enter 0% for transparent or 100% for the full color. The underlying color can also include alpha. Changing a strength updates every component that uses it.',
+    match: (k) => k.startsWith('tint'),
+  },
+  {
     id: 'layout',
     label: 'Shape & layout',
     hint: 'Corner radii, the gutter between workspace panes, header height, and density (multiplies every padding and gap).',
@@ -485,6 +491,7 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 
 export function tokenKind(key: string): TokenKind {
   if (key in TOKEN_CHOICES) return 'choice';
+  if (key.startsWith('tint')) return 'text';
   // ── motion ── easings are curves (text), durations are <time> lengths, bindings 0..1 numbers
   if (/^motionEase|^motionSpring/.test(key)) return 'text';
   if (/^glass(Opacity|Saturation|Sheen|SheenEase)$/.test(key)) return 'text';

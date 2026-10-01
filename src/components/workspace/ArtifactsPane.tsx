@@ -674,7 +674,7 @@ export default function ArtifactsPane() {
       )}
       {/* Desktop: registered Project Folder is missing on disk */}
       {folderMissing && (
-        <div className="shrink-0 px-3 py-2 border-b border-border bg-error/10 flex items-center justify-between gap-2">
+        <div className="shrink-0 px-3 py-2 border-b border-border bg-error/(--tint-faint) flex items-center justify-between gap-2">
           <span className="text-xs text-text">
             Project folder is missing on disk. Your files are safe in history.
           </span>
@@ -747,7 +747,7 @@ export default function ArtifactsPane() {
             onDrop={handleEmptyDrop}
           >
             {isDraggingOverEmpty ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/5 border-2 border-dashed border-accent/40 rounded-[var(--radius)] pointer-events-none">
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/(--tint-trace) border-2 border-dashed border-accent/(--tint-muted) rounded-[var(--radius)] pointer-events-none">
                 <div className="flex flex-col items-center gap-1 text-accent">
                   <svg
                     width="24"

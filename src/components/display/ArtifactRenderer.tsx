@@ -347,7 +347,7 @@ function FileListing({
               <button
                 key={a.id}
                 onClick={() => handleDownload(a)}
-                className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] hover:bg-surface/50 transition-colors group w-full text-left"
+                className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] hover:bg-surface/(--tint-balanced) transition-colors group w-full text-left"
               >
                 <span className="text-text-muted shrink-0">{getFileIcon(name)}</span>
                 <span className="text-sm font-mono text-text group-hover:text-accent truncate">

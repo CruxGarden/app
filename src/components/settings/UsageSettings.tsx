@@ -146,7 +146,7 @@ export default function UsageSettings() {
               </thead>
               <tbody>
                 {usage.cruxes.map((c) => (
-                  <tr key={c.cruxId} className="border-t border-border/60">
+                  <tr key={c.cruxId} className="border-t border-border/(--tint-medium)">
                     <td className="py-1.5 text-text truncate max-w-[16rem]">{title(c)}</td>
                     <td className="py-1.5 text-right font-mono text-text-muted">
                       {formatBytes(c.storageBytes)}
@@ -180,7 +180,7 @@ export default function UsageSettings() {
               </thead>
               <tbody>
                 {past.map((p) => (
-                  <tr key={p.period.start} className="border-t border-border/60">
+                  <tr key={p.period.start} className="border-t border-border/(--tint-medium)">
                     <td className="py-1.5 text-text">
                       {day(p.period.start)} → {day(p.period.end)}
                     </td>

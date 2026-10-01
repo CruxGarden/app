@@ -304,7 +304,7 @@ export default function PublishPane() {
                 <span
                   className={cn(
                     'ml-auto text-2xs font-mono',
-                    hasUnpublishedChanges ? 'text-warning-text' : 'text-accent/80',
+                    hasUnpublishedChanges ? 'text-warning-text' : 'text-accent/(--tint-dense)',
                   )}
                 >
                   {hasUnpublishedChanges ? 'Changes to share' : 'Up to date'}
@@ -355,7 +355,7 @@ export default function PublishPane() {
           ) : publishing ? (
             <PaneAction busy={PHASE_LABELS[phase ?? 'sync']}>Share</PaneAction>
           ) : showConnect ? (
-            <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3">
+            <div className="rounded-[var(--radius-sm)] border border-border bg-surface/(--tint-balanced) p-3">
               <ConnectAccount
                 compact
                 description="Connect your account to share this crux."
@@ -421,7 +421,7 @@ export default function PublishPane() {
             })()}
 
           {failure && !publishing && (
-            <div className="rounded-[var(--radius-sm)] border border-error/40 bg-error/5 p-3">
+            <div className="rounded-[var(--radius-sm)] border border-error/(--tint-muted) bg-error/(--tint-trace) p-3">
               <p role="alert" className="text-xs font-body text-error">
                 {failure.message}
               </p>
@@ -545,7 +545,7 @@ export default function PublishPane() {
 
           {/* Unshare — clearly a button, but not competing with Share */}
           {isPublished && (
-            <div className="border-t border-border/60 pt-3 flex flex-col gap-1.5">
+            <div className="border-t border-border/(--tint-medium) pt-3 flex flex-col gap-1.5">
               <button
                 type="button"
                 onClick={handleUnpublish}
@@ -553,7 +553,7 @@ export default function PublishPane() {
                 className={buttonClass(
                   'secondary',
                   'sm',
-                  'w-full text-text-muted hover:text-error hover:border-error/60 hover:bg-error-muted',
+                  'w-full text-text-muted hover:text-error hover:border-error/(--tint-medium) hover:bg-error-muted',
                 )}
               >
                 <PowerIcon size={13} />

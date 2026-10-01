@@ -311,7 +311,7 @@ export default function FunctionsSection({
 
         {building && (
           <form
-            className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-border/60 p-2"
+            className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-border/(--tint-medium) p-2"
             data-testid="when-then"
             onSubmit={(e) => {
               e.preventDefault();

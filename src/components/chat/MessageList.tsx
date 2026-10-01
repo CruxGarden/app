@@ -110,11 +110,11 @@ export default function MessageList({
 
       {truncatedAfter != null && truncatedAfter > 0 && (
         <div className="flex items-center gap-2 py-2">
-          <div className="flex-1 border-t border-accent/30" />
-          <span className="text-2xs font-mono text-accent/70 shrink-0">
+          <div className="flex-1 border-t border-accent/(--tint-quiet)" />
+          <span className="text-2xs font-mono text-accent/(--tint-strong) shrink-0">
             snapshot taken here — {truncatedAfter} message{truncatedAfter !== 1 ? 's' : ''} after
           </span>
-          <div className="flex-1 border-t border-accent/30" />
+          <div className="flex-1 border-t border-accent/(--tint-quiet)" />
         </div>
       )}
 
@@ -127,7 +127,7 @@ export default function MessageList({
             {streamingContent && (
               <>
                 <MarkdownRenderer content={streamingContent} />
-                <span className="inline-block w-1.5 h-4 bg-accent/60 motion-attention ml-0.5 align-text-bottom" />
+                <span className="inline-block w-1.5 h-4 bg-accent/(--tint-medium) motion-attention ml-0.5 align-text-bottom" />
               </>
             )}
             {liveToolCalls.length > 0 && (

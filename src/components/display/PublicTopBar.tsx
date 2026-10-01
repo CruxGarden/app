@@ -25,7 +25,7 @@ export default function PublicTopBar({
         >
           {APP_NAME}
         </a>
-        <span className="text-public-top-bar-text-muted/40">/</span>
+        <span className="text-public-top-bar-text-muted/(--tint-muted)">/</span>
         <a
           href={`/${username}`}
           className="shrink-0 text-public-top-bar-link hover:text-public-top-bar-link-hover hover:underline"
@@ -34,7 +34,7 @@ export default function PublicTopBar({
         </a>
         {title && (
           <>
-            <span className="text-public-top-bar-text-muted/40">/</span>
+            <span className="text-public-top-bar-text-muted/(--tint-muted)">/</span>
             <span className="text-public-top-bar-text truncate">{title}</span>
           </>
         )}

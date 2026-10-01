@@ -25,8 +25,8 @@ export default function EditorTabBar({ tabs, activeId, onSelect, onClose }: Edit
               'border-r border-border transition-colors cursor-pointer',
               'group relative',
               isActive
-                ? 'bg-surface/50 text-text'
-                : 'text-text-muted hover:text-text hover:bg-surface/20',
+                ? 'bg-surface/(--tint-balanced) text-text'
+                : 'text-text-muted hover:text-text hover:bg-surface/(--tint-subtle)',
             )}
             title={tab.path}
           >

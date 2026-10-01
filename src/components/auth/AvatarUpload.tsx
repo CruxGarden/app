@@ -89,7 +89,7 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
             </div>
           )}
           {uploading && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-[var(--radius)] bg-bg/60">
+            <div className="absolute inset-0 flex items-center justify-center rounded-[var(--radius)] bg-bg/(--tint-medium)">
               <Spinner size={compact ? 12 : 16} />
             </div>
           )}

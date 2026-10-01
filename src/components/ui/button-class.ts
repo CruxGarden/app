@@ -127,7 +127,7 @@ export function chipClass(active = false, className?: string | false | null) {
     'inline-flex items-center gap-1 h-6 px-2 rounded-chip text-xxs font-mono whitespace-nowrap cursor-pointer select-none border',
     'transition-[color,background-color,border-color] active-dim',
     active
-      ? 'bg-accent-muted text-accent border-accent/30 hover:border-accent/60'
+      ? 'bg-accent-muted text-accent border-accent/(--tint-quiet) hover:border-accent/(--tint-medium)'
       : 'bg-surface text-text-muted border-border hover:text-text hover:border-action-button-border-hover hover:bg-action-button-hover',
     className,
   );

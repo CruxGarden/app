@@ -198,7 +198,7 @@ export default function MessageInput({
                 title="Send after the current turn finishes"
                 className={cn(
                   pill,
-                  'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20 hover:bg-chat-send-button-hover motion-press react-accent',
+                  'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/(--tint-subtle) hover:bg-chat-send-button-hover motion-press react-accent',
                 )}
               >
                 Queue
@@ -226,7 +226,7 @@ export default function MessageInput({
             title="Send (Enter)"
             className={cn(
               round,
-              'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20',
+              'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/(--tint-subtle)',
               'hover:bg-chat-send-button-hover motion-press react-accent ',
             )}
           >
@@ -247,7 +247,7 @@ export default function MessageInput({
         )}
       </div>
       {isStreaming && (
-        <p className="text-xxs text-chat-text-muted/70 mt-1.5 px-2">
+        <p className="text-xxs text-chat-text-muted/(--tint-strong) mt-1.5 px-2">
           Enter to queue after this turn · Steer stops it and sends now
         </p>
       )}

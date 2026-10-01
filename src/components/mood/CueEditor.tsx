@@ -181,7 +181,7 @@ export default function CueEditor({
     <div
       data-testid="cue-editor"
       className={cn(
-        'rounded-[var(--radius-sm)] border border-border bg-surface/60 p-3 flex flex-col gap-3',
+        'rounded-[var(--radius-sm)] border border-border bg-surface/(--tint-medium) p-3 flex flex-col gap-3',
         className,
       )}
     >
@@ -206,7 +206,7 @@ export default function CueEditor({
         height={56}
         aria-label="Waveform of this cue"
         data-testid="cue-trace"
-        className="w-full h-14 rounded-[var(--radius-sm)] bg-bg/60 border border-border"
+        className="w-full h-14 rounded-[var(--radius-sm)] bg-bg/(--tint-medium) border border-border"
       />
 
       <fieldset className="min-w-0">

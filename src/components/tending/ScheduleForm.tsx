@@ -654,7 +654,7 @@ export default function ScheduleForm({
             key={i}
             data-testid="schedule-action"
             data-kind={a.kind}
-            className="grid gap-2 sm:grid-cols-[auto_1fr_auto] items-start rounded-[var(--radius-sm)] border border-border/60 p-2"
+            className="grid gap-2 sm:grid-cols-[auto_1fr_auto] items-start rounded-[var(--radius-sm)] border border-border/(--tint-medium) p-2"
           >
             <span className="text-text pt-1.5 w-24">{ACTION_LABEL[a.kind]}</span>
             <div className="flex flex-col gap-1.5">

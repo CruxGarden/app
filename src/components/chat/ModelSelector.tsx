@@ -195,7 +195,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         className={cn(
           'flex items-center gap-1.5 h-6 px-2 text-xxs font-mono rounded-[var(--radius-sm)] cursor-pointer',
           'bg-accent-muted text-accent hover-bright active-dim',
-          open && 'ring-1 ring-accent/40',
+          open && 'ring-1 ring-accent/(--tint-muted)',
           'disabled:cursor-not-allowed',
         )}
       >
@@ -389,7 +389,9 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                         >
                           {name}
                           {isToolCapableLocalModel(name) && (
-                            <span className="ml-1.5 text-2xs text-accent/70">· tools</span>
+                            <span className="ml-1.5 text-2xs text-accent/(--tint-strong)">
+                              · tools
+                            </span>
                           )}
                         </button>
                       );

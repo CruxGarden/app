@@ -972,7 +972,7 @@ export default function NewCruxModal({
                         'flex items-center gap-3 transition-colors',
                         'disabled:cursor-not-allowed',
                         selectedTemplate === t.id
-                          ? 'bg-accent-muted/40'
+                          ? 'bg-accent-muted/(--tint-muted)'
                           : 'hover:bg-action-button-hover',
                       )}
                     >

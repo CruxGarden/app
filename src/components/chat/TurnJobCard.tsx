@@ -159,7 +159,7 @@ function SubagentRows({ runs, now }: { runs: SubagentRun[]; now: number }) {
           className={cn(
             'flex items-center gap-1.5',
             run.status === 'pending' && 'text-subtle',
-            run.status === 'failed' && 'text-error/90',
+            run.status === 'failed' && 'text-error/(--tint-near-solid)',
           )}
           title={run.error ?? run.reply ?? undefined}
         >
@@ -211,7 +211,7 @@ function MergePanel({
   const pending = merge.status === 'pending';
   const selectCls = cn(
     'text-xxs font-mono rounded-[var(--radius-sm)] border border-border bg-transparent px-1 py-0.5',
-    'text-text hover:border-accent/50 cursor-pointer',
+    'text-text hover:border-accent/(--tint-balanced) cursor-pointer',
   );
 
   return (
@@ -322,7 +322,7 @@ function CheckShot({ fingerprint, ok }: { fingerprint: string; ok: boolean }) {
       data-ok={ok ? 'true' : 'false'}
       className={cn(
         'h-14 w-auto rounded-[var(--radius-sm)] border object-cover object-top',
-        ok ? 'border-accent/40' : 'border-error/40',
+        ok ? 'border-accent/(--tint-muted)' : 'border-error/(--tint-muted)',
       )}
     />
   );
@@ -465,11 +465,14 @@ export default function TurnJobCard() {
           )}
 
           {job.error && job.stopReason !== 'closed' && (
-            <div className="text-2xs text-error/80 break-words">{job.error}</div>
+            <div className="text-2xs text-error/(--tint-dense) break-words">{job.error}</div>
           )}
 
           {job.check && job.check.problems.length > 0 && (
-            <ul className="space-y-0.5 text-2xs text-error/90" data-testid="check-problems">
+            <ul
+              className="space-y-0.5 text-2xs text-error/(--tint-near-solid)"
+              data-testid="check-problems"
+            >
               {job.check.problems.map((p, i) => (
                 <li key={i} className="whitespace-pre-wrap break-words">
                   {p}

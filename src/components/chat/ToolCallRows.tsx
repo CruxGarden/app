@@ -229,7 +229,7 @@ function ToolCallItem({ tc }: { tc: ToolCall }) {
         className={cn(
           'text-xs font-mono rounded px-1.5 py-0.5 flex items-center gap-1.5 w-full text-left transition-colors',
           hasResult ? 'cursor-pointer hover:bg-surface-hover' : 'cursor-default',
-          isError ? 'text-error/80' : 'text-chat-text-muted',
+          isError ? 'text-error/(--tint-dense)' : 'text-chat-text-muted',
         )}
       >
         {hasResult ? <Chevron open={expanded} /> : <span className="w-2 shrink-0" />}
@@ -250,7 +250,7 @@ export default function ToolCallRows({ calls }: { calls: ToolCall[] }) {
   if (calls.length === 0) return null;
   if (calls.length === 1) return <ToolCallItem tc={calls[0]!} />;
   return (
-    <div className="rounded-[var(--radius-sm)] border border-border/50">
+    <div className="rounded-[var(--radius-sm)] border border-border/(--tint-balanced)">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -259,7 +259,7 @@ export default function ToolCallRows({ calls }: { calls: ToolCall[] }) {
         data-error={failed ? 'true' : 'false'}
         className={cn(
           'text-xs font-mono px-2 py-1 flex items-center gap-1.5 w-full text-left cursor-pointer transition-colors hover:bg-surface-hover rounded-[var(--radius-sm)]',
-          failed ? 'text-error/80' : 'text-chat-text-muted',
+          failed ? 'text-error/(--tint-dense)' : 'text-chat-text-muted',
         )}
       >
         <Chevron open={open} />

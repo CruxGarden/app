@@ -178,7 +178,7 @@ export default function SyncPane() {
           title="Sync is off"
           description="Connect your crux.garden account to back this crux up to the cloud and pull it onto other devices."
         >
-          <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3 text-left">
+          <div className="rounded-[var(--radius-sm)] border border-border bg-surface/(--tint-balanced) p-3 text-left">
             <ConnectAccount compact description="Connect your account to enable sync." />
           </div>
         </PaneEmpty>

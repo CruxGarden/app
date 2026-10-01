@@ -115,7 +115,7 @@ function TokenRow({
     <div
       className={cn(
         'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)]',
-        overridden ? 'bg-accent-muted/40' : 'hover:bg-surface/60',
+        overridden ? 'bg-accent-muted/(--tint-muted)' : 'hover:bg-surface/(--tint-medium)',
       )}
     >
       <div className="min-w-0">
@@ -594,7 +594,7 @@ export default function ThemeTokensTab() {
                   'flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-left text-xs cursor-pointer transition-colors',
                   active
                     ? 'bg-surface text-text'
-                    : 'text-text-muted hover:text-text hover:bg-surface/60',
+                    : 'text-text-muted hover:text-text hover:bg-surface/(--tint-medium)',
                 )}
               >
                 <span className="truncate">{group.label}</span>

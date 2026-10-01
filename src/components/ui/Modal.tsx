@@ -194,7 +194,7 @@ export default function Modal({
               )}
               <div
                 className={cn(
-                  'flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)] border border-border',
+                  'flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/(--tint-balanced) rounded-[var(--radius-sm)] border border-border',
                   !flush && 'p-4',
                 )}
               >

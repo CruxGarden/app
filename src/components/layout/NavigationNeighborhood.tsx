@@ -25,7 +25,7 @@ export default function NavigationNeighborhood(props: NavigationViewProps) {
   return (
     <div aria-label="Neighborhood" role="region">
       <div
-        className="mx-2 rounded-xl border border-accent/30 bg-accent-muted px-3 py-3 text-center text-sm font-medium"
+        className="mx-2 rounded-xl border border-accent/(--tint-quiet) bg-accent-muted px-3 py-3 text-center text-sm font-medium"
         aria-current="page"
       >
         {center?.title || 'Current location'}

@@ -216,7 +216,7 @@ function RepeaterField({
         <span className={labelClass}>{field.label}</span>
         <button
           onClick={addItem}
-          className="text-2xs font-mono text-accent hover:text-accent/80 transition-colors cursor-pointer"
+          className="text-2xs font-mono text-accent hover:text-accent/(--tint-dense) transition-colors cursor-pointer"
         >
           + Add
         </button>
@@ -252,7 +252,7 @@ function RepeaterField({
                 </button>
                 <button
                   onClick={() => removeItem(i)}
-                  className="text-2xs text-error/70 hover:text-error px-1 cursor-pointer"
+                  className="text-2xs text-error/(--tint-strong) hover:text-error px-1 cursor-pointer"
                 >
                   &times;
                 </button>

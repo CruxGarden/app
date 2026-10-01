@@ -15,7 +15,7 @@ export default function CruxDimensions() {
     <section
       aria-label="Crux connections"
       hidden={empty && !error}
-      className="shrink-0 max-h-36 overflow-y-auto border-t border-border bg-bg/70 px-3 py-1"
+      className="shrink-0 max-h-36 overflow-y-auto border-t border-border bg-bg/(--tint-strong) px-3 py-1"
     >
       <div className="flex items-start gap-2 min-w-0">
         <div className="flex-1 min-w-0">

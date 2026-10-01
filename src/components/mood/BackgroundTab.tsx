@@ -63,8 +63,8 @@ export function BackgroundTabContent({
                   disabled
                     ? 'opacity-[var(--disabled-opacity)] cursor-not-allowed border-border'
                     : bgType === value
-                      ? 'bg-surface text-text border-accent/30 cursor-pointer'
-                      : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text cursor-pointer',
+                      ? 'bg-surface text-text border-accent/(--tint-quiet) cursor-pointer'
+                      : 'bg-transparent border-border text-text-muted hover:border-accent/(--tint-subtle) hover:text-text cursor-pointer',
                 )}
               >
                 <span className="text-xs font-mono font-medium">{label}</span>
@@ -87,8 +87,8 @@ export function BackgroundTabContent({
           className={cn(
             'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors cursor-pointer',
             bgType === 'image'
-              ? 'bg-surface text-text border-accent/30'
-              : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text',
+              ? 'bg-surface text-text border-accent/(--tint-quiet)'
+              : 'bg-transparent border-border text-text-muted hover:border-accent/(--tint-subtle) hover:text-text',
           )}
         >
           <span className="text-xs font-mono font-medium">Image</span>
@@ -144,7 +144,7 @@ export function BackgroundTabContent({
           </form>
         )}
         {bgType === 'image' && bgImagePreview && (
-          <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/50 rounded-[var(--radius-sm)]">
+          <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/(--tint-balanced) rounded-[var(--radius-sm)]">
             <div className="relative w-full h-28 rounded-[var(--radius-sm)] overflow-hidden">
               <img
                 src={bgImagePreview}
@@ -152,7 +152,7 @@ export function BackgroundTabContent({
                 className="w-full h-full object-cover"
               />
               {bgGenerating && (
-                <div className="absolute inset-0 flex items-center justify-center bg-bg/60">
+                <div className="absolute inset-0 flex items-center justify-center bg-bg/(--tint-medium)">
                   <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
@@ -160,13 +160,13 @@ export function BackgroundTabContent({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => fileRef.current?.click()}
-                className="text-2xs text-accent hover:text-accent/80 transition-colors cursor-pointer"
+                className="text-2xs text-accent hover:text-accent/(--tint-dense) transition-colors cursor-pointer"
               >
                 Change image
               </button>
               <button
                 onClick={onBgImageClear}
-                className="text-2xs text-error hover:text-error/80 transition-colors cursor-pointer"
+                className="text-2xs text-error hover:text-error/(--tint-dense) transition-colors cursor-pointer"
               >
                 Remove
               </button>
@@ -177,7 +177,7 @@ export function BackgroundTabContent({
         {bgType === 'image' && !bgImagePreview && (
           <button
             onClick={() => fileRef.current?.click()}
-            className="text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer mt-1"
+            className="text-xs text-accent hover:text-accent/(--tint-dense) transition-colors cursor-pointer mt-1"
           >
             Choose an image...
           </button>

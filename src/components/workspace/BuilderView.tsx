@@ -129,7 +129,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
                   {publishedUrl.replace(/^https?:\/\//, '')}
                 </a>
                 {hasUnpublishedChanges && (
-                  <span className="px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                  <span className="px-1.5 py-0.5 rounded bg-accent/(--tint-light) text-accent">
                     unpublished changes
                   </span>
                 )}
@@ -235,7 +235,7 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
               key={item.artifact.id}
               className={cn(
                 'group flex items-center gap-3 px-4 py-3 rounded-[var(--radius-sm)]',
-                'bg-surface border border-border hover:border-accent/60 hover:bg-action-button-hover transition-colors',
+                'bg-surface border border-border hover:border-accent/(--tint-medium) hover:bg-action-button-hover transition-colors',
               )}
             >
               <button
@@ -347,7 +347,7 @@ function ShelfSection({ path }: { path: string }) {
           {shelf.entries.map((e) => (
             <li
               key={e.id}
-              className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/60 text-sm"
+              className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/(--tint-medium) text-sm"
               data-testid="shelf-entry"
             >
               <span className="text-text truncate">{e.name}</span>

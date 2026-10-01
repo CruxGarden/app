@@ -31,7 +31,7 @@ function DeleteConfirmations() {
           key={d.id}
           data-tending-request={d.id}
           tabIndex={-1}
-          className="flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-sm)] bg-error-muted border border-error/30"
+          className="flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-sm)] bg-error-muted border border-error/(--tint-quiet)"
         >
           <span className="text-xs font-mono text-text truncate">
             Delete <strong>{d.path}</strong>?
@@ -79,7 +79,7 @@ function AgentApprovals() {
           data-tending-request={a.id}
           tabIndex={-1}
           role="alert"
-          className="flex flex-col gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] bg-accent-muted border border-accent/30"
+          className="flex flex-col gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] bg-accent-muted border border-accent/(--tint-quiet)"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-mono text-text truncate" title={a.detail}>

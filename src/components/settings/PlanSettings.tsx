@@ -195,7 +195,8 @@ export default function PlanSettings() {
     <SettingsSection
       title="Plan"
       testId="plan-settings"
-      aside={me && (
+      aside={
+        me && (
           <span className="text-xxs font-mono text-text-muted" data-testid="plan-status">
             {me.plan.name}
             {me.status === 'trialing' && me.trialEndsAt
@@ -208,7 +209,8 @@ export default function PlanSettings() {
               : ''}
             {me.status === 'past_due' ? ' · payment failed' : ''}
           </span>
-        )}
+        )
+      }
     >
       {me?.provider === 'simulation' && (
         <div className="text-xs text-text-muted mb-3" data-testid="billing-simulation">
@@ -279,7 +281,9 @@ export default function PlanSettings() {
                   data-testid={`plan-card-${plan.id}`}
                   className={cn(
                     'rounded-[var(--radius)] border p-3 flex flex-col gap-1.5',
-                    current ? 'border-accent bg-accent/5' : 'border-border bg-surface/40',
+                    current
+                      ? 'border-accent bg-accent/(--tint-trace)'
+                      : 'border-border bg-surface/(--tint-muted)',
                   )}
                 >
                   <div className="flex items-baseline justify-between">

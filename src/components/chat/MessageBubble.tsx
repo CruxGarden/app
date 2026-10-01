@@ -20,13 +20,13 @@ function CheckLine({ check }: { check: TurnCheckSummary }) {
   return (
     <div className="mt-1.5 space-y-1" data-testid="check-record" data-status={check.status}>
       <div
-        className={cn('text-2xs font-mono', ok ? 'text-accent' : 'text-error/90')}
+        className={cn('text-2xs font-mono', ok ? 'text-accent' : 'text-error/(--tint-near-solid)')}
         data-testid="check-result"
       >
         {describeCheck(check.status)}
       </div>
       {!ok && check.problems.length > 0 && (
-        <ul className="text-2xs text-chat-text-muted/80 space-y-0.5">
+        <ul className="text-2xs text-chat-text-muted/(--tint-dense) space-y-0.5">
           {check.problems.map((p, i) => (
             <li key={i} className="whitespace-pre-wrap break-words">
               {p}
@@ -41,7 +41,7 @@ function CheckLine({ check }: { check: TurnCheckSummary }) {
           data-testid="check-thumb"
           className={cn(
             'h-16 w-auto rounded-[var(--radius-sm)] border object-cover object-top',
-            ok ? 'border-accent/40' : 'border-error/40',
+            ok ? 'border-accent/(--tint-muted)' : 'border-error/(--tint-muted)',
           )}
         />
       )}
@@ -165,7 +165,7 @@ export default function MessageBubble({
       >
         <div className="max-w-[82%] min-w-0">
           {authorName && (
-            <div className="text-2xs font-mono text-chat-text-muted/80 mb-1 text-right">
+            <div className="text-2xs font-mono text-chat-text-muted/(--tint-dense) mb-1 text-right">
               {authorName}
             </div>
           )}
@@ -208,7 +208,7 @@ export default function MessageBubble({
             a one-step reply reads exactly as it always did) */}
         {message.job && (message.job.steps > 1 || message.job.status !== 'done') && (
           <div
-            className="mt-1.5 text-2xs font-mono text-chat-text-muted/70"
+            className="mt-1.5 text-2xs font-mono text-chat-text-muted/(--tint-strong)"
             data-testid="turn-summary"
           >
             {describeJobSummary(message.job)}
@@ -217,7 +217,7 @@ export default function MessageBubble({
         {message.job?.check && <CheckLine check={message.job.check} />}
 
         {footer.length > 0 && (
-          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/50">
+          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/(--tint-balanced)">
             {footer.join(' · ')}
           </div>
         )}

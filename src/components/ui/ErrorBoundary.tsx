@@ -40,7 +40,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex flex-col items-center justify-center h-full p-8 gap-4">
           <div className="text-error text-sm font-mono">Something went wrong</div>
-          <pre className="text-xs text-text-muted font-mono max-w-md overflow-auto bg-surface/50 rounded-[var(--radius-sm)] p-3 border border-border">
+          <pre className="text-xs text-text-muted font-mono max-w-md overflow-auto bg-surface/(--tint-balanced) rounded-[var(--radius-sm)] p-3 border border-border">
             {this.state.error?.message || 'Unknown error'}
           </pre>
           {this.state.retries < MAX_RETRIES ? (
@@ -52,7 +52,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                   retries: prev.retries + 1,
                 }))
               }
-              className="px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors motion-press cursor-pointer"
+              className="px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/(--tint-subtle) hover:border-accent transition-colors motion-press cursor-pointer"
             >
               Try Again
             </button>
@@ -64,7 +64,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               </p>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors motion-press cursor-pointer"
+                className="px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/(--tint-subtle) hover:border-accent transition-colors motion-press cursor-pointer"
               >
                 Reload
               </button>

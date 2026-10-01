@@ -139,7 +139,9 @@ function MoodCard({
     <div
       className={cn(
         'group shape-card rounded-[var(--radius)] border bg-panel overflow-hidden flex flex-col transition-[border-color,box-shadow] motion-enter-card',
-        worn ? 'border-accent/60' : 'border-border hover:border-accent/40 hover:shadow-card-hover',
+        worn
+          ? 'border-accent/(--tint-medium)'
+          : 'border-border hover:border-accent/(--tint-muted) hover:shadow-card-hover',
         busy && 'opacity-[var(--busy-opacity)]',
       )}
       data-testid={testId}
@@ -161,7 +163,7 @@ function MoodCard({
             Wearing
           </span>
         ) : (
-          <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-black/25">
+          <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-black/(--tint-soft)">
             <span className="rounded-full bg-primary-button text-primary-button-text px-3 py-1 text-xs font-medium shadow-card">
               Wear this Mood
             </span>
@@ -586,7 +588,7 @@ export default function MoodBrowser() {
       </section>
 
       {moods.length === 0 ? (
-        <div className="rounded-[var(--radius)] border border-dashed border-border/70 p-8 text-center">
+        <div className="rounded-[var(--radius)] border border-dashed border-border/(--tint-strong) p-8 text-center">
           <p className="text-sm text-heading">No saved Moods yet</p>
           <p className="text-xs text-text-muted mt-1">
             Shape the app in Theme, Background, Sound{aiEnabled ? ' and Persona' : ''}, then save

@@ -11,7 +11,7 @@ import { getModelShortName } from '@/ai/providers';
 
 const VISIBILITY_ORDER: CruxVisibility[] = ['public', 'unlisted', 'private'];
 const VISIBILITY_COLORS: Record<CruxVisibility, string> = {
-  public: 'bg-accent/20 text-accent',
+  public: 'bg-accent/(--tint-subtle) text-accent',
   unlisted: 'bg-accent-muted text-text-muted',
   private: 'bg-error-muted text-error',
 };
@@ -214,7 +214,7 @@ function TagInput({
             key={tag}
             className={cn(
               'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs font-mono',
-              'bg-accent/15 text-accent',
+              'bg-accent/(--tint-light) text-accent',
             )}
           >
             {readOnly && tagLink ? (
@@ -414,7 +414,7 @@ export default function MetadataContent({
             <button
               onClick={cycleVisibility}
               className={cn(
-                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/40',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/(--tint-muted)',
                 VISIBILITY_COLORS[crux.visibility],
               )}
               title="Click to change"
@@ -439,9 +439,9 @@ export default function MetadataContent({
             <button
               onClick={cycleKind}
               className={cn(
-                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/40',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/(--tint-muted)',
                 crux.kind
-                  ? 'bg-accent/20 text-accent'
+                  ? 'bg-accent/(--tint-subtle) text-accent'
                   : 'bg-badge text-badge-text border border-badge-border',
               )}
               title="Click to change"

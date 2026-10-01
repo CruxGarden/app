@@ -25,7 +25,12 @@ it('keeps hidden dimming out of first-party components', () => {
   for (const name of readdirSync(root, { recursive: true }) as string[]) {
     if (!/\.tsx?$/.test(name) || /\.test\./.test(name)) continue;
     const source = readFileSync(join(root, name), 'utf8');
-    if (/\bopacity-(?:[1-9]\d?)(?![\d])|text-text-muted\/\d+/.test(source)) offenders.push(name);
+    if (
+      /\bopacity-(?:[1-9]\d?)(?![\d])|(?:text|bg|border|ring|outline|divide|from|via|to|fill|stroke)-[a-z-]+\/[1-9]\d?\b/.test(
+        source,
+      )
+    )
+      offenders.push(name);
   }
   expect(offenders).toEqual([]);
 });

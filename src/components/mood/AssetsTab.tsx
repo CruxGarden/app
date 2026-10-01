@@ -100,7 +100,7 @@ export default function AssetsTab() {
     <div className="flex flex-col gap-4">
       <div
         className={cn(
-          'rounded-[var(--radius)] border border-dashed border-border/70 p-5 text-center transition-colors',
+          'rounded-[var(--radius)] border border-dashed border-border/(--tint-strong) p-5 text-center transition-colors',
           busy && 'opacity-[var(--busy-opacity)]',
         )}
         onDragOver={(e) => e.preventDefault()}

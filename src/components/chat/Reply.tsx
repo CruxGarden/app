@@ -38,7 +38,7 @@ export function Reply({
         <div className="font-body text-sm leading-[1.6] break-words">
           <MarkdownRenderer content={content} />
           {streaming && (
-            <span className="inline-block w-1.5 h-4 bg-accent/60 motion-attention ml-0.5 align-text-bottom" />
+            <span className="inline-block w-1.5 h-4 bg-accent/(--tint-medium) motion-attention ml-0.5 align-text-bottom" />
           )}
         </div>
         {toolCalls && toolCalls.length > 0 && (
@@ -48,7 +48,7 @@ export function Reply({
         )}
         {children}
         {footer && footer.length > 0 && (
-          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/50">
+          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/(--tint-balanced)">
             {footer.join(' · ')}
           </div>
         )}
@@ -76,7 +76,9 @@ export function PersonPill({
     >
       <div className="max-w-[82%] min-w-0">
         {name && (
-          <div className="text-2xs font-mono text-chat-text-muted/80 mb-1 text-right">{name}</div>
+          <div className="text-2xs font-mono text-chat-text-muted/(--tint-dense) mb-1 text-right">
+            {name}
+          </div>
         )}
         <div className="rounded-bubble px-3.5 py-2 text-sm break-words border bg-chat-user-bubble text-chat-user-bubble-text border-chat-user-bubble-border">
           <p className="whitespace-pre-wrap">{content}</p>

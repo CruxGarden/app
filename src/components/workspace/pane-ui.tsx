@@ -64,7 +64,9 @@ export function PaneSection({
       {...rest}
       className={cn(
         'rounded-[var(--radius-sm)] border px-3 py-2.5',
-        tone === 'dashed' ? 'border-dashed border-border/70' : 'border-border bg-surface/50',
+        tone === 'dashed'
+          ? 'border-dashed border-border/(--tint-strong)'
+          : 'border-border bg-surface/(--tint-balanced)',
         className,
       )}
     >

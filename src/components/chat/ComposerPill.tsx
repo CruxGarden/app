@@ -104,7 +104,7 @@ export default function ComposerPill({
             title="Send (Enter)"
             className={cn(
               composerRound,
-              'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20',
+              'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/(--tint-subtle)',
               'hover:bg-chat-send-button-hover motion-press react-accent ',
             )}
           >
@@ -112,7 +112,7 @@ export default function ComposerPill({
           </button>
         )}
       </div>
-      {hint && <p className="text-xxs text-chat-text-muted/70 mt-1.5 px-2">{hint}</p>}
+      {hint && <p className="text-xxs text-chat-text-muted/(--tint-strong) mt-1.5 px-2">{hint}</p>}
     </div>
   );
 }
