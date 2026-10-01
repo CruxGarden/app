@@ -327,7 +327,7 @@ export default function StorePane() {
               disabled={src === 'live' && !canLive}
               onClick={() => setSource(src)}
               className={cn(
-                'px-1.5 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer disabled:cursor-default disabled:opacity-40',
+                'px-1.5 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer disabled:cursor-default ',
                 source === src ? 'text-text bg-surface-solid' : 'text-text-muted hover:text-text',
               )}
               title={

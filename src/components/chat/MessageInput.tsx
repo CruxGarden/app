@@ -227,7 +227,7 @@ export default function MessageInput({
             className={cn(
               round,
               'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20',
-              'hover:bg-chat-send-button-hover motion-press react-accent disabled:opacity-40',
+              'hover:bg-chat-send-button-hover motion-press react-accent ',
             )}
           >
             <svg

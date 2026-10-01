@@ -349,14 +349,14 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                             cn(
                               'text-xs font-mono',
                               !available
-                                ? 'text-text-muted/60'
+                                ? 'text-subtle'
                                 : model.id === value && 'text-accent bg-accent-muted',
                             ),
                           )}
                         >
                           {model.name}
                           {!available && (
-                            <span className="ml-1.5 text-2xs text-text-muted/70">
+                            <span className="ml-1.5 text-2xs text-subtle">
                               · {agent.installed ? 'unavailable' : 'not installed'}
                             </span>
                           )}

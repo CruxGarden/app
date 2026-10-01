@@ -3,7 +3,6 @@ import { getServices } from '@/services';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { collectionsChanged } from '@/services/cruxspaces';
 import { useGardenContext } from '@/stores/gardenContext';
-import { cn } from '@/lib/cn';
 
 /** What a Garden is for, under its name: read in place, edited in place. */
 export default function GardenBrief({ gardenId }: { gardenId: string }) {
@@ -65,10 +64,7 @@ export default function GardenBrief({ gardenId }: { gardenId: string }) {
         type="button"
         aria-label={brief ? 'Edit Garden brief' : 'Add a Garden brief'}
         onClick={() => setDraft(brief)}
-        className={cn(
-          'block mt-0.5 text-left text-sm line-clamp-2 cursor-text',
-          brief ? 'text-text-muted' : 'text-text-muted/50 hover:text-text-muted',
-        )}
+        className="block mt-0.5 text-left text-sm line-clamp-2 cursor-text text-text-muted hover:text-text"
       >
         {brief || 'Add a brief'}
       </button>

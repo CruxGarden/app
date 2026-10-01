@@ -70,14 +70,15 @@ export default function MemorySettings() {
     <SettingsSection
       title="Memory"
       testId="memory-settings"
-      aside={<span className="text-xxs font-mono text-text-muted" data-testid="memory-status">
+      aside={
+        <span className="text-xxs font-mono text-text-muted" data-testid="memory-status">
           {status ||
             (empty
               ? 'nothing remembered'
               : `${entries.length} line${entries.length === 1 ? '' : 's'}`)}
-        </span>}
+        </span>
+      }
     >
-
       <div className="flex flex-col gap-3 text-xs">
         <p className="text-text-muted">
           What the collaborator knows about you across every crux — your preferences, voice and
@@ -105,7 +106,7 @@ export default function MemorySettings() {
           spellCheck={false}
           className={cn(
             'w-full bg-bg border border-border rounded-[var(--radius-sm)] px-2.5 py-1.5',
-            'text-xs text-text placeholder:text-text-muted/50 font-mono leading-relaxed',
+            'text-xs text-text placeholder:text-placeholder font-mono leading-relaxed',
             'focus:outline-none focus:border-input-border-active resize-y min-h-[180px]',
           )}
         />

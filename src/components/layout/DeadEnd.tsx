@@ -28,7 +28,7 @@ export default function DeadEnd({
         padding="lg"
         className="relative z-10 w-full max-w-md text-center motion-enter-card"
       >
-        <CruxBloom size={48} className="mx-auto mb-5 opacity-40" />
+        <CruxBloom size={48} className="mx-auto mb-5 opacity-[var(--decoration-opacity)]" />
         <h1 className="font-display text-2xl text-heading mb-2">{title}</h1>
         <p className="text-sm text-text-muted mb-6">{body}</p>
         <nav aria-label="Way back" className="flex flex-wrap items-center justify-center gap-2">

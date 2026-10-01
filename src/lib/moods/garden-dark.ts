@@ -20,6 +20,7 @@ export const GARDEN_DARK = {
   bg: '#0b0d0c',
   text: '#e8ebe9',
   textMuted: '#98a49e',
+  textSubtle: 'var(--text-muted)',
   accent: '#72c3a8',
   border: 'rgba(94, 112, 100, 0.28)',
   panel: '#141816',
@@ -196,11 +197,17 @@ export const GARDEN_DARK = {
   focusRingWidth: '2px',
   focusRingOffset: '1px',
   disabledOpacity: '0.5',
+  busyOpacity: '0.7',
+  inactiveOpacity: '0.6',
+  secondaryActionOpacity: '0.6',
+  decorationOpacity: '0.5',
   hoverBrightness: '1.1',
   activeBrightness: '0.95',
   paneHeaderHoverBrightness: '1.15',
   cardHoverLift: '2px',
   buttonRadius: 'var(--radius-sm)',
+  buttonBorderWidth: '1px',
+  buttonFillOverlay: 'linear-gradient(to bottom, #ffffff1a, transparent)',
   // A dialog's title: the display face by default; a Mood may set the
   // wordmark serif and a larger size (the Plasma Mood does).
   dialogTitleFont: 'var(--font-display)',
@@ -519,6 +526,10 @@ export const GARDEN_DARK = {
 
   // ── Elevation ────────────────────────────────────────
   elevationPanel: '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
+  // Workspace frames and labelled controls can wear cut-paper shadows.
+  elevationPane: '0 0 0 transparent',
+  elevationButton: 'none',
+  elevationPrimaryButton: '0 1px 1px rgb(0 0 0 / 0.18)',
   elevationCard: 'none',
   elevationCardHover: '0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2)',
   elevationModal: '0 24px 80px -16px rgb(0 0 0 / 0.65)',

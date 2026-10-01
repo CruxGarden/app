@@ -721,10 +721,12 @@ html[data-motion-intensity='subtle'] .motion-ambient {
   }
 }
 
-/* Outside the layer: must beat globals.css's `.mosaic-window { box-shadow: none }`. */
+/* Keep the Mood’s frame shadow while Collaboration signals activity. */
 .mosaic.crux-mosaic-theme .mosaic-window.pane-collaboration {
-  box-shadow: 0 0 calc(28px * var(--signal-agent) * var(--react-pane-agent))
-    color-mix(in srgb, var(--pane-collaboration) 55%, transparent);
+  box-shadow:
+    var(--elevation-pane),
+    0 0 calc(28px * var(--signal-agent) * var(--react-pane-agent))
+      color-mix(in srgb, var(--pane-collaboration) 55%, transparent);
 }
 
 /* The modal scrim (globals.css) fades on the fast duration; div. outranks the plain class there. */

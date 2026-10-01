@@ -61,14 +61,14 @@ export function BackgroundTabContent({
                 className={cn(
                   'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors',
                   disabled
-                    ? 'opacity-30 cursor-not-allowed border-border'
+                    ? 'opacity-[var(--disabled-opacity)] cursor-not-allowed border-border'
                     : bgType === value
                       ? 'bg-surface text-text border-accent/30 cursor-pointer'
                       : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text cursor-pointer',
                 )}
               >
                 <span className="text-xs font-mono font-medium">{label}</span>
-                <span className="text-2xs opacity-60">{description}</span>
+                <span className="text-2xs text-subtle">{description}</span>
               </button>
             );
           })}
@@ -92,7 +92,7 @@ export function BackgroundTabContent({
           )}
         >
           <span className="text-xs font-mono font-medium">Image</span>
-          <span className="text-2xs opacity-60">Upload a background image</span>
+          <span className="text-2xs text-subtle">Upload a background image</span>
         </button>
         <input
           ref={fileRef}

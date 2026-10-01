@@ -150,7 +150,7 @@ export default function CruxCard({
           <p
             className={cn(
               'text-xs text-garden-card-text leading-relaxed line-clamp-2 min-h-[2lh]',
-              !description && 'italic opacity-70',
+              !description && 'italic text-subtle',
             )}
           >
             {description || 'No description yet'}

@@ -143,7 +143,7 @@ export default function ApiKeySetup({
                 </a>
                 {isAgentModel(providerId) ? (
                   <span
-                    className="text-xs font-mono text-text-muted/70"
+                    className="text-xs font-mono text-subtle"
                     data-testid={`${providerId}-status`}
                   >
                     {agent === null
@@ -154,7 +154,7 @@ export default function ApiKeySetup({
                           `Install ${provider.name} and sign in, then reopen Settings`)}
                   </span>
                 ) : local ? (
-                  <span className="text-xs font-mono text-text-muted/70">
+                  <span className="text-xs font-mono text-subtle">
                     No key needed — runs on this machine
                   </span>
                 ) : hint ? (
@@ -162,7 +162,7 @@ export default function ApiKeySetup({
                     {hint}
                   </span>
                 ) : (
-                  <span className="text-xs font-mono text-text-muted/50">
+                  <span className="text-xs font-mono text-subtle">
                     {loading
                       ? 'Loading…'
                       : errors[providerId]
@@ -205,7 +205,7 @@ export default function ApiKeySetup({
                   }
                   className={cn(
                     'flex-1 basis-40 min-w-0 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                    'bg-bg border border-border text-text placeholder:text-text-muted/50',
+                    'bg-bg border border-border text-text placeholder:text-placeholder',
                     'outline-none focus:border-input-border-active ',
                   )}
                 />
@@ -244,7 +244,7 @@ export default function ApiKeySetup({
       })}
 
       {!compact && (
-        <p className="text-xxs text-text-muted/60 mt-2">
+        <p className="text-xxs text-subtle mt-2">
           Your keys are encrypted on this device using system credential storage and sent only to
           the AI provider you choose.
         </p>

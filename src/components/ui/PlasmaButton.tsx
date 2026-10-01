@@ -94,7 +94,7 @@ export default function PlasmaButton({
       className={cn(
         'plasma-button relative z-[1] inline-flex items-center justify-center overflow-hidden',
         'font-body font-medium rounded-button cursor-pointer',
-        'disabled:opacity-60 disabled:cursor-not-allowed',
+        'disabled:cursor-not-allowed',
         sizes[size],
         fullWidth && 'w-full',
         className,

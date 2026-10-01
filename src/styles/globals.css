@@ -184,6 +184,7 @@
   --color-input: var(--input);
   --color-input-text: var(--input-text);
   --color-placeholder: var(--placeholder);
+  --color-subtle: var(--text-subtle);
   --color-input-outline: var(--input-outline);
   --color-input-border: var(--input-border);
   --color-input-border-active: var(--input-border-active);
@@ -981,7 +982,7 @@ html.palette-transition *::after {
   border: none;
   padding: var(--pane-border-width);
   border-radius: var(--pane-radius);
-  box-shadow: none;
+  box-shadow: var(--elevation-pane);
   background: var(--border);
   color: var(--text);
 }

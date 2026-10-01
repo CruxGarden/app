@@ -22,7 +22,7 @@ export default function Toggle({
     <label
       className={cn(
         'inline-flex items-center gap-2 cursor-pointer select-none max-w-full',
-        disabled && 'opacity-50 cursor-not-allowed',
+        disabled && 'cursor-not-allowed',
       )}
     >
       <button

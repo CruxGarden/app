@@ -46,7 +46,7 @@ export default function FlowControl() {
           describedBy={`${id}-description`}
         />
       </div>
-      <div className={settings.enabled ? '' : 'opacity-50'}>
+      <div className={settings.enabled ? '' : 'opacity-[var(--inactive-opacity)]'}>
         <label htmlFor={`${id}-sensitivity`} className="text-xs text-text-muted">
           Sensitivity
         </label>

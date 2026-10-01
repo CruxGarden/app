@@ -247,7 +247,7 @@ function TagInput({
               }
             }}
             placeholder={tags.length === 0 ? 'add tags...' : ''}
-            className="bg-transparent text-xs font-mono text-text outline-none min-w-[60px] flex-1 py-0.5 placeholder:text-text-muted/50"
+            className="bg-transparent text-xs font-mono text-text outline-none min-w-[60px] flex-1 py-0.5 placeholder:text-placeholder"
           />
         )}
       </div>

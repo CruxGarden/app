@@ -11,6 +11,7 @@ import { synthForMood, synthPresetsForMood } from '@/audio/synth-patch';
  * the range comes from colour, type, motion and voice.
  */
 import { MOOD_PRESETS } from './presets';
+import { EXPEDITION_PRESETS } from './expedition';
 import { refreshPresets } from './user-presets';
 import type { MoodPackage } from './packages';
 import { SITEMETRIC_RED } from './presets';
@@ -1138,7 +1139,24 @@ function build(spec: Spec): MoodPackage {
   };
 }
 
-export const BUNDLED_MOODS: MoodPackage[] = SPECS.map(build);
+export const BUNDLED_MOODS: MoodPackage[] = [
+  ...SPECS,
+  ...EXPEDITION_PRESETS.map(
+    (p): Spec => ({
+      id: p.id,
+      name: p.name,
+      presetId: p.id,
+      background: { type: BgType.Blank },
+      volume: 0.3,
+      persona: {
+        name: p.name,
+        greeting: 'One small step, then another. What shall we make?',
+        systemPrompt:
+          'Be an encouraging, practical expedition companion. Break work into small achievable steps, explain plainly, and celebrate progress without distracting from the task.',
+      },
+    }),
+  ),
+].map(build);
 export const SHELVED_MOODS: MoodPackage[] = SHELVED_SPECS.map(build);
 
 /** A Mood that ships in the app — on the shelf or not. */

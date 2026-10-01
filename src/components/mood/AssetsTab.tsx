@@ -101,7 +101,7 @@ export default function AssetsTab() {
       <div
         className={cn(
           'rounded-[var(--radius)] border border-dashed border-border/70 p-5 text-center transition-colors',
-          busy && 'opacity-60',
+          busy && 'opacity-[var(--busy-opacity)]',
         )}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {

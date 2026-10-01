@@ -183,7 +183,7 @@ export default function SchedulesSection() {
               data-source={s.source ?? 'garden'}
               className={cn(
                 'flex flex-wrap items-center gap-3 py-2',
-                s.source === 'mood' && !moodsOn && 'opacity-60',
+                s.source === 'mood' && !moodsOn && 'opacity-[var(--inactive-opacity)]',
               )}
             >
               <div className="flex-1 min-w-48">

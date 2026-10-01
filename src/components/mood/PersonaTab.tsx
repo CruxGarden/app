@@ -78,7 +78,7 @@ export function PersonaTab() {
 
   const inputClass = cn(
     'w-full bg-bg border border-border rounded-[var(--radius-sm)] px-2.5 py-1.5',
-    'text-xs text-text placeholder:text-text-muted/50',
+    'text-xs text-text placeholder:text-placeholder',
     'focus:outline-none focus:border-input-border-active font-mono',
   );
 
@@ -167,7 +167,7 @@ export function PersonaTab() {
           maxLength={4000}
         />
         <div className="flex items-center justify-between mt-1 shrink-0">
-          <p className="text-3xs text-text-muted/50">
+          <p className="text-3xs text-subtle">
             {persona.systemPrompt ? `${persona.systemPrompt.length}/4000` : ''}
           </p>
           {isCustomized && (

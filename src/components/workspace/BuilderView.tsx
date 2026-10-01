@@ -202,7 +202,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
           <CollectionSection key={collection.name} collection={collection} />
         ))}
 
-        <p className="text-2xs text-text-muted/60 text-center">
+        <p className="text-2xs text-subtle text-center">
           This is a real Astro project — open the Artifacts panel to work with the files directly.
         </p>
       </div>
@@ -264,7 +264,7 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
                     `Delete "${itemLabel(data, collection) || item.path}"?`,
                   );
                 }}
-                className="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-xs text-text-muted hover:text-error transition-opacity cursor-pointer px-1"
+                className="shrink-0 opacity-0 group-hover:opacity-[var(--secondary-action-opacity)] hover:!opacity-100 text-xs text-text-muted hover:text-error transition-opacity cursor-pointer px-1"
                 title={`Delete ${collection.singular.toLowerCase()}`}
               >
                 ✕

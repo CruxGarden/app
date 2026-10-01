@@ -24,7 +24,7 @@ export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 const VARIANTS: Record<ButtonVariant, string> = {
   // A soft top light and a hairline shadow give the fill some body in every Mood.
   primary:
-    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover react-accent bg-gradient-to-b from-white/10 to-transparent shadow-[0_1px_1px_rgb(0_0_0/0.18)]',
+    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover react-accent [background-image:var(--button-fill-overlay)] [box-shadow:var(--elevation-primary-button)]',
   secondary:
     'bg-action-button text-action-button-text border border-action-button-border hover:bg-action-button-hover hover:text-action-button-text-hover hover:border-action-button-border-hover',
   // The quiet action: only words until the pointer arrives, then the same fill as the others.
@@ -57,6 +57,8 @@ export function buttonClass(
     'disabled:bg-button-disabled disabled:text-button-disabled-text disabled:border-transparent disabled:bg-none disabled:shadow-none disabled:opacity-100 disabled:cursor-not-allowed',
     'aria-disabled:cursor-not-allowed',
     VARIANTS[variant],
+    variant !== 'ghost' && '[border-width:var(--button-border-width)]',
+    (variant === 'secondary' || variant === 'danger') && '[box-shadow:var(--elevation-button)]',
     SIZES[size],
     className,
   );
@@ -75,7 +77,7 @@ export function iconButtonClass(
   return cn(
     'inline-flex items-center justify-center shrink-0 rounded-[var(--radius-sm)] cursor-pointer',
     'transition-[color,background-color,transform] motion-press active-dim',
-    'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+    'disabled:cursor-not-allowed disabled:hover:bg-transparent',
     size === 'xs' ? 'w-6 h-6' : 'w-7 h-7',
     active
       ? 'text-icon-button-icon-hover bg-icon-button-hover'
@@ -142,7 +144,7 @@ export function menuItemClass(
     tone === 'danger'
       ? 'text-error hover:bg-error-muted focus-visible:bg-error-muted'
       : 'text-text hover:bg-action-button-hover focus-visible:bg-action-button-hover',
-    'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+    'disabled:cursor-not-allowed disabled:hover:bg-transparent',
     className,
   );
 }

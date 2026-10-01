@@ -401,8 +401,8 @@ export default function ConvertActions({ artifact }: { artifact: Artifact }) {
             onClick={() => void run(a)}
             className={cn(
               'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)] border border-border',
-              has(a.tool) ? 'text-text-muted' : 'text-text-muted/50 border-dashed',
-              'hover:text-text hover:border-accent/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+              has(a.tool) ? 'text-text-muted' : 'text-subtle border-dashed',
+              'hover:text-text hover:border-accent/50 transition-colors cursor-pointer disabled:cursor-not-allowed',
             )}
           >
             {busy === a.label ? `${a.label}… ${Math.round(progress * 100)}%` : a.label}

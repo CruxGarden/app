@@ -81,7 +81,7 @@ function StepMark({ status }: { status: PlanStep['status'] }) {
       );
     default:
       return (
-        <span className={cn(base, 'text-text-muted/60')} aria-label="pending">
+        <span className={cn(base, 'text-subtle')} aria-label="pending">
           ·
         </span>
       );
@@ -158,7 +158,7 @@ function SubagentRows({ runs, now }: { runs: SubagentRun[]; now: number }) {
           data-status={run.status}
           className={cn(
             'flex items-center gap-1.5',
-            run.status === 'pending' && 'text-text-muted/70',
+            run.status === 'pending' && 'text-subtle',
             run.status === 'failed' && 'text-error/90',
           )}
           title={run.error ?? run.reply ?? undefined}
@@ -443,13 +443,13 @@ export default function TurnJobCard() {
                   data-status={step.status}
                   className={cn(
                     'flex items-center gap-1.5',
-                    step.status === 'pending' && 'text-text-muted/70',
+                    step.status === 'pending' && 'text-subtle',
                     step.status === 'running' && 'text-text',
                   )}
                 >
                   <StepMark status={step.status} />
                   <span className="truncate">
-                    <span className="font-mono text-text-muted/70 mr-1">{i + 1}.</span>
+                    <span className="font-mono text-subtle mr-1">{i + 1}.</span>
                     {step.title}
                   </span>
                 </li>
@@ -489,7 +489,7 @@ export default function TurnJobCard() {
             </div>
           )}
           {job.check?.note && job.status !== 'checking' && (
-            <div className="text-2xs text-text-muted/80">{job.check.note}</div>
+            <div className="text-2xs text-subtle">{job.check.note}</div>
           )}
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">

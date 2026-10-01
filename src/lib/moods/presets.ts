@@ -5,6 +5,8 @@
  * They vary in: shade, structure, saturation, warmth, contrast, and vibe.
  */
 
+import { EXPEDITION_PRESETS } from './expedition';
+
 export interface MoodPresetDef {
   id: string;
   name: string;
@@ -950,6 +952,7 @@ const PLASMA_MOODS: MoodPresetDef[] = SOFT_TONES.map((t) => ({
 }));
 
 export const MOOD_PRESETS: MoodPresetDef[] = [
+  ...EXPEDITION_PRESETS,
   {
     id: 'plasma',
     name: 'Plasma',

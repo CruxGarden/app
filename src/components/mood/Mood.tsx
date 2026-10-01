@@ -83,7 +83,7 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
             >
               <div
                 className="mt-0.5 mx-0.5 h-1 rounded-[1px]"
-                style={{ backgroundColor: p('accent'), opacity: 0.5 }}
+                style={{ backgroundColor: p('accent'), opacity: 'var(--decoration-opacity)' }}
               />
               <div
                 className="mt-0.5 mx-0.5 h-1 rounded-[1px]"

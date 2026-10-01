@@ -1,3 +1,4 @@
+import { editableColor, colorWithAlpha, type EditableColor } from '@/lib/moods/color-controls';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { APP_TYPOGRAPHY } from '@/lib/moods/typography';
 import ContrastCheck from './ContrastCheck';
@@ -41,7 +42,7 @@ import { SettingsKey } from '@/lib/constants';
  * preset (lib/moods/active.ts) — picking another preset keeps them.
  */
 
-/** Resolve any CSS color expression (var(), color-mix(), rgba) to #rrggbb. */
+/** Resolve the RGB channels and alpha without silently discarding transparency. */
 function useColorResolver(onReady?: () => void) {
   const probe = useRef<HTMLSpanElement | null>(null);
   const readyRef = useRef(onReady);
@@ -58,19 +59,11 @@ function useColorResolver(onReady?: () => void) {
       probe.current = null;
     };
   }, []);
-  return useCallback((cssVar: string): string | null => {
+  return useCallback((cssVar: string): EditableColor | null => {
     const el = probe.current;
     if (!el) return null;
     el.style.color = `var(${cssVar})`;
-    const m = getComputedStyle(el).color.match(/rgba?\(([^)]+)\)/);
-    if (!m) return null;
-    const parts = m[1]!
-      .split(/[\s,/]+/)
-      .filter(Boolean)
-      .map(Number);
-    if (parts.length >= 4 && parts[3] === 0) return null;
-    const hex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
-    return `#${hex(parts[0]!)}${hex(parts[1]!)}${hex(parts[2]!)}`;
+    return editableColor(getComputedStyle(el).color);
   }, []);
 }
 
@@ -86,7 +79,7 @@ interface RowProps {
   overridden: boolean;
   onChange: (value: string) => void;
   onReset: () => void;
-  resolveColor: (cssVar: string) => string | null;
+  resolveColor: (cssVar: string) => EditableColor | null;
   /** re-resolve trigger */
   tick: number;
 }
@@ -135,7 +128,7 @@ function TokenRow({
         </div>
         <div className="text-2xs font-mono text-text-muted truncate">
           {cssVar}
-          {!overridden && isDerived(value) && <span className="ml-1.5 opacity-70">inherits</span>}
+          {!overridden && isDerived(value) && <span className="ml-1.5 text-subtle">inherits</span>}
         </div>
       </div>
 
@@ -143,8 +136,10 @@ function TokenRow({
         {kind === 'color' && (
           <label
             className="relative w-7 h-7 rounded-[var(--radius-sm)] border border-border overflow-hidden cursor-pointer shrink-0"
-            style={{ backgroundColor: swatch ?? 'transparent' }}
-            title={swatch ?? 'transparent'}
+            style={{
+              backgroundColor: swatch ? colorWithAlpha(swatch.hex, swatch.alpha) : 'transparent',
+            }}
+            title={value}
           >
             {!swatch && (
               <span className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent_0_4px,rgba(128,128,128,.35)_4px_8px)]" />
@@ -152,10 +147,30 @@ function TokenRow({
             <input
               type="color"
               aria-label={`${label} color`}
-              value={swatch ?? '#000000'}
-              onChange={(e) => onChange(e.target.value)}
+              value={swatch?.hex ?? '#000000'}
+              onChange={(e) => onChange(colorWithAlpha(e.target.value, swatch?.alpha ?? 1))}
               className="absolute inset-0 opacity-0 cursor-pointer"
             />
+          </label>
+        )}
+        {kind === 'color' && swatch && (
+          <label className="inline-flex items-center gap-1 text-2xs text-text-muted">
+            <input
+              type="number"
+              aria-label={`${label} opacity percent`}
+              title="Color opacity: 0% transparent, 100% opaque"
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(swatch.alpha * 100)}
+              onChange={(e) => {
+                const percent = e.target.valueAsNumber;
+                if (Number.isFinite(percent) && percent >= 0 && percent <= 100)
+                  onChange(colorWithAlpha(swatch.hex, percent / 100));
+              }}
+              className="h-7 w-14 rounded-[var(--radius-sm)] border border-border bg-surface px-1 text-text"
+            />
+            %
           </label>
         )}
         {kind === 'length' && len && (
@@ -222,6 +237,11 @@ function TokenRow({
         <input
           type="text"
           aria-label={`${label} value`}
+          title={
+            kind === 'color'
+              ? 'CSS color: hex, rgba(40, 43, 76, 0.5), or a theme variable'
+              : undefined
+          }
           hidden={kind === 'choice'}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

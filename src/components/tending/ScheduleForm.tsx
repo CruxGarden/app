@@ -527,7 +527,7 @@ export default function ScheduleForm({
                     aria-label={`Remove phase ${i + 1}`}
                     onClick={() => setPhases((list) => list.filter((_, j) => j !== i))}
                     disabled={phases.length <= 1}
-                    className="text-text-muted hover:text-error disabled:opacity-40 px-1 cursor-pointer"
+                    className="text-text-muted hover:text-error px-1 cursor-pointer"
                   >
                     ×
                   </button>
@@ -828,7 +828,7 @@ export default function ScheduleForm({
               aria-label={`Remove action ${i + 1}`}
               onClick={() => setActions((list) => list.filter((_, j) => j !== i))}
               disabled={actions.length <= 1}
-              className="text-text-muted hover:text-error disabled:opacity-40 px-1 cursor-pointer"
+              className="text-text-muted hover:text-error px-1 cursor-pointer"
             >
               ×
             </button>

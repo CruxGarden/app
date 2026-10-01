@@ -182,7 +182,7 @@ export default function Draggable({
         <span
           aria-hidden
           data-testid={`gateway-${id}-grip`}
-          className="text-text-muted/70 text-xs leading-none px-0.5"
+          className="text-subtle text-xs leading-none px-0.5"
           title="Drag to move"
         >
           ⋮⋮

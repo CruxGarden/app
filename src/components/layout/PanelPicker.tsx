@@ -210,7 +210,9 @@ export default function PanelPicker() {
                       className={iconButtonClass(
                         'sm',
                         false,
-                        isPinned ? 'text-accent hover:text-accent' : 'opacity-60 hover:opacity-100',
+                        isPinned
+                          ? 'text-accent hover:text-accent'
+                          : 'opacity-[var(--secondary-action-opacity)] hover:opacity-100',
                       )}
                       onClick={() => togglePin(scope, pane)}
                     >

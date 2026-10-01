@@ -31,7 +31,7 @@ export default function NavigationHistory() {
         size="sm"
         tooltip={{ label: 'Back' }}
         disabled={!back}
-        className="disabled:opacity-30"
+        className=""
         onClick={() => {
           void navigate(-1);
         }}
@@ -43,7 +43,7 @@ export default function NavigationHistory() {
         size="sm"
         tooltip={{ label: 'Forward' }}
         disabled={!forward}
-        className="disabled:opacity-30"
+        className=""
         onClick={() => {
           void navigate(1);
         }}

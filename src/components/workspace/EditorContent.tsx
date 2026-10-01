@@ -775,9 +775,7 @@ export default function EditorContent({
                   : 'Starting dev server…'}
               </p>
               {target.detail && (
-                <p className="text-2xs font-mono text-text-muted/70 max-w-md truncate">
-                  {target.detail}
-                </p>
+                <p className="text-2xs font-mono text-subtle max-w-md truncate">{target.detail}</p>
               )}
             </>
           ) : (

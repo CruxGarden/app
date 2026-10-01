@@ -239,14 +239,14 @@ function RepeaterField({
                 <button
                   onClick={() => moveItem(i, -1)}
                   disabled={i === 0}
-                  className="text-2xs text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
+                  className="text-2xs text-text-muted hover:text-text px-1 cursor-pointer"
                 >
                   &uarr;
                 </button>
                 <button
                   onClick={() => moveItem(i, 1)}
                   disabled={i === value.length - 1}
-                  className="text-2xs text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
+                  className="text-2xs text-text-muted hover:text-text px-1 cursor-pointer"
                 >
                   &darr;
                 </button>

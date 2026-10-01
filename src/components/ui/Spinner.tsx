@@ -21,7 +21,7 @@ export default function Spinner({ size = 16, className }: SpinnerProps) {
         stroke="currentColor"
         strokeWidth="3"
         strokeLinecap="round"
-        className="opacity-20"
+        className="opacity-[var(--decoration-opacity)]"
       />
       <path
         d="M12 2a10 10 0 0 1 10 10"

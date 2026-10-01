@@ -275,10 +275,7 @@ export default function Shell() {
                   <button
                     key={choice.id}
                     disabled={!choice.available}
-                    className={rowClass(
-                      false,
-                      'block disabled:opacity-50 disabled:cursor-not-allowed',
-                    )}
+                    className={rowClass(false, 'block disabled:cursor-not-allowed')}
                     onClick={() => {
                       void navigate(locationPath(choice.id), { replace: true });
                     }}

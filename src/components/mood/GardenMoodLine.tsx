@@ -70,7 +70,7 @@ export default function GardenMoodLine() {
           type="button"
           disabled={busy}
           onClick={() => act('inherit')}
-          className="text-xs text-accent hover:underline cursor-pointer disabled:opacity-50"
+          className="text-xs text-accent hover:underline cursor-pointer "
         >
           Follow {parent}
         </button>
@@ -80,7 +80,7 @@ export default function GardenMoodLine() {
           type="button"
           disabled={busy}
           onClick={() => act('none')}
-          className="text-xs text-accent hover:underline cursor-pointer disabled:opacity-50"
+          className="text-xs text-accent hover:underline cursor-pointer "
         >
           Use the Default Mood
         </button>
@@ -122,7 +122,7 @@ export function KeepLook() {
         type="button"
         disabled={busy}
         onClick={keep}
-        className="text-accent hover:underline cursor-pointer disabled:opacity-50"
+        className="text-accent hover:underline cursor-pointer "
       >
         Keep for {garden.title || 'this Garden'}
       </button>

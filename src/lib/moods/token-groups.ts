@@ -95,6 +95,7 @@ const LAYOUT_KEYS = new Set([
   'radiusSm',
   'radiusLg',
   'buttonRadius',
+  'buttonBorderWidth',
   'inputRadius',
   'cardRadius',
   'chipRadius',
@@ -202,6 +203,10 @@ const HEADER_KEYS = new Set([
 ]);
 const ELEVATION_KEYS = new Set([
   'elevationPanel',
+  'elevationPane',
+  'elevationButton',
+  'elevationPrimaryButton',
+  'buttonFillOverlay',
   'elevationCard',
   'elevationCardHover',
   'elevationModal',
@@ -212,6 +217,10 @@ const ELEVATION_KEYS = new Set([
   'hoverBrightness',
   'activeBrightness',
   'disabledOpacity',
+  'busyOpacity',
+  'inactiveOpacity',
+  'secondaryActionOpacity',
+  'decorationOpacity',
 ]);
 const EDITOR_KEYS = new Set([
   'editorBackground',
@@ -253,6 +262,7 @@ const FOUNDATION_KEYS = new Set([
   'bg',
   'text',
   'textMuted',
+  'textSubtle',
   'accent',
   'accentMuted',
   'border',
@@ -277,7 +287,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'foundation',
     label: 'Foundation',
-    hint: 'The root colors everything else derives from.',
+    hint: 'The root colors everything else derives from. Colors accept hex, rgba() and theme variables; the percentage controls color opacity.',
     match: (k) => FOUNDATION_KEYS.has(k),
   },
   {
@@ -334,7 +344,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'elevation',
     label: 'Elevation & motion',
-    hint: 'Shadows for panels, cards and modals, the modal scrim, and how fast things move (0 = instant).',
+    hint: 'Shadows for workspace panes, panels, cards, buttons and modals; the primary button highlight (none for flat paper); the modal scrim and motion speed (0 = instant).',
     match: (k) => ELEVATION_KEYS.has(k),
   },
   // ── icons ──
@@ -493,6 +503,7 @@ export function tokenKind(key: string): TokenKind {
   if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';
   if (NAME_KEYS.has(key)) return 'text';
   if (TEXT_KEYS.test(key)) return 'text';
+  if (key === 'buttonFillOverlay') return 'text';
   if (/Shadow$|^elevation/.test(key)) return 'text';
   if (/Brightness$|^disabledOpacity$/.test(key)) return 'number';
   if (

@@ -44,7 +44,10 @@ export default function CruxResultCard({
             />
           ) : (
             <div className="h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-accent-muted to-surface text-text-muted">
-              <span className="text-5xl font-display opacity-50" aria-hidden>
+              <span
+                className="text-5xl font-display opacity-[var(--decoration-opacity)]"
+                aria-hidden
+              >
                 {title.slice(0, 1).toUpperCase()}
               </span>
               <span className="text-xs">Preview coming soon</span>

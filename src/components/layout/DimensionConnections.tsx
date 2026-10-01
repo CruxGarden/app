@@ -98,7 +98,7 @@ export default function DimensionConnections({
                         disabled={!link.available}
                         onClick={() => void open(link.node)}
                         title={`${link.direction === 'incoming' ? 'Incoming' : 'Outgoing'} ${link.type}${link.kind ? ` · ${link.kind}` : ''}`}
-                        className={`min-w-0 flex-1 flex items-center gap-2 text-left rounded-lg hover:bg-surface disabled:opacity-50 cursor-pointer ${compact ? 'text-xs px-1 py-1' : 'text-sm p-2'}`}
+                        className={`min-w-0 flex-1 flex items-center gap-2 text-left rounded-lg hover:bg-surface cursor-pointer ${compact ? 'text-xs px-1 py-1' : 'text-sm p-2'}`}
                       >
                         <span aria-hidden="true" className="text-text-muted">
                           {link.direction === 'incoming' ? '←' : '→'}

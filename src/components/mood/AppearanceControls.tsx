@@ -69,7 +69,7 @@ export default function AppearanceControls() {
           type="button"
           onClick={reset}
           disabled={!appearance.customized}
-          className="text-xs text-text-muted hover:text-text disabled:opacity-40 cursor-pointer disabled:cursor-default"
+          className="text-xs text-text-muted hover:text-text cursor-pointer disabled:cursor-default"
         >
           Reset appearance
         </button>

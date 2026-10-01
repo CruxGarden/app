@@ -47,7 +47,14 @@ function Swatch({ pkg }: { pkg: MoodPackage }) {
     return <img src={coverUrl} alt="" className="w-full h-full object-cover" draggable={false} />;
   }
   return (
-    <div className="w-full h-full flex flex-col" style={{ background: c('bg') }}>
+    <div
+      className="w-full h-full flex flex-col"
+      style={{
+        backgroundColor: c('bg'),
+        backgroundImage: o.workspaceTexture,
+        backgroundSize: o.workspaceTextureSize,
+      }}
+    >
       <div
         className="h-3 flex items-center px-1.5 gap-0.5"
         style={{ background: c('surface'), borderBottom: `1px solid ${c('border')}` }}
@@ -59,8 +66,31 @@ function Swatch({ pkg }: { pkg: MoodPackage }) {
         ))}
       </div>
       <div className="flex-1 flex gap-1 p-1.5">
-        <div className="flex-1 rounded-[2px]" style={{ background: c('panel') }} />
-        <div className="w-1/3 rounded-[2px]" style={{ background: c('panel') }} />
+        {['paneWorkshop', 'paneArtifacts'].map((pane, index) => (
+          <div
+            key={pane}
+            className={index === 0 ? 'flex-1 overflow-hidden' : 'w-1/3 overflow-hidden'}
+            style={{
+              background: c('panel'),
+              border: `1px solid ${c('border')}`,
+              borderRadius: o.cardRadius ?? '2px',
+              boxShadow: o.elevationPane ?? 'none',
+            }}
+          >
+            <div
+              className="h-3 m-1 rounded-[2px]"
+              style={{ background: o[`${pane}Header`] ?? c(pane) }}
+            />
+            <div
+              className="h-1 m-2 w-1/2 opacity-[var(--decoration-opacity)]"
+              style={{ background: c('textMuted') }}
+            />
+            <div
+              className="h-1 mx-2 w-1/3 opacity-[var(--decoration-opacity)]"
+              style={{ background: c('textMuted') }}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -104,13 +134,13 @@ function MoodCard({
     .filter(Boolean)
     .join(' · ');
   const iconBtn =
-    'w-7 h-7 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-text-muted hover:text-text hover:bg-action-button-hover active-dim motion-press cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
+    'w-7 h-7 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-text-muted hover:text-text hover:bg-action-button-hover active-dim motion-press cursor-pointer disabled:cursor-not-allowed';
   return (
     <div
       className={cn(
         'group shape-card rounded-[var(--radius)] border bg-panel overflow-hidden flex flex-col transition-[border-color,box-shadow] motion-enter-card',
         worn ? 'border-accent/60' : 'border-border hover:border-accent/40 hover:shadow-card-hover',
-        busy && 'opacity-70',
+        busy && 'opacity-[var(--busy-opacity)]',
       )}
       data-testid={testId}
     >
@@ -148,7 +178,7 @@ function MoodCard({
             </div>
           )}
         </div>
-        <div className="flex items-center shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center shrink-0 opacity-[var(--secondary-action-opacity)] group-hover:opacity-100 transition-opacity">
           <button
             type="button"
             onClick={onExport}
@@ -510,8 +540,8 @@ export default function MoodBrowser() {
         <div className="flex items-baseline justify-between gap-3">
           <SectionLabel as="h3">HyperMoods</SectionLabel>
           <span className="text-2xs text-text-muted text-right">
-            {HYPER_MOODS.length} rooms — a render, a sound and a voice, made as one. Click one to
-            wear it.
+            {HYPER_MOODS.length} Moods — color, texture and sound, made as one. Click one to wear
+            it.
           </span>
         </div>
         <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">

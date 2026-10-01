@@ -79,7 +79,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
         <button
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
-          className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] text-text-muted/60 hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer text-xxs whitespace-nowrap"
+          className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] text-subtle hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer text-xxs whitespace-nowrap"
         >
           <svg
             width="6"
@@ -153,7 +153,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                       style={{ width: `${Math.max(usagePercent, 1)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between mt-1 text-2xs text-text-muted/60">
+                  <div className="flex justify-between mt-1 text-2xs text-subtle">
                     <span>0</span>
                     <span>{formatTokens(info.contextWindow)}</span>
                   </div>
