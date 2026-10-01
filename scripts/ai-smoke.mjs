@@ -12,6 +12,7 @@
  * Providers without keys are skipped. Exits non-zero if any attempted
  * provider fails.
  */
+import { PROVIDERS } from '../src/ai/providers';
 import { streamText, tool, jsonSchema, stepCountIs } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -23,20 +24,24 @@ const targets = [];
 if (process.env.ANTHROPIC_API_KEY) {
   targets.push({
     name: 'anthropic',
-    model: createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })('claude-sonnet-5'),
+    model: createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(
+      PROVIDERS.anthropic.defaultModel,
+    ),
   });
 }
 if (process.env.OPENAI_API_KEY) {
   targets.push({
     name: 'openai',
-    model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY })('gpt-5.6-terra'),
+    model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).responses(
+      PROVIDERS.openai.defaultModel,
+    ),
   });
 }
 if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
   targets.push({
     name: 'google',
     model: createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })(
-      'gemini-3.6-flash',
+      PROVIDERS.google.defaultModel,
     ),
   });
 }
@@ -75,7 +80,7 @@ if (targets.length === 0) {
 let failures = 0;
 
 for (const target of targets) {
-  process.stdout.write(`${target.name.padEnd(24)} … `);
+  process.stdout.write(`${target.name.padEnd(24)} [${target.model.modelId}] … `);
   const started = Date.now();
   try {
     let toolCalled = false;
@@ -106,7 +111,9 @@ for (const target of targets) {
         }),
       },
       stopWhen: stepCountIs(4),
-      maxOutputTokens: 200,
+      maxOutputTokens: 4096,
+      abortSignal: AbortSignal.timeout(60_000),
+      maxRetries: 0,
     });
 
     for await (const part of result.fullStream) {

@@ -106,7 +106,7 @@ export function modelIdFor(config: ModelConfig): string {
  * reasoning models reject the parameter.
  */
 export function temperatureFor(config: ModelConfig): 'default' | undefined {
-  return config.provider === 'openai' ? 'default' : undefined;
+  return config.provider === 'openai' || config.provider === 'anthropic' ? 'default' : undefined;
 }
 
 /** Why a config cannot be used, or null when it can. */
