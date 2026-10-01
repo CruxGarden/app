@@ -138,6 +138,16 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
       .click();
     const card = online.page.getByTestId('explore-tool-pocket-notes');
     await expect(card).toBeVisible();
+    api.state.publishedDownloadDelayMs = 30_000;
+    await card.getByRole('button', { name: 'Install', exact: true }).click();
+    await expect(card.getByRole('progressbar')).toBeVisible();
+    await expect
+      .poll(async () => Number(await card.getByRole('progressbar').getAttribute('value')))
+      .toBeGreaterThan(0);
+    await card.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(card).toContainText('Cancelled. You can retry');
+    await expect(card.getByTestId('tool-installed')).toHaveCount(0);
+    api.state.publishedDownloadDelayMs = undefined;
     await card.getByRole('button', { name: 'Install', exact: true }).click();
     await expect(card.getByTestId('tool-installed')).toBeVisible();
     await online.page.keyboard.press('Escape');

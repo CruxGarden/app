@@ -78,14 +78,65 @@ export function getDownloadUrl(username: string, slug: string, artifactId: strin
   return `${authorPath(username)}/cruxes/${encodeURIComponent(slug)}/artifacts/${encodeURIComponent(artifactId)}/download`;
 }
 
+export interface DownloadProgress {
+  received: number;
+  total?: number;
+}
+
+/** Downloads have a separate budget from metadata requests and release their
+ * reader/timers on failure or cancellation. Never hand a partial Blob to import. */
 export async function downloadArtifact(
   username: string,
   slug: string,
   artifactId: string,
   signal?: AbortSignal,
+  onProgress?: (progress: DownloadProgress) => void,
 ): Promise<Blob> {
-  const res = await request(getDownloadUrl(username, slug, artifactId), signal);
-  return res.blob();
+  const deadline = new AbortController();
+  const combined = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
+  const expired = () =>
+    deadline.abort(new DOMException('Download stalled. Please retry.', 'TimeoutError'));
+  let idle = setTimeout(expired, 60_000);
+  const overall = setTimeout(
+    () => deadline.abort(new DOMException('Download took too long. Please retry.', 'TimeoutError')),
+    15 * 60_000,
+  );
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  try {
+    combined.throwIfAborted();
+    const res = await fetch(getDownloadUrl(username, slug, artifactId), { signal: combined });
+    if (!res.ok) throw new PublicApiError(res.status);
+    if (!res.body) throw new Error('The download was empty. Please retry.');
+    const length = Number(res.headers.get('content-length'));
+    const total = !res.headers.get('content-encoding') && length > 0 ? length : undefined;
+    const limit = 500 * 1024 * 1024;
+    if (total && total > limit) throw new Error('This download exceeds the 500 MB limit.');
+    reader = res.body.getReader();
+    let received = 0;
+    const chunks: BlobPart[] = [];
+    onProgress?.({ received, total });
+    while (true) {
+      combined.throwIfAborted();
+      const { done, value } = await reader.read();
+      combined.throwIfAborted();
+      if (done) break;
+      received += value.byteLength;
+      if (received > limit) throw new Error('This download exceeds the 500 MB limit.');
+      chunks.push(value as BlobPart);
+      clearTimeout(idle);
+      idle = setTimeout(expired, 60_000);
+      onProgress?.({ received, total });
+    }
+    if (total && received !== total) throw new Error('The download was incomplete. Please retry.');
+    return new Blob(chunks, {
+      type: res.headers.get('content-type') || 'application/octet-stream',
+    });
+  } finally {
+    clearTimeout(idle);
+    clearTimeout(overall);
+    await reader?.cancel().catch(() => undefined);
+    reader?.releaseLock();
+  }
 }
 
 // ── Explore ───────────────────────────────────────────

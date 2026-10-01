@@ -1,3 +1,4 @@
+import { confirmDialog } from '@/stores/dialogStore';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { linkClass } from '@/components/ui/button-class';
@@ -78,6 +79,7 @@ function MoodCard({
   onApply,
   onExport,
   onPublish,
+  onUnshare,
   onDelete,
   canPublish,
   testId,
@@ -88,6 +90,7 @@ function MoodCard({
   onApply: () => void;
   onExport: () => void;
   onPublish?: () => void;
+  onUnshare?: () => void;
   onDelete?: () => void;
   canPublish?: boolean;
   testId: string;
@@ -163,16 +166,27 @@ function MoodCard({
               disabled={busy || !canPublish}
               title={
                 canPublish
-                  ? pkg.publishedCruxId
+                  ? pkg.publishedAt
                     ? 'Share the update on crux.garden'
                     : 'Share on crux.garden'
                   : 'Connect your account (Settings) to share'
               }
-              aria-label={`${pkg.publishedCruxId ? 'Share update of' : 'Share'} ${pkg.name}`}
+              aria-label={`${pkg.publishedAt ? 'Share update of' : 'Share'} ${pkg.name}`}
               className={iconBtn}
             >
               <ShareIcon size={13} />
             </button>
+          )}
+          {onUnshare && pkg.publishedAt && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onUnshare}
+              disabled={busy || !canPublish}
+              aria-label={`Unshare ${pkg.name}`}
+            >
+              Unshare
+            </Button>
           )}
           {onDelete && (
             <button
@@ -180,7 +194,11 @@ function MoodCard({
               onClick={onDelete}
               disabled={busy || worn}
               aria-label={`Delete Mood ${pkg.name}`}
-              title={worn ? 'Worn here — wear another Mood to delete this one' : 'Delete'}
+              title={
+                worn
+                  ? 'Worn here — wear another Mood to delete this one'
+                  : 'Delete from this Garden only; the public edition stays shared'
+              }
               className={cn(iconBtn, 'hover:text-error')}
             >
               <CloseIcon size={13} />
@@ -277,6 +295,37 @@ export default function MoodBrowser() {
       say(`Shared "${published.name}" — it's on crux.garden and in Explore → Moods.`);
     } catch (err) {
       say(err instanceof Error ? `Sharing failed: ${err.message}` : 'Sharing failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const doUnshare = async (pkg: MoodPackage) => {
+    if (
+      !(await confirmDialog({
+        title: `Unshare ${pkg.name}?`,
+        message:
+          'Remove this Mood from your public Garden, Explore and its shared link. Your saved Mood and its assets stay here. Downloaded copies belong to their recipients.',
+        confirmLabel: 'Unshare',
+        danger: true,
+      }))
+    )
+      return;
+    setBusy(pkg.id);
+    try {
+      const [{ unshareMood }, { getServices }, { unpublishPipeline }] = await Promise.all([
+        import('@/lib/moods/unshare-mood'),
+        import('@/services'),
+        import('@/services/publish'),
+      ]);
+      await unshareMood(pkg, {
+        findCrux: (id) => getServices().crux.findById(id),
+        unpublish: unpublishPipeline,
+      });
+      say(`Unshared "${pkg.name}". Your saved Mood is still here.`);
+    } catch (error) {
+      say(
+        error instanceof Error ? `Unshare failed: ${error.message}` : 'Unshare failed. Try again.',
+      );
     } finally {
       setBusy(null);
     }
@@ -525,14 +574,27 @@ export default function MoodBrowser() {
               onApply={() => void doApply(pkg)}
               onExport={() => void doExport(pkg)}
               onPublish={() => void doPublish(pkg)}
+              onUnshare={() => void doUnshare(pkg)}
               canPublish={isAuthenticated}
               onDelete={() => {
-                setBusy(pkg.id);
-                void deleteMood(pkg.id)
-                  .catch((error) =>
-                    say(error instanceof Error ? error.message : 'Could not delete this Mood.'),
+                void (async () => {
+                  if (
+                    !(await confirmDialog({
+                      title: `Delete Mood ${pkg.name}?`,
+                      message:
+                        'Delete this saved Mood from your Garden. Its public edition stays shared; use Unshare first if you want to remove that too.',
+                      confirmLabel: 'Delete locally',
+                      danger: true,
+                    }))
                   )
-                  .finally(() => setBusy(null));
+                    return;
+                  setBusy(pkg.id);
+                  void deleteMood(pkg.id)
+                    .catch((error) =>
+                      say(error instanceof Error ? error.message : 'Could not delete this Mood.'),
+                    )
+                    .finally(() => setBusy(null));
+                })();
               }}
               testId={`mood-${pkg.id}`}
             />

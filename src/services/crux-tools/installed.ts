@@ -1,3 +1,4 @@
+import type { DownloadProgress } from '@/api/public';
 import { useEffect, useState } from 'react';
 import { SettingsKey } from '@/lib/constants';
 import { getSetting, setSetting, setSettingDurably } from '@/services/settings';
@@ -91,7 +92,15 @@ export interface PublishedToolCrux {
 }
 
 export interface InstallToolDeps {
-  apiDownload: (username: string, slug: string, artifactId: string) => Promise<Blob>;
+  apiDownload: (
+    username: string,
+    slug: string,
+    artifactId: string,
+    signal?: AbortSignal,
+    onProgress?: (progress: DownloadProgress) => void,
+  ) => Promise<Blob>;
+  signal?: AbortSignal;
+  onDownloadProgress?: (progress: DownloadProgress) => void;
   putBlob: (bytes: Uint8Array | Blob) => Promise<string>;
   onProgress?: (done: number, total: number) => void;
 }
@@ -120,13 +129,24 @@ export async function installToolFromPublished(
       'This tool needs to be republished as a single package before it can be installed.',
     );
   const previous = installedTool(publishedToolId(crux.id));
+  deps.signal?.throwIfAborted();
   deps.onProgress?.(0, 1);
-  const blob = await deps.apiDownload(crux.author_username, crux.slug, reference.artifactId);
+  const blob = await deps.apiDownload(
+    crux.author_username,
+    crux.slug,
+    reference.artifactId,
+    deps.signal,
+    deps.onDownloadProgress,
+  );
+  deps.signal?.throwIfAborted();
   const { manifest } = await openToolPackage(blob, id, reference.fingerprint);
   if (getSqliteClient() !== owner)
     throw new Error('The local connection changed. Retry this installation.');
   if (previous?.fingerprint === reference.fingerprint) return previous;
   const fingerprint = await deps.putBlob(blob);
+  deps.signal?.throwIfAborted();
+  if (getSqliteClient() !== owner)
+    throw new Error('The local connection changed. Retry this installation.');
   const services = getServices();
   const holder = await services.crux.create({
     title: manifest.name,
@@ -140,6 +160,7 @@ export async function installToolFromPublished(
     },
   });
   try {
+    deps.signal?.throwIfAborted();
     await services.artifact.registerMany([
       {
         resourceId: holder.id,
@@ -151,6 +172,7 @@ export async function installToolFromPublished(
         meta: { path: TOOL_PACKAGE_PATH },
       },
     ]);
+    deps.signal?.throwIfAborted();
   } catch (error) {
     await services.crux.delete(holder.id);
     throw error;

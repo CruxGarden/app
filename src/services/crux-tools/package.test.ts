@@ -97,7 +97,13 @@ describe('single-entity tool packages', () => {
       apiDownload,
       putBlob: save,
     });
-    expect(apiDownload).toHaveBeenCalledExactlyOnceWith('keeper', 'p5', 'package-artifact');
+    expect(apiDownload).toHaveBeenCalledExactlyOnceWith(
+      'keeper',
+      'p5',
+      'package-artifact',
+      undefined,
+      undefined,
+    );
     expect(save).toHaveBeenCalledTimes(1);
     const services = getServices();
     const artifacts = await services.artifact.findByResource('crux', tool.cruxId);
@@ -111,6 +117,34 @@ describe('single-entity tool packages', () => {
     );
     const source = files.find((file) => file.meta?.path === 'src/editor.ts')!;
     expect(await services.artifact.readContent(source.id)).toBe('export const editor = true;');
+  });
+
+  it('cancels a replacement without changing the installed tool, then retries successfully', async () => {
+    const blob = await packTool(manifest, inputs());
+    const crux = await published(blob);
+    const first = await installToolFromPublished(crux, { apiDownload: async () => blob, putBlob });
+    const next = await packTool({ ...manifest, name: 'Updated sketch' }, inputs());
+    const update = await published(next);
+    const controller = new AbortController();
+    const save = vi.fn(putBlob);
+    await expect(
+      installToolFromPublished(update, {
+        apiDownload: async () => {
+          controller.abort();
+          return next;
+        },
+        putBlob: save,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    expect(save).not.toHaveBeenCalled();
+    expect(installedTool(first.id)).toEqual(first);
+    const installed = await installToolFromPublished(update, {
+      apiDownload: async () => next,
+      putBlob,
+    });
+    expect(installed.manifest?.name).toBe('Updated sketch');
+    expect(installedTool(first.id)?.cruxId).toBe(installed.cruxId);
   });
 
   it('keeps the previous installation when the download does not match', async () => {

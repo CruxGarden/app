@@ -30,7 +30,7 @@ export default function PublishedCreationCard({
         crux={crux}
         canInstall={ready}
         onOpen={open}
-        onInstall={async (onProgress) => {
+        onInstall={async (options) => {
           const [{ installToolFromPublished }, { putBlob }] = await Promise.all([
             import('@/services/crux-tools/installed'),
             import('@/services/blobs'),
@@ -38,7 +38,7 @@ export default function PublishedCreationCard({
           await installToolFromPublished(crux, {
             apiDownload: publicApi.downloadArtifact,
             putBlob,
-            onProgress,
+            ...options,
           });
         }}
       />

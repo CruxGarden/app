@@ -69,6 +69,37 @@ test.describe('publish + discover moods (mocked API)', () => {
       expect(paths).toEqual(['index.html', 'mood.cruxmood', 'mood.json']);
       expect((moodCrux!.meta as Record<string, unknown>).mood).toMatchObject({ section: 'Dark' });
 
+      // A failed unshare keeps the public badge and saved Mood; retry removes
+      // the visitor-facing edition while retaining the local library entry.
+      api.state.failUnpublish = true;
+      await page.getByRole('button', { name: 'Unshare Sea Glass', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Unshare Sea Glass?' })
+        .getByRole('button', { name: 'Unshare', exact: true })
+        .click();
+      await expect(page.getByRole('status').filter({ hasText: 'Unshare failed:' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Share update of Sea Glass' })).toBeVisible();
+      expect(api.state.cruxes[moodCrux!.id as string]).toBeDefined();
+      api.state.failUnpublish = false;
+      await page.getByRole('button', { name: 'Unshare Sea Glass', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Unshare Sea Glass?' })
+        .getByRole('button', { name: 'Unshare', exact: true })
+        .click();
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Unshared "Sea Glass"' }),
+      ).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Apply Sea Glass' })).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Unshare Sea Glass', exact: true }),
+      ).toHaveCount(0);
+      const visitor = await fetch(`${api.url}/authors/tester/cruxes/${moodCrux!.slug}`);
+      expect(visitor.status).toBe(404);
+      await page.getByRole('button', { name: 'Share Sea Glass', exact: true }).click();
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Shared "Sea Glass"' }),
+      ).toBeVisible();
+
       // Explore → Moods shows it with a swatch; Install pulls the package from the API
       await showPane(page, 'Explore');
       await page

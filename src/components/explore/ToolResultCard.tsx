@@ -1,7 +1,7 @@
 import ExploreCreator from './ExploreCreator';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui';
-import type { ExploreCrux } from '@/api/public';
+import type { ExploreCrux, DownloadProgress } from '@/api/public';
 import { toolManifest } from '@/services/crux-tools/registry';
 import { useInstalledTools, publishedToolId } from '@/services/crux-tools/installed';
 
@@ -19,7 +19,10 @@ export default function ToolResultCard({
   crux: ExploreCrux;
   canInstall: boolean;
   onOpen: () => void;
-  onInstall: (report: (done: number, total: number) => void) => Promise<void>;
+  onInstall: (options: {
+    signal: AbortSignal;
+    onDownloadProgress: (progress: DownloadProgress) => void;
+  }) => Promise<void>;
 }) {
   const id = typeof crux.meta?.template === 'string' ? crux.meta.template : null;
   const manifest = id ? toolManifest(id) : null;
@@ -30,17 +33,29 @@ export default function ToolResultCard({
     !!current && !!packageRef?.fingerprint && current.fingerprint !== packageRef.fingerprint;
   const already = !!current && !updateAvailable;
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<DownloadProgress | null>(null);
+  const controller = useRef<AbortController | null>(null);
+  useEffect(() => () => controller.current?.abort(), []);
   const [note, setNote] = useState<string | null>(null);
   const run = async () => {
+    if (controller.current) return;
+    const pending = new AbortController();
+    controller.current = pending;
     setBusy(true);
     setNote(null);
     try {
-      await onInstall((done, total) => setProgress({ done, total }));
+      await onInstall({ signal: pending.signal, onDownloadProgress: setProgress });
       setNote('Installed');
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Failed');
+      setNote(
+        pending.signal.aborted
+          ? 'Cancelled. You can retry; existing tools are unchanged.'
+          : err instanceof Error
+            ? err.message
+            : 'Download failed. Try again.',
+      );
     } finally {
+      controller.current = null;
       setBusy(false);
       setProgress(null);
     }
@@ -79,7 +94,9 @@ export default function ToolResultCard({
         ) : canInstall ? (
           <Button size="sm" onClick={() => void run()} loading={busy}>
             {progress
-              ? `Installing ${progress.done}/${progress.total}`
+              ? progress.total && progress.received >= progress.total
+                ? 'Checking package…'
+                : 'Downloading…'
               : updateAvailable
                 ? 'Install update'
                 : size
@@ -89,8 +106,27 @@ export default function ToolResultCard({
         ) : (
           <span className="text-xs text-text-muted">Open Crux Garden to install</span>
         )}
+        {busy && (
+          <Button size="sm" variant="ghost" onClick={() => controller.current?.abort()}>
+            Cancel
+          </Button>
+        )}
         {note && !already ? <span className="text-xs text-text-muted">{note}</span> : null}
       </div>
+      {busy && progress && (
+        <div className="text-xs text-text-muted space-y-1" role="status">
+          <p>
+            {(progress.received / 1024 ** 2).toFixed(1)} MB
+            {progress.total ? ` of ${(progress.total / 1024 ** 2).toFixed(1)} MB` : ' downloaded'}
+          </p>
+          <progress
+            aria-label={`Downloading ${name}`}
+            className="w-full accent-accent"
+            max={progress.total ?? 1}
+            value={progress.total ? progress.received : undefined}
+          />
+        </div>
+      )}
     </div>
   );
 }

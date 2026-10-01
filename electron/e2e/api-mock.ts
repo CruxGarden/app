@@ -30,6 +30,7 @@ export interface MockApi {
     failPublish: boolean;
     failUnpublish?: boolean;
     failPublishedDownloadPath?: string;
+    publishedDownloadDelayMs?: number;
     /** Refuse one recovery listing page to exercise visible retry. */
     failCruxPage?: number;
     /** This server's own URL (for canned file links). */
@@ -316,6 +317,22 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       if (!f) return send(404, { statusCode: 404, message: 'No file' });
       if (state.failPublishedDownloadPath === f.path)
         return send(503, { message: 'Published download interrupted' });
+      if (state.publishedDownloadDelayMs) {
+        log.push(`${method} ${path} -> 200 (streaming)`);
+        res.writeHead(200, {
+          'Content-Type': f.mime,
+          'Content-Length': f.bytes.length,
+          'Access-Control-Allow-Origin': '*',
+        });
+        const split = Math.max(1, Math.floor(f.bytes.length / 2));
+        res.write(f.bytes.subarray(0, split));
+        const timer = setTimeout(
+          () => res.end(f.bytes.subarray(split)),
+          state.publishedDownloadDelayMs,
+        );
+        res.on('close', () => clearTimeout(timer));
+        return;
+      }
       return sendRaw(200, f.mime, f.bytes);
     }
 
