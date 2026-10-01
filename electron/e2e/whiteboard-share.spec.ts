@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { launchApp } from './launch';
@@ -94,6 +94,24 @@ test('Whiteboard: PNG and SVG outputs, and the drawing shares as a view-mode pag
       await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({
         timeout: 6 * 60_000,
       });
+      await expect(
+        page.getByText('Your first Crux is live! Copy its link or save a share card from Share.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+      const cardPath = join(first.dir, 'share-card.png');
+      await appDownload(first.app, cardPath);
+      await share.getByRole('button', { name: 'Save share card', exact: true }).click();
+      expect(await first.app.evaluate(() => (globalThis as any).shareCardDownload)).toBe(
+        'completed',
+      );
+      const card = readFileSync(cardPath);
+      expect(card.subarray(1, 4).toString()).toBe('PNG');
+      expect(card.readUInt32BE(16)).toBe(1200);
+      expect(card.readUInt32BE(20)).toBe(630);
+      const cardEvidence = resolve(__dirname, '../../docs/quality-of-life');
+      mkdirSync(cardEvidence, { recursive: true });
+      writeFileSync(join(cardEvidence, 'share-card.png'), card);
       const paths = (api.state.published[id] ?? []).map((f) => f.path);
       expect(paths).toEqual(
         expect.arrayContaining([
@@ -112,3 +130,14 @@ test('Whiteboard: PNG and SVG outputs, and the drawing shares as a view-mode pag
     await api.close();
   }
 });
+
+async function appDownload(app: import('@playwright/test').ElectronApplication, file: string) {
+  await app.evaluate(({ session }, path) => {
+    (globalThis as any).shareCardDownload = new Promise((resolve) => {
+      session.defaultSession.once('will-download', (_event, item) => {
+        item.setSavePath(path);
+        item.once('done', (_event, state) => resolve(state));
+      });
+    });
+  }, file);
+}

@@ -1,3 +1,4 @@
+import { claimFirstPublication } from '@/services/first-publication';
 import { captureGardenId } from './gardenContext';
 import { uniqueSlug } from '@/lib/slug';
 import { flushNotebook } from '@/services/notebook-lifecycle';
@@ -743,6 +744,15 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           }
         }
         void playCue('published', mergedCrux.id);
+        if (!crux.meta?.publishedAt)
+          void claimFirstPublication(mergedCrux.id)
+            .then((first) => {
+              if (first)
+                toast('Your first Crux is live! Copy its link or save a share card from Share.');
+            })
+            .catch(() => {
+              /* A missed acknowledgement must not turn a successful publish into a failure. */
+            });
         return true;
       } catch (err) {
         console.error('[publish] failed:', err);

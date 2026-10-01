@@ -88,6 +88,8 @@ export interface UIState {
   paneOrder: PaneType[];
   paneVisibility: Record<PaneType, boolean>;
   mosaicLayout: MosaicNode<PaneType> | null;
+  /** Temporary view only; never replaces the saved pane geometry. */
+  focusedPane: PaneType | null;
   activeCruxId: string | null;
   /**
    * The active Crux opened on a layout of its own from before (false) or on a
@@ -703,6 +705,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
     paneOrder: initialLayout.paneOrder,
     paneVisibility: initialLayout.paneVisibility,
     mosaicLayout: initialLayout.mosaicLayout,
+    focusedPane: null,
     activeCruxId: null,
     layoutFresh: false,
 
@@ -864,6 +867,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
 
         set({
           activeCruxId: id,
+          focusedPane: null,
           layoutFresh,
           workshopView:
             getSetting(`cruxgarden:workshop-view:${id}`) === 'advanced' ? 'advanced' : 'clean',
@@ -882,6 +886,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
         const layout = global ? validateLayout(global) : getInitialLayout();
         set({
           activeCruxId: null,
+          focusedPane: null,
           layoutFresh: false,
           paneOrder: layout.paneOrder,
           paneVisibility: layout.paneVisibility,
@@ -918,6 +923,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
         const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
 
         set({
+          focusedPane: null,
           paneVisibility: newVisibility,
           paneOrder: newOrder,
           mosaicLayout: newMosaic,
@@ -956,6 +962,7 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
       }
       const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
       set({
+        focusedPane: null,
         paneVisibility: { ...prev.paneVisibility, [pane]: visible },
         mosaicLayout: newMosaic,
         paneOrder: newOrder,
@@ -1001,10 +1008,15 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
         for (const pane of DEFAULT_PANE_ORDER) {
           newVisibility[pane] = leafSet.has(pane);
         }
-        set({ mosaicLayout: newLayout, paneVisibility: newVisibility, paneOrder: newLeaves });
+        set({
+          focusedPane: null,
+          mosaicLayout: newLayout,
+          paneVisibility: newVisibility,
+          paneOrder: newLeaves,
+        });
       } else {
         // Resize only — just update the tree, skip visibility/order
-        set({ mosaicLayout: newLayout });
+        set({ focusedPane: null, mosaicLayout: newLayout });
       }
 
       // Drag frames are debounced; applying a named arrangement is an explicit save.

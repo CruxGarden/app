@@ -151,6 +151,13 @@
       "ledger": "cruxgarden:browser:"
     },
     {
+      "key": "cruxgarden:celebratePublication",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:celebratePublication"
+    },
+    {
       "key": "cruxgarden:composer:",
       "sources": [
         "src/components/garden/NewCruxModal.tsx",
@@ -228,6 +235,13 @@
         "src/components/workspace/FirstProjectGuide.tsx"
       ],
       "ledger": "cruxgarden:first-project:"
+    },
+    {
+      "key": "cruxgarden:firstPublication",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:firstPublication"
     },
     {
       "key": "cruxgarden:fn-secrets:",
@@ -535,6 +549,13 @@
         "src/lib/constants.ts"
       ],
       "ledger": "cruxgarden:resonanceVolume"
+    },
+    {
+      "key": "cruxgarden:resumeWorkspace",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:resumeWorkspace"
     },
     {
       "key": "cruxgarden:schedules",

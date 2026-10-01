@@ -26,6 +26,9 @@ export function isSecretSettingKey(key: string): boolean {
 
 /** All settings keys used in getSetting/setSetting. */
 export enum SettingsKey {
+  ResumeWorkspace = 'cruxgarden:resumeWorkspace',
+  CelebratePublication = 'cruxgarden:celebratePublication',
+  FirstPublication = 'cruxgarden:firstPublication',
   /** Last eight Explore topics explicitly selected, remembered on this installation. */
   ExploreRecentTags = 'cruxgarden:exploreRecentTags',
   // Identity

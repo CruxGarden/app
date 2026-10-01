@@ -652,6 +652,27 @@
       "target": "Crux local presentation",
       "preservation": "Preserve the selected walkthrough step locally without changing project content or publication.",
       "status": "retained"
+    },
+    {
+      "key": "cruxgarden:resumeWorkspace",
+      "group": "device-presentation",
+      "target": "installation/settings",
+      "preservation": "Opt-in startup navigation only; references the existing validated open-workspace registry.",
+      "status": "implemented"
+    },
+    {
+      "key": "cruxgarden:celebratePublication",
+      "group": "device-presentation",
+      "target": "installation/settings",
+      "preservation": "Optional first-publication acknowledgement preference.",
+      "status": "implemented"
+    },
+    {
+      "key": "cruxgarden:firstPublication",
+      "group": "device-presentation",
+      "target": "installation/settings",
+      "preservation": "First successfully published Crux marker; prevents repeat acknowledgements across restarts.",
+      "status": "implemented"
     }
   ]
 }

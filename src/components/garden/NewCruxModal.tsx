@@ -789,7 +789,7 @@ export default function NewCruxModal({
           className={buttonClass('ghost', 'sm', 'self-start -ml-3 mb-3')}
           onClick={() => setView('crux')}
         >
-          Just a Crux
+          Just a Crux — one project
         </button>
         <Suspense fallback={<p role="status">Loading starting points…</p>}>
           <Undertakings
@@ -883,7 +883,7 @@ export default function NewCruxModal({
               className={linkClass('text-sm')}
               onClick={() => setView('undertakings')}
             >
-              Undertakings — start a Garden
+              Undertakings — a collection of related projects
             </button>
           </div>
           {/* Name */}

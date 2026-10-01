@@ -1,3 +1,5 @@
+import StartSettings from './StartSettings';
+import LibrarySettings from './LibrarySettings';
 import { useRef } from 'react';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import WorkspaceLayoutsSettings from '@/components/settings/WorkspaceLayoutsSettings';
@@ -17,6 +19,8 @@ export default function Settings() {
   const aiEnabled = useAiEnabled();
   const sections = useRef<Record<string, HTMLElement | null>>({});
   const groups = [
+    { id: 'start', label: 'Getting started', content: <StartSettings /> },
+    { id: 'library', label: 'Tools and Moods', content: <LibrarySettings /> },
     {
       id: 'account',
       label: 'Account',

@@ -365,12 +365,13 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'export_crux',
     description:
-      "Export a crux as a .crux archive — files, conversation and every snapshot — to the person's downloads. The complete history, in one file.",
+      "Export a crux as a .crux archive — files, conversation and every snapshot — to the person's downloads. The complete history, in one file. Use format share-card for a local PNG of an already published Crux’s current title, author and public link, styled with the current Mood.",
     input_schema: {
       type: 'object',
       properties: {
         cruxId: { type: 'string' },
         title: { type: 'string' },
+        format: { type: 'string', enum: ['archive', 'share-card'] },
         runtime: {
           type: 'string',
           enum: ['reference', 'included'],
@@ -623,6 +624,8 @@ export function validateGardenTool(name: string, input: Record<string, unknown>)
     case 'export_crux':
       if (!str(input.cruxId, 80) && !str(input.title, 200))
         return { valid: false, error: 'give a cruxId or a title' };
+      if (input.format !== undefined && !['archive', 'share-card'].includes(String(input.format)))
+        return { valid: false, error: 'Choose archive or share-card.' };
       return { valid: true };
     case 'export_cruxspace':
       if (!str(input.cruxspaceId, 80)) return { valid: false, error: 'cruxspaceId is required' };
@@ -1270,6 +1273,18 @@ async function runGardenToolInner(
       const { exportCrux } = await import('@/services/crux-io');
       const { useAppStore } = await import('@/stores/appStore');
       const author = useAppStore.getState().author;
+      if (input.format === 'share-card') {
+        if (!crux.meta?.publishedAt || !author)
+          return 'Share cards require an already published Crux and its author.';
+        const { downloadShareCard } = await import('@/services/share-card');
+        const { publicCruxUrl } = await import('@/lib/public-url');
+        await downloadShareCard(
+          crux.title || 'My Crux',
+          author.username,
+          publicCruxUrl(author.username, crux.slug),
+        );
+        return 'Saved crux-garden-share.png to the person’s downloads.';
+      }
       const result = await exportCrux({
         cruxId: crux.id,
         runtime: input.runtime as 'reference' | 'included' | undefined,

@@ -97,6 +97,8 @@ test('accessibility scan of entry, creation, Settings and workspace', async () =
     await page.keyboard.press('Escape');
     await showPane(page, 'Settings');
     for (const name of [
+      'Getting started',
+      'Tools and Moods',
       'Account',
       'AI and agents',
       'Garden and backups',
@@ -114,6 +116,9 @@ test('accessibility scan of entry, creation, Settings and workspace', async () =
     await hidePane(page, 'Settings');
     await createCrux(page, 'Accessible workspace');
     await scan(page, 'workspace');
+    await page.getByTestId('workspace-status').locator('summary').click();
+    await scan(page, 'work-status-expanded');
+    await page.getByTestId('workspace-status').locator('summary').click();
     await page.getByTestId('model-selector').click();
     await scan(page, 'models');
     await page.keyboard.press('Escape');

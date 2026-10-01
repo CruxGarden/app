@@ -17,7 +17,9 @@ import { waitForSitePreview, openSite, pollBody, painted, replaceEditor } from '
  * jobs/publish-undertakings.spec.ts (opt-in) and a visitor's browser by hand.
  */
 async function startUndertaking(page: Page, id: string, name: string) {
-  await page.getByRole('button', { name: 'Explore undertakings', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Explore undertakings — a collection of projects', exact: true })
+    .click();
   await page.locator(`[data-undertaking-id="${id}"]`).click();
   await page.getByRole('button', { name: 'Start undertaking', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Add Crux', exact: true })).toBeHidden({

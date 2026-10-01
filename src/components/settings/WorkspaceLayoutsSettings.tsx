@@ -8,6 +8,7 @@ import {
   saveWorkspaceLayout,
   applyWorkspaceLayout,
   arrangeWorkspacePanels,
+  applyWorkspacePreset,
   deleteWorkspaceLayout,
 } from '@/services/workspace-layouts';
 
@@ -24,6 +25,24 @@ export default function WorkspaceLayoutsSettings() {
       title="Workspace layouts"
       description="Save an arrangement of panels and reuse it in the Crux you’re working on. Your files and drafts stay where they are."
     >
+      <div className="flex flex-wrap gap-2 mb-3">
+        {(['make', 'review'] as const).map((preset) => (
+          <Button
+            key={preset}
+            size="sm"
+            disabled={!cruxId || busy}
+            onClick={() => {
+              setBusy(true);
+              setError('');
+              void applyWorkspacePreset(ui, preset)
+                .catch((e) => setError(String(e)))
+                .finally(() => setBusy(false));
+            }}
+          >
+            {preset === 'make' ? 'Make: Workshop + Artifacts' : 'Review: Workshop + Share'}
+          </Button>
+        ))}
+      </div>
       <Button
         size="sm"
         className="mb-3"

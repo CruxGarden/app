@@ -66,7 +66,12 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
       let page = instance.page;
       await page.setViewportSize({ width: 1800, height: 1100 });
       await enterGarden(page);
-      await page.getByRole('button', { name: 'Explore undertakings', exact: true }).click();
+      await page
+        .getByRole('button', {
+          name: 'Explore undertakings — a collection of projects',
+          exact: true,
+        })
+        .click();
       await page.locator(`[data-undertaking-id="${entry.id}"]`).click();
       await expect(page.getByText(entry.firstTask, { exact: false })).toBeVisible();
       await page.screenshot({ path: join(out, 'picker.png') });
@@ -182,8 +187,14 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
         await expect(game.getByRole('heading', { name: 'My firefly game' })).toBeVisible({
           timeout: 60000,
         });
-        for (let n = 0; n < original.target; n++)
-          await game.getByRole('button', { name: 'Catch the firefly' }).click();
+        // The target moves after every catch; keyboard play verifies the same real button
+        // without racing a pointer coordinate against its new position.
+        for (let n = 0; n < original.target; n++) {
+          await game.getByRole('button', { name: 'Catch the firefly' }).press('Enter');
+          await expect(game.getByRole('status')).toContainText(
+            n + 1 === original.target ? 'You caught them all' : `${n + 1} / ${original.target}`,
+          );
+        }
         await expect(game.getByRole('status')).toContainText('You caught them all');
       } else if (entry.id === 'research-question') {
         await openRootFile(page, 'observations.csv');

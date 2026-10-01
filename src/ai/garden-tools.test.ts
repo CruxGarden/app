@@ -153,6 +153,12 @@ describe("the Keeper's garden tools", () => {
     expect(validateGardenTool('read_garden_file', { title: 'x' }).valid).toBe(false);
     expect(validateGardenTool('read_garden_file', { title: 'x', path: 'a.md' }).valid).toBe(true);
     expect(validateGardenTool('export_crux', {}).valid).toBe(false);
+    expect(validateGardenTool('export_crux', { cruxId: 'one', format: 'share-card' }).valid).toBe(
+      true,
+    );
+    expect(validateGardenTool('export_crux', { cruxId: 'one', format: 'unknown' }).valid).toBe(
+      false,
+    );
     expect(validateGardenTool('export_cruxspace', { cruxspaceId: 's' }).valid).toBe(true);
     expect(validateGardenTool('find_people', {}).valid).toBe(false);
     expect(validateGardenTool('invite_person', { gardenCruxId: 'g' }).valid).toBe(false);

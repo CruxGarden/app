@@ -1,3 +1,4 @@
+import { downloadShareCard } from '@/services/share-card';
 import GuideLink from '@/components/explore/GuideLink';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -54,6 +55,8 @@ export default function PublishPane() {
   const [showConnect, setShowConnect] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareError, setShareError] = useState('');
+  const [cardBusy, setCardBusy] = useState(false);
   const phase = useCruxStore((s) => s.publishPhase);
   const failure = useCruxStore((s) => s.publishFailure);
 
@@ -231,11 +234,16 @@ export default function PublishPane() {
     }
   }, [unpublishCrux, crux?.id]);
 
-  const handleCopyUrl = useCallback(() => {
+  const handleCopyUrl = useCallback(async () => {
     if (!publicUrl) return;
-    navigator.clipboard.writeText(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setShareError('');
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setShareError('Could not copy the link. Select the public address above to copy it.');
+    }
   }, [publicUrl]);
 
   if (!crux) {
@@ -436,6 +444,29 @@ export default function PublishPane() {
           {/* Public address */}
           {isPublished && publicUrl && (
             <PaneSection label="Public address">
+              <p className="text-xs text-text-muted mb-2">
+                Make a share card with this Crux’s current title, your name and public link.
+              </p>
+              <button
+                type="button"
+                className={buttonClass('secondary', 'xs', 'mb-3')}
+                disabled={cardBusy}
+                onClick={() => {
+                  if (!author) return;
+                  setCardBusy(true);
+                  setShareError('');
+                  void downloadShareCard(crux.title || 'My Crux', author.username, publicUrl)
+                    .catch((e) => setShareError(String(e)))
+                    .finally(() => setCardBusy(false));
+                }}
+              >
+                {cardBusy ? 'Creating share card…' : 'Save share card'}
+              </button>
+              {shareError && (
+                <p role="alert" className="text-xs text-error mb-2">
+                  {shareError}
+                </p>
+              )}
               <a
                 href={publicUrl}
                 target="_blank"

@@ -1,3 +1,5 @@
+import { restoreWorkspaceList, useWorkspaceRegistry } from '@/stores/workspaceRegistry';
+import { tendingPath } from '@/services/tending-actions';
 import { showBackgroundFallback } from '@/services/background';
 import { isPublicSite } from '@/lib/site';
 import BackButton from '@/components/gateway/BackButton';
@@ -100,9 +102,41 @@ const REVEAL_AFTER_MS = CURTAIN_MS;
 const ENTRANCE_MS = 2_000;
 const IDLE_AFTER_MS = 15_000;
 
+let startupConsumed = false;
+
 export default function Gateway() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(Step.Banner);
+  useEffect(() => {
+    if (startupConsumed) return;
+    if (getSetting(SettingsKey.ResumeWorkspace) !== 'true') {
+      startupConsumed = true;
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      await useAppStore.getState().bootstrap();
+      if (!getSetting(SettingsKey.LocalAuthorId)) return;
+      await useAppStore.getState().ensureAuthor();
+      const last = await restoreWorkspaceList();
+      if (cancelled) return;
+      const entry = useWorkspaceRegistry.getState().entries.find((e) => e.id === last);
+      navigate(
+        entry ? tendingPath({ cruxId: entry.cruxId ?? entry.id, copyId: entry.id }) : '/home',
+        { replace: true },
+      );
+    })()
+      .catch(() => {
+        // Keep Enter available if storage cannot be read. Normal entry owns recovery.
+      })
+      .finally(() => {
+        if (!cancelled) startupConsumed = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
   useEffect(() => {
     void wearGatewayMood().catch(() => {});
   }, []);

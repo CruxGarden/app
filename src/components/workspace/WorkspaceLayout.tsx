@@ -1,3 +1,4 @@
+import PaneFocusButton from './PaneFocusButton';
 import CopyArtifactsDialog, { type ArtifactCopySelection } from './CopyArtifactsDialog';
 import { captureGardenId } from '@/stores/gardenContext';
 import DeferredImportNotice from './DeferredImportNotice';
@@ -232,6 +233,7 @@ function MobilePane({ pane }: { pane: PaneType }) {
 export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType }> }) {
   const labels = usePaneLabels();
   const mosaicLayout = useUIStore((s) => s.mosaicLayout);
+  const focusedPane = useUIStore((s) => s.focusedPane);
   const setMosaicLayout = useUIStore((s) => s.setMosaicLayout);
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
   const mobileActivePane = useUIStore((s) => s.mobileActivePane);
@@ -267,9 +269,9 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
   }, [isDesktopLayout, setWorkspaceGeometry]);
   const handleChange = useCallback(
     (newNode: MosaicNode<PaneType> | null) => {
-      setMosaicLayout(newNode);
+      if (!focusedPane) setMosaicLayout(newNode);
     },
-    [setMosaicLayout],
+    [setMosaicLayout, focusedPane],
   );
 
   // Render each tile with custom toolbar containing icon + label + close
@@ -305,6 +307,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
                 </span>
                 <span className="pane-toolbar-label">{labels[paneType]}</span>
               </div>
+              <PaneFocusButton pane={paneType} label={labels[paneType]} />
               {/* Home is the Garden's anchor: it stays. */}
               {paneType !== 'home' && (
                 <button
@@ -339,7 +342,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
       {mosaicLayout ? (
         <MosaicWithoutDragDropContext<PaneType>
           renderTile={renderTile}
-          value={mosaicLayout}
+          value={focusedPane ?? mosaicLayout}
           onChange={handleChange}
           resize={{ minimumPaneSizePercentage: 5 }}
           className="crux-mosaic-theme"

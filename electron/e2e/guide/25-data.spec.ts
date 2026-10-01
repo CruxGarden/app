@@ -264,7 +264,7 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
       await page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
       await expect(page.getByTestId('pane-body-home')).toBeVisible({ timeout: 30_000 });
       const settings = await showPane(page, 'Settings');
-      await settings.locator('h2', { hasText: /^Garden$/ }).click();
+      await settings.getByRole('button', { name: 'Tools and Moods', exact: true }).click();
       const tools = settings.getByTestId('installed-tools');
       const row = tools.getByTestId('installed-tool-p5-app');
       await expect(row).toBeVisible();

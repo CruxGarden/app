@@ -6,17 +6,24 @@ import {
   saveWorkspaceLayout,
   applyWorkspaceLayout,
   arrangeWorkspacePanels,
+  focusWorkspacePanel,
+  applyWorkspacePreset,
   deleteWorkspaceLayout,
 } from '@/services/workspace-layouts';
 
 export const WORKSPACE_LAYOUT_TOOL: ToolDefinition = {
   name: 'workspace_layouts',
   description:
-    'List, save, apply or delete named panel arrangements, or arrange the currently open panels, using the same controls as Settings → Workspace layouts. Applying keeps the current Crux, files, drafts and running collaborators. Read before changing. Arranging redistributes open panels without changing saved arrangements. Only change layouts when asked.',
+    'List, save, apply or delete named panel arrangements, or arrange the currently open panels, using the same controls as Settings → Workspace layouts. Applying keeps the current Crux, files, drafts and running collaborators. Read before changing. Arranging redistributes open panels without changing saved arrangements. Focus temporarily shows one open panel; restore returns the original geometry. Presets make (Workshop/Artifacts) and review (Workshop/Share) replace the current arrangement. Only change layouts when asked.',
   input_schema: {
     type: 'object',
     properties: {
-      action: { type: 'string', enum: ['list', 'save', 'apply', 'delete', 'arrange'] },
+      action: {
+        type: 'string',
+        enum: ['list', 'save', 'apply', 'delete', 'arrange', 'focus', 'restore', 'preset'],
+      },
+      pane: { type: 'string', description: 'Open panel id to focus temporarily.' },
+      preset: { type: 'string', enum: ['make', 'review'] },
       name: {
         type: 'string',
         description: 'Arrangement name, 1–80 characters. Saving the same name replaces it.',
@@ -35,10 +42,28 @@ export async function runWorkspaceLayouts(
   cruxId?: string,
 ): Promise<string> {
   const action = input.action;
-  if (!['list', 'save', 'apply', 'delete', 'arrange'].includes(String(action)))
-    throw new Error('Choose list, save, apply, delete or arrange.');
+  if (
+    !['list', 'save', 'apply', 'delete', 'arrange', 'focus', 'restore', 'preset'].includes(
+      String(action),
+    )
+  )
+    throw new Error('Choose list, save, apply, delete, arrange, focus, restore or preset.');
   const ui = cruxId ? getWorkspace(cruxId)?.ui : workspaceSelection.getState().active?.ui;
-  if (action === 'arrange') {
+  if (action === 'focus' || action === 'restore' || action === 'preset') {
+    if (!ui?.getState().activeCruxId) throw new Error('Open a Crux first.');
+    if (action === 'preset') {
+      if (input.preset !== 'make' && input.preset !== 'review')
+        throw new Error('Choose make or review.');
+      await applyWorkspacePreset(ui, input.preset);
+    } else {
+      if (action === 'focus' && typeof input.pane !== 'string')
+        throw new Error('Choose an open panel.');
+      await focusWorkspacePanel(
+        ui,
+        action === 'restore' ? null : (input.pane as import('@/stores/uiStore').PaneType),
+      );
+    }
+  } else if (action === 'arrange') {
     if (!ui?.getState().activeCruxId) throw new Error('Open a Crux before arranging panels.');
     await arrangeWorkspacePanels(ui);
   } else if (action !== 'list') {
@@ -60,5 +85,6 @@ export async function runWorkspaceLayouts(
   return JSON.stringify({
     layouts: listWorkspaceLayouts(),
     current: ui?.getState().mosaicLayout ?? null,
+    focused: ui?.getState().focusedPane ?? null,
   });
 }

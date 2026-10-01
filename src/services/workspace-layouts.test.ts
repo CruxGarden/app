@@ -88,3 +88,46 @@ describe('custom workspace arrangements', () => {
     }
   });
 });
+
+describe('temporary panel focus', () => {
+  it('preserves exact geometry and drafts, including after recreating the workspace', async () => {
+    const { focusWorkspacePanel } = await import('./workspace-layouts');
+    const ui = createUIStore();
+    const layout = {
+      direction: 'row' as const,
+      first: 'workshop' as const,
+      second: 'artifacts' as const,
+      splitPercentage: 67,
+    };
+    ui.getState().setMosaicLayout(layout, { persistImmediately: true });
+    ui.getState().setComposerDraft('Keep my thought');
+    await focusWorkspacePanel(ui, 'workshop');
+    expect(ui.getState().focusedPane).toBe('workshop');
+    expect(ui.getState().mosaicLayout).toEqual(layout);
+    expect(createUIStore().getState().focusedPane).toBeNull();
+    expect(createUIStore().getState().mosaicLayout).toEqual(layout);
+    await focusWorkspacePanel(ui, null);
+    expect(ui.getState().mosaicLayout).toEqual(layout);
+    expect(ui.getState().composerDraft).toBe('Keep my thought');
+    await focusWorkspacePanel(ui, 'workshop');
+    ui.getState().setPaneVisible('publish', true);
+    expect(ui.getState().focusedPane).toBeNull();
+  });
+  it('retains the visible editor when its save fails before focus', async () => {
+    const { focusWorkspacePanel } = await import('./workspace-layouts');
+    const ui = createUIStore('focus-save-failure');
+    ui.getState().setMosaicLayout('workshop');
+    const dispose = registerNotebookEditor('focus-save-failure', {
+      dirty: () => true,
+      flush: async () => {
+        throw new Error('disk full');
+      },
+    });
+    try {
+      await expect(focusWorkspacePanel(ui, 'workshop')).rejects.toThrow('disk full');
+      expect(ui.getState().focusedPane).toBeNull();
+    } finally {
+      dispose();
+    }
+  });
+});

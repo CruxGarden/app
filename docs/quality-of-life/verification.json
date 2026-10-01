@@ -1,0 +1,31 @@
+{
+  "scope": "Six authorized whole-app quality-of-life improvements",
+  "features": [
+    "Opt-in startup resume, validated saved workspace membership, and Home recent-work links",
+    "Direct Settings Tools and Moods management using existing installation/library owners",
+    "Plain-language project and collection descriptions without a new onboarding gate",
+    "Local/draft/private/published status and explicit backup distinction",
+    "Temporary focus with original geometry retained, save-failure refusal, Make/Review presets and agent parity",
+    "Durable optional first-publication acknowledgement and Mood-styled local PNG share card via UI/export_crux"
+  ],
+  "initialVerification": {
+    "app": "1690 passed in 268 files, 18 skipped; verify/build passed (/tmp/qol-all-verify.log)",
+    "electron": "77 passed, 1 skipped (/tmp/qol-release-electron.log)",
+    "desktop": "10 passed, 1 Undo-focus failure (/tmp/qol-final-desktop.log). Screenshot showed an open command palette; unchanged Undo passed in isolation. Trigger not established.",
+    "starter": "Five of six starter journeys passed in the first batch. Small-game pointer catch assertion failed; deterministic keyboard catches passed every intermediate score in the follow-up.",
+    "community": "Creator export/file recipient/Explore source/update journey passed in first batch.",
+    "card": "PNG signature and 1200x630 dimensions verified; share-card.png visually reviewed. Fixture publication, not hosted release evidence."
+  },
+  "limits": [
+    "Physical assistive-technology and newcomer usability acceptance remain.",
+    "Moods own styling; upstream tool save indicators remain authoritative for tool-specific progress.",
+    "No merge, deploy or real publication. Test Gardens isolated; existing manual Garden preserved.",
+    "Native CI acceptance must be evaluated per commit; previous successful runs are not proof of the new head."
+  ],
+  "acceptedSourceVerification": {
+    "app": "npm run verify: 1690 tests / 268 files passed, 18 skipped, production build passed. /tmp/qol-release-verify.log",
+    "electron": "npm run verify: 77 passed, one skipped. /tmp/qol-release-electron.log",
+    "desktop": "12/12 passed together in 2.1 minutes, including 21 axe states, restart/opt-out/closed-workspace fallback, real file save, exact focus geometry restoration, keyboard focus, Make/Review presets, fixture publication and PNG export. /tmp/qol-accepted-desktop.log",
+    "guide": "126 stories / 1233 criteria, all 346 baseline checks and 71 creation choices mapped; offline guide acceptance passes. Existing result IDs unchanged. /tmp/qol-guide-final.log"
+  }
+}

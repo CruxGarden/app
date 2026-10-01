@@ -152,8 +152,7 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
     await expect(card.getByTestId('tool-installed')).toBeVisible();
     const homeUrl = online.page.url();
     const settings = await showPane(online.page, 'Settings');
-    await settings.getByRole('button', { name: 'Garden and backups', exact: true }).click();
-    await settings.getByRole('button', { name: 'Garden', exact: true }).click();
+    await settings.getByRole('button', { name: 'Tools and Moods', exact: true }).click();
     await settings
       .getByTestId('installed-tools')
       .getByRole('button', { name: 'Source and updates', exact: true })

@@ -1,3 +1,4 @@
+import RecentWorkspaces from './RecentWorkspaces';
 import { installToolFile } from '@/services/crux-tools/files';
 import { installMoodFile, installImportedCreation } from '@/services/import-installation';
 import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
@@ -337,6 +338,8 @@ export default function HomeGarden() {
         </details>
       )}
 
+      {!search && <RecentWorkspaces />}
+
       {/* Content */}
       {cruxList.length === 0 && search.length > 0 ? (
         <Panel padding="md" className="flex flex-col items-center py-10">
@@ -352,7 +355,8 @@ export default function HomeGarden() {
           </div>
           <p className="font-display text-base text-text mb-1">What do you want to make?</p>
           <p className="text-sm text-text-muted max-w-[34ch] mb-5">
-            Choose an undertaking with a worked example, or start with a single Crux
+            A Crux is one project: a page, drawing, song or notebook. An undertaking groups related
+            projects in a Garden
             {aiEnabled ? '. Work on your own or with a collaborator.' : '.'}
           </p>
           <PlasmaButton
@@ -361,7 +365,7 @@ export default function HomeGarden() {
               setShowNewCrux(true);
             }}
           >
-            Explore undertakings
+            Explore undertakings — a collection of projects
           </PlasmaButton>
           <Button
             variant="ghost"
@@ -372,7 +376,7 @@ export default function HomeGarden() {
               setShowNewCrux(true);
             }}
           >
-            Just a Crux
+            Just a Crux — one project
           </Button>
         </Panel>
       ) : (

@@ -1,3 +1,4 @@
+import WorkspaceStatus from '@/components/workspace/WorkspaceStatus';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getServices } from '@/services';
@@ -120,6 +121,7 @@ function Builder() {
       <h1 tabIndex={-1} className="sr-only" data-workspace-heading>
         {crux?.title}
       </h1>
+      <WorkspaceStatus />
       <TendingDestination />
       <CruxspaceMomentBanner />
       <SnapshotBanner />

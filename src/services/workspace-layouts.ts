@@ -106,3 +106,30 @@ async function replaceWorkspaceLayout(
   ui.getState().setMosaicLayout(resolve(), { persistImmediately: true });
   await flushSettings();
 }
+
+/** Focus is a temporary view over the original geometry; restart restores the arrangement. */
+export async function focusWorkspacePanel(ui: StoreApi<UIState>, pane: PaneType | null) {
+  const revision = (applying.get(ui) ?? 0) + 1;
+  applying.set(ui, revision);
+  const before = ui.getState();
+  if (pane && !getMosaicLeaves(before.mosaicLayout).includes(pane))
+    throw new Error('Open that panel before focusing it.');
+  await flushNotebook(before.activeCruxId);
+  const after = ui.getState();
+  if (
+    applying.get(ui) !== revision ||
+    after.activeCruxId !== before.activeCruxId ||
+    after.mosaicLayout !== before.mosaicLayout
+  )
+    return;
+  ui.setState({ focusedPane: pane });
+}
+
+export async function applyWorkspacePreset(ui: StoreApi<UIState>, preset: 'make' | 'review') {
+  await replaceWorkspaceLayout(ui, () => ({
+    direction: 'row',
+    first: 'workshop',
+    second: preset === 'make' ? 'artifacts' : 'publish',
+    splitPercentage: 70,
+  }));
+}
