@@ -20,7 +20,7 @@ describe('guided customization', () => {
     ).toEqual({ workspaceTexture: 'none', secondaryActionOpacity: '0.8' });
   });
   it('every family/hue/mode selects an existing package and can be recognized again', () => {
-    for (const material of ['plasma', 'soft', 'paper'] as Material[])
+    for (const material of ['plasma', 'glass', 'soft', 'paper'] as Material[])
       for (const hue of huesFor(material))
         for (const mode of ['light', 'dark'] as const) {
           const id = moodIdFor(material, hue.id, mode);

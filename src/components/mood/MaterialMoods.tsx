@@ -72,6 +72,31 @@ const SWITCHES: Record<
       ],
     },
   ],
+  glass: [
+    {
+      key: 'frost',
+      label: 'Frost',
+      options: [
+        { id: 'light', label: 'Light', tokens: { glassOpacity: '72%', glassBlur: '12px' } },
+        { id: 'deep', label: 'Deep', tokens: { glassOpacity: '82%', glassBlur: '20px' } },
+      ],
+    },
+    {
+      key: 'depth',
+      label: 'Depth',
+      options: [
+        { id: 'flat', label: 'Flat', tokens: { glassFrameShadow: 'none' } },
+        {
+          id: 'lifted',
+          label: 'Lifted',
+          tokens: {
+            glassFrameShadow:
+              'inset 0 1px 0 var(--glass-highlight), 0 8px 24px color-mix(in srgb, var(--text) 12%, transparent)',
+          },
+        },
+      ],
+    },
+  ],
   paper: [
     {
       key: 'texture',
@@ -246,6 +271,7 @@ export default function MaterialMoods({
         value={worn ? material : null}
         options={[
           { id: 'plasma', label: 'Plasma' },
+          { id: 'glass', label: 'Glass' },
           { id: 'soft', label: 'Soft' },
           { id: 'paper', label: 'Paper' },
         ]}

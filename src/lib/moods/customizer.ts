@@ -40,6 +40,9 @@ function typeface(font: string): Tokens {
 function depth(shadow: string, elevation: string): Tokens {
   return {
     elevationPane: shadow,
+    glassFrameShadow: shadow,
+    glassButtonShadow: shadow,
+    glassPrimaryButtonShadow: shadow,
     elevationPanel: shadow,
     elevationCard: shadow,
     elevationCardHover: shadow,

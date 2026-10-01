@@ -951,8 +951,32 @@ const PLASMA_MOODS: MoodPresetDef[] = SOFT_TONES.map((t) => ({
   overrides: plasmaOverrides(t),
 }));
 
+/** The same readable palettes, with CSS glass instead of the Plasma renderer. */
+export const GLASS_MOODS: MoodPresetDef[] = SOFT_TONES.filter((t) => t.id !== 'sitemetric').map(
+  (t) => ({
+    id: `glass-${t.id}`,
+    name: `Glass ${t.name}`,
+    section: t.section,
+    overrides: {
+      ...softOverrides(t),
+      surfaceStyle: 'glass',
+      glassOpacity: '82%',
+      glassBlur: '20px',
+      glassSaturation: '130%',
+      glassHighlight: t.glassHighlight,
+      glassRefraction: '0.2',
+      glassLight: t.accent,
+      glassFrameShadow:
+        'inset 0 1px 0 var(--glass-highlight), 0 8px 24px color-mix(in srgb, var(--text) 12%, transparent)',
+      workspaceTexture: `radial-gradient(ellipse at 15% 10%, ${t.accentMuted}, transparent 65%), radial-gradient(ellipse at 90% 85%, ${t.surface}, transparent 65%)`,
+      workspaceTextureSize: 'cover',
+    },
+  }),
+);
+
 export const MOOD_PRESETS: MoodPresetDef[] = [
   ...EXPEDITION_PRESETS,
+  ...GLASS_MOODS,
   {
     id: 'plasma',
     name: 'Plasma',

@@ -1,11 +1,11 @@
 import { MOOD_PRESETS } from './presets';
 
 /**
- * The Material Moods (Daniel, 2026-09-19): a material (Plasma or Soft), a hue
+ * The Material Moods (Daniel, 2026-09-19): a material (Plasma, Glass, Soft or Paper), a hue
  * and a mode name one bundled Mood — the soft suite's tone ids, which the
  * Plasma family prefixes with `plasma-`. Everything deeper is a HyperMood.
  */
-export type Material = 'plasma' | 'soft' | 'paper';
+export type Material = 'plasma' | 'glass' | 'soft' | 'paper';
 export type Mode = 'light' | 'dark';
 
 /** Each hue's light and dark tone id (the soft suite's ids; the Plasma family prefixes them). */
@@ -38,8 +38,12 @@ export function materialChoice(
     if (hue.light === id) return { material: 'paper', hue: hue.id, mode: 'light' };
     if (hue.dark === id) return { material: 'paper', hue: hue.id, mode: 'dark' };
   }
-  const material: Material = id.startsWith('plasma-') ? 'plasma' : 'soft';
-  const tone = material === 'plasma' ? id.slice('plasma-'.length) : id;
+  const material: Material = id.startsWith('plasma-')
+    ? 'plasma'
+    : id.startsWith('glass-')
+      ? 'glass'
+      : 'soft';
+  const tone = material === 'plasma' || material === 'glass' ? id.slice(material.length + 1) : id;
   for (const h of HUES) {
     if (h.light === tone) return { material, hue: h.id, mode: 'light' };
     if (h.dark === tone) return { material, hue: h.id, mode: 'dark' };
@@ -51,7 +55,7 @@ export function moodIdFor(material: Material, hue: string, mode: Mode): string {
   const hues = huesFor(material);
   const h = hues.find((x) => x.id === hue) ?? hues[0]!;
   const tone = mode === 'light' ? h.light : h.dark;
-  return material === 'plasma' ? `plasma-${tone}` : tone;
+  return material === 'plasma' || material === 'glass' ? `${material}-${tone}` : tone;
 }
 
 /** A hue's swatch colours, read from its presets. */

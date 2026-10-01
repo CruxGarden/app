@@ -10,7 +10,7 @@ import { synthForMood, synthPresetsForMood } from '@/audio/synth-patch';
  * Silhouettes stay square-ish (Daniel): round or bevel corners, solid frames;
  * the range comes from colour, type, motion and voice.
  */
-import { MOOD_PRESETS } from './presets';
+import { MOOD_PRESETS, GLASS_MOODS } from './presets';
 import { EXPEDITION_PRESETS } from './expedition';
 import { refreshPresets } from './user-presets';
 import type { MoodPackage } from './packages';
@@ -1141,6 +1141,20 @@ function build(spec: Spec): MoodPackage {
 
 export const BUNDLED_MOODS: MoodPackage[] = [
   ...SPECS,
+  ...GLASS_MOODS.map(
+    (p): Spec => ({
+      id: p.id,
+      name: p.name,
+      presetId: p.id,
+      background: { type: BgType.Blank },
+      persona: {
+        name: 'Clarity',
+        greeting: 'A little clarity. What shall we make?',
+        systemPrompt:
+          'Be a thoughtful, practical creative collaborator. Explain clearly, work in small steps, and verify the result.',
+      },
+    }),
+  ),
   ...EXPEDITION_PRESETS.map(
     (p): Spec => ({
       id: p.id,

@@ -487,7 +487,8 @@ export function tokenKind(key: string): TokenKind {
   if (key in TOKEN_CHOICES) return 'choice';
   // ── motion ── easings are curves (text), durations are <time> lengths, bindings 0..1 numbers
   if (/^motionEase|^motionSpring/.test(key)) return 'text';
-  if (/^glass(Opacity|Saturation)$/.test(key)) return 'text';
+  if (/^glass(Opacity|Saturation|Sheen|SheenEase)$/.test(key)) return 'text';
+  if (key === 'glassSheenDuration') return 'length';
   if (
     /^(glassRefraction|plasmaRefraction|plasmaDispersion|plasmaOpacity|plasmaFrost|plasmaRim|plasmaRimWidth|plasmaElevation|plasmaFormSpeed|plasmaFlow|plasmaStretch|plasmaViscosity)$/.test(
       key,

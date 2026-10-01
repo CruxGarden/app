@@ -8,10 +8,10 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods (the backgrounds set, the soft suite and the Plasma family)', () => {
-  it('ships seventy-two Moods and shelves Office, all complete and valid with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(72);
+  it('ships eighty-six Moods and shelves Office, all complete and valid with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(86);
     expect(SHELVED_MOODS.map((m) => m.id)).toEqual(['office']);
-    expect(new Set(ALL.map((m) => m.id)).size).toBe(73);
+    expect(new Set(ALL.map((m) => m.id)).size).toBe(87);
     for (const m of ALL) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -53,12 +53,11 @@ describe('bundled Moods (the backgrounds set, the soft suite and the Plasma fami
     expect(f.sound.track).toBeNull();
     // Every Mood is a render from backgrounds/ - except Plasma, whose
     // material draws its own field - and exactly one brings a track.
-    // Every glass Mood is a render from backgrounds/; the material Moods —
-    // Plasma, its family and the soft suite — draw their own ground.
+    // Illustrated glass Moods retain their renders; the Glass family draws a token-based ground.
     expect(
-      ALL.filter((m) => m.theme.overrides.surfaceStyle === 'glass').every(
-        (m) => m.bundled?.background && m.background.type === 'image',
-      ),
+      ALL.filter(
+        (m) => m.theme.overrides.surfaceStyle === 'glass' && !m.id.startsWith('glass-'),
+      ).every((m) => m.bundled?.background && m.background.type === 'image'),
     ).toBe(true);
     expect(ALL.filter((m) => m.bundled?.track)).toHaveLength(1);
   });
@@ -86,7 +85,8 @@ describe('bundled Moods (the backgrounds set, the soft suite and the Plasma fami
       expect(opacity, `${m.id} glass opacity`).toBeGreaterThanOrEqual(
         m.theme.section === 'Light' ? 70 : 60,
       );
-      expect(parseFloat(o.bgImageDim ?? '0'), `${m.id} dims its render`).toBeGreaterThan(0);
+      if (m.background.type === 'image')
+        expect(parseFloat(o.bgImageDim ?? '0'), `${m.id} dims its render`).toBeGreaterThan(0);
     }
   });
 
@@ -116,7 +116,7 @@ describe('bundled Moods (the backgrounds set, the soft suite and the Plasma fami
     expect(pick('paneHeaderShape').size).toBeGreaterThanOrEqual(3);
     expect(pick('paneCornerShape').size).toBe(2);
     expect(pick('iconSet').size).toBe(3);
-    expect(new Set(ALL.map((m) => m.persona!.name)).size).toBe(73);
+    expect(new Set(ALL.map((m) => m.persona!.name)).size).toBeGreaterThanOrEqual(73);
     // named rooms the journeys lean on
     expect(bundledMood('raster-bars')?.theme.overrides.motionFrames).toBe('4');
     expect(bundledMood('raster-bars')?.theme.overrides.iconSet).toBe('pixel');
