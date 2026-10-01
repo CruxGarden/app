@@ -18,7 +18,17 @@ export const emptyBillingSettings = (): BillingSettingsState => ({
 });
 
 interface Dependencies {
-  api: Pick<typeof Billing, 'me' | 'plans' | 'sync' | 'checkout' | 'portal' | 'simulate'>;
+  api: Pick<
+    typeof Billing,
+    | 'me'
+    | 'plans'
+    | 'sync'
+    | 'checkout'
+    | 'portal'
+    | 'simulate'
+    | 'resumeCheckout'
+    | 'cancelCheckout'
+  >;
   open: (url: string) => Promise<boolean>;
   usageChanged: () => void;
   /** Account identity is checked again after every await, before another action. */
@@ -182,7 +192,32 @@ export class BillingSettingsSession {
       const { url } = await this.dependencies.api.checkout(planId, interval);
       if (!this.active) return;
       if (catalog.instant) await this.refresh();
-      else await this.openAndWait(url, me);
+      else {
+        this.update({ me: { ...me, pendingCheckout: true } });
+        await this.openAndWait(url, me);
+      }
+    });
+  }
+  async resumeCheckout() {
+    const me = this.state.me;
+    if (!me?.pendingCheckout) return;
+    await this.run('checkout-resume', async () => {
+      const { url } = await this.dependencies.api.resumeCheckout();
+      if (this.active) await this.openAndWait(url, me);
+    });
+  }
+  async cancelCheckout() {
+    await this.run('checkout-cancel', async () => {
+      const me = await this.dependencies.api.cancelCheckout();
+      if (!this.active) return;
+      this.absorb(me);
+      this.stopWaiting();
+      this.update({
+        notice:
+          me.plan.id !== 'free'
+            ? 'Checkout had already completed. Your plan status has been refreshed.'
+            : 'Pending checkout canceled.',
+      });
     });
   }
   async manage() {

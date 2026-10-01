@@ -101,6 +101,31 @@ function AccountPlanSettings({ accountId }: { accountId: string }) {
           Finish in your browser — this updates by itself.
         </p>
       )}
+      {me?.pendingCheckout && (
+        <div className="text-xs text-text-muted space-y-2 my-2" data-testid="pending-checkout">
+          <p>A checkout is pending. Resume it or cancel it before choosing another plan.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!!busy}
+              loading={busy === 'checkout-resume'}
+              onClick={() => void session.current?.resumeCheckout()}
+            >
+              Resume checkout
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!!busy}
+              loading={busy === 'checkout-cancel'}
+              onClick={() => void session.current?.cancelCheckout()}
+            >
+              Cancel pending checkout
+            </Button>
+          </div>
+        </div>
+      )}
       {me?.status === 'past_due' && (
         <p className="text-xs text-warning mb-2">
           {me.plan.id !== 'free' && me.graceEndsAt
@@ -167,7 +192,7 @@ function AccountPlanSettings({ accountId }: { accountId: string }) {
                       <Button
                         size="sm"
                         variant="primary"
-                        disabled={!!busy || waiting || !price}
+                        disabled={!!busy || waiting || me.pendingCheckout || !price}
                         loading={busy === plan.id}
                         onClick={() => void choose(plan.id)}
                       >

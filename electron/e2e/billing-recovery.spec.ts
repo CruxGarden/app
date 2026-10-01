@@ -9,6 +9,8 @@ import { startMockApi } from './api-mock';
 test('billing return recovery: unavailable prices, timeout, retry, interval and grace', async ({}, info) => {
   const api = await startMockApi();
   const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url, CRUX_AI_MOCK: '1' } });
+  let pending = false;
+  let resumed = 0;
   let interval = 'month';
   let unavailable = false;
   let graceEndsAt: string | null = null;
@@ -18,7 +20,20 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
     });
     await page.route('**/billing/**', async (route) => {
       const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/checkout/resume')) {
+        resumed++;
+        await route.fulfill({ json: { url: 'https://checkout.stripe.com/isolated-fixture' } });
+        return;
+      }
+      if (path.endsWith('/checkout/cancel')) {
+        pending = false;
+        const response = await route.fetch({ url: api.url + '/billing/sync' });
+        const data = await response.json();
+        await route.fulfill({ response, json: { ...data, graceEndsAt, pendingCheckout: false } });
+        return;
+      }
       if (path.endsWith('/checkout')) {
+        pending = true;
         await route.fulfill({ json: { url: 'https://checkout.stripe.com/isolated-fixture' } });
         return;
       }
@@ -34,6 +49,7 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
           entry.prices = entry.prices.filter((p: { interval: string }) => p.interval === 'month');
       }
       if (path.endsWith('/me') || path.endsWith('/sync')) {
+        data.pendingCheckout = pending;
         data.interval = interval;
         data.graceEndsAt = graceEndsAt;
       }
@@ -60,10 +76,19 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
     await expect(plan.getByTestId('plan-waiting')).toBeVisible();
     await page.clock.fastForward(320_000);
     await expect(plan).toContainText('No plan change confirmed yet');
+    await expect(plan.getByTestId('pending-checkout')).toBeVisible();
+    await plan.getByRole('button', { name: 'Resume checkout', exact: true }).click();
+    await expect(plan.getByTestId('plan-waiting')).toBeVisible();
+    expect(resumed).toBe(1);
+    await plan.getByRole('button', { name: 'Cancel pending checkout' }).click();
+    await expect(plan.getByTestId('pending-checkout')).toHaveCount(0);
+    await expect(plan.getByTestId('plan-waiting')).toHaveCount(0);
+    await expect(plan).toContainText('Pending checkout canceled');
     unavailable = true;
     await plan.getByRole('button', { name: 'Check again' }).click();
     await expect(plan.getByRole('alert')).toContainText('Could not verify your plan');
     unavailable = false;
+    pending = false;
     api.state.billing.planId = 'gardener';
     api.state.billing.status = 'active';
     api.state.billing.customer = true;

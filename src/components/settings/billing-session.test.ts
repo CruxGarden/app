@@ -9,6 +9,7 @@ const free: BillingMe = {
   renewsAt: null,
   trialEndsAt: null,
   graceEndsAt: null,
+  pendingCheckout: false,
   cancelAtPeriodEnd: false,
   canManage: false,
   provider: 'stripe',
@@ -46,6 +47,8 @@ function fixture(initial = free) {
     checkout: vi.fn(async () => ({ url: 'https://checkout.stripe.com/test' })),
     portal: vi.fn(async () => ({ url: 'https://billing.stripe.com/test' })),
     simulate: vi.fn(async () => paid),
+    resumeCheckout: vi.fn(async () => ({ url: 'https://checkout.stripe.com/existing' })),
+    cancelCheckout: vi.fn(async () => free),
   };
   let current = true;
   let state: BillingSettingsState;
@@ -153,6 +156,43 @@ describe('account-owned billing settings', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('resumes without purchasing again and reports a payment completed during cancellation', async () => {
+    const f = fixture({ ...free, pendingCheckout: true });
+    await f.session.load();
+    await f.session.resumeCheckout();
+    expect(f.api.checkout).not.toHaveBeenCalled();
+    expect(f.open).toHaveBeenCalledWith('https://checkout.stripe.com/existing');
+    expect(f.state.waiting).toBe(true);
+    f.api.cancelCheckout.mockResolvedValue(paid);
+    await f.session.cancelCheckout();
+    expect(f.state.me).toEqual(paid);
+    expect(f.state.notice).toContain('already completed');
+    expect(f.state.waiting).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not open a resumed checkout or apply cancellation after changing accounts', async () => {
+    const f = fixture({ ...free, pendingCheckout: true });
+    await f.session.load();
+    const response = deferred<{ url: string }>();
+    f.api.resumeCheckout.mockReturnValueOnce(response.promise);
+    const resuming = f.session.resumeCheckout();
+    f.switchAccount();
+    response.resolve({ url: 'https://checkout.stripe.com/old-account' });
+    await resuming;
+    expect(f.open).not.toHaveBeenCalled();
+    const other = fixture({ ...free, pendingCheckout: true });
+    await other.session.load();
+    const cancellation = deferred<BillingMe>();
+    other.api.cancelCheckout.mockReturnValueOnce(cancellation.promise);
+    const canceling = other.session.cancelCheckout();
+    other.switchAccount();
+    const calls = other.changed.mock.calls.length;
+    cancellation.resolve(paid);
+    await canceling;
+    expect(other.changed).toHaveBeenCalledTimes(calls);
   });
 
   it('refuses an unavailable interval and concurrent duplicate checkout requests', async () => {

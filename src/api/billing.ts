@@ -12,6 +12,7 @@ export interface BillingMe {
   cancelAtPeriodEnd: boolean;
   trialEndsAt: string | null;
   graceEndsAt: string | null;
+  pendingCheckout: boolean;
   canManage: boolean;
   provider: string;
   canSimulate?: boolean;
@@ -58,6 +59,14 @@ export async function checkout(
     throw new Error(`"${planId}" is not a plan you can buy`);
   const body: CheckoutBody = { planId: planId as PaidPlanId, interval };
   const { data } = await client.post<{ url: string }>('/billing/checkout', body);
+  return data;
+}
+export async function resumeCheckout(): Promise<{ url: string }> {
+  const { data } = await client.post<{ url: string }>('/billing/checkout/resume');
+  return data;
+}
+export async function cancelCheckout(): Promise<BillingMe> {
+  const { data } = await client.post<BillingMe>('/billing/checkout/cancel');
   return data;
 }
 export async function portal(): Promise<{ url: string }> {
