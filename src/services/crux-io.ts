@@ -431,22 +431,22 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   );
   zip.file('crux.json', cruxJsonContent);
 
-  // ── store.json ──────────────────────────────────
-  try {
-    const { store } = getServices();
-    const entries = await store.list(cruxId);
-    if (entries.length > 0) {
-      zip.file(
-        'store.json',
-        JSON.stringify(
-          entries.map((e) => ({ key: e.key, value: e.value, mode: e.mode })),
-          null,
-          2,
-        ),
-      );
-    }
-  } catch {
-    // Store service may not be ready — skip silently
+  // A private export is a backup: failure to read a section must fail the export.
+  const entries = await getServices().store.list(cruxId);
+  if (entries.length > 0) {
+    zip.file(
+      'store.json',
+      JSON.stringify(
+        entries.map(({ key, value, mode, visitorId }) => ({
+          key,
+          value,
+          mode,
+          visitorId,
+        })),
+        null,
+        2,
+      ),
+    );
   }
 
   // ── Archive integrity fingerprint ────────────────
@@ -523,6 +523,49 @@ export async function exportArtifactsZip(
   return { blob, filename, failed };
 }
 
+interface ArchivedStoreEntry {
+  key: string;
+  value: unknown;
+  mode: 'public' | 'protected';
+  visitorId: string | null;
+}
+
+/** Identity is (key, visitor), just as in the Store. Never admit colliding rows. */
+function parseStoreArchive(json: string): ArchivedStoreEntry[] {
+  let rows: unknown;
+  try {
+    rows = JSON.parse(json);
+  } catch {
+    throw new Error('Invalid Store data in .crux archive.');
+  }
+  if (!Array.isArray(rows)) throw new Error('Invalid Store data in .crux archive.');
+  const identities = new Set<string>();
+  return rows.map((row: unknown) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row))
+      throw new Error('Invalid Store entry in .crux archive.');
+    const entry = row as Record<string, unknown>;
+    const visitorId = entry.visitorId ?? null;
+    if (
+      typeof entry.key !== 'string' ||
+      !entry.key ||
+      !('value' in entry) ||
+      (entry.mode !== 'public' && entry.mode !== 'protected') ||
+      (visitorId !== null && (typeof visitorId !== 'string' || !visitorId)) ||
+      (entry.mode === 'public' && visitorId !== null)
+    )
+      throw new Error('Invalid Store entry in .crux archive.');
+    const identity = JSON.stringify([entry.key, visitorId]);
+    if (identities.has(identity)) throw new Error('Duplicate Store identity in .crux archive.');
+    identities.add(identity);
+    return {
+      key: entry.key,
+      value: entry.value,
+      mode: entry.mode,
+      visitorId: visitorId as string | null,
+    };
+  });
+}
+
 // ── Import ──────────────────────────────────────────────
 
 export async function importCrux(options: ImportOptions): Promise<ImportResult> {
@@ -551,6 +594,10 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
   if (!cruxJsonFile) throw new Error('Invalid .crux file: missing crux.json');
   const cruxData = JSON.parse(await cruxJsonFile.async('text'));
   const title = cruxData.title || 'Imported Crux';
+
+  // Validate Store identities before replace mode can touch the existing Crux.
+  const storeFile = zip.file('store.json');
+  const storeEntries = storeFile ? parseStoreArchive(await storeFile.async('text')) : [];
 
   // ── Read dimensions.json ───────────────────────────
   const dimensionsFile = zip.file('dimensions.json');
@@ -811,22 +858,10 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
       onProgress?.(done, total);
     }
 
-    // ── Restore store data ──────────────────────────
-    const storeFile = zip.file('store.json');
-    if (storeFile) {
-      try {
-        const storeEntries = JSON.parse(await storeFile.async('text')) as {
-          key: string;
-          value: unknown;
-          mode: 'public' | 'protected';
-        }[];
-        const { store } = getServices();
-        for (const entry of storeEntries) {
-          await store.set(newCrux.id, entry.key, entry.value, entry.mode);
-        }
-      } catch (err) {
-        console.warn('Failed to restore store data:', err);
-      }
+    // Failure propagates to the outer rollback; never report a partial restore as success.
+    const { store } = getServices();
+    for (const entry of storeEntries) {
+      await store.set(newCrux.id, entry.key, entry.value, entry.mode, entry.visitorId);
     }
 
     // ── Final meta update ────────────────────────────

@@ -2,7 +2,7 @@ import { getSqliteClient } from '@/services/sqlite/client';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { alertDialog } from '@/stores/dialogStore';
 import { useGardenStore } from '@/stores/gardenStore';
-import { gardenPath, useGardenContext } from '@/stores/gardenContext';
+import { cruxPath, gardenPath, useGardenContext } from '@/stores/gardenContext';
 import { useState, useRef, useCallback, lazy, Suspense } from 'react';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { Link } from 'react-router-dom';
@@ -68,6 +68,24 @@ export default function CruxCard({
   const garden = useGardenContext((s) => s.garden);
   const navigate = useMoodNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
+  const duplicate = async () => {
+    if (copyStatus) return;
+    const origin = window.location.href;
+    const gardenId = garden?.id;
+    setMenuOpen(false);
+    setCopyStatus('Preparing copy…');
+    try {
+      const { duplicateCrux } = await import('@/services/duplicate-crux');
+      const copy = await duplicateCrux(crux.id, gardenId, setCopyStatus);
+      await useGardenStore.getState().refresh();
+      if (window.location.href === origin) navigate(cruxPath(copy, gardenId));
+    } catch (error) {
+      await alertDialog((error as Error).message, 'Could not duplicate Crux');
+    } finally {
+      setCopyStatus('');
+    }
+  };
   const [exportOpen, setExportOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -175,6 +193,7 @@ export default function CruxCard({
               e.stopPropagation();
               setMenuOpen(!menuOpen);
             }}
+            disabled={!!copyStatus}
             aria-label="Crux actions"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
@@ -206,6 +225,18 @@ export default function CruxCard({
               >
                 Export...
               </button>
+              {onDelete && crux.kind !== 'garden' && (
+                <button
+                  role="menuitem"
+                  className={menuItemClass('default', 'text-xs')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void duplicate();
+                  }}
+                >
+                  Duplicate
+                </button>
+              )}
               {onDelete && garden && (
                 <button
                   role="menuitem"
@@ -243,6 +274,11 @@ export default function CruxCard({
         </div>
       )}
 
+      {copyStatus && (
+        <p role="status" className="px-3 pb-3 text-xs text-text-muted">
+          {copyStatus}
+        </p>
+      )}
       {exportOpen && (
         <Suspense fallback={null}>
           <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} crux={crux} />

@@ -150,6 +150,19 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
     api.state.publishedDownloadDelayMs = undefined;
     await card.getByRole('button', { name: 'Install', exact: true }).click();
     await expect(card.getByTestId('tool-installed')).toBeVisible();
+    const homeUrl = online.page.url();
+    const settings = await showPane(online.page, 'Settings');
+    await settings.getByRole('button', { name: 'Garden and backups', exact: true }).click();
+    await settings.getByRole('button', { name: 'Garden', exact: true }).click();
+    await settings
+      .getByTestId('installed-tools')
+      .getByRole('button', { name: 'Source and updates', exact: true })
+      .click();
+    await expect(
+      online.page.getByRole('region', { name: 'Install this tool', exact: true }),
+    ).toBeVisible();
+    await expect(online.page.getByTestId('tool-installed')).toBeVisible();
+    await online.page.goto(homeUrl);
     await online.page.keyboard.press('Escape');
     await online.page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await online.page.locator('[data-template-id^="installed-"]').click();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { getServices } from '@/services';
 import { toolManifest } from '@/services/crux-tools/registry';
@@ -15,6 +16,7 @@ import { choiceDialog } from '@/stores/dialogStore';
  */
 export default function InstalledTools() {
   const tools = useInstalledTools();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const list = Object.values(tools).sort((a, b) => a.id.localeCompare(b.id));
@@ -33,9 +35,7 @@ export default function InstalledTools() {
     setBusy(id);
     setError('');
     try {
-      await getServices()
-        .crux.trash(cruxId)
-        .catch(() => undefined);
+      await getServices().crux.trash(cruxId);
       forgetInstalledTool(id);
     } catch (e) {
       setError((e as Error).message);
@@ -48,7 +48,8 @@ export default function InstalledTools() {
       <h3 className="font-display text-sm font-medium text-text mb-2">Installed tools</h3>
       <p className="text-xs text-text-muted mb-3">
         Crux Tools this garden installed from Explore or a .cruxtool file. The build's own tools are
-        not listed; they cannot be removed.
+        not listed; they cannot be removed. Source and updates opens the creator’s publication,
+        where newer versions can be installed. Existing Cruxes keep their current files.
       </p>
       {list.length === 0 ? (
         <p className="text-xs text-text-muted">None yet. Explore ▸ Tools has them.</p>
@@ -69,14 +70,27 @@ export default function InstalledTools() {
                     {formatDateTime(t.installedAt)}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy === t.id}
-                  onClick={() => void remove(t.id, t.cruxId)}
-                >
-                  Remove
-                </Button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  {t.author && t.slug && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        navigate(`/${encodeURIComponent(t.author!)}/${encodeURIComponent(t.slug!)}`)
+                      }
+                    >
+                      Source and updates
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy === t.id}
+                    onClick={() => void remove(t.id, t.cruxId)}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </li>
             );
           })}

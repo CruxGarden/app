@@ -331,6 +331,68 @@ describe('.crux format conformance (CRUX-FORMAT.md)', () => {
     expect(byKey.prefs!.mode).toBe('protected');
   });
 
+  it('preserves separate visitor-owned values sharing a Store key', async () => {
+    const crux = await makeWorkspace();
+    await svc.store.set(crux.id, 'prefs', { color: 'red' }, 'protected', 'visitor-a');
+    await svc.store.set(crux.id, 'prefs', { color: 'blue' }, 'protected', 'visitor-b');
+    const exported = await exportCrux({ cruxId: crux.id });
+    const imported = await importCrux({ data: exported.blob, mode: 'clone' });
+    expect(await svc.store.get(imported.cruxId, 'prefs', 'visitor-a')).toEqual({ color: 'red' });
+    expect(await svc.store.get(imported.cruxId, 'prefs', 'visitor-b')).toEqual({ color: 'blue' });
+    expect(await svc.store.get(imported.cruxId, 'prefs')).toBeNull();
+  });
+
+  it('refuses to produce a silently incomplete archive when Store reads fail', async () => {
+    const crux = await makeWorkspace();
+    const failure = vi
+      .spyOn(svc.store, 'list')
+      .mockRejectedValueOnce(new Error('Store unavailable'));
+    try {
+      await expect(exportCrux({ cruxId: crux.id })).rejects.toThrow(/Store/i);
+    } finally {
+      failure.mockRestore();
+    }
+  });
+
+  it('reports failed Store restoration and rolls back the partial copy', async () => {
+    const crux = await makeWorkspace();
+    await svc.store.set(crux.id, 'prefs', { color: 'red' }, 'protected', 'visitor-a');
+    const exported = await exportCrux({ cruxId: crux.id });
+    const failure = vi
+      .spyOn(svc.store, 'set')
+      .mockRejectedValueOnce(new Error('Store unavailable'));
+    try {
+      await expect(importCrux({ data: exported.blob, mode: 'clone' })).rejects.toThrow(/Store/i);
+      const rows = await getSqliteClient().all('SELECT id FROM cruxes WHERE deleted IS NULL');
+      expect(rows.map((r) => r.id)).toContain(crux.id);
+      expect(rows.filter((r) => r.id !== crux.id)).toEqual([]);
+    } finally {
+      failure.mockRestore();
+    }
+  });
+
+  it.each([
+    [{ key: 'prefs', value: 1, mode: 'protected', visitorId: 42 }],
+    [{ key: 'prefs', value: 1, mode: 'public', visitorId: 'visitor-a' }],
+    [{ key: 'prefs', value: 1, mode: 'other' }],
+    [
+      { key: 'prefs', value: 1, mode: 'protected' },
+      { key: 'prefs', value: 2, mode: 'protected' },
+    ],
+  ])(
+    'rejects invalid or colliding Store rows before replacing existing work (%j)',
+    async (...entries) => {
+      const crux = await makeWorkspace();
+      const exported = await exportCrux({ cruxId: crux.id });
+      const zip = await zipOf(exported.blob);
+      zip.file('store.json', JSON.stringify(entries));
+      await expect(importCrux({ data: await repack(zip), mode: 'replace' })).rejects.toThrow(
+        /Store/i,
+      );
+      expect((await svc.crux.findById(crux.id)).title).toBe(crux.title);
+    },
+  );
+
   it('omits store.json entirely when the crux has no store data', async () => {
     const crux = await makeWorkspace();
     const result = await exportCrux({ cruxId: crux.id });
