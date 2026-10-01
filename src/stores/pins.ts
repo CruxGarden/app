@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useReducer } from 'react';
-import { getSetting, onSettingChange, setSetting } from '@/services/settings';
+import { useMemo } from 'react';
+import { useSetting } from '@/hooks/useSetting';
+import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import type { PaneType, WorkspaceScope } from './uiStore';
 
@@ -28,9 +29,7 @@ export function pinsFor(scope: WorkspaceScope): PaneType[] {
 }
 
 export function usePinned(scope: WorkspaceScope): PaneType[] {
-  const [, changed] = useReducer((n: number) => n + 1, 0);
-  useEffect(() => onSettingChange((key) => key === SettingsKey.PanelPins && changed()), []);
-  const raw = getSetting(SettingsKey.PanelPins);
+  const raw = useSetting(SettingsKey.PanelPins);
   return useMemo(() => parse(raw)[scope], [raw, scope]);
 }
 

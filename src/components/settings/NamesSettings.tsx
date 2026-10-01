@@ -49,7 +49,7 @@ export default function NamesSettings() {
     <SettingsSection
       title="Names"
       testId="names-settings"
-      description="What this Garden is called, and its panes. Leave a pane empty for the usual word."
+      description="Name your Garden. You can also give its panels your own names."
     >
       <label className="flex flex-col gap-1 mb-4">
         <SectionLabel tone="muted">Garden title</SectionLabel>
@@ -74,23 +74,32 @@ export default function NamesSettings() {
           </span>
         )}
       </label>
-      <div className="grid grid-cols-1 @min-[600px]/settings:grid-cols-2 gap-x-6 gap-y-2">
-        {PANES.filter((type) => paneOffered(type, aiEnabled)).map((type) => (
-          <label key={type} className="flex items-center gap-2">
-            <span className="w-28 shrink-0 text-xs font-mono text-text-muted">
-              {DEFAULT_PANE_LABELS[type]}
-            </span>
-            <Input
-              aria-label={`Name for ${DEFAULT_PANE_LABELS[type]}`}
-              placeholder={DEFAULT_PANE_LABELS[type]}
-              defaultValue={current[tokenFor(type)] ?? ''}
-              onBlur={(e) => write(tokenFor(type), e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              className="flex-1"
-            />
-          </label>
-        ))}
-      </div>
+      <details>
+        <summary className="cursor-pointer text-sm text-text rounded-[var(--radius-sm)] px-1 py-1">
+          Custom panel names
+        </summary>
+        <p className="text-xs text-text-muted my-2">
+          Optional: make the workspace vocabulary your own. Leave a field empty to use its usual
+          name.
+        </p>
+        <div className="grid grid-cols-1 @min-[600px]/settings:grid-cols-2 gap-x-6 gap-y-2">
+          {PANES.filter((type) => paneOffered(type, aiEnabled)).map((type) => (
+            <label key={type} className="flex items-center gap-2">
+              <span className="w-28 shrink-0 text-xs font-mono text-text-muted">
+                {DEFAULT_PANE_LABELS[type]}
+              </span>
+              <Input
+                aria-label={`Name for ${DEFAULT_PANE_LABELS[type]}`}
+                placeholder={DEFAULT_PANE_LABELS[type]}
+                defaultValue={current[tokenFor(type)] ?? ''}
+                onBlur={(e) => write(tokenFor(type), e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                className="flex-1"
+              />
+            </label>
+          ))}
+        </div>
+      </details>
     </SettingsSection>
   );
 }

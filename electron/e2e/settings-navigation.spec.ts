@@ -21,7 +21,12 @@ test('Settings groups remain reachable in a small window without exposing advanc
     await navigation.getByRole('button', { name: 'Garden and backups', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Desktop', exact: true })).toBeInViewport();
     await navigation.getByRole('button', { name: 'Appearance and panels', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Names', exact: true })).toBeInViewport();
+    await expect(
+      page.getByRole('button', { name: 'Customize appearance', exact: true }),
+    ).toBeInViewport();
+    await expect(
+      page.getByRole('textbox', { name: 'Name for Workshop', exact: true }),
+    ).toBeHidden();
     await navigation.getByRole('button', { name: 'Account', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'API address' })).toBeHidden();
     const evidence = resolve(__dirname, '../../docs/product-review/2026-09-30');

@@ -19,6 +19,7 @@ test('a garden names itself and its panes', async () => {
     await expect(names).toBeVisible();
     await names.getByLabel('Garden title').fill('Floyd County Police Department');
     await names.getByLabel('Garden title').press('Enter');
+    await names.getByText('Custom panel names', { exact: true }).click();
     await names.getByLabel('Name for Collaboration').fill('Interview room');
     await names.getByLabel('Name for Collaboration').press('Enter');
     await names.getByLabel('Name for Artifacts').fill('Case files');
@@ -38,6 +39,7 @@ test('a garden names itself and its panes', async () => {
 
     // Cleared, the usual words return.
     await page.keyboard.press('ControlOrMeta+,');
+    await names.getByText('Custom panel names', { exact: true }).click();
     await names.getByLabel('Name for Collaboration').fill('');
     await names.getByLabel('Name for Collaboration').press('Enter');
     await hidePane(page, 'Settings');

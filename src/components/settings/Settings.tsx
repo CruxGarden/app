@@ -1,3 +1,4 @@
+import AppearanceSettings from './AppearanceSettings';
 import StartSettings from './StartSettings';
 import LibrarySettings from './LibrarySettings';
 import { useRef } from 'react';
@@ -59,6 +60,7 @@ export default function Settings() {
       label: 'Appearance and panels',
       content: (
         <>
+          <AppearanceSettings />
           <NamesSettings />
           <WorkspaceLayoutsSettings />
         </>

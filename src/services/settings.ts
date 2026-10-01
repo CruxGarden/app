@@ -136,8 +136,10 @@ export async function setSettingDurably(key: string, value: string): Promise<voi
       writeFailure = error;
     });
   await operation;
+  const previous = cache.get(key);
   cache.set(key, value);
   if (SYNC_KEYS.has(key) && typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+  if (previous !== value) changed(key);
 }
 
 /** Remove a setting from cache + SQLite + localStorage. */

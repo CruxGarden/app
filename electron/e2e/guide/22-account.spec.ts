@@ -112,6 +112,7 @@ test.describe('guide 22 · Account and Names', () => {
       await createCrux(page, 'Renamed panes');
       const settings = await showPane(page, 'Settings');
       const names = settings.getByTestId('names-settings');
+      await names.getByText('Custom panel names', { exact: true }).click();
       const field = names.getByLabel('Name for Collaboration');
       const long = 'The Conversation Where All The Thinking Happens Together At Length';
       await field.fill(long);
@@ -142,6 +143,7 @@ test.describe('guide 22 · Account and Names', () => {
       await createCrux(page, 'Renamed everywhere');
       const settings = await showPane(page, 'Settings');
       const names = settings.getByTestId('names-settings');
+      await names.getByText('Custom panel names', { exact: true }).click();
       await names.getByLabel('Garden title').fill('The Bachelor Pad');
       await names.getByLabel('Garden title').blur();
       for (const [pane, word] of [

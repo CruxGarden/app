@@ -1,0 +1,24 @@
+{
+  "scope": "Settings discoverability and shared preference observation",
+  "changes": [
+    "Direct routes to the existing Mood Customizer, library and sound controls from Appearance and panels",
+    "Optional panel naming folded without hiding the Garden title or removing any fields",
+    "Shared useSetting subscription replaces mirrored state in startup preferences and pin rendering",
+    "Durable settings notify subscribers after successful persistence; failed writes keep the prior observed value"
+  ],
+  "reproduction": {
+    "desktop": "Appearance entry missing before change. Ordinary cross-workspace startup preference flow already passed; not claimed as a reproduced bug. /tmp/clarity-baseline.log",
+    "unit": "Durable settings subscriber received no committed changes. Strengthened test failed, then passed after notification fix. /tmp/clarity-settings-{red,green}.log"
+  },
+  "verification": {
+    "app": "npm run verify: 1690 passed / 268 files, 18 skipped, build passed. /tmp/clarity-app-verify.log",
+    "electron": "npm run verify: 77 passed, 1 skipped. /tmp/clarity-electron-verify.log",
+    "desktop": "15 passed together in 2.3 minutes: 21 axe states, narrow Settings, naming/reset, Customizer/full builder/restart, resume/fallback, direct appearance navigation and live pin/unpin. /tmp/clarity-desktop.log",
+    "guide": "126 stories / 1235 criteria; 346 baseline checks, 71 creation choices and 14 Settings components mapped. Offline acceptance passed. /tmp/clarity-guide-verify.log"
+  },
+  "limits": [
+    "No universal accessibility or newcomer-study claim.",
+    "No real publication, deployment or merge.",
+    "Native CI remains commit-specific; previous accae9fcd Windows/Linux passed."
+  ]
+}

@@ -8,7 +8,7 @@ import { formatDateTime } from '@/lib/format';
 import { choiceDialog } from '@/stores/dialogStore';
 
 /**
- * Settings → Data → Installed tools (CRUX-TOOLS-DISTRIBUTION-PLAN §3.6): the
+ * Settings → Tools and Moods → Installed tools (CRUX-TOOLS-DISTRIBUTION-PLAN §3.6): the
  * Crux Tools this garden installed, where each came from, and Remove. A
  * Crux made from a tool keeps its own Artifacts (cloned by fingerprint), so
  * removing the tool takes nothing from it; it only stops new Cruxes being
@@ -47,9 +47,10 @@ export default function InstalledTools() {
     <div data-testid="installed-tools">
       <h3 className="font-display text-sm font-medium text-text mb-2">Installed tools</h3>
       <p className="text-xs text-text-muted mb-3">
-        Crux Tools this garden installed from Explore or a .cruxtool file. The build's own tools are
-        not listed; they cannot be removed. Source and updates opens the creator’s publication,
-        where newer versions can be installed. Existing Cruxes keep their current files.
+        Crux Tools this garden installed from Explore or a .cruxtool file. Built-in tools are
+        available from Add Crux and cannot be removed here. Source and updates opens the creator’s
+        publication, where newer versions can be installed. Existing Cruxes keep their current
+        files.
       </p>
       {list.length === 0 ? (
         <p className="text-xs text-text-muted">None yet. Explore ▸ Tools has them.</p>
