@@ -1,7 +1,9 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { getServices, initServices } from './index';
 import { indexedTaskManifest, indexTaskManifest } from './task-files';
 
+localApiFixture();
 beforeEach(() => initServices());
 
 /** Task Working Copies index blobs the store already holds instead of re-reading them (GAME-CRUXSPACE-PLAN.md §9 #7). */
@@ -24,7 +26,7 @@ it('registers an existing blob by fingerprint and refuses unknown blobs or dupli
     meta: { path: 'runtime/game.js', mode: 0o644 },
   });
   expect(registered.fingerprint).toBe(source.fingerprint);
-  expect(await artifact.readContent(registered.id)).toBe('console.log("glow")');
+  expect(await artifact.readContent(registered)).toBe('console.log("glow")');
   await expect(
     artifact.register({
       resourceId: task.id,
@@ -44,7 +46,7 @@ it('registers an existing blob by fingerprint and refuses unknown blobs or dupli
       mimeType: 'text/javascript',
       encoding: 'utf-8',
     }),
-  ).rejects.toThrow('Blob not found');
+  ).rejects.toThrow('Missing content');
   // The manifest carries sizes, and indexing a fresh copy registers every file without reading bytes.
   const manifest = await indexedTaskManifest(main.id);
   expect(manifest['runtime/game.js']?.size).toBe(source.size);

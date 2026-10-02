@@ -91,7 +91,7 @@ test('a worker review resolves conflicts into its named source Task and recovers
       },
       { main, target },
     );
-    await launch.page.goto(`crux-app://app/c/${main}?task=${prepared.worker}`);
+    await launch.page.goto(new URL(`/c/${main}?task=${prepared.worker}`, launch.page.url()).href);
     await launch.page.getByRole('button', { name: 'Review changes', exact: true }).click();
     const dialog = launch.page.getByRole('dialog', {
       name: 'Review changes for Parent task',
@@ -149,7 +149,7 @@ test('a worker review resolves conflicts into its named source Task and recovers
     launch = await launchApp({ dir });
     await launch.page.getByRole('button', { name: 'Enter', exact: true }).click();
     await expect(launch.page.getByRole('button', { name: 'Navigator', exact: true })).toBeVisible();
-    await launch.page.goto(`crux-app://app/c/${main}?task=${prepared.worker}`);
+    await launch.page.goto(new URL(`/c/${main}?task=${prepared.worker}`, launch.page.url()).href);
     await expect(launch.page.getByText('Parent task is protected', { exact: false })).toBeVisible();
     await launch.page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_finish'));
     await launch.page.getByRole('button', { name: 'Resume merge', exact: true }).click();

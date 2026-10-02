@@ -41,13 +41,30 @@ test('refused Task completion retains setup across restart and recovery protects
     launch = await launchApp({ dir, env });
     page = launch.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.goto(`crux-app://app/c/${main}?task=${copy.id}`);
+    await page.goto(new URL(`/c/${main}?task=${copy.id}`, page.url()).href);
     const recover = page.getByRole('button', { name: 'Recover task setup', exact: true });
     await expect(recover).toBeVisible();
+    // Recovery must inspect the committed folder after restart, before any allocation.
+    expect(
+      await page.evaluate(
+        (folder) => window.electronAPI!.project.folderExists(folder),
+        copy.project_folder,
+      ),
+    ).toBe(true);
     await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_ready'));
     writeFileSync(join(copy.project_folder, 'external.txt'), 'External work must remain');
     await recover.click();
     await expect(page.getByRole('alert').filter({ hasText: 'external.txt' })).toBeVisible();
+    expect(
+      await page.evaluate(
+        (id) =>
+          window.electronAPI!.sqlite.get(
+            'SELECT phase, project_folder FROM working_copies WHERE id = ?',
+            [id],
+          ),
+        copy.id,
+      ),
+    ).toEqual({ phase: 'failed', project_folder: copy.project_folder });
     expect(readFileSync(join(copy.project_folder, 'external.txt'), 'utf8')).toBe(
       'External work must remain',
     );

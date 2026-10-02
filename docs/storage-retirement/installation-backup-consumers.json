@@ -72,11 +72,18 @@
     "Selected Garden wrapper admission remains sequential with compensating cleanup; coordinated workspace-operation ownership and atomic selected-Garden admission remain follow-through.",
     "Refused intake may leave unreachable verified immutable objects; no root garbage collection is enabled.",
     "Folder rehoming retains its existing per-Crux retry behavior. Whole-installation capture coordination and exclusive operation ownership remain separate AR07 work.",
-    "API/runtime, real Garden, manual candidate and unrelated screenshots/data are unchanged. No merge/deploy/live publication occurred. Exact new-head Windows/Linux CI needs separate acceptance."
+    "API/runtime, real Garden, manual candidate and unrelated screenshots/data are unchanged. No merge/deploy/live publication occurred. Native Windows/Linux passed for a86 (run36986820000)."
   ],
   "priorNativeCI": {
     "head": "37e7447e9afb754baee1d60609aa5a31ef71a327",
     "run": 36974449003,
+    "windows": "success",
+    "linux": "success",
+    "jobStatusInspected": true
+  },
+  "nativeCI": {
+    "head": "a86edc43589a4c4fc35ed408feb267562cabbd78",
+    "run": 36986820000,
     "windows": "success",
     "linux": "success",
     "jobStatusInspected": true

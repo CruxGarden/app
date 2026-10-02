@@ -1,5 +1,6 @@
 import type { Crux, CruxMeta } from '@/api/types';
 import { getSqliteClient } from './sqlite/client';
+import { taskStorage } from './task-storage';
 import { fromRow } from './sqlite/helpers';
 
 /** Durable copy identity is distinct from its owning Crux and open UI lifetime. */
@@ -124,37 +125,16 @@ export async function updateCopyMeta(
   patch: Record<string, unknown>,
   title?: string,
 ): Promise<Crux> {
-  const db = getSqliteClient();
-  // Capture before waiting behind a Task operation; the API captures again at
-  // its own admission boundary. Keep the existing local lifecycle ordering.
-  const captured = db.updateWorkingCopyMeta ? JSON.parse(JSON.stringify(patch)) : patch;
+  const db = taskStorage();
+  // Capture before waiting behind a Task operation; the API captures again at admission.
+  const captured = JSON.parse(JSON.stringify(patch));
   return serializeCopy(id, async () => {
-    if (db.updateWorkingCopyMeta) {
-      await db.updateWorkingCopyMeta(id, captured, title);
-      announceTasksChanged();
-      return (await workingCopyDocument(id))!;
-    }
-    const copy = await findWorkingCopy(id);
-    if (!copy) throw new Error('Working Copy not found.');
-    const meta = { ...copy.meta, ...patch } as Record<string, unknown>;
-    delete meta.workingCopy;
-    delete meta.projectFolder;
-    const result = await getSqliteClient().run(
-      'UPDATE working_copies SET meta = ?, title = COALESCE(?, title), revision = revision + 1, updated = ? WHERE id = ? AND revision = ?',
-      [
-        JSON.stringify(meta),
-        title === undefined ? null : title.trim() || 'Untitled task',
-        new Date().toISOString(),
-        id,
-        copy.revision,
-      ],
-    );
-    if (result.changes !== 1)
-      throw new Error('This task changed while saving. Reload it before retrying.');
+    await db.updateWorkingCopyMeta(id, captured, title);
     announceTasksChanged();
     return (await workingCopyDocument(id))!;
   });
 }
+
 export async function assertMainWorkspace(id: string): Promise<void> {
   if (await findWorkingCopy(id))
     throw new Error('This action belongs to Main. Open Main to continue.');

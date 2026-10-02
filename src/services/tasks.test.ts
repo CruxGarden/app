@@ -64,6 +64,46 @@ async function fixture() {
   return { main, a, b };
 }
 describe('parallel tasks', () => {
+  it('refuses an incomplete native Task owner before creating a workspace, Growth or copy', async () => {
+    const main = await getServices().crux.create({ title: 'Unopened Main' });
+    await write(main.id, 'Keep Main');
+    const before = await native.client.export();
+    const command = native.client.finishWorkingCopySetup;
+    native.client.finishWorkingCopySetup = undefined;
+    try {
+      await expect(createTask(main.id, 'Cannot prepare')).rejects.toThrow(
+        'Task storage is unavailable',
+      );
+      expect(allWorkspaces()).toEqual([]);
+      expect(await native.client.all('SELECT id FROM working_copies')).toEqual([]);
+      expect(await native.client.export()).toEqual(before);
+    } finally {
+      native.client.finishWorkingCopySetup = command;
+    }
+    const task = await createTask(main.id, 'Can prepare');
+    expect(task.phase).toBe('ready');
+    expect(await read(task.id)).toBe('Keep Main');
+  });
+  it('refuses missing merge authority before changing a checked review or releasing its candidate', async () => {
+    const { main, a } = await fixture();
+    await write(a.id, 'Checked result');
+    const review = await prepareTaskReview(a.id);
+    await verifyTaskReview(review.id);
+    const before = await native.client.export();
+    const begin = native.client.beginTaskMerge;
+    native.client.beginTaskMerge = undefined;
+    try {
+      await expect(applyTaskReview(review.id)).rejects.toThrow('Task storage is unavailable');
+      await expect(releaseTaskReview(review.id)).rejects.toThrow('Task storage is unavailable');
+      expect(await native.client.export()).toEqual(before);
+      expect(await read(main.id)).toBe('<h1>Base</h1>');
+      expect(await read(review.candidateId)).toBe('Checked result');
+    } finally {
+      native.client.beginTaskMerge = begin;
+    }
+    await applyTaskReview(review.id);
+    expect(await read(main.id)).toBe('Checked result');
+  });
   it('checks a content-only task on an embedded app without rebuilding its editor', async () => {
     const { artifact, crux } = getServices();
     const main = await crux.create({

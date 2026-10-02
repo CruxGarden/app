@@ -757,10 +757,14 @@ async function setupIpc() {
         /* bad meta row — skip */
       }
     }
-    for (const copy of await db.all<{ project_folder: string | null }>(
-      "SELECT project_folder FROM working_copies WHERE phase = 'ready'",
+    // Unfinished setup must remain inspectable after restart. Register its
+    // committed folder, but admit watcher edits only after recovery succeeds.
+    for (const copy of await db.all<{ project_folder: string | null; phase: string }>(
+      "SELECT project_folder, phase FROM working_copies WHERE phase IN ('ready', 'preparing', 'failed')",
     )) {
-      if (copy.project_folder) watcher.watch(projects.registerFolder(copy.project_folder));
+      if (!copy.project_folder) continue;
+      const folder = projects.registerFolder(copy.project_folder);
+      if (copy.phase === 'ready') watcher.watch(folder);
     }
     debugLog(`Watcher bootstrap: watching ${watched} project folder(s)`);
   } catch (err: any) {

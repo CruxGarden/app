@@ -834,61 +834,6 @@
       "statement": "'DELETE FROM store WHERE crux_id = ?'"
     },
     {
-      "file": "src/services/task-files.ts",
-      "method": "getSqliteClient().run",
-      "statement": "'UPDATE artifacts SET meta = ? WHERE resource_id = ? AND path = ?'"
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "insert.sql"
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "\"UPDATE working_copies SET phase = 'ready' WHERE id = ?\""
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "\"UPDATE working_copies SET phase = 'failed' WHERE id = ?\""
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "'INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET phase = excluded.phase, data = excluded.data'"
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "\"UPDATE working_copies SET phase = 'merged', revision = revision + 1 WHERE id = ?\""
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "'UPDATE working_copies SET phase = ?, revision = revision + 1, updated = ? WHERE id = ? AND revision = ?'"
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "\"UPDATE working_copies SET phase = 'archived' WHERE id = ?\""
-    },
-    {
-      "file": "src/services/tasks.ts",
-      "method": "db.run",
-      "statement": "\"UPDATE working_copies SET phase = 'ready', revision = revision + 1 WHERE id = ?\""
-    },
-    {
-      "file": "src/services/working-copies.ts",
-      "method": "getSqliteClient().run",
-      "statement": "'UPDATE working_copies SET meta = ?, title = COALESCE(?, title), revision = revision + 1, updated = ? WHERE id = ? AND revision = ?'"
-    },
-    {
       "file": "src/stores/authStore.ts",
       "method": "db.run",
       "statement": "'UPDATE cruxes SET author_id = ? WHERE author_id = ?'"
