@@ -5,7 +5,7 @@ import { getSqliteClient } from './sqlite/client';
 import { getLocalIdentity } from './sqlite/identity';
 import { getServices } from './index';
 
-function bridge() {
+export function privateArchiveService() {
   const archive = getSqliteClient().privateArchive;
   if (!archive)
     throw new Error('The API archive service is unavailable. Restart Garden and retry.');
@@ -15,7 +15,7 @@ export async function privateArchiveBytes(data: Blob | ArrayBuffer) {
   return new Uint8Array(data instanceof Blob ? await data.arrayBuffer() : data.slice(0));
 }
 export async function exportPrivateCrux(options: ExportOptions): Promise<ExportResult> {
-  const api = bridge();
+  const api = privateArchiveService();
   const cruxId = options.cruxId;
   options.onProgress?.('Saving files and conversation…');
   const { withCapturedTaskGraph } = await import('./tasks');
@@ -36,7 +36,7 @@ export async function exportPrivateCrux(options: ExportOptions): Promise<ExportR
   });
 }
 export async function importPrivateCrux(options: ImportOptions): Promise<ImportResult> {
-  const api = bridge();
+  const api = privateArchiveService();
   const gardenId = options.gardenId ?? captureGardenId();
   const mode = options.mode ?? 'restore';
   const requestId = options.requestId ?? crypto.randomUUID();

@@ -691,16 +691,6 @@
       "statement": "'ALTER TABLE cruxes ADD COLUMN deleted TEXT'"
     },
     {
-      "file": "src/services/crux-io.ts",
-      "method": "db.run",
-      "statement": "'UPDATE dimensions SET created = ?, updated = ? WHERE id = ?'"
-    },
-    {
-      "file": "src/services/crux-io.ts",
-      "method": "db.run",
-      "statement": "'UPDATE cruxes SET created = ?, updated = ? WHERE id = ?'"
-    },
-    {
       "file": "src/services/cruxspaces.ts",
       "method": "getSqliteClient().run",
       "statement": "'INSERT INTO settings (key, value) VALUES (?, ?)'"
@@ -876,34 +866,9 @@
       "statement": "'DELETE FROM store WHERE crux_id = ?'"
     },
     {
-      "file": "src/services/task-archive.ts",
-      "method": "db.run",
-      "statement": "insert.sql"
-    },
-    {
-      "file": "src/services/task-archive.ts",
-      "method": "db.run",
-      "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"
-    },
-    {
-      "file": "src/services/task-archive.ts",
-      "method": "db.run",
-      "statement": "`DELETE FROM ${row.table} WHERE id = ?`"
-    },
-    {
       "file": "src/services/task-files.ts",
       "method": "getSqliteClient().run",
       "statement": "'UPDATE artifacts SET meta = ? WHERE resource_id = ? AND path = ?'"
-    },
-    {
-      "file": "src/services/task-import-replacement.ts",
-      "method": "db.run",
-      "statement": "`DELETE FROM ${table} WHERE id IN (${ids.map(() => '?').join(',')})`"
-    },
-    {
-      "file": "src/services/task-import-replacement.ts",
-      "method": "getSqliteClient().run",
-      "statement": "insert.sql.replace(/^INSERT INTO/, 'INSERT OR REPLACE INTO')"
     },
     {
       "file": "src/services/tasks.ts",

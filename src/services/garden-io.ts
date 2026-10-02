@@ -272,7 +272,7 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     WHERE meta IS NOT NULL`);
 
       // A restored task always gets a fresh directory and provider session.
-      const { portableMeta } = await import('./task-archive');
+      const { portableMeta } = await import('./portable-metadata');
       const copies = await db.all<{ id: string; meta: string }>(
         'SELECT id, meta FROM working_copies',
       );

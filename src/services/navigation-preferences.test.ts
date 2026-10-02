@@ -102,7 +102,7 @@ it('does not report a failed preference save as successful and can retry it', as
 it('detects ignored settings writes and keeps author intent portable without personal choices', async () => {
   const a = await garden('A');
   await saveGardenNavigation(a.id, 'neighborhood');
-  const { portableMeta } = await import('./task-archive');
+  const { portableMeta } = await import('./portable-metadata');
   const portable = portableMeta((await getServices().crux.findById(a.id)).meta);
   expect(portable.navigation).toEqual({ version: 1, view: 'neighborhood' });
   await getSqliteClient().run(

@@ -5,7 +5,7 @@ import {
   nativeAppType,
   samplerType,
 } from './embedded-app';
-import { portableMeta } from './task-archive';
+import { portableMeta } from './portable-metadata';
 import { downloadPublicationBlob } from './publication-files';
 import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
 import { manifestFor } from './crux-tools/registry';
