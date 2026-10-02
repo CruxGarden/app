@@ -35,7 +35,7 @@
                 {
                   "html": "<div class=\"flex items-center gap-2 h-9 pl-2 pr-1.5 whitespace-nowrap bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown text-text\">",
                   "target": [
-                    ".pl-2"
+                    ".h-9"
                   ]
                 }
               ],
@@ -51,6 +51,37 @@
             ".max-w-\\[9rem\\]"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button data-plasma-host=\"\" class=\"plasma-button relative z-[1] inline-flex items-center justify-center overflow-hidden font-body font-medium rounded-button cursor-pointer disabled:cursor-not-allowed px-5 text-sm gap-2 h-auto min-h-11 max-w-full whitespace-normal py-2\">",
+                  "target": [
+                    ".plasma-button"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"relative inline-flex items-center gap-[inherit]\">Explore undertakings — a collection of projects</span>",
+          "target": [
+            ".gap-\\[inherit\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
         },
         {
           "any": [
@@ -80,7 +111,7 @@
           "impact": "serious",
           "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
           "target": [
-            ".-ml-2\\.5 > .border-transparent.bg-transparent.hover\\:text-action-button-text-hover:nth-child(1)"
+            ".-ml-2\\.5 > .bg-transparent.border-transparent.hover\\:text-action-button-text-hover:nth-child(1)"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
         },
@@ -112,7 +143,7 @@
           "impact": "serious",
           "html": "<button class=\"inline-flex items-ce...\" aria-expanded=\"false\">",
           "target": [
-            ".border-transparent.bg-transparent.hover\\:text-action-button-text-hover:nth-child(2)"
+            ".bg-transparent.border-transparent.hover\\:text-action-button-text-hover:nth-child(2)"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
         },
@@ -144,70 +175,7 @@
           "impact": "serious",
           "html": "<button class=\"inline-flex items-ce...\">",
           "target": [
-            ".border-transparent.bg-transparent.hover\\:text-action-button-text-hover:nth-child(3)"
-          ],
-          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
-        },
-        {
-          "any": [
-            {
-              "id": "color-contrast",
-              "data": {
-                "fontSize": "9.8pt (13px)",
-                "fontWeight": "normal",
-                "messageKey": "pseudoContent",
-                "expectedContrastRatio": "4.5:1"
-              },
-              "relatedNodes": [
-                {
-                  "html": "<button data-plasma-host=\"\" class=\"plasma-button relative z-[1] inline-flex items-center justify-center overflow-hidden font-body font-medium rounded-button cursor-pointer disabled:cursor-not-allowed h-11 px-5 text-sm gap-2\">",
-                  "target": [
-                    ".plasma-button"
-                  ]
-                }
-              ],
-              "impact": "serious",
-              "message": "Element's background color could not be determined due to a pseudo element"
-            }
-          ],
-          "all": [],
-          "none": [],
-          "impact": "serious",
-          "html": "<span class=\"relative inline-flex items-center gap-[inherit]\">Explore undertakings</span>",
-          "target": [
-            ".gap-\\[inherit\\]"
-          ],
-          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
-        },
-        {
-          "any": [
-            {
-              "id": "color-contrast",
-              "data": {
-                "contrastRatio": 0,
-                "fontSize": "9.0pt (12px)",
-                "fontWeight": "normal",
-                "messageKey": "bgImage",
-                "expectedContrastRatio": "4.5:1"
-              },
-              "relatedNodes": [
-                {
-                  "html": "<div class=\"mosaic-window-body\">",
-                  "target": [
-                    ".pane-settings > .mosaic-window-body"
-                  ]
-                }
-              ],
-              "impact": "serious",
-              "message": "Element's background color could not be determined due to a background image"
-            }
-          ],
-          "all": [],
-          "none": [],
-          "impact": "serious",
-          "html": "<h2 class=\"text-xs font-medium text-text-muted\">Account</h2>",
-          "target": [
-            ".space-y-3[aria-label=\"Account\"] > h2"
+            ".bg-transparent.border-transparent.hover\\:text-action-button-text-hover:nth-child(3)"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
         },
@@ -237,9 +205,9 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<h2 class=\"text-xs font-medium text-text-muted\">AI and agents</h2>",
+          "html": "<h2 class=\"text-xs font-medium text-text-muted\">Getting started</h2>",
           "target": [
-            "section[aria-label=\"AI and agents\"] > h2"
+            "section[aria-label=\"Getting started\"] > h2"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
         },
@@ -269,9 +237,9 @@
           "all": [],
           "none": [],
           "impact": "serious",
-          "html": "<h2 class=\"text-xs font-medium text-text-muted\">Garden and backups</h2>",
+          "html": "<h2 class=\"text-xs font-medium text-text-muted\">Tools and Moods</h2>",
           "target": [
-            "section[aria-label=\"Garden and backups\"] > h2"
+            "section[aria-label=\"Tools and Moods\"] > h2"
           ],
           "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background image"
         }

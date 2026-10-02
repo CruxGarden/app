@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
 import { showPane, hidePane } from './panel-helpers';
+import { expectToggleCentered } from './toggle-helpers';
 
 test('paper Moods apply, builder controls reach pixels, and edits survive restart without AI', async () => {
   test.setTimeout(180_000);
@@ -32,7 +33,10 @@ test('paper Moods apply, builder controls reach pixels, and edits survive restar
         '6px',
       );
       await hidePane(page, 'Mood');
-      await showPane(page, 'Settings');
+      const settings = await showPane(page, 'Settings');
+      await expect(settings.getByText('When I open Crux Garden', { exact: true })).toBeVisible();
+      for (const label of ['Resume my last workspace on startup', 'Celebrate my first publication'])
+        await expectToggleCentered(settings.getByRole('switch', { name: label, exact: true }));
       await expect(
         page
           .getByTestId('pane-body-settings')
@@ -78,6 +82,15 @@ test('paper Moods apply, builder controls reach pixels, and edits survive restar
     await alpha.fill('80');
     await alpha.press('Tab');
     await expect(muted).toHaveValue('rgba(240, 230, 220, 0.8)');
+    await mood.getByRole('button', { name: 'Shape & layout', exact: true }).click();
+    for (const [label, value] of [
+      ['Toggle width', '38px'],
+      ['Toggle height', '20px'],
+    ]) {
+      const field = mood.getByRole('textbox', { name: `${label} value`, exact: true });
+      await field.fill(value!);
+      await field.press('Enter');
+    }
     await hidePane(page, 'Mood');
     await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toHaveCSS(
       'box-shadow',
@@ -87,6 +100,23 @@ test('paper Moods apply, builder controls reach pixels, and edits survive restar
       'color',
       'rgba(240, 230, 220, 0.8)',
     );
+    const settings = await showPane(page, 'Settings');
+    for (const label of ['Resume my last workspace on startup', 'Celebrate my first publication']) {
+      const toggle = settings.getByRole('switch', { name: label, exact: true });
+      await expect(toggle).toHaveCSS('width', '38px');
+      await expect(toggle).toHaveCSS('height', '20px');
+      await expectToggleCentered(toggle);
+      await toggle.hover();
+      await page.mouse.down();
+      try {
+        await expectToggleCentered(toggle);
+      } finally {
+        await page.mouse.move(600, 900);
+        await page.mouse.up();
+      }
+      await expectToggleCentered(toggle);
+    }
+    await hidePane(page, 'Settings');
     await app.close();
     const again = await launchApp({ dir, ai: false });
     try {
@@ -98,6 +128,14 @@ test('paper Moods apply, builder controls reach pixels, and edits survive restar
       await expect(
         again.page.getByRole('button', { name: 'Add a Garden brief', exact: true }),
       ).toHaveCSS('color', 'rgba(240, 230, 220, 0.8)');
+      const settings = await showPane(again.page, 'Settings');
+      const restoredToggle = settings.getByRole('switch', {
+        name: 'Resume my last workspace on startup',
+        exact: true,
+      });
+      await expect(restoredToggle).toHaveCSS('width', '38px');
+      await expect(restoredToggle).toHaveCSS('height', '20px');
+      await expectToggleCentered(restoredToggle);
     } finally {
       await again.app.close();
     }

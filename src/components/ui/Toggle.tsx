@@ -43,15 +43,17 @@ export default function Toggle({
       >
         <span
           className={cn(
-            'toggle-thumb absolute top-[2px] left-[2px] rounded-full',
+            'toggle-thumb absolute top-1/2 left-px rounded-full',
             checked ? 'bg-toggle-thumb-active' : 'bg-toggle-thumb',
           )}
           style={{
             width: 'calc(var(--toggle-height) - 4px + var(--toggle-stretch))',
             height: 'calc(var(--toggle-height) - 4px)',
+            // Absolute offsets start inside the track's 1px border. Center
+            // vertically and keep the same outer inset at either end.
             transform: checked
-              ? 'translateX(calc(var(--toggle-width) - var(--toggle-height) - var(--toggle-stretch)))'
-              : undefined,
+              ? 'translateY(-50%) translateX(calc(var(--toggle-width) - var(--toggle-height) - var(--toggle-stretch)))'
+              : 'translateY(-50%)',
           }}
         />
       </button>

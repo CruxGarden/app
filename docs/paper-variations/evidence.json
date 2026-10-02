@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-02",
+  "stage": "Shared switch alignment and six actual Paper Mood captures",
+  "completeSlice": true,
+  "base": "05d1bf27dc6e01e84c86fbf455ff985512edefd9",
+  "reproduction": {
+    "log": "/tmp/toggle-centering-red.log",
+    "oldOuterInsetPx": {
+      "top": 3,
+      "bottom": 1,
+      "offEnd": 3
+    }
+  },
+  "fix": "Position the thumb at50% of the bordered track interior, translate it vertically by half its height, and start horizontally1px inside the border. Outer insets are2px at both ends and both vertical edges; Mood dimensions, colors and pressed stretch remain.",
+  "checks": [
+    "Off/on pixel geometry within0.1px in all six Paper Moods.",
+    "Custom38\u00d720 dimensions and both states, pressed stretch/release.",
+    "Save through actual Mood builder and app restart; dimensions and centered pixels persist.",
+    "Actual desktop light/dark token colors, RGBA alpha and shadow roundtrip remain covered.",
+    "All six screenshot layouts inspected; no blank Settings or open Mood flyout."
+  ],
+  "verification": {
+    "app": "/tmp/task-read-app-accepted.log",
+    "electron": "/tmp/task-read-electron-final.log",
+    "desktop": "/tmp/task-read-desktop-accepted.log",
+    "appPassed": 1684,
+    "appSkipped": 18,
+    "appFiles": 273,
+    "build": true,
+    "electronPassed": 77,
+    "electronSkipped": 1,
+    "desktopPassed": 7,
+    "desktopDuration": "2.3m"
+  },
+  "accessibility": {
+    "lightViolations": 0,
+    "darkViolations": 0,
+    "incompleteRulesPerMode": 1,
+    "limit": "Axe cannot determine some contrast over the patterned background; manual contrast/product review remains. These are scoped Settings checks, not full-app accessibility certification."
+  },
+  "captures": [
+    "sunflower-light.png",
+    "sunflower-dark.png",
+    "lagoon-light.png",
+    "lagoon-dark.png",
+    "berry-light.png",
+    "berry-dark.png"
+  ],
+  "limits": [
+    "Existing Mood hues share Paper pane/body palettes; accent/background hue changes are shown accurately, not redesigned.",
+    "No new Mood token or appearance default was introduced.",
+    "Full v1 release readiness is not complete."
+  ]
+}
