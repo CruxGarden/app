@@ -70,6 +70,10 @@ test('a Garden connects a website, finished artwork and a tracker, retaining sel
     await page.setViewportSize({ width: 1600, height: 1100 });
     await enterGarden(page);
     // A Garden for the release, with what it is for written under its name.
+    await expect(page.getByRole('button', { name: 'New Garden', exact: true })).toHaveCount(1);
+    await page.screenshot({
+      path: resolve(__dirname, '../../docs/storage-retirement/home-actions-after.png'),
+    });
     await page.getByRole('button', { name: 'New Garden', exact: true }).click();
     await page.getByRole('textbox', { name: 'Garden name' }).fill('Album release');
     await page.getByRole('button', { name: 'Create Garden', exact: true }).click();
@@ -105,6 +109,7 @@ test('a Garden connects a website, finished artwork and a tracker, retaining sel
     await taskCell.locator('input').press('Enter');
     await expect(table.locator('#save-state')).toHaveText('Saved in this Crux');
     await home(page);
+    await expect(page.getByRole('button', { name: 'New Garden', exact: true })).toHaveCount(1);
     await expect(work(page).getByRole('img', { name: 'Album cover', exact: true })).toBeVisible();
     await page.screenshot({ path: info.outputPath('garden-work.png') });
     await open(page, 'Album website').click();

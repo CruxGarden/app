@@ -47,5 +47,11 @@
     "Native service tests and four actual Electron journeys cover API/file projection/community behavior in isolated profiles.",
     "No legacy archive conversion or catalog substitution is added.",
     "No real Garden/manual candidate or live publication changes."
-  ]
+  ],
+  "nativeCI": {
+    "commit": "acec833e4",
+    "run": 36962010343,
+    "windows": "success",
+    "linux": "success"
+  }
 }

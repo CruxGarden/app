@@ -12,6 +12,7 @@ import { exportTaskCrux, importTaskCrux, portableMeta } from './task-archive';
 import { assertMainWorkspace, listWorkingCopies } from './working-copies';
 import JSZip from 'jszip';
 import { getServices } from './index';
+import { NotFoundError } from './types';
 import { guessMimeType, hashContent, buildInsert } from './sqlite/helpers';
 import { getSqliteClient } from './sqlite/client';
 import { getLocalIdentity } from './sqlite/identity';
@@ -178,8 +179,8 @@ export async function peekImport(data: Blob | ArrayBuffer): Promise<{
         incomingVersion: Number(meta?.growthCount) || 0,
         incomingUpdated: String(cruxData.updated || meta?.exportedAt || ''),
       };
-    } catch {
-      // No conflict — crux doesn't exist locally
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
     }
   }
 

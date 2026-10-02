@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { getServices, initServices } from './index';
 import { createCruxspace, listCruxspaces } from './cruxspaces';
@@ -5,6 +6,7 @@ import { exportCruxspace } from './cruxspace-package';
 import { startCruxspaceTemplate } from './cruxspace-templates';
 import { growthHostFor } from './growth';
 
+localApiFixture();
 beforeEach(() => initServices());
 afterEach(() => vi.unstubAllGlobals());
 async function packageBytes() {
@@ -50,7 +52,7 @@ it('makes independent copies with the original content and Growth, including a s
   expect(a.space.origin?.members[source.crux.id]).toBe(a.space.cruxIds[0]);
   const files = await getServices().artifact.findByResource('crux', a.space.cruxIds[0]!);
   expect(
-    await getServices().artifact.readContent(files.find((f) => f.filename === 'draft.md')!.id),
+    await getServices().artifact.readContent(files.find((f) => f.filename === 'draft.md')!),
   ).toBe('A first draft');
   const growth = await getServices().dimension.findBySourceAndType(a.space.cruxIds[0]!, 'growth');
   expect(growth.some((g) => g.meta?.label === 'Actual first draft')).toBe(true);

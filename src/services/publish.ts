@@ -6,6 +6,7 @@ import {
   samplerType,
 } from './embedded-app';
 import { portableMeta } from './task-archive';
+import { downloadPublicationBlob } from './publication-files';
 import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
 import { manifestFor } from './crux-tools/registry';
 import { parseManifest } from './crux-tools/manifest';
@@ -76,7 +77,7 @@ async function defaultDeps(): Promise<PublishDeps> {
     import('./index'),
     import('./site'),
   ]);
-  const { artifact, crux: cruxService } = getServices();
+  const { crux: cruxService } = getServices();
   return {
     api: {
       exists: async (id) => {
@@ -102,7 +103,7 @@ async function defaultDeps(): Promise<PublishDeps> {
     },
     local: {
       updateCruxMeta: (id, meta) => cruxService.update(id, { meta }),
-      downloadBlob: (id) => artifact.downloadBlob(id),
+      downloadBlob: downloadPublicationBlob,
     },
     site: {
       isSiteCrux: site.isSiteCrux,

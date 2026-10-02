@@ -64,5 +64,11 @@
     "Shipping implementation/runtime unchanged; prior actual desktop archive/community4/1.6m and unchanged Electron gate remain applicable.",
     "The service fixture does not launch all upstream editor interfaces; their existing desktop/manual acceptance remains separate.",
     "Generic archive/collection consumers and optional command/fallback/worker retirement remain."
-  ]
+  ],
+  "nativeCI": {
+    "commit": "c61e986e9",
+    "run": 36962833146,
+    "windows": "success",
+    "linux": "success"
+  }
 }

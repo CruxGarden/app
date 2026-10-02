@@ -333,7 +333,7 @@ export default function HomeGarden() {
       {/* Cruxes the account has and this machine does not (RESILIENCE-PLAN §2c) */}
       <RecoverSection />
 
-      {garden && !emptyGarden && <GardenActions key={garden.id} />}
+      {garden && !emptyGarden && <GardenActions key={`actions:${garden.id}`} />}
       {can(Capability.V2) && (
         <details className="mb-4 text-sm text-text-muted">
           <summary className="py-2 hover:text-text">Shared gardens</summary>
@@ -393,10 +393,10 @@ export default function HomeGarden() {
         />
       )}
 
-      {garden && emptyGarden && <GardenActions key={garden.id} />}
+      {garden && emptyGarden && <GardenActions key={`actions:${garden.id}`} />}
 
       {/* The Garden's shared work: walkthrough, outputs, history, package */}
-      {garden && <Cruxspaces key={garden.id} gardenId={garden.id} />}
+      {garden && <Cruxspaces key={`outputs:${garden.id}`} gardenId={garden.id} />}
 
       {/* The Trash: deleted cruxes wait here, restorable, until purged */}
       <TrashSection />

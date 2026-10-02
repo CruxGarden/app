@@ -34,5 +34,12 @@
   "logs": [
     "/tmp/native-task-import-replacement-focused.log",
     "/tmp/native-task-import-replacement-verify.log"
-  ]
+  ],
+  "nativeCI": {
+    "commit": "21b94aef1",
+    "run": 36960895095,
+    "windows": "failure in packaged/companion CLI checks after successful verification, build and packaging",
+    "linux": "success",
+    "limits": "Exact failing Windows assertion is unavailable anonymously; later acec833e4 passes both platforms. No cause claimed."
+  }
 }

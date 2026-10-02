@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-02",
+  "stage": "AR06 native archive consumers and publication selection follow-through",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "verification": {
+    "focused": {
+      "passed": 79,
+      "suites": 7,
+      "nativeCases": 37
+    },
+    "app": {
+      "passed": 1713,
+      "skipped": 18,
+      "files": 271,
+      "build": true
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1,
+      "hostSourceUnchanged": true
+    },
+    "desktop": {
+      "passed": 5,
+      "duration": "1.9m",
+      "command": "npm run test:e2e -- e2e/private-archive-ui.spec.ts e2e/community-tool.spec.ts e2e/manifest-garden-archive.spec.ts e2e/cruxspace.spec.ts --project=desktop"
+    },
+    "communityReplay": {
+      "passed": 2,
+      "duration": "1.4m",
+      "command": "npm run test:e2e -- e2e/community-tool.spec.ts --project=desktop --repeat-each=2"
+    }
+  },
+  "changes": [
+    "Conflict inspection propagates database failures; only NotFoundError indicates absence.",
+    "Seven native archive facade cases retain conflicts, exact identity, binary/text bytes, idempotent replay, separate visitor Store values, presentation metadata, branched marked Growth and Artifact ZIP behavior.",
+    "Notebook import, Cruxspace asset transfers and template copies adopt native storage; 23 existing cases remain.",
+    "Garden placement tests exercise movement and retirement instead of retired settings-based multi-membership.",
+    "Publication reads preserve selected identity, fingerprint, path, mode, encoding and MIME type when an unrelated save advances the head; ordinary editor reads remain strict.",
+    "Seven native publication cases include changed/replaced/foreign files, missing bytes with or without head advancement, and changed publishing attributes.",
+    "Distinct sibling component keys prevent duplicate Garden action controls; real desktop checks require one action set on empty and populated Home."
+  ],
+  "baselines": [
+    "Archive facade: one read-refusal failure/six passing native cases; actual owner SQL table rename reproduces swallowed failure.",
+    "Initial native consumer scaffold: fourteen failures/twenty-three passing; ownerless reads and retired collection/format assumptions corrected. Package suite is deferred unchanged.",
+    "Desktop: three passing/two failing journeys; community file read refused twice, then passed with diagnostics. Exact first desktop cause was not captured.",
+    "Native publication selection: one failure/three passing cases; unrelated guide update throws File content changed; reload before reading.",
+    "Home screenshot shows two identical action rows from shared sibling React keys."
+  ],
+  "logs": [
+    "/tmp/archive-facade-baseline.log",
+    "/tmp/archive-consumers-baseline.log",
+    "/tmp/archive-consumers-focused.log",
+    "/tmp/archive-consumers-verify.log",
+    "/tmp/archive-consumers-electron.log",
+    "/tmp/archive-consumers-desktop.log",
+    "/tmp/archive-community-repro.log",
+    "/tmp/archive-publication-diagnostics.log",
+    "/tmp/publication-files-baseline.log",
+    "/tmp/archive-publication-focused.log",
+    "/tmp/archive-publication-app-final.log",
+    "/tmp/archive-publication-desktop-final.log",
+    "/tmp/archive-community-repeat-final.log"
+  ],
+  "limits": [
+    "Crux IO still holds old format serialization; generic format/Garden installation/Cruxspace package tests still need native adoption.",
+    "Cruxspace package lookup also catches errors as absence and must be fixed with native fault evidence in its next block.",
+    "Required command interfaces and Task/Garden/browser worker/schema fallbacks remain; AR06 is incomplete.",
+    "Further changes during a revalidated read can still refuse; changed selected file bytes are never silently substituted.",
+    "No live publication, deployment, merge, real-Garden or manual-candidate changes. New commit native CI remains separate."
+  ],
+  "visualQA": {
+    "before": "home-actions-before.png",
+    "after": "home-actions-after.png",
+    "inspected": true,
+    "result": "One Garden action row; original layout and Mood appearance preserved."
+  }
+}
