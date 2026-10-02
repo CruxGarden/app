@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { cruxes } from '@/api';
 import { initServices, getServices } from './index';
@@ -12,6 +13,7 @@ import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 import { registerAppTools } from './embedded-app-tool-registry';
 import { createToolExecutor, defaultToolDefinitions, didMutate } from '@/ai/tools';
 import { starter, applyCommand } from '../../tool-cruxes/shared/model.js';
+localApiFixture();
 beforeEach(() => initServices());
 it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
   'preserves %s documents through scoped commands, conflicts, Growth and archive roundtrip',
@@ -94,7 +96,7 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
     const imported = await importCrux({ data: archive.blob, mode: 'clone' });
     const files = await services.artifact.findByResource('crux', imported.cruxId);
     const file = files.find((f) => f.meta?.path === 'data/project.json')!;
-    expect(JSON.parse(await services.artifact.readContent(file.id))).toEqual(document);
+    expect(JSON.parse(await services.artifact.readContent(file))).toEqual(document);
     // The Whiteboard shares its drawing as a view-mode page; the other samplers stay local
     if (type === 'excalidraw') {
       // Reach the publish-state check without contacting a real service.
@@ -113,7 +115,7 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
     const restored = (await services.artifact.findByResource('crux', crux.id)).find(
       (f) => f.meta?.path === 'data/project.json',
     )!;
-    expect(JSON.parse(await services.artifact.readContent(restored.id))).toEqual(initialDocument);
+    expect(JSON.parse(await services.artifact.readContent(restored))).toEqual(initialDocument);
     store.setState({ viewingSnapshotId: 'past' });
     await expect(call({ op: 'read', path: 'project.json' })).rejects.toThrow('current app');
   },
@@ -168,7 +170,7 @@ it.each(['openmosh', 'excalidraw'])(
     const files = await services.artifact.findByResource('crux', imported.cruxId);
     const image = files.find((f) => f.meta?.path === 'data/' + path)!;
     expect(
-      new Uint8Array(await (await services.artifact.downloadBlob(image.id)).arrayBuffer()),
+      new Uint8Array(await (await services.artifact.downloadBlob(image)).arrayBuffer()),
     ).toEqual(bytes);
   },
 );
@@ -215,5 +217,5 @@ it('acknowledges the bytes written, even when an external edit arrives during th
   const file = (await services.artifact.findByResource('crux', crux.id)).find(
     (f) => f.meta?.path === 'data/project.json',
   )!;
-  expect(await services.artifact.readContent(file.id)).toBe(theirs);
+  expect(await services.artifact.readContent(file)).toBe(theirs);
 });

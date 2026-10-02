@@ -1,9 +1,11 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
+localApiFixture();
 beforeEach(() => initServices());
 it('retains native models, animations and texture components through Growth and portable Crux archives', async () => {
   const services = getServices();
@@ -97,18 +99,16 @@ it('retains native models, animations and texture components through Growth and 
   });
   const files = await services.artifact.findByResource('crux', imported.cruxId);
   expect(
-    await services.artifact.readContent(
-      files.find((f) => f.meta?.path === 'data/project.json')!.id,
-    ),
+    await services.artifact.readContent(files.find((f) => f.meta?.path === 'data/project.json')!),
   ).toBe(content);
   for (const output of exported) {
     const artifact = files.find((f) => f.meta?.path === output.path)!;
-    const blob = await services.artifact.downloadBlob(artifact.id);
+    const blob = await services.artifact.downloadBlob(artifact);
     expect(await blob.text()).toBe(output.text);
   }
   for (const asset of assets) {
     const data = await services.artifact.downloadBlob(
-      files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,
+      files.find((f) => f.meta?.path === 'data/' + asset.path)!,
     );
     expect(new Uint8Array(await data.arrayBuffer())).toEqual(asset.bytes);
   }

@@ -1,9 +1,11 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
+localApiFixture();
 beforeEach(() => initServices());
 it('retains native chemistry and template library through Growth and portable Crux archives', async () => {
   const services = getServices();
@@ -75,13 +77,11 @@ it('retains native chemistry and template library through Growth and portable Cr
   });
   const files = await services.artifact.findByResource('crux', imported.cruxId);
   expect(
-    await services.artifact.readContent(
-      files.find((f) => f.meta?.path === 'data/project.json')!.id,
-    ),
+    await services.artifact.readContent(files.find((f) => f.meta?.path === 'data/project.json')!),
   ).toBe(content);
   for (const asset of assets) {
     const data = await services.artifact.downloadBlob(
-      files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,
+      files.find((f) => f.meta?.path === 'data/' + asset.path)!,
     );
     expect(new Uint8Array(await data.arrayBuffer())).toEqual(asset.bytes);
   }

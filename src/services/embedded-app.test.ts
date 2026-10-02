@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -5,6 +6,7 @@ import { notebookSession } from './notebook';
 import { moqiraPath } from './embedded-app';
 import { exportCrux, importCrux } from './crux-io';
 
+localApiFixture();
 beforeEach(() => initServices());
 it.each([
   '../project.json',

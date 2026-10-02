@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { applyTemplateToCrux } from './crux-create';
@@ -24,6 +25,7 @@ const png = () =>
     ],
     { type: 'image/png' },
   );
+localApiFixture();
 beforeEach(() => initServices());
 it.each([
   'javascript:alert(1)',
@@ -85,7 +87,7 @@ it('preserves a changed link and carries imported asset provenance through trans
   const files = await artifact.findByResource('crux', target.id);
   expect(files.find((f) => pathOf(f) === 'public/cover.png')!.fingerprint).toBe(output.fingerprint);
   const sidecar = files.find((f) => pathOf(f).endsWith('.json'))!;
-  expect(JSON.parse(await artifact.readContent(sidecar.id)).externalSource).toEqual(
+  expect(JSON.parse(await artifact.readContent(sidecar)).externalSource).toEqual(
     output.externalSource,
   );
   expect(await (await growthHostFor(source.id)).list()).toHaveLength(0);

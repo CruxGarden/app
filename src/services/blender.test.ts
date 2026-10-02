@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { applyTemplateToCrux } from './crux-create';
@@ -8,6 +9,7 @@ import { exportCrux, importCrux } from './crux-io';
 import { pathOf } from '@/lib/artifact-path';
 import { isLocalCreationTool } from './embedded-app';
 
+localApiFixture();
 beforeEach(() => initServices());
 it('shares a saved GLB version with native scene provenance through transfer and complete import', async () => {
   const { crux, artifact } = getServices();

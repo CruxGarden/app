@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
@@ -7,6 +8,7 @@ import { exportCrux, importCrux } from './crux-io';
 import { nativeAppType } from './embedded-app';
 import { kanCommand } from '@/ai/kan-tools';
 
+localApiFixture();
 beforeEach(() => initServices());
 it('keeps original bytes and native records portable while rejecting stale and cross-Crux access', async () => {
   const services = getServices();

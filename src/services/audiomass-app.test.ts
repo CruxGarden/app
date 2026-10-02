@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -5,6 +6,7 @@ import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 
+localApiFixture();
 beforeEach(() => initServices());
 it('preserves native AudioMass tracks and PCM channel bytes in Growth and complete Crux archives', async () => {
   const services = getServices();
@@ -90,12 +92,10 @@ it('preserves native AudioMass tracks and PCM channel bytes in Growth and comple
   });
   const files = await services.artifact.findByResource('crux', imported.cruxId);
   expect(
-    await services.artifact.readContent(
-      files.find((f) => f.meta?.path === 'data/project.json')!.id,
-    ),
+    await services.artifact.readContent(files.find((f) => f.meta?.path === 'data/project.json')!),
   ).toBe(content);
   const raster = await services.artifact.downloadBlob(
-    files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,
+    files.find((f) => f.meta?.path === 'data/' + asset.path)!,
   );
   expect(new Uint8Array(await raster.arrayBuffer())).toEqual(bytes);
 });
@@ -181,7 +181,7 @@ it('retains lossless audio bytes and provenance when another member uses a FLAC 
   const file = (await artifact.findByResource('crux', target.id)).find(
     (f) => f.meta?.path === 'assets/sound.flac',
   )!;
-  expect(new Uint8Array(await (await artifact.downloadBlob(file.id)).arrayBuffer())).toEqual(bytes);
+  expect(new Uint8Array(await (await artifact.downloadBlob(file)).arrayBuffer())).toEqual(bytes);
 });
 
 it('arrangement tool contract exposes guarded scoped native edits', () => {

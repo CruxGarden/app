@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -6,6 +7,7 @@ import { exportCrux, importCrux } from './crux-io';
 import { nativeAppType } from './embedded-app';
 import { playcanvasEditorCommand } from '@/ai/playcanvas-editor-tools';
 
+localApiFixture();
 beforeEach(() => initServices());
 it('preserves empty source files, fingerprinted scene components and ownership through export', async () => {
   const services = getServices();
@@ -69,9 +71,7 @@ it('preserves empty source files, fingerprinted scene components and ownership t
   });
   const files = await services.artifact.findByResource('crux', result.cruxId);
   expect(
-    await services.artifact.readContent(
-      files.find((f) => f.meta?.path === 'data/project.json')!.id,
-    ),
+    await services.artifact.readContent(files.find((f) => f.meta?.path === 'data/project.json')!),
   ).toBe(content);
   expect(files.find((f) => f.meta?.path === 'data/' + file.path)?.size).toBe(0);
   await expect(call({ op: 'native-read', path: '../project.json' })).rejects.toThrow();
