@@ -1,32 +1,23 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it } from 'vitest';
 import JSZip from 'jszip';
+import { localApiFixture } from '@/test/local-api-fixture';
 import { initServices, getServices } from './index';
 import { exportCrux, importCrux } from './crux-io';
 import { createTask } from './tasks';
 import { listWorkingCopies } from './working-copies';
 import { getSqliteClient } from './sqlite/client';
 import { hashContent } from './sqlite/helpers';
-import * as folders from './project-folder';
-import {
-  allWorkspaces,
-  closeWorkspace,
-  getWorkspace,
-  openWorkspace,
-} from '@/stores/workspaceRegistry';
+import { getWorkspace, openWorkspace } from '@/stores/workspaceRegistry';
 
+const native = localApiFixture();
 beforeEach(() => initServices());
-afterEach(async () => {
-  vi.restoreAllMocks();
-  for (const workspace of allWorkspaces())
-    await closeWorkspace(workspace.id, { stop: true, documents: 'discard' });
-});
 const write = (id: string, content: string) =>
   getServices().artifact.create({ resourceId: id, content, meta: { path: 'index.html' } });
 async function read(id: string) {
   const file = (await getServices().artifact.findByResource('crux', id)).find(
     (a) => a.meta?.path === 'index.html',
   )!;
-  return getServices().artifact.readContent(file.id);
+  return getServices().artifact.readContent(file);
 }
 async function fixture() {
   const main = await getServices().crux.create({ title: 'Project' });
@@ -34,14 +25,14 @@ async function fixture() {
   const task = await createTask(main.id, 'Alternative');
   await write(task.id, 'Archived Task');
   await getServices().store.set(main.id, 'count', 1);
-  const archive = await exportCrux({ cruxId: main.id, runtime: 'included' });
+  const archive = await exportCrux({ cruxId: main.id });
   await write(main.id, 'Local Main');
   await write(task.id, 'Local Task');
   await getServices().store.set(main.id, 'count', 99);
   return { main, task, archive };
 }
 
-it('replaces Main and the Task graph while preserving other open Cruxes', async () => {
+it('replaces Main and the Task graph while preserving other open Cruxes and restart', async () => {
   const { main, task, archive } = await fixture();
   const extra = await createTask(main.id, 'Local-only task');
   const other = await getServices().crux.create({ title: 'Other work' });
@@ -57,15 +48,19 @@ it('replaces Main and the Task graph while preserving other open Cruxes', async 
   expect(await getServices().store.get(main.id, 'count')).toBe(1);
   expect(await read(other.id)).toBe('Keep me');
   expect(getWorkspace(other.id)).toBeDefined();
+  await native().restart();
+  expect(await read(main.id)).toBe('Archived Main');
+  expect(await read(task.id)).toBe('Archived Task');
+  expect(await read(other.id)).toBe('Keep me');
 });
 
-it('restores exact local content, Tasks and Store after a folder projection failure', async () => {
+it('preserves local content, Tasks and Store after an actual import host failure and retries', async () => {
   const { main, task, archive } = await fixture();
   const extra = await createTask(main.id, 'Local-only task');
   const before = await getSqliteClient().all('SELECT * FROM task_merges WHERE crux_id = ?', [
     main.id,
   ]);
-  vi.spyOn(folders, 'projectAllArtifacts').mockRejectedValueOnce(new Error('Disk unavailable'));
+  native().failNextImportHost('Disk unavailable');
   await expect(importCrux({ data: archive.blob, mode: 'replace' })).rejects.toThrow(
     'Disk unavailable',
   );
@@ -78,58 +73,65 @@ it('restores exact local content, Tasks and Store after a folder projection fail
   expect(
     await getSqliteClient().all('SELECT * FROM task_merges WHERE crux_id = ?', [main.id]),
   ).toEqual(before);
+  await native().restart();
+  expect(await read(main.id)).toBe('Local Main');
+  await importCrux({ data: archive.blob, mode: 'replace' });
+  expect(await read(main.id)).toBe('Archived Main');
+  expect(await read(task.id)).toBe('Archived Task');
 });
 
-it('rejects corrupt contents before closing or replacing the local graph', async () => {
+it('rejects missing archive3 content before closing or replacing the local graph', async () => {
   const { main, task, archive } = await fixture();
   const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
-  zip.remove(Object.keys(zip.files).find((path) => /^artifacts\/[a-f0-9]{64}$/.test(path))!);
+  zip.remove(Object.keys(zip.files).find((path) => /^content\/[a-f0-9]{64}$/.test(path))!);
   await expect(
     importCrux({ data: await zip.generateAsync({ type: 'blob' }), mode: 'replace' }),
-  ).rejects.toThrow('missing an Artifact');
+  ).rejects.toThrow('Missing private archive content');
   expect(await read(main.id)).toBe('Local Main');
   expect(await read(task.id)).toBe('Local Task');
   expect(getWorkspace(main.id)).toBeDefined();
 });
 
-it('refuses foreign row identities without replacing either project', async () => {
-  const { main, archive } = await fixture();
+it('refuses a foreign Task identity without replacing either project', async () => {
+  const { main, task, archive } = await fixture();
   const other = await getServices().crux.create({ title: 'Other' });
-  const foreign = await write(other.id, 'Other content');
+  await write(other.id, 'Other content');
+  const foreign = await createTask(other.id, 'Other Task');
+  await write(foreign.id, 'Other Task content');
   const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
-  const graph = JSON.parse(await zip.file('tasks.json')!.async('text'));
-  graph.artifacts[0].id = foreign.id;
-  const payload = JSON.stringify(graph);
-  zip.file('tasks.json', payload);
+  const payload = (await zip.file('graph.json')!.async('text')).replaceAll(task.id, foreign.id);
+  zip.file('graph.json', payload);
   const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
   zip.file(
     'manifest.json',
-    JSON.stringify({ ...manifest, fingerprint: await hashContent(payload) }),
+    JSON.stringify({ ...manifest, graphFingerprint: await hashContent(payload) }),
   );
   await expect(
     importCrux({ data: await zip.generateAsync({ type: 'blob' }), mode: 'replace' }),
-  ).rejects.toThrow('other local work');
+  ).rejects.toThrow('identity already exists');
   expect(await read(main.id)).toBe('Local Main');
+  expect(await read(task.id)).toBe('Local Task');
   expect(await read(other.id)).toBe('Other content');
+  expect(await read(foreign.id)).toBe('Other Task content');
 });
 
-it('recovers a failure partway through removing the previous graph', async () => {
+it('rolls back an actual SQLite failure partway through replacement, survives restart and retries', async () => {
   const { main, task, archive } = await fixture();
-  const db = getSqliteClient();
-  const run = db.run.bind(db);
-  let injected = false;
-  vi.spyOn(db, 'run').mockImplementation(async (sql, params) => {
-    if (!injected && sql.startsWith('DELETE FROM working_copies WHERE id IN')) {
-      injected = true;
-      throw new Error('Interrupted deletion');
-    }
-    return run(sql, params);
-  });
+  await native().faultSql(
+    "CREATE TRIGGER refuse_task_removal BEFORE DELETE ON working_copies BEGIN SELECT RAISE(ABORT, 'Interrupted deletion'); END",
+  );
   await expect(importCrux({ data: archive.blob, mode: 'replace' })).rejects.toThrow(
     'Interrupted deletion',
   );
-  expect(injected).toBe(true);
   expect(await read(main.id)).toBe('Local Main');
   expect(await read(task.id)).toBe('Local Task');
   expect(await getServices().store.get(main.id, 'count')).toBe(99);
+  await native().restart();
+  expect(await read(main.id)).toBe('Local Main');
+  expect(await read(task.id)).toBe('Local Task');
+  await native().faultSql('DROP TRIGGER refuse_task_removal');
+  await importCrux({ data: archive.blob, mode: 'replace' });
+  expect(await read(main.id)).toBe('Archived Main');
+  expect(await read(task.id)).toBe('Archived Task');
+  expect(await getServices().store.get(main.id, 'count')).toBe(1);
 });

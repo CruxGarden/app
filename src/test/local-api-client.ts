@@ -14,6 +14,7 @@ export async function createLocalApiTestClient() {
   const blobs = join(dir, 'blobs');
   let api = await SqliteApi.open(filename, blobs);
   const folders = new Set<string>();
+  let importFailure: string | undefined;
   const folder = async (id: string) => {
     if (!/^[a-zA-Z0-9-]+$/.test(id)) throw new Error('Use an isolated test folder identity.');
     const path = join(dir, 'projects', id);
@@ -34,7 +35,16 @@ export async function createLocalApiTestClient() {
         await chmod(target, entry.mode);
       }
     });
-    api.setImportHost(async (input) => folder(input.id));
+    api.setImportHost(async (input) => {
+      if (importFailure) {
+        const message = importFailure;
+        importFailure = undefined;
+        throw new Error(message);
+      }
+      // Replacement must prepare a fresh folder, never reuse the previous
+      // registration; allocation is isolated exactly like ordinary creation.
+      return folder(`${input.id}-${crypto.randomUUID()}`);
+    });
   };
   configure();
   const client: ISqliteClient = {
@@ -100,6 +110,9 @@ export async function createLocalApiTestClient() {
   return {
     client,
     faultSql: (sql: string, params?: unknown[]) => api.run(sql, params),
+    failNextImportHost(message: string) {
+      importFailure = message;
+    },
     async restart() {
       await api.close();
       api = await SqliteApi.open(filename, blobs);
