@@ -2,6 +2,8 @@ import { getSqliteClient } from './sqlite/client';
 import type { Crux } from '@/api/types';
 import { hasGardenGraph } from './garden-navigation';
 import { getServices } from './index';
+import { NotFoundError } from './types';
+import { fromRow } from './sqlite/helpers';
 import { gardenMembers } from './garden-navigation';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 
@@ -42,6 +44,7 @@ export function collectionsChanged() {
 const works = (kind?: string | null) => kind !== 'garden' && kind !== 'mood' && kind !== 'snapshot';
 
 interface GardenRow {
+  meta?: string;
   id: string;
   title: string | null;
   description: string | null;
@@ -50,6 +53,8 @@ interface GardenRow {
 }
 async function record(row: GardenRow): Promise<Cruxspace> {
   const members = await gardenMembers(row.id);
+  const origin = fromRow<{ meta?: { cruxspaceOrigin?: CruxspaceOrigin } }>({ ...row }).meta
+    ?.cruxspaceOrigin;
   return {
     version: 1,
     id: row.id,
@@ -58,23 +63,24 @@ async function record(row: GardenRow): Promise<Cruxspace> {
     cruxIds: members.filter((m) => works(m.kind)).map((m) => m.id),
     created: row.created,
     updated: row.updated,
+    ...(origin ? { origin } : {}),
   };
 }
 
 /** Every Garden with at least one Crux to work on, by name. */
 async function gardenListCruxspaces(): Promise<Cruxspace[]> {
   const rows = await getSqliteClient().all<GardenRow>(
-    "SELECT id, title, description, created, updated FROM cruxes WHERE kind = 'garden' AND deleted IS NULL",
+    "SELECT id, title, description, created, updated, meta FROM cruxes WHERE kind = 'garden' AND deleted IS NULL",
   );
   const spaces = await Promise.all(rows.map(record));
   return spaces.filter((s) => s.cruxIds.length).sort((a, b) => a.name.localeCompare(b.name));
 }
 async function gardenGetCruxspace(id: string): Promise<Cruxspace> {
   const row = await getSqliteClient().get<GardenRow>(
-    "SELECT id, title, description, created, updated FROM cruxes WHERE id = ? AND kind = 'garden' AND deleted IS NULL",
+    "SELECT id, title, description, created, updated, meta FROM cruxes WHERE id = ? AND kind = 'garden' AND deleted IS NULL",
     [id],
   );
-  if (!row) throw new Error('This Garden is no longer available.');
+  if (!row) throw new NotFoundError('This Garden is no longer available.');
   return record(row);
 }
 
@@ -164,7 +170,7 @@ async function getRecord(id: string): Promise<Cruxspace> {
     'SELECT value FROM settings WHERE key = ?',
     [PREFIX + id],
   );
-  if (!row) throw new Error('This Cruxspace is no longer available.');
+  if (!row) throw new NotFoundError('This Cruxspace is no longer available.');
   return JSON.parse(row.value) as Cruxspace;
 }
 async function recordValues(input: CruxspaceInput): Promise<CruxspaceInput> {
@@ -195,29 +201,6 @@ async function createRecord(input: CruxspaceInput): Promise<Cruxspace> {
   collectionsChanged();
   return space;
 }
-/** Record a Cruxspace with a chosen identity (package import); members must already exist. */
-export async function insertCruxspace(
-  input: CruxspaceInput & { id: string; created?: string; origin?: CruxspaceOrigin },
-): Promise<Cruxspace> {
-  const values = await recordValues(input);
-  if (await getRecord(input.id).catch(() => null))
-    throw new Error('A Cruxspace with this identity already exists.');
-  const now = new Date().toISOString();
-  const space: Cruxspace = {
-    ...values,
-    version: 1,
-    id: input.id,
-    created: input.created && Number.isFinite(Date.parse(input.created)) ? input.created : now,
-    updated: now,
-    ...(input.origin ? { origin: input.origin } : {}),
-  };
-  await getSqliteClient().run('INSERT INTO settings (key, value) VALUES (?, ?)', [
-    PREFIX + space.id,
-    JSON.stringify(space),
-  ]);
-  collectionsChanged();
-  return space;
-}
 async function updateRecord(id: string, input: CruxspaceInput): Promise<Cruxspace> {
   const values = await recordValues(input);
   const previous = await getRecord(id);
@@ -226,7 +209,7 @@ async function updateRecord(id: string, input: CruxspaceInput): Promise<Cruxspac
     JSON.stringify(space),
     PREFIX + id,
   ]);
-  if (!result.changes) throw new Error('This Cruxspace is no longer available.');
+  if (!result.changes) throw new NotFoundError('This Cruxspace is no longer available.');
   collectionsChanged();
   return space;
 }

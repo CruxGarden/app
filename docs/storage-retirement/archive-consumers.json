@@ -30,6 +30,13 @@
       "passed": 2,
       "duration": "1.4m",
       "command": "npm run test:e2e -- e2e/community-tool.spec.ts --project=desktop --repeat-each=2"
+    },
+    "nativeCI": {
+      "head": "6cabdb370319c771226e5cdcf5718a5fec4019de",
+      "run": 36966277916,
+      "status": "passed",
+      "platforms": ["Windows", "Linux"],
+      "url": "https://github.com/CruxGarden/app/actions/runs/36966277916"
     }
   },
   "changes": [

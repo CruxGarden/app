@@ -708,11 +708,6 @@
     {
       "file": "src/services/cruxspaces.ts",
       "method": "getSqliteClient().run",
-      "statement": "'INSERT INTO settings (key, value) VALUES (?, ?)'"
-    },
-    {
-      "file": "src/services/cruxspaces.ts",
-      "method": "getSqliteClient().run",
       "statement": "'UPDATE settings SET value = ? WHERE key = ?'"
     },
     {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { localApiFixture } from '@/test/local-api-fixture';
 import { initServices, getServices } from '../index';
 import { applyTemplateToCrux } from '../crux-create';
 import { exportCreation } from '../export-creation';
@@ -13,6 +14,8 @@ import { openToolPackage, packTool } from './package';
 import { exportCrux, importCrux } from '../crux-io';
 import { installImportedCreation, installMoodFile } from '../import-installation';
 import { captureCurrentMood, exportMoodPackage, getInstalledMoods } from '@/lib/moods/packages';
+
+localApiFixture();
 
 beforeEach(async () => {
   await initServices();
@@ -40,16 +43,14 @@ describe('community tool and file installation', () => {
     const services = getServices();
     const project = await services.crux.create({ title: 'My own notes' });
     const applied = await applyTemplateToCrux(project, installed.id, 'webapp');
-    const artifacts = await services.artifact.findByResource('crux', project.id);
-    const document = artifacts.find((a) => a.meta?.path === 'data/project.json')!;
-    await services.artifact.create({
+    const document = await services.artifact.create({
       resourceId: project.id,
       content: JSON.stringify({ version: 1, app: 'pocket-notes', text: 'A real edit' }),
       meta: { path: 'data/project.json' },
     });
     await validateNativeDocument(
       project.id,
-      await services.artifact.readContent(document.id),
+      await services.artifact.readContent(document),
       'pocket-notes',
     );
     forgetInstalledTool(installed.id);
@@ -79,11 +80,11 @@ describe('community tool and file installation', () => {
     };
     const deps = { apiDownload: async () => blob, putBlob };
     const a = await installToolFromPublished(
-      { id: 'creator-a', slug: 'notes', author_username: 'alice', meta },
+      { id: crypto.randomUUID(), slug: 'notes', author_username: 'alice', meta },
       deps,
     );
     const b = await installToolFromPublished(
-      { id: 'creator-b', slug: 'notes', author_username: 'bob', meta },
+      { id: crypto.randomUUID(), slug: 'notes', author_username: 'bob', meta },
       deps,
     );
     expect(a.id).not.toBe(b.id);
@@ -98,8 +99,9 @@ describe('community tool and file installation', () => {
     const owner = await authorTool();
     const { blob } = await exportCreation({ cruxId: owner.id });
     const pkg = await openToolPackage(blob);
+    const publicationId = crypto.randomUUID();
     const publication = (fingerprint: string) => ({
-      id: 'update-owner',
+      id: publicationId,
       slug: 'notes',
       author_username: 'alice',
       meta: {
