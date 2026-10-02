@@ -135,15 +135,32 @@ export function createDocuments(data: StoreApi<CruxState>, ui: StoreApi<UIState>
         .catch(() => {});
       return pending;
     },
-    async saveAll() {
-      await flushNotebook(data.getState().crux?.id);
-      for (const ref of references.values()) {
-        if (ref.resourceId === data.getState().crux?.id) await this.save(ref);
+    async saveAll(ownerId = data.getState().crux?.id) {
+      // An initial load can fail before any document exists. Closing that empty
+      // workspace still drains work, while retained edits require a real owner.
+      if (!ownerId && !this.hasDirty()) {
+        await this.drain();
+        return;
+      }
+      const requireOwner = () => {
+        if (!ownerId || data.getState().crux?.id !== ownerId)
+          throw new Error('This workspace changed. Your edits are retained.');
+      };
+      requireOwner();
+      const owned = [...references.values()].filter((ref) => ref.resourceId === ownerId);
+      await flushNotebook(ownerId);
+      requireOwner();
+      for (const ref of owned) {
+        await this.save(ref);
+        requireOwner();
       }
     },
     async drain() {
       await Promise.all([...saves.values()]);
     },
+    hasDirtyFor: (ownerId: string) =>
+      notebookIsDirty(ownerId) ||
+      [...references.values()].some((ref) => ref.resourceId === ownerId && dirty(ref)),
     hasDirty: () =>
       notebookIsDirty(data.getState().crux?.id) || [...references.values()].some(dirty),
     dispose() {
@@ -161,4 +178,41 @@ export function documentsFor(data: StoreApi<CruxState>, ui: StoreApi<UIState>) {
     registries.set(data, docs);
   }
   return docs;
+}
+
+/** Publication consumes a captured workspace, never the currently selected tab.
+ * All UI and agent publication entry points use this preparation boundary. */
+export function assertPublicationWorkspace(
+  data: StoreApi<CruxState>,
+  ui: StoreApi<UIState>,
+  ownerId: string,
+) {
+  const current = data.getState();
+  if (current.crux?.id !== ownerId || current.closing)
+    throw new Error('This workspace changed or is closing. Your edits are retained.');
+  if (current.viewingSnapshotId) throw new Error('Return to the current work before sharing.');
+  if (documentsFor(data, ui).hasDirtyFor(ownerId))
+    throw new Error(
+      'Edits changed while preparing to share. Your draft is retained; share again when ready.',
+    );
+}
+
+export async function prepareWorkspacePublication(
+  data: StoreApi<CruxState>,
+  ui: StoreApi<UIState>,
+  ownerId: string,
+) {
+  const before = data.getState();
+  if (before.crux?.id !== ownerId || before.closing || before.viewingSnapshotId)
+    throw new Error('Return to the current workspace before sharing.');
+  await documentsFor(data, ui).saveAll(ownerId);
+  assertPublicationWorkspace(data, ui, ownerId);
+  await data.getState().saveMeta();
+  assertPublicationWorkspace(data, ui, ownerId);
+  const current = data.getState();
+  return structuredClone({
+    crux: current.crux!,
+    artifacts: current.artifacts,
+    messages: current.messages,
+  });
 }

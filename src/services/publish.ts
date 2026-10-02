@@ -44,9 +44,8 @@ export interface PublishDeps {
      *
      * MUST resolve false only for a genuine "not found", and MUST throw on any
      * other failure (network, 5xx, auth). Publishing takes the create path when
-     * this is false, and the API's create hard-deletes any record with the same
-     * author+slug — so answering false on a transient error destroys the live
-     * published crux.
+     * this is false. Create refuses an occupied identity or author slug, so
+     * availability failures must not be misreported as missing content.
      */
     exists(cruxId: string): Promise<boolean>;
     create(input: Record<string, unknown>): Promise<Crux>;

@@ -602,3 +602,11 @@ it('restoration excludes new sessions, preserves unrelated work and reopens afte
   expect(getWorkspace(b.id)).toBe(wb);
   expect(useWorkspaceRegistry.getState().activeId).toBe(b.id);
 });
+
+it('Save and close can dismiss an empty workspace whose initial load failed', async () => {
+  const id = 'missing-workspace';
+  await expect(openWorkspace(id)).rejects.toThrow();
+  expect(getWorkspace(id)?.phase).toBe('error');
+  await expect(closeWorkspace(id, { documents: 'save' })).resolves.toBeUndefined();
+  expect(getWorkspace(id)).toBeUndefined();
+});

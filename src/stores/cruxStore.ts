@@ -1,3 +1,7 @@
+import {
+  prepareWorkspacePublication,
+  assertPublicationWorkspace,
+} from '@/services/workspace-documents';
 import { notifyUsageChanged } from '@/lib/usage-events';
 import { claimFirstPublication } from '@/services/first-publication';
 import { captureGardenId } from './gardenContext';
@@ -586,9 +590,13 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     saveMeta: () => {
+      const ownerId = get().crux?.id;
+      const generation = loadGeneration;
       const write = metadataTail.then(async () => {
         const { crux, messages, messageSegmentStart, summary, growthCount } = get();
-        if (!crux) return;
+        if (!ownerId) return;
+        if (crux?.id !== ownerId || generation !== loadGeneration)
+          throw new Error('This workspace changed before its metadata could be saved.');
         const meta = {
           ...crux.meta,
           messages: messages.slice(messageSegmentStart),
@@ -714,23 +722,27 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     // The phase and the failure live here so the Share pane can show them
     // whichever button started the publish.
     publishCrux: async () => {
-      const { crux, saveMeta } = get();
-      if (!crux) return false;
+      const { crux, publishPhase } = get();
+      if (!crux || publishPhase) return false;
       set({ publishFailure: null, publishPhase: 'sync' });
       try {
-        await flushNotebook(crux.id);
-        await saveMeta();
+        const prepared = await prepareWorkspacePublication(store, ui, crux.id);
         const { functionFiles, listPublishedFunctions, putRemoteSecret } =
           await import('@/services/crux-functions');
         const { localSecrets } = await import('@/services/function-secrets');
-        const hasFunctions = functionFiles(get().artifacts || []).length > 0;
+        const hasFunctions = functionFiles(prepared.artifacts || []).length > 0;
         // Unlock before publishing so a local credential failure cannot leave
         // a newly live handler without the credentials it needs.
         const secrets = hasFunctions ? await localSecrets(crux.id) : {};
-        const mergedCrux = await publishPipeline(get().crux!, get().artifacts || [], {
-          messages: get().messages,
+        assertPublicationWorkspace(store, ui, crux.id);
+        const mergedCrux = await publishPipeline(prepared.crux, prepared.artifacts || [], {
+          messages: prepared.messages,
           onProgress: (phase) => set({ publishPhase: phase }),
         });
+        if (get().crux?.id !== crux.id)
+          throw new Error(
+            'The Crux was shared, but this workspace changed. Reopen it to refresh its status.',
+          );
         set({ crux: mergedCrux });
         notifyUsageChanged();
         if (hasFunctions) {
