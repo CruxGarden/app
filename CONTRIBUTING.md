@@ -139,6 +139,22 @@ also works after a clean install. If you install with `--ignore-scripts`, run
 `npm run postinstall` in `electron/` before testing. After a runtime update, verify the
 database-owner/restart, permission, PDF and video journeys with the new binary.
 
+Command-backed renderer tests use the same vendored `@cruxgarden/local-api` archive
+as Electron, with their own Node-ABI `better-sqlite3` in the root dev dependencies.
+Update both root and Electron manifests/lockfiles when changing that archive.
+`verify-local-api-test-runtime.mjs` refuses mismatched archives/installed versions.
+`src/test/local-api-client.ts` creates a scratch native API owner and Blob Store;
+renderer SQL writes are refused. Tests inject database faults through its separate
+`faultSql` handle. This fixture implements no SQL command policy itself. Its
+filesystem callbacks and UI notifications are not substitutes for desktop IPC
+journeys; those still run in isolated Electron profiles. During storage retirement,
+the Task lifecycle suite uses this fixture; other SQL.js fixtures remain to migrate.
+
+Core Monaco's DOMPurify is scoped to 3.4.16 (GHSA-p98j-92pf-mc4p), and the fixture's
+Swagger dependency uses the same js-yaml 5.4.2 override as the desktop/API. Keep
+these overrides until upstream adopts patched versions. The root dependency audit
+is zero after these patches; this says nothing about separate embedded tool trees.
+
 macOS recording also needs the camera/audio entitlements and purpose strings in the
 packaging configuration. These allow the signed app to request OS consent; they do not
 replace the workspace permission policy. Fake-device tests do not verify real hardware or

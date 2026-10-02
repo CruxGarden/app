@@ -38,7 +38,7 @@ export default defineConfig({
     // this, its `react` import resolved to a second pre-bundled copy and every
     // hook inside PlasmaProvider threw "Cannot read properties of null
     // (reading 'useState')" — the invalid-hook-call error, wearing a disguise.
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', '@cruxgarden/local-api'],
   },
   // A tool's built runtime is shipped as files, never imported: every path
   // under a `*-crux/runtime/` is an asset, so the dev server serves an

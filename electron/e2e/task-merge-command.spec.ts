@@ -154,7 +154,7 @@ test('refused admission preserves Main and refused finalization preserves recove
     launch = await launchApp({ dir, env });
     page = launch.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.goto(`crux-app://app/c/${main}?task=${copy}`);
+    await page.goto(new URL(`/c/${main}?task=${copy}`, page.url()).href);
     await expect(page.getByRole('button', { name: 'Resume merge', exact: true })).toBeVisible();
     await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_finish'));
     // A damaged transcript must not silently complete with a truncated Collaboration.

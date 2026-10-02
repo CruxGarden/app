@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-01",
+  "stage": "AR06 Task test fixture and browser delegation retirement",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r4d984f15f5d7.h037a33c6",
+  "implementation": [
+    "Task lifecycle suite uses the actual SqliteApi and vendored LocalGraphRuntime/native SQLite, not SQL.js command replacements.",
+    "Renderer raw SQL writes refuse; owner-only faultSql injects actual SQLite failures.",
+    "Node and Electron keep separate native binaries while verification checks the same API archive.",
+    "Removed the unused browser snapshot delegation algorithm: net407 lines. Delegation uses ordinary API-owned Tasks."
+  ],
+  "verification": {
+    "app": {
+      "passed": 1706,
+      "skipped": 18,
+      "files": 270,
+      "build": true
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1
+    },
+    "nativeTaskServiceTests": 25,
+    "desktop": {
+      "passed": 8,
+      "duration": "1.9m",
+      "command": "npm run test:e2e -- e2e/task-create-command.spec.ts e2e/task-merge-command.spec.ts e2e/task-lifecycle-command.spec.ts e2e/task-base-restored-main.spec.ts e2e/delegated-copies.spec.ts e2e/editor-history-draft.spec.ts",
+      "invariants": [
+        "Task preparation refuses partial preview slot copying, rolls back and permits retry.",
+        "Stale/admission/completion/snapshot refusal retains content and metadata.",
+        "Interrupted projection and applying merge journal survive API restart.",
+        "Archive/reopen refuses failed protected recovery and retains content across restart.",
+        "Retained Task base remains usable after Main restores before its starting version.",
+        "Delegated workers report checked results to Main and Task, resolve conflicts and persist across restart without automatic Growth.",
+        "Monaco draft/history/Undo and offline JSON validation work with the patched sanitizer."
+      ]
+    },
+    "rootDependencyAudit": 0
+  },
+  "dependencyPatches": {
+    "monacoDompurify": "3.4.16",
+    "monacoAdvisory": "https://github.com/advisories/GHSA-p98j-92pf-mc4p",
+    "swaggerJsYaml": "5.4.2",
+    "yamlAdvisory": "https://github.com/advisories/GHSA-r3ph-w7gj-g6xm"
+  },
+  "testCorrections": [
+    "Native Tasks retain base/result state; creation and merging do not automatically mark Growth. Tests explicitly mark a version when testing ancestry.",
+    "Private Crux archives use archiveVersion3 and graph.json/content/, not the retired archive2/tasks.json format.",
+    "Initial desktop batch6pass/2fail used an invented restart origin; both passed after preserving the running trusted origin, and the final combined eight passed."
+  ],
+  "limits": [
+    "Other Task/archive consumers still use SQL.js fixtures and Task lifecycle fallbacks remain to retire.",
+    "Fixture filesystem callbacks and notice suppression do not replace real Electron IPC/Project Folder coverage.",
+    "This app commit needs its own native CI acceptance; publication app96d497db7 passed Windows/Linux run36953327222.",
+    "Live AI/provider/S3 and real user profiles are not exercised.",
+    "Root audit does not cover separate embedded upstream dependency trees."
+  ]
+}

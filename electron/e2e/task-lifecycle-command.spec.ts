@@ -83,7 +83,7 @@ test('Task archive/reopen reports refusal, preserves content, retries and surviv
     launch = await launchApp({ dir });
     page = launch.page;
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.goto(`crux-app://app/c/${main}?task=${id}`);
+    await page.goto(new URL(`/c/${main}?task=${id}`, page.url()).href);
     await expect(page.getByRole('button', { name: 'Reopen task', exact: true })).toBeVisible();
     await page.evaluate(() =>
       window.electronAPI!.sqlite.run(
