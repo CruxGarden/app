@@ -7,7 +7,7 @@ export async function duplicateCrux(
   gardenId: string | undefined,
   onProgress: (status: string) => void,
 ) {
-  const exported = await exportCrux({ cruxId, runtime: 'included', onProgress });
+  const exported = await exportCrux({ cruxId, onProgress });
   if (exported.failed.length)
     throw new Error('The copy could not be made because its export is incomplete.');
   onProgress('Creating independent copy…');

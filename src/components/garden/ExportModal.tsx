@@ -1,5 +1,5 @@
 import { exportCreation, creationExportLabel } from '@/services/export-creation';
-import RuntimeExportChoice from './RuntimeExportChoice';
+import PrivateBackupDescription from './PrivateBackupDescription';
 import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/cn';
@@ -95,13 +95,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {crux.kind !== 'tool' && crux.kind !== 'mood' && (
-            <RuntimeExportChoice
-              template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
-              artifacts={artifacts}
-              disabled={busy}
-            />
-          )}
+          {crux.kind !== 'tool' && crux.kind !== 'mood' && <PrivateBackupDescription />}
           <div className="flex flex-col gap-1.5">
             <Button
               onClick={handleExportCrux}

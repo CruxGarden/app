@@ -1,6 +1,6 @@
 import { exportCreation, creationExportLabel } from '@/services/export-creation';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
-import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
+import PrivateBackupDescription from '@/components/garden/PrivateBackupDescription';
 import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useMemo } from 'react';
 import { isEmbeddedApp, isCardinal, samplerType } from '@/services/embedded-app';
@@ -208,13 +208,7 @@ export default function ExportPane() {
             </ul>
           </PaneSection>
 
-          {!installable && (
-            <RuntimeExportChoice
-              template={typeof crux.meta?.template === 'string' ? crux.meta.template : undefined}
-              artifacts={artifacts}
-              disabled={exporting || exportingZip}
-            />
-          )}
+          {!installable && <PrivateBackupDescription />}
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap gap-1.5 [&>*]:flex-1 [&>*]:min-w-[132px]">
               <PaneAction

@@ -57,7 +57,7 @@ describe('community tool and file installation', () => {
     expect(toolManifest(installed.id)).toBeNull();
     expect(nativeAppType(applied.crux)).toBe('pocket-notes');
     expect(isEmbeddedApp(applied.crux)).toBe(true);
-    const archive = await exportCrux({ cruxId: project.id, runtime: 'included' });
+    const archive = await exportCrux({ cruxId: project.id });
     const imported = await importCrux({ data: archive.blob, mode: 'clone' });
     expect(await installImportedCreation(imported.cruxId)).toBeNull();
     const reopened = await services.crux.findById(imported.cruxId);
@@ -150,7 +150,7 @@ describe('community tool and file installation', () => {
 
   it('installs an exported Tool Crux backup, but never installs an ordinary project as a tool', async () => {
     const owner = await authorTool();
-    const archive = await exportCrux({ cruxId: owner.id, runtime: 'included' });
+    const archive = await exportCrux({ cruxId: owner.id });
     const imported = await importCrux({ data: archive.blob, mode: 'clone' });
     expect((await installImportedCreation(imported.cruxId))?.kind).toBe('tool');
   });

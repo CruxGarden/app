@@ -87,7 +87,7 @@ export default function SyncSettings() {
     setError('');
     setStatus('Exporting garden...');
     try {
-      const result = await exportGarden({ onProgress: setStatus, runtime: 'included' });
+      const result = await exportGarden({ onProgress: setStatus });
       setStatus('Uploading to cloud...');
       const meta = await syncApi.pushGarden(result.blob);
       setGardenStatus(meta);
@@ -195,135 +195,134 @@ export default function SyncSettings() {
 
   return (
     <SettingsSection title="Sync" collapsible>
-        <div>
-          {/* Automatic backup */}
-          <div
-            className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-border"
-            data-testid="auto-backup"
-          >
-            <div className="min-w-0">
-              <p className="text-sm text-text">Back up my garden to crux.garden automatically</p>
-              <p className="text-xs text-text-muted mt-0.5">
-                A crux is backed up ten minutes after it goes quiet, the whole garden once a day,
-                and every crux you share. A published site is not a backup — this is.
-              </p>
-              {auto && autoPause && (
-                <p
-                  role="alert"
-                  className="text-xs text-error mt-1.5"
-                  data-testid="auto-backup-paused"
-                >
-                  Paused — {autoPause} Switch it off and on to try again.
-                </p>
-              )}
-              {auto && !autoPause && (
-                <p
-                  className="text-xs text-text-muted mt-1.5 font-mono"
-                  data-testid="auto-backup-status"
-                >
-                  {autoLast
-                    ? `Garden backed up ${formatDateTime(autoLast)}`
-                    : 'On — the first garden backup runs shortly'}
-                </p>
-              )}
-            </div>
-            <Toggle checked={auto} onChange={(on) => setAutoBackup(on)} label="Automatic backup" />
-          </div>
-
-          {/* Garden backup */}
-          <SectionLabel as="h3" className="mb-2">
-            Garden Backup
-          </SectionLabel>
-
-          {gardenStatus && (
-            <p className="text-xs text-text-muted mb-3">
-              Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)}
-              )
+      <div>
+        {/* Automatic backup */}
+        <div
+          className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-border"
+          data-testid="auto-backup"
+        >
+          <div className="min-w-0">
+            <p className="text-sm text-text">Back up my garden to crux.garden automatically</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              A crux is backed up ten minutes after it goes quiet, the whole garden once a day, and
+              every crux you share. A published site is not a backup — this is.
             </p>
-          )}
-          {budget && budget.limit > 0 && budget.used / budget.limit >= 0.8 && (
-            <p
-              role={budget.over ? 'alert' : undefined}
-              className={cn('text-xs mb-3', budget.over ? 'text-error' : 'text-text-muted')}
-              data-testid="settings-sync-budget"
-            >
-              {budget.over
-                ? `Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit.`
-                : `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan — a push may soon be refused.`}
-            </p>
-          )}
-
-          <div className="flex items-center gap-2 mb-4">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handlePush}
-              disabled={busy}
-              loading={pushing}
-            >
-              {pushing ? 'Pushing...' : 'Push garden'}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handlePull}
-              disabled={busy}
-              loading={pulling}
-            >
-              {pulling ? 'Pulling...' : 'Pull garden'}
-            </Button>
-            {gardenStatus && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleDeleteGarden}
-                disabled={busy}
-                loading={deletingGarden}
+            {auto && autoPause && (
+              <p
+                role="alert"
+                className="text-xs text-error mt-1.5"
+                data-testid="auto-backup-paused"
               >
-                {deletingGarden ? 'Deleting...' : 'Delete backup'}
-              </Button>
+                Paused — {autoPause} Switch it off and on to try again.
+              </p>
+            )}
+            {auto && !autoPause && (
+              <p
+                className="text-xs text-text-muted mt-1.5 font-mono"
+                data-testid="auto-backup-status"
+              >
+                {autoLast
+                  ? `Garden backed up ${formatDateTime(autoLast)}`
+                  : 'On — the first garden backup runs shortly'}
+              </p>
             )}
           </div>
-
-          {/* Synced cruxes */}
-          <div className="border-t border-border my-4" />
-          <SectionLabel as="h3" className="mb-2">
-            Synced Cruxes
-          </SectionLabel>
-
-          {loading ? (
-            <div className="flex items-center gap-2 text-xs text-text-muted">
-              <Spinner size={12} /> Loading...
-            </div>
-          ) : syncedCruxes.length === 0 ? (
-            <p className="text-xs text-text-muted">No cruxes synced to cloud yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {syncedCruxes.map((c) => (
-                <div key={c.cruxId} className="flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-text font-medium">{c.title}</span>
-                    <span className="text-text-muted ml-2">
-                      {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
-                    </span>
-                  </div>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDeleteCrux(c.cruxId)}
-                    disabled={deletingId === c.cruxId}
-                    loading={deletingId === c.cruxId}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
-          {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
+          <Toggle checked={auto} onChange={(on) => setAutoBackup(on)} label="Automatic backup" />
         </div>
+
+        {/* Garden backup */}
+        <SectionLabel as="h3" className="mb-2">
+          Garden Backup
+        </SectionLabel>
+
+        {gardenStatus && (
+          <p className="text-xs text-text-muted mb-3">
+            Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)})
+          </p>
+        )}
+        {budget && budget.limit > 0 && budget.used / budget.limit >= 0.8 && (
+          <p
+            role={budget.over ? 'alert' : undefined}
+            className={cn('text-xs mb-3', budget.over ? 'text-error' : 'text-text-muted')}
+            data-testid="settings-sync-budget"
+          >
+            {budget.over
+              ? `Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit.`
+              : `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan — a push may soon be refused.`}
+          </p>
+        )}
+
+        <div className="flex items-center gap-2 mb-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePush}
+            disabled={busy}
+            loading={pushing}
+          >
+            {pushing ? 'Pushing...' : 'Push garden'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePull}
+            disabled={busy}
+            loading={pulling}
+          >
+            {pulling ? 'Pulling...' : 'Pull garden'}
+          </Button>
+          {gardenStatus && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleDeleteGarden}
+              disabled={busy}
+              loading={deletingGarden}
+            >
+              {deletingGarden ? 'Deleting...' : 'Delete backup'}
+            </Button>
+          )}
+        </div>
+
+        {/* Synced cruxes */}
+        <div className="border-t border-border my-4" />
+        <SectionLabel as="h3" className="mb-2">
+          Synced Cruxes
+        </SectionLabel>
+
+        {loading ? (
+          <div className="flex items-center gap-2 text-xs text-text-muted">
+            <Spinner size={12} /> Loading...
+          </div>
+        ) : syncedCruxes.length === 0 ? (
+          <p className="text-xs text-text-muted">No cruxes synced to cloud yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {syncedCruxes.map((c) => (
+              <div key={c.cruxId} className="flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-text font-medium">{c.title}</span>
+                  <span className="text-text-muted ml-2">
+                    {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
+                  </span>
+                </div>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleDeleteCrux(c.cruxId)}
+                  disabled={deletingId === c.cruxId}
+                  loading={deletingId === c.cruxId}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
+        {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
+      </div>
     </SettingsSection>
   );
 }

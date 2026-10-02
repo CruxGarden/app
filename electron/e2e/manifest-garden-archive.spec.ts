@@ -18,7 +18,7 @@ async function importArchive(page: Page, file: string) {
   await page.getByRole('dialog').getByRole('button', { name: 'Continue', exact: true }).click();
 }
 
-test('Settings backs up the manifest graph, refuses cache-masked missing history and restores into a fresh installation', async () => {
+test('Settings backs up the manifest graph, refuses cache-masked missing history and restores into a fresh installation', async ({}, testInfo) => {
   let launch = await launchApp();
   const source = launch.dir;
   const archive = join(launch.dir, 'manifest.garden');
@@ -87,6 +87,8 @@ test('Settings backs up the manifest graph, refuses cache-masked missing history
       return { id, root, moodId, first, snapshot, latest, fingerprint: original.put.fingerprint };
     });
     await openData(launch.page);
+    await expect(launch.page.getByText(/Includes every Garden and Crux/)).toBeVisible();
+    await launch.page.screenshot({ path: testInfo.outputPath('installation-backup.png') });
     await launch.app.evaluate(({ session }, destination) => {
       session.defaultSession.once('will-download', (_e, item) => {
         item.setSavePath(destination);

@@ -134,8 +134,12 @@ does not publish, grant access or execute downloaded host modules.
   metadata and shared content, or complete inline archive3 members in shipped
   undertakings. Its sequential member admission is not one atomic Garden graph
   transaction.
-- `.garden` is a whole-installation backup with a captured SQLite database and
-  verified content inventory; it is not a shareable selected graph.
+- `.garden` is a format4 whole-installation backup (`scope: installation`) with a
+  captured SQLite database and complete verified content inventory, including tool
+  bytes, historical files and typed Mood/portrait assets. The native API owns
+  replacement and imported-session cleanup; cleanup failure restores the previous
+  database. There is no omitted-runtime choice or cache-based repair. It is not a
+  shareable selected graph.
 - `.cruxtool` and `.cruxmood` are installable Tool and Mood packages with their own
   content contracts. An ordinary project archive does not automatically install a tool.
 

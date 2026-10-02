@@ -223,13 +223,6 @@
       "ledger": "cruxgarden:exploreRecentTags"
     },
     {
-      "key": "cruxgarden:export-runtime-mode",
-      "sources": [
-        "src/services/archive-runtimes.ts"
-      ],
-      "ledger": "cruxgarden:export-runtime-mode"
-    },
-    {
       "key": "cruxgarden:first-project:",
       "sources": [
         "src/components/workspace/FirstProjectGuide.tsx"
@@ -704,31 +697,6 @@
       "file": "src/services/cruxspaces.ts",
       "method": "getSqliteClient().run",
       "statement": "'DELETE FROM settings WHERE key = ?'"
-    },
-    {
-      "file": "src/services/garden-io.ts",
-      "method": "db.run",
-      "statement": "'DELETE FROM file_content_heads'"
-    },
-    {
-      "file": "src/services/garden-io.ts",
-      "method": "db.run",
-      "statement": "`DELETE FROM ${table}`"
-    },
-    {
-      "file": "src/services/garden-io.ts",
-      "method": "db.run",
-      "statement": "`UPDATE cruxes SET meta = json_remove(meta, '$.settings.agentSessionId', '$.settings.agentSessions', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue') WHERE meta IS NOT NULL`"
-    },
-    {
-      "file": "src/services/garden-io.ts",
-      "method": "db.run",
-      "statement": "'UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?'"
-    },
-    {
-      "file": "src/services/garden-io.ts",
-      "method": "db.run",
-      "statement": "`UPDATE task_merges SET phase = 'cancelled', data = CASE WHEN json_valid(data) AND json_type(data) = 'object' THEN json_remove(json_set(data, '$.phase', 'cancelled'), '$.previewUrl') ELSE data END WHERE phase = 'review' OR (phase = 'cancelled' AND json_extract(data, '$.phase') = 'review')`"
     },
     {
       "file": "src/services/index.ts",

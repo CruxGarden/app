@@ -5,7 +5,6 @@ import {
   privateArchiveService,
 } from './private-crux-archive';
 import { generateZip } from '@/lib/zip-off-thread';
-import type { RuntimeMode } from './archive-runtimes';
 import { assertMainWorkspace, listWorkingCopies } from './working-copies';
 import JSZip from 'jszip';
 import { getServices } from './index';
@@ -13,7 +12,6 @@ import { NotFoundError } from './types';
 import { getSqliteClient } from './sqlite/client';
 
 export interface ExportOptions {
-  runtime?: RuntimeMode;
   cruxId: string;
   /** Dialog hints; native export always captures authoritative saved Collaboration. */
   messages?: unknown[];

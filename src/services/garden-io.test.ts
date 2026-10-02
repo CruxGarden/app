@@ -4,13 +4,16 @@ import { initServices, type Services } from './index';
 import { exportGarden, importGarden, wipeGarden } from './garden-io';
 import { hashContent } from './sqlite/helpers';
 import { getSqliteClient } from './sqlite/client';
+import { localApiFixture } from '@/test/local-api-fixture';
+import { growthHostFor } from './growth';
+import { createTask, prepareTaskReview } from './tasks';
+import { allWorkspaces, closeWorkspace } from '@/stores/workspaceRegistry';
 
-/**
- * Garden export/import tests.
- *
- * These test the full-database .garden ZIP format (garden-io.ts).
- * The TestSqliteClient (in-memory) is injected by test/setup.ts.
- */
+// Exercise the shipped API and native SQLite in an isolated installation.
+const native = localApiFixture();
+async function closeWorkspaces() {
+  for (const w of allWorkspaces()) await closeWorkspace(w.id, { stop: true, documents: 'discard' });
+}
 
 describe('Garden Export / Import', () => {
   let svc: Services;
@@ -20,15 +23,62 @@ describe('Garden Export / Import', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
+  it('requires the native installation commands before any export, intake or wipe', async () => {
+    const db = getSqliteClient();
+    const installation = db.installation;
+    db.installation = undefined;
+    const exportImage = vi.spyOn(db, 'export');
+    const replace = vi.spyOn(db, 'import');
+    const rawWrite = vi.spyOn(db, 'run');
+    try {
+      await expect(exportGarden()).rejects.toThrow(/installation.*unavailable/i);
+      await expect(importGarden({ data: new ArrayBuffer(0) })).rejects.toThrow(
+        /installation.*unavailable/i,
+      );
+      await expect(wipeGarden()).rejects.toThrow(/installation.*unavailable/i);
+      expect(exportImage).not.toHaveBeenCalled();
+      expect(replace).not.toHaveBeenCalled();
+      expect(rawWrite).not.toHaveBeenCalled();
+    } finally {
+      db.installation = installation;
+    }
+  });
+
+  it('refuses export when a retained blob read returns the wrong bytes', async () => {
+    const crux = await svc.crux.create({ title: 'Preserve bytes' });
+    const file = await svc.artifact.create({
+      resourceId: crux.id,
+      content: 'Real content',
+      meta: { path: 'kept.txt' },
+    });
+    const db = getSqliteClient();
+    const read = db.blobRead.bind(db);
+    vi.spyOn(db, 'blobRead').mockImplementation((fp) =>
+      fp === file.fingerprint ? Promise.resolve(new TextEncoder().encode('Wrong bytes')) : read(fp),
+    );
+    await expect(exportGarden()).rejects.toThrow(/integrity|fingerprint/i);
+  });
+
+  it('captures incoming buffer bytes before yielding to another caller', async () => {
+    const crux = await svc.crux.create({ title: 'Captured input' });
+    const archive = await exportGarden();
+    const bytes = await archive.blob.arrayBuffer();
+    const intake = importGarden({ data: bytes });
+    new Uint8Array(bytes).fill(0);
+    await intake;
+    expect(await svc.crux.findById(crux.id)).toMatchObject({ title: 'Captured input' });
+  });
+
   it('clears retained manifest heads when intentionally wiping the installation', async () => {
     const db = getSqliteClient();
-    await db.run(
-      'CREATE TABLE file_content_heads (crux_id TEXT PRIMARY KEY, root TEXT, revision INTEGER, format_version INTEGER)',
-    );
-    const bytes = new TextEncoder().encode('Retained content');
-    const root = await hashContent(bytes);
-    await db.blobWrite(root, bytes);
-    await db.run('INSERT INTO file_content_heads VALUES (?, ?, 1, 1)', ['retained-snapshot', root]);
+    const crux = await svc.crux.create({ title: 'Retained content' });
+    const file = await svc.artifact.create({
+      resourceId: crux.id,
+      content: 'Retained content',
+      meta: { path: 'kept.txt' },
+    });
+    await (await growthHostFor(crux.id)).snapshot({ label: 'Keep', requestedBy: 'person' });
+    const root = file.fingerprint!;
     await wipeGarden();
     expect(await db.all('SELECT * FROM file_content_heads')).toEqual([]);
     expect(await db.blobExists(root)).toBe(false);
@@ -46,7 +96,7 @@ describe('Garden Export / Import', () => {
     vi.spyOn(db, 'export').mockImplementation(async () => {
       const image = await capture();
       // A later edit removes this reference from the live working database.
-      await db.run('DELETE FROM artifacts WHERE id = ?', [file.id]);
+      await svc.artifact.delete(file);
       return image;
     });
     const archive = await exportGarden();
@@ -91,10 +141,10 @@ describe('Garden Export / Import', () => {
           meta: { authorSnapshots: { previous: { avatarFingerprint: fingerprint } } },
         });
       else
-        await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+        await db.settings!.put(
           'cruxgarden:moodAssets',
           JSON.stringify([{ name: 'Retained image', fingerprint }]),
-        ]);
+        );
       const archive = await exportGarden();
       const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
       expect(zip.file(`artifacts/${fingerprint}`)).not.toBeNull();
@@ -116,24 +166,34 @@ describe('Garden Export / Import', () => {
   it('requires retained Growth files and author avatars, not just the current Crux files', async () => {
     const snapshot = await svc.crux.create({
       title: 'Retained history',
-      type: 'crux',
-      kind: 'snapshot',
+      type: 'workspace',
     });
     const file = await svc.artifact.upload({
       resourceId: snapshot.id,
       blob: new File(['Historical bytes'], 'old.txt'),
       meta: { path: 'old.txt' },
     });
+    await (
+      await growthHostFor(snapshot.id)
+    ).snapshot({ label: 'Retained history', requestedBy: 'person' });
+    await svc.artifact.create({
+      resourceId: snapshot.id,
+      content: 'Current bytes',
+      meta: { path: 'old.txt' },
+    });
     const avatar = new TextEncoder().encode('Avatar bytes');
     const avatarFingerprint = await hashContent(avatar);
     const db = getSqliteClient();
     await db.blobWrite(avatarFingerprint, avatar);
-    await db.run('INSERT INTO authors (id, meta, created, updated) VALUES (?, ?, ?, ?)', [
-      'avatar-fixture',
-      JSON.stringify({ avatarFingerprint }),
-      new Date().toISOString(),
-      new Date().toISOString(),
-    ]);
+    await native().faultSql(
+      'INSERT INTO authors (id, meta, created, updated) VALUES (?, ?, ?, ?)',
+      [
+        crypto.randomUUID(),
+        JSON.stringify({ avatarFingerprint }),
+        new Date().toISOString(),
+        new Date().toISOString(),
+      ],
+    );
     const archive = await exportGarden();
     const zip = await JSZip.loadAsync(await archive.blob.arrayBuffer());
     zip.remove(`artifacts/${file.fingerprint}`);
@@ -146,7 +206,7 @@ describe('Garden Export / Import', () => {
     const replace = vi.spyOn(db, 'import');
     await expect(
       importGarden({ data: await zip.generateAsync({ type: 'arraybuffer' }) }),
-    ).rejects.toThrow('missing required content (2 blob(s))');
+    ).rejects.toThrow(/missing required content/);
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -163,7 +223,7 @@ describe('Garden Export / Import', () => {
       const image = await db.export();
       const existing = await svc.crux.create({ title: 'Current work', type: 'workspace' });
       if (fault === 'missing') await db.blobDelete(file.fingerprint!);
-      else await db.blobWrite(file.fingerprint!, new TextEncoder().encode('Wrong bytes'));
+      else vi.spyOn(db, 'blobRead').mockResolvedValue(new TextEncoder().encode('Wrong bytes'));
       const replace = vi.spyOn(db, 'import');
       await expect(importGarden({ data: image })).rejects.toThrow('expected a current ZIP archive');
       expect(replace).not.toHaveBeenCalled();
@@ -186,7 +246,7 @@ describe('Garden Export / Import', () => {
       write(fingerprint, new TextEncoder().encode('Short write')),
     );
     const replace = vi.spyOn(db, 'import');
-    await expect(importGarden({ data: archive.blob })).rejects.toThrow('failed integrity check');
+    await expect(importGarden({ data: archive.blob })).rejects.toThrow(/integrity|fingerprint/);
     expect(replace).not.toHaveBeenCalled();
     expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Current work' });
   });
@@ -208,7 +268,7 @@ describe('Garden Export / Import', () => {
     vi.spyOn(getSqliteClient(), 'blobWrite').mockRejectedValue(new Error('Disk full'));
     await expect(importGarden({ data: archive.blob })).rejects.toThrow('Disk full');
     expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
-    expect(await (await svc.artifact.downloadBlob(file.id)).text()).toBe('Irreplaceable content');
+    expect(await (await svc.artifact.downloadBlob(file)).text()).toBe('Irreplaceable content');
   });
 
   it('refuses replacement when its recovery database cannot be captured', async () => {
@@ -220,17 +280,22 @@ describe('Garden Export / Import', () => {
   });
 
   it('restores the previous database when imported session cleanup fails', async () => {
-    const archive = await exportGarden();
+    await native().faultSql(
+      "CREATE TRIGGER refuse_cleanup BEFORE UPDATE OF meta ON cruxes BEGIN SELECT RAISE(ABORT, 'Cleanup interrupted'); END",
+    );
+    const guarded = await exportGarden();
+    await native().faultSql('DROP TRIGGER refuse_cleanup');
     const existing = await svc.crux.create({ title: 'Keep me', type: 'workspace' });
-    const db = getSqliteClient();
-    const run = db.run.bind(db);
-    vi.spyOn(db, 'run').mockImplementation((sql, params) => {
-      if (sql.startsWith('UPDATE cruxes SET meta = json_remove'))
-        return Promise.reject(new Error('Cleanup interrupted'));
-      return run(sql, params);
+    const file = await svc.artifact.create({
+      resourceId: existing.id,
+      content: 'Local work after the backup',
+      meta: { path: 'kept.txt' },
     });
-    await expect(importGarden({ data: archive.blob })).rejects.toThrow('Cleanup interrupted');
+    await expect(importGarden({ data: guarded.blob })).rejects.toThrow('Cleanup interrupted');
     expect(await svc.crux.findById(existing.id)).toMatchObject({ title: 'Keep me' });
+    expect(await svc.artifact.readContent(file)).toBe('Local work after the backup');
+    await native().restart();
+    expect(await svc.artifact.readContent(file)).toBe('Local work after the backup');
   });
 
   it.each(['review', 'cancelled'])(
@@ -238,32 +303,28 @@ describe('Garden Export / Import', () => {
     async (phase) => {
       const db = getSqliteClient();
       const crux = await svc.crux.create({ title: 'Imported review', type: 'workspace' });
-      const bytes = new TextEncoder().encode('Retained review evidence bytes');
-      const fingerprint = await hashContent(bytes);
-      await db.blobWrite(fingerprint, bytes);
-      const data = {
-        id: 'review-id',
-        cruxId: crux.id,
-        copyId: 'task-id',
-        candidateId: 'candidate-id',
-        phase: 'review',
-        previewUrl: 'http://localhost:12345',
-        manifest: { 'kept.txt': { fingerprint } },
-        verificationLog: 'Keep this evidence',
-      };
-      await db.run(
-        'INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [
+      await svc.artifact.create({
+        resourceId: crux.id,
+        content: 'Original',
+        meta: { path: 'kept.txt' },
+      });
+      const task = await createTask(crux.id, 'Review changes');
+      await svc.artifact.create({
+        resourceId: task.id,
+        content: 'Retained review evidence bytes',
+        meta: { path: 'kept.txt' },
+      });
+      const data = await prepareTaskReview(task.id);
+      const expected = JSON.stringify(data);
+      data.previewUrl = 'http://localhost:12345';
+      data.verificationLog = 'Keep this evidence';
+      await db.saveTaskReview!(JSON.stringify(data), expected);
+      if (phase === 'cancelled')
+        await native().faultSql("UPDATE task_merges SET phase = 'cancelled' WHERE id = ?", [
           data.id,
-          crux.id,
-          data.copyId,
-          data.candidateId,
-          phase,
-          JSON.stringify(data),
-          new Date().toISOString(),
-        ],
-      );
+        ]);
       const archive = await exportGarden();
+      await closeWorkspaces();
       await importGarden({ data: archive.blob });
       const row = await db.get<{ phase: string; data: string }>(
         'SELECT phase, data FROM task_merges WHERE id = ?',
@@ -276,7 +337,7 @@ describe('Garden Export / Import', () => {
   );
 
   describe('basic round-trip', () => {
-    it('exports and re-imports an empty garden', async () => {
+    it('exports and re-imports a newly initialized installation', async () => {
       const result = await exportGarden();
 
       expect(result.filename).toMatch(/^crux-garden-\d{8}\.garden$/);
@@ -325,17 +386,37 @@ describe('Garden Export / Import', () => {
       const ab = await result.blob.arrayBuffer();
       const zip = await JSZip.loadAsync(ab);
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
-      expect(manifest.artifactCount).toBe(2);
+      expect(manifest.artifactCount).toBeGreaterThanOrEqual(3);
 
-      // Artifacts directory should have 2 entries (unique fingerprints)
+      // Inventory includes manifest objects as well as file bytes.
       const artifactFiles: string[] = [];
       zip.folder('artifacts')?.forEach((path) => artifactFiles.push(path));
-      expect(artifactFiles).toHaveLength(2);
+      expect(artifactFiles).toHaveLength(manifest.artifactCount);
 
       // Import back
       const imported = await importGarden({ data: result.blob });
       expect(imported.cruxCount).toBe(1);
-      expect(imported.artifactCount).toBe(2);
+      expect(imported.artifactCount).toBe(manifest.artifactCount);
+      const files = await svc.artifact.findByResource('crux', crux.id);
+      const content = await Promise.all(
+        files.map(async (f) => [f.filename, await (await svc.artifact.downloadBlob(f)).text()]),
+      );
+      expect(content).toEqual(
+        expect.arrayContaining([
+          ['index.html', '<h1>Hello</h1>'],
+          ['style.css', 'body { color: red }'],
+        ]),
+      );
+      await native().restart();
+      const reopened = await svc.artifact.findByResource('crux', crux.id);
+      expect(
+        await Promise.all(
+          reopened.map(async (f) => [
+            f.filename,
+            await (await svc.artifact.downloadBlob(f)).text(),
+          ]),
+        ),
+      ).toEqual(content);
     });
   });
 
@@ -369,6 +450,7 @@ describe('Garden Export / Import', () => {
 
       // Upload identical content to both cruxes
       const content = 'same content across cruxes';
+      const contentHash = await hashContent(new TextEncoder().encode(content));
       await svc.artifact.upload({
         resourceId: cruxA.id,
         blob: new File([content], 'file.txt', { type: 'text/plain' }),
@@ -386,10 +468,10 @@ describe('Garden Export / Import', () => {
       const ab = await result.blob.arrayBuffer();
       const zip = await JSZip.loadAsync(ab);
 
-      // Only 1 artifact file despite 2 uploads (same fingerprint)
+      // Shared file bytes appear once; each Crux also retains its manifest.
       const artifactFiles: string[] = [];
       zip.folder('artifacts')?.forEach((path) => artifactFiles.push(path));
-      expect(artifactFiles).toHaveLength(1);
+      expect(artifactFiles.filter((fp) => fp === contentHash)).toHaveLength(1);
     });
   });
 
@@ -469,9 +551,7 @@ describe('Garden Export / Import', () => {
         'expected a current ZIP archive',
       );
       expect(replace).not.toHaveBeenCalled();
-      expect(await (await svc.artifact.downloadBlob(file.id)).text()).toBe(
-        'Keep the existing blob',
-      );
+      expect(await (await svc.artifact.downloadBlob(file)).text()).toBe('Keep the existing blob');
     });
   });
 

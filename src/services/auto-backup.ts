@@ -183,7 +183,7 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
       window.dispatchEvent(new Event(AUTO_BACKUP_CHANGED));
     },
     backupGarden: async () => {
-      const result = await gardenIo.exportGarden({ runtime: 'included' });
+      const result = await gardenIo.exportGarden({});
       await syncApi.pushGarden(result.blob);
       setSetting(SettingsKey.LastGardenBackupAt, new Date().toISOString());
       window.dispatchEvent(new Event(AUTO_BACKUP_CHANGED));
@@ -227,4 +227,3 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
   setInterval(() => void s.tickGarden(), 60 * 60_000);
   return s;
 }
-

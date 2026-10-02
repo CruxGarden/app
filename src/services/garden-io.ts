@@ -1,11 +1,5 @@
 import { toArrayBuffer } from '@/lib/bytes';
 import { generateZip } from '@/lib/zip-off-thread';
-import {
-  archiveRuntimeMode,
-  referenceArchiveRuntimes,
-  hydrateArchiveRuntimes,
-  type RuntimeMode,
-} from './archive-runtimes';
 import JSZip from 'jszip';
 import { getSqliteClient } from './sqlite/client';
 import { hashContent } from './sqlite/helpers';
@@ -18,7 +12,6 @@ const SUPPORTED_MANIFEST_MAJOR = '4';
 // ── Types ───────────────────────────────────────────────
 
 export interface GardenExportOptions {
-  runtime?: RuntimeMode;
   author?: { username: string; displayName: string } | null;
   onProgress?: (status: string) => void;
 }
@@ -38,38 +31,19 @@ export interface GardenImportResult {
   artifactCount: number;
 }
 
-// ── Helpers ─────────────────────────────────────────────
-
-// ── Wipe ────────────────────────────────────────────────
-
-const ALL_TABLES = [
-  'task_merges',
-  'working_copies',
-  'store',
-  'cruxes',
-  'artifacts',
-  'dimensions',
-  'authors',
-  'settings',
-];
+function installationClient() {
+  const db = getSqliteClient();
+  if (!db.installation || !db.fileContent)
+    throw new Error('The API installation service is unavailable. Restart Garden and retry.');
+  return { db, installation: db.installation };
+}
 
 export async function wipeGarden(onProgress?: (status: string) => void): Promise<void> {
+  const { db, installation } = installationClient();
   await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
-  const db = getSqliteClient();
 
   onProgress?.('Deleting all data...');
-  if (db.installation) {
-    // Desktop: every record goes in one transaction, or none does.
-    await db.installation.wipeGarden();
-  } else {
-    if (
-      await db.get(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'file_content_heads'",
-      )
-    )
-      await db.run('DELETE FROM file_content_heads');
-    for (const table of ALL_TABLES) await db.run(`DELETE FROM ${table}`);
-  }
+  await installation.wipeGarden();
 
   onProgress?.('Removing all files...');
   await db.blobWipeAll();
@@ -95,7 +69,7 @@ export async function wipeGarden(onProgress?: (status: string) => void): Promise
 
 export async function exportGarden(options: GardenExportOptions = {}): Promise<GardenExportResult> {
   const { author = null, onProgress } = options;
-  const db = getSqliteClient();
+  const { db } = installationClient();
 
   if (await db.get("SELECT id FROM task_merges WHERE phase = 'applying'"))
     throw new Error('Recover pending task merges before exporting the garden.');
@@ -119,7 +93,7 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
   // garden.sqlite — metadata only (no content column)
   zip.file('garden.sqlite', sqliteData);
 
-  // Artifact blobs from OPFS, keyed by fingerprint
+  // Complete immutable content inventory, keyed by fingerprint
   let artifactCount = 0;
   for (let i = 0; i < fingerprints.length; i++) {
     const fingerprint = fingerprints[i]!;
@@ -127,11 +101,13 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
 
     try {
       const bytes = await db.blobRead(fingerprint);
+      if ((await hashContent(bytes)) !== fingerprint)
+        throw new Error('Content failed its fingerprint integrity check.');
       zip.file(`artifacts/${fingerprint}`, bytes);
       artifactCount++;
     } catch (err) {
       throw new Error(
-        `Garden backup stopped because an Artifact could not be read: ${fingerprint}`,
+        `Garden backup stopped because retained content failed its read or integrity check: ${fingerprint}`,
         { cause: err },
       );
     }
@@ -159,14 +135,6 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
     ),
   );
 
-  const templates = await db.all<{ template: string }>(
-    "SELECT DISTINCT json_extract(meta, '$.template') AS template FROM cruxes WHERE json_extract(meta, '$.template') IS NOT NULL",
-  );
-  await referenceArchiveRuntimes(
-    zip,
-    templates.map((row) => row.template),
-    options.runtime ?? archiveRuntimeMode(),
-  );
   onProgress?.('Compressing...');
   const blob = await generateZip(zip);
 
@@ -181,8 +149,9 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
 
 export async function importGarden(options: GardenImportOptions): Promise<GardenImportResult> {
   const { data, onProgress } = options;
-  const raw = await toArrayBuffer(data);
-  const db = getSqliteClient();
+  const { db, installation } = installationClient();
+  // Capture mutable caller buffers before the first asynchronous operation.
+  const raw = await toArrayBuffer(data instanceof Blob ? data : data.slice(0));
 
   let zip: JSZip;
   try {
@@ -213,7 +182,6 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     throw new Error(
       'Garden file integrity check failed — the database may be corrupted or tampered with.',
     );
-  await hydrateArchiveRuntimes(zip);
   const entries: { fingerprint: string; entry: JSZip.JSZipObject }[] = [];
   zip.folder('artifacts')?.forEach((fingerprint, entry) => {
     if (!entry.dir) entries.push({ fingerprint, entry });
@@ -262,32 +230,8 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
   try {
     onProgress?.('Importing database...');
     await db.import(sqliteData);
-    if (db.installation) {
-      // Desktop: another machine's sessions, folders and live reviews go at once.
-      await db.installation.sanitizeImportedGarden();
-    } else {
-      // Provider sessions belong to the exporting installation, including Main's.
-      await db.run(`UPDATE cruxes SET meta = json_remove(meta,
-    '$.settings.agentSessionId', '$.settings.agentSessions', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue')
-    WHERE meta IS NOT NULL`);
-
-      // A restored task always gets a fresh directory and provider session.
-      const { portableMeta } = await import('./portable-metadata');
-      const copies = await db.all<{ id: string; meta: string }>(
-        'SELECT id, meta FROM working_copies',
-      );
-      for (const copy of copies)
-        await db.run('UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?', [
-          JSON.stringify(portableMeta(copy.meta)),
-          copy.id,
-        ]);
-      // Reviews cannot carry a live preview across installations. Keep the JSON
-      // journal consistent with its indexed phase, including restored data.
-      await db.run(`UPDATE task_merges SET phase = 'cancelled',
-      data = CASE WHEN json_valid(data) AND json_type(data) = 'object'
-        THEN json_remove(json_set(data, '$.phase', 'cancelled'), '$.previewUrl') ELSE data END
-      WHERE phase = 'review' OR (phase = 'cancelled' AND json_extract(data, '$.phase') = 'review')`);
-    }
+    // Another installation's sessions, folders and live reviews are cleared atomically.
+    await installation.sanitizeImportedGarden();
   } catch (error) {
     onProgress?.('Import failed — restoring previous data...');
     try {
@@ -357,7 +301,7 @@ export async function confirmAndImportGarden(options: ConfirmAndImportOptions): 
   );
   if (wantBackup) {
     try {
-      const backup = await exportGarden({ onProgress, runtime: 'included' });
+      const backup = await exportGarden({ onProgress });
       const url = URL.createObjectURL(backup.blob);
       const a = document.createElement('a');
       a.href = url;

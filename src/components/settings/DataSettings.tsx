@@ -1,8 +1,7 @@
 import { useAiEnabled } from '@/hooks/useAiEnabled';
-import RuntimeExportChoice from '@/components/garden/RuntimeExportChoice';
+import PrivateBackupDescription from '@/components/garden/PrivateBackupDescription';
 import SettingsSection from './SettingsSection';
 import { downloadBlob } from '@/lib/download';
-import { archiveRuntimeMode } from '@/services/archive-runtimes';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
@@ -39,23 +38,22 @@ export default function DataSettings() {
     if (chosen) setGardenRoot(chosen);
   }, []);
 
-  const handleExport = useCallback(async (selfContained = false) => {
+  const handleExport = useCallback(async () => {
     setExporting(true);
     setError('');
     try {
       const result = await exportGarden({
         onProgress: setStatus,
-        runtime: selfContained ? 'included' : archiveRuntimeMode(),
       });
 
       downloadBlob(result.blob, result.filename);
 
       setStatus('Export complete');
-      lastGardenExportAt = selfContained || archiveRuntimeMode() === 'included' ? Date.now() : 0;
+      lastGardenExportAt = Date.now();
       return true;
     } catch (err) {
       console.error('Garden export failed:', err);
-      setError('Export failed');
+      setError(err instanceof Error ? err.message : 'Export failed');
       setStatus('');
       return false;
     } finally {
@@ -104,7 +102,7 @@ export default function DataSettings() {
         ],
       });
       if (!choice) return;
-      if (choice === 'export' && !(await handleExport(true))) return;
+      if (choice === 'export' && !(await handleExport())) return;
     }
     setWiping(true);
     setError('');
@@ -139,7 +137,7 @@ export default function DataSettings() {
         </p>
 
         <div className="mb-4">
-          <RuntimeExportChoice disabled={busy} />
+          <PrivateBackupDescription installation />
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -192,8 +190,6 @@ export default function DataSettings() {
             </div>
           </>
         )}
-
-        <hr className="divider my-6" />
 
         <hr className="divider my-6" />
 

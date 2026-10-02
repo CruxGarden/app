@@ -594,8 +594,8 @@
       "key": "cruxgarden:export-runtime-mode",
       "group": "additional",
       "target": "export preference",
-      "preservation": "Preserve runtime-by-reference choice while new graph format is designed.",
-      "status": "planned"
+      "preservation": "Retired: native backups always include all content. Existing opaque settings survive whole-installation backup; this key no longer selects archive behavior.",
+      "status": "retired"
     },
     {
       "key": "cruxgarden:selftest",

@@ -372,12 +372,6 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
         cruxId: { type: 'string' },
         title: { type: 'string' },
         format: { type: 'string', enum: ['archive', 'share-card'] },
-        runtime: {
-          type: 'string',
-          enum: ['reference', 'included'],
-          description:
-            'Desktop private backups always include tool files. In Web Mode, reference unchanged tool files or include them; omit to use the saved Web export preference.',
-        },
       },
       required: [],
       additionalProperties: false,
@@ -391,7 +385,6 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
       type: 'object',
       properties: {
         cruxspaceId: { type: 'string' },
-        runtime: { type: 'string', enum: ['reference', 'included'] },
       },
       required: ['cruxspaceId'],
       additionalProperties: false,
@@ -452,12 +445,6 @@ export const isGardenTool = (name: string) => GARDEN_TOOL_NAMES.has(name);
 const str = (v: unknown, max = 8000) => sharedStr(v, max);
 
 export function validateGardenTool(name: string, input: Record<string, unknown>): ValidationResult {
-  if (
-    (name === 'export_crux' || name === 'export_cruxspace') &&
-    input.runtime !== undefined &&
-    !['reference', 'included'].includes(String(input.runtime))
-  )
-    return { valid: false, error: 'runtime must be reference or included' };
   switch (name) {
     case 'garden_collaboration':
       if (
@@ -1287,7 +1274,6 @@ async function runGardenToolInner(
       }
       const result = await exportCrux({
         cruxId: crux.id,
-        runtime: input.runtime as 'reference' | 'included' | undefined,
         author: author ? { username: author.username, displayName: author.displayName } : null,
       });
       download(result.blob, result.filename);
@@ -1297,7 +1283,6 @@ async function runGardenToolInner(
       const { exportCruxspace } = await import('@/services/cruxspace-package');
       const result = await exportCruxspace({
         spaceId: input.cruxspaceId as string,
-        runtime: input.runtime as 'reference' | 'included' | undefined,
       });
       download(result.blob, result.filename);
       return `Exported the Garden as ${result.filename} to the person's downloads (${result.manifest.members?.length ?? 0} members${result.failed.length ? `; could not include: ${result.failed.join(', ')}` : ''}).`;

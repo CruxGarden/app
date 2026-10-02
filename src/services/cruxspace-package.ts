@@ -1,4 +1,3 @@
-import type { RuntimeMode } from './archive-runtimes';
 import { generateZip } from '@/lib/zip-off-thread';
 import { listGrowths } from './growth';
 import { slugify } from '@/lib/slug';
@@ -104,7 +103,6 @@ export function missingTools(
 }
 
 export interface ExportCruxspaceOptions {
-  runtime?: RuntimeMode;
   spaceId: string;
   onProgress?: (status: string) => void;
 }
