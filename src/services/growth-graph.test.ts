@@ -1,3 +1,7 @@
+import { taskHistoryNodeId } from './task-history-graph';
+import { loadGrowthDetail } from './growth-detail';
+import { readCheckpointFile } from './checkpoint-files';
+import { localApiFixture } from '@/test/local-api-fixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
@@ -24,6 +28,8 @@ import {
   type GrowthNode,
   type GrowthLane,
 } from './growth-graph';
+
+const native = localApiFixture();
 
 beforeEach(async () => {
   await initServices();
@@ -69,27 +75,72 @@ describe('whole Crux Growth projection', () => {
     expect(graph.links).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          source: review.sourceHead,
-          target: result.resultHead,
+          source: taskHistoryNodeId(review.id, 'source'),
+          target: taskHistoryNodeId(result.id, 'result'),
           kind: 'merge',
         }),
         expect.objectContaining({
-          source: review.targetHead,
-          target: result.resultHead,
+          source: taskHistoryNodeId(review.id, 'target'),
+          target: taskHistoryNodeId(result.id, 'result'),
           kind: 'history',
         }),
         expect.objectContaining({
-          source: empty.baseSnapshotId,
+          source: taskHistoryNodeId(empty.id, 'base'),
           target: `copy:${empty.id}`,
           kind: 'copy',
         }),
       ]),
     );
-    const ancestry = growthAncestry(graph, result.resultHead!);
-    expect(ancestry.has(review.sourceHead!)).toBe(true);
-    expect(ancestry.has(review.targetHead!)).toBe(true);
+    const ancestry = growthAncestry(graph, taskHistoryNodeId(result.id, 'result'));
+    expect(ancestry.has(taskHistoryNodeId(review.id, 'source'))).toBe(true);
+    expect(ancestry.has(taskHistoryNodeId(review.id, 'target'))).toBe(true);
     expect(layoutGrowthGraph(graph).cyclic).toBe(false);
     expect(graph.warnings).toEqual([]);
+    const resultNode = graph.nodes.find((n) => n.id === taskHistoryNodeId(result.id, 'result'))!;
+    const detail = await loadGrowthDetail(resultNode);
+    expect(detail.messages.some((m) => m.content.includes('Private transcript sentinel'))).toBe(
+      true,
+    );
+    expect(
+      await (
+        await readCheckpointFile(detail.artifacts.find((f) => f.path === 'index.html')!)
+      ).text(),
+    ).toBe('Checkout complete');
+    await write(main.id, 'Later Main');
+    expect(
+      await (
+        await readCheckpointFile(detail.artifacts.find((f) => f.path === 'index.html')!)
+      ).text(),
+    ).toBe('Checkout complete');
+  });
+
+  it('connects later Tasks and marked versions to retained merges and preserves those links after restart', async () => {
+    const main = await getServices().crux.create({ title: 'Connected history' });
+    await write(main.id, 'Starting point');
+    const task = await createTask(main.id, 'First contribution');
+    await write(task.id, 'Accepted contribution');
+    const review = await prepareTaskReview(task.id);
+    await verifyTaskReview(review.id);
+    await applyTaskReview(review.id);
+    const later = await createTask(main.id, 'Next contribution');
+    const resultId = taskHistoryNodeId(review.id, 'result');
+    const workspace = await openWorkspace(main.id);
+    await workspace.data
+      .getState()
+      .createSnapshot({ label: 'An explicit marked version', silent: true });
+    const snapshotId = workspace.data.getState().growths.at(-1)!.targetId;
+    const graph = await loadGrowthGraph(main.id);
+    expect(graph.nodes.find((n) => n.id === taskHistoryNodeId(later.id, 'base'))?.parentId).toBe(
+      resultId,
+    );
+    expect(graph.nodes.find((n) => n.id === snapshotId)?.parentId).toBe(resultId);
+    expect(growthAncestry(graph, snapshotId).has(taskHistoryNodeId(task.id, 'base'))).toBe(true);
+    expect(layoutGrowthGraph(graph).cyclic).toBe(false);
+    expect(graph.warnings).toEqual([]);
+    for (const w of allWorkspaces())
+      await closeWorkspace(w.id, { stop: true, documents: 'discard' });
+    await native().restart();
+    expect(await loadGrowthGraph(main.id)).toEqual(graph);
   });
 
   it('reconstructs the graph from a portable .crux clone with all identities remapped', async () => {
@@ -114,6 +165,12 @@ describe('whole Crux Growth projection', () => {
     expect(after.links.filter((l) => l.kind === 'merge')).toHaveLength(1);
     expect(after.nodes.every((n) => !before.nodes.some((old) => old.id === n.id))).toBe(true);
     expect(after.warnings).toEqual([]);
+    const detail = await loadGrowthDetail(after.nodes.find((n) => n.kind === 'merge')!);
+    expect(
+      await (
+        await readCheckpointFile(detail.artifacts.find((f) => f.path === 'index.html')!)
+      ).text(),
+    ).toBe('Result');
   });
 });
 
@@ -189,6 +246,28 @@ describe('graph presentation preserves history', () => {
     expect(graph.warnings).toHaveLength(1);
     expect(layoutGrowthGraph(graph).cyclic).toBe(true);
     expect(growthAncestry(graph, 'a')).toEqual(new Set(['a', 'b']));
+  });
+  it('separates independent states in one lane and keeps their descendants below them', () => {
+    const graph = buildGrowthGraph(
+      'main',
+      'Separate histories',
+      [lane('main')],
+      [
+        { ...snapshot('first', 'main', null), created: '2026-10-01T01:00:00Z' },
+        { ...snapshot('second', 'main', null), created: '2026-10-01T00:00:00Z' },
+        snapshot('child', 'main', 'first'),
+      ],
+    );
+    const positions = layoutGrowthGraph(graph).nodes;
+    expect(new Set(positions.map((node) => node.y)).size).toBe(positions.length);
+    expect(new Set(positions.map((node) => node.x)).size).toBe(1);
+    expect(positions.find((node) => node.id === 'first')!.y).toBeGreaterThan(
+      positions.find((node) => node.id === 'second')!.y,
+    );
+    for (const link of graph.links)
+      expect(positions.find((node) => node.id === link.target)!.y).toBeGreaterThan(
+        positions.find((node) => node.id === link.source)!.y,
+      );
   });
   it('uses graph order rather than timestamps to place parents before children', () => {
     const graph = buildGrowthGraph(

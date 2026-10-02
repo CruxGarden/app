@@ -1,3 +1,5 @@
+import type { TaskHistorySelection } from '@cruxgarden/local-api';
+import { getSqliteClient } from './sqlite/client';
 import { getServices } from './index';
 import { pathOf } from '@/lib/artifact-path';
 import { readSelectedFile, selectCruxFiles, type FileReference } from './file-content';
@@ -11,7 +13,10 @@ export interface CheckpointFile {
   size: number;
   mimeType: string;
   encoding: string;
-  source: { kind: 'manifest'; file: FileReference } | { kind: 'record'; id: string };
+  source:
+    | { kind: 'manifest'; file: FileReference }
+    | { kind: 'record'; id: string }
+    | { kind: 'task-history'; selection: TaskHistorySelection; root: string; path: string };
 }
 
 export async function checkpointFiles(cruxId: string): Promise<CheckpointFile[]> {
@@ -44,6 +49,13 @@ export async function checkpointFiles(cruxId: string): Promise<CheckpointFile[]>
 }
 
 export async function readCheckpointFile(file: CheckpointFile): Promise<Blob> {
+  if (file.source.kind === 'task-history') {
+    const read = getSqliteClient().readTaskHistoryFile;
+    if (!read) throw new Error('Task history inspection is unavailable.');
+    const result = await read(file.source.selection, file.source.root, file.source.path);
+    if (!result) throw new Error('This file is missing from the retained Task state.');
+    return new Blob([new Uint8Array(result.bytes)], { type: result.entry.mimeType });
+  }
   if (file.source.kind === 'record') return getServices().artifact.downloadBlob(file.source.id);
   const result = await readSelectedFile(file.source.file);
   return new Blob([new Uint8Array(result.bytes)], { type: result.entry.mimeType });

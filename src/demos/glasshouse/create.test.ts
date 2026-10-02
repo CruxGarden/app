@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { getServices, initServices } from '@/services';
 import { allWorkspaces, closeWorkspace, useWorkspaceRegistry } from '@/stores/workspaceRegistry';
@@ -7,6 +8,8 @@ import { prepareTaskReview, verifyTaskReview, applyTaskReview } from '@/services
 import { getSqliteClient } from '@/services/sqlite/client';
 import { createTendingDemo } from './create';
 import { checkout, accessibility } from './content';
+
+localApiFixture();
 
 beforeEach(async () => {
   await initServices();
@@ -20,7 +23,7 @@ async function read(id: string, path: string) {
   const artifact = (await s.artifact.findByResource('crux', id)).find(
     (a) => a.meta?.path === path,
   )!;
-  return s.artifact.readContent(artifact.id);
+  return s.artifact.readContent(artifact);
 }
 it('creates isolated, reviewable Tasks and a portable merge graph without starting an agent', async () => {
   const demo = await createTendingDemo();
@@ -50,9 +53,9 @@ it('creates isolated, reviewable Tasks and a portable merge graph without starti
     restored.every((c) => !c.meta.turnJob && !c.meta.turnQueue && c.cruxId === imported.cruxId),
   ).toBe(true);
   const merges = await getSqliteClient().all<{ meta: string }>(
-    "SELECT meta FROM cruxes WHERE kind = 'snapshot'",
+    "SELECT data AS meta FROM task_merges WHERE phase = 'merged'",
   );
-  expect(merges.some((row) => JSON.parse(row.meta).merge?.sourceHead)).toBe(true);
+  expect(merges.some((row) => JSON.parse(row.meta).resultState?.root)).toBe(true);
   for (const title of ['Checkout', 'Accessibility']) {
     const task = restored.find((c) => c.title === title)!;
     const review = await prepareTaskReview(task.id);

@@ -1,4 +1,5 @@
 import type {
+  TaskHistorySelection,
   SelectGardenMood,
   LocalWorkingCopyCreate,
   LocalCruxCreate,
@@ -147,6 +148,14 @@ export interface SqliteBridge {
   finishWorkingCopySetup?(id: string, revision: number, phase: 'ready' | 'failed'): Promise<void>;
   createWorkingCopy?(input: LocalWorkingCopyCreate): Promise<void>;
   workingCopyBase?(id: string): ReturnType<LocalGraphRuntime['workingCopyBase']>;
+  inspectTaskHistory?(
+    input: TaskHistorySelection,
+  ): ReturnType<LocalGraphRuntime['inspectTaskHistory']>;
+  readTaskHistoryFile?(
+    input: TaskHistorySelection,
+    root: string,
+    path: string,
+  ): ReturnType<LocalGraphRuntime['readTaskHistoryFile']>;
   saveTaskReview?(reviewData: string, expectedData?: string): Promise<void>;
   beginTaskMerge?(id: string, reviewData: string): Promise<void>;
   releaseTaskReview?(id: string): Promise<void>;

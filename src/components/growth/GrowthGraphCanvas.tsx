@@ -2,7 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d';
 import { moodTimeline, revealAlpha, setPieceAllowed } from '@/lib/set-piece';
 import { layoutGrowthGraph, type GrowthLink } from '@/services/growth-graph';
-import { endpointId, laneColor, safeGraphLabel, type GraphCanvasProps, type RenderNode, GRAPH_BG, GRAPH_TEXT } from './graph-style';
+import {
+  endpointId,
+  laneColor,
+  safeGraphLabel,
+  type GraphCanvasProps,
+  type RenderNode,
+  GRAPH_BG,
+  GRAPH_TEXT,
+} from './graph-style';
 
 export default function GrowthGraphCanvas({
   graph,
@@ -95,7 +103,11 @@ export default function GrowthGraphCanvas({
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           ctx.fillStyle = GRAPH_TEXT;
-          const label = n.title.length > 30 ? `${n.title.slice(0, 29)}…` : n.title;
+          let label = n.title;
+          // Keep labels inside their lane; the inspector and tooltip retain
+          // the complete title at every zoom level.
+          while (label.length > 1 && ctx.measureText(label).width > 160)
+            label = `${label.replace(/…$/, '').slice(0, -1)}…`;
           ctx.fillText(label, n.x, n.y + radius + 5);
           ctx.globalAlpha = 1;
         }}

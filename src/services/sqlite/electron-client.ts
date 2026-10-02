@@ -8,7 +8,6 @@ import type { SqliteBridge } from '@/lib/platform';
  * is backend-agnostic.
  */
 
-
 /** A read: SELECT or WITH, naming no statement that changes anything. */
 export function assertRead(sql: string): void {
   const statement = sql.replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/, '');
@@ -93,6 +92,13 @@ export class ElectronSqliteClient implements ISqliteClient {
   get finishWorkingCopySetup(): SqliteBridge['finishWorkingCopySetup'] {
     return this.api.finishWorkingCopySetup;
   }
+  get inspectTaskHistory(): SqliteBridge['inspectTaskHistory'] {
+    return this.api.inspectTaskHistory;
+  }
+  get readTaskHistoryFile(): SqliteBridge['readTaskHistoryFile'] {
+    return this.api.readTaskHistoryFile;
+  }
+
   get workingCopyBase(): SqliteBridge['workingCopyBase'] {
     return this.api.workingCopyBase;
   }

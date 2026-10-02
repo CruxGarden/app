@@ -5,7 +5,7 @@ import { useGrowthGraphView } from './useGrowthGraphView';
 import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
 import { Modal, SectionLabel } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import { loadGrowthGraph, type GrowthGraph } from '@/services/growth-graph';
+import { growthNodeKindLabel, loadGrowthGraph, type GrowthGraph } from '@/services/growth-graph';
 import { TASKS_CHANGED } from '@/services/working-copies';
 import GrowthInspector from './GrowthInspector';
 import { GRAPH_BG, GRAPH_TEXT, laneColor } from './graph-style';
@@ -146,7 +146,7 @@ export default function GrowthExplorer({
             <h2 className="font-display text-xl">{graph?.title ?? 'Your creation’s history'}</h2>
             <p className="text-xs text-text-muted mt-1">
               {graph
-                ? `${graph.nodes.filter((n) => n.kind !== 'copy').length} checkpoints · ${graph.lanes.length - 1} Tasks · branches and merges preserved`
+                ? `${graph.nodes.filter((n) => n.kind !== 'copy' && !n.retained).length} checkpoints${graph.nodes.some((n) => n.retained) ? ` · ${graph.nodes.filter((n) => n.retained).length} retained Task states` : ''} · ${graph.lanes.length - 1} Tasks · branches and merges preserved`
                 : 'Loading saved history…'}
             </p>
           </div>
@@ -317,11 +317,7 @@ export default function GrowthExplorer({
                     <span className="block truncate">{node.title}</span>
                     <span className="text-text-muted">
                       {graph?.lanes.find((l) => l.id === node.ownerId)?.title} ·{' '}
-                      {node.kind === 'copy'
-                        ? 'Working Copy'
-                        : node.kind === 'merge'
-                          ? 'Merge checkpoint'
-                          : 'Checkpoint'}
+                      {growthNodeKindLabel(node)}
                     </span>
                   </button>
                 ))}
@@ -351,8 +347,8 @@ export default function GrowthExplorer({
                     : 'Select a checkpoint to explore its Artifacts.'}
                 </p>
                 <p>
-                  Circles are checkpoints, diamonds in 2D mark merges, and outlined endpoints mark
-                  Working Copies. Gold connections bring a Task into Main.
+                  Circles show checkpoints and retained Task states, diamonds in 2D mark merges, and
+                  outlined endpoints mark Working Copies. Gold connections bring a Task into Main.
                 </p>
                 <p>
                   Completed Tasks remain part of the story. Browsing here does not change your work.

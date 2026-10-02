@@ -53,7 +53,7 @@ interface GrowthTimelineProps {
   growths: Dimension[];
   summary: CruxSummaryType | null;
   isCreatingGrowth: boolean;
-  onCreateSnapshot: (label?: string) => void;
+  onCreateSnapshot: (label?: string) => Promise<boolean>;
   viewingSnapshotIndex: number | null;
   onViewSnapshot: (snapshotId: string, index: number) => void;
   onExitSnapshot: () => void;
@@ -110,11 +110,11 @@ export default function GrowthTimeline({
     }
   };
 
-  const handleSnapshot = () => {
+  const handleSnapshot = async () => {
     const label = labelText.trim() || undefined;
+    if (!(await onCreateSnapshot(label))) return;
     setShowLabelInput(false);
     setLabelText('');
-    onCreateSnapshot(label);
   };
 
   return (
@@ -178,6 +178,7 @@ export default function GrowthTimeline({
                   <div className="flex gap-1.5">
                     <input
                       ref={labelInputRef}
+                      disabled={isCreatingGrowth}
                       type="text"
                       value={labelText}
                       onChange={(e) => setLabelText(e.target.value)}
@@ -191,7 +192,11 @@ export default function GrowthTimeline({
                       placeholder="Label (optional)"
                       className={fieldClass(undefined, 'flex-1 min-w-0', 'sm')}
                     />
-                    <button onClick={handleSnapshot} className={buttonClass('primary', 'sm')}>
+                    <button
+                      disabled={isCreatingGrowth}
+                      onClick={handleSnapshot}
+                      className={buttonClass('primary', 'sm')}
+                    >
                       Save
                     </button>
                     <button

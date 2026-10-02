@@ -1,3 +1,5 @@
+import type { TaskHistorySelection } from '@cruxgarden/local-api';
+import { projectTaskHistory } from './task-history-graph';
 import { getSqliteClient } from './sqlite/client';
 
 export interface GrowthLane {
@@ -15,11 +17,22 @@ export interface GrowthNode {
   ownerId: string;
   title: string;
   created: string;
-  kind: 'snapshot' | 'merge' | 'copy';
+  kind: 'snapshot' | 'merge' | 'copy' | 'state';
+  /** Disposable reference to an API-owned retained state, not additional Growth. */
+  retained?: { selection: TaskHistorySelection; root: string; parentId: string | null };
+  retainedMergeId?: string;
   parentId: string | null;
   mergeSourceId: string | null;
   mergeTargetId: string | null;
 }
+export function growthNodeKindLabel(node: GrowthNode): string {
+  if (node.kind === 'copy') return 'Working Copy';
+  if (node.kind === 'merge') return node.retained ? 'Merge result' : 'Merge checkpoint';
+  if (node.kind === 'state')
+    return node.retained?.selection.part === 'base' ? 'Task starting state' : 'Retained Task state';
+  return 'Checkpoint';
+}
+
 export interface GrowthLink {
   source: string;
   target: string;
@@ -77,13 +90,19 @@ export async function loadGrowthGraph(cruxId: string): Promise<GrowthGraph> {
        d.created, 'snapshot' AS kind,
        json_extract(s.meta, '$.parentCruxId') AS parentId,
        json_extract(s.meta, '$.merge.sourceHead') AS mergeSourceId,
-       json_extract(s.meta, '$.merge.targetHead') AS mergeTargetId
+       json_extract(s.meta, '$.merge.targetHead') AS mergeTargetId,
+       (SELECT json_extract(message.value, '$.taskMergeId') FROM json_each(s.meta, '$.messages') message
+        WHERE json_extract(message.value, '$.taskMergeId') IS NOT NULL ORDER BY message.key DESC LIMIT 1) AS retainedMergeId
      FROM dimensions d JOIN cruxes s ON s.id = d.target_id
      WHERE d.type = 'growth' AND (d.source_id = ? OR d.source_id IN (
        SELECT id FROM working_copies WHERE crux_id = ? AND role = 'task'
      )) ORDER BY d.created, d.weight, d.id`,
     [cruxId, cruxId],
   );
+  if (db.inspectTaskHistory) {
+    const projected = await projectTaskHistory(main.id, lanes, snapshots);
+    return buildGrowthGraph(main.id, main.title, projected.lanes, projected.nodes);
+  }
   return buildGrowthGraph(main.id, main.title, lanes, snapshots);
 }
 
@@ -102,7 +121,7 @@ export function buildGrowthGraph(
           n.id,
           {
             ...n,
-            kind: n.mergeSourceId ? ('merge' as const) : ('snapshot' as const),
+            kind: n.mergeSourceId ? ('merge' as const) : n.kind,
           },
         ]),
     ).values(),
@@ -216,10 +235,24 @@ export function layoutGrowthGraph(graph: GrowthGraph) {
     indegree.set(l.target, (indegree.get(l.target) ?? 0) + 1);
     children.set(l.source, [...(children.get(l.source) ?? []), l.target]);
   }
-  const queue = graph.nodes.filter((n) => !indegree.get(n.id)).map((n) => n.id);
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+  const nextRow = new Map<string, number>();
+  const queue = graph.nodes
+    .filter((n) => !indegree.get(n.id))
+    .sort(
+      (a, b) =>
+        (a.created || '\uffff').localeCompare(b.created || '\uffff') || a.id.localeCompare(b.id),
+    )
+    .map((n) => n.id);
   for (const root of queue) depths.set(root, 0);
   for (let i = 0; i < queue.length; i++) {
     const id = queue[i]!;
+    const owner = byId.get(id)!.ownerId;
+    // Independent states in one lane need their own rows. Propagate the placed
+    // row to descendants so every connection still flows down the graph.
+    const row = Math.max(depths.get(id) ?? 0, nextRow.get(owner) ?? 0);
+    depths.set(id, row);
+    nextRow.set(owner, row + 1);
     for (const child of children.get(id) ?? []) {
       depths.set(child, Math.max(depths.get(child) ?? 0, (depths.get(id) ?? 0) + 1));
       indegree.set(child, indegree.get(child)! - 1);
@@ -227,21 +260,17 @@ export function layoutGrowthGraph(graph: GrowthGraph) {
     }
   }
   const laneIndices = new Map(graph.lanes.map((l, i) => [l.id, i]));
-  const occupied = new Map<string, number>();
   return {
     cyclic: queue.length !== graph.nodes.length,
     nodes: graph.nodes.map((n, i) => {
       const lane = laneIndices.get(n.ownerId) ?? 0;
       const depth = depths.get(n.id) ?? i;
-      const key = `${lane}:${depth}`;
-      const offset = occupied.get(key) ?? 0;
-      occupied.set(key, offset + 1);
       return {
         ...n,
         lane,
-        x: lane * 200 + offset * 65,
+        x: lane * 200,
         y: depth * 90,
-        fx: lane * 200 + offset * 65,
+        fx: lane * 200,
         fy: depth * 90,
         z: 0,
         fz: 0,

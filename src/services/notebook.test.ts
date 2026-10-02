@@ -1,9 +1,12 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookPath, notebookSession } from './notebook';
 import { createTask, prepareTaskReview, verifyTaskReview, applyTaskReview } from './tasks';
 import { exportCrux, importCrux } from './crux-io';
+
+localApiFixture();
 
 beforeEach(async () => {
   await initServices();
@@ -168,7 +171,7 @@ it('merges editor-only customization while preserving newer notes on Main', asyn
   const layout = (await artifact.findByResource('crux', main.crux.id)).find(
     (a) => a.meta?.path === 'src/layout.css',
   )!;
-  expect(await artifact.readContent(layout.id)).toBe('new layout');
+  expect(await artifact.readContent(layout)).toBe('new layout');
 });
 
 it('rejects an external disk edit before the watcher has delivered it, then reloads it', async () => {

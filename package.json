@@ -170,7 +170,7 @@
     }
   },
   "devDependencies": {
-    "@cruxgarden/local-api": "file:electron/vendor/cruxgarden-local-api-0.0.0-unification.r4d984f15f5d7.h037a33c6.tgz",
+    "@cruxgarden/local-api": "file:electron/vendor/cruxgarden-local-api-0.0.0-unification.r33691b02cad8.h81c501e2.tgz",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^19.0.0",

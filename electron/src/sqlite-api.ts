@@ -308,6 +308,19 @@ export class SqliteApi implements NativeStorage {
     this.assertAvailable();
     return this.owner.createWorkingCopy(input, this.contentStore());
   }
+  inspectTaskHistory(input: Parameters<LocalGraphRuntime['inspectTaskHistory']>[0]) {
+    this.assertAvailable();
+    return this.owner.inspectTaskHistory(input, this.contentStore());
+  }
+  readTaskHistoryFile(
+    input: Parameters<LocalGraphRuntime['readTaskHistoryFile']>[0],
+    root: string,
+    path: string,
+  ) {
+    this.assertAvailable();
+    return this.owner.readTaskHistoryFile(input, root, path, this.contentStore());
+  }
+
   workingCopyBase(id: string) {
     this.assertAvailable();
     return this.owner.workingCopyBase(id, this.contentStore());

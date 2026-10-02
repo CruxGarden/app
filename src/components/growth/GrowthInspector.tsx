@@ -3,14 +3,9 @@ import { isAgentFile } from '@/lib/artifact-path';
 import { useEffect, useState } from 'react';
 import { linkClass } from '@/components/ui/button-class';
 import { Link } from 'react-router-dom';
-import { getServices } from '@/services';
-import type { ChatMessage, Crux } from '@/api/types';
-import type { GrowthGraph, GrowthNode } from '@/services/growth-graph';
-import {
-  checkpointFiles,
-  readCheckpointFile,
-  type CheckpointFile,
-} from '@/services/checkpoint-files';
+import { loadGrowthDetail } from '@/services/growth-detail';
+import { growthNodeKindLabel, type GrowthGraph, type GrowthNode } from '@/services/growth-graph';
+import { readCheckpointFile, type CheckpointFile } from '@/services/checkpoint-files';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 
 function ArtifactContent({ artifact }: { artifact: CheckpointFile }) {
@@ -67,11 +62,7 @@ export default function GrowthInspector({
   onClose: () => void;
 }) {
   const aiEnabled = useAiEnabled();
-  const [detail, setDetail] = useState<{
-    snapshot: Crux;
-    artifacts: CheckpointFile[];
-    summary?: string;
-  } | null>(null);
+  const [detail, setDetail] = useState<Awaited<ReturnType<typeof loadGrowthDetail>> | null>(null);
   const [error, setError] = useState('');
   const [fileId, setFileId] = useState('');
   const [messageLimit, setMessageLimit] = useState(20);
@@ -83,20 +74,11 @@ export default function GrowthInspector({
     setMessageLimit(20);
     if (node.kind === 'copy') return;
     let live = true;
-    const { crux, dimension } = getServices();
-    void Promise.all([
-      crux.findById(node.id),
-      checkpointFiles(node.id),
-      node.dimensionId ? dimension.findById(node.dimensionId) : Promise.resolve(null),
-    ])
-      .then(([snapshot, artifacts, growth]) => {
+    void loadGrowthDetail(node)
+      .then((value) => {
         if (live) {
-          setDetail({
-            snapshot,
-            artifacts,
-            summary: typeof growth?.meta?.summary === 'string' ? growth.meta.summary : undefined,
-          });
-          setFileId(artifacts.find((a) => a.path === 'preview.jpg')?.id ?? '');
+          setDetail(value);
+          setFileId(value.artifacts.find((a) => a.path === 'preview.jpg')?.id ?? '');
         }
       })
       .catch((e: Error) => {
@@ -105,8 +87,8 @@ export default function GrowthInspector({
     return () => {
       live = false;
     };
-  }, [node.id, node.kind, node.dimensionId]);
-  const messages = (detail?.snapshot.meta?.messages ?? []) as ChatMessage[];
+  }, [node]);
+  const messages = detail?.messages ?? [];
   const parents = graph.links.filter((l) => l.target === node.id);
   const file = detail?.artifacts.find((a) => a.id === fileId);
   return (
@@ -114,13 +96,7 @@ export default function GrowthInspector({
       <div>
         <p className="text-xs text-accent font-mono">
           {lane.title} ·{' '}
-          {node.kind === 'copy'
-            ? lane.phase === 'main'
-              ? 'Working Copy'
-              : lane.phase
-            : node.kind === 'merge'
-              ? 'Merge checkpoint'
-              : 'Checkpoint'}
+          {node.kind === 'copy' && lane.phase !== 'main' ? lane.phase : growthNodeKindLabel(node)}
         </p>
         <h3 className="font-display text-lg mt-1 break-words">{node.title}</h3>
         {node.created && (
@@ -170,9 +146,9 @@ export default function GrowthInspector({
       {node.kind !== 'copy' && !detail && !error && <p role="status">Loading checkpoint…</p>}
       {detail && (
         <>
-          {((aiEnabled && detail.summary) || detail.snapshot.data) && (
+          {((aiEnabled && detail.summary) || detail.data) && (
             <div className="text-xs text-text-muted whitespace-pre-wrap">
-              {(aiEnabled && detail.summary) || detail.snapshot.data}
+              {(aiEnabled && detail.summary) || detail.data}
             </div>
           )}
           <section className="space-y-2">

@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -6,6 +7,8 @@ import { NOTEBOOK_PAGE_ROUTE, setNotebookLayout } from './notebook-sharing';
 import { registerNotebookEditor } from './notebook-lifecycle';
 import { createTask } from './tasks';
 import { exportCrux, importCrux } from './crux-io';
+
+localApiFixture();
 
 beforeEach(async () => {
   await initServices();
@@ -110,7 +113,7 @@ it('rejects unsupported layouts, history edits, failed editor saves and readers 
   const route = (await getServices().artifact.findByResource('crux', crux.id)).find(
     (a) => a.meta?.path === NOTEBOOK_PAGE_ROUTE,
   )!;
-  await getServices().artifact.delete(route.id);
+  await getServices().artifact.delete(route);
   await expect(setNotebookLayout(store, 'separate-pages')).rejects.toThrow('updated public reader');
   expect(await config(call)).toEqual(current);
 });

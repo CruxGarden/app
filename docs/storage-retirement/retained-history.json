@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-01",
+  "stage": "AR06 retained Task history and native consumer migration",
+  "completeSlice": true,
+  "completeAR06": false,
+  "apiCommits": [
+    "aa489e0",
+    "33691b0"
+  ],
+  "runtime": "r33691b02cad8.h81c501e2",
+  "implementation": [
+    "Read-only API Task-history selectors validate retaining Crux/Task/merge ownership and exact root; bounded file reads verify bytes.",
+    "Whole Crux Growth projects retained bases/source/target/results without manufacturing Growth versions. Metadata projection excludes file bytes and transcripts; selected detail uses the API.",
+    "Notebook, sharing, Growth, Glasshouse and Garden revert use the actual API/native SQLite fixture.",
+    "Refused Mark version reports an error, keeps its label and permits retry.",
+    "Graph layout reserves separate rows within each lane and truncates canvas labels to the available width; complete titles remain in the inspector and tooltip."
+  ],
+  "verification": {
+    "api": {
+      "passed": 1166,
+      "skipped": 5,
+      "integrationPassed": 407,
+      "integrationSuites": 25,
+      "build": true,
+      "focusedHistoryTests": 13
+    },
+    "app": {
+      "passed": 1708,
+      "skipped": 18,
+      "files": 270,
+      "build": true
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1
+    },
+    "nativeConsumers": {
+      "passed": 29,
+      "suites": 5
+    },
+    "desktop": {
+      "combinedPassed": 8,
+      "combinedDuration": "2.9m",
+      "afterFinalRootOrderingPassed": 3,
+      "finalDuration": "1.4m",
+      "note": "Final ordering only changes graph layout; all three affected Growth journeys reran after the complete app gate."
+    }
+  },
+  "reproductions": [
+    "Actual unchanged-renderer desktop failed to find Merged Checkout after a native merge before any marked Main version.",
+    "Refused marked version originally dismissed its label and had no visible alert. The corrected UI retains its label, reports the API error and retries.",
+    "Visual review caught overlapping labels for independent retained states within one lane."
+  ],
+  "logs": [
+    "/tmp/task-history-api-final.log",
+    "/tmp/task-history-api-package-final.log",
+    "/tmp/task-history-installed-runtime-smoke.log",
+    "/tmp/task-consumers-native-scoped-green.log",
+    "/tmp/task-history-app-verify-accepted.log",
+    "/tmp/task-history-electron-verify.log",
+    "/tmp/task-history-desktop-baseline-diagnostics.log",
+    "/tmp/marked-version-desktop-baseline.log",
+    "/tmp/task-history-desktop-accepted.log",
+    "/tmp/task-history-app-verify-final-order.log",
+    "/tmp/task-history-desktop-spacing-final.log",
+    "/tmp/task-history-desktop-order-final.log"
+  ],
+  "limits": [
+    "AR06 is incomplete: more Task/archive consumers, required command contracts and retired worker/schema remain.",
+    "Unit fixture imports allocate isolated folders; real Electron journeys cover IPC/filesystem/notice behavior.",
+    "Projection uses separate metadata reads; selection revalidates retained ownership/root.",
+    "Merge states show the journal creation timestamp; it is not a separately persisted completion timestamp.",
+    "Retained Task states cannot be restored as marked Growth versions.",
+    "Previous app e6d85bfbd passed both Windows/Linux CI run36955813286; the new app head needs its own native acceptance.",
+    "No live AI/provider/S3 or real Garden/manual package changes."
+  ],
+  "screenshots": [
+    "retained-history-2d.png",
+    "retained-history-3d.png"
+  ],
+  "visualQA": "Final 2D/3D inspected: independent states have distinct rows, retained Task starts precede marked versions, labels stay inside lanes; selected exact content is readable."
+}

@@ -96,6 +96,27 @@ test('Whole Crux Growth explores merged and independent Tasks in 2D and 3D witho
     await review.getByRole('button', { name: 'Merge into Main', exact: true }).click();
     await expect(review).toHaveCount(0);
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', main);
+    // A merge retains its result without manufacturing a marked Growth version.
+    // The graph must expose that result before the person marks another version.
+    await (await history(page))
+      .getByRole('button', { name: 'Whole Crux · branches & merges' })
+      .click();
+    const retainedGraph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
+    await retainedGraph.getByLabel('Find checkpoint').fill('Merged Checkout');
+    await retainedGraph
+      .getByRole('button', { name: 'Merged Checkout Main · Merge result', exact: true })
+      .click();
+    await retainedGraph.getByLabel('Checkpoint Artifact').selectOption({ label: 'index.html' });
+    await expect(retainedGraph.getByTestId('growth-inspector').locator('pre')).toContainText(
+      '<h1>Checkout ready</h1>',
+    );
+    await expect(
+      retainedGraph
+        .getByTestId('growth-inspector')
+        .getByText('Completed workspace Checkout.', { exact: false }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(retainedGraph).toHaveCount(0);
     await checkpoint(
       page,
       { id: main, folder: meta.projectFolder },
@@ -173,7 +194,7 @@ test('Whole Crux Growth explores merged and independent Tasks in 2D and 3D witho
     await app.close();
     ({ app, page } = await launchApp({ dir }));
     await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.goto(`crux-app://app/c/${main}?task=${experiment.id}`);
+    await page.goto(new URL(`/c/${main}?task=${experiment.id}`, page.url()).href);
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute(
       'data-workspace-id',
       experiment.id,
@@ -213,6 +234,43 @@ test('an empty Crux has a browsable endpoint and graph dialog traps keyboard foc
     await expect(graph.getByRole('button', { name: '2D lanes', exact: true })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(graph).toHaveCount(0);
+  } finally {
+    await app.close();
+  }
+});
+
+test('a refused marked version reports its error, keeps its label and permits retry', async () => {
+  const { app, page } = await launchApp({ ai: false });
+  try {
+    await enterGarden(page);
+    const main = await createCrux(page, 'Version recovery');
+    const pane = await history(page);
+    await page.evaluate(() =>
+      window.electronAPI!.sqlite.run(
+        "CREATE TRIGGER refuse_version BEFORE INSERT ON cruxes WHEN NEW.kind = 'snapshot' BEGIN SELECT RAISE(ABORT, 'Version save refused'); END",
+      ),
+    );
+    await pane.getByRole('button', { name: 'Mark version', exact: true }).click();
+    await pane.getByPlaceholder('Label (optional)').fill('A version to keep');
+    await pane.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Could not create Crux' }),
+    ).toBeVisible();
+    await expect(pane.getByPlaceholder('Label (optional)')).toHaveValue('A version to keep');
+    expect(
+      await page.evaluate(
+        (id) =>
+          window.electronAPI!.sqlite.all(
+            "SELECT id FROM dimensions WHERE source_id = ? AND type = 'growth'",
+            [id],
+          ),
+        main,
+      ),
+    ).toEqual([]);
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_version'));
+    await pane.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(pane.getByText('A version to keep', { exact: true })).toBeVisible();
+    await expect(pane.getByPlaceholder('Label (optional)')).toHaveCount(0);
   } finally {
     await app.close();
   }

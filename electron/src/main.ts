@@ -507,6 +507,21 @@ async function setupIpc() {
     },
   );
 
+  fromGarden(
+    'sqlite:inspect-task-history',
+    (_e: unknown, input: Parameters<NonNullable<typeof db.inspectTaskHistory>>[0]) =>
+      db.inspectTaskHistory!(input),
+  );
+  fromGarden(
+    'sqlite:read-task-history-file',
+    (
+      _e: unknown,
+      input: Parameters<NonNullable<typeof db.readTaskHistoryFile>>[0],
+      root: string,
+      path: string,
+    ) => db.readTaskHistoryFile!(input, root, path),
+  );
+
   fromGarden('sqlite:working-copy-base', (_e: unknown, id: string) => {
     return db.workingCopyBase(id);
   });

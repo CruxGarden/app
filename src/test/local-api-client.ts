@@ -73,6 +73,8 @@ export async function createLocalApiTestClient() {
       api.finishWorkingCopySetup(id, revision, phase),
     createWorkingCopy: (input) => api.createWorkingCopy(input),
     workingCopyBase: (id) => api.workingCopyBase(id),
+    inspectTaskHistory: (input) => api.inspectTaskHistory(input),
+    readTaskHistoryFile: (input, root, path) => api.readTaskHistoryFile(input, root, path),
     saveTaskReview: (data, expected) => api.saveTaskReview(data, expected),
     beginTaskMerge: (id, data) => api.beginTaskMerge(id, data),
     releaseTaskReview: (id) => api.releaseTaskReview(id),
