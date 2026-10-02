@@ -13,7 +13,6 @@ import {
   workingCopyDocument,
   updateCopyMeta,
   assertMainWorkspace,
-  isTaskHistoryReference,
 } from '../working-copies';
 
 export class SqliteCruxService implements ICruxService {
@@ -214,8 +213,6 @@ export class SqliteCruxService implements ICruxService {
     await assertMainWorkspace(cruxId);
     await assertNoOpenTasks(cruxId);
     if (db.deleteCrux) return db.deleteCrux(cruxId);
-    if (await isTaskHistoryReference(cruxId))
-      throw new Error('This snapshot is used by a task or merge.');
     await assertSnapshotUnshared(cruxId);
     const ids = await planCruxDeletion(cruxId);
     // Delete only the planned ownership set, never arbitrary relationship

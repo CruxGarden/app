@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-02",
+  "stage": "AR06 native Task/history readers and ownership fixtures",
+  "base": "05d1bf27dc6e01e84c86fbf455ff985512edefd9",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "verification": {
+    "focused": {
+      "passed": 58,
+      "files": 6,
+      "log": "/tmp/task-read-focused-final-accepted.log"
+    },
+    "app": {
+      "passed": 1684,
+      "skipped": 18,
+      "files": 273,
+      "build": true,
+      "log": "/tmp/task-read-app-accepted.log"
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1,
+      "log": "/tmp/task-read-electron-final.log"
+    },
+    "desktop": {
+      "log": "/tmp/task-read-desktop-accepted.log",
+      "command": "CRUX_SHOTS=1 CRUX_E2E_DIAGNOSTICS=1 npm run test:e2e -- e2e/expedition-mood.spec.ts e2e/paper-variations.spec.ts e2e/growth-graph.spec.ts e2e/graph-deletion.spec.ts e2e/task-source-review.spec.ts --project=desktop",
+      "status": "passed",
+      "passed": 7,
+      "duration": "2.3m"
+    },
+    "replay": {
+      "passed": 4,
+      "duration": "1.5m",
+      "log": "/tmp/task-read-desktop-replay.log"
+    },
+    "inventory": {
+      "literalKeys": 95,
+      "literalSqlMutations": 36,
+      "log": "/tmp/task-read-inventory-final.log"
+    }
+  },
+  "changes": [
+    "Working Copies require the native retained base_state; the Crux-shaped workspace view carries its actual baseParentId. Removed base_snapshot_id reader compatibility and misleading fingerprint fallback in Task details.",
+    "Whole Crux Growth requires inspectTaskHistory before reading a partial graph. Missing native authority or journal read failure refuses; restoring authority and restart expose complete retained history.",
+    "Removed the duplicate renderer Task-history reference guard. Native content/lifecycle commands remain the only shipping immutable-file and purge authority. Five production files lose a net45 lines.",
+    "All three delayed detail-refresh cases use actual native storage, including archive phase/base and restart while preserving live Collaboration selection.",
+    "Ten old deletion fixture cases become11 native ownership cases: shared/foreign/lateral history, ancestor retention, foreign Task base, four native merge-state references, immutable starting/merge files, purge refusal, real transaction rollback/retry and restart.",
+    "Four Garden transfer/history cases now exercise actual native membership and immutable content. Purged members are removed by native membership authority; no old settings-list or array-order invariant is fabricated.",
+    "The desktop deletion fixture uses actual native creation/content/membership/dimension commands and Project Folder writes; shared creation/history survives UI Trash/purge and restart without Artifact-table rows."
+  ],
+  "fixtureCorrections": [
+    "Deleted content-owner IDs refuse head access rather than returning null; read-only SQL verifies removed heads. Native snapshot admission rejects a selected foreign Growth tip, so fixtures create own snapshots before attaching shared links.",
+    "Native merge journal references are sourceState, targetState, resultState and candidateBase; replaced retired targetWorkspace assertions. Full Artifact references replace obsolete ID-only deletes.",
+    "SQLite ALTER TABLE rewrites index SQL; owner-only outage fixture restores original index statements before restart to preserve strict schema admission.",
+    "First full app gate found four remaining SQL.js Garden-history consumers; migrated all four rather than adding a missing-port fallback.",
+    "First combined desktop deletion fixture recorded native content without writing the Project Folder. The actual watcher ingested its empty folder. Matching real desktop writes resolves the failure; deletion and restart replay passes."
+  ],
+  "baseline": {
+    "log": "/tmp/task-read-desktop-final.log",
+    "passed": 5,
+    "failed": 2,
+    "findings": [
+      "Deletion fixture missing its physical file, corrected in fixture only.",
+      "Growth first marked checkpoint was not visible once; unchanged Growth test passed replay. Cause not established; retain diagnostics and report recurrence instead of assuming a fix."
+    ]
+  },
+  "limits": [
+    "Completes only this native reader/fixture slice. AR06 remains open: Crux lifecycle/deletion planner, Garden/settings/ingestion consumers, optional client commands and browser worker/schema/global test setup remain.",
+    "AR07 workspace operation ownership, AR08 unknown community public-edition strategy, AR09 contributor architecture references and graph appearance tokens remain.",
+    "API/runtime and manual-testing candidate unchanged. Fresh pushed-head Windows/Linux CI needs its own acceptance; previous05d run37019538713 passed both.",
+    "Isolated native and desktop evidence does not establish real-provider, hosted deployment, signed distribution or manual product-feel acceptance."
+  ]
+}

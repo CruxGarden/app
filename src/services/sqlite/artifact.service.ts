@@ -1,4 +1,4 @@
-import { assertCopyWritable, isTaskHistoryReference } from '../working-copies';
+import { assertCopyWritable } from '../working-copies';
 import type { ArtifactReference, IArtifactService } from '../artifact.service';
 import type {
   Artifact,
@@ -345,8 +345,6 @@ export class SqliteArtifactService implements IArtifactService {
       path: string | null;
       filename: string;
     }>('SELECT fingerprint, type, resource_id, path, filename FROM artifacts WHERE id = ?', [id]);
-    if (row && (await isTaskHistoryReference(row.resource_id)))
-      throw new Error('This snapshot is used by a task or merge.');
     if (row) await assertSnapshotUnshared(row.resource_id);
     if (row && row.type === 'artifact' && opts?.writeThrough !== false) {
       await assertCopyWritable(row.resource_id);

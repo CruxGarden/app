@@ -94,5 +94,12 @@
       "log": "/tmp/task-command-setup-registration-red.log",
       "finding": "Actual restart probe reports folderExists false for the committed failed-Task folder that remains on disk."
     }
-  ]
+  ],
+  "nativeCI": {
+    "head": "05d1bf27dc6e01e84c86fbf455ff985512edefd9",
+    "run": 37019538713,
+    "windows": "success",
+    "linux": "success",
+    "jobStatusInspected": true
+  }
 }

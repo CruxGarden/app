@@ -144,9 +144,7 @@ export default function TaskDetails() {
             <dt className="text-text-muted">Started</dt>
             <dd>{formatDateTime(copy.created)}</dd>
             <dt className="text-text-muted">Starting state</dt>
-            <dd className="font-mono">
-              {copy.baseState ? 'Retained' : copy.baseSnapshotId?.slice(0, 8)}
-            </dd>
+            <dd>Retained</dd>
           </>
         )}
         {aiEnabled && row?.model && (

@@ -53,6 +53,8 @@ export interface GrowthGraph {
 /** A read-only projection. Never load Artifact bytes, conversations or provider state here. */
 export async function loadGrowthGraph(cruxId: string): Promise<GrowthGraph> {
   const db = getSqliteClient();
+  if (!db.inspectTaskHistory)
+    throw new Error('Growth storage is unavailable. Restart the updated desktop app.');
   const main = await db.get<{
     id: string;
     title: string;
@@ -66,7 +68,7 @@ export async function loadGrowthGraph(cruxId: string): Promise<GrowthGraph> {
   );
   if (!main) throw new Error('This Crux is no longer available.');
   const tasks = await db.all<GrowthLane>(
-    `SELECT id, title, phase, ${db.workingCopyBase ? "json_extract(base_state, '$.workspace.parentId')" : 'base_snapshot_id'} AS baseId,
+    `SELECT id, title, phase, json_extract(base_state, '$.workspace.parentId') AS baseId,
        json_extract(meta, '$.settings.activeBranch') AS headId,
        json_type(meta, '$.settings.activeBranch') IS NOT NULL AS headSelected
      FROM working_copies WHERE crux_id = ? AND role = 'task' ORDER BY created, id`,
@@ -99,11 +101,8 @@ export async function loadGrowthGraph(cruxId: string): Promise<GrowthGraph> {
      )) ORDER BY d.created, d.weight, d.id`,
     [cruxId, cruxId],
   );
-  if (db.inspectTaskHistory) {
-    const projected = await projectTaskHistory(main.id, lanes, snapshots);
-    return buildGrowthGraph(main.id, main.title, projected.lanes, projected.nodes);
-  }
-  return buildGrowthGraph(main.id, main.title, lanes, snapshots);
+  const projected = await projectTaskHistory(main.id, lanes, snapshots);
+  return buildGrowthGraph(main.id, main.title, projected.lanes, projected.nodes);
 }
 
 export function buildGrowthGraph(

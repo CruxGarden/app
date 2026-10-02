@@ -1,212 +1,253 @@
-import { describe, expect, it } from 'vitest';
-import { SqliteCruxService } from './crux.service';
-import { SqliteArtifactService } from './artifact.service';
-import { SqliteDimensionService } from './dimension.service';
-import { SqliteStoreService } from './store.service';
-import { getSqliteClient } from './client';
-import { removeLatestSnapshotCore, type GrowthDeps } from '../growth';
-import type { DimensionType } from '../types';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { localApiFixture } from '@/test/local-api-fixture';
+import { getServices, initServices } from '../index';
+import { defaultGrowthDeps, growthHostFor, removeLatestSnapshotCore } from '../growth';
+import { createTask, prepareTaskReview } from '../tasks';
+import { findWorkingCopy } from '../working-copies';
+import { allWorkspaces, closeWorkspace } from '@/stores/workspaceRegistry';
 
-const crux = new SqliteCruxService();
-const artifact = new SqliteArtifactService();
-const dimension = new SqliteDimensionService();
-const store = new SqliteStoreService();
+const native = localApiFixture();
+beforeEach(() => initServices());
 const write = (id: string, content: string) =>
-  artifact.create({ resourceId: id, content, meta: { path: 'work.txt' } });
-const link = (sourceId: string, targetId: string, type: DimensionType) =>
-  dimension.create({ sourceId, targetId, type });
-
-async function snapshot(owner: string, meta: Record<string, unknown> = {}) {
-  const value = await crux.create({ title: 'Checkpoint', kind: 'snapshot', meta });
-  await link(owner, value.id, 'growth');
-  const file = await write(value.id, 'history');
-  return { value, file };
+  getServices().artifact.create({ resourceId: id, content, meta: { path: 'work.txt' } });
+const link = (sourceId: string, targetId: string, type: 'garden' | 'graft' | 'gate' | 'growth') =>
+  getServices().dimension.create({ sourceId, targetId, type });
+async function read(id: string) {
+  const [file] = await getServices().artifact.findByResource('crux', id);
+  return getServices().artifact.readContent(file!);
 }
-
-async function task(owner: string, base: string) {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  await getSqliteClient().run(
-    `INSERT INTO working_copies
-      (id, crux_id, task_id, title, base_snapshot_id, phase, created, updated)
-      VALUES (?, ?, ?, 'Task', ?, 'ready', ?, ?)`,
-    [id, owner, crypto.randomUUID(), base, now, now],
-  );
-  return id;
+async function snapshot(owner: string, content = 'history') {
+  await write(owner, content);
+  return (
+    await (await growthHostFor(owner)).snapshot({ label: 'Checkpoint', requestedBy: 'person' })
+  ).id;
 }
+async function closeWorkspaces() {
+  for (const workspace of allWorkspaces())
+    await closeWorkspace(workspace.id, { stop: true, documents: 'discard' });
+}
+const main = (title: string) => getServices().crux.create({ title, type: 'workspace' });
 
-describe('Crux deletion ownership', () => {
-  it('purges one Garden without removing shared members or related creations', async () => {
+// Setup uses normal native commands. faultSql injects only deliberate cross-owner
+// references or actual storage faults, never obsolete Task rows/Artifact records.
+describe('native Crux deletion ownership', () => {
+  it('purges a Garden’s history and Store without deleting members or related creations', async () => {
+    const { crux, dimension, store } = getServices();
     const a = await crux.create({ title: 'Garden A', kind: 'garden' });
     const b = await crux.create({ title: 'Garden B', kind: 'garden' });
-    const own = await snapshot(a.id); // Legacy Main snapshots have no contentOwnerId.
+    const own = await snapshot(a.id);
+    const member = await main('Member A');
+    await write(member.id, 'Member remains');
+    await link(a.id, member.id, 'garden');
     const survivors = [];
-    for (const type of ['garden', 'graft', 'gate', 'growth'] as const) {
-      const member = await crux.create({ title: `Related ${type}` });
-      const file = await write(member.id, type);
-      await link(a.id, member.id, type);
-      const membership = await link(b.id, member.id, 'garden');
-      survivors.push({ member, file, membership, type });
+    for (const type of ['graft', 'gate', 'growth'] as const) {
+      const related = await main(`Related ${type}`);
+      await write(related.id, type);
+      await link(a.id, related.id, type);
+      const membership = await link(b.id, related.id, 'garden');
+      survivors.push({ related, membership, type });
     }
     await store.set(a.id, 'private', 'remove');
     await store.set(b.id, 'private', 'keep');
     await crux.trash(a.id);
     await crux.restore(a.id);
+    expect((await crux.findById(a.id)).deleted).toBeNull();
     await crux.trash(a.id);
-    await getSqliteClient().run('UPDATE cruxes SET deleted = ? WHERE id = ?', [
+    await native().faultSql('UPDATE cruxes SET deleted = ? WHERE id = ?', [
       '2000-01-01T00:00:00.000Z',
       a.id,
     ]);
     expect(await crux.purgeTrash(0)).toBe(1);
-    for (const { member, file, membership, type } of survivors) {
-      expect((await crux.findById(member.id)).id).toBe(member.id);
-      expect(await artifact.readContent(file.id)).toBe(type);
+    await native().restart();
+    expect(await read(member.id)).toBe('Member remains');
+    for (const { related, membership, type } of survivors) {
+      expect(await read(related.id)).toBe(type);
       expect((await dimension.findById(membership.id)).sourceId).toBe(b.id);
     }
-    await expect(crux.findById(own.value.id)).rejects.toThrow('not found');
-    expect(await artifact.findByResource('crux', own.value.id)).toEqual([]);
+    await expect(crux.findById(own)).rejects.toThrow('not found');
+    expect(
+      await native().client.get('SELECT crux_id FROM file_content_heads WHERE crux_id = ?', [own]),
+    ).toBeUndefined();
     expect(await store.list(a.id)).toEqual([]);
     expect(await store.get(b.id, 'private')).toBe('keep');
-    expect(
-      await getSqliteClient().all('SELECT * FROM dimensions WHERE target_id = ?', [own.value.id]),
-    ).toEqual([]);
+    expect(await dimension.findBySourceAndType(a.id)).toEqual([]);
   });
 
-  it('keeps snapshots owned or referenced by surviving Cruxes, including their ancestors', async () => {
-    const a = await crux.create({ title: 'A' });
-    const b = await crux.create({ title: 'B' });
-    const base = await snapshot(a.id);
-    const shared = await snapshot(a.id, { parentCruxId: base.value.id });
-    await link(b.id, shared.value.id, 'growth');
-    const foreign = await snapshot(a.id, { contentOwnerId: b.id });
-    const grafted = await crux.create({ title: 'History reference', kind: 'snapshot' });
-    const graftedFile = await write(grafted.id, 'lateral');
-    await link(a.id, grafted.id, 'graft');
+  it('retains shared and foreign-owned history and the shared tip’s ancestors after restart', async () => {
+    const { crux, dimension } = getServices();
+    const a = await main('A');
+    const b = await main('B');
+    const base = await snapshot(a.id, 'Ancestor');
+    const shared = await snapshot(a.id, 'Shared tip');
+    const foreign = await snapshot(b.id, 'Foreign owned');
+    await link(a.id, foreign, 'growth');
+    const lateral = await snapshot(b.id, 'Lateral');
+    await link(a.id, lateral, 'graft');
+    await link(b.id, shared, 'growth');
+    await closeWorkspaces();
     await crux.delete(a.id);
-    for (const { value, file } of [base, shared, foreign]) {
-      expect((await crux.findById(value.id)).id).toBe(value.id);
-      expect(await artifact.readContent(file.id)).toBe('history');
-    }
-    expect(await artifact.readContent(graftedFile.id)).toBe('lateral');
-    expect(await dimension.findBySourceAndType(b.id, 'growth')).toHaveLength(1);
+    await native().restart();
+    expect(await read(base)).toBe('Ancestor');
+    expect(await read(shared)).toBe('Shared tip');
+    expect(await read(foreign)).toBe('Foreign owned');
+    expect(await read(lateral)).toBe('Lateral');
+    expect(await dimension.findBySourceAndType(b.id, 'growth')).toHaveLength(3);
   });
 
-  it('retains an external Task base and ancestry but cleans up the deleted owner’s Tasks', async () => {
-    const a = await crux.create({ title: 'A' });
-    const b = await crux.create({ title: 'B' });
-    const base = await snapshot(a.id);
-    const pinned = await snapshot(a.id, { parentCruxId: base.value.id });
-    const external = await task(b.id, pinned.value.id);
-    const localBase = await snapshot(a.id);
-    const copy = await task(a.id, localBase.value.id);
-    const copyFile = await write(copy, 'task');
-    const copySnapshot = await snapshot(copy, { contentOwnerId: copy });
-    const unrelated = await crux.create({ title: 'Linked task output' });
-    const unrelatedFile = await write(unrelated.id, 'keep');
-    await link(copy, unrelated.id, 'garden');
-    await store.set(copy, 'state', 'remove');
-    await getSqliteClient().run("UPDATE working_copies SET phase = 'archived' WHERE id = ?", [
-      copy,
+  it('retains a foreign Task base and ancestry while purging only the deleted owner’s copies', async () => {
+    const { crux, dimension, store } = getServices();
+    const a = await main('A');
+    const b = await main('B');
+    const base = await snapshot(a.id, 'Ancestor');
+    const pinned = await snapshot(a.id, 'Pinned history');
+    await write(b.id, 'Foreign Task bytes');
+    const external = await createTask(b.id, 'Foreign Task');
+    const externalState = structuredClone(external.baseState);
+    externalState.workspace.parentId = pinned;
+    // Retain the actual root and current-format fields; inject only the foreign pointer.
+    await native().faultSql('UPDATE working_copies SET base_state = ? WHERE id = ?', [
+      JSON.stringify(externalState),
+      external.id,
     ]);
+    const localBase = await snapshot(a.id, 'Local history');
+    const copy = await createTask(a.id, 'Local Task');
+    const copySnapshot = await snapshot(copy.id, 'Task checkpoint');
+    const unrelated = await main('Linked output');
+    await write(unrelated.id, 'Keep output');
+    await link(copy.id, unrelated.id, 'graft');
+    await store.set(copy.id, 'state', 'remove');
+    const current = (await findWorkingCopy(copy.id))!;
+    await native().client.setWorkingCopyArchived!(copy.id, true, current.revision);
+    await closeWorkspaces();
     await crux.delete(a.id);
-    for (const saved of [base, pinned])
-      expect(await artifact.readContent(saved.file.id)).toBe('history');
+    await native().restart();
+    expect(await read(base)).toBe('Ancestor');
+    expect(await read(pinned)).toBe('Pinned history');
+    expect((await findWorkingCopy(external.id))!.baseState).toEqual(externalState);
+    expect(await read(external.id)).toBe('Foreign Task bytes');
+    expect(await findWorkingCopy(copy.id)).toBeNull();
+    for (const id of [localBase, copySnapshot]) {
+      await expect(crux.findById(id)).rejects.toThrow('not found');
+      expect(
+        await native().client.get('SELECT crux_id FROM file_content_heads WHERE crux_id = ?', [id]),
+      ).toBeUndefined();
+    }
     expect(
-      await getSqliteClient().get('SELECT id FROM working_copies WHERE id = ?', [external]),
-    ).toBeTruthy();
-    expect(
-      await getSqliteClient().get('SELECT id FROM working_copies WHERE id = ?', [copy]),
+      await native().client.get('SELECT crux_id FROM file_content_heads WHERE crux_id = ?', [
+        copy.id,
+      ]),
     ).toBeUndefined();
-    await expect(artifact.findById(copyFile.id)).rejects.toThrow('not found');
-    for (const saved of [localBase, copySnapshot])
-      await expect(crux.findById(saved.value.id)).rejects.toThrow('not found');
-    expect(await store.list(copy)).toEqual([]);
-    expect(await artifact.readContent(unrelatedFile.id)).toBe('keep');
-    expect((await crux.findById(unrelated.id)).id).toBe(unrelated.id);
-    expect(await dimension.findBySourceAndType(copy)).toEqual([]);
+    expect(await store.list(copy.id)).toEqual([]);
+    expect(await read(unrelated.id)).toBe('Keep output');
+    expect(await dimension.findBySourceAndType(copy.id)).toEqual([]);
   });
 
-  it('refuses removing a shared history tip before deleting its file records', async () => {
-    const a = await crux.create({ title: 'A' });
-    const b = await crux.create({ title: 'B' });
+  it('refuses removing a shared history tip before changing files or links', async () => {
+    const { crux, dimension } = getServices();
+    const a = await main('A');
+    const b = await main('B');
     const shared = await snapshot(a.id);
-    await link(b.id, shared.value.id, 'growth');
-    const deps: GrowthDeps = {
-      crux: {
-        create: async () => {
-          throw new Error('Not used');
-        },
-        findById: (id) => crux.findById(id),
-        update: async () => undefined,
-        delete: (id) => crux.delete(id),
-      },
-      artifact,
-      dimension: {
-        create: async () => {
-          throw new Error('Not used');
-        },
-        update: async () => undefined,
-      },
-    };
+    await link(b.id, shared, 'growth');
+    const head = await native().client.fileContent!.head(shared);
     await expect(
       removeLatestSnapshotCore(
         {
-          crux: a,
+          crux: await crux.findById(a.id),
           growths: await dimension.findBySourceAndType(a.id, 'growth'),
         },
-        deps,
+        await defaultGrowthDeps(),
       ),
     ).rejects.toThrow(/referenced|shared/);
-    expect(await artifact.readContent(shared.file.id)).toBe('history');
+    expect(await native().client.fileContent!.head(shared)).toEqual(head);
+    expect(await read(shared)).toBe('history');
     expect(await dimension.findBySourceAndType(a.id, 'growth')).toHaveLength(1);
     expect(await dimension.findBySourceAndType(b.id, 'growth')).toHaveLength(1);
   });
 
-  it.each(['baseId', 'sourceHead', 'targetHead', 'resultHead'])(
-    'retains history referenced by a surviving merge’s %s',
+  it.each(['sourceState', 'targetState', 'resultState', 'candidateBase'] as const)(
+    'retains ancestry referenced by a surviving merge’s %s through restart',
     async (field) => {
-      const a = await crux.create({ title: 'A' });
-      const b = await crux.create({ title: 'B' });
-      const base = await snapshot(a.id);
-      const tip = await snapshot(a.id, { parentCruxId: base.value.id });
-      const candidate = await snapshot(b.id);
-      await getSqliteClient().run(
-        `INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created)
-         VALUES (?, ?, ?, ?, 'applying', ?, ?)`,
-        [
-          crypto.randomUUID(),
-          b.id,
-          crypto.randomUUID(),
-          candidate.value.id,
-          JSON.stringify({ [field]: tip.value.id }),
-          new Date().toISOString(),
-        ],
+      const { crux } = getServices();
+      const a = await main('A');
+      const b = await main('B');
+      const base = await snapshot(a.id, 'Ancestor');
+      const tip = await snapshot(a.id, 'Retained tip');
+      await write(b.id, 'Main B');
+      const copy = await createTask(b.id, 'Surviving Task');
+      await write(copy.id, 'Reviewed result');
+      const review = await prepareTaskReview(copy.id);
+      const row = await native().client.get<{ data: string }>(
+        'SELECT data FROM task_merges WHERE id = ?',
+        [review.id],
       );
+      const data = JSON.parse(row!.data);
+      if (field === 'candidateBase') {
+        const candidate = (await findWorkingCopy(review.candidateId))!;
+        candidate.baseState.workspace.parentId = tip;
+        await native().faultSql('UPDATE working_copies SET base_state = ? WHERE id = ?', [
+          JSON.stringify(candidate.baseState),
+          candidate.id,
+        ]);
+      } else
+        data[field] = {
+          ...(data[field] ?? data.sourceState),
+          workspace: { ...(data[field] ?? data.sourceState).workspace, parentId: tip },
+        };
+      // The native API created the review/candidate. Inject only a retaining pointer.
+      await native().faultSql('UPDATE task_merges SET data = ? WHERE id = ?', [
+        JSON.stringify(data),
+        review.id,
+      ]);
+      await closeWorkspaces();
       await crux.delete(a.id);
-      expect(await artifact.readContent(tip.file.id)).toBe('history');
-      expect(await artifact.readContent(base.file.id)).toBe('history');
+      await native().restart();
+      expect(await read(tip)).toBe('Retained tip');
+      expect(await read(base)).toBe('Ancestor');
+      expect(await read(copy.id)).toBe('Reviewed result');
+      expect(await read(review.candidateId)).toBe('Reviewed result');
     },
   );
-  it.each(['candidate_id', 'baseId'])(
-    'protects a same-owner merge %s before any snapshot files are removed',
-    async (field) => {
-      const a = await crux.create({ title: 'Merge owner' });
+  it.each(['starting state', 'merge state'] as const)(
+    'protects same-owner history and immutable files pinned by a %s',
+    async (reference) => {
+      const { crux, artifact } = getServices();
+      const a = await main('Merge owner');
       const pinned = await snapshot(a.id);
-      await getSqliteClient().run(
-        'INSERT INTO task_merges (id, crux_id, copy_id, candidate_id, phase, data, created) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [
-          crypto.randomUUID(),
-          a.id,
-          crypto.randomUUID(),
-          field === 'candidate_id' ? pinned.value.id : crypto.randomUUID(),
-          'applying',
-          JSON.stringify(field === 'baseId' ? { baseId: pinned.value.id } : {}),
-          new Date().toISOString(),
-        ],
-      );
-      await expect(artifact.delete(pinned.file.id)).rejects.toThrow(/task|merge/);
-      await expect(crux.delete(pinned.value.id)).rejects.toThrow(/task|merge/);
-      expect(await artifact.readContent(pinned.file.id)).toBe('history');
+      const copy = await createTask(a.id, 'Task');
+      if (reference === 'merge state') await prepareTaskReview(copy.id);
+      const [file] = await artifact.findByResource('crux', pinned);
+      const before = await native().client.export();
+      await expect(artifact.delete(file!)).rejects.toThrow(/read-only/);
+      await expect(crux.delete(pinned)).rejects.toThrow(/task|merge|recovery/);
+      expect(await native().client.export()).toEqual(before);
+      await native().restart();
+      expect(await read(pinned)).toBe('history');
     },
   );
+  it('rolls back an owner purge refusal, preserves bytes after restart, and permits retry', async () => {
+    const { crux, store } = getServices();
+    const a = await main('Atomic deletion');
+    const history = await snapshot(a.id);
+    await write(a.id, 'Current work');
+    await store.set(a.id, 'keep', { count: 3 });
+    await closeWorkspaces();
+    await native().faultSql(
+      "CREATE TRIGGER refuse_purge BEFORE DELETE ON cruxes BEGIN SELECT RAISE(ABORT, 'Purge refused'); END",
+    );
+    await expect(crux.delete(a.id)).rejects.toThrow('Purge refused');
+    await native().restart();
+    expect(await read(a.id)).toBe('Current work');
+    expect(await read(history)).toBe('history');
+    expect(await store.get(a.id, 'keep')).toEqual({ count: 3 });
+    await native().faultSql('DROP TRIGGER refuse_purge');
+    await crux.delete(a.id);
+    await native().restart();
+    await expect(crux.findById(a.id)).rejects.toThrow('not found');
+    expect(
+      await native().client.get('SELECT crux_id FROM file_content_heads WHERE crux_id = ?', [
+        history,
+      ]),
+    ).toBeUndefined();
+    expect(await store.list(a.id)).toEqual([]);
+  });
 });

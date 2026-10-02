@@ -1,4 +1,7 @@
 import { beforeEach, expect, it } from 'vitest';
+import { localApiFixture } from '@/test/local-api-fixture';
+
+localApiFixture();
 import { getServices, initServices } from './index';
 import { createCruxspace } from './cruxspaces';
 import { saveCruxOutput, copyCruxspaceAsset } from './cruxspace-assets';
@@ -57,18 +60,14 @@ it('keeps transfers distinct from deliberate versions and never classifies versi
   const history = await loadCruxspaceHistory(space.id);
   expect(history.space.name).toBe('Release');
   expect(
-    history.members.map((m) => [
-      m.title,
-      m.checkpoints,
-      m.outputs.length,
-      m.transfersIn,
-      m.transfersOut,
-    ]),
+    [...history.members]
+      .sort((a, b) => a.title.localeCompare(b.title))
+      .map((m) => [m.title, m.checkpoints, m.outputs.length, m.transfersIn, m.transfersOut]),
   ).toEqual([
     ['Artwork', 0, 1, 0, 1],
     ['Website', 3, 0, 1, 0],
   ]);
-  expect(history.graph.lanes.map((l) => l.title)).toEqual(['Artwork', 'Website']);
+  expect(history.graph.lanes.map((l) => l.title).sort()).toEqual(['Artwork', 'Website']);
   expect(history.laneOwners).toEqual({ [source.id]: source.id, [target.id]: target.id });
   const transfer = history.transfers[0]!;
   expect(transfer).toMatchObject({
@@ -95,20 +94,16 @@ it('keeps transfers distinct from deliberate versions and never classifies versi
   expect([...times].sort()).toEqual(times);
 });
 
-it('reports members that are gone without failing the rest', async () => {
+it('omits purged members while preserving the remaining native Garden history', async () => {
   const { crux } = getServices();
   const a = await crux.create({ title: 'A', type: 'workspace' });
   const b = await crux.create({ title: 'B', type: 'workspace' });
   const space = await createCruxspace({ name: 'Pair', brief: '', cruxIds: [a.id, b.id] });
   await crux.delete(b.id);
   const history = await loadCruxspaceHistory(space.id);
-  expect(history.members.map((m) => [m.title, m.available])).toEqual([
-    ['A', true],
-    ['Unavailable Crux', false],
-  ]);
-  expect(history.graph.warnings).toContain(
-    'Some members are no longer in this Garden; their history is omitted.',
-  );
+  expect(history.members.map((m) => [m.title, m.available])).toEqual([['A', true]]);
+  expect(history.graph.lanes.map((lane) => lane.id)).toEqual([a.id]);
+  expect(history.graph.warnings).toEqual([]);
 });
 
 it('picks the last checkpoint at or before a moment', () => {
@@ -163,7 +158,7 @@ it('connects transfers only to marked versions that actually retain their output
   const sidecar = (await artifact.findByResource('crux', target.id)).find(
     (f) => f.meta?.path === transfer.provenancePath,
   )!;
-  await artifact.delete(sidecar.id);
+  await artifact.delete(sidecar);
   await targetGrowth.snapshot({ label: 'Used Cover from Release', requestedBy: 'person' });
   expect((await loadCruxspaceHistory(space.id)).transfers).toHaveLength(0);
 });

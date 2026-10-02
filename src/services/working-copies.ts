@@ -9,9 +9,8 @@ export interface WorkingCopy {
   cruxId: string;
   taskId: string;
   title: string;
-  /** Parked Web mode still uses snapshot bases; native Tasks retain baseState. */
-  baseSnapshotId?: string;
-  baseState?: {
+  /** Immutable starting state retained by the native API. */
+  baseState: {
     /** The exact Task source; absence means Main. */
     sourceId?: string;
     root: string;
@@ -26,8 +25,7 @@ export interface WorkingCopy {
   updated: string;
 }
 export type CopyIdentity = Pick<WorkingCopy, 'cruxId' | 'taskId' | 'phase' | 'role' | 'title'> & {
-  baseParentId?: string | null;
-  baseSnapshotId?: string;
+  baseParentId: string | null;
 };
 export const TASKS_CHANGED = 'crux:tasks-changed';
 export function announceTasksChanged() {
@@ -38,10 +36,8 @@ export function copyIdentity(crux: Crux | null | undefined): CopyIdentity | null
 }
 function copyFromRow(row: Record<string, unknown>): WorkingCopy {
   const copy = fromRow<WorkingCopy>(row);
-  if (getSqliteClient().workingCopyBase) {
-    if (typeof row.base_state !== 'string') throw new Error('Task starting state is missing.');
-    copy.baseState = JSON.parse(row.base_state);
-  }
+  if (typeof row.base_state !== 'string') throw new Error('Task starting state is missing.');
+  copy.baseState = JSON.parse(row.base_state);
   return copy;
 }
 export async function findWorkingCopy(id: string): Promise<WorkingCopy | null> {
@@ -97,9 +93,7 @@ export async function workingCopyDocument(id: string): Promise<Crux | null> {
         title: copy.title,
         cruxId: copy.cruxId,
         taskId: copy.taskId,
-        ...(copy.baseState
-          ? { baseParentId: copy.baseState.workspace.parentId }
-          : { baseSnapshotId: copy.baseSnapshotId }),
+        baseParentId: copy.baseState.workspace.parentId,
         role: copy.role,
         phase: copy.phase,
       },
@@ -152,37 +146,6 @@ export async function assertCopyWritable(id: string): Promise<void> {
   );
   if (pending)
     throw new Error('Finish recovering the pending merge before editing this workspace.');
-}
-
-/** Protect all ancestry referenced by a task, including a retained merge candidate. */
-export async function isTaskHistoryReference(snapshotId: string): Promise<boolean> {
-  const row = await getSqliteClient().get(
-    `
-    WITH RECURSIVE roots(id) AS (
-      SELECT ${getSqliteClient().workingCopyBase ? "json_extract(base_state, '$.workspace.parentId')" : 'base_snapshot_id'} FROM working_copies
-      UNION SELECT candidate_id FROM task_merges
-      UNION SELECT json_extract(meta, '$.merge.baseId') FROM cruxes
-      UNION SELECT json_extract(meta, '$.merge.sourceHead') FROM cruxes
-      UNION SELECT json_extract(meta, '$.merge.targetHead') FROM cruxes
-      UNION SELECT json_extract(data, '$.sourceHead') FROM task_merges
-      UNION SELECT json_extract(data, '$.targetHead') FROM task_merges
-      UNION SELECT json_extract(data, '$.resultHead') FROM task_merges
-      UNION SELECT json_extract(data, '$.sourceState.workspace.parentId') FROM task_merges
-      UNION SELECT json_extract(data, '$.targetState.workspace.parentId') FROM task_merges
-      UNION SELECT json_extract(data, '$.resultState.workspace.parentId') FROM task_merges
-      UNION SELECT json_extract(data, '$.targetWorkspace.parentId') FROM task_merges
-      UNION SELECT json_extract(data, '$.baseId') FROM task_merges
-    ), links(parent, child) AS (
-      SELECT json_extract(meta, '$.parentCruxId'), id FROM cruxes
-      UNION SELECT json_extract(meta, '$.merge.sourceHead'), id FROM cruxes
-      UNION SELECT json_extract(meta, '$.merge.targetHead'), id FROM cruxes
-    ), ancestry(id) AS (
-      SELECT id FROM roots WHERE id IS NOT NULL
-      UNION SELECT links.parent FROM links JOIN ancestry ON links.child = ancestry.id WHERE links.parent IS NOT NULL
-    ) SELECT id FROM ancestry WHERE id = ? LIMIT 1`,
-    [snapshotId],
-  );
-  return !!row;
 }
 
 export async function assertNoOpenTasks(cruxId: string): Promise<void> {

@@ -43,6 +43,52 @@ const write = (id: string, content: string) =>
   getServices().artifact.create({ resourceId: id, content, meta: { path: 'index.html' } });
 
 describe('whole Crux Growth projection', () => {
+  it('refuses incomplete history authority before reading a partial graph and permits retry', async () => {
+    const main = await getServices().crux.create({ title: 'Retain all history' });
+    await write(main.id, 'Base');
+    const copy = await createTask(main.id, 'Task');
+    const db = getSqliteClient();
+    const inspect = db.inspectTaskHistory;
+    const reads = vi.spyOn(db, 'all');
+    const before = await db.export();
+    db.inspectTaskHistory = undefined;
+    try {
+      await expect(loadGrowthGraph(main.id)).rejects.toThrow('Growth storage is unavailable');
+      expect(reads).not.toHaveBeenCalled();
+      expect(await db.export()).toEqual(before);
+    } finally {
+      db.inspectTaskHistory = inspect;
+    }
+    const graph = await loadGrowthGraph(main.id);
+    expect(graph.lanes.map((lane) => lane.id)).toContain(copy.id);
+    expect(graph.nodes.map((node) => node.id)).toContain(taskHistoryNodeId(copy.id, 'base'));
+  });
+
+  it('propagates an actual history metadata read failure without substituting a partial graph', async () => {
+    const main = await getServices().crux.create({ title: 'Unavailable history' });
+    await write(main.id, 'Keep bytes');
+    const copy = await createTask(main.id, 'Keep Task');
+    const indexes = await native().client.all<{ name: string; sql: string }>(
+      "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'task_merges' AND sql IS NOT NULL",
+    );
+    await native().faultSql('ALTER TABLE task_merges RENAME TO temporarily_unavailable_merges');
+    try {
+      await expect(loadGrowthGraph(main.id)).rejects.toThrow(/no such table/i);
+    } finally {
+      await native().faultSql('ALTER TABLE temporarily_unavailable_merges RENAME TO task_merges');
+      // SQLite rewrites index SQL during table renames. Restore the exact owner
+      // schema after this deliberate fault, so restart tests ordinary admission.
+      for (const index of indexes) {
+        await native().faultSql(`DROP INDEX ${index.name}`);
+        await native().faultSql(index.sql);
+      }
+    }
+    await native().restart();
+    expect((await loadGrowthGraph(main.id)).lanes.map((lane) => lane.id)).toContain(copy.id);
+    const [file] = await getServices().artifact.findByResource('crux', copy.id);
+    expect(await getServices().artifact.readContent(file!)).toBe('Keep bytes');
+  });
+
   it('shows both sides of a completed merge, archived work and empty Tasks without loading blobs or transcripts', async () => {
     const main = await getServices().crux.create({ title: 'Garden website' });
     await write(main.id, 'Base');

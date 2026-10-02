@@ -1,6 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { initServices, getServices } from '@/services';
 import { createCruxStore } from './cruxStore';
+import { localApiFixture } from '@/test/local-api-fixture';
+import { createTask } from '@/services/tasks';
+import { getSqliteClient } from '@/services/sqlite/client';
+
+const native = localApiFixture();
 
 beforeEach(async () => {
   await initServices();
@@ -57,40 +62,22 @@ it('cannot resurrect a closed workspace or overwrite a detail changed during the
 
 it('refreshes Task phase without replacing live messages or editor state', async () => {
   const crux = await getServices().crux.create({ title: 'Main' });
-  const task = {
-    ...crux,
-    meta: {
-      workingCopy: {
-        cruxId: crux.id,
-        taskId: 'task',
-        baseSnapshotId: 'base',
-        role: 'task',
-        phase: 'ready',
-        title: 'Task',
-      },
-    },
-  };
+  const copy = await createTask(crux.id, 'Task');
+  const task = await getServices().crux.findById(copy.id);
   const store = createCruxStore();
   store.setState({ crux: task, streamingContent: 'retained', viewingSnapshotId: 'selected' });
   const messages = store.getState().messages;
-  const spy = vi
-    .spyOn(getServices().crux, 'findById')
-    .mockResolvedValue({
-      ...task,
-      meta: { workingCopy: { ...task.meta.workingCopy, phase: 'archived' } },
-    });
-  try {
-    await store.getState().refreshDetails(['phase'], []);
-    expect(store.getState().crux?.meta?.workingCopy).toMatchObject({
-      phase: 'archived',
-      taskId: 'task',
-    });
-    expect(store.getState().messages).toBe(messages);
-    expect(store.getState()).toMatchObject({
-      streamingContent: 'retained',
-      viewingSnapshotId: 'selected',
-    });
-  } finally {
-    spy.mockRestore();
-  }
+  await getSqliteClient().setWorkingCopyArchived!(copy.id, true, copy.revision);
+  await native().restart();
+  await store.getState().refreshDetails(['phase'], []);
+  expect(store.getState().crux?.meta?.workingCopy).toMatchObject({
+    phase: 'archived',
+    taskId: copy.taskId,
+    baseParentId: copy.baseState.workspace.parentId,
+  });
+  expect(store.getState().messages).toBe(messages);
+  expect(store.getState()).toMatchObject({
+    streamingContent: 'retained',
+    viewingSnapshotId: 'selected',
+  });
 });

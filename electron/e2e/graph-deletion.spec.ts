@@ -2,8 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
 
-// Seed relationships through the isolated native database: the recursive
-// Garden editor is not implemented yet. Deletion itself uses the real UI.
+// Seed current content through native commands; deletion uses the actual Home UI.
+// Graph links preserve references but do not grant ownership of another creation.
 test('purging a linked Crux preserves shared work and history after restart', async () => {
   const first = await launchApp();
   let fixture!: {
@@ -19,9 +19,11 @@ test('purging a linked Crux preserves shared work and history after restart', as
       const db = window.electronAPI!.sqlite;
       const exists = async (id: string) =>
         !!(await db.get('SELECT id FROM cruxes WHERE id = ?', [id]));
-      const file = (await db.get('SELECT fingerprint FROM artifacts WHERE resource_id = ?', [
-        f.member,
-      ])) as { fingerprint: string };
+      const files = db.fileContent!;
+      const memberHead = (await files.head(f.member))!;
+      const { entries: memberFiles } = await files.list({ cruxId: f.member, expected: memberHead });
+      const sharedHead = (await files.head(f.shared))!;
+      const { entries: sharedFiles } = await files.list({ cruxId: f.shared, expected: sharedHead });
       return {
         removed: await exists(f.a),
         own: await exists(f.own),
@@ -32,13 +34,16 @@ test('purging a linked Crux preserves shared work and history after restart', as
           'SELECT target_id FROM dimensions WHERE source_id = ? ORDER BY target_id',
           [f.b],
         ),
-        content: new TextDecoder().decode(await db.blobRead(file.fingerprint)),
+        content: new TextDecoder().decode(await db.blobRead(memberFiles[0]!.fingerprint)),
         orphanEdges: await db.all(
           'SELECT id FROM dimensions WHERE source_id IN (?, ?) OR target_id IN (?, ?)',
           [f.a, f.own, f.a, f.own],
         ),
-        ownFiles: await db.all('SELECT id FROM artifacts WHERE resource_id = ?', [f.own]),
-        sharedFiles: await db.all('SELECT fingerprint FROM artifacts WHERE resource_id = ?', [
+        ownFiles: await db.all('SELECT crux_id FROM file_content_heads WHERE crux_id = ?', [f.own]),
+        sharedFiles: sharedFiles.map((file) => ({ fingerprint: file.fingerprint })),
+        artifactRows: await db.all('SELECT id FROM artifacts WHERE resource_id IN (?, ?, ?)', [
+          f.member,
+          f.own,
           f.shared,
         ]),
       };
@@ -54,60 +59,99 @@ test('purging a linked Crux preserves shared work and history after restart', as
       orphanEdges: [],
       ownFiles: [],
       sharedFiles: [{ fingerprint: fixture.fingerprint }],
+      artifactRows: [],
     });
   }
   try {
     await enterGarden(first.page);
     fixture = await first.page.evaluate(async () => {
       const db = window.electronAPI!.sqlite;
-      const now = new Date().toISOString();
-      const make = async (title: string, kind: string) => {
-        const id = crypto.randomUUID();
-        await db.run(
-          'INSERT INTO cruxes (id, slug, title, kind, author_id, home_id, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [id, id, title, kind, 'fixture-author', 'fixture-home', now, now],
+      const root = new URL(window.location.href).searchParams.get('garden')!;
+      const identity = (await db.get('SELECT author_id, home_id FROM cruxes WHERE id = ?', [
+        root,
+      ])) as { author_id: string; home_id: string };
+      const make = (title: string, kind?: string) =>
+        db.createCrux!({
+          slug: crypto.randomUUID(),
+          title,
+          kind,
+          type: 'workspace',
+          authorId: identity.author_id,
+          homeId: identity.home_id,
+        });
+      const files = db.fileContent!;
+      const put = async (cruxId: string, text: string) => {
+        const bytes = new TextEncoder().encode(text);
+        const fingerprint = Array.from(
+          new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
+          (x) => x.toString(16).padStart(2, '0'),
+        ).join('');
+        const meta = JSON.parse(
+          ((await db.get('SELECT meta FROM cruxes WHERE id = ?', [cruxId])) as { meta: string })
+            .meta,
         );
-        return id;
+        // Native edits record content; the desktop watcher reads the actual Project Folder.
+        await window.electronAPI!.project.writeFile(meta.projectFolder, 'work.txt', bytes);
+        const head = await files.edit({
+          cruxId,
+          expected: await files.head(cruxId),
+          changes: [
+            {
+              put: {
+                id: crypto.randomUUID(),
+                path: 'work.txt',
+                fingerprint,
+                size: bytes.length,
+                encoding: 'utf-8',
+                mimeType: 'text/plain',
+                mode: 0o644,
+                attributes: {},
+              },
+              bytes,
+            },
+          ],
+        });
+        await files.finishProjection(cruxId);
+        return { head, fingerprint };
       };
       const a = await make('Discarded Garden', 'garden');
       const b = await make('Surviving Garden', 'garden');
-      const member = await make('Shared creation', 'project');
-      const own = await make('Owned history', 'snapshot');
-      const shared = await make('Shared history', 'snapshot');
-      const bytes = new TextEncoder().encode('Shared creation survives');
-      const fingerprint = Array.from(
-        new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
-        (x) => x.toString(16).padStart(2, '0'),
-      ).join('');
-      await db.blobWrite(fingerprint, bytes);
-      for (const id of [member, own, shared])
-        await db.run(
-          'INSERT INTO artifacts (id, resource_id, author_id, home_id, path, filename, fingerprint, size, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [
-            crypto.randomUUID(),
-            id,
-            'fixture-author',
-            'fixture-home',
-            'work.txt',
-            'work.txt',
-            fingerprint,
-            bytes.length,
-            now,
-            now,
-          ],
-        );
-      for (const [source, target, type] of [
-        [a, member, 'garden'],
-        [b, member, 'garden'],
-        [a, own, 'growth'],
-        [a, shared, 'growth'],
-        [b, shared, 'growth'],
-      ])
-        await db.run(
-          'INSERT INTO dimensions (id, source_id, target_id, type, home_id, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [crypto.randomUUID(), source, target, type, 'fixture-home', now, now],
-        );
-      return { a, b, member, own, shared, fingerprint };
+      const member = await make('Shared creation');
+      await put(member, 'Shared creation survives');
+      const ownContent = await put(a, 'Owned history');
+      const own = (
+        await files.snapshot({
+          cruxId: a,
+          expected: ownContent.head,
+          snapshotId: crypto.randomUUID(),
+          parentId: null,
+          meta: { label: 'Owned history' },
+        })
+      ).snapshot.id;
+      const sharedContent = await put(a, 'Shared history');
+      const shared = (
+        await files.snapshot({
+          cruxId: a,
+          expected: sharedContent.head,
+          snapshotId: crypto.randomUUID(),
+          parentId: null,
+          meta: { label: 'Shared history' },
+        })
+      ).snapshot.id;
+      await db.gardenMembership!.add({ gardenId: b, memberId: member });
+      await db.installation!.createDimension({
+        sourceId: a,
+        targetId: member,
+        type: 'graft',
+        homeId: identity.home_id,
+      });
+      await db.installation!.createDimension({
+        sourceId: b,
+        targetId: shared,
+        type: 'growth',
+        homeId: identity.home_id,
+      });
+      return { a, b, member, own, shared, fingerprint: sharedContent.fingerprint };
     });
     // Home lists the root Garden's members: place the fixture's Gardens there.
     const root = new URL(first.page.url()).searchParams.get('garden')!;
