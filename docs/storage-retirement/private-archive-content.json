@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-01",
+  "stage": "AR06 complete native archives and omitted-runtime repair retirement",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "focused": {
+    "passed": 25,
+    "suites": 4,
+    "newNativeArchiveCases": 7
+  },
+  "verification": {
+    "app": {
+      "passed": 1699,
+      "skipped": 18,
+      "files": 269,
+      "build": true
+    },
+    "desktop": {
+      "passed": 4,
+      "duration": "1.6m",
+      "command": "npm run test:e2e -- e2e/private-archive-ui.spec.ts e2e/community-tool.spec.ts e2e/manifest-garden-archive.spec.ts --project=desktop",
+      "invariants": [
+        "Unknown creator .cruxtool exports, installs into a clean profile, edits and restarts.",
+        "Settings installation backup restores manifest history into a fresh profile and refuses cache-masked missing bytes.",
+        "Visible private export/import preserve Main/Task/base/binary files across profiles and restart.",
+        "Authenticated outside agent uses the same private archive API contract."
+      ]
+    }
+  },
+  "reproduction": "A complete native archive3 import consulted the bundled template catalog after the API had already admitted all bytes. The first native case failed on the catalog call; six others passed after correcting scaffold API/close assumptions.",
+  "changes": [
+    "Private Crux intake no longer restores old omitted runtimes after successful API admission.",
+    "Removed unused tool-runtime.ts/helper tests and obsolete SQL.js runtime-reference archive assertions.",
+    "Native coverage verifies complete editor/work/license bytes, shared-byte deduplication, modified editor plus original marked Growth, remapped immutable Task base, Cruxspace members and installation backup/restart.",
+    "Missing installation payload refuses even when local cache still has it."
+  ],
+  "logs": [
+    "/tmp/private-archive-content-baseline.log",
+    "/tmp/private-archive-content-compat-baseline.log",
+    "/tmp/private-archive-content-focused.log",
+    "/tmp/private-archive-content-verify.log",
+    "/tmp/private-archive-content-desktop.log"
+  ],
+  "limits": [
+    "Reference export helpers and more archive consumers still belong to the retired SQL.js path; this slice does not remove all of them.",
+    "Native service tests and four actual Electron journeys cover API/file projection/community behavior in isolated profiles.",
+    "No legacy archive conversion or catalog substitution is added.",
+    "No real Garden/manual candidate or live publication changes."
+  ]
+}

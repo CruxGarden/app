@@ -44,6 +44,12 @@
       "afterFinalRootOrderingPassed": 3,
       "finalDuration": "1.4m",
       "note": "Final ordering only changes graph layout; all three affected Growth journeys reran after the complete app gate."
+    },
+    "nativeCI": {
+      "appCommit": "572b35ba1563d9adc2a12256e9a8b5912430c478",
+      "run": 36960226228,
+      "windows": "success",
+      "linux": "success"
     }
   },
   "reproductions": [
@@ -71,7 +77,6 @@
     "Projection uses separate metadata reads; selection revalidates retained ownership/root.",
     "Merge states show the journal creation timestamp; it is not a separately persisted completion timestamp.",
     "Retained Task states cannot be restored as marked Growth versions.",
-    "Previous app e6d85bfbd passed both Windows/Linux CI run36955813286; the new app head needs its own native acceptance.",
     "No live AI/provider/S3 or real Garden/manual package changes."
   ],
   "screenshots": [
