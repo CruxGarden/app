@@ -89,9 +89,11 @@ test('selected-Garden import reports and exposes a retained partial copy through
     for (const title of ['First work', 'Second work']) {
       const id = await createCrux(page, title);
       await writeFirstFile(page, 'hello.txt', title);
-      await expect
-        .poll(() => storedFingerprint(page, id, 'hello.txt'))
-        .toBe(createHash('sha256').update(title).digest('hex'));
+      await expect(async () => {
+        expect(await storedFingerprint(page, id, 'hello.txt')).toBe(
+          createHash('sha256').update(title).digest('hex'),
+        );
+      }).toPass();
       originals.push({
         id,
         title,

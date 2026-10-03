@@ -1,3 +1,4 @@
+import { plainError } from '@/lib/error-text';
 import { useEffect, useState } from 'react';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
@@ -61,10 +62,16 @@ export default function LocalTestPublication() {
     try {
       await operation();
     } catch (error) {
+      const message = plainError(
+        error,
+        'Local testing failed. Your project and live website are unchanged.',
+      );
       setError(
-        error instanceof Error
-          ? error.message
-          : 'Local testing failed. Your project and live website are unchanged.',
+        /ENOSPC|no space left|disk (?:is )?full/i.test(message)
+          ? 'Could not save the test copy. Free up space on this computer, then retry. Your project and live website are unchanged.'
+          : /EACCES|EPERM|permission denied/i.test(message)
+            ? 'Could not change the test copy. Check access to the app’s data folder, then retry. Your project and live website are unchanged.'
+            : message,
       );
     } finally {
       setBusy(false);

@@ -103,6 +103,26 @@ test('a website can be tested locally without an account, restarted and publishe
     expect(await (await fetch(sites[0].url)).text()).toContain('First visitor page');
     writeFileSync(join(folder, 'index.html'), '<h1>Third visitor page</h1>');
     await expect.poll(() => fileText(page, id, 'index.html')).toContain('Third visitor page');
+    // One refused write through the actual host path must retain the previous test copy.
+    await running.app.evaluate(() => {
+      const fs = process.getBuiltinModule('fs');
+      const original = fs.writeFileSync;
+      fs.writeFileSync = ((filename, ...args) => {
+        if (
+          String(filename).includes('local-test-garden') &&
+          String(filename).endsWith('index.html')
+        ) {
+          fs.writeFileSync = original;
+          throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
+        }
+        return original(filename, ...args);
+      }) as typeof fs.writeFileSync;
+    });
+    await share.getByRole('button', { name: 'Update local test copy' }).click();
+    await expect(share.getByRole('alert')).toContainText(
+      'Free up space on this computer, then retry.',
+    );
+    expect(await (await fetch(sites[0].url)).text()).toContain('First visitor page');
     await share.getByRole('button', { name: 'Update local test copy' }).click();
     await expect(share.getByRole('button', { name: 'Update local test copy' })).toBeEnabled();
     sites = await page.evaluate(() => window.electronAPI!.staging!.list());
