@@ -5,10 +5,40 @@ import type { RecoveryOperation, RecoveryOverview } from './bridge';
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const kinds = ['write', 'delete', 'rename'];
-const signature = (stat: fs.Stats) =>
-  [stat.dev, stat.ino, stat.mode, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink].join(':');
+const inode = (stat: fs.Stats) => `${stat.dev}:${stat.ino}`;
+const signature = (stat: fs.Stats, includeChangeTime = true) =>
+  [
+    stat.dev,
+    stat.ino,
+    stat.mode,
+    stat.size,
+    stat.mtimeMs,
+    ...(includeChangeTime ? [stat.ctimeMs] : []),
+    stat.nlink,
+  ].join(':');
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT';
 const changed = () => new Error('Recovery files changed. Refresh the review before trying again.');
+
+/** Bounded-memory comparison for aliases affected by our own OS Trash move. */
+function fingerprint(file: string, expected: fs.Stats) {
+  const fd = fs.openSync(file, 'r');
+  try {
+    if (signature(fs.fstatSync(fd)) !== signature(expected)) throw changed();
+    const hash = createHash('sha256');
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let count: number;
+    while ((count = fs.readSync(fd, buffer, 0, buffer.length, null)) > 0)
+      hash.update(buffer.subarray(0, count));
+    if (
+      signature(fs.fstatSync(fd)) !== signature(expected) ||
+      signature(fs.lstatSync(file)) !== signature(expected)
+    )
+      throw changed();
+    return hash.digest('hex');
+  } finally {
+    fs.closeSync(fd);
+  }
+}
 
 function directory(file: string) {
   const stat = fs.lstatSync(file);
@@ -48,6 +78,7 @@ export class ProjectRecovery {
   private inspect(folder: string, kind: string, id: string) {
     const stage = this.location(folder, kind, id);
     const marks = new Map<string, string>();
+    const stats = new Map<string, fs.Stats>();
     const inodes = new Map<string, number>();
     let fileCount = 0;
     const walk = (file: string, depth: number) => {
@@ -57,6 +88,7 @@ export class ProjectRecovery {
       if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile()))
         throw new Error('Recovery contains a link or special file. Review it manually.');
       marks.set(path.relative(stage, file), signature(stat));
+      stats.set(path.relative(stage, file), stat);
       if (stat.isDirectory()) {
         for (const name of fs.readdirSync(file).sort()) walk(path.join(file, name), depth + 1);
       } else {
@@ -130,7 +162,7 @@ export class ProjectRecovery {
       reason,
       hasPayload: payload.length > 0,
     };
-    return { operation, inodes, payload, stage, marks };
+    return { operation, inodes, payload, stage, marks, stats };
   }
 
   overview(folders: string[]): RecoveryOverview {
@@ -189,12 +221,42 @@ export class ProjectRecovery {
       const next = this.inspect(selected.folder, selected.kind, selected.id);
       if (next.operation.reason || next.operation.token !== current.operation.token)
         throw changed();
+      const moved = (file: string) => file === name || file.startsWith(name + path.sep);
+      const movedInodes = new Set(
+        [...next.stats]
+          .filter(([file, stat]) => moved(file) && stat.isFile())
+          .map(([, stat]) => inode(stat)),
+      );
+      const aliases = new Map(
+        [...next.stats]
+          .filter(([file, stat]) => !moved(file) && stat.isFile() && movedInodes.has(inode(stat)))
+          .map(([file, stat]) => [
+            file,
+            {
+              stat,
+              hash: fingerprint(path.join(next.stage, file), stat),
+            },
+          ]),
+      );
       await trashItem(path.join(next.stage, name));
       current = this.inspect(selected.folder, selected.kind, selected.id);
-      const expected = [...next.marks].filter(
-        ([file]) => file !== name && !file.startsWith(name + path.sep),
-      );
-      if (JSON.stringify([...current.marks]) !== JSON.stringify(expected)) throw changed();
+      const expected = new Map([...next.marks].filter(([file]) => !moved(file)));
+      if (current.marks.size !== expected.size) throw changed();
+      for (const [file, mark] of current.marks) {
+        if (mark === expected.get(file)) continue;
+        const alias = aliases.get(file);
+        const stat = current.stats.get(file);
+        // Windows Recycle Bin changes ctime on the shared inode when moving
+        // another alias. Only that own-move alias may differ, and only in ctime
+        // with verified identical bytes. All other metadata stays strict.
+        if (
+          !alias ||
+          !stat ||
+          signature(stat, false) !== signature(alias.stat, false) ||
+          fingerprint(path.join(current.stage, file), stat) !== alias.hash
+        )
+          throw changed();
+      }
     }
   }
 }

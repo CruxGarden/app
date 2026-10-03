@@ -69,6 +69,86 @@ test('review counts hardlinked bytes once and cleanup preserves live files, rece
   }
 });
 
+test('recycling a hardlink can change the remaining alias change-time without changing its bytes', async () => {
+  const f = fixture();
+  try {
+    f.apply();
+    const original = join(f.stage, 'original');
+    fs.utimesSync(original, 1700000000, 1700000000);
+    const selected = f.recovery.overview([f.folder]).operations[0];
+    const before = fs.statSync(original);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    let moves = 0;
+    await f.recovery.trash(selected, async (file) => {
+      await f.move(file);
+      if (++moves === 1) {
+        // Reproduce Windows Recycle Bin's inode-wide ctime change when it
+        // moves move-*/file. Identity, bytes, mtime and link count stay equal.
+        fs.utimesSync(original, 1700000000, 1700000000);
+        expect(fs.statSync(original).ctimeMs).not.toBe(before.ctimeMs);
+      }
+    });
+    expect(moves).toBe(3);
+    expect(fs.readFileSync(join(f.trash, 'original'), 'utf8')).toBe('Original');
+    expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');
+    expect(fs.readdirSync(f.stage).sort()).toEqual(['README.txt', 'completed.json']);
+    f.apply();
+    expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('a same-size external edit with restored mtime during recycling still refuses cleanup', async () => {
+  const f = fixture();
+  try {
+    f.apply();
+    const original = join(f.stage, 'original');
+    fs.utimesSync(original, 1700000000, 1700000000);
+    const selected = f.recovery.overview([f.folder]).operations[0];
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    let moves = 0;
+    await expect(
+      f.recovery.trash(selected, async (file) => {
+        await f.move(file);
+        moves++;
+        fs.writeFileSync(original, 'Altered!');
+        fs.utimesSync(original, 1700000000, 1700000000);
+      }),
+    ).rejects.toThrow(/changed/);
+    expect(moves).toBe(1);
+    expect(fs.readFileSync(original, 'utf8')).toBe('Altered!');
+    expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');
+    expect(fs.existsSync(join(f.stage, 'completed.json'))).toBe(true);
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('change-time changes on unrelated retained files still invalidate review', async () => {
+  const f = fixture();
+  try {
+    f.apply();
+    const replacement = join(f.stage, 'replacement');
+    fs.utimesSync(replacement, 1700000000, 1700000000);
+    const selected = f.recovery.overview([f.folder]).operations[0];
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    let moves = 0;
+    await expect(
+      f.recovery.trash(selected, async (file) => {
+        await f.move(file);
+        moves++;
+        fs.utimesSync(replacement, 1700000000, 1700000000);
+      }),
+    ).rejects.toThrow(/changed/);
+    expect(moves).toBe(1);
+    expect(fs.existsSync(join(f.stage, 'original'))).toBe(true);
+    expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
 test('an external editor invalidates consent, including a write while OS Trash is pending', async () => {
   const f = fixture();
   const fd = fs.openSync(f.target, 'r+');
