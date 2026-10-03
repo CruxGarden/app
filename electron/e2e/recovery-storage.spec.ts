@@ -66,7 +66,11 @@ test('Settings reviews real recovery files, refuses unfinished cleanup and prese
       })) as typeof dialog.showMessageBox;
     });
     await completed.getByRole('button', { name: 'Move retained files to Trash' }).click();
-    await expect(review.getByRole('status')).toContainText('Retained files moved to Trash');
+    // Keep native refusal details in CI annotations; a missing success locator
+    // alone hides the distinction between an OS failure and unfinished UI work.
+    await expect(review.getByRole('status').or(review.getByRole('alert'))).toContainText(
+      'Retained files moved to Trash',
+    );
     expect(readdirSync(stage).sort()).toEqual(['README.txt', 'completed.json']);
     expect(readFileSync(join(stage, 'completed.json'), 'utf8')).toBe(receipt);
     expect(readFileSync(join(folder, 'target.txt'), 'utf8')).toBe('Current content');
