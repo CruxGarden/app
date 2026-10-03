@@ -79,6 +79,16 @@ test('an external editor invalidates consent, including a write while OS Trash i
     await expect(f.recovery.trash(selected, f.move)).rejects.toThrow(/changed/);
     expect(fs.readdirSync(f.trash)).toEqual([]);
     const refreshed = f.recovery.overview([f.folder]).operations[0];
+    // Windows refuses moving a directory containing this open handle before
+    // our between-moves revalidation runs. Assert that stronger OS refusal;
+    // the separate pending-write case below covers revalidation on every OS.
+    if (process.platform === 'win32') {
+      await expect(f.recovery.trash(refreshed, f.move)).rejects.toThrow(/EPERM|EBUSY|EACCES/);
+      expect(fs.readdirSync(f.trash)).toEqual([]);
+      expect(fs.readFileSync(join(f.stage, 'original'), 'utf8')).toBe('External work');
+      expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');
+      return;
+    }
     let moves = 0;
     await expect(
       f.recovery.trash(refreshed, async (file) => {
@@ -92,6 +102,28 @@ test('an external editor invalidates consent, including a write while OS Trash i
     expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');
   } finally {
     fs.closeSync(fd);
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('a concurrent file write while OS Trash is pending forces a fresh review on every platform', async () => {
+  const f = fixture();
+  try {
+    f.apply();
+    const selected = f.recovery.overview([f.folder]).operations[0];
+    let moves = 0;
+    await expect(
+      f.recovery.trash(selected, async (file) => {
+        await f.move(file);
+        moves++;
+        fs.writeFileSync(join(f.stage, 'original'), 'Concurrent external bytes');
+      }),
+    ).rejects.toThrow(/changed/);
+    expect(moves).toBe(1);
+    expect(fs.readFileSync(join(f.stage, 'original'), 'utf8')).toBe('Concurrent external bytes');
+    expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');
+    expect(fs.existsSync(join(f.stage, 'completed.json'))).toBe(true);
+  } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }
 });
