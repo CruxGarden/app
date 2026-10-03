@@ -62,6 +62,7 @@ export enum Capability {
   Build = 'build',
   /** Local preview webserver serving from disk (ADR 0003). */
   PreviewServer = 'previewServer',
+  LocalStaging = 'localStaging',
   /** OS-keychain-backed secret storage (safeStorage). */
   SecureSecrets = 'secureSecrets',
   /** ffmpeg media transcoding in the main process. */
@@ -117,6 +118,8 @@ export function can(capability: Capability): boolean {
       return !!api.project;
     case Capability.SecureSecrets:
       return !!api.secrets;
+    case Capability.LocalStaging:
+      return !!api.staging;
     case Capability.PreviewServer:
       return !!api.preview;
     case Capability.Build:

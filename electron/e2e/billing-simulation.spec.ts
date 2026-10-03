@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { fork, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -101,7 +102,7 @@ test('persistent simulation: checkout, failure, API + desktop restart, recovery,
     let page = desktop.page;
     await page.getByRole('button', { name: /enter/i }).click();
     await page.getByText('Plant a new garden').click();
-    await page.getByRole('button', { name: 'Welcome' }).click();
+    await finishSetupAtHome(page);
     await page.getByRole('button', { name: 'Account menu' }).click();
     await page.getByRole('button', { name: /^Settings/ }).click();
     await page.getByPlaceholder('email@example.com').fill('tester@example.com');

@@ -341,6 +341,15 @@ export interface ProjectBridge {
 
 // ── preview (static server per crux, ADR 0003) ──────────────────────────────
 
+export interface LocalStagingBridge {
+  publish(
+    input: import('./local-staging').StageInput,
+  ): Promise<import('./local-staging').StagedSite>;
+  list(): Promise<import('./local-staging').StagedSite[]>;
+  remove(id: string): Promise<void>;
+  openGarden(theme: Record<string, string>): Promise<string>;
+}
+
 export interface PreviewBridge {
   start(folder: string): Promise<string>;
   stop(folder: string): Promise<void>;
@@ -833,6 +842,7 @@ export interface ElectronBridge {
   desktop: DesktopBridge;
   project: ProjectBridge;
   preview: PreviewBridge;
+  staging?: LocalStagingBridge;
   toolchain: ToolchainBridge;
   devserver: DevServerBridge;
   secrets: SecretsBridge;

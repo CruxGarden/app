@@ -1,4 +1,4 @@
-import { goHome } from './multi-crux-helpers';
+import { finishSetupAtHome, goHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -31,7 +31,7 @@ test.describe('links out of the app', () => {
 
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -69,7 +69,9 @@ test.describe('links out of the app', () => {
 
       // Garden Home → Public Garden
       await goHome(page);
-      await page.getByRole('button', { name: 'Public Garden' }).click({ timeout: 30_000 });
+      await page
+        .getByRole('button', { name: 'Public Garden on crux.garden' })
+        .click({ timeout: 30_000 });
       await expect.poll(opened).toHaveLength(2);
       expect((await opened())[1]).toBe('https://crux.garden/tester');
     } finally {

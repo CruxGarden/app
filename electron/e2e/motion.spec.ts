@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -44,7 +45,7 @@ test.describe('motion roles', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({ timeout: 30_000 });
 
       // Plasma, the Default Mood, keeps its motion quiet (fades, a sink, no
@@ -126,7 +127,7 @@ test.describe('motion roles', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByPlaceholder('My Crux').fill('Moving picture');

@@ -1,4 +1,4 @@
-import { openFullThemeBuilder } from './multi-crux-helpers';
+import { finishSetupAtHome, openFullThemeBuilder } from './multi-crux-helpers';
 import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
@@ -22,7 +22,7 @@ test.describe('mood assets', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       const moodPane = await showPane(page, 'Mood');
       // Files live at the foot of the Theme section, under the tokens
       await openFullThemeBuilder(page);

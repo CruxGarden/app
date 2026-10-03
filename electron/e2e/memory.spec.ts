@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
@@ -16,7 +17,7 @@ const NOTE = 'prefers British spelling';
 async function plantGarden(page: Page) {
   await page.getByRole('button', { name: /enter/i }).click();
   await page.getByText('Plant a new garden').click();
-  await page.getByRole('button', { name: 'Welcome' }).click();
+  await finishSetupAtHome(page);
   await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
 }
 

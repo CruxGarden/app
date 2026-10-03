@@ -5,7 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { createCrux, enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
+import {
+  finishSetupAtHome,
+  createCrux,
+  enterGarden,
+  reenterWorkspace,
+  storedCrux,
+} from './multi-crux-helpers';
 
 /**
  * Three flows with no e2e until now:
@@ -36,7 +42,7 @@ const PNG = Buffer.from(
 async function plantBlankCrux(page: Page) {
   await page.getByRole('button', { name: /enter/i }).click();
   await page.getByText('Plant a new garden').click();
-  await page.getByRole('button', { name: 'Welcome' }).click();
+  await finishSetupAtHome(page);
   await page.getByRole('button', { name: 'Add Crux' }).click();
   await page.getByRole('button', { name: /^Blank/ }).click();
   await page.getByRole('button', { name: 'Create', exact: true }).click();

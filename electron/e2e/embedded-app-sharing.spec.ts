@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { finishSetupAtHome, enterGarden, storedCrux } from './multi-crux-helpers';
 
 /**
  * Share selected content against the actual apps (ADR 0040): the edition
@@ -96,7 +96,7 @@ test('Notes Share uploads only selected saved content; failed updates retain the
       .poll(() => JSON.parse(readFileSync(note('publish.json'), 'utf8')).pages)
       .toEqual(['Welcome.md']);
     await frame.getByRole('button', { name: 'Public edition…' }).click();
-    await frame.getByRole('button', { name: 'Welcome', exact: true }).first().click();
+    await finishSetupAtHome(frame);
     await expect(editor).toBeVisible();
     await editor.click();
     await page.keyboard.press('Control+End');

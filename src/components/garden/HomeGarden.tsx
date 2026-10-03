@@ -36,6 +36,7 @@ import TrashSection from '@/components/garden/TrashSection';
 import Cruxspaces from '@/components/garden/Cruxspaces';
 import Gardens from '@/components/garden/Gardens';
 import { TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
+import LocalTestGarden from './LocalTestGarden';
 import { openGardenPage } from '@/lib/public-url';
 import {
   IconButton,
@@ -288,11 +289,12 @@ export default function HomeGarden() {
               {garden && <GardenBrief key={garden.id} gardenId={garden.id} />}
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">{isHome ? 'Home Garden' : 'Garden'}</p>
+                {can(Capability.LocalStaging) && <LocalTestGarden />}
                 {author && (
                   <IconButton
-                    label="Public Garden"
+                    label="Public Garden on crux.garden"
                     size="sm"
-                    tooltip={{ label: 'Public Garden' }}
+                    tooltip={{ label: 'Public Garden on crux.garden' }}
                     onClick={() => void openGardenPage(`/${author.username}`)}
                   >
                     <GlobeIcon />

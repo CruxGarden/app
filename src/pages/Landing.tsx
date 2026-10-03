@@ -1,3 +1,5 @@
+import Download from './Download';
+import { useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { TeaserMaterial, TeaserPanel, TeaserBrand } from '@/components/landing/TeaserMaterial';
 import TeaserTrack from '@/components/landing/TeaserTrack';
@@ -64,6 +66,7 @@ function hasSubscribed() {
  */
 /** `/subscribed` renders the same teaser with the form already answered. */
 export default function Landing({ subscribed = false }: { subscribed?: boolean }) {
+  const location = useLocation();
   // Declared first so the flag is cleared before the read below sees it.
   const [reset] = useState(() => {
     const asked = new URLSearchParams(window.location.search).has(RESET_PARAM);
@@ -81,6 +84,7 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
   useEffect(() => {
     if (subscribed && !reset) rememberSubscribed();
   }, [subscribed, reset]);
+  if (location.hash === '#download') return <Download />;
   return (
     <div className="teaser">
       <TeaserMaterial>
@@ -90,6 +94,9 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
               inline style that would beat the stylesheet. */}
           <TeaserPanel draggable>
             <TeaserBrand />
+            <a href="/#download" className="text-sm text-accent underline" data-plasma-nodrag>
+              Get the desktop app
+            </a>
 
             {answered ? (
               <p className="teaser-sent" role="status">

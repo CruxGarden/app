@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { togglePanel, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -45,7 +46,7 @@ const textOf = (result: unknown): string => {
 async function plantGarden(page: Page, template: RegExp) {
   await page.getByRole('button', { name: /enter/i }).click();
   await page.getByText('Plant a new garden').click();
-  await page.getByRole('button', { name: 'Welcome' }).click();
+  await finishSetupAtHome(page);
   await page.getByRole('button', { name: 'Add Crux' }).click();
   await page.getByRole('button', { name: template }).click();
   await page.getByRole('button', { name: 'Create', exact: true }).click();

@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { launchApp } from './launch';
@@ -95,7 +96,7 @@ test('billing return recovery: unavailable prices, timeout, retry, interval and 
     });
     await page.getByRole('button', { name: /enter/i }).click();
     await page.getByText('Plant a new garden').click();
-    await page.getByRole('button', { name: 'Welcome' }).click();
+    await finishSetupAtHome(page);
     await page.getByRole('button', { name: 'Account menu' }).click();
     await page.getByRole('button', { name: /^Settings/ }).click();
     await page.getByPlaceholder('email@example.com').fill('tester@example.com');

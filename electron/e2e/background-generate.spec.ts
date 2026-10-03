@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -13,7 +14,7 @@ test.describe('background: describe a backdrop (UI)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Background', exact: true }).first().click();
       const box = page.getByRole('textbox', { name: 'Backdrop description' });

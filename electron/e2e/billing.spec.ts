@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -14,7 +15,7 @@ test.describe('billing (mocked API)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
 
       // Connect the account from Settings → Account (the same inline form the Share pane uses)
       await page.getByRole('button', { name: 'Account menu' }).click();

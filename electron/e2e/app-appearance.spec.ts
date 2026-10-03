@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, reenterWorkspace } from './multi-crux-helpers';
+import { finishSetupAtHome, enterGarden, reenterWorkspace } from './multi-crux-helpers';
 import { showPane, hidePane } from './panel-helpers';
 
 /** The actual Tigrana (ADR 0040) follows live Garden Moods without reloading the draft; the App appearance choice persists. */
@@ -17,8 +17,13 @@ test('Notes follows live Garden Moods without reloading drafts; app appearance p
   const editor = () => frame().locator('.tiptap').first();
   /** Tigrana opens Welcome itself; when its sidebar is folded (a narrow Workshop) the note is already there. */
   const openWelcome = async () => {
-    if (await editor().isVisible().catch(() => false)) return;
-    await frame().getByRole('button', { name: 'Welcome', exact: true }).first().click();
+    if (
+      await editor()
+        .isVisible()
+        .catch(() => false)
+    )
+      return;
+    await finishSetupAtHome(frame());
     await expect(editor()).toBeVisible();
   };
   try {

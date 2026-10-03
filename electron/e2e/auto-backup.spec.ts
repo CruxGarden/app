@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -20,7 +21,7 @@ test.describe('automatic backup (mocked API, mock AI)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
 
       // Connect, then switch automatic backup on (Settings → Account, then Sync)
       await page.getByRole('button', { name: 'Account menu' }).click();

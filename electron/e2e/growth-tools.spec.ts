@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { storedCrux } from './multi-crux-helpers';
+import { finishSetupAtHome, storedCrux } from './multi-crux-helpers';
 
 /**
  * B0 — Growth as an API, with the scripted model (CRUX_AI_MOCK=1):
@@ -31,7 +31,7 @@ test.describe('growth tools (mock AI)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -158,7 +158,7 @@ test.describe('AGENTS.md per Project Folder', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Blog/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();

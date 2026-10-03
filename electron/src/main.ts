@@ -32,6 +32,7 @@ const { SecretStore } = require('./secrets');
 const { DesktopConfig, ProjectFolders } = require('./projects');
 const { ProjectWatcher } = require('./watcher');
 const { PreviewServer } = require('./preview-server');
+let localStaging: import('./local-staging').LocalStaging | undefined;
 const { isInside } = require('./paths');
 const { Toolchain } = require('./toolchain');
 const { DevServerManager } = require('./dev-server');
@@ -839,11 +840,13 @@ async function setupIpc() {
   );
   fromGarden(
     'installation',
-    (event: Electron.IpcMainInvokeEvent, name: InstallationCommand, ...args: unknown[]) => {
+    async (event: Electron.IpcMainInvokeEvent, name: InstallationCommand, ...args: unknown[]) => {
       if (!(INSTALLATION_COMMANDS as readonly string[]).includes(name))
         throw new Error('Unknown installation command');
       if (name === 'setWorkingCopyFolder') projects.resolveKnownFolder(args[1]);
-      return (localDb.installation[name] as (...a: unknown[]) => unknown)(...args);
+      const result = await (localDb.installation[name] as (...a: unknown[]) => unknown)(...args);
+      if (name === 'wipeGarden') await staging().clear();
+      return result;
     },
   );
   fromGarden('settings:list', (_event: Electron.IpcMainInvokeEvent) => {
@@ -1047,6 +1050,19 @@ async function setupIpc() {
 
   // ── Preview server (ADR 0003) ───────────────────────────────
   previewServer = new PreviewServer((folder: string) => projects.resolveKnownFolder(folder));
+
+  const staging = (): import('./local-staging').LocalStaging =>
+    (localStaging ??= new (require('./local-staging').LocalStaging)(
+      path.join(app.getPath('userData'), 'local-test-garden'),
+    ));
+  fromGarden('staging:publish', (_e: any, input: import('./local-staging').StageInput) =>
+    staging().publish(input),
+  );
+  fromGarden('staging:list', () => staging().list());
+  fromGarden('staging:remove', (_e: any, id: string) => staging().remove(id));
+  fromGarden('staging:open-garden', (_e: any, theme: Record<string, string>) =>
+    staging().openGarden(theme),
+  );
 
   fromGarden('preview:start', (_e: any, folder: string) => previewServer.start(folder));
   fromGarden('preview:stop', (_e: any, folder: string) => previewServer.stop(folder));
@@ -1833,6 +1849,7 @@ app.on('before-quit', (event: any) => {
     // A project the person started is a child of this app, and goes with it.
     await (require('./project-runner') as typeof import('./project-runner')).stopAllProjects();
     await previewServer?.stopAll();
+    await localStaging?.close();
     await watcher?.closeAll();
     await db?.close();
     teardownDone = true;

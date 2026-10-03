@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -52,7 +53,7 @@ test.describe('background turns (mock AI)', () => {
   async function newBlankCrux(page: Page) {
     await page.getByRole('button', { name: /enter/i }).click();
     await page.getByText('Plant a new garden').click();
-    await page.getByRole('button', { name: 'Welcome' }).click();
+    await finishSetupAtHome(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Blank/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();

@@ -1,7 +1,7 @@
 import { showPane, hidePane, chooseSettingsSection } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { openFullThemeBuilder } from './multi-crux-helpers';
+import { finishSetupAtHome, openFullThemeBuilder } from './multi-crux-helpers';
 
 /**
  * Settings & Mood: both are workspace panes, opened from the TopBar / account
@@ -14,7 +14,7 @@ test.describe('settings & mood', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
       const html = page.locator('html');
 

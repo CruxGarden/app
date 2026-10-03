@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -46,7 +47,7 @@ test('the second set of bundled Moods applies and paints', async () => {
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.getByRole('button', { name: /enter/i }).click();
     await page.getByText('Plant a new garden').click();
-    await page.getByRole('button', { name: 'Welcome' }).click();
+    await finishSetupAtHome(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Blank/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();

@@ -280,6 +280,12 @@ const api: ElectronBridge = {
     onChanged: (callback: (batch: ChangeBatch) => void) => subscribe('project:changed', callback),
   },
 
+  staging: {
+    publish: (input) => ipcRenderer.invoke('staging:publish', input),
+    list: () => ipcRenderer.invoke('staging:list'),
+    remove: (id) => ipcRenderer.invoke('staging:remove', id),
+    openGarden: (theme) => ipcRenderer.invoke('staging:open-garden', theme),
+  },
   preview: {
     start: (folder: string) => ipcRenderer.invoke('preview:start', folder) as Promise<string>,
     stop: (folder: string) => ipcRenderer.invoke('preview:stop', folder) as Promise<void>,

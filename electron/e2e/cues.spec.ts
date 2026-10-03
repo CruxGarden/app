@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -21,7 +22,7 @@ test.describe('sound: track + cues', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       const dock = page.getByRole('region', { name: 'Mood Bar' });
       await expect(dock).toBeVisible({ timeout: 30_000 });
       // Every Mood plays the Crux Synth (a Mood plays one Track, ADR 0017);

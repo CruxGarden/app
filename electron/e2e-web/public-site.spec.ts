@@ -353,3 +353,82 @@ test('a creator Garden presents tools and Moods with their own actions and categ
     }
   }
 });
+
+test('download leads to actual release installers and explains the shortest first-website path', async ({
+  page,
+}) => {
+  await page.route('https://api.github.com/repos/CruxGarden/app/releases/latest', (route) =>
+    route.fulfill({
+      json: {
+        tag_name: 'v1.0.0',
+        draft: false,
+        prerelease: false,
+        assets: [
+          {
+            name: 'Crux.Garden-1.0.0-arm64.dmg',
+            browser_download_url:
+              'https://github.com/CruxGarden/app/releases/download/v1.0.0/Crux.Garden-1.0.0-arm64.dmg',
+          },
+          {
+            name: 'Crux.Garden-1.0.0-win-x64.exe',
+            browser_download_url:
+              'https://github.com/CruxGarden/app/releases/download/v1.0.0/Crux.Garden-1.0.0-win-x64.exe',
+          },
+          {
+            name: 'Crux.Garden-1.0.0-x64.dmg',
+            browser_download_url: 'https://elsewhere.invalid/installer.dmg',
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Get the desktop app' }).click();
+  await expect(page).toHaveURL(/\/#download$/);
+  await expect(page.getByRole('heading', { name: 'Your first website starts here' })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Download for Mac · Apple silicon' }),
+  ).toHaveAttribute(
+    'href',
+    'https://github.com/CruxGarden/app/releases/download/v1.0.0/Crux.Garden-1.0.0-arm64.dmg',
+  );
+  await expect(page.getByRole('link', { name: 'Download for Windows' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Download for Mac · Intel' })).toHaveCount(0);
+  await expect(page.getByText('Make my home page', { exact: true })).toBeVisible();
+  await expect(page.getByText('A local test Garden is available', { exact: false })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('download.png'), fullPage: true });
+});
+
+test('download failure has a useful retry and never offers a draft release', async ({ page }) => {
+  let requests = 0;
+  await page.route('https://api.github.com/repos/CruxGarden/app/releases/latest', (route) => {
+    requests++;
+    return route.fulfill({
+      status: requests === 1 ? 503 : 200,
+      json:
+        requests === 1
+          ? {}
+          : {
+              draft: true,
+              assets: [
+                {
+                  name: 'Crux.Garden-1.0.0-arm64.dmg',
+                  browser_download_url:
+                    'https://github.com/CruxGarden/app/releases/download/v1.0.0/app.dmg',
+                },
+              ],
+            },
+    });
+  });
+  await page.goto('/#download');
+  await expect(page.getByRole('status')).toContainText(
+    'couldn’t find an available public installer',
+  );
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect.poll(() => requests).toBe(2);
+  await expect(page.getByRole('link', { name: /^Download for/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Check releases' })).toHaveAttribute(
+    'href',
+    'https://github.com/CruxGarden/app/releases',
+  );
+});

@@ -20,12 +20,12 @@ const steps = [
   {
     title: 'Watch it grow',
     action: 'Open Growth',
-    text: 'In Growth, choose Mark version, give this moment a name and save it. You can return to that version as you experiment. Routine saves also appear under Edits.',
+    text: 'Optional: your work already saves automatically. In Growth, choose Mark version, give this moment a name and save it. You can return to that version as you experiment. Routine saves also appear under Edits.',
   },
   {
     title: 'Share it',
     action: 'Open Share',
-    text: 'Ready for visitors? Connect your crux.garden account in Share, review what will be public, then press Share. It builds your site and gives you a link. You can keep editing locally and share updates when you choose.',
+    text: 'Ready for visitors? Open Share, review what will be public and publish to crux.garden to get your internet link. Sign in there if needed. Test locally first is optional: it saves a separate website copy on this computer without changing your live site.',
   },
 ];
 
@@ -63,9 +63,9 @@ export default function FirstProjectGuide({
       <div className="mt-2 space-y-3 max-w-3xl">
         <p className="text-xs text-text-muted">{model.guide!.introduction}</p>
         <nav aria-label="Home page walkthrough" className="flex flex-wrap gap-2">
-          {steps.map((item, index) => (
+          {[0, 1, 3, 2].map((index, position) => (
             <button
-              key={item.title}
+              key={steps[index]!.title}
               aria-current={step === index ? 'step' : undefined}
               className={buttonClass(step === index ? 'primary' : 'secondary', 'xs')}
               onClick={() => {
@@ -73,7 +73,8 @@ export default function FirstProjectGuide({
                 setSetting(key, String(index));
               }}
             >
-              {index + 1}. {item.title}
+              {index === 2 ? 'Optional: ' : `${position + 1}. `}
+              {steps[index]!.title}
             </button>
           ))}
         </nav>

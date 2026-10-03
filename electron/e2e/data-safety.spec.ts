@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { closeWorkspace } from './journeys/journey-helpers';
 import { togglePanel, showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
@@ -68,7 +69,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
       await page.setViewportSize({ width: 2000, height: 1200 });
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();

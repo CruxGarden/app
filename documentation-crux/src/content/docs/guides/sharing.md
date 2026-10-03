@@ -9,13 +9,23 @@ sidebar:
 
 Preview lets you inspect a creation without publishing it. For a Site Crux, the first run may download build dependencies. A failed preview or build should show a useful error; fix it before publishing.
 
+## Test locally first (optional)
+
+For websites and declared static editions, Share → **Test locally first** → **Publish to local test Garden** saves a separate built website copy. No account is needed. Open the test website or browse **Local test Garden** from Home. Changes to your project do not appear there until you choose **Update local test copy**.
+
+This is a staging area on **this computer only**, available while Crux Garden is running. Test copies survive app restart; their local addresses may change. These are not internet links. Each website has its own origin, separate from the Garden index and your app.
+
+Hosted visitor accounts, Functions and form submissions are not available. The test server blocks cross-origin API requests and form submission, but external images/fonts may still connect to the internet. Verify hosted features separately before treating a site as ready. Specialized creation tools continue to use their own preview/export flows.
+
+Removing a local test copy leaves your editable project and live website unchanged. Test copies are not backups and are not included in project or Garden archives. Each test copy supports up to 5,000 files and 100 MB.
+
 ## Review the public result
 
 Before Share, check your text, images, links, and mobile layout. Remove private details. Consider the conversation and source information exposed by **How was this made?**, as well as the visible site.
 
 Use a separate visitor browser after publishing to verify what someone else actually sees.
 
-## Publish a site
+## Publish to crux.garden
 
 Open **Share**, connect your account if needed, and follow the publication controls. A Site Crux is built before its public output is uploaded. A failed build does not count as a successful publication.
 

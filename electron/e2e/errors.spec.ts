@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -8,7 +9,7 @@ test.describe('error states', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
 
       // A stale deep link: full load straight into a crux id this garden lacks

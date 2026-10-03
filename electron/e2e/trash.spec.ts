@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { togglePanel, panelPressed, expectPanelBarReady, openPanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
@@ -62,7 +63,7 @@ test.describe('trash: recently deleted cruxes', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await newBlankCrux(page, '<h1>Keep me</h1>');
       await closeWorkspace(page, 'My Crux');
 

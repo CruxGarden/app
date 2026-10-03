@@ -1,13 +1,13 @@
 ---
-title: "Your first home page"
-description: "From a name and a photo to a place on the web."
+title: 'Your first home page'
+description: 'From a name and a photo to a place on the web.'
 sidebar:
   order: 1
 ---
 
 ## Start with Hello, world
 
-When you plant a new Garden, leave **Include a first home page walkthrough** checked. Open **Hello, world**. The four-step guide stays inside your workspace; it will not appear on your published site.
+When you plant a new Garden, leave **Include a first home page walkthrough** checked. Choose **Make my home page** to open **Hello, world** directly. The guide stays inside your workspace; it will not appear on your published site.
 
 Already have a Garden? Choose **Add Crux → Hello, world → Create** for the same walkthrough. **Astro Home Page** is a larger starter with a blog and works collection when you want more.
 
@@ -31,11 +31,7 @@ Choose **Preview my page** in the walkthrough. The first preview may install the
 
 If the preview fails, read the build message before trying again. You can keep editing your content while you resolve it.
 
-## Keep the moment
-
-Open **Growth**, choose **Mark version**, and name it something useful, such as “My first home page”. See [Growth](../../guides/growth/) for how to inspect earlier work.
-
-## Give it an address
+## Give it an address on crux.garden
 
 Choose **Open Share**, sign in if asked, and review what will be public. Publishing builds your site and uploads the result. Your account’s plan and storage limits apply. Guestbooks and API functions are under **Optional enhancements**; you do not need them for this page. Wait for success, then open the resulting link and check it as a visitor.
 
@@ -43,4 +39,10 @@ Choose **Open Share**, sign in if asked, and review what will be public. Publish
 
 **3 · Choose when to go public.** Read the status before pressing **Share**. After it succeeds, **Copy link** gives you the visitor address. Editing locally does not update the public site until you share again.
 
+Want a rehearsal? In Share, expand **Test locally first** and choose **Publish to local test Garden**. This saves a separate visitor-facing website copy on this computer. It does not change the live website. See [local testing and its limits](../../guides/sharing/#test-locally-first-optional).
+
 No AI is required for any of these steps. Read [Preview and Share](../../guides/sharing/) before publishing private material.
+
+## Optional: keep a named version
+
+Your edits already save automatically. When you want to mark a milestone, open **Growth**, choose **Mark version**, and name it “My first home page”. This is optional; you can publish first. See [Growth](../../guides/growth/).

@@ -28,10 +28,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       await expect(
         page.getByRole('checkbox', { name: /Include a first home page walkthrough/ }),
       ).toBeChecked();
-      await page.getByRole('button', { name: 'Welcome', exact: true }).click();
-      await page
-        .getByRole('button', { name: 'Open Hello, world', exact: true })
-        .click({ timeout: 60_000 });
+      await page.getByRole('button', { name: 'Make my home page', exact: true }).click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
       id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -94,7 +91,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       await page
         .getByTestId('workshop-view')
         .screenshot({ path: join(illustrations, 'first-home-preview.png') });
-      await page.getByRole('button', { name: '3. Watch it grow', exact: true }).click();
+      await page.getByRole('button', { name: 'Optional: Watch it grow', exact: true }).click();
       await page.getByRole('button', { name: 'Open Growth', exact: true }).click();
       const growth = page.getByTestId('pane-body-history');
       await expect(growth).toBeVisible();
@@ -102,7 +99,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       await growth.getByPlaceholder('Label (optional)').fill('My first home page');
       await growth.getByRole('button', { name: 'Save', exact: true }).click();
       await expect(growth.getByText('My first home page', { exact: true })).toBeVisible();
-      await page.getByRole('button', { name: '4. Share it', exact: true }).click();
+      await page.getByRole('button', { name: '3. Share it', exact: true }).click();
     } finally {
       await first.app.close();
     }
@@ -112,7 +109,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       const { page } = again;
       await page.getByRole('button', { name: 'Enter', exact: true }).click();
       await page.getByRole('button', { name: 'Open Hello, world', exact: true }).click();
-      await expect(page.getByRole('button', { name: '4. Share it', exact: true })).toHaveAttribute(
+      await expect(page.getByRole('button', { name: '3. Share it', exact: true })).toHaveAttribute(
         'aria-current',
         'step',
       );
@@ -129,6 +126,17 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
         path: join(illustrations, 'first-home-share.png'),
         clip: { ...shareBox, height: helpBox.y + helpBox.height + 12 - shareBox.y },
       });
+      await share.getByText('Test locally first', { exact: false }).click();
+      await share
+        .getByRole('button', { name: 'Publish to local test Garden', exact: true })
+        .click();
+      await expect(share.getByRole('button', { name: 'Open test website' })).toBeVisible({
+        timeout: 8 * 60_000,
+      });
+      const staged = await page.evaluate(() => window.electronAPI!.staging!.list());
+      const testSite = staged.find((site) => site.id === id)!;
+      expect(await (await fetch(testSite.url)).text()).toContain('River Moss');
+      expect(api.state.published[id]).toBeUndefined();
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();

@@ -1,0 +1,37 @@
+{
+  "status": "targeted acceptance passed; broad desktop gate and fresh package pending",
+  "scope": [
+    "release-asset download at /#download",
+    "direct editable first home page",
+    "optional Growth and staging",
+    "saved local website editions with stable in-session URLs",
+    "separate local/live publication state",
+    "Home test-copy management and installation wipe"
+  ],
+  "verified": {
+    "app": "1826 tests / 291 files + 18 skips; build passed",
+    "electron": "90 passed, 1 platform skip; stable URLs and preview isolation",
+    "desktop": "7 passed in 1.8m on the final product source, including stable staging URLs and wipe",
+    "public": "13 passed in 3m",
+    "game": {
+      "stories": 128,
+      "criteria": 1260,
+      "baselineMapped": 346,
+      "creationChoices": 71,
+      "unmapped": 0
+    }
+  },
+  "limits": [
+    "No production deployment or public release was performed.",
+    "Public installers and hosted publication still require actual release operations.",
+    "Local staging serves static website editions only; hosted visitor accounts, Functions and submissions are not certified.",
+    "No real model calls, paid spend or actual user/manual-profile changes."
+  ],
+  "logs": {
+    "app": "/tmp/crux-first-website-app-release.log",
+    "electron": "/tmp/crux-first-website-electron-stable-urls.log",
+    "desktop": "/tmp/crux-first-website-desktop-release.log",
+    "public": "/tmp/crux-first-website-public-accepted.log",
+    "game": "/tmp/crux-first-website-game.log"
+  }
+}

@@ -2,7 +2,13 @@ import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { createCrux, enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
+import {
+  finishSetupAtHome,
+  createCrux,
+  enterGarden,
+  reenterWorkspace,
+  storedCrux,
+} from './multi-crux-helpers';
 import { togglePanel } from './panel-helpers';
 
 /**
@@ -29,7 +35,7 @@ test.describe('files (Artifacts pane + Project Folder)', () => {
       // Fresh garden → empty Crux → explicitly open file tools
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();

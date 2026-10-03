@@ -2,7 +2,7 @@ import { showPane, togglePanel } from './panel-helpers';
 import { test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { launchApp } from './launch';
-import { createCrux, goHome } from './multi-crux-helpers';
+import { finishSetupAtHome, createCrux, goHome } from './multi-crux-helpers';
 
 /**
  * Every page of the app under the Plasma theme, as evidence rather than as a
@@ -51,7 +51,7 @@ test('plasma across every page', async () => {
     await shot('01b-gateway-choice');
     await page.getByText('Plant a new garden').click();
     await shot('01c-gateway-plant');
-    await page.getByRole('button', { name: 'Welcome' }).click();
+    await finishSetupAtHome(page);
     await page.getByRole('button', { name: 'Add Crux' }).waitFor();
     await shot('02-home-garden-empty');
 

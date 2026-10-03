@@ -78,7 +78,11 @@ export class PreviewServer {
   private starting = new Map<string, Promise<string>>();
   private running = new Map<string, RunningServer>(); // resolved folder -> server
 
-  constructor(private resolveKnownFolder: (folder: string) => string) {}
+  constructor(
+    private resolveKnownFolder: (folder: string) => string,
+    private responseHeaders: Record<string, string> = {},
+    private serveFolder?: (folder: string) => string,
+  ) {}
 
   /** An active server identity, renewed on restart so a reused port inherits no consent. */
   ownerForOrigin(origin: string): object | undefined {
@@ -148,6 +152,12 @@ export class PreviewServer {
       refuse(405, 'Method not allowed');
       return;
     }
+    try {
+      base = this.serveFolder?.(base) ?? base;
+    } catch {
+      refuse(404, 'Not found');
+      return;
+    }
     let relative: string;
     try {
       relative = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\//, '');
@@ -183,18 +193,22 @@ export class PreviewServer {
         return;
       }
 
+      // Open before yielding so an atomic test-edition update cannot remove the
+      // selected file between stat and the stream's asynchronous open.
+      const fd = req.method === 'HEAD' ? undefined : fs.openSync(target, 'r');
       res.writeHead(200, {
         'Content-Type': mimeFor(target),
         'Content-Length': stat.size,
         // Always fresh — this is a live workspace, not a CDN
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
+        ...this.responseHeaders,
       });
       if (req.method === 'HEAD') {
         res.end();
         return;
       }
-      const file = fs.createReadStream(target);
+      const file = fs.createReadStream(target, { fd, autoClose: true });
       res.once('close', () => file.destroy());
       file.once('error', () => res.destroy());
       file.pipe(res);

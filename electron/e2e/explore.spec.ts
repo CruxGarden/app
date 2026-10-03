@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -40,7 +41,7 @@ test.describe('explore (mocked API)', () => {
 
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await showPane(page, 'Explore');
       await expect(page.getByText('Rainy Garden Notes')).toBeVisible();
       await expect(page.getByText('Sunny Recipes')).toBeVisible();

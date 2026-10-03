@@ -12,7 +12,7 @@ import { PROVIDERS } from '@/ai/providers';
 import { getApiKey } from '@/ai/keys';
 import { setSetting } from '@/services/settings';
 import { seedWelcomeCrux } from '@/services/welcome-crux';
-import { captureGardenId } from '@/stores/gardenContext';
+import { captureGardenId, cruxPath } from '@/stores/gardenContext';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -176,6 +176,8 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
       if (includeWelcome && can(Capability.Build)) {
         const id = await seedWelcomeCrux(captureGardenId());
         useUIStore.getState().seedCruxLayout(id, 22);
+        navigate(cruxPath({ id, kind: 'webapp' }), { replace: true });
+        return;
       }
       navigate('/home', { replace: true });
     } catch (error) {
@@ -391,7 +393,7 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
           fullWidth
           size="md"
         >
-          Welcome
+          {includeWelcome && can(Capability.Build) ? 'Make my home page' : 'Welcome'}
         </Button>
       </div>
     </Panel>

@@ -1,4 +1,5 @@
 import { downloadShareCard } from '@/services/share-card';
+import LocalTestPublication from './LocalTestPublication';
 import GuideLink from '@/components/explore/GuideLink';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -308,6 +309,12 @@ export default function PublishPane() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
+          <div>
+            <h2 className="text-sm font-medium text-text">Publish to crux.garden</h2>
+            <p className="mt-1 text-xs text-text-muted">
+              Put your reviewed website online. Anyone with its link can visit.
+            </p>
+          </div>
           {/* Status */}
           {isPublished && publishedAt ? (
             <PaneSection label="Status" aside={`v${publishedVersion}`}>
@@ -400,6 +407,11 @@ export default function PublishPane() {
                     : 'Share'}
             </PaneAction>
           ) : null}
+
+          {can(Capability.LocalStaging) &&
+            (!isEmbeddedApp(crux) || plan.kind === 'static') &&
+            plan.kind !== 'unavailable' &&
+            plan.kind !== 'tool-package' && <LocalTestPublication />}
 
           {/* Failure — a silent no-op is indistinguishable from success here */}
           {backupError && <PaneNote tone="error">{backupError}</PaneNote>}

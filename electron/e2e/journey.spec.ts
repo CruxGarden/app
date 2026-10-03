@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -23,7 +24,7 @@ test.describe('home page template regressions', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await expect(page.getByText('Set up your garden')).toBeVisible();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
 
       // ── Home → New Crux from the Astro Home Page template ──────────────
       await page.getByRole('button', { name: 'Add Crux' }).click();

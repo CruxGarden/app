@@ -1,4 +1,4 @@
-import { goHome } from './multi-crux-helpers';
+import { finishSetupAtHome, goHome } from './multi-crux-helpers';
 import { hidePane, showPane, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
@@ -18,7 +18,7 @@ test.describe('wild theme', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
 
       // A crux with a file and a snapshot so every pane has content
       await page.getByRole('button', { name: 'Add Crux' }).click();

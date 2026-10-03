@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { finishSetupAtHome, enterGarden, storedCrux } from './multi-crux-helpers';
 
 test('a narrow Notes panel keeps navigation and outline usable while editing and after restart', async () => {
   test.setTimeout(120_000);
@@ -36,7 +36,7 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
     await expect(frame.locator('#right-note-sidebar')).toBeVisible();
     await frame.getByRole('button', { name: 'Show left sidebar', exact: true }).click();
     await expect(frame.locator('#right-note-sidebar')).toBeHidden();
-    await navigation.getByRole('button', { name: 'Welcome', exact: true }).click();
+    await finishSetupAtHome(navigation);
     await expect(navigation).toBeHidden();
 
     await frame.locator('.tiptap').first().click();
