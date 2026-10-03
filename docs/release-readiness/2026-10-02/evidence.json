@@ -1,6 +1,6 @@
 {
   "date": "2026-10-02",
-  "status": "local-review-accepted-native-package-pending",
+  "status": "review-block-accepted-external-release-gates-remain",
   "baseApp": "add8edbba815e8919db692e5e7507066e796c194",
   "baseApi": "33691b02cad8",
   "preserveBehaviorTests": true,
@@ -87,13 +87,12 @@
     "limit": "Committed API accepted; exact installed runtime passes complete desktop gate and named follow-throughs."
   },
   "remainingReleaseBlockers": [
-    "Owned source commit/push, exact-head native CI and fresh isolated package smoke",
-    "External signing/hosted/provider/manual acceptance in ROADMAP"
+    "External signing/notarization, hosted migration/rollout, actual provider/Stripe/SES and manual/hardware acceptance in ROADMAP"
   ],
   "constraints": [
     "No production deployment or merge.",
     "Real Garden and manual-testing candidate preserved.",
-    "App source uncommitted; final production source full gate passes and committed runtime is installed in both consumers. Root serializes build/desktop/package work."
+    "Verified source040e7e90b committed/pushed; APIa1435e5 runtime in both consumers. Isolated macOS package and native Windows/Linux packages accepted; familiar manual candidate preserved."
   ],
   "appGate": {
     "log": "/tmp/crux-release-plasma-layout-verify.log",
@@ -101,7 +100,7 @@
     "files": 287,
     "skipped": 18,
     "build": "passed",
-    "limit": "Final production source accepted; all scoped actual desktop follow-throughs and visuals accepted. Native CI/package remain separate."
+    "limit": "Final source accepted by local gate, all named actual desktop follow-throughs, inspected visuals, macOS package smoke and native Windows/Linux CI. External operational/manual gates remain separate."
   },
   "electronGate": {
     "log": "/tmp/crux-release-electron-accepted.log",
@@ -209,10 +208,12 @@
     "desktopGreen": "/tmp/crux-release-task-tool.log"
   },
   "currentAcceptance": {
-    "state": "local-review-accepted-preparing-commit",
+    "state": "review-block-accepted-external-release-gates-remain",
     "desktopScope": "Desktop application, normal window/panel resizing; no expanded mobile matrix.",
     "testReview": "Read-only diff audit found no concrete weakening of existing test assertions.",
-    "pending": ["Owned source commit/push, exact-head native CI and fresh isolated package smoke"],
+    "pending": [
+      "External signing/hosted/provider/manual acceptance; see ROADMAP. Structural AR06 and broader AR07 remain tracked separately."
+    ],
     "log": "/tmp/crux-release-originals-desktop.log",
     "passedSoFar": [
       "File recovery receipt and reopen",
@@ -278,7 +279,7 @@
     "failed": 3,
     "minutes": 21.6,
     "artifactDirectory": "/tmp/crux-release-desktop-gate-artifacts",
-    "remaining": ["Exact-head native CI and packaged smoke"],
+    "remaining": [],
     "followThrough": "All three initial fixture failures accepted in named follow-through logs; Growth3 and Plasma1 later added to gate and passed separately. No claim that all111 ran together."
   },
   "polishDesktopBatch": {
@@ -333,6 +334,49 @@
       "default-glass-dark-3d.png",
       "graph-restarted-2d.png",
       "graph-restarted-3d.png"
+    ]
+  },
+  "verifiedSourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b",
+  "sourcePushed": true,
+  "macosPackage": {
+    "directory": "electron/release/v1-readiness-oct2/mac-arm64/Crux Garden.app",
+    "buildLog": "/tmp/crux-release-package.log",
+    "signing": "ad-hoc; not notarized",
+    "smoke": {
+      "log": "/tmp/crux-release-packaged-smoke.log",
+      "passed": 1,
+      "seconds": 8.1,
+      "scope": "Actual packaged launch, SQLite, CLI, FFmpeg/source/licenses, isolated storage and refusal of development test overrides"
+    },
+    "plasmaRegression": {
+      "log": "/tmp/crux-release-packaged-plasma.log",
+      "passed": 1,
+      "seconds": 11,
+      "scope": "Same GPU/DOM/settled viewport regression against actual packaged executable, normal/reduced motion and disclosure transitions"
+    }
+  },
+  "nativeCI": {
+    "sourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b",
+    "run": 37089492260,
+    "url": "https://github.com/CruxGarden/app/actions/runs/37089492260",
+    "status": "completed",
+    "conclusion": "success",
+    "completedAt": "2026-10-03T02:38:46Z",
+    "jobs": [
+      {
+        "id": 111106585100,
+        "name": "Packaged runtime (windows-latest)",
+        "conclusion": "success",
+        "url": "https://github.com/CruxGarden/app/actions/runs/37089492260/job/111106585100",
+        "completedAt": "2026-10-03T02:38:45Z"
+      },
+      {
+        "id": 111106585189,
+        "name": "Packaged runtime (ubuntu-latest)",
+        "conclusion": "success",
+        "url": "https://github.com/CruxGarden/app/actions/runs/37089492260/job/111106585189",
+        "completedAt": "2026-10-03T02:33:42Z"
+      }
     ]
   }
 }

@@ -1,6 +1,6 @@
 {
   "date": "2026-10-02",
-  "status": "locally-accepted-native-ci-and-package-pending",
+  "status": "review-slice-locally-and-portably-accepted",
   "baseApp": "add8edbba815e8919db692e5e7507066e796c194",
   "runtime": "ra1435e5dc008.h2d03f470",
   "changes": [
@@ -52,6 +52,16 @@
       "passed": 80,
       "skipped": 1,
       "log": "/tmp/crux-release-electron-accepted.log"
+    },
+    "nativeCI": {
+      "run": 37089492260,
+      "sourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b",
+      "conclusion": "success",
+      "platforms": ["windows-latest", "ubuntu-latest"]
+    },
+    "macosPackageSmoke": {
+      "log": "/tmp/crux-release-packaged-smoke.log",
+      "passed": 1
     }
   },
   "productionReductionLines": 54,
@@ -61,9 +71,10 @@
     "mutationSitesAfter": 28
   },
   "limits": [
-    "Current source locally verified and preparing owned commit; exact-head portable CI/package smoke pending.",
+    "Verified source040e7e90b committed/pushed; exact-source native Windows/Linux CI and fresh isolated macOS package smoke pass.",
     "Create/update SQL fallback, legacy Artifact snapshot guard and AR06 remaining consumers are retained pending migration.",
     "AR06 structural retirement and larger AR07 cycle refactor stay tracked; AR08/AR09 are locally accepted. External release gates remain open.",
     "No real Garden/manual candidate changes, hosted deployment or merge."
-  ]
+  ],
+  "verifiedSourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b"
 }
