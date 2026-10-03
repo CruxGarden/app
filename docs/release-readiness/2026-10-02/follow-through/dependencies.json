@@ -83,9 +83,7 @@
               "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
               "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
               "severity": "high",
-              "cwe": [
-                "CWE-674"
-              ],
+              "cwe": ["CWE-674"],
               "cvss": {
                 "score": 7.5,
                 "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
@@ -93,13 +91,9 @@
               "range": "<=3.0.3"
             }
           ],
-          "effects": [
-            "chokidar"
-          ],
+          "effects": ["chokidar"],
           "range": "*",
-          "nodes": [
-            "node_modules/braces"
-          ],
+          "nodes": ["node_modules/braces"],
           "fixAvailable": {
             "name": "chokidar",
             "version": "5.0.0",
@@ -110,14 +104,10 @@
           "name": "chokidar",
           "severity": "high",
           "isDirect": true,
-          "via": [
-            "braces"
-          ],
+          "via": ["braces"],
           "effects": [],
           "range": "2.0.0 - 3.6.0",
-          "nodes": [
-            "node_modules/chokidar-fsevents"
-          ],
+          "nodes": ["node_modules/chokidar-fsevents"],
           "fixAvailable": {
             "name": "chokidar",
             "version": "5.0.0",
@@ -162,30 +152,20 @@
           "name": "@astrojs/mdx",
           "severity": "high",
           "isDirect": false,
-          "via": [
-            "astro"
-          ],
+          "via": ["astro"],
           "effects": [],
           "range": "<=0.0.0-vercel-upgrade-20230905174957 || >=1.0.0-beta.0",
-          "nodes": [
-            "node_modules/@astrojs/mdx"
-          ],
+          "nodes": ["node_modules/@astrojs/mdx"],
           "fixAvailable": true
         },
         "@astrojs/starlight": {
           "name": "@astrojs/starlight",
           "severity": "high",
           "isDirect": true,
-          "via": [
-            "@astrojs/mdx",
-            "astro",
-            "astro-expressive-code"
-          ],
+          "via": ["@astrojs/mdx", "astro", "astro-expressive-code"],
           "effects": [],
           "range": ">=0.9.0",
-          "nodes": [
-            "node_modules/@astrojs/starlight"
-          ],
+          "nodes": ["node_modules/@astrojs/starlight"],
           "fixAvailable": {
             "name": "@astrojs/starlight",
             "version": "0.8.1",
@@ -196,18 +176,10 @@
           "name": "astro",
           "severity": "high",
           "isDirect": true,
-          "via": [
-            "http-cache-semantics"
-          ],
-          "effects": [
-            "@astrojs/mdx",
-            "@astrojs/starlight",
-            "astro-expressive-code"
-          ],
+          "via": ["http-cache-semantics"],
+          "effects": ["@astrojs/mdx", "@astrojs/starlight", "astro-expressive-code"],
           "range": "<=0.0.0-head-body-content-20240329190922 || >=2.10.10",
-          "nodes": [
-            "node_modules/astro"
-          ],
+          "nodes": ["node_modules/astro"],
           "fixAvailable": {
             "name": "astro",
             "version": "2.10.9",
@@ -218,16 +190,10 @@
           "name": "astro-expressive-code",
           "severity": "high",
           "isDirect": false,
-          "via": [
-            "astro"
-          ],
-          "effects": [
-            "@astrojs/starlight"
-          ],
+          "via": ["astro"],
+          "effects": ["@astrojs/starlight"],
           "range": ">=0.30.0",
-          "nodes": [
-            "node_modules/astro-expressive-code"
-          ],
+          "nodes": ["node_modules/astro-expressive-code"],
           "fixAvailable": {
             "name": "@astrojs/starlight",
             "version": "0.8.1",
@@ -246,9 +212,7 @@
               "title": "http-cache-semantics max-stale handling can disclose cross-user cached responses",
               "url": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp",
               "severity": "high",
-              "cwe": [
-                "CWE-524"
-              ],
+              "cwe": ["CWE-524"],
               "cvss": {
                 "score": 7.5,
                 "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
@@ -256,13 +220,9 @@
               "range": "<=4.2.0"
             }
           ],
-          "effects": [
-            "astro"
-          ],
+          "effects": ["astro"],
           "range": "*",
-          "nodes": [
-            "node_modules/http-cache-semantics"
-          ],
+          "nodes": ["node_modules/http-cache-semantics"],
           "fixAvailable": {
             "name": "astro",
             "version": "2.10.9",
@@ -318,14 +278,10 @@
           "name": "@excalidraw/excalidraw",
           "severity": "high",
           "isDirect": true,
-          "via": [
-            "sass"
-          ],
+          "via": ["sass"],
           "effects": [],
           "range": "0.5.0-a78d45417 || 0.17.1-08b13f9 - 0.17.1-test || >=0.18.0-699826",
-          "nodes": [
-            "node_modules/@excalidraw/excalidraw"
-          ],
+          "nodes": ["node_modules/@excalidraw/excalidraw"],
           "fixAvailable": {
             "name": "@excalidraw/excalidraw",
             "version": "0.17.6",
@@ -344,9 +300,7 @@
               "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
               "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
               "severity": "high",
-              "cwe": [
-                "CWE-674"
-              ],
+              "cwe": ["CWE-674"],
               "cvss": {
                 "score": 7.5,
                 "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
@@ -354,13 +308,9 @@
               "range": "<=3.0.3"
             }
           ],
-          "effects": [
-            "chokidar"
-          ],
+          "effects": ["chokidar"],
           "range": "*",
-          "nodes": [
-            "node_modules/braces"
-          ],
+          "nodes": ["node_modules/braces"],
           "fixAvailable": {
             "name": "@excalidraw/excalidraw",
             "version": "0.17.6",
@@ -371,16 +321,10 @@
           "name": "chokidar",
           "severity": "high",
           "isDirect": false,
-          "via": [
-            "braces"
-          ],
-          "effects": [
-            "sass"
-          ],
+          "via": ["braces"],
+          "effects": ["sass"],
           "range": "2.0.0 - 3.6.0",
-          "nodes": [
-            "node_modules/chokidar"
-          ],
+          "nodes": ["node_modules/chokidar"],
           "fixAvailable": {
             "name": "@excalidraw/excalidraw",
             "version": "0.17.6",
@@ -391,16 +335,10 @@
           "name": "sass",
           "severity": "high",
           "isDirect": false,
-          "via": [
-            "chokidar"
-          ],
-          "effects": [
-            "@excalidraw/excalidraw"
-          ],
+          "via": ["chokidar"],
+          "effects": ["@excalidraw/excalidraw"],
           "range": "1.6.0 - 1.78.0",
-          "nodes": [
-            "node_modules/sass"
-          ],
+          "nodes": ["node_modules/sass"],
           "fixAvailable": {
             "name": "@excalidraw/excalidraw",
             "version": "0.17.6",
@@ -422,9 +360,7 @@
           "findings": [
             {
               "version": "4.2.0",
-              "paths": [
-                ".>astro>http-cache-semantics"
-              ]
+              "paths": [".>astro>http-cache-semantics"]
             }
           ],
           "found_by": null,
@@ -437,9 +373,7 @@
           "reported_by": null,
           "title": "http-cache-semantics max-stale handling can disclose cross-user cached responses",
           "metadata": null,
-          "cves": [
-            "CVE-2026-93748"
-          ],
+          "cves": ["CVE-2026-93748"],
           "access": "public",
           "severity": "high",
           "module_name": "http-cache-semantics",
@@ -452,9 +386,7 @@
             "score": 7.5,
             "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
           },
-          "cwe": [
-            "CWE-524"
-          ],
+          "cwe": ["CWE-524"],
           "url": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp"
         }
       }
