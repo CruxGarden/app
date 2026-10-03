@@ -45,6 +45,13 @@ commands. It does not require PostgreSQL, Redis or a separately launched HTTP
 server for local creation. Electron supplies filesystem access and native SQLite;
 the renderer cannot mutate SQLite with arbitrary SQL.
 
+Local Author creation and profile updates require the runtime's installation
+commands. Author creation and the local identity setting commit together. Startup
+may create a replacement only after a confirmed missing Author; a read or storage
+outage must preserve the existing identity and report the failure. See
+[author.service.ts](../src/services/sqlite/author.service.ts) and its
+[native refusal/retry tests](../src/services/sqlite/author-native.test.ts).
+
 | Boundary                                       | Source                                                                                                                             |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Renderer startup and routes                    | [main.tsx](../src/main.tsx), [App.tsx](../src/App.tsx), [appStore.ts](../src/stores/appStore.ts)                                   |
@@ -89,6 +96,17 @@ These private paths are excluded from normal scans, captures and previews. Unkno
 or conflicting bytes are retained for recovery; there is no automatic deletion of
 that safety area. Completed receipts make replay leave later external edits alone.
 These guards are not an OS-wide lock against arbitrary external writers.
+
+Settings offers explicit review and native confirmation before moving completed
+recovery payloads to OS Trash. Receipts stay in place. The host rechecks identities,
+metadata, contents and receipt state across each move; partial failure reports
+that some files may already be in Trash and requires a fresh review. Windows
+Recycle Bin can change the shared inode's change-time when moving a hardlink.
+Only remaining aliases of that moved inode may accept a change-time difference,
+with all other checked metadata and before/after content fingerprints unchanged.
+Unrelated changes and external edits still stop cleanup. See
+[project-recovery.ts](../electron/src/project-recovery.ts) and the
+[actual Settings journey](../electron/e2e/recovery-storage.spec.ts).
 
 External filesystem changes follow watcher → fingerprint → ingestion. Ingestion
 updates the native index without writing those bytes back to disk. Internal
