@@ -1,6 +1,6 @@
 {
   "date": "2026-10-02",
-  "status": "local app and desktop accepted; performance/package/native checks pending",
+  "status": "Mac manual-testing candidate and game ready; Windows native verification under investigation",
   "appGate": {
     "log": "/tmp/crux-followthrough-app-release.log",
     "tests": 1814,
@@ -38,14 +38,40 @@
     "log": "/tmp/crux-followthrough-cli-verify.log"
   },
   "remaining": [
-    "startup/project-scale/workspace-memory",
-    "package smoke and manual launch shortcut",
-    "app commit/push and exact-source native CI"
+    "native Windows/Linux CI follow-up"
   ],
   "noLiveProviderCalls": true,
   "preserved": [
     "real Garden",
     "existing manual Garden",
     "unrelated working changes"
-  ]
+  ],
+  "sourceCommit": "20436fc061e74cc4c21c8621c6e86be2133b4609",
+  "nativeCI": {
+    "run": 37095316024,
+    "url": "https://github.com/CruxGarden/app/actions/runs/37095316024",
+    "status": "in_progress"
+  },
+  "performance": {
+    "log": "/tmp/crux-followthrough-performance.log",
+    "tests": 4,
+    "pass": true,
+    "projectFiles": [
+      1000,
+      10000
+    ],
+    "notes": "Production renderer in development Electron, process-cold startup with filesystem caches retained. 12 workspace switches with actual synth signal and 60s post-close observation; no claim of hours-long or all-hardware certification. Raw phase, heap/DOM/process samples stored alongside this report."
+  },
+  "package": {
+    "directory": "app/electron/release/manual-testing-ready-oct2/mac-arm64/Crux Garden.app",
+    "signature": "ad-hoc; not notarized",
+    "buildLog": "/tmp/crux-morning-package.log",
+    "smokeLog": "/tmp/crux-morning-packaged-smoke.log",
+    "tests": 4,
+    "pass": true,
+    "asarSHA256": "66c98e143e269911f343e02d69855dcb493ff2b70b6a5a5ae84f5e8898a74b6a",
+    "launcher": "app/electron/release/manual-testing-current/Launch Manual Testing.command",
+    "preservedProfile": "$HOME/CruxGarden-ManualTesting",
+    "profileOpenedByAgent": false
+  }
 }

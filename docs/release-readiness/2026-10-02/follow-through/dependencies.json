@@ -465,7 +465,7 @@
       "advisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
       "package": "braces <=3.0.3 via chokidar-fsevents",
       "status": "Vulnerable package remains; no upstream patch available at review. Mitigated in the shipping watcher by disableGlobbing:true. All watcher roots are literal registered folders; ignore is a function, not an untrusted glob string. Existing backend retained for macOS FSEvents scaling (ADR0038).",
-      "evidence": "New literal-brace/bracket folder test failed before the option and passes afterward. Full native watcher integrity/performance journeys pending final run. This is reachability mitigation, not an audit-zero claim."
+      "evidence": "The literal-brace/bracket native filesystem test reproduced the defect and passes with disableGlobbing. Actual Electron external file ingestion and restart passes10.9s. Larger scale timings are recorded separately in performance evidence. This is reachability mitigation, not an audit-zero claim."
     },
     {
       "advisory": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp",
@@ -485,7 +485,7 @@
     {
       "advisory": "https://github.com/advisories/GHSA-j22f-vq7h-c4qm",
       "package": "devalue5.9.2 via Digital Garden Astro",
-      "status": "Pinned patched5.9.3 in pnpm.overrides and regenerated frozen lockfile. Six devalue advisories cleared; remaining audit finding is the unpatched remote-image build-cache http-cache-semantics already scoped above. This changes newly created starter source, not existing user projects. Full app/starter build acceptance pending."
+      "status": "Pinned patched5.9.3 in pnpm.overrides and regenerated frozen lockfile. Six devalue advisories cleared; remaining audit finding is the unpatched remote-image build-cache http-cache-semantics already scoped above. This changes newly created starter source, not existing user projects. Full app1,814/build and actual Digital Garden create/edit/link/graph/scripted Collaboration/fixture Share/restart/clean import journey pass56.7s. Newly created starter installs and builds using the patched frozen lockfile."
     }
   ],
   "limits": [
