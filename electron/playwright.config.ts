@@ -72,7 +72,9 @@ export default defineConfig({
     { name: 'gate', testMatch: gateSpecs },
     { name: 'desktop', testIgnore: ['**/*.unit.spec.ts', ...gateSpecs] },
   ],
-  reporter: [['list']],
+  // Keep exact failed assertions visible in CI annotations, even when job logs
+  // require an authenticated GitHub session.
+  reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   outputDir: './e2e/.results',
   use: { screenshot: 'only-on-failure', trace: 'retain-on-failure' },
 });
