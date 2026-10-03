@@ -699,11 +699,6 @@
       "statement": "'DELETE FROM settings WHERE key = ?'"
     },
     {
-      "file": "src/services/index.ts",
-      "method": "db.run",
-      "statement": "`INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorId}', ?)`"
-    },
-    {
       "file": "src/services/project-folder.ts",
       "method": "db.run",
       "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"

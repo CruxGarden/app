@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { SqliteArtifactService } from './artifact.service';
+import { ManifestArtifactService } from '../manifest-artifact.service';
+import { localApiFixture } from '@/test/local-api-fixture';
+
 import { SqliteAuthorService } from './author.service';
 import { SqliteCruxService } from './crux.service';
 import { getSqliteClient } from './client';
 
-const artifacts = new SqliteArtifactService();
+localApiFixture();
+
+const artifacts = new ManifestArtifactService();
 const authors = new SqliteAuthorService();
 const cruxes = new SqliteCruxService();
 
@@ -24,7 +28,7 @@ describe('shared Artifact and avatar content', () => {
         displayName: 'Avatar fixture',
       });
       await authors.update(author.id, { meta: { avatarFingerprint: file.fingerprint } });
-      if (action === 'delete') await artifacts.delete(file.id, { writeThrough: false });
+      if (action === 'delete') await artifacts.delete(file, { writeThrough: false });
       else
         await artifacts.create({
           resourceId: crux.id,
@@ -50,7 +54,7 @@ describe('shared Artifact and avatar content', () => {
       title: 'Retained conversation',
       meta: { authorSnapshots: { previous: { avatarFingerprint: file.fingerprint } } },
     });
-    await artifacts.delete(file.id, { writeThrough: false });
+    await artifacts.delete(file, { writeThrough: false });
     expect((await cruxes.findById(history.id)).meta?.authorSnapshots).toEqual({
       previous: { avatarFingerprint: file.fingerprint },
     });
@@ -69,9 +73,9 @@ describe('shared Artifact and avatar content', () => {
     const db = getSqliteClient();
     const captured = await db.export();
     const bytes = await db.blobRead(file.fingerprint!);
-    await artifacts.delete(file.id, { writeThrough: false });
+    await artifacts.delete(file, { writeThrough: false });
     expect(await db.inspectImport(captured)).toContain(file.fingerprint);
     expect(await db.blobRead(file.fingerprint!)).toEqual(bytes);
-    await expect(artifacts.findById(file.id)).rejects.toThrow('Artifact not found');
+    expect(await artifacts.findByResource('crux', crux.id)).toEqual([]);
   });
 });

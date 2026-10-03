@@ -6,6 +6,7 @@ import type { IStoreService } from './sqlite/store.service';
 import { getSqliteClient } from './sqlite/client';
 import { initSettings } from './settings';
 import { SettingsKey } from '@/lib/constants';
+import { NotFoundError } from './types';
 
 export interface Services {
   crux: ICruxService;
@@ -104,27 +105,19 @@ export async function ensureLocalAuthor(): Promise<import('./types').Author> {
   if (existing?.value) {
     try {
       return await services!.author.findById(existing.value);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
       // Author was deleted — fall through to create a new one
     }
   }
 
   const shortId = crypto.randomUUID().slice(0, 8);
   const input = { username: `wanderer-${shortId}`, displayName: 'Wanderer' };
-  // Desktop: the author and the installation's record of it land together.
-  if (db.installation) {
-    const { SqliteAuthorService } = await import('./sqlite/author.service');
-    const created = await new SqliteAuthorService().create({ ...input, local: true });
-    // The command recorded it in the database; keep the settings cache in step.
-    (await import('./settings')).setSetting(SettingsKey.LocalAuthorId, created.id);
-    return created;
-  }
-  const author = await services!.author.create(input);
-  await db.run(
-    `INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorId}', ?)`,
-    [author.id],
-  );
-  return author;
+  // The native command records the author and installation identity atomically.
+  const { SqliteAuthorService } = await import('./sqlite/author.service');
+  const created = await new SqliteAuthorService().create({ ...input, local: true });
+  (await import('./settings')).setSetting(SettingsKey.LocalAuthorId, created.id);
+  return created;
 }
 
 // Re-export interfaces for convenience

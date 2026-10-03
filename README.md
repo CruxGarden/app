@@ -15,21 +15,34 @@ local model. Publishing, sync and included collaboration use our servers as desc
 ## Run it from source
 
 ```bash
-nvm use                       # Node 22
+nvm use                       # app/.nvmrc: Node 22
 npm ci
-npm --prefix electron ci
-npm run dev:site              # the web app in the browser, http://localhost:8080
-npm run dev:app               # the desktop app on that dev server (HMR); starts it if needed
-npm run dev:app --live        # the same, against the production API — publishes are real
+cd electron
+nvm use                       # electron/.nvmrc: Node 24
+npm ci                        # downloads Electron and rebuilds its native modules
+cd ..
+nvm use
+npm run build                 # builds the renderer, guide and bundled tools
 ```
 
-`dev:app` is `scripts/desktop.sh --dev`; the script also builds and launches the
-bundled app (`npm run desktop`, `desktop:live`, `desktop:rebuild`, `desktop:selftest`).
+Then use two terminals:
 
-The shell helpers above are for macOS/Linux. On Windows, use two terminals:
-`npm run dev:site` and `npm --prefix electron run dev`. For a bundled build on
-any platform, use the Node version in `electron/.nvmrc`, then
-`npm --prefix electron run build:all` and `npm --prefix electron start`.
+```bash
+# Terminal 1, app/ (Node 22)
+npm run dev:site               # Vite renderer/public site at http://localhost:8080
+# Terminal 2, app/electron/ (Node 24)
+npm run dev                   # actual desktop app, using that renderer with HMR
+```
+
+Browser authoring is retired; use Electron for creating and editing. Public Explore,
+docs and published views remain browser surfaces. Local creation needs no cloud
+account or sibling API checkout. Authentication, sync and hosted publishing need a
+configured API; see `.env.example`. Never put secrets in public `VITE_*` inputs.
+
+On macOS/Linux, `npm run dev:app` starts the desktop and Vite together. Its `--live`
+option uses the production API, where publishing is real. For a bundled local launch,
+run `npm start` inside `electron/` after the renderer build. Native Node and Electron
+modules are separate installations; do not copy `node_modules` between them.
 
 Package on the target OS with `electron` scripts `dist:win`, `dist:linux`, or
 `dist:mac:unsigned` (ad-hoc Mac testing). `npm run test:packaged` in `electron/`
@@ -38,15 +51,21 @@ Native Windows and Linux packaged-runtime CI checks pass. Signed installers, upd
 
 ## Verify
 
+For the full desktop gate or packaging, first prepare the matched native media tools
+with `npm run binaries:build` in `electron/`; see the [toolchain prerequisites](CONTRIBUTING.md#native-media-binaries).
+The renderer build and local creation can be checked before that longer source build.
+
 ```bash
 npm run verify                # typecheck + lint + unit tests + build
-cd electron && npm run verify && npm run build:all && npm run test:e2e   # Playwright against the real app
+cd electron && nvm use && npm run verify && npm run test:e2e -- --project=gate   # Playwright against the real app
 ```
 
 ## Field guide and first project
 
 New Gardens offer an AI-free home page walkthrough: add a name and photo, preview,
-mark a version in Growth, and use Share when ready. Explore includes a field guide
+and use Share when ready. Marking a version in Growth is optional. Share distinguishes
+a saved edition in your **Local test Garden** (this computer) from the online site
+on **crux.garden**. Explore includes a field guide
 with offline navigation and search. Make a copy to edit the guide as an ordinary
 Starlight Crux. The same source in `documentation-crux/` builds the public docs and journal.
 
@@ -87,7 +106,8 @@ alias to avoid a PATH collision with this companion.
 
 - **AI with your own key** goes straight from your machine to your chosen provider.
   **Included collaboration**, when configured, sends conversation and selected file context through
-  the Crux Garden API to Anthropic; the accounting ledger retains model, token counts, cost and status,
+  the Crux Garden API to Anthropic for chat and to OpenAI for included image generation/editing.
+  The accounting ledger retains model, token counts, cost and status,
   not prompt or response content. Tool execution and Project Folders stay local. Local models run
   on your machine. Included usage has rolling limits and no automatic paid overages.
 - **Publishing and sync** send only what you ask to publish or back up, to crux.garden.
@@ -101,6 +121,17 @@ alias to avoid a PATH collision with this companion.
   discovery and delegation across Cruxes. Keep connection tokens private.
 - **Nothing else.** No analytics. No crash reporting unless you opt in. Logs stay on your disk
   (`~/Library/Logs/Crux Garden`).
+
+## Project maturity
+
+This is a v1 release candidate under active refinement. Automated checks cover local
+storage, refusal/retry/restart, core desktop journeys and fixture-backed hosted flows.
+They do not certify live provider quality, payments/email, production catalog delivery,
+signed updates or every OS/hardware combination. See [test scope](CONTRIBUTING.md#test-scope-and-release-boundaries).
+
+The default build bundles eight manifest Crux Tools; additional tool source folders
+are not a promise of availability in the public catalog. Built-in editors and website
+starters are separate. See [catalog scope](CONTRIBUTING.md#catalog-test-scope).
 
 ## Contributing
 

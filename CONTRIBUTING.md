@@ -17,18 +17,14 @@ Thanks for helping. This repo contains the desktop app (Electron + React) and it
 ## Setup
 
 The desktop runtime is Electron 44 and requires macOS 13 or later on Mac.
-Use Node 22.12 or later for development (the repository's `.nvmrc` selects Node 22).
+Use the pinned Node version in each directory: Node 22 for the renderer/native test
+fixture, Node 24 for Electron tooling. See the [clean install commands](README.md#run-it-from-source).
+Run `npm ci` separately in both directories; the Electron postinstall downloads its
+runtime and rebuilds native dependencies for Electron's ABI.
 
-```bash
-nvm use                      # Node22 from .nvmrc
-npm ci
-npm --prefix electron ci
-npm run dev:app               # macOS/Linux: desktop + Vite dev server
-```
-
-On Windows, use two terminals: `npm run dev:site` and
-`npm --prefix electron run dev`. Vite serves the renderer for Electron; browser
-authoring is retired, while public Explore/docs/published views remain supported.
+After `npm run build` in the app directory, run `npm run dev:site` there and
+`npm run dev` in `electron/` in a second terminal. Vite serves Electron's renderer;
+browser authoring is retired, while public Explore/docs/published views remain supported.
 
 The app repository is sufficient to install the desktop: its pinned local API package
 is committed under `electron/vendor/`, with provenance and a license. A sibling API
@@ -46,7 +42,8 @@ matching release changes; a local desktop build does not deploy it.
 The current manual-testing target is **macOS Apple Silicon**, with an unsigned/ad-hoc
 local package exercised on macOS 26.6.2. The declared minimum is macOS 13; that older
 OS has not been exercised in this acceptance run. Native Windows x64 and Linux x64
-packaged-runtime CI also passes at welcome source f09ae6938 (run 36773598438).
+packaged-runtime CI also exercises the supported runtime. Inspect the
+[portable workflow](.github/workflows/portable.yml) and the results for your exact commit.
 That covers startup, bundled runtime/CLI and the workflow’s named interaction/security
 checks; it does not establish every hardware, keychain, installer or update behavior.
 Intel Mac and older OS versions still need their own acceptance. Signed/notarized distribution and real-provider/hardware
@@ -163,8 +160,17 @@ the Task lifecycle suite uses this fixture; other SQL.js fixtures remain to migr
 
 Core Monaco's DOMPurify is scoped to 3.4.16 (GHSA-p98j-92pf-mc4p), and the fixture's
 Swagger dependency uses the same js-yaml 5.4.2 override as the desktop/API. Keep
-these overrides until upstream adopts patched versions. The root dependency audit
-is zero after these patches; this says nothing about separate embedded tool trees.
+these overrides until upstream adopts patched versions. Audit results change independently of the source. The October 3 clean install reports
+four high findings through build-time `patch-package` → `find-yarn-workspace-root` →
+`micromatch` → `braces` (GHSA-vfj7-8cjw-p6xm). These are not renderer dependencies;
+do not accept untrusted patch/workspace patterns. A reviewed upstream fix and a
+rerun of the Mosaic patch/layout checks remain pending. Do not use `npm audit fix
+--force`: its suggested patch-package downgrade changes the major version. The Electron install reports ten high findings, including the shipping macOS watcher’s
+`braces` chain and the builder’s `http-cache-semantics` chain. The watcher already uses
+literal folders with `disableGlobbing: true`; preserve its regression and FSEvents backend.
+The builder chain is packaging tooling. See the [existing dependency dispositions](docs/release-readiness/2026-10-02/follow-through/dependencies.json)
+for the reachability limits and separate template findings. Audit embedded tool trees
+separately; neither mitigation nor an audit count certifies them.
 
 macOS recording also needs the camera/audio entitlements and purpose strings in the
 packaging configuration. These allow the signed app to request OS consent; they do not
@@ -185,18 +191,21 @@ you used `--ignore-scripts`. Panel and keyboard desktop journeys cover this inte
 ## Pull requests
 
 - Branch from `main`; one coherent change per PR; include tests for behaviour you add.
-- Format with Prettier before you push: `npm run format` (CI checks `npm run format:check`). There
+- Format the files you changed with Prettier before you push. `npm run format:check`
+  is available separately; the current CI verify gate does not invoke it. There
   is no commit hook in this repo; the Claude Code hook that formats agents' edits does not apply to
   you. ESLint runs with `--max-warnings=0`.
 - Say what you verified. If a step was skipped, say that.
 
 ## What the app sends over the network (trust statement)
 
-AI requests go from the user's machine to the provider they chose with their own key (or a local
-model). Publishing and sync send only what the user asked to publish or back up, to crux.garden.
-Update checks ask GitHub Releases for the latest version and can be turned off. There are no
-analytics and no crash reporting unless the user opts in; logs stay on disk. Changing this stance
-is a product decision (ADR 0008) — not a PR.
+Own-key AI requests go directly to the selected provider; local models run locally.
+Configured included collaboration sends selected context through the API to Anthropic
+(chat) or OpenAI (image generation/editing), with usage accounting and no automatic
+paid overages. See the [README network statement](README.md#what-the-app-sends-over-the-network).
+Publishing and sync send the selected content to crux.garden. Update checks use GitHub
+Releases and can be disabled. A change to these boundaries needs an explicit product
+review and matching user-facing documentation.
 
 ## Catalog test scope
 
@@ -205,3 +214,46 @@ assertions in `src/templates/*-app.test.ts` and the native stylesheet cases use 
 same manifest scope; host, service and manifest tests still cover every tool. Use
 `CRUX_BUNDLE_TOOLS=all npm run verify` for the complete prepared catalog (also run
 by the weekly CI job). This is explicit scope, never a skip based on missing files.
+
+## Test scope and release boundaries
+
+Keep expected-behavior assertions when refactoring; do not remove tests or silently
+skip cases to make a gate pass. Use native runtime tests for persistence and rollback,
+and actual Electron Playwright journeys for user-visible behavior. Script only external
+providers where a deterministic fixture is needed. The desktop gate is a selected set;
+run the affected tool/guide specs as well. Opt-in install/live suites need their stated
+fixtures. Never point a test at a personal Garden or spend against a real provider by default.
+
+The Release Expedition and `docs/manual-testing/story-coverage.json` map manual user
+stories; zero unmapped criteria does **not** mean every criterion has an automated test.
+The September coverage matrix is historical. Live subscription/provider quality, email,
+payments, production Tool/Mood delivery, signed update application and physical hardware
+remain release acceptance work. A fixture-backed publishing test is not a production
+publication test.
+
+## Small contribution candidates
+
+These are scoped starting points, not claimed or preapproved GitHub issues. Open an issue
+before starting to confirm the current gap and avoid duplicate work.
+
+| Candidate                        | Expected result                                                                                                | Acceptance boundary                                                                                 |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Composer “Add a file” regression | Exercise the actual attachment chooser with multiple files and verify the selected file context                | Electron Playwright; isolated Garden, scripted AI, no live upload                                   |
+| Streaming scroll behavior        | Prove scrolling upward during a reply preserves reading position and returning to the bottom resumes following | Real Collaboration UI with deterministic streamed responses                                         |
+| Manual coverage reconciliation   | Reconcile one story group with current spec names and explicitly separate fixture, manual and live checks      | Preserve story IDs/progress; run the game validation; do not infer automation from inventory counts |
+
+Storage ownership changes need a maintainer-reviewed slice: migrate all affected fixture
+consumers before removing a fallback. Do not begin by rewriting `cruxStore` or replacing
+the local runtime. [The architecture guide](docs/architecture.md) identifies the owners.
+
+## Review and support expectations
+
+Use [issues](https://github.com/CruxGarden/app/issues) for reproducible bugs and scoped
+proposals; remove credentials, personal files and connection tokens from reports.
+Include the source revision, OS, exact steps and expected/actual behavior. Support is
+best effort; no response or merge deadline is promised. Security reports use `SECURITY.md`.
+
+A PR should describe the behavior, preservation risks, tests actually run and any skipped
+checks. UI changes include before/after captures; persistence changes include refusal,
+retry and restart evidence. Maintainer review and passing required CI precede merge.
+Contributor changes do not authorize deployment, live publication or a paid-provider test.

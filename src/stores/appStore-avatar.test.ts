@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { initServices, type Services } from '@/services';
-import { getSqliteClient } from '@/services/sqlite/client';
+import { localApiFixture } from '@/test/local-api-fixture';
+
 import { putBlob, readBlob } from '@/services/blobs';
 import { useAppStore } from './appStore';
 import { _avatarUrlCache, resolveAvatarUrlAsync, useAuthStore } from './authStore';
+
+const native = localApiFixture();
 
 let services: Services;
 const original = 'Original portrait bytes';
@@ -32,7 +35,7 @@ describe('avatar content preservation', () => {
     async (action) => {
       const author = useAppStore.getState().author!;
       const url = await resolveAvatarUrlAsync(author);
-      await getSqliteClient().run(
+      await native().faultSql(
         "CREATE TRIGGER refuse_avatar BEFORE UPDATE ON authors BEGIN SELECT RAISE(ABORT, 'Avatar update refused'); END",
       );
       const change =
@@ -84,7 +87,7 @@ describe('avatar content preservation', () => {
       expect((await services.crux.findById(history.id)).meta?.authorSnapshots).toEqual({
         [author.id]: { ...author.meta, displayName: author.displayName },
       });
-      expect(await services.artifact.readContent(file.id)).toBe(original);
+      expect(await services.artifact.readContent(file)).toBe(original);
       expect(await (await fetch(url!)).text()).toBe(original);
     },
   );

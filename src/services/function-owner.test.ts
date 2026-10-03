@@ -1,6 +1,10 @@
 import { expect, it } from 'vitest';
 import { initServices, ensureLocalAuthor } from './index';
+import { localApiFixture } from '@/test/local-api-fixture';
+
 import { functionOwnerId } from './functions-runner';
+
+localApiFixture();
 
 it('recognizes the local legacy owner without treating another author as the owner', async () => {
   const services = await initServices();

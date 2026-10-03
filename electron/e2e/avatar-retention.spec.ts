@@ -24,11 +24,13 @@ test('shared avatar bytes survive editing the source file and restart', async ()
     const fingerprint = (await indexedFiles(page, id))['avatar.txt']!;
     expect(fingerprint).toBeTruthy();
     await page.evaluate(async (fp) => {
-      const updated = await window.electronAPI!.sqlite.run(
-        "UPDATE authors SET meta = json_set(COALESCE(meta, '{}'), '$.avatarFingerprint', ?) WHERE id = (SELECT id FROM authors ORDER BY id LIMIT 1)",
-        [fp],
+      const author = await window.electronAPI!.sqlite.get<{ id: string }>(
+        'SELECT id FROM authors ORDER BY id LIMIT 1',
       );
-      if (updated.changes !== 1) throw new Error('The avatar fixture was not registered');
+      if (!author) throw new Error('The local author is missing');
+      await window.electronAPI!.sqlite.installation.updateAuthor(author.id, {
+        meta: { avatarFingerprint: fp },
+      });
     }, fingerprint);
     await page.locator('.monaco-editor').click();
     await page.keyboard.press('ControlOrMeta+a');
