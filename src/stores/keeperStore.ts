@@ -13,7 +13,7 @@ export type { KeeperConversation } from '@/services/garden-collaboration';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
 import { runConversation } from '@/ai/engine';
-import { getApiKey } from '@/ai/keys';
+import { getApiKey, automaticModel } from '@/ai/keys';
 import { DEFAULT_MODEL, getProviderForModel, resolveModel } from '@/ai/providers';
 import {
   THEME_TOOL_DEFINITIONS,
@@ -73,6 +73,7 @@ export interface KeeperState {
   conversations: KeeperConversation[];
   activeId: string | null;
   model: string;
+  modelAutomatic: boolean;
   streaming: boolean;
   streamContent: string;
   toolCalls: ToolCall[];
@@ -105,6 +106,7 @@ export function createKeeperStore(gardenId: string) {
       const value = structuredClone({
         version: 1 as const,
         model: state.model,
+        modelAutomatic: state.modelAutomatic,
         activeId: state.activeId,
         conversations: state.conversations,
       });
@@ -139,6 +141,7 @@ export function createKeeperStore(gardenId: string) {
       conversations: [],
       activeId: null,
       model: DEFAULT_MODEL,
+      modelAutomatic: false,
       streaming: false,
       streamContent: '',
       toolCalls: [],
@@ -151,7 +154,12 @@ export function createKeeperStore(gardenId: string) {
         set({ loading: true, error: '' });
         loading = loadGardenCollaboration(gardenId)
           .then((state) => {
-            set({ ...state, model: resolveModel(state.model) || DEFAULT_MODEL, loaded: true });
+            set({
+              ...state,
+              modelAutomatic: state.modelAutomatic === true,
+              model: resolveModel(state.model) || DEFAULT_MODEL,
+              loaded: true,
+            });
           })
           .catch((error: unknown) => {
             set({ error: (error as Error).message });
@@ -174,7 +182,7 @@ export function createKeeperStore(gardenId: string) {
       },
       setModel: (model) => {
         if (!get().loaded || get().streaming) return;
-        set({ model });
+        set({ model, modelAutomatic: false });
         saveSoon();
       },
       newConversation: () => {
@@ -222,12 +230,15 @@ export function createKeeperStore(gardenId: string) {
       controller = new AbortController();
       set({ streaming: true, turnId: targetId, error: '', working: 'Thinking…' });
       try {
-        const model = get().model;
+        const model = get().modelAutomatic ? automaticModel(get().model) : get().model;
         const providerId = getProviderForModel(model);
         const apiKey = (await getApiKey(providerId)) ?? (isAiMock() ? 'mock' : null);
         if (!apiKey) {
           set({
-            error: `No API key for ${providerId}. Add one in Settings to chat with The Keeper.`,
+            error:
+              providerId === 'included'
+                ? 'Sign in to your Crux Garden account in Settings to use your included collaborator.'
+                : `No API key for ${providerId}. Add one in Settings to chat with The Keeper.`,
           });
           return;
         }

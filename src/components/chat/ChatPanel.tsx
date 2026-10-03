@@ -1,7 +1,9 @@
+import IncludedStatus from './IncludedStatus';
 import { copyIdentity } from '@/services/working-copies';
 import { useMemo } from 'react';
 import { useChat } from '@/hooks/useChat';
-import { resolveModel } from '@/ai/providers';
+import { cruxModel } from '@/ai/keys';
+import { useIncludedAccess } from '@/services/included-access';
 import { useCruxStore } from '@/stores/cruxStore';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -11,9 +13,9 @@ import TurnJobCard from './TurnJobCard';
 
 export default function ChatPanel() {
   const { messages, isStreaming, streamingContent, isJobRunning, send, steer, stop } = useChat();
-  const model = useCruxStore((s) =>
-    resolveModel(s.crux?.meta?.settings?.model as string | undefined),
-  );
+  useIncludedAccess((s) => s.usage);
+  const crux = useCruxStore((s) => s.crux);
+  const model = cruxModel(crux);
   const setModel = useCruxStore((s) => s.setModel);
   const isViewingSnapshot = useCruxStore((s) => s.viewingSnapshotId !== null);
   const copy = useCruxStore((s) => copyIdentity(s.crux));
@@ -44,6 +46,7 @@ export default function ChatPanel() {
 
   return (
     <div className="flex flex-col h-full">
+      <p className="shrink-0 px-3 pt-2 text-xs text-text-muted">Working on: {crux?.title}</p>
       <MessageList
         messages={visibleMessages}
         streamingContent={isViewingSnapshot ? '' : streamingContent}
@@ -63,6 +66,11 @@ export default function ChatPanel() {
       ) : (
         <div className="border-t border-border/(--tint-medium)">
           <TurnJobCard />
+          {model === 'garden-included' && (
+            <div className="px-3 pt-2">
+              <IncludedStatus />
+            </div>
+          )}
           <MessageInput
             onSend={send}
             onSteer={steer}

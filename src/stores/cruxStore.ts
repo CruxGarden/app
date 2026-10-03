@@ -1,3 +1,4 @@
+import { getDefaultModel, cruxModel } from '@/ai/keys';
 import { pendingFileProjection, recoverPendingFileUpdates } from '@/services/file-content';
 import {
   prepareWorkspacePublication,
@@ -60,7 +61,6 @@ import {
   personaSnapshotOf,
   type PersonaSettings,
 } from '@/services/persona';
-import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
 import { useUIStore, type UIState } from '@/stores/uiStore';
 import { playCue } from '@/services/cues';
 import { toast } from './toastStore';
@@ -478,7 +478,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           personaSnapshots,
           summary: null,
           settings: {
-            model: DEFAULT_MODEL,
+            model: await getDefaultModel(),
+            modelAutomatic: true,
           },
         },
       });
@@ -613,7 +614,10 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     setModel: (model: string) => {
       const { crux, saveMeta } = get();
       if (!crux) return;
-      const meta = { ...crux.meta, settings: { ...crux.meta?.settings, model } };
+      const meta = {
+        ...crux.meta,
+        settings: { ...crux.meta?.settings, model, modelAutomatic: false },
+      };
       set({ crux: { ...crux, meta } });
       saveMeta();
     },
@@ -1222,7 +1226,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
         // Fire-and-forget AI summary — scoped to the segment this snapshot captured
         if (!options.silent) {
-          const model = resolveModel(crux.meta?.settings?.model);
+          const model = cruxModel(crux);
           void trackWorkspacePromise(
             store,
             generateSnapshotSummary({

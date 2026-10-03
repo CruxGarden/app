@@ -43,6 +43,17 @@ export default function MessageInput({
     [ui],
   );
 
+  const focusedDraft = useRef<string | null>(null);
+  useEffect(() => {
+    if (!cruxId || !value.trim() || history.length || focusedDraft.current === cruxId) return;
+    // The saved idea arrives after mount; wait until modal cleanup has restored focus.
+    const frame = requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      focusedDraft.current = cruxId;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [cruxId, value, history.length]);
+
   // Builder actions can hand the user to the AI mid-sentence
 
   const clear = useCallback(() => {
@@ -123,6 +134,11 @@ export default function MessageInput({
   // chip and the check controls sit beneath it in the panel.
   return (
     <div className="px-3 pb-2 pt-2 bg-chat-composer">
+      {history.length === 0 && !isStreaming && value.trim() && (
+        <p className="text-xs text-text-muted mb-2">
+          Your idea is ready. Press Enter or choose Send to start with AI.
+        </p>
+      )}
       <div
         className={cn(
           'flex items-end gap-1.5 rounded-[22px] border px-2 py-1.5',

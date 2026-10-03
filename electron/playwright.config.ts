@@ -10,6 +10,7 @@ const gateSpecs = [
   '**/settings-secrets.spec.ts',
   '**/settings-navigation.spec.ts',
   '**/settings-clarity.spec.ts',
+  '**/subscriber.spec.ts',
   '**/recovery-storage.spec.ts',
   '**/artifact-file-safety.spec.ts',
   '**/files.spec.ts',

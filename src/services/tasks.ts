@@ -173,6 +173,7 @@ async function provision(
     ),
     settings: {
       model: sourceMeta.settings?.model,
+      modelAutomatic: sourceMeta.settings?.modelAutomatic,
       systemPrompt: sourceMeta.settings?.systemPrompt,
       palette: sourceMeta.settings?.palette,
       snapshotFrequency: sourceMeta.settings?.snapshotFrequency,

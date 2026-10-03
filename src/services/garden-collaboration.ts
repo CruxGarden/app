@@ -1,5 +1,5 @@
 import type { ChatMessage } from '@/api/types';
-import { DEFAULT_MODEL } from '@/ai/providers';
+import { getDefaultModel } from '@/ai/keys';
 import { getServices } from './index';
 
 export interface KeeperConversation {
@@ -15,13 +15,12 @@ export interface KeeperConversation {
 export interface GardenCollaboration {
   version: 1;
   model: string;
+  modelAutomatic?: boolean;
   activeId: string | null;
   conversations: KeeperConversation[];
 }
 
 function decode(value: unknown): GardenCollaboration {
-  if (value === undefined)
-    return { version: 1, model: DEFAULT_MODEL, activeId: null, conversations: [] };
   const state = value as GardenCollaboration;
   if (
     !state ||
@@ -60,7 +59,15 @@ async function owner(gardenId: string) {
 
 export async function loadGardenCollaboration(gardenId: string): Promise<GardenCollaboration> {
   const { garden } = await owner(gardenId);
-  return decode(garden.meta?.gardenCollaboration);
+  if (garden.meta?.gardenCollaboration === undefined)
+    return {
+      version: 1,
+      model: await getDefaultModel(),
+      modelAutomatic: true,
+      activeId: null,
+      conversations: [],
+    };
+  return decode(garden.meta.gardenCollaboration);
 }
 
 export async function saveGardenCollaboration(

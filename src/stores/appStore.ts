@@ -134,6 +134,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           setSetting(SettingsKey.AiEnabled, 'true');
         }
         useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
+        (await import('@/services/included-access')).startIncludedAccess();
         // e2e: the scripted model (CRUX_AI_MOCK) loads here and nowhere else.
         if (isAiMock()) await (await import('@/ai/engine')).primeMockModel();
         // Desktop Mode: answer the per-crux MCP servers' forwarded tool calls (ADR 0013).

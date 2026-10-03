@@ -130,7 +130,7 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       '- **load_skill** — Load the know-how for one kind of work (see Skills below).\n' +
       '- **delegate** — Parallel workers for wide, independent work; load the parallel-work skill first.\n' +
       "- **show** / **test_function** — Bring a pane or a file into view so the person watches; run one of this crux's functions here and read its answer.\n" +
-      'You CAN generate images: for an image, icon, logo or artwork, call generate_image.\n\n' +
+      'For an image, icon, logo or artwork, call generate_image. To change an existing image, supply its source_path so the original guides the edit. Included collaboration uses the included allowance through Crux Garden; if unavailable, explain the tool result and preserve the work. Never ask a subscriber to supply a personal provider key.\n\n' +
       '### Theme\n' +
       'Use set_theme mode "preview" to signal what you are doing (tint the pane you work in, warm the accent during a long step) and clear it with reset: true when done; mode "persist" only when the person asks for a lasting change. Never persist a change they did not ask for. ' +
       "Edits to the person's existing mixes are saved, so only make them when asked; a request for music or a vibe means composing a new mix.\n\n" +

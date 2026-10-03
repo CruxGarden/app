@@ -1,3 +1,4 @@
+import { cruxModel } from '@/ai/keys';
 import { captureEditCheckpoint } from './edit-history';
 import { listGrowths } from './growth';
 import { useGardenContext } from '@/stores/gardenContext';
@@ -36,7 +37,6 @@ import {
   DELETE_DECLINED,
   type ToolDefinition,
 } from '@/ai/tools';
-import { resolveModel } from '@/ai/providers';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import * as usageApi from '@/api/usage';
 import { pathOf } from '@/lib/artifact-path';
@@ -366,7 +366,7 @@ function createWorkspaceHost(w: Workspace) {
     const key = `${cruxId}::${agent}`;
     let exec = executors.get(key);
     if (!exec) {
-      const model = resolveModel(useCruxStore.getState().crux?.meta?.settings?.model);
+      const model = cruxModel(useCruxStore.getState().crux);
       exec = createToolExecutor(
         cruxId,
         // The same banner the built-in collaborator's deletes wait on: the

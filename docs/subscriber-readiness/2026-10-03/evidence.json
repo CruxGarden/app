@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-03",
+  "scope": "Desktop subscriber onboarding, defaults, included image tools, recovery and user-story guide",
+  "liveProviderCalls": 0,
+  "realGardenModified": false,
+  "hostedDeployment": false,
+  "api": {
+    "commit": "b45e593469ef64d891f090aa7d1568351a4b25bc",
+    "verify": {
+      "unit": 1185,
+      "unitSkipped": 5,
+      "integration": 410,
+      "build": true,
+      "localRuntime": true
+    },
+    "imageUnit": 5,
+    "imageHttpPostgres": 3,
+    "runtimeContentHash": "2d03f470",
+    "log": "/tmp/crux-subscriber-api-verify.log"
+  },
+  "app": {
+    "focused": 16,
+    "focusedFiles": 4,
+    "verify": {
+      "passed": 1826,
+      "files": 291,
+      "skipped": 18,
+      "build": true
+    },
+    "log": "/tmp/crux-subscriber-app-accepted.log"
+  },
+  "electron": {
+    "verify": {
+      "passed": 88,
+      "skipped": 1
+    },
+    "subscriberJourneys": 2,
+    "relatedSettingsAndBillingJourneys": 6,
+    "log": "/tmp/crux-subscriber-replay-final.log",
+    "fixture": "Real Electron app/native SQLite/Project Folders and HTTP; CRUX_AI_MOCK=0. HTTP model output and image provider are scripted. This is not live-model evidence.",
+    "combinedDesktop": {
+      "passed": 9,
+      "log": "/tmp/crux-subscriber-desktop-accepted.log"
+    }
+  },
+  "assertions": [
+    "Verified paid access enables an absent AI preference without provider keys",
+    "Explicit AI-off survives sign-in, refresh and restart",
+    "Create preserves and focuses the idea without dispatching an AI request",
+    "Included chat writes a native file and displays it in Workshop",
+    "Included image generation and editing retain changed bytes after restart",
+    "Unavailable allowance has Retry without removing the included selection",
+    "Reached limit explains that work remains saved",
+    "Destination save refusal retains an original when file scope permits; total disk refusal does not automatically regenerate",
+    "Image recovery obeys exact Task file scope",
+    "Real authenticated HTTP/PostgreSQL rejects duplicates, closed accounts and allowance exhaustion"
+  ],
+  "game": {
+    "stories": 127,
+    "criteria": 1253,
+    "baselineChecks": 346,
+    "creationChoices": 71,
+    "unmapped": 0,
+    "offlineAcceptance": "passed",
+    "newStoryId": "SUBSCRIBER",
+    "existingStoryIdsPreserved": true
+  },
+  "limits": [
+    "Production needs the hosted API update and INCLUDED_OPENAI_API_KEY with included inference enabled",
+    "Human testing owns real provider access, quality, latency and billing acceptance",
+    "Existing explicitly selected models are preserved; no legacy-choice migration",
+    "Scoped tasks cannot create an out-of-scope recovery Artifact",
+    "A full storage failure cannot guarantee generated-image recovery",
+    "Manual package refresh and native CI pending"
+  ]
+}

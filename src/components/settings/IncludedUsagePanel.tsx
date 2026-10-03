@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { includedUsage, type IncludedUsage, INCLUDED_MODEL } from '@/api/inference';
+import { refreshIncludedAccess, useIncludedAccess } from '@/services/included-access';
+import { INCLUDED_MODEL } from '@/api/inference';
 import { useAuthStore } from '@/stores/authStore';
-import { onUsageChanged } from '@/lib/usage-events';
 import { Meter } from '@/components/workspace/UsageSection';
 import { setDefaultModel } from '@/ai/keys';
 import { getModelShortName } from '@/ai/providers';
@@ -11,39 +11,14 @@ import { useUIStore } from '@/stores/uiStore';
 
 export default function IncludedUsagePanel() {
   const accountId = useAuthStore((s) => s.account?.id);
-  const [usage, setUsage] = useState<IncludedUsage | null>(null);
-  const [error, setError] = useState(false);
+  const { usage, status } = useIncludedAccess();
+  const error = status === 'unavailable';
   const [selected, setSelected] = useState(false);
   useEffect(() => {
-    let cancelled = false;
-    let revision = 0;
-    setUsage(null);
-    setError(false);
     setSelected(false);
-    if (!accountId) return;
-    const load = async () => {
-      const current = ++revision;
-      try {
-        const value = await includedUsage();
-        if (!cancelled && current === revision) {
-          setUsage(value);
-          setError(false);
-        }
-      } catch {
-        if (!cancelled && current === revision) {
-          setUsage(null);
-          setError(true);
-        }
-      }
-    };
-    void load();
-    const off = onUsageChanged(() => void load());
-    const timer = window.setInterval(() => void load(), 30000);
-    return () => {
-      cancelled = true;
-      off();
-      window.clearInterval(timer);
-    };
+    void refreshIncludedAccess();
+    const timer = window.setInterval(() => void refreshIncludedAccess(), 30000);
+    return () => window.clearInterval(timer);
   }, [accountId]);
   if (!accountId) return null;
   return (
@@ -59,7 +34,7 @@ export default function IncludedUsagePanel() {
         <>
           {!usage.available && (
             <p className="text-xs text-text-muted">
-              Included collaboration is not configured on this server yet.
+              Included AI is temporarily unavailable. Please try again shortly.
             </p>
           )}
           {!usage.eligible ? (
@@ -154,9 +129,11 @@ export default function IncludedUsagePanel() {
         </>
       )}
       <p className="text-xxs text-text-muted">
-        Included requests send conversation and selected file context through Crux Garden to
-        Anthropic. Files and tool execution stay in your garden. Your own API keys use their
-        providers directly; provider balances are not tracked here.
+        Included chat sends conversation and selected file context through Crux Garden to Anthropic.
+        Included images send the image description and any reference image through Crux Garden to
+        OpenAI. Chat and images share your included allowance; image usage is estimated
+        conservatively without cache discounts. Files and tool execution stay in your garden. Your
+        own API keys use their providers directly; provider balances are not tracked here.
       </p>
     </section>
   );

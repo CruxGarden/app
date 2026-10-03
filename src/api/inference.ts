@@ -5,6 +5,7 @@ import { notifyUsageChanged } from '@/lib/usage-events';
 export const INCLUDED_MODEL = 'garden-included';
 export interface IncludedUsage {
   available: boolean;
+  imagesAvailable?: boolean;
   eligible: boolean;
   planId: string;
   model: string;
@@ -107,3 +108,59 @@ export const includedFetch: typeof fetch = async (_input, init) => {
   });
   return new Response(body, { status: response.status, headers: response.headers });
 };
+
+/** Included image calls use only the Garden session and never a personal provider key. */
+export async function includedImage(
+  prompt: string,
+  size: string,
+  reference?: Blob,
+  signal?: AbortSignal,
+) {
+  const context = captureAuth();
+  const accountId = useAuthStore.getState().account?.id;
+  if (!accountId) throw new Error('Sign in to use included images.');
+  let image: string | undefined;
+  if (reference) {
+    if (reference.size > 3_000_000)
+      throw new Error('Use a PNG image up to 3 MB for included editing.');
+    const bytes = new Uint8Array(await reference.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192)
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    image = btoa(binary);
+  }
+  const requestId = crypto.randomUUID();
+  try {
+    const response = await client.post<{ image: string; mimeType: string; requestId: string }>(
+      '/inference/images',
+      { prompt, size, ...(image ? { image } : {}) },
+      { authContext: context, timeout: 310_000, signal, headers: { 'X-Request-Id': requestId } },
+    );
+    assertAuthCurrent(context);
+    if (accountId !== useAuthStore.getState().account?.id)
+      throw new Error('The account changed. The image has not been added to this Garden.');
+    const result = response.data;
+    if (
+      result.requestId !== requestId ||
+      result.mimeType !== 'image/png' ||
+      typeof result.image !== 'string' ||
+      result.image.length > 4_000_000
+    )
+      throw new Error('The image service returned an invalid image.');
+    const bytes = Uint8Array.from(atob(result.image), (c) => c.charCodeAt(0));
+    return { blob: new Blob([bytes], { type: 'image/png' }), requestId };
+  } catch (error) {
+    const message = (error as { response?: { data?: { message?: unknown } } }).response?.data
+      ?.message;
+    throw new Error(
+      typeof message === 'string'
+        ? message
+        : error instanceof Error
+          ? error.message
+          : 'Included images are unavailable. Please try again.',
+      { cause: error },
+    );
+  } finally {
+    notifyUsageChanged();
+  }
+}

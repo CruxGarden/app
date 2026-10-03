@@ -28,6 +28,9 @@ export interface MockApi {
   url: string;
   state: {
     failPublish: boolean;
+    includedMessages?: Record<string, unknown>[];
+    includedImages?: Record<string, unknown>[];
+    failIncludedImages?: boolean;
     failUnpublish?: boolean;
     failAccountClosure?: boolean;
     accountClosed?: boolean;
@@ -641,11 +644,100 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       canManage: state.billing.customer,
       provider: 'mock',
     });
+    if (path === '/inference/v1/messages' && method === 'POST') {
+      if (!req.headers.authorization?.startsWith('Bearer '))
+        return send(401, { message: 'Sign in' });
+      const body = bodyJson();
+      (state.includedMessages ??= []).push(body);
+      log.push('POST /inference/v1/messages -> 200');
+      const messages = body.messages as { role: string; content: unknown }[];
+      const last = messages.at(-1);
+      const editingImage = JSON.stringify(last?.content).includes('background lighter');
+      const makingImage = editingImage || JSON.stringify(last?.content).includes('Make a banner');
+      const toolName = makingImage ? 'generate_image' : 'write_file';
+      const toolInput = makingImage
+        ? {
+            path: 'banner.png',
+            prompt: editingImage ? 'A lighter background' : 'A garden banner',
+            ...(editingImage ? { source_path: 'banner.png' } : {}),
+          }
+        : { path: 'index.html', content: '<h1>Made with included AI</h1>' };
+      const toolResult =
+        Array.isArray(last?.content) &&
+        last.content.some((p: { type?: string }) => p.type === 'tool_result') &&
+        !last.content.some(
+          (p: { type?: string; text?: string }) =>
+            p.type === 'text' && !p.text?.startsWith('<workspace_context>'),
+        );
+      const events = [
+        {
+          type: 'message_start',
+          message: {
+            id: 'included-fixture',
+            type: 'message',
+            role: 'assistant',
+            model: 'claude-sonnet-5-5',
+            content: [],
+            stop_reason: null,
+            stop_sequence: null,
+            usage: { input_tokens: 100, output_tokens: 1 },
+          },
+        },
+        {
+          type: 'content_block_start',
+          index: 0,
+          content_block: toolResult
+            ? { type: 'text', text: '' }
+            : { type: 'tool_use', id: 'write-included', name: toolName, input: {} },
+        },
+        {
+          type: 'content_block_delta',
+          index: 0,
+          delta: toolResult
+            ? { type: 'text_delta', text: 'Your included creation is ready.' }
+            : { type: 'input_json_delta', partial_json: JSON.stringify(toolInput) },
+        },
+        { type: 'content_block_stop', index: 0 },
+        {
+          type: 'message_delta',
+          delta: { stop_reason: toolResult ? 'end_turn' : 'tool_use', stop_sequence: null },
+          usage: { output_tokens: 30 },
+        },
+        { type: 'message_stop' },
+      ];
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(
+        events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(''),
+      );
+      return;
+    }
+    if (path === '/inference/images' && method === 'POST') {
+      if (!req.headers.authorization?.startsWith('Bearer '))
+        return send(401, { message: 'Sign in' });
+      const body = bodyJson();
+      (state.includedImages ??= []).push(body);
+      if (state.failIncludedImages)
+        return send(503, {
+          message: 'Included images are temporarily unavailable. Please try again shortly.',
+        });
+      return send(200, {
+        image: body.image
+          ? 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGPY9+wEEDFAKABDtgmxkV+TzgAAAABJRU5ErkJggg=='
+          : 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGMQCVAGIgYIBQAOlgIdBN2aogAAAABJRU5ErkJggg==',
+        mimeType: 'image/png',
+        model: 'gpt-image-2.5-flare',
+        requestId: req.headers['x-request-id'],
+      });
+    }
     if (path === '/inference/usage' && method === 'GET') {
       if (state.failIncludedUsage) return send(503, { message: 'Unavailable' });
       const percent = state.includedUsagePercent ?? 25;
       return send(200, {
         available: true,
+        imagesAvailable: true,
         eligible: state.billing.planId !== 'free',
         planId: state.billing.planId,
         model: 'claude-sonnet-5-5',

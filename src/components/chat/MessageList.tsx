@@ -67,7 +67,7 @@ export default function MessageList({
   }, [streamingContent, liveToolCalls]);
 
   return (
-    <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+    <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-5">
       {messages.length === 0 && !isStreaming && (
         <div className="text-text-muted">
           <p className="text-sm font-medium">What would you like to make?</p>

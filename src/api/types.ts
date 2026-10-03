@@ -228,6 +228,8 @@ export interface CruxMeta {
   messages?: ChatMessage[];
   settings?: {
     model?: string;
+    /** Follow the account/default until the person explicitly selects a model. */
+    modelAutomatic?: boolean;
     systemPrompt?: string;
     palette?: Record<string, string>;
     snapshotFrequency?: string;

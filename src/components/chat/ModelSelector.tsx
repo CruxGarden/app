@@ -1,4 +1,4 @@
-import { includedUsage } from '@/api/inference';
+import { refreshIncludedAccess, useIncludedAccess } from '@/services/included-access';
 import { SectionLabel, menuItemClass } from '@/components/ui';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useAuthStore } from '@/stores/authStore';
@@ -73,7 +73,8 @@ function getProviderLabel(modelId: string): string {
 
 export default function ModelSelector({ value, onChange, disabled }: ModelSelectorProps) {
   const accountId = useAuthStore((s) => s.account?.id);
-  const [included, setIncluded] = useState(false);
+  const access = useIncludedAccess();
+  const included = access.usage?.eligible === true;
   const [open, setOpen] = useState(false);
   const [localEndpoints, setLocalEndpoints] = useState<LocalAiEndpoint[]>([]);
   const [agents, setAgents] = useState<Record<string, AgentStatus>>({});
@@ -160,20 +161,10 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   }, [open]);
 
   useEffect(() => {
-    let cancelled = false;
-    setIncluded(false);
-    if (open && accountId)
-      void includedUsage()
-        .then((u) => {
-          if (!cancelled) setIncluded(u.available && u.eligible);
-        })
-        .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    if (open && accountId) void refreshIncludedAccess();
   }, [open, accountId]);
   const groups = getAllModels().filter(
-    (g) => !isAgentModel(g.providerId) && (g.providerId !== 'included' || included),
+    (g) => !isAgentModel(g.providerId) && (g.providerId !== 'included' || !!accountId),
   );
   const agentGroups = getAllModels().filter((g) => isAgentModel(g.providerId));
   const label = getModelLabel(value);
@@ -292,6 +283,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                     {group.models.map((model) => (
                       <button
                         key={model.id}
+                        disabled={group.providerId === 'included' && !included}
                         aria-pressed={model.id === value}
                         onClick={() => {
                           onChange(model.id);
@@ -306,6 +298,13 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                         )}
                       >
                         {model.name}
+                        {group.providerId === 'included' && !included
+                          ? access.status === 'ready'
+                            ? ' · paid plan'
+                            : access.status === 'unavailable'
+                              ? ' · access unavailable'
+                              : ' · checking access'
+                          : ''}
                       </button>
                     ))}
                   </div>

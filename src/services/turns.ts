@@ -1,3 +1,4 @@
+import { cruxModel } from '@/ai/keys';
 import { PROGRESS_PROMPT } from './task-progress';
 import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { captureEditCheckpoint } from './edit-history';
@@ -12,7 +13,7 @@ import { useAppStore } from '@/stores/appStore';
 import { runConversation, type ConversationEvent } from '@/ai/engine';
 import { createToolExecutor } from '@/ai/tools';
 import { getApiKey } from '@/ai/keys';
-import { getProviderForModel, resolveModel, isAgentModel } from '@/ai/providers';
+import { getProviderForModel, isAgentModel } from '@/ai/providers';
 import { agentStatus, runAgentTurn } from '@/services/agent-provider';
 import { isAiMock } from '@/lib/platform';
 import { playCue, duckAudio } from '@/services/cues';
@@ -269,7 +270,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
   async function resolveModelAndKey(
     crux: NonNullable<ReturnType<typeof useCruxStore.getState>['crux']>,
   ) {
-    const model = resolveModel(crux.meta?.settings?.model);
+    const model = cruxModel(crux);
     const providerId = getProviderForModel(model);
     // The Agent Provider (ADR 0019) needs no key: Claude Code's own login pays.
     if (isAgentModel(model)) {
@@ -301,7 +302,9 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
         role: 'assistant',
         content: isAgentModel(model)
           ? `${reason ?? 'The agent is unavailable.'} Check its installation and sign-in, or pick another model.`
-          : `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
+          : providerId === 'included'
+            ? 'Sign in to your Crux Garden account in Settings to use your included collaborator.'
+            : `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
       });
       return;
     }
@@ -884,7 +887,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     if (!apiKey) {
       s.addMessage({
         role: 'assistant',
-        content: `No API key configured for ${providerId}. Add one in Settings to run this.`,
+        content:
+          providerId === 'included'
+            ? 'Sign in to your Crux Garden account in Settings to use your included collaborator.'
+            : `No API key configured for ${providerId}. Add one in Settings to run this.`,
       });
       return;
     }

@@ -221,6 +221,11 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           description:
             'File path to save the generated image. Should end in .png. Example: "images/hero.png", "logo.png".',
         },
+        source_path: {
+          type: 'string',
+          description:
+            'For editing, the exact path of the existing PNG image in this Crux. Use this for changes to a previous image instead of regenerating from scratch.',
+        },
         size: {
           type: 'string',
           enum: ['1024x1024', '1536x1024', '1024x1536'],
@@ -920,7 +925,14 @@ export function createToolExecutor(
             result = await toolListFiles(cruxId, artifactService);
             break;
           case 'generate_image':
-            result = await toolGenerateImage(input, cruxId, artifactService, chatModel);
+            result = await toolGenerateImage(
+              input,
+              cruxId,
+              artifactService,
+              chatModel,
+              options.signal,
+              options.scope,
+            );
             break;
           case 'search_files':
             result = await toolSearchFiles(input, cruxId, artifactService);
@@ -1701,6 +1713,8 @@ async function toolGenerateImage(
   cruxId: string,
   artifactService: ArtifactService,
   chatModel?: string,
+  signal?: AbortSignal,
+  scope?: WriteScope,
 ): Promise<string> {
   const prompt = input.prompt as string;
   const path = input.path as string;
@@ -1709,16 +1723,51 @@ async function toolGenerateImage(
   if (!prompt) return formatToolError('generate_image', 'prompt is required');
   if (!path) return formatToolError('generate_image', 'path is required');
 
-  const generated = await generateImageBlob(prompt, size, chatModel);
-  if ('error' in generated) return formatToolError('generate_image', generated.error);
+  let reference: Blob | undefined;
+  if (input.source_path) {
+    const artifacts = await artifactService.findByResource('crux', cruxId);
+    const source = findArtifactByPath(artifacts, input.source_path as string);
+    if (!source)
+      return formatToolError('generate_image', 'The image to edit was not found in this Crux.');
+    reference = await artifactService.downloadBlob(source);
+  }
+  const generated = await generateImageBlob(prompt, size, chatModel, reference, signal);
+  if ('error' in generated)
+    return `Error in generate_image: ${generated.error} Do not repeat generation automatically; explain the problem and wait for the user.`;
 
-  await artifactService.upload({
-    resourceId: cruxId,
-    resourceType: 'crux',
-    blob: generated.blob,
-    meta: { path },
-  });
-
+  if (signal?.aborted)
+    return 'Error in generate_image: Image generation stopped. Check your allowance before trying again. Do not repeat generation automatically.';
+  // Keep a generated original before replacing the requested file. If that final
+  // save refuses, the paid result remains a normal local Artifact for recovery.
+  const retained = `images/generated/${crypto.randomUUID()}.png`;
+  const retain =
+    generated.provider === 'included' && !scopeViolation('write_file', { path: retained }, scope);
+  if (retain) {
+    try {
+      await artifactService.upload({
+        resourceId: cruxId,
+        resourceType: 'crux',
+        blob: generated.blob,
+        meta: { path: retained },
+      });
+    } catch (error) {
+      return `Error in generate_image: The image was generated but could not be saved locally. Allowance may have been used. Do not generate another image automatically; resolve the storage problem first. ${String(error)}`;
+    }
+  }
+  try {
+    await artifactService.upload({
+      resourceId: cruxId,
+      resourceType: 'crux',
+      blob: generated.blob,
+      meta: { path },
+    });
+  } catch (error) {
+    if (retain)
+      return `The generated image is saved at ${retained}. Saving to ${path} failed. Use the saved image; do not generate it again. ${String(error)}`;
+    if (generated.provider === 'included')
+      return `Error in generate_image: The image could not be saved within this task’s file scope. Allowance may have been used. Do not generate another image automatically. ${String(error)}`;
+    throw error;
+  }
   return `Generated and saved image: ${path}`;
 }
 
@@ -1731,11 +1780,29 @@ export async function generateImageBlob(
   prompt: string,
   size = '1024x1024',
   chatModel?: string,
+  reference?: Blob,
+  signal?: AbortSignal,
 ): Promise<{ blob: Blob; provider: string } | { error: string }> {
   const { getApiKey } = await import('./keys');
   const { getProviderForModel } = await import('./providers');
   const { PROVIDERS } = await import('./providers');
 
+  chatModel ??= await (await import('./keys')).getDefaultModel();
+  if (chatModel === 'garden-included') {
+    try {
+      const result = await (
+        await import('@/api/inference')
+      ).includedImage(prompt, size, reference, signal);
+      return { blob: result.blob, provider: 'included' };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Included images are unavailable.' };
+    }
+  }
+  if (reference)
+    return {
+      error:
+        'Reference-image editing is available with the included collaborator. Your original image is unchanged.',
+    };
   const chatProvider = chatModel ? getProviderForModel(chatModel) : null;
   const chatProviderInfo = chatProvider ? PROVIDERS[chatProvider] : null;
   const chatSupportsImages = chatProviderInfo?.capabilities.includes('Images');

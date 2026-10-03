@@ -365,22 +365,22 @@ export default function HomeGarden() {
           <PlasmaButton
             className="h-auto min-h-11 max-w-full whitespace-normal py-2"
             onClick={() => {
-              setNewCruxView('undertakings');
+              setNewCruxView('crux');
               setShowNewCrux(true);
             }}
           >
-            Explore undertakings — a collection of projects
+            Just a Crux — one project
           </PlasmaButton>
           <Button
             variant="ghost"
             size="sm"
             className="mt-2"
             onClick={() => {
-              setNewCruxView('crux');
+              setNewCruxView('undertakings');
               setShowNewCrux(true);
             }}
           >
-            Just a Crux — one project
+            Explore undertakings — a collection of projects
           </Button>
         </Panel>
       ) : (

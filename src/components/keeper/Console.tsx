@@ -1,3 +1,6 @@
+import { automaticModel } from '@/ai/keys';
+import { useIncludedAccess } from '@/services/included-access';
+import IncludedStatus from '@/components/chat/IncludedStatus';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { onPersonaChange } from '@/services/persona';
@@ -81,7 +84,10 @@ export default function Console() {
   const setActive = useKeeperStore((s) => s.setActive);
   const newConversation = useKeeperStore((s) => s.newConversation);
   const deleteConversation = useKeeperStore((s) => s.deleteConversation);
-  const model = useKeeperStore((s) => s.model);
+  const storedModel = useKeeperStore((s) => s.model);
+  const automatic = useKeeperStore((s) => s.modelAutomatic);
+  useIncludedAccess();
+  const model = automatic ? automaticModel(storedModel) : storedModel;
   const changeModel = useKeeperStore((s) => s.setModel);
   const streaming = useKeeperStore((s) => s.streaming);
   const streamContent = useKeeperStore((s) => s.streamContent);
@@ -261,6 +267,10 @@ export default function Console() {
             </div>
           )}
 
+          <p className="text-xs text-text-muted">
+            Working across this Garden · open a Crux to work on one creation.
+          </p>
+          {model === 'garden-included' && <IncludedStatus />}
           {/* The pill composer, the model chip beneath it */}
           <div className="border-t border-border/(--tint-medium)">
             <ComposerPill

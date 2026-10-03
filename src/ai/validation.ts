@@ -254,6 +254,12 @@ function validatePathOnly(input: Record<string, unknown>): ValidationResult {
 }
 
 function validateGenerateImage(input: Record<string, unknown>): ValidationResult {
+  if (input.source_path !== undefined) {
+    if (typeof input.source_path !== 'string')
+      return { valid: false, error: 'source_path must be an image path.' };
+    const issue = validatePath(input.source_path);
+    if (issue) return issue;
+  }
   if (!input.prompt || typeof input.prompt !== 'string') {
     return { valid: false, error: 'prompt is required and must be a string.' };
   }

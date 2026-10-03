@@ -8,7 +8,10 @@ import { runConversation } from '@/ai/engine';
 import { getApiKey } from '@/ai/keys';
 import { runGardenTool } from '@/ai/garden-tools';
 
-vi.mock('@/ai/keys', () => ({ getApiKey: vi.fn(async () => 'test-key') }));
+vi.mock('@/ai/keys', async (original) => ({
+  ...(await original<typeof import('@/ai/keys')>()),
+  getApiKey: vi.fn(async () => 'test-key'),
+}));
 vi.mock('@/ai/engine', () => ({ runConversation: vi.fn() }));
 vi.mock('@/ai/garden-tools', async (original) => ({
   ...(await original<typeof import('@/ai/garden-tools')>()),

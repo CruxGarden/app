@@ -1,3 +1,5 @@
+import { useIncludedAccess } from '@/services/included-access';
+import IncludedStatus from '@/components/chat/IncludedStatus';
 import { useState, useRef, useEffect } from 'react';
 import BackButton from './BackButton';
 import { applyMood } from '@/lib/moods/packages';
@@ -8,7 +10,7 @@ import AvatarUpload from '@/components/auth/AvatarUpload';
 import { SettingsKey } from '@/lib/constants';
 import { PROVIDERS } from '@/ai/providers';
 import { getApiKey } from '@/ai/keys';
-import { getSetting, setSetting } from '@/services/settings';
+import { setSetting } from '@/services/settings';
 import { seedWelcomeCrux } from '@/services/welcome-crux';
 import { captureGardenId } from '@/stores/gardenContext';
 import { useAuthStore } from '@/stores/authStore';
@@ -35,8 +37,9 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
   const [usernameError, setUsernameError] = useState('');
   const [saving, setSaving] = useState(false);
   const [includeWelcome, setIncludeWelcome] = useState(() => can(Capability.Build));
-  const [openSection, setOpenSection] = useState<SetupSection | null>(SetupSection.Username);
-  const [aiEnabled, setAiEnabled] = useState(() => getSetting(SettingsKey.AiEnabled) === 'true');
+  const [openSection, setOpenSection] = useState<SetupSection | null>(SetupSection.Connect);
+  const aiEnabled = useUIStore((s) => s.aiEnabled);
+  const included = useIncludedAccess((s) => s.usage?.eligible);
   const [keysConfigured, setKeysConfigured] = useState(false);
   const desktop = can(Capability.ProjectFolder);
   const [gardenRoot, setGardenRoot] = useState<string | null>(null);
@@ -52,13 +55,14 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
   };
 
   const handleAiToggle = (enabled: boolean) => {
-    setAiEnabled(enabled);
     setSetting(SettingsKey.AiEnabled, enabled ? 'true' : 'false');
     useUIStore.getState().setAiEnabled(enabled);
   };
 
   const checkApiKeys = async () => {
-    for (const id of Object.keys(PROVIDERS)) {
+    for (const id of Object.keys(PROVIDERS).filter(
+      (id) => !['included', 'ollama', 'lmstudio'].includes(id),
+    )) {
       try {
         if (await getApiKey(id)) {
           setKeysConfigured(true);
@@ -190,6 +194,55 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
       <p className="text-xs text-text-muted mb-6">You can always change these later in Settings</p>
 
       <div className="flex flex-col gap-2">
+        {/* Connect */}
+        <AccordionHeader
+          label="Connect to crux.garden"
+          open={openSection === SetupSection.Connect}
+          onToggle={() => toggle(SetupSection.Connect)}
+          summary={isAuthenticated ? 'Connected' : 'Optional'}
+          completed={isAuthenticated}
+        />
+        {openSection === SetupSection.Connect && (
+          <div className="pt-3 pb-4 px-1">
+            <ConnectAccount
+              compact
+              autoFocus
+              description="Sign in to use the AI included with your subscription, back up work, and share."
+              onDisconnected={() => {
+                // Clear API-specific errors — username is only local now
+                if (usernameError.includes('crux.garden')) setUsernameError('');
+              }}
+              onConnected={async () => {
+                const apiAuthor = useAppStore.getState().author;
+                if (!apiAuthor) return;
+
+                // If the API account already has a real username, adopt it
+                if (apiAuthor.username && !apiAuthor.username.startsWith('wanderer-')) {
+                  setUsername(apiAuthor.username);
+                  setUsernameError('');
+                  return;
+                }
+
+                // New account — validate the locally chosen username against the API
+                // Read isAuthenticated directly from store since the closure value may be stale
+                const trimmed = username.trim();
+                if (trimmed && useAuthStore.getState().isAuthenticated) {
+                  try {
+                    const { authors } = await import('@/api');
+                    const { available } = await authors.checkUsername(trimmed.toLowerCase());
+                    if (!available) {
+                      setUsernameError('Username is taken at crux.garden');
+                      setOpenSection(SetupSection.Username);
+                    }
+                  } catch {
+                    /* API unavailable */
+                  }
+                }
+              }}
+            />
+          </div>
+        )}
+
         {/* Username */}
         <AccordionHeader
           label="Pick Username"
@@ -273,76 +326,43 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
 
         {/* AI Tools */}
         <AccordionHeader
-          label="Configure AI Tools"
+          label="AI collaborator"
           open={openSection === SetupSection.Keys}
           onToggle={() => toggle(SetupSection.Keys)}
-          summary={!aiEnabled ? 'Disabled' : keysConfigured ? 'Configured' : 'Optional'}
-          completed={aiEnabled && keysConfigured}
+          summary={
+            !aiEnabled
+              ? 'Off'
+              : included
+                ? 'Included with your plan'
+                : keysConfigured
+                  ? 'Configured'
+                  : 'Optional'
+          }
+          completed={aiEnabled && (!!included || keysConfigured)}
         />
         {openSection === SetupSection.Keys && (
           <div className="pt-3 pb-4 px-1">
             <div className="flex items-center justify-between">
               <Toggle checked={aiEnabled} onChange={handleAiToggle} label="Enable AI Tools" />
             </div>
-            {aiEnabled && (
+            {isAuthenticated && (
               <div className="mt-3">
-                <p className="text-xs text-text-muted mb-3">
-                  {can(Capability.SecureSecrets)
-                    ? 'Add one or more API keys to build with AI agents. Keys are encrypted in your Mac’s Keychain'
-                    : 'Add one or more API keys to build with AI agents. Keys stay in your browser'}
-                </p>
-                <ApiKeySetup compact autoFocus onKeyChange={checkApiKeys} />
+                <IncludedStatus />
               </div>
             )}
-          </div>
-        )}
-
-        {/* Connect */}
-        <AccordionHeader
-          label="Connect to crux.garden"
-          open={openSection === SetupSection.Connect}
-          onToggle={() => toggle(SetupSection.Connect)}
-          summary={isAuthenticated ? 'Connected' : 'Optional'}
-          completed={isAuthenticated}
-        />
-        {openSection === SetupSection.Connect && (
-          <div className="pt-3 pb-4 px-1">
-            <ConnectAccount
-              compact
-              autoFocus
-              description="Enables storage, sync, and share features"
-              onDisconnected={() => {
-                // Clear API-specific errors — username is only local now
-                if (usernameError.includes('crux.garden')) setUsernameError('');
-              }}
-              onConnected={async () => {
-                const apiAuthor = useAppStore.getState().author;
-                if (!apiAuthor) return;
-
-                // If the API account already has a real username, adopt it
-                if (apiAuthor.username && !apiAuthor.username.startsWith('wanderer-')) {
-                  setUsername(apiAuthor.username);
-                  setUsernameError('');
-                  return;
-                }
-
-                // New account — validate the locally chosen username against the API
-                // Read isAuthenticated directly from store since the closure value may be stale
-                const trimmed = username.trim();
-                if (trimmed && useAuthStore.getState().isAuthenticated) {
-                  try {
-                    const { authors } = await import('@/api');
-                    const { available } = await authors.checkUsername(trimmed.toLowerCase());
-                    if (!available) {
-                      setUsernameError('Username is taken at crux.garden');
-                      setOpenSection(SetupSection.Username);
-                    }
-                  } catch {
-                    /* API unavailable */
-                  }
-                }
-              }}
-            />
+            {aiEnabled && (
+              <details className="mt-3" open={!included}>
+                <summary className="text-xs text-accent cursor-pointer">
+                  Use your own provider or local AI
+                </summary>
+                <p className="text-xs text-text-muted mb-3">
+                  {can(Capability.SecureSecrets)
+                    ? 'Optional: connect your own provider. Keys are protected by your system’s secure storage.'
+                    : 'Optional: connect your own AI provider.'}
+                </p>
+                <ApiKeySetup compact onKeyChange={checkApiKeys} />
+              </details>
+            )}
           </div>
         )}
       </div>
