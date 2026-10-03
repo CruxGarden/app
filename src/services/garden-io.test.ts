@@ -10,7 +10,7 @@ import { createTask, prepareTaskReview } from './tasks';
 import { allWorkspaces, closeWorkspace } from '@/stores/workspaceRegistry';
 
 // Exercise the shipped API and native SQLite in an isolated installation.
-const native = localApiFixture();
+const native = localApiFixture({ project: true });
 async function closeWorkspaces() {
   for (const w of allWorkspaces()) await closeWorkspace(w.id, { stop: true, documents: 'discard' });
 }
@@ -22,6 +22,42 @@ describe('Garden Export / Import', () => {
     svc = await initServices();
   });
   afterEach(() => vi.restoreAllMocks());
+
+  it('refuses a changed cloud owner before installation replacement and permits a fresh retry', async () => {
+    const crux = await svc.crux.create({ title: 'Cloud copy' });
+    await svc.artifact.create({
+      resourceId: crux.id,
+      content: 'Backed up',
+      meta: { path: 'keep.txt' },
+    });
+    const archive = await exportGarden();
+    await svc.crux.update(crux.id, { title: 'Newer local work' });
+    const db = getSqliteClient();
+    const replace = vi.spyOn(db, 'import');
+    let current = true;
+    const guard = () => {
+      if (!current) throw new Error('Cloud account changed');
+    };
+    await expect(
+      importGarden({
+        data: archive.blob,
+        beforeCommit: guard,
+        onProgress: (status) => {
+          if (status === 'Importing database...') current = false;
+        },
+      }),
+    ).rejects.toThrow('Cloud account changed');
+    expect(replace).not.toHaveBeenCalled();
+    expect(await svc.crux.findById(crux.id)).toMatchObject({ title: 'Newer local work' });
+    await native().restart();
+    expect(await svc.crux.findById(crux.id)).toMatchObject({ title: 'Newer local work' });
+    current = true;
+    await importGarden({ data: archive.blob, beforeCommit: guard });
+    expect(await svc.crux.findById(crux.id)).toMatchObject({ title: 'Cloud copy' });
+    expect(
+      await svc.artifact.readContent((await svc.artifact.findByResource('crux', crux.id))[0]!),
+    ).toBe('Backed up');
+  });
 
   it('requires the native installation commands before any export, intake or wipe', async () => {
     const db = getSqliteClient();

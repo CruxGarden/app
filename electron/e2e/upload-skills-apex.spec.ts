@@ -1,17 +1,11 @@
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import {
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
+import { createCrux, enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 
 /**
  * Three flows with no e2e until now:
@@ -56,11 +50,10 @@ async function ensurePane(page: Page, type: string, toggle: string) {
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
-/** The one Project Folder in a fresh garden (memory.md may sit beside it). */
-function projectFolderIn(gardenRoot: string): string {
-  const dirs = readdirSync(gardenRoot).filter((n) => statSync(join(gardenRoot, n)).isDirectory());
-  expect(dirs).toHaveLength(1);
-  return join(gardenRoot, dirs[0]!);
+/** Resolve the current Crux, even when the Garden also contains welcome projects. */
+async function currentProjectFolder(page: Page): Promise<string> {
+  const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+  return (await storedCrux(page, id)).projectFolder;
 }
 
 interface DroppedFile {
@@ -112,16 +105,156 @@ function systemPrompts(page: Page): Promise<string[]> {
   );
 }
 
+async function refuseNextProjectWrite(
+  app: import('@playwright/test').ElectronApplication,
+  refusedPath: string,
+) {
+  await app.evaluate(({ app }, refusedPath) => {
+    const path = process.getBuiltinModule('path');
+    const load = process
+      .getBuiltinModule('module')
+      .createRequire(path.join(app.getAppPath(), 'package.json'));
+    const { ProjectFolders } = load('./dist/projects.js') as typeof import('../src/projects');
+    const original = ProjectFolders.prototype.projectOperation;
+    ProjectFolders.prototype.projectOperation = function (folder, intent, apply, bytes) {
+      if (!apply && intent.kind === 'write' && intent.entry.path === refusedPath) {
+        ProjectFolders.prototype.projectOperation = original;
+        throw new Error('Test project write refused');
+      }
+      return original.call(this, folder, intent, apply, bytes);
+    };
+  }, refusedPath);
+}
+
+test('Artifacts uploads report partial refusal, keep successful files, and retry across restart', async () => {
+  test.setTimeout(180_000);
+  let instance = await launchApp();
+  const { dir } = instance;
+  try {
+    let page = instance.page;
+    await enterGarden(page);
+    const id = await createCrux(page, 'Upload recovery');
+    await ensurePane(page, 'artifacts', 'Toggle artifacts');
+    const folder = (await storedCrux(page, id)).projectFolder as string;
+    const successful = join(dir, 'successful.txt');
+    const refused = join(dir, 'refused.txt');
+    writeFileSync(successful, 'Successful original bytes');
+    writeFileSync(refused, 'Refused original bytes');
+    const choose = async (files: string[]) => {
+      await page.getByRole('button', { name: 'Upload', exact: true }).click();
+      const chooser = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Files…', exact: true }).click();
+      await (await chooser).setFiles(files);
+    };
+    await refuseNextProjectWrite(instance.app, 'refused.txt');
+    await choose([successful, refused]);
+    const failure = page.getByRole('alertdialog', { name: 'Upload failed', exact: true });
+    await expect(failure).toContainText('1 of 2 files added');
+    await expect(failure).toContainText('refused.txt');
+    await expect(failure).toContainText(/kept.*retry/s);
+    expect(readFileSync(join(folder, 'successful.txt'), 'utf8')).toBe('Successful original bytes');
+    expect(existsSync(join(folder, 'refused.txt'))).toBe(false);
+    await expect(page.getByTestId('pane-body-artifacts').getByText(/\d+\/\d+: /)).toHaveCount(0);
+    await failure.getByRole('button', { name: 'OK', exact: true }).click();
+    await expect(page.getByRole('tree').getByText('successful.txt', { exact: true })).toBeVisible();
+    await expect(page.getByRole('tree').getByText('refused.txt', { exact: true })).toHaveCount(0);
+
+    await choose([refused]);
+    await expect(page.getByRole('tree').getByText('refused.txt', { exact: true })).toBeVisible();
+    expect(readFileSync(join(folder, 'refused.txt'), 'utf8')).toBe('Refused original bytes');
+    expect(readFileSync(join(folder, 'successful.txt'), 'utf8')).toBe('Successful original bytes');
+    await instance.app.close();
+    instance = await launchApp({ dir });
+    page = instance.page;
+    await reenterWorkspace(page, 'Upload recovery');
+    for (const [path, expected] of [
+      ['successful.txt', 'Successful original bytes'],
+      ['refused.txt', 'Refused original bytes'],
+    ]) {
+      expect(readFileSync(join(folder, path!), 'utf8')).toBe(expected);
+      const saved = await page.evaluate(
+        async ({ id, path }) => {
+          const files = window.electronAPI!.sqlite.fileContent!;
+          const head = (await files.head(id))!;
+          const selected = await files.read({ cruxId: id, expected: head, path: path! });
+          return selected ? new TextDecoder().decode(new Uint8Array(selected.bytes)) : null;
+        },
+        { id, path },
+      );
+      expect(saved).toBe(expected);
+    }
+    expect(readFileSync(successful, 'utf8')).toBe('Successful original bytes');
+    expect(readFileSync(refused, 'utf8')).toBe('Refused original bytes');
+  } finally {
+    await instance.app.close().catch(() => {});
+  }
+});
+
+test('Builder image uploads report partial refusal without a success notice or clipboard snippet', async () => {
+  test.setTimeout(180_000);
+  const { app, page } = await launchApp();
+  try {
+    await enterGarden(page);
+    await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
+    await page.getByRole('button', { name: /Astro Feed/ }).click();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit content', exact: true }).click();
+    const addImages = page.getByRole('button', { name: /Add images$/ });
+    await expect(addImages).toBeVisible();
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const folder = (await storedCrux(page, id)).projectFolder as string;
+    // Observe the real UI's clipboard request without touching the person's clipboard.
+    await page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', {
+        configurable: true,
+        value: async (text: string) => {
+          document.body.dataset.uploadClipboard = text;
+        },
+      });
+    });
+    await refuseNextProjectWrite(app, 'public/images/refused.png');
+    const choose = async (names: string[]) => {
+      const chooser = page.waitForEvent('filechooser');
+      await addImages.click();
+      await (
+        await chooser
+      ).setFiles(names.map((name) => ({ name, mimeType: 'image/png', buffer: PNG })));
+    };
+    await choose(['successful.png', 'refused.png']);
+    const failure = page.getByRole('alertdialog', { name: 'Upload failed', exact: true });
+    await expect(failure).toContainText('1 of 2 files added');
+    await expect(failure).toContainText('public/images/refused.png');
+    expect(readFileSync(join(folder, 'public/images/successful.png'))).toEqual(PNG);
+    expect(existsSync(join(folder, 'public/images/refused.png'))).toBe(false);
+    expect(await page.locator('body').getAttribute('data-upload-clipboard')).toBeNull();
+    await expect(page.getByRole('alertdialog', { name: 'Images added', exact: true })).toHaveCount(
+      0,
+    );
+    await failure.getByRole('button', { name: 'OK', exact: true }).click();
+    await choose(['refused.png']);
+    const success = page.getByRole('alertdialog', { name: 'Images added', exact: true });
+    await expect(success).toContainText('Added 1 image.');
+    await expect(page.locator('body')).toHaveAttribute(
+      'data-upload-clipboard',
+      '![](/images/refused.png)',
+    );
+    expect(readFileSync(join(folder, 'public/images/refused.png'))).toEqual(PNG);
+    expect(readFileSync(join(folder, 'public/images/successful.png'))).toEqual(PNG);
+  } finally {
+    await app.close();
+  }
+});
+
 test.describe('upload, skills, apex domain', () => {
   test.setTimeout(150_000);
 
   test('Artifacts upload: file chooser, OS drag-and-drop, Replace dialog — tree and disk agree', async () => {
     const src = mkdtempSync(join(tmpdir(), 'crux-upload-src-'));
-    const { app, page, dir } = await launchApp();
+    const { app, page } = await launchApp();
     try {
       await plantBlankCrux(page);
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
-      const folder = projectFolderIn(join(dir, 'garden'));
+      const folder = await currentProjectFolder(page);
       const onDisk = (rel: string) => existsSync(join(folder, rel));
       const textOnDisk = (rel: string) => readFileSync(join(folder, rel), 'utf8');
 
@@ -208,12 +341,12 @@ test.describe('upload, skills, apex domain', () => {
     expect(skillNames).toContain('astro-basics');
     expect(skillNames.length).toBeGreaterThanOrEqual(5);
 
-    const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+    const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     try {
       await plantBlankCrux(page);
       const input = page.getByPlaceholder('Send a message...');
       await expect(input).toBeVisible({ timeout: 30_000 });
-      const folder = projectFolderIn(join(dir, 'garden'));
+      const folder = await currentProjectFolder(page);
       const agentsMd = () => readFileSync(join(folder, 'AGENTS.md'), 'utf8');
 
       // ── First turn: the system prompt carries the skills index, not the Site Crux guidance ──

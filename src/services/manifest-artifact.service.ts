@@ -9,14 +9,9 @@ import type { ArtifactReference, IArtifactService } from './artifact.service';
 import { getSqliteClient } from './sqlite/client';
 import { getLocalIdentity } from './sqlite/identity';
 import { guessMimeType, hashContent } from './sqlite/helpers';
-import { readSelectedFile, type SelectedFiles } from './file-content';
+import { readSelectedFile, finishFileProjection, type SelectedFiles } from './file-content';
 import { assertCopyWritable } from './working-copies';
 import { serializeIngestion } from './ingestion';
-import {
-  writeThroughArtifact,
-  renameThroughArtifact,
-  deleteThroughArtifact,
-} from './project-folder';
 
 type Entry = SelectedFiles['entries'][number];
 type Head = SelectedFiles['head'];
@@ -140,9 +135,7 @@ export class ManifestArtifactService implements IArtifactService {
     const captured = {
       ...input,
       meta: structuredClone(input.meta ?? {}),
-      ...('expected' in input && input.expected
-        ? { expected: structuredClone(input.expected) }
-        : {}),
+      ...(input.expected !== undefined ? { expected: structuredClone(input.expected) } : {}),
     };
     const savedBytes = Uint8Array.from(bytes);
     const execute = async () => {
@@ -151,7 +144,6 @@ export class ManifestArtifactService implements IArtifactService {
       const path = captured.meta.path;
       if (!path) throw new Error('Use a file path.');
       if (
-        'expected' in captured &&
         captured.expected &&
         (captured.expected.resourceId !== captured.resourceId ||
           captured.expected.fileReference?.path !== path)
@@ -159,10 +151,17 @@ export class ManifestArtifactService implements IArtifactService {
         throw new Error(
           'Save the selected file in its owning Crux; use rename to change its path.',
         );
-      const before =
-        'expected' in captured && captured.expected
-          ? this.unchanged(captured.expected, selected.entries)
-          : selected.entries.find((entry) => entry.path === path);
+      const current = selected.entries.find((entry) => entry.path === path);
+      if (captured.expected === null && current)
+        throw new Error('A file appeared at this path. Choose the file again before replacing it.');
+      const before = captured.expected
+        ? this.unchanged(captured.expected, selected.entries)
+        : current;
+      // An ordinary create also keeps its first selection across a head-conflict retry.
+      if (captured.expected === undefined)
+        captured.expected = before
+          ? manifestArtifact(captured.resourceId, selected.head!, before)
+          : null;
       const identity = await getLocalIdentity();
       const now = new Date().toISOString();
       const entry: Entry = {
@@ -184,17 +183,24 @@ export class ManifestArtifactService implements IArtifactService {
           ),
         },
       };
+      const api = content();
+      const head =
+        captured.writeThrough === false
+          ? await api.edit({
+              cruxId: captured.resourceId,
+              expected: selected.head,
+              changes: [{ put: entry, bytes: savedBytes }],
+            })
+          : await api.write({
+              cruxId: captured.resourceId,
+              expected: selected.head,
+              before: before ?? null,
+              ...(captured.retention ? { retention: captured.retention } : {}),
+              entry,
+              bytes: savedBytes,
+            });
       if (captured.writeThrough !== false)
-        await writeThroughArtifact(
-          captured.resourceId,
-          { filename: path.split('/').pop()!, meta: { path } },
-          savedBytes,
-        );
-      const head = await content().edit({
-        cruxId: captured.resourceId,
-        expected: selected.head,
-        changes: [{ put: entry, bytes: savedBytes }],
-      });
+        await finishFileProjection(captured.resourceId, [path], api.finishProjection);
       return manifestArtifact(captured.resourceId, head, entry);
     };
     // Another writer (a preview capture, the watcher) can advance the head
@@ -218,9 +224,21 @@ export class ManifestArtifactService implements IArtifactService {
     return this.put(input, new TextEncoder().encode(input.content), 'utf-8');
   }
   async upload(input: UploadArtifactInput): Promise<Artifact> {
-    if (input.type && input.type !== 'artifact')
+    const captured = {
+      ...input,
+      meta: structuredClone(input.meta ?? {}),
+      ...(input.expected !== undefined ? { expected: structuredClone(input.expected) } : {}),
+    };
+    if (captured.type && captured.type !== 'artifact')
       throw new Error('Use Growth to retain a file version.');
-    return this.put(input, new Uint8Array(await input.blob.arrayBuffer()), 'binary');
+    if (captured.expected === undefined) {
+      const selected = await this.selected(captured.resourceId);
+      const before = selected.entries.find((entry) => entry.path === captured.meta.path);
+      captured.expected = before
+        ? manifestArtifact(captured.resourceId, selected.head!, before)
+        : null;
+    }
+    return this.put(captured, new Uint8Array(await captured.blob.arrayBuffer()), 'binary');
   }
 
   async registerMany(inputs: RegisterArtifactInput[]): Promise<number> {
@@ -275,8 +293,13 @@ export class ManifestArtifactService implements IArtifactService {
       const selected = await this.selected(file.resourceId);
       const before = this.unchanged(file, selected.entries);
       const path = captured.meta?.path || captured.filename || before.path;
-      if (path !== before.path && selected.entries.some((entry) => entry.path === path))
-        throw new Error(`An Artifact already exists at ${path}`);
+      const target = selected.entries.find((entry) => entry.path === path) ?? null;
+      if (path !== before.path && target) {
+        if (!captured.replace || captured.replace.resourceId !== file.resourceId)
+          throw new Error(`An Artifact already exists at ${path}`);
+        const approved = this.unchanged(this.reference(captured.replace), selected.entries);
+        if (approved.path !== path) throw new Error('The approved replacement path changed.');
+      } else if (captured.replace) throw new Error('The approved replacement file changed.');
       const entry: Entry = {
         ...before,
         path,
@@ -290,7 +313,19 @@ export class ManifestArtifactService implements IArtifactService {
           ),
         },
       };
-      if (path !== before.path) await renameThroughArtifact(file.resourceId, before.path, path);
+      if (path !== before.path) {
+        if (!selected.head) throw new Error('The selected file content is unavailable.');
+        const api = content();
+        const head = await api.rename({
+          cruxId: file.resourceId,
+          expected: selected.head,
+          source: before,
+          target,
+          entry,
+        });
+        await finishFileProjection(file.resourceId, [before.path, path], api.finishProjection);
+        return manifestArtifact(file.resourceId, head, entry);
+      }
       const head = await content().edit({
         cruxId: file.resourceId,
         expected: selected.head,
@@ -306,12 +341,17 @@ export class ManifestArtifactService implements IArtifactService {
       await this.writable(file.resourceId);
       const selected = await this.selected(file.resourceId);
       const entry = this.unchanged(file, selected.entries);
-      if (opts?.writeThrough !== false) await deleteThroughArtifact(file.resourceId, file);
-      await content().edit({
-        cruxId: file.resourceId,
-        expected: selected.head,
-        changes: [{ remove: entry.path }],
-      });
+      const api = content();
+      if (opts?.writeThrough === false) {
+        await api.edit({
+          cruxId: file.resourceId,
+          expected: selected.head,
+          changes: [{ remove: entry.path }],
+        });
+      } else {
+        await api.delete({ cruxId: file.resourceId, expected: selected.head!, file: entry });
+        await finishFileProjection(file.resourceId, [entry.path], api.finishProjection);
+      }
     };
     return opts?.writeThrough === false ? execute() : serializeIngestion(execute);
   }

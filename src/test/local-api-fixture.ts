@@ -7,11 +7,12 @@ import { allWorkspaces, closeWorkspace, useWorkspaceRegistry } from '@/stores/wo
 /** Adopt the command-backed fixture before a suite initializes its services.
  * Retired SQL.js setup is disposed immediately; workspace cleanup precedes
  * native owner shutdown, so queued writes cannot outlive their test Garden. */
-export function localApiFixture() {
+export function localApiFixture(options: { project?: boolean } = {}) {
   let native: Awaited<ReturnType<typeof createLocalApiTestClient>> | undefined;
   beforeEach(async () => {
     await getSqliteClient().close();
     native = await createLocalApiTestClient();
+    if (options.project) native.installProjectBridge();
     setSqliteClient(native.client);
     useGardenContext.getState().initialize(await native.client.enterLocalGarden!());
   });

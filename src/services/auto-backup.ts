@@ -133,17 +133,13 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
   const [
     { useAuthStore },
     { getWorkspace, useWorkspaceRegistry },
-    { backupCrux },
-    gardenIo,
-    syncApi,
+    { backupCrux, backupGarden },
     { GROWTH_CHANGED_EVENT },
     { autoBackupQuietMsKnob },
   ] = await Promise.all([
     import('@/stores/authStore'),
     import('@/stores/workspaceRegistry'),
     import('@/services/backup'),
-    import('@/services/garden-io'),
-    import('@/api/sync'),
     import('@/services/growth'),
     import('@/lib/platform'),
   ]);
@@ -183,8 +179,7 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
       window.dispatchEvent(new Event(AUTO_BACKUP_CHANGED));
     },
     backupGarden: async () => {
-      const result = await gardenIo.exportGarden({});
-      await syncApi.pushGarden(result.blob);
+      await backupGarden();
       setSetting(SettingsKey.LastGardenBackupAt, new Date().toISOString());
       window.dispatchEvent(new Event(AUTO_BACKUP_CHANGED));
     },

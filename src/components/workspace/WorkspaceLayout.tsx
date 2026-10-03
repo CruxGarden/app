@@ -356,7 +356,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
     </div>
   ) : (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex-1 min-h-0 group/pane">
+      <div className="flex-1 min-h-0 overflow-hidden group/pane">
         <Suspense fallback={null}>
           <MobilePane pane={mobileActivePane} />
         </Suspense>

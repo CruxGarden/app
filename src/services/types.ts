@@ -1,4 +1,4 @@
-import type { CruxKind } from '@/api/types';
+import type { CruxKind, Artifact } from '@/api/types';
 // ── Re-export entity types from API types ────────────
 // The service layer uses the same entity shapes as the API client.
 // No duplication — single source of truth.
@@ -52,8 +52,10 @@ export interface UpdateCruxInput {
 }
 
 export interface CreateArtifactInput {
-  /** Selected file when saving an existing editor document. */
-  expected?: import('@/api/types').Artifact;
+  /** Selected file when saving; null explicitly requires an unused path. */
+  expected?: import('@/api/types').Artifact | null;
+  /** Explicit replacement keeps protected history; routine saves omit this. */
+  retention?: 'safety';
   resourceId: string;
   resourceType?: string;
   content: string;
@@ -69,6 +71,10 @@ export interface CreateArtifactInput {
 }
 
 export interface UploadArtifactInput {
+  /** Exact approved replacement, or explicit absence, captured before reading the Blob. */
+  expected?: import('@/api/types').Artifact | null;
+  /** Explicit replacement keeps protected history; routine binary saves omit this. */
+  retention?: 'safety';
   resourceId: string;
   resourceType?: string;
   blob: Blob;
@@ -78,6 +84,13 @@ export interface UploadArtifactInput {
   meta?: { path?: string; growthId?: string; [key: string]: unknown };
   /** See CreateArtifactInput.writeThrough. */
   writeThrough?: boolean;
+}
+
+export interface ArtifactUploadEntry {
+  file: File;
+  path: string;
+  /** Capture before asking whether to replace; null never grants overwrite. */
+  expected?: import('@/api/types').Artifact | null;
 }
 
 /** Index an Artifact whose bytes the Blob Store already holds; no hashing, no Project Folder write. */
@@ -92,6 +105,8 @@ export interface RegisterArtifactInput {
 }
 
 export interface UpdateArtifactInput {
+  /** Exact destination the person approved replacing; absence never grants overwrite. */
+  replace?: Artifact;
   meta?: { path?: string; [key: string]: unknown };
   mimeType?: string;
   filename?: string;

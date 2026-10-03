@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact, storedCrux } from './multi-crux-helpers';
-import { openPanel } from './panel-helpers';
+import { openPanel, chooseSettingsSection } from './panel-helpers';
 
 test('workspace status explains privacy and focus restores the original panels', async () => {
   const first = await launchApp({ ai: false });
@@ -65,12 +65,12 @@ test('workspace status explains privacy and focus restores the original panels',
     await openPanel(page, 'settings', 'Toggle settings');
     await expect(page.getByTestId('pane-body-settings')).toBeVisible();
     await expect(page.locator('.mosaic-window')).not.toHaveCount(1);
-    await page.getByRole('button', { name: 'Appearance and panels', exact: true }).click();
+    await chooseSettingsSection(page, 'Appearance and panels');
     await page.getByRole('button', { name: 'Make: Workshop + Artifacts', exact: true }).click();
     await expect(page.locator('.mosaic-window')).toHaveCount(2);
     await expect(page.getByTestId('pane-body-artifacts')).toBeVisible();
     await openPanel(page, 'settings', 'Toggle settings');
-    await page.getByRole('button', { name: 'Appearance and panels', exact: true }).click();
+    await chooseSettingsSection(page, 'Appearance and panels');
     await page.getByRole('button', { name: 'Review: Workshop + Share', exact: true }).click();
     await expect(page.locator('.mosaic-window')).toHaveCount(2);
     await expect(page.getByTestId('pane-body-publish')).toBeVisible();

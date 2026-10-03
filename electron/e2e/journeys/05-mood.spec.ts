@@ -17,6 +17,7 @@ test('Moods belong to Gardens', async () => {
       'Studio wears the Default Mood',
     );
     await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+    await mood.getByRole('button', { name: 'Full Theme Builder', exact: true }).click();
     await mood.getByRole('button', { name: 'Ivory' }).click();
     await expect(html).toHaveClass(/\blight\b/);
     await mood.getByRole('button', { name: 'Keep for Studio', exact: true }).click();

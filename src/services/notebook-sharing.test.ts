@@ -8,7 +8,7 @@ import { registerNotebookEditor } from './notebook-lifecycle';
 import { createTask } from './tasks';
 import { exportCrux, importCrux } from './crux-io';
 
-localApiFixture();
+localApiFixture({ project: true });
 
 beforeEach(async () => {
   await initServices();

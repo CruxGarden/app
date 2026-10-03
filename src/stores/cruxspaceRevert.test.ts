@@ -75,14 +75,19 @@ it('plans a revert per member, names blockers, and reverts every member with a s
     step: 1,
     steps: 3,
   });
+  const { listEditHistory, inspectEditCheckpoint } = await import('@/services/edit-history');
+  const priorCheckpoints = new Set(
+    (await listEditHistory(a.id)).checkpoints.map((checkpoint) => checkpoint.id),
+  );
   const report = await revertCruxspaceTo(space.id, first.when);
   expect(report.reverted).toEqual(['Plan']);
   expect(report.skipped.sort()).toEqual(['Late', 'Site']);
   expect(await read(a.id)).toBe('plan v1');
   expect(await read(b.id)).toBe('site v1');
   expect((await ga.list()).map((g) => g.label)).toEqual(['Plan written', 'Plan revised']);
-  const { listEditHistory, inspectEditCheckpoint } = await import('@/services/edit-history');
-  const safety = (await listEditHistory(a.id)).checkpoints.find((c) => c.reason === 'safety');
+  const safety = (await listEditHistory(a.id)).checkpoints.find(
+    (c) => c.reason === 'safety' && !priorCheckpoints.has(c.id),
+  );
   expect(safety).toBeDefined();
   const retained = await inspectEditCheckpoint(a.id, safety!.id);
   const { hashContent } = await import('@/services/sqlite/helpers');

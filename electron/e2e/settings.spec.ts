@@ -1,6 +1,7 @@
-import { showPane, hidePane } from './panel-helpers';
+import { showPane, hidePane, chooseSettingsSection } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
+import { openFullThemeBuilder } from './multi-crux-helpers';
 
 /**
  * Settings & Mood: both are workspace panes, opened from the TopBar / account
@@ -18,8 +19,8 @@ test.describe('settings & mood', () => {
       const html = page.locator('html');
 
       // ── Mood → Themes: pick a light preset, theme class follows ──────────
-      const mood = await showPane(page, 'Mood');
-      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+      await showPane(page, 'Mood');
+      await openFullThemeBuilder(page);
       await page.getByRole('button', { name: 'Ivory' }).click();
       await expect(html).toHaveClass(/\blight\b/);
       await page.getByRole('button', { name: 'Obsidian' }).click();
@@ -46,11 +47,19 @@ test.describe('settings & mood', () => {
       await page.getByRole('button', { name: 'Account menu' }).click();
       await page.getByRole('button', { name: /^Settings/ }).click();
       await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-      for (const section of ['Account', 'AI', 'Garden']) {
-        await expect(page.getByRole('heading', { name: section, exact: true })).toBeVisible();
+      for (const section of ['Account', 'AI and agents', 'Garden and backups'] as const) {
+        await chooseSettingsSection(page, section);
+        const group = page
+          .getByTestId('pane-body-settings')
+          .getByRole('region', { name: section, exact: true })
+          .and(page.locator('section[tabindex="-1"]'));
+        await expect(group).toBeFocused();
+        await expect(group.locator(':scope > h2')).toHaveText(section);
+        await expect(group.locator(':scope > h2')).toBeInViewport();
       }
       // Sync is only offered once an account is connected
       await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toHaveCount(0);
+      await chooseSettingsSection(page, 'Account');
       await expect(page.getByPlaceholder('email@example.com')).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/settings-2-settings.png' });
       await hidePane(page, 'Settings');

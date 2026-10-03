@@ -6,14 +6,16 @@ import { createTask, prepareTaskReview } from '../tasks';
 import { findWorkingCopy } from '../working-copies';
 import { allWorkspaces, closeWorkspace } from '@/stores/workspaceRegistry';
 
-const native = localApiFixture();
+const native = localApiFixture({ project: true });
 beforeEach(() => initServices());
 const write = (id: string, content: string) =>
   getServices().artifact.create({ resourceId: id, content, meta: { path: 'work.txt' } });
 const link = (sourceId: string, targetId: string, type: 'garden' | 'graft' | 'gate' | 'growth') =>
   getServices().dimension.create({ sourceId, targetId, type });
 async function read(id: string) {
-  const [file] = await getServices().artifact.findByResource('crux', id);
+  const file = (await getServices().artifact.findByResource('crux', id)).find(
+    (file) => file.meta?.path === 'work.txt',
+  );
   return getServices().artifact.readContent(file!);
 }
 async function snapshot(owner: string, content = 'history') {

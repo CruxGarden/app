@@ -1,0 +1,462 @@
+{
+  "scope": "Settings pane",
+  "violations": [],
+  "incomplete": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "7.5pt (10px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"mosaic-window mosaic-drop-target pane-settings motion-enter-pane\">",
+                  "target": [
+                    ".pane-settings"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"block text-2xs font-mono uppercase tracking-wider text-text-muted\">Section</span>",
+          "target": [
+            "label[for=\"_r_3_-chooser\"] > .uppercase.tracking-wider.text-2xs"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"mosaic-window mosaic-drop-target pane-settings motion-enter-pane\">",
+                  "target": [
+                    ".pane-settings"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<select class=\"w-full rounded-[var(...\" id=\"_r_3_-chooser\" aria-label=\"Settings section\">",
+          "target": [
+            "#_r_3_-chooser"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"mosaic-window mosaic-drop-target pane-settings motion-enter-pane\">",
+                  "target": [
+                    ".pane-settings"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"inline-flex items-ce...\" aria-label=\"Go to selected secti...\" aria-controls=\"_r_3_-appearance\">",
+          "target": [
+            ".min-h-10"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Garden\">",
+                  "target": [
+                    "section[aria-label=\"Garden\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">Garden</h2>",
+          "target": [
+            "section[aria-label=\"Garden\"] > .items-baseline.justify-between.gap-3 > .group.-ml-1\\.5.py-0\\.5 > .text-settings-label.font-display"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"mosaic-window mosaic-drop-target pane-settings motion-enter-pane\">",
+                  "target": [
+                    ".pane-settings"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<h2 class=\"text-xs font-medium text-text-muted\">Appearance and panels</h2>",
+          "target": [
+            "#_r_3_-appearance > h2"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Appearance\">",
+                  "target": [
+                    "section[aria-label=\"Appearance\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">Appearance</h2>",
+          "target": [
+            "section[aria-label=\"Appearance\"] > .items-baseline.mb-3.justify-between > .text-settings-label.font-display"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Appearance\">",
+                  "target": [
+                    "section[aria-label=\"Appearance\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-xs text-text-muted mb-4\">A Mood controls your Garden’s colors, type, surfaces, motion and sound. Start with the guided Customizer; the full Theme Builder is there when you want more control.</p>",
+          "target": [
+            "section[aria-label=\"Appearance\"] > .mb-4"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Appearance\">",
+                  "target": [
+                    "section[aria-label=\"Appearance\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"inline-flex items-ce...\">",
+          "target": [
+            "section[aria-label=\"Appearance\"] > .flex-wrap.gap-2.flex > .bg-primary-button.text-primary-button-text.border-primary-button-border:nth-child(1)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Appearance\">",
+                  "target": [
+                    "section[aria-label=\"Appearance\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"inline-flex items-ce...\">",
+          "target": [
+            "section[aria-label=\"Appearance\"] > .flex-wrap.gap-2.flex > .bg-primary-button.text-primary-button-text.border-primary-button-border:nth-child(2)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Appearance\">",
+                  "target": [
+                    "section[aria-label=\"Appearance\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"inline-flex items-ce...\">",
+          "target": [
+            ".flex-wrap.gap-2.flex > .bg-primary-button.text-primary-button-text.border-primary-button-border:nth-child(3)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Names\" data-testid=\"names-settings\">",
+                  "target": [
+                    "section[aria-label=\"Names\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<h2 class=\"font-display text-sm font-medium text-settings-label\">Names</h2>",
+          "target": [
+            "section[aria-label=\"Names\"] > .items-baseline.mb-3.justify-between > .text-settings-label.font-display"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Names\" data-testid=\"names-settings\">",
+                  "target": [
+                    "section[aria-label=\"Names\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-xs text-text-muted mb-4\">Name your Garden. You can also give its panels your own names.</p>",
+          "target": [
+            "section[aria-label=\"Names\"] > .mb-4:nth-child(2)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "7.5pt (10px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Names\" data-testid=\"names-settings\">",
+                  "target": [
+                    "section[aria-label=\"Names\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"block text-2xs font-mono uppercase tracking-wider text-text-muted\">Garden title</span>",
+          "target": [
+            ".gap-1.mb-4 > .uppercase.tracking-wider.text-2xs"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fontSize": "9.8pt (13px)",
+                "fontWeight": "normal",
+                "messageKey": "pseudoContent",
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"bg-panel text-panel-text border border-panel-border rounded-[var(--radius)] shadow-panel p-5 min-w-0 break-words\" aria-label=\"Names\" data-testid=\"names-settings\">",
+                  "target": [
+                    "section[aria-label=\"Names\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element's background color could not be determined due to a pseudo element"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<input class=\"w-full rounded-[var(...\" aria-label=\"Garden title\" placeholder=\"The Bachelor Pad, Fl...\" value=\"My Garden\">",
+          "target": [
+            "input[aria-label=\"Garden title\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+        }
+      ]
+    }
+  ],
+  "passes": 21
+}

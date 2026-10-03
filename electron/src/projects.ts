@@ -1,3 +1,4 @@
+import { isPrivateProjectPath } from './project-private';
 const { shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -160,6 +161,8 @@ export class ProjectFolders {
   /** Resolve a relative path inside a project folder; reject traversal. */
   private resolveInside(folder: string, relPath: string): string {
     const base = this.assertKnownFolder(folder);
+    if (isPrivateProjectPath(relPath))
+      throw new Error('This path is reserved for Crux Garden recovery files.');
     return resolveInsideOrThrow(base, relPath);
   }
 
@@ -259,6 +262,42 @@ export class ProjectFolders {
       }
       dir = path.dirname(dir);
     }
+  }
+
+  projectRename(
+    folder: string,
+    intent: import('@cruxgarden/local-api').FileRenameIntent,
+    apply: boolean,
+  ): void {
+    this.assertNoSymlinks(folder, intent.source.path);
+    this.assertNoSymlinks(folder, intent.entry.path);
+    const base = this.assertKnownFolder(folder);
+    require('./project-rename').projectRename(
+      base,
+      this.resolveInside(folder, intent.source.path),
+      this.resolveInside(folder, intent.entry.path),
+      intent,
+      apply,
+    );
+  }
+
+  projectOperation(
+    folder: string,
+    intent: import('@cruxgarden/local-api').FileProjectionIntent,
+    apply: boolean,
+    bytes?: Uint8Array,
+  ): void {
+    if (intent.kind === 'rename') return this.projectRename(folder, intent, apply);
+    const relative = intent.kind === 'write' ? intent.entry.path : intent.source.path;
+    this.assertNoSymlinks(folder, relative);
+    const base = this.assertKnownFolder(folder);
+    require('./project-file-operation').projectFileOperation(
+      base,
+      this.resolveInside(folder, relative),
+      intent,
+      apply,
+      bytes,
+    );
   }
 
   renameFile(folder: string, fromRel: string, toRel: string): void {
@@ -386,7 +425,7 @@ export class ProjectFolders {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
           const abs = path.join(dir, entry.name);
           const rel = toPosixRel(base, abs);
-          if (ig.ignores(rel) || ig.ignores(rel + '/')) continue;
+          if (isPrivateProjectPath(rel) || ig.ignores(rel) || ig.ignores(rel + '/')) continue;
           if (entry.isSymbolicLink())
             throw new Error(`Task capture does not support symlinks: ${rel}`);
           if (entry.isDirectory()) walk(abs);
@@ -468,7 +507,10 @@ export class ProjectFolders {
       throw new Error('ignoredPaths: choose up to 200,000 paths');
     const ig = this.captureIgnores(base);
     return paths.filter(
-      (rel) => typeof rel === 'string' && !!rel && (ig.ignores(rel) || ig.ignores(rel + '/')),
+      (rel) =>
+        typeof rel === 'string' &&
+        !!rel &&
+        (isPrivateProjectPath(rel) || ig.ignores(rel) || ig.ignores(rel + '/')),
     );
   }
 
@@ -529,7 +571,7 @@ export class ProjectFolders {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
           const abs = path.join(dir, entry.name);
           const rel = toPosixRel(base, abs);
-          if (ig.ignores(rel) || ig.ignores(rel + '/')) continue;
+          if (isPrivateProjectPath(rel) || ig.ignores(rel) || ig.ignores(rel + '/')) continue;
           if (entry.isSymbolicLink())
             throw new Error(`Task capture does not support symlinks: ${rel}`);
           if (entry.isDirectory()) walk(abs);
@@ -579,7 +621,8 @@ export class ProjectFolders {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const abs = path.join(dir, entry.name);
         const rel = toPosixRel(base, abs);
-        if (ig.ignores(entry.isDirectory() ? rel + '/' : rel)) continue;
+        if (isPrivateProjectPath(rel) || ig.ignores(entry.isDirectory() ? rel + '/' : rel))
+          continue;
         if (entry.isDirectory()) walk(abs);
         else if (entry.isFile()) out.push(rel);
       }

@@ -24,6 +24,7 @@ import {
   type CaptionItem,
 } from './builder-files';
 import { useTurns } from '@/services/turns';
+import { reportFileUpdateError } from '@/components/artifacts/fileUpdateError';
 
 function artifactPaths(useCruxStore: ReturnType<typeof useCruxStoreApi>): Set<string> {
   return new Set(
@@ -135,18 +136,50 @@ export function NewItemButton({ collection }: { collection: ContentCollection })
 }
 
 export function AddImageButton() {
+  const cruxStore = useCruxStoreApi();
   const uploadFiles = useCruxStore((s) => s.uploadFiles);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
+      const files = Array.from(e.currentTarget.files || []);
+      e.currentTarget.value = '';
       if (!files.length) return;
-      const entries = files.map((f) => ({
-        file: f,
-        path: `public/images/${f.name.replace(/\s+/g, '-')}`,
-      }));
-      await uploadFiles(entries);
+      const owner = cruxStore.getState().crux?.id;
+      const current = cruxStore.getState().artifacts;
+      const entries = files.map((file) => {
+        const path = `public/images/${file.name.replace(/\s+/g, '-')}`;
+        return {
+          file,
+          path,
+          expected: structuredClone(
+            current.find((artifact) => artifact.meta?.path === path) ?? null,
+          ),
+        };
+      });
+      try {
+        const conflicts = entries.filter((entry) => entry.expected !== null);
+        if (
+          conflicts.length &&
+          !(await confirmDialog({
+            message:
+              conflicts.length === 1
+                ? `"${conflicts[0]!.path}" already exists. Replace it?`
+                : `${conflicts.length} files already exist. Replace them?`,
+            confirmLabel: 'Replace',
+          }))
+        )
+          return;
+        if (cruxStore.getState().crux?.id !== owner)
+          throw new Error('The active Crux changed. Choose the images again in their destination.');
+        await uploadFiles(entries);
+      } catch (error) {
+        await reportFileUpdateError(cruxStore, error, {
+          title: 'Upload failed',
+          fallback: 'Could not add these images. Choose them again to retry.',
+        });
+        return;
+      }
       const snippet = entries
         .map((entry) => `![](${entry.path.replace(/^public/, '')})`)
         .join('\n');
@@ -160,9 +193,8 @@ export function AddImageButton() {
           `Markdown snippet copied — paste it into any post.`,
         'Images added',
       );
-      e.target.value = '';
     },
-    [uploadFiles],
+    [cruxStore, uploadFiles],
   );
 
   return (

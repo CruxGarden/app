@@ -156,6 +156,7 @@ export async function openWorkspace(id: string): Promise<Workspace> {
   if (w) {
     if (w.phase === 'closing') throw new Error('This workspace is closing.');
     await w.loaded;
+    await w.data.getState().recoverFileUpdates(id, true);
     return w;
   }
   const ui = createUIStore(id);
@@ -257,7 +258,13 @@ export async function closeWorkspace(
     await flushSettings();
     return;
   }
-  if (w.phase === 'closing') throw new Error('This workspace is already closing.');
+  const assertCloseAvailable = () => {
+    if (sessions.get(id) !== w || w.phase === 'closing')
+      throw new Error('This workspace is already closing.');
+    if (w.data.getState().closing)
+      throw new Error('Wait for this workspace’s task operation to finish before closing.');
+  };
+  assertCloseAvailable();
   const s = w.data.getState();
   const busy =
     s.isStreaming ||
@@ -270,7 +277,14 @@ export async function closeWorkspace(
   const docs = documentsFor(w.data, w.ui);
   if (docs.hasDirty() && !options.documents)
     throw new Error('Save or discard unsaved edits before closing.');
+  // A deferred file update already committed its head. Finish that intent before
+  // saving any draft or metadata; refusal leaves this workspace and drafts live.
+  // Embedded editors must still be writable while their pre-close flush runs.
+  await w.data.getState().recoverFileUpdates(id, true);
   if (options.documents === 'save') await flushNotebook(w.id);
+  // Task capture may have acquired the workspace while recovery or the guest
+  // editor was flushing. Its lifetime must outlive that admitted operation.
+  assertCloseAvailable();
   w.phase = 'closing';
   w.data.setState({ closing: true });
   summarize(w);

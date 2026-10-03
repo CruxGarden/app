@@ -58,6 +58,9 @@ export interface MockApi {
     failIncludedUsage?: boolean;
     /** Answer GET /usage/me with 503 (Settings → Usage's error state) */
     failUsage?: boolean;
+    /** Refuse backup discovery independently; retained backup data is unchanged. */
+    failSyncGardenStatus?: boolean;
+    failSyncCruxList?: boolean;
     /** The email of the last login; other@example.com is a second account */
     loginEmail?: string;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
@@ -723,6 +726,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     }
     // ── sync: garden backup + crux archives (multipart PUT), metered into usage
     if (path === '/sync/garden/status' && method === 'GET') {
+      if (state.failSyncGardenStatus)
+        return send(503, { message: 'Garden backup status unavailable' });
       return state.sync.garden
         ? send(200, { syncedAt: state.sync.garden.syncedAt, size: state.sync.garden.bytes })
         : send(404, { statusCode: 404, message: 'No garden backup found' });
@@ -746,6 +751,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       return send(204, null);
     }
     if (path === '/sync/crux' && method === 'GET') {
+      if (state.failSyncCruxList) return send(503, { message: 'Crux backup list unavailable' });
       return send(
         200,
         Object.entries(state.sync.cruxes).map(([cruxId, c]) => ({

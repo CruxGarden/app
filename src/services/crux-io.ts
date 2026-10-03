@@ -58,6 +58,8 @@ export interface ImportOptions {
   requestId?: string;
   data: Blob | ArrayBuffer;
   mode?: ImportMode;
+  /** Revalidate the initiating operation immediately before native import admission. */
+  beforeCommit?: () => void;
   onProgress?: (done: number, total: number) => void;
 }
 

@@ -24,6 +24,8 @@ export interface GardenExportResult {
 export interface GardenImportOptions {
   data: Blob | ArrayBuffer;
   onProgress?: (status: string) => void;
+  /** Cloud callers recheck the captured account before replacing local data. */
+  beforeCommit?: () => void;
 }
 
 export interface GardenImportResult {
@@ -148,8 +150,9 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
 // ── Import ──────────────────────────────────────────────
 
 export async function importGarden(options: GardenImportOptions): Promise<GardenImportResult> {
-  const { data, onProgress } = options;
+  const { data, onProgress, beforeCommit } = options;
   const { db, installation } = installationClient();
+  beforeCommit?.();
   // Capture mutable caller buffers before the first asynchronous operation.
   const raw = await toArrayBuffer(data instanceof Blob ? data : data.slice(0));
 
@@ -222,13 +225,16 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
       throw new Error(`Garden restore content failed integrity check: ${fingerprint}`);
   }
 
+  beforeCommit?.();
   await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
   onProgress?.('Creating safety backup...');
   // An empty garden still has a valid database image. An export failure is
   // never evidence that there is nothing to preserve.
   const backupSqlite = await db.export();
+  onProgress?.('Importing database...');
+  // Refusal precedes the replacement/rollback block: no database changed yet.
+  beforeCommit?.();
   try {
-    onProgress?.('Importing database...');
     await db.import(sqliteData);
     // Another installation's sessions, folders and live reviews are cleared atomically.
     await installation.sanitizeImportedGarden();
@@ -280,6 +286,7 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
 export interface ConfirmAndImportOptions {
   data: Blob | ArrayBuffer;
   onProgress?: (status: string) => void;
+  beforeCommit?: () => void;
   /** Called after successful import to reconcile auth state */
   onPostImport?: () => Promise<void>;
   /** Ask the user a yes/no question. Defaults to the app's dialog; tests inject their own. */
@@ -320,7 +327,7 @@ export async function confirmAndImportGarden(options: ConfirmAndImportOptions): 
   // Final confirmation
   if (!(await confirm('This will replace your entire garden. Continue?'))) return false;
 
-  await importGarden({ data, onProgress });
+  await importGarden({ data, onProgress, beforeCommit: options.beforeCommit });
   await onPostImport?.();
 
   onProgress?.('Redirecting...');

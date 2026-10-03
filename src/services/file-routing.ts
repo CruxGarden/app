@@ -169,20 +169,49 @@ export async function startFromFiles(
   gardenId = captureGardenId(),
 ): Promise<StartFromFilesResult> {
   if (!files.length) throw new Error('Drop a file or a folder.');
-  const route = folderName ? routeFolder(files) : routeFile(files[0]!.path);
+  // Capture paths before creation yields. File bodies themselves are immutable.
+  const captured = files.map(({ path, file }) => ({ path, file }));
+  const route = folderName ? routeFolder(captured) : routeFile(captured[0]!.path);
   if (!route)
     throw new Error(
-      `No Crux Tool opens ${files[0]!.path.split('/').pop()}. Try a document, image, sound, video, PDF, notebook or project file.`,
+      `No Crux Tool opens ${captured[0]!.path.split('/').pop()}. Try a document, image, sound, video, PDF, notebook or project file.`,
     );
   const others = folderName
     ? []
-    : files.filter((f) => !routeFile(f.path) || routeFile(f.path)!.templateId !== route.templateId);
+    : captured.filter(
+        (f) => !routeFile(f.path) || routeFile(f.path)!.templateId !== route.templateId,
+      );
   if (others.length) throw new Error('Drop files for one tool at a time.');
+  const base =
+    route.folder === 'notebook/Imported'
+      ? `notebook/Imported/${safeSegment(folderName ?? stem(captured[0]!.path))}`
+      : route.folder;
+  const planned = captured.flatMap(({ path, file }) => {
+    let rel = safeSegment(folderName ? path : path.split('/').pop()!);
+    if (!rel) return [];
+    if (route.templateId === 'notes' && /\.txt$/i.test(rel)) rel = rel.replace(/\.txt$/i, '.md');
+    return [{ file, path: base ? `${base}/${rel}` : rel }];
+  });
+  // Match notebook admission on case-insensitive, Unicode-normalizing disks.
+  // Upserting these aliases would silently replace an earlier source document.
+  const occupied = new Set<string>();
+  const conflict = (path: string) =>
+    new Error(`Files conflict at "${path}" after preparing their names. Rename one and try again.`);
+  for (const { path } of planned) {
+    const folded = path.normalize('NFC').toLowerCase();
+    if (occupied.has(folded)) throw conflict(path);
+    occupied.add(folded);
+  }
+  for (const { path } of planned) {
+    const parts = path.normalize('NFC').toLowerCase().split('/');
+    for (let length = 1; length < parts.length; length++)
+      if (occupied.has(parts.slice(0, length).join('/'))) throw conflict(path);
+  }
   const title = folderName
     ? stem(folderName)
-    : files.length === 1
-      ? stem(files[0]!.path)
-      : `${stem(files[0]!.path)} and ${files.length - 1} more`;
+    : captured.length === 1
+      ? stem(captured[0]!.path)
+      : `${stem(captured[0]!.path)} and ${captured.length - 1} more`;
   const store = createCruxStore();
   const crux = await store.getState().createCrux(title, gardenId);
   let latest = crux;
@@ -204,30 +233,22 @@ export async function startFromFiles(
     );
   const { artifact } = getServices();
   const placed: string[] = [];
-  const base =
-    route.folder === 'notebook/Imported'
-      ? `notebook/Imported/${safeSegment(folderName ?? stem(files[0]!.path))}`
-      : route.folder;
-  for (const dropped of files) {
-    let rel = safeSegment(folderName ? dropped.path : dropped.path.split('/').pop()!);
-    if (!rel) continue;
-    if (route.templateId === 'notes' && /\.txt$/i.test(rel)) rel = rel.replace(/\.txt$/i, '.md');
-    const path = base ? `${base}/${rel}` : rel;
+  for (const { path, file } of planned) {
     const text =
       /\.(md|markdown|txt|csv|tsv|html?|svg|json|twee|tw|mmd|mermaid|ics|ket|mol|sdf|rxn|gexf|graphml)$/i.test(
-        rel,
+        path,
       );
     if (text)
       await artifact.create({
         resourceId: crux.id,
-        content: await dropped.file.text(),
+        content: await file.text(),
         meta: { path },
       });
     else
       await artifact.upload({
         resourceId: crux.id,
-        blob: dropped.file,
-        mimeType: dropped.file.type || undefined,
+        blob: file,
+        mimeType: file.type || undefined,
         meta: { path },
       });
     placed.push(path);

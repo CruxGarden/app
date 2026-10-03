@@ -1,3 +1,4 @@
+import { isPrivateProjectPath } from './project-private';
 // Chokidar 4 uses a kqueue descriptor per file on macOS. Large Project
 // Folders can then prevent Electron's sandboxed child processes from starting.
 // The pinned macOS adapter retains Chokidar's FSEvents backend and the same
@@ -101,12 +102,12 @@ class FolderWatch {
     if (!rel) return false;
     // Directory-only patterns ("node_modules/") need the trailing slash to
     // match a directory path — test both forms.
-    return this.ig.ignores(rel) || this.ig.ignores(rel + '/');
+    return isPrivateProjectPath(rel) || this.ig.ignores(rel) || this.ig.ignores(rel + '/');
   }
 
   private record(type: WatchEvent['type'], absPath: string) {
     const rel = this.rel(absPath);
-    if (!rel) return;
+    if (!rel || isPrivateProjectPath(rel)) return;
 
     // Editing .cruxignore re-arms the rules (and is itself ingested)
     if (rel === '.cruxignore') this.loadIgnores();

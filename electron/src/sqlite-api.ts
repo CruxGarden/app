@@ -41,6 +41,11 @@ export class SqliteApi implements NativeStorage {
     this.projectionHost = host;
   }
 
+  private projectionOperationHost?: import('@cruxgarden/local-api').FileProjectionHost;
+  setProjectionOperationHost(host: NonNullable<SqliteApi['projectionOperationHost']>) {
+    this.projectionOperationHost = host;
+  }
+
   private importHost?: PrepareImportedWorkspace;
   setImportHost(host: PrepareImportedWorkspace) {
     this.importHost = host;
@@ -240,7 +245,12 @@ export class SqliteApi implements NativeStorage {
     finishProjection: (id) => {
       this.assertAvailable();
       if (!this.projectionHost) throw new Error('Project Folder host is unavailable');
-      return this.owner.finishContentProjection(id, this.contentStore(), this.projectionHost);
+      return this.owner.finishContentProjection(
+        id,
+        this.contentStore(),
+        this.projectionHost,
+        this.projectionOperationHost,
+      );
     },
     head: (id) => {
       this.assertAvailable();
@@ -253,6 +263,24 @@ export class SqliteApi implements NativeStorage {
     read: (input) => {
       this.assertAvailable();
       return this.owner.readFileContent(input, this.contentStore());
+    },
+    rename: (input) => {
+      this.assertAvailable();
+      if (!this.projectionOperationHost)
+        throw new Error('Project Folder operation host is unavailable');
+      return this.owner.renameFileContent(input, this.contentStore(), this.projectionOperationHost);
+    },
+    write: (input) => {
+      this.assertAvailable();
+      if (!this.projectionOperationHost)
+        throw new Error('Project Folder operation host is unavailable');
+      return this.owner.writeFileContent(input, this.contentStore(), this.projectionOperationHost);
+    },
+    delete: (input) => {
+      this.assertAvailable();
+      if (!this.projectionOperationHost)
+        throw new Error('Project Folder operation host is unavailable');
+      return this.owner.deleteFileContent(input, this.contentStore(), this.projectionOperationHost);
     },
     edit: (input) => {
       this.assertAvailable();

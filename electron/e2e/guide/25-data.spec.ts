@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, createCrux, goHome, storedCrux } from '../multi-crux-helpers';
-import { showPane, hidePane } from '../panel-helpers';
+import { showPane, hidePane, chooseSettingsSection } from '../panel-helpers';
 import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -35,6 +35,128 @@ async function visit(page: Page, path: string) {
 }
 
 test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
+  for (const failure of [
+    { flag: 'failSyncGardenStatus', path: '/sync/garden/status', name: 'Garden backup status' },
+    { flag: 'failSyncCruxList', path: '/sync/crux', name: 'Crux backup list' },
+  ] as const) {
+    test(`SETDATA-01 failure — ${failure.name} refusal is visible and retry recovers retained backups`, async () => {
+      test.setTimeout(120_000);
+      const api = await startMockApi();
+      const cruxId = '25c40c1a-5adc-442c-ae09-f8be60750d00';
+      const syncedAt = '2026-09-29T12:00:00.000Z';
+      const retainedGarden = {
+        bytes: 19,
+        syncedAt,
+        data: Buffer.from('Kept Garden archive'),
+      };
+      const retainedCrux = {
+        bytes: 17,
+        slug: 'retained-backup',
+        title: 'Retained cloud backup',
+        updatedAt: syncedAt,
+        data: Buffer.from('Kept Crux archive'),
+      };
+      api.state.sync.garden = { ...retainedGarden };
+      api.state.sync.cruxes[cruxId] = { ...retainedCrux };
+      api.state[failure.flag] = true;
+      const { app, page } = await launchApp({ ai: false, env: { CRUX_API_URL: api.url } });
+      try {
+        await enterGarden(page);
+        const settings = await connectAndOpenSync(page);
+        const sync = settings.getByRole('region', { name: 'Sync', exact: true });
+        await expect.poll(() => api.log.includes(`GET ${failure.path} -> 503`)).toBe(true);
+        await expect(sync.getByRole('alert')).toContainText(/could not load|unavailable/i);
+        await expect(sync.getByText('No cruxes synced to cloud yet.')).toHaveCount(0);
+        const retry = sync.getByRole('button', { name: 'Retry', exact: true });
+        await expect(retry).toBeVisible();
+        expect(api.state.sync.garden).toEqual(retainedGarden);
+        expect(api.state.sync.cruxes[cruxId]).toEqual(retainedCrux);
+
+        // Retry the actual network read after the endpoint recovers; never replace a backup.
+        api.state[failure.flag] = false;
+        await retry.click();
+        await expect(sync.getByText('Retained cloud backup', { exact: true })).toBeVisible();
+        await expect(sync.getByText(/^Last pushed:/)).toBeVisible();
+        await expect(sync.getByRole('alert')).toHaveCount(0);
+        await expect(sync.getByText('No cruxes synced to cloud yet.')).toHaveCount(0);
+        expect(api.state.sync.garden).toEqual(retainedGarden);
+        expect(api.state.sync.cruxes[cruxId]).toEqual(retainedCrux);
+        expect(api.log.filter((entry) => /^(PUT|DELETE) \/sync\//.test(entry))).toEqual([]);
+      } finally {
+        await app.close();
+        await api.close();
+      }
+    });
+  }
+
+  test('SETDATA-01 account switch — failed backup discovery never exposes the previous account’s metadata', async () => {
+    test.setTimeout(120_000);
+    const api = await startMockApi();
+    const firstId = '23d411af-d015-4200-8cfe-025697897af4';
+    const secondId = '787898d9-33d5-40c7-9859-467b1b623099';
+    api.state.sync.garden = { bytes: 1024, syncedAt: '2026-09-29T12:00:00.000Z' };
+    api.state.sync.cruxes[firstId] = {
+      bytes: 1024,
+      slug: 'first-account',
+      title: 'First account backup',
+      updatedAt: '2026-09-29T12:00:00.000Z',
+    };
+    const { app, page } = await launchApp({ ai: false, env: { CRUX_API_URL: api.url } });
+    try {
+      await enterGarden(page);
+      const settings = await connectAndOpenSync(page);
+      const sync = settings.getByRole('region', { name: 'Sync', exact: true });
+      await expect(sync.getByText('First account backup', { exact: true })).toBeVisible();
+      await expect(sync.getByText(/^Last pushed:/)).toBeVisible();
+      const account = settings.getByTestId('account-settings');
+      await account.getByRole('button', { name: 'Disconnect', exact: true }).click();
+      await expect(account.getByPlaceholder('email@example.com')).toBeVisible();
+      await expect(sync).toHaveCount(0);
+
+      // The fixture now represents the second account's distinct cloud inventory.
+      api.state.sync.garden = null;
+      api.state.sync.cruxes = {
+        [secondId]: {
+          bytes: 2048,
+          slug: 'second-account',
+          title: 'Second account backup',
+          updatedAt: '2026-09-30T12:00:00.000Z',
+        },
+      };
+      api.state.failSyncCruxList = true;
+      await account.getByPlaceholder('email@example.com').fill('other@example.com');
+      await account.getByRole('button', { name: 'Send Code' }).click();
+      await account.getByPlaceholder('Enter code').fill('123456');
+      await account.getByRole('button', { name: 'Connect', exact: true }).click();
+      await page
+        .getByRole('dialog')
+        .filter({ hasText: 'A different account' })
+        .getByRole('button', { name: 'Switch this garden', exact: true })
+        .click();
+      await expect(account.getByText(/Connected —/)).toContainText('other@example.com');
+      const expand = settings.getByRole('button', { name: 'Sync', exact: true });
+      if ((await expand.getAttribute('aria-expanded')) === 'false') await expand.click();
+      await expect(sync.getByRole('alert')).toContainText(/could not load|unavailable/i);
+      await expect(sync.getByText('First account backup', { exact: true })).toHaveCount(0);
+      await expect(sync.getByText(/^Last pushed:/)).toHaveCount(0);
+      await expect(sync.getByRole('button', { name: 'Remove', exact: true })).toHaveCount(0);
+      await expect(sync.getByRole('button', { name: 'Delete backup', exact: true })).toHaveCount(0);
+      await expect(sync.getByText('No cruxes synced to cloud yet.')).toHaveCount(0);
+
+      api.state.failSyncCruxList = false;
+      await sync.getByRole('button', { name: 'Retry', exact: true }).click();
+      await expect(sync.getByText('Second account backup', { exact: true })).toBeVisible();
+      await expect(sync.getByRole('alert')).toHaveCount(0);
+      await expect(sync.getByText('First account backup', { exact: true })).toHaveCount(0);
+      await expect(sync.getByText(/^Last pushed:/)).toHaveCount(0);
+      expect(Object.keys(api.state.sync.cruxes)).toEqual([secondId]);
+      expect(api.log.filter((entry) => /^(PUT|DELETE) \/sync\//.test(entry))).toEqual([]);
+    } finally {
+      await app.close();
+      await api.close();
+    }
+  });
+
   test('SETDATA-01 — automatic backup lists every backed-up Crux; Settings and the Sync pane agree; Remove takes one out', async () => {
     test.setTimeout(180_000);
     const api = await startMockApi();
@@ -118,23 +240,31 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
       await expect(settings.getByTestId('plan-status')).toContainText('Free');
       await hidePane(page, 'Settings');
 
-      const cases: Array<[string, RegExp]> = [
-        ['/billing/cancel', /No changes made/],
-        ['/billing/success', /all set/],
-        ['/billing/return', /Billing updated/],
-        ['/billing/not-a-real-outcome', /Billing updated/],
+      // A return URL is not payment-provider evidence. Each route gives honest
+      // next steps; only the account's verified plan can establish a purchase.
+      const cases = [
+        ['/billing/cancel', 'Checkout closed', 'check your current plan or start checkout again'],
+        ['/billing/success', 'Return to your Garden', 'this page alone does not confirm payment'],
+        ['/billing/return', 'Back from billing', 'verify any changes'],
+        ['/billing/not-a-real-outcome', 'Back from billing', 'verify any changes'],
       ];
-      for (const [path, heading] of cases) {
+      for (const [path, heading, guidance] of cases) {
         await visit(page, path);
-        await expect(page.getByRole('heading', { name: heading })).toBeVisible({
+        await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible({
           timeout: 15_000,
         });
+        await expect(page.getByText(guidance, { exact: false })).toBeVisible();
         // Every return page offers the way back.
         await expect(page.getByRole('link', { name: 'crux.garden' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'crux.garden' })).toHaveAttribute('href', '/');
       }
-      await expect(page.getByText('Checkout was cancelled')).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Checkout closed', exact: true })).toHaveCount(
+        0,
+      );
       await visit(page, '/billing/cancel');
-      await expect(page.getByText(/Checkout was cancelled/)).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Checkout closed', exact: true }),
+      ).toBeVisible();
       // Back in the garden: the plan is still Free and nothing was bought.
       await page.getByRole('link', { name: 'crux.garden' }).click();
       // "/" is the Gateway; Enter leads back into the garden.
@@ -194,7 +324,11 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
       const oldId = await createCrux(page, 'Old ground');
       await writeFirstFile(page, 'index.html', '<h1>Old ground</h1>');
       const oldFolder = (await storedCrux(page, oldId)).projectFolder as string;
-      expect(oldFolder.startsWith(join(dir, 'garden'))).toBe(true);
+      // The native grant stores canonical paths (including macOS /private/var
+      // and Windows short-name aliases), while tmpdir may return an alias.
+      expect(realpathSync.native(dirname(oldFolder))).toBe(
+        realpathSync.native(join(dir, 'garden')),
+      );
       await goHome(page);
 
       // Settings → Garden → Choose…: the native folder picker answers with the new folder.
@@ -202,10 +336,11 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
         dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [folder] })) as never;
       }, elsewhere);
       const settings = await showPane(page, 'Settings');
+      await chooseSettingsSection(page, 'Garden and backups');
       await settings.locator('h2', { hasText: /^Garden$/ }).click();
       await expect(settings.getByRole('heading', { name: 'Garden location' })).toBeVisible();
       await settings.getByRole('button', { name: 'Choose…' }).click();
-      await expect(settings.locator('code', { hasText: elsewhere.split('/').pop()! })).toBeVisible({
+      await expect(settings.locator('code', { hasText: basename(elsewhere) })).toBeVisible({
         timeout: 15_000,
       });
       await hidePane(page, 'Settings');
@@ -214,7 +349,7 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
       const newId = await createCrux(page, 'New ground');
       await writeFirstFile(page, 'index.html', '<h1>New ground</h1>');
       const newFolder = (await storedCrux(page, newId)).projectFolder as string;
-      expect(newFolder.startsWith(elsewhere)).toBe(true);
+      expect(realpathSync.native(dirname(newFolder))).toBe(realpathSync.native(elsewhere));
       await expect.poll(() => existsSync(join(newFolder, 'index.html'))).toBe(true);
 
       // The older one did not move and still works.
@@ -264,11 +399,11 @@ test.describe('guide 25 · Sync, Plan, Usage, Garden and Desktop', () => {
       await page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
       await expect(page.getByTestId('pane-body-home')).toBeVisible({ timeout: 30_000 });
       const settings = await showPane(page, 'Settings');
-      await settings.getByRole('button', { name: 'Tools and Moods', exact: true }).click();
+      await chooseSettingsSection(page, 'Tools and Moods');
       const tools = settings.getByTestId('installed-tools');
       const row = tools.getByTestId('installed-tool-p5-app');
       await expect(row).toBeVisible();
-      await expect(row).toContainText('from a .crux package');
+      await expect(row).toContainText('from a .cruxtool file');
       // Keep it: nothing changes.
       await row.getByRole('button', { name: 'Remove' }).click();
       const ask = page.getByRole('dialog').filter({ hasText: /^Remove .*\?/ });

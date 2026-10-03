@@ -1,42 +1,53 @@
 import { expect, it, vi } from 'vitest';
-import { getSqliteClient } from './client';
+import { localApiFixture } from '@/test/local-api-fixture';
 import { SqliteCruxService } from './crux.service';
 import { getLocalIdentity } from './identity';
+import { stat } from 'node:fs/promises';
 
-it('uses the owner result and never performs a legacy insert after admission', async () => {
-  const service = new SqliteCruxService();
-  const committed = await service.create({ title: 'Owner allocated', slug: 'owner-2' });
-  const db = getSqliteClient();
-  db.createCrux = vi.fn(async () => committed.id);
-  const run = vi.spyOn(db, 'run');
-  const result = await service.create({ title: 'Requested', slug: 'owner', type: 'workspace' });
-  expect(result.id).toBe(committed.id);
-  expect(result.slug).toBe('owner-2');
-  expect(db.createCrux).toHaveBeenCalledWith(
-    expect.objectContaining({ slug: 'owner', title: 'Requested', type: 'workspace' }),
+const native = localApiFixture();
+const service = new SqliteCruxService();
+
+it('uses native slug allocation across concurrent creation and Trash, with real Project Folders', async () => {
+  const first = await service.create({ title: 'Owner', type: 'workspace' });
+  await service.trash(first.id);
+  const rows = await Promise.all(
+    Array.from({ length: 3 }, () => service.create({ title: 'Owner', type: 'workspace' })),
   );
-  expect(run).not.toHaveBeenCalled();
+  expect(rows.map((row) => row.slug).sort()).toEqual(['owner-2', 'owner-3', 'owner-4']);
+  expect(new Set(rows.map((row) => row.meta?.projectFolder)).size).toBe(3);
+  for (const row of rows)
+    expect((await stat(row.meta!.projectFolder as string)).isDirectory()).toBe(true);
+  await native().restart();
+  for (const row of rows)
+    expect(await service.findById(row.id)).toMatchObject({ slug: row.slug, meta: row.meta });
 });
 
-it('propagates creation refusal without legacy SQL or success', async () => {
+it('propagates real creation refusal without a partial row, then retries after restart', async () => {
   await getLocalIdentity();
-  const db = getSqliteClient();
-  db.createCrux = vi.fn(async () => {
-    throw new Error('Folder preparation refused');
-  });
-  const run = vi.spyOn(db, 'run');
-  await expect(new SqliteCruxService().create({ title: 'No partial work' })).rejects.toThrow(
-    'Folder preparation refused',
+  const before = await native().client.all('SELECT id FROM cruxes ORDER BY id');
+  await native().faultSql(
+    "CREATE TRIGGER refuse_create BEFORE INSERT ON cruxes BEGIN SELECT RAISE(ABORT, 'No create'); END",
   );
+  const run = vi.spyOn(native().client, 'run');
+  await expect(service.create({ title: 'No partial work' })).rejects.toThrow();
   expect(run).not.toHaveBeenCalled();
-  expect(await db.all('SELECT id FROM cruxes')).toEqual([]);
+  expect(await native().client.all('SELECT id FROM cruxes ORDER BY id')).toEqual(before);
+  await native().faultSql('DROP TRIGGER refuse_create');
+  await native().restart();
+  const created = await service.create({ title: 'No partial work' });
+  expect(created.slug).toBe('no-partial-work');
 });
 
 it('captures nested input before resolving identity', async () => {
-  const service = new SqliteCruxService();
   const input = { title: 'Original', meta: { notes: 'Original' } };
   const pending = service.create(input);
   input.title = 'Changed';
   input.meta.notes = 'Changed';
-  expect(await pending).toMatchObject({ title: 'Original', meta: { notes: 'Original' } });
+  const created = await pending;
+  expect(created).toMatchObject({ title: 'Original', meta: { notes: 'Original' } });
+  await native().restart();
+  expect(await service.findById(created.id)).toMatchObject({
+    title: 'Original',
+    meta: { notes: 'Original' },
+  });
 });

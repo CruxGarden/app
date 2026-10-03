@@ -9,7 +9,7 @@ import { getSqliteClient } from '@/services/sqlite/client';
 import { createTendingDemo } from './create';
 import { checkout, accessibility } from './content';
 
-localApiFixture();
+localApiFixture({ project: true });
 
 beforeEach(async () => {
   await initServices();

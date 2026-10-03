@@ -1,10 +1,6 @@
-import {
-  isEmbeddedApp,
-  isMoqira,
-  isLocalCreationTool,
-  nativeAppType,
-  samplerType,
-} from './embedded-app';
+import { isEmbeddedApp, isMoqira } from './embedded-app';
+import { publicationPlan, publishableArtifacts } from './publication-plan';
+export { isInternalArtifactPath, publishableArtifacts } from './publication-plan';
 import { portableMeta } from './portable-metadata';
 import { downloadPublicationBlob } from './publication-files';
 import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
@@ -24,9 +20,9 @@ import { assertCopyWritable } from './working-copies';
  */
 
 import type { Crux, Artifact, ChatMessage } from '@/api/types';
+import { captureAuth, assertAuthCurrent, type AuthContext } from '@/api/session';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { PUBLIC_COVER_PATH } from '@/lib/public-cover';
-import { isGeneratedGuidePath } from './agents-md';
 
 export interface PublishFile {
   blob: Blob;
@@ -71,7 +67,7 @@ function isNotFound(err: unknown): boolean {
   return status === 404;
 }
 
-async function defaultDeps(): Promise<PublishDeps> {
+async function defaultDeps(context: AuthContext): Promise<PublishDeps> {
   const [{ cruxes }, { getServices }, site] = await Promise.all([
     import('@/api'),
     import('./index'),
@@ -83,7 +79,7 @@ async function defaultDeps(): Promise<PublishDeps> {
       exists: async (id) => {
         let found: Crux | undefined;
         try {
-          found = await cruxes.get(id);
+          found = await cruxes.get(id, context);
         } catch (err) {
           if (isNotFound(err)) return false;
           throw err; // transient/auth failure — never assume "not published"
@@ -95,11 +91,13 @@ async function defaultDeps(): Promise<PublishDeps> {
         }
         return true;
       },
-      create: (input) => cruxes.create(input as unknown as Parameters<typeof cruxes.create>[0]),
-      update: (id, input) => cruxes.update(id, input as Parameters<typeof cruxes.update>[1]),
-      publish: (id, files) => cruxes.publish(id, files),
-      unpublish: (id) => cruxes.unpublish(id),
-      syncTags: (id, tags) => cruxes.syncTags(id, tags),
+      create: (input) =>
+        cruxes.create(input as unknown as Parameters<typeof cruxes.create>[0], context),
+      update: (id, input) =>
+        cruxes.update(id, input as Parameters<typeof cruxes.update>[1], context),
+      publish: (id, files) => cruxes.publish(id, files, context),
+      unpublish: (id) => cruxes.unpublish(id, context),
+      syncTags: (id, tags) => cruxes.syncTags(id, tags, context),
     },
     local: {
       updateCruxMeta: (id, meta) => cruxService.update(id, { meta }),
@@ -125,29 +123,17 @@ async function defaultDeps(): Promise<PublishDeps> {
  * - `AGENTS.md` / `CLAUDE.md` — the generated agent guide (B1): documentation
  *   for whoever works in the folder, not part of the site.
  */
-export function isInternalArtifactPath(path: string): boolean {
-  const p = path.toLowerCase();
-  return (
-    isWorkspaceThumbnail(p) ||
-    p === '.keep' ||
-    p.endsWith('/.keep') ||
-    isGeneratedGuidePath(path) ||
-    p.startsWith('cruxspace-assets/') ||
-    (p.startsWith('exports/') && p.endsWith('.asset.json'))
-  );
-}
-
-/** The artifacts a publish actually ships (working files, minus internals). */
-export function publishableArtifacts(artifacts: Artifact[]): Artifact[] {
-  return artifacts.filter((a) => a.type === 'artifact' && !isInternalArtifactPath(pathOf(a)));
-}
-
 /** Build a fingerprint snapshot from artifacts: { path: fingerprint } */
-export function buildFingerprintMap(artifacts: Artifact[]): Record<string, string> {
+export function buildFingerprintMap(artifacts: Artifact[], crux?: Crux): Record<string, string> {
   const map: Record<string, string> = {};
-  for (const a of publishableArtifacts(artifacts)) {
-    if (!a.fingerprint) continue;
-    map[pathOf(a)] = a.fingerprint;
+  const plan = crux ? publicationPlan(crux, artifacts) : null;
+  const files =
+    plan?.kind === 'static'
+      ? plan.files
+      : publishableArtifacts(artifacts).map((file) => ({ file, path: pathOf(file) }));
+  for (const { file, path } of files) {
+    if (!file.fingerprint) continue;
+    map[path] = file.fingerprint;
   }
   return map;
 }
@@ -156,9 +142,11 @@ export function buildFingerprintMap(artifacts: Artifact[]): Record<string, strin
 export function hasContentChanged(
   artifacts: Artifact[],
   publishedFingerprints: Record<string, string> | undefined,
+  crux?: Crux,
 ): boolean {
   if (!publishedFingerprints) return true; // never published
-  const current = buildFingerprintMap(artifacts);
+  if (crux && publicationPlan(crux, artifacts).kind === 'unavailable') return true;
+  const current = buildFingerprintMap(artifacts, crux);
   const currentKeys = Object.keys(current).sort();
   const publishedKeys = Object.keys(publishedFingerprints).sort();
   if (currentKeys.length !== publishedKeys.length) return true;
@@ -252,16 +240,25 @@ export async function publishPipeline(
     onProgress?: (phase: PublishPhase) => void;
     deps?: PublishDeps;
     messages?: ChatMessage[];
+    /** Captured before workspace preparation; direct callers capture at pipeline entry. */
+    authContext?: AuthContext;
   },
 ): Promise<Crux> {
-  if (isLocalCreationTool(crux))
-    throw new Error('Website sharing is not available for this local creation tool yet.');
+  const context = opts?.authContext ?? captureAuth();
+  assertAuthCurrent(context);
+  artifacts = structuredClone(artifacts);
+  const plan = publicationPlan(crux, artifacts, opts?.deps?.site.isSiteCrux(artifacts));
+  if (plan.kind === 'unavailable') throw new Error(plan.explanation);
+  if (plan.kind === 'garden-package')
+    throw new Error(
+      'Share this workspace with Export Garden or Export this Crux. Its editable archive is not a public website.',
+    );
   if (crux.type === 'working-copy' || crux.meta?.workingCopy)
     throw new Error('Publish from Main after merging this task.');
   if (!opts?.deps) await assertCopyWritable(crux.id);
-  const deps = opts?.deps ?? (await defaultDeps());
+  const deps = opts?.deps ?? (await defaultDeps(context));
   const progress = opts?.onProgress ?? (() => {});
-  if (crux.kind === 'notes') {
+  if (crux.kind === 'notes' && plan.kind === 'build') {
     const manifest = artifacts.find((a) => pathOf(a) === 'notebook/publish.json');
     if (!manifest) throw new Error('The notebook publication settings are missing.');
     const selected = JSON.parse(await (await deps.local.downloadBlob(manifest)).text());
@@ -282,7 +279,7 @@ export async function publishPipeline(
       );
   }
 
-  if (crux.kind !== 'tool' && isMoqira(crux)) {
+  if (plan.kind === 'build' && isMoqira(crux)) {
     const readJson = async (path: string) => {
       const artifact = artifacts.find((a) => pathOf(a) === path);
       if (!artifact) throw new Error('Moqira publication files are missing.');
@@ -334,22 +331,7 @@ export async function publishPipeline(
   // form-js Cruxes publish the viewer edition their own script renders (formjs-crux/scripts/edition.mjs).
   // Tool templates distribute their complete editor/runtime package, even when
   // projects made with the tool have a separate public-edition build.
-  const builds =
-    crux.kind !== 'tool' &&
-    (deps.site.isSiteCrux(artifacts) ||
-      isMoqira(crux) ||
-      crux.kind === 'notes' ||
-      nativeAppType(crux) === 'formjs' ||
-      nativeAppType(crux) === 'maps');
-  // A sketch or shader Crux publishes its page as it is: no build, the files are the site.
-  const publishesAsIs =
-    ['p5', 'glsl', 'abc', 'jscad', 'timeline'].includes(nativeAppType(crux) ?? '') ||
-    samplerType(crux) === 'excalidraw';
-  if (isEmbeddedApp(crux) && !builds && !publishesAsIs)
-    throw new Error(
-      'This notebook is missing its site configuration. Restore it before publishing.',
-    );
-  if (builds) {
+  if (plan.kind === 'build') {
     progress('build');
     filesToPublish = await deps.site.buildForPublish(crux.id);
   } else {
@@ -358,7 +340,7 @@ export async function publishPipeline(
     // Every publishable artifact must load. Skipping a failed blob would ship
     // an incomplete site while `publishedFingerprints` recorded it as shipped,
     // so the missing file would never be retried.
-    for (const art of publishableArtifacts(artifacts)) {
+    for (const { file: art, path } of plan.files) {
       let blob: Blob;
       try {
         blob = await deps.local.downloadBlob(art);
@@ -370,7 +352,7 @@ export async function publishPipeline(
       }
       filesToPublish.push({
         blob,
-        path: pathOf(art) || 'file',
+        path,
         type: art.type,
         kind: art.kind || undefined,
         mimeType: art.mimeType,
@@ -432,7 +414,9 @@ export async function publishPipeline(
   // A transient failure here aborts the publish: `exists` throwing is the
   // guard that stops us taking the destructive create path (see PublishDeps).
   progress('sync');
+  assertAuthCurrent(context);
   const cruxExistsOnApi = await deps.api.exists(crux.id);
+  assertAuthCurrent(context);
   if (cruxExistsOnApi) {
     await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
   } else {
@@ -446,12 +430,21 @@ export async function publishPipeline(
 
   // 3. Publish — all files in one multipart request
   progress('upload');
+  assertAuthCurrent(context);
   const updated = await deps.api.publish(crux.id, filesToPublish);
+  assertAuthCurrent(context);
 
   // 4. Merge API publish metadata into the local crux (preserving local-only
   // meta) and snapshot fingerprints for change detection; persist locally.
   progress('finalize');
-  const publishedFingerprints = buildFingerprintMap(artifacts);
+  const publishedFingerprints =
+    plan.kind === 'static'
+      ? Object.fromEntries(
+          plan.files
+            .filter(({ file }) => !!file.fingerprint)
+            .map(({ file, path }) => [path, file.fingerprint]),
+        )
+      : buildFingerprintMap(artifacts);
   const mergedMeta = {
     ...(crux.meta as Record<string, unknown>),
     ...(updated.meta as Record<string, unknown>),
@@ -460,6 +453,7 @@ export async function publishPipeline(
     settings: crux.meta?.settings,
   };
   await deps.local.updateCruxMeta(crux.id, mergedMeta);
+  assertAuthCurrent(context);
   const mergedCrux: Crux = { ...crux, ...updated, meta: mergedMeta as Crux['meta'] };
 
   // 5. Sync discoverable state and tags (best-effort — publish itself succeeded)
@@ -471,6 +465,7 @@ export async function publishPipeline(
     // best-effort
   }
 
+  assertAuthCurrent(context);
   return mergedCrux;
 }
 
@@ -479,18 +474,26 @@ export async function publishPipeline(
  * publish metadata locally (persisted — not just in-memory), returns the
  * updated crux.
  */
-export async function unpublishPipeline(crux: Crux, opts?: { deps?: PublishDeps }): Promise<Crux> {
+export async function unpublishPipeline(
+  crux: Crux,
+  opts?: { deps?: PublishDeps; authContext?: AuthContext },
+): Promise<Crux> {
+  const context = opts?.authContext ?? captureAuth();
+  assertAuthCurrent(context);
   if (crux.type === 'working-copy' || crux.meta?.workingCopy) throw new Error('Publish from Main.');
   if (!opts?.deps) await assertCopyWritable(crux.id);
-  const deps = opts?.deps ?? (await defaultDeps());
+  const deps = opts?.deps ?? (await defaultDeps(context));
 
+  assertAuthCurrent(context);
   await deps.api.unpublish(crux.id);
+  assertAuthCurrent(context);
 
   const meta = { ...(crux.meta as Record<string, unknown>) };
   delete meta.publishedAt;
   delete meta.publishedVersion;
   delete meta.publishedFingerprints;
   await deps.local.updateCruxMeta(crux.id, meta);
+  assertAuthCurrent(context);
 
   return { ...crux, meta: meta as Crux['meta'], visibility: 'private' };
 }

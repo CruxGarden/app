@@ -157,3 +157,112 @@ test('an indexed path replaced with an outside symlink is refused, never read or
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('rename recovery is inside the exact folder grant and never enters scans despite negation', async () => {
+  const { root, projects, folder } = fixture();
+  const { randomUUID } = require('node:crypto');
+  const { scanFolder } = require('../dist/folder-scan');
+  const preview = new PreviewServer((folder) => projects.resolveKnownFolder(folder));
+  try {
+    const source = {
+      id: randomUUID(),
+      path: 'source.txt',
+      fingerprint: hash('Source'),
+      size: 6,
+      mimeType: 'text/plain',
+      encoding: 'utf-8',
+      mode: 0o644,
+      attributes: {},
+    };
+    const target = { ...source, id: randomUUID(), path: 'target.txt', fingerprint: hash('Target') };
+    const intent = {
+      kind: 'rename' as const,
+      operationId: randomUUID(),
+      source,
+      target,
+      entry: { ...source, path: 'target.txt' },
+    };
+    projects.writeFile(folder, source.path, Buffer.from('Source'));
+    projects.writeFile(folder, target.path, Buffer.from('Target'));
+    projects.projectRename(folder, intent, false);
+    projects.projectRename(folder, intent, true);
+    const recovery = `.crux-recovery/rename/${intent.operationId}/target`;
+    expect(readFileSync(join(folder, recovery), 'utf8')).toBe('Target');
+    expect(() => projects.projectRename(join(root, 'garden'), intent, false)).toThrow(/registered/);
+    expect(() => projects.readFile(folder, recovery)).toThrow(/reserved/);
+    writeFileSync(join(folder, '.cruxignore'), '!.crux-recovery/\n!.crux-recovery/**\n');
+    expect(projects.listFiles(folder)).toEqual(['.cruxignore', 'target.txt']);
+    expect(projects.capture(folder).map((file) => file.path)).toEqual([
+      '.cruxignore',
+      'target.txt',
+    ]);
+    expect(
+      (await projects.captureManifest(folder, join(root, 'blobs'), [])).files.map(
+        (file) => file.path,
+      ),
+    ).toEqual(['.cruxignore', 'target.txt']);
+    expect(projects.ignoredPaths(folder, [recovery])).toEqual([recovery]);
+    expect(scanFolder(folder).files).toEqual(['.cruxignore', 'target.txt']);
+    const url = await preview.start(folder);
+    expect((await fetch(new URL(recovery, url))).status).toBe(403);
+  } finally {
+    await preview.stopAll();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+for (const kind of ['write', 'delete'] as const) {
+  test(`${kind} recovery preserves folder grants and remains private to scans and preview`, async () => {
+    const { root, projects, folder } = fixture();
+    const { randomUUID } = require('node:crypto');
+    const { scanFolder } = require('../dist/folder-scan');
+    const preview = new PreviewServer((folder) => projects.resolveKnownFolder(folder));
+    try {
+      const original = {
+        id: randomUUID(),
+        path: 'target.txt',
+        fingerprint: hash('Original'),
+        size: 8,
+        mode: 0o644,
+        mimeType: 'text/plain',
+        encoding: 'utf-8',
+        attributes: {},
+      };
+      const intent =
+        kind === 'write'
+          ? {
+              kind,
+              operationId: randomUUID(),
+              before: original,
+              entry: { ...original, fingerprint: hash('Replacement'), size: 11 },
+            }
+          : { kind, operationId: randomUUID(), source: original };
+      projects.writeFile(folder, 'target.txt', Buffer.from('Original'));
+      expect(() => projects.projectOperation(join(root, 'garden'), intent, false)).toThrow(
+        /registered/,
+      );
+      projects.projectOperation(folder, intent, false);
+      expect(readFileSync(join(folder, 'target.txt'), 'utf8')).toBe('Original');
+      projects.projectOperation(folder, intent, true, Buffer.from('Replacement'));
+      const recovery = `.crux-recovery/${kind}/${intent.operationId}/original`;
+      expect(readFileSync(join(folder, recovery), 'utf8')).toBe('Original');
+      expect(() => projects.readFile(folder, recovery)).toThrow(/reserved/);
+      writeFileSync(join(folder, '.cruxignore'), '!.crux-recovery/\n!.crux-recovery/**\n');
+      const expected = kind === 'write' ? ['.cruxignore', 'target.txt'] : ['.cruxignore'];
+      expect(projects.listFiles(folder)).toEqual(expected);
+      expect(projects.capture(folder).map((file) => file.path)).toEqual(expected);
+      expect(
+        (await projects.captureManifest(folder, join(root, 'blobs'), [])).files.map(
+          (file) => file.path,
+        ),
+      ).toEqual(expected);
+      expect(projects.ignoredPaths(folder, [recovery])).toEqual([recovery]);
+      expect(scanFolder(folder).files).toEqual(expected);
+      const url = await preview.start(folder);
+      expect((await fetch(new URL(recovery, url))).status).toBe(403);
+    } finally {
+      await preview.stopAll();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}

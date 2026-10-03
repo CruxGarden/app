@@ -11,6 +11,9 @@ import type { CruxKind } from '@/api/types';
 
 export type ToolIcon = 'layout' | 'pencil' | 'home';
 export type ToolLayout = 'workshop' | 'chat' | 'writing' | 'visual';
+export type ToolPublication =
+  | { type: 'static'; root: string; include?: string[] }
+  | { type: 'garden-package' };
 
 export interface CruxToolManifest {
   version: 1;
@@ -42,6 +45,8 @@ export interface CruxToolManifest {
   document?: { path: string; seed: unknown };
   /** Whether a Crux made here has a public edition to Share. */
   share: boolean;
+  /** Explicit visitor files or editable workspace handoff; never downloaded host code. */
+  publication?: ToolPublication;
   /** Provenance for "About this tool". */
   toolInfo: { name: string; upstream: string; relationship: string; detailsPath: string };
   /** Dropped files this tool takes: extensions (with the dot) and the folder they land in. */
@@ -92,6 +97,55 @@ function relativePath(id: string, label: string, value: string, directory = fals
   return value;
 }
 
+/** Static publication paths are literal project paths, never URLs or patterns. */
+export function publicOutputPath(value: string, directory = false): boolean {
+  const path = directory && value.endsWith('/') ? value.slice(0, -1) : value;
+  return (
+    !!path &&
+    !/[\\:%?#*]/.test(path) &&
+    !Array.from(path).some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127) &&
+    path
+      .split('/')
+      .every(
+        (part) =>
+          !!part &&
+          part !== '.' &&
+          part !== '..' &&
+          !['.crux', '.crux-recovery', '.git', '_crux'].includes(part.toLowerCase()) &&
+          !/^\.env(?:\.|$)/i.test(part),
+      )
+  );
+}
+
+function publication(id: string, value: unknown): ToolPublication | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    fail(id, 'publication must describe a supported output');
+  const input = value as Record<string, unknown>;
+  if (input.type === 'garden-package') {
+    if (Object.keys(input).some((key) => key !== 'type')) fail(id, 'unknown publication field');
+    return { type: 'garden-package' };
+  }
+  if (input.type !== 'static') fail(id, 'unsupported publication type');
+  if (Object.keys(input).some((key) => !['type', 'root', 'include'].includes(key)))
+    fail(id, 'unknown publication field');
+  if (typeof input.root !== 'string' || !publicOutputPath(input.root, true))
+    fail(id, 'publication.root must be a public directory inside the Crux');
+  const root = input.root.endsWith('/') ? input.root : `${input.root}/`;
+  let include: string[] | undefined;
+  if (input.include !== undefined) {
+    if (
+      !Array.isArray(input.include) ||
+      input.include.length > 64 ||
+      input.include.some((path) => typeof path !== 'string' || !publicOutputPath(path, true))
+    )
+      fail(id, 'publication.include must list up to 64 literal public files or directories');
+    include = [...input.include] as string[];
+    if (new Set(include).size !== include.length) fail(id, 'duplicate publication.include path');
+  }
+  return { type: 'static', root, ...(include ? { include } : {}) };
+}
+
 /** Parse and validate a manifest; throws a message naming the tool and the field. */
 export function parseManifest(raw: unknown): CruxToolManifest {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('', 'must be an object');
@@ -108,6 +162,9 @@ export function parseManifest(raw: unknown): CruxToolManifest {
   const order = typeof o.order === 'number' && Number.isFinite(o.order) ? o.order : 1000;
   const entryFile = req(id, o, 'entryFile');
   relativePath(id, 'entryFile', entryFile);
+  const share = bool(id, o, 'share', false);
+  const output = publication(id, o.publication);
+  if (output && !share) fail(id, 'publication requires share: true');
 
   const info = o.toolInfo;
   if (!info || typeof info !== 'object') fail(id, 'toolInfo is required');
@@ -166,7 +223,8 @@ export function parseManifest(raw: unknown): CruxToolManifest {
     contentRoot: relativePath(id, 'contentRoot', opt(id, o, 'contentRoot') ?? 'data/', true),
     layout,
     document,
-    share: bool(id, o, 'share', false),
+    share,
+    ...(output ? { publication: output } : {}),
     toolInfo: {
       name: req(id, ti, 'name'),
       upstream,

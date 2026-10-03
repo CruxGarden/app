@@ -1,14 +1,13 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import type { CruxKind } from '@/api/types';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { navigationNeighborhood, navigationVersionTarget } from './navigation-neighborhood';
 
+const native = localApiFixture();
 beforeEach(async () => {
   await initServices();
-  // The shared unit harness uses the parked web schema; desktop API Dimensions
-  // already have tombstones. Mirror that column for these read projections.
-  await getSqliteClient().run('ALTER TABLE dimensions ADD COLUMN deleted TEXT');
 });
 const node = (title: string, kind?: CruxKind) => getServices().crux.create({ title, kind });
 const edge = (
@@ -68,12 +67,11 @@ it('omits deleted edges and preserves an unavailable endpoint without exposing i
   const a = await node('A');
   const b = await node('Private removed title');
   const e = await edge(a.id, b.id, 'graft');
-  const db = getSqliteClient();
-  await db.run('UPDATE cruxes SET deleted = ? WHERE id = ?', ['gone', b.id]);
+  await native().faultSql('UPDATE cruxes SET deleted = ? WHERE id = ?', ['gone', b.id]);
   const result = await navigationNeighborhood(a.id);
   expect(result.links[0]).toMatchObject({ node: { id: b.id }, available: false });
   expect(JSON.stringify(result)).not.toContain('Private removed title');
-  await db.run('UPDATE dimensions SET deleted = ? WHERE id = ?', ['gone', e.id]);
+  await native().faultSql('UPDATE dimensions SET deleted = ? WHERE id = ?', ['gone', e.id]);
   expect((await navigationNeighborhood(a.id)).links).toEqual([]);
   await expect(navigationNeighborhood(b.id)).rejects.toThrow('unavailable');
 });

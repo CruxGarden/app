@@ -9,7 +9,7 @@ import { getSqliteClient } from './sqlite/client';
 import { hashContent } from './sqlite/helpers';
 import { getWorkspace, openWorkspace } from '@/stores/workspaceRegistry';
 
-const native = localApiFixture();
+const native = localApiFixture({ project: true });
 beforeEach(() => initServices());
 const write = (id: string, content: string) =>
   getServices().artifact.create({ resourceId: id, content, meta: { path: 'index.html' } });

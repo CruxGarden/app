@@ -6,7 +6,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
 import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
-import { openPanel } from './panel-helpers';
+import { openPanel, chooseSettingsSection } from './panel-helpers';
 import { writeFirstFile, connectAccount } from './journeys/journey-helpers';
 
 const text = (result: unknown) =>
@@ -21,10 +21,9 @@ test('source save refusal retains the draft; UI retry and Garden agent sharing p
   try {
     await enterGarden(page);
     await page.keyboard.press('ControlOrMeta+,');
-    const navigation = page.getByRole('navigation', { name: 'Settings sections' });
-    await navigation.getByRole('button', { name: 'AI and agents', exact: true }).click();
+    await chooseSettingsSection(page, 'AI and agents');
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
-    await navigation.getByRole('button', { name: 'Account', exact: true }).click();
+    await chooseSettingsSection(page, 'Account');
     await connectAccount(page);
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const id = await createCrux(page, 'Visible source');

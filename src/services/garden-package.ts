@@ -6,7 +6,20 @@ export async function importGardenPackage(file: Blob, gardenId: string): Promise
     import('@/services/embedded-app'),
     import('@/stores/uiStore'),
   ]);
-  const result = await importCruxspace({ data: file, gardenId });
+  let result: Awaited<ReturnType<typeof importCruxspace>>;
+  try {
+    result = await importCruxspace({ data: file, gardenId });
+  } catch (error) {
+    // Refused cleanup can leave a new partial Garden. Refresh the normal Home
+    // inventory before reporting it so the person can find and review it.
+    await (
+      await import('@/stores/gardenStore')
+    ).useGardenStore
+      .getState()
+      .refresh()
+      .catch(() => undefined);
+    throw error;
+  }
   // Imported apps open on their Workshop, as they would when created here.
   for (const member of result.members)
     if (isEmbeddedApp(await getServices().crux.findById(member.id)))

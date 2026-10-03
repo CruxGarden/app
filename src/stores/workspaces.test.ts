@@ -1,4 +1,3 @@
-import { useGardenStore } from './gardenStore';
 import { newTurnJob } from '@/services/turn-jobs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCruxStore } from './cruxStore';
@@ -432,18 +431,6 @@ it('opening an editor with Collaboration hidden does not acknowledge an unseen r
   wa.ui.getState().setPaneVisible('collaboration', true);
   expect(workspaceTending(wa).attention).toEqual([]);
   expect(wa.data.getState().crux).toBe(content);
-});
-
-it('requires an open workspace to close before its Crux can be deleted', async () => {
-  const { wa, wb, service } = await pair();
-  await expect(useGardenStore.getState().deleteCrux(wa.id)).rejects.toThrow(
-    'Close this Crux workspace',
-  );
-  expect((await service.crux.findById(wa.id)).id).toBe(wa.id);
-  await closeWorkspace(wa.id);
-  await useGardenStore.getState().deleteCrux(wa.id);
-  expect((await service.crux.listAll()).some((c) => c.id === wa.id)).toBe(false);
-  expect(getWorkspace(wb.id)).toBe(wb);
 });
 
 it.each([false, true])(

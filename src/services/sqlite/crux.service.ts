@@ -6,7 +6,6 @@ import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
 import { fromRow, buildInsert, buildUpdate, generateSlug } from './helpers';
 import { createProjectFolder } from '../project-folder';
-import { assertSnapshotUnshared, planCruxDeletion } from './crux-deletion';
 import {
   findWorkingCopy,
   assertNoOpenTasks,
@@ -67,20 +66,19 @@ export class SqliteCruxService implements ICruxService {
   }
 
   async trash(cruxId: string): Promise<void> {
+    const db = getSqliteClient();
+    if (!db.setCruxTrashed)
+      throw new Error('Crux lifecycle storage is unavailable. Restart the updated desktop app.');
     await assertMainWorkspace(cruxId);
     await assertNoOpenTasks(cruxId);
-    const db = getSqliteClient();
-    if (db.setCruxTrashed) return db.setCruxTrashed(cruxId, true);
-    await db.run('UPDATE cruxes SET deleted = ? WHERE id = ? AND deleted IS NULL', [
-      new Date().toISOString(),
-      cruxId,
-    ]);
+    return db.setCruxTrashed(cruxId, true);
   }
 
   async restore(cruxId: string): Promise<void> {
     const db = getSqliteClient();
-    if (db.setCruxTrashed) return db.setCruxTrashed(cruxId, false);
-    await db.run('UPDATE cruxes SET deleted = NULL WHERE id = ?', [cruxId]);
+    if (!db.setCruxTrashed)
+      throw new Error('Crux lifecycle storage is unavailable. Restart the updated desktop app.');
+    return db.setCruxTrashed(cruxId, false);
   }
 
   async purgeTrash(olderThanMs: number): Promise<number> {
@@ -171,6 +169,8 @@ export class SqliteCruxService implements ICruxService {
   }
 
   async update(cruxId: string, updates: UpdateCruxInput): Promise<Crux> {
+    // Capture the caller's intent before the asynchronous Main/Task lookup.
+    updates = structuredClone(updates);
     if (await findWorkingCopy(cruxId)) {
       if (Object.keys(updates).some((key) => key !== 'meta' && key !== 'title'))
         throw new Error('Change the Crux’s details in Main.');
@@ -210,25 +210,10 @@ export class SqliteCruxService implements ICruxService {
 
   async delete(cruxId: string): Promise<void> {
     const db = getSqliteClient();
+    if (!db.deleteCrux)
+      throw new Error('Crux lifecycle storage is unavailable. Restart the updated desktop app.');
     await assertMainWorkspace(cruxId);
     await assertNoOpenTasks(cruxId);
-    if (db.deleteCrux) return db.deleteCrux(cruxId);
-    await assertSnapshotUnshared(cruxId);
-    const ids = await planCruxDeletion(cruxId);
-    // Delete only the planned ownership set, never arbitrary relationship
-    // targets. Chunk parameters for the Web and native SQLite backends.
-    for (let i = 0; i < ids.length; i += 200) {
-      const chunk = ids.slice(i, i + 200);
-      const placeholders = chunk.map(() => '?').join(',');
-      await db.run(`DELETE FROM artifacts WHERE resource_id IN (${placeholders})`, chunk);
-      await db.run(`DELETE FROM store WHERE crux_id IN (${placeholders})`, chunk);
-      await db.run(
-        `DELETE FROM dimensions WHERE source_id IN (${placeholders}) OR target_id IN (${placeholders})`,
-        [...chunk, ...chunk],
-      );
-      await db.run(`DELETE FROM cruxes WHERE id IN (${placeholders})`, chunk);
-    }
-    await db.run('DELETE FROM working_copies WHERE crux_id = ?', [cruxId]);
-    await db.run('DELETE FROM task_merges WHERE crux_id = ?', [cruxId]);
+    return db.deleteCrux(cruxId);
   }
 }

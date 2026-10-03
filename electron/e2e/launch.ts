@@ -98,7 +98,11 @@ export async function launchApp(
   // Capture while the test is live: its timeout can expire before finally runs.
   const diagnosticInfo = diagnostics ? test.info() : undefined;
   if (diagnostics)
-    await app.context().tracing.start({ screenshots: true, snapshots: true, sources: false });
+    // Playwright's HAR body collector can re-fetch a binary response through
+    // Network.loadNetworkResource. Diagnostics must not repeat app requests
+    // (or consume a second metered download), so retain actions/screenshots
+    // without network/DOM snapshots. Failure screenshots/context remain below.
+    await app.context().tracing.start({ screenshots: true, snapshots: false, sources: false });
   let diagnosticsSaved = false;
   const rendererErrors: string[] = [];
   page.on('pageerror', (error) => rendererErrors.push(error.message));

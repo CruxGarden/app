@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
-import { showPane, hidePane } from './panel-helpers';
+import { showPane, hidePane, chooseSettingsSection } from './panel-helpers';
 import { closeWorkspace } from './journeys/journey-helpers';
 
 test('returning users can resume, find installed packages, and opt back into the welcome page', async () => {
@@ -10,7 +10,7 @@ test('returning users can resume, find installed packages, and opt back into the
   try {
     await enterGarden(first.page);
     const settings = await showPane(first.page, 'Settings');
-    await settings.getByRole('button', { name: 'Tools and Moods', exact: true }).click();
+    await chooseSettingsSection(first.page, 'Tools and Moods');
     await expect(settings.getByTestId('installed-tools')).toBeVisible();
     await settings.getByRole('button', { name: 'Manage my Moods', exact: true }).click();
     await expect(first.page.getByRole('region', { name: 'Mood', exact: true })).toBeVisible();
@@ -18,7 +18,7 @@ test('returning users can resume, find installed packages, and opt back into the
     await hidePane(first.page, 'Settings');
     id = await createCrux(first.page, 'My return project');
     const preferences = await showPane(first.page, 'Settings');
-    await preferences.getByRole('button', { name: 'Getting started', exact: true }).click();
+    await chooseSettingsSection(first.page, 'Getting started');
     await preferences.getByRole('switch', { name: 'Resume my last workspace on startup' }).click();
     await hidePane(first.page, 'Settings');
     await goHome(first.page);
@@ -39,7 +39,7 @@ test('returning users can resume, find installed packages, and opt back into the
       { timeout: 30000 },
     );
     const settings = await showPane(again.page, 'Settings');
-    await settings.getByRole('button', { name: 'Getting started', exact: true }).click();
+    await chooseSettingsSection(again.page, 'Getting started');
     await settings.getByRole('switch', { name: 'Resume my last workspace on startup' }).click();
   } finally {
     await again.app.close();
@@ -58,7 +58,7 @@ test('resume falls back to Home after the last workspace is closed', async () =>
     await enterGarden(first.page);
     await createCrux(first.page, 'Finished for today');
     const settings = await showPane(first.page, 'Settings');
-    await settings.getByRole('button', { name: 'Getting started', exact: true }).click();
+    await chooseSettingsSection(first.page, 'Getting started');
     await settings.getByRole('switch', { name: 'Resume my last workspace on startup' }).click();
     await hidePane(first.page, 'Settings');
     await closeWorkspace(first.page, 'Finished for today');

@@ -4,6 +4,7 @@ import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { isEmbeddedApp, isLocalCreationTool } from '@/services/embedded-app';
+import { publicationPlan } from '@/services/publication-plan';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -28,6 +29,7 @@ import * as liveStore from '@/api/store';
 import CustomDomainSection from './CustomDomainSection';
 import GuestbookSection from './GuestbookSection';
 import GardenShelfSection from './GardenShelfSection';
+import WorkspacePackageShare from './WorkspacePackageShare';
 import FunctionsSection from './FunctionsSection';
 import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
 
@@ -254,12 +256,20 @@ export default function PublishPane() {
     );
   }
 
-  if (isLocalCreationTool(crux))
+  const plan = publicationPlan(crux, artifacts);
+  if (plan.kind === 'garden-package')
+    return (
+      <div ref={ref} className="flex flex-col h-full">
+        <WorkspacePackageShare crux={crux} />
+      </div>
+    );
+
+  if (plan.kind === 'unavailable' && !isPublished)
     return (
       <div ref={ref} className="flex flex-col h-full">
         <PaneEmpty
-          title="A local creation tool"
-          description="Use and save this tool in Garden. Website sharing isn't available for this Crux yet."
+          title={isLocalCreationTool(crux) ? 'A local creation tool' : 'Public edition unavailable'}
+          description={plan.explanation}
         />
       </div>
     );
@@ -344,9 +354,11 @@ export default function PublishPane() {
           ) : (
             <PaneSection label="Status" tone="dashed">
               <p className="text-sm text-text-muted leading-relaxed">
-                {isEmbeddedApp(crux)
-                  ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content stays here.'
-                  : 'Private for now. Sharing puts this creation and its conversation on the web. Review your page and conversation before sharing.'}
+                {plan.kind === 'static'
+                  ? `Sharing puts every file in ${plan.declaration.root}${plan.declaration.include?.length ? ` and the explicitly included ${plan.declaration.include.join(', ')}` : ''} on the web. Review the complete included documents before sharing. Other project files and your Collaboration stay here.`
+                  : isEmbeddedApp(crux)
+                    ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content stays here.'
+                    : 'Private for now. Sharing puts this creation and its conversation on the web. Review your page and conversation before sharing.'}
               </p>
               {!isAuthenticated && (
                 <p className="mt-2 text-xs text-text-muted">
@@ -358,7 +370,9 @@ export default function PublishPane() {
           )}
 
           {/* Action — only when there is something to do; never a disabled green */}
-          {backingUp ? (
+          {plan.kind === 'unavailable' ? (
+            <PaneNote tone="error">{plan.explanation}</PaneNote>
+          ) : backingUp ? (
             <PaneAction busy="Backing up...">Share</PaneAction>
           ) : publishing ? (
             <PaneAction busy={PHASE_LABELS[phase ?? 'sync']}>Share</PaneAction>

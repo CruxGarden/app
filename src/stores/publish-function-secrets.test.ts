@@ -5,6 +5,7 @@ import * as publish from '@/services/publish';
 import * as secrets from '@/services/function-secrets';
 import * as functions from '@/services/crux-functions';
 import * as cues from '@/services/cues';
+import { captureAuth } from '@/api/session';
 
 beforeEach(async () => {
   await initServices();
@@ -54,7 +55,8 @@ it('reports a partial publication safely and only reports success after credenti
   );
   expect(vi.mocked(cues.playCue).mock.calls.some(([cue]) => cue === 'published')).toBe(false);
   upload.mockResolvedValue(undefined);
+  const context = captureAuth();
   expect(await store.getState().publishCrux()).toBe(true);
-  expect(activate).toHaveBeenCalledWith(store.getState().crux!.id);
+  expect(activate).toHaveBeenCalledWith(store.getState().crux!.id, context);
   expect(store.getState().publishFailure).toBeNull();
 });

@@ -372,6 +372,12 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     hint: 'Card width, thumbnail shape and gap on the Home Garden; snapshot card shape.',
     match: (k) => GRID_KEYS.has(k),
   },
+  {
+    id: 'graphs',
+    label: 'Graphs',
+    hint: 'Lane colors, connections, unselected branches and label size. Graphs share the Mood’s panel, text, body font, focus outline and motion. Color alpha is used directly.',
+    match: (key) => key.startsWith('graph'),
+  },
   ...PANES.map<TokenGroup>((p) => ({
     id: `pane-${p.id.toLowerCase()}`,
     label: `${p.label} pane`,

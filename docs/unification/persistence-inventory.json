@@ -744,46 +744,6 @@
       "statement": "`INSERT INTO artifacts (${columns.join(', ')}) VALUES ${chunk.map(() => placeholder).join(', ')}`"
     },
     {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "'UPDATE cruxes SET deleted = ? WHERE id = ? AND deleted IS NULL'"
-    },
-    {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "'UPDATE cruxes SET deleted = NULL WHERE id = ?'"
-    },
-    {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "`DELETE FROM artifacts WHERE resource_id IN (${placeholders})`"
-    },
-    {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "`DELETE FROM store WHERE crux_id IN (${placeholders})`"
-    },
-    {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "`DELETE FROM dimensions WHERE source_id IN (${placeholders}) OR target_id IN (${placeholders})`"
-    },
-    {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "`DELETE FROM cruxes WHERE id IN (${placeholders})`"
-    },
-    {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "'DELETE FROM working_copies WHERE crux_id = ?'"
-    },
-    {
-      "file": "src/services/sqlite/crux.service.ts",
-      "method": "db.run",
-      "statement": "'DELETE FROM task_merges WHERE crux_id = ?'"
-    },
-    {
       "file": "src/services/sqlite/dimension.service.ts",
       "method": "db.run",
       "statement": "'DELETE FROM dimensions WHERE id = ?'"

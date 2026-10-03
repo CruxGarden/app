@@ -5,7 +5,7 @@ import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
 import { closeWorkspace } from './journeys/journey-helpers';
 import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
-import { showPane, hidePane, togglePanel, openPanel } from './panel-helpers';
+import { showPane, hidePane, togglePanel, openPanel, chooseSettingsSection } from './panel-helpers';
 
 // Host UI only: upstream editors and user-created previews need separate audits.
 async function scan(page: Page, name: string) {
@@ -103,11 +103,8 @@ test('accessibility scan of entry, creation, Settings and workspace', async () =
       'AI and agents',
       'Garden and backups',
       'Appearance and panels',
-    ]) {
-      await page
-        .getByRole('navigation', { name: 'Settings sections' })
-        .getByRole('button', { name, exact: true })
-        .click();
+    ] as const) {
+      await chooseSettingsSection(page, name);
       const section = page.getByRole('region', { name, exact: true }).first();
       const folded = section.locator('button[aria-expanded="false"]');
       while (await folded.count()) await folded.first().click();

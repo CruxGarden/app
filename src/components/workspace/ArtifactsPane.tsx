@@ -1,3 +1,5 @@
+import type { Artifact } from '@/api/types';
+import type { ArtifactUploadEntry } from '@/services/types';
 import CopyArtifactsDialog, { type ArtifactCopySelection } from './CopyArtifactsDialog';
 import { captureGardenId } from '@/stores/gardenContext';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
@@ -23,8 +25,9 @@ import { FieldRow } from './MetadataContent';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { Capability, can } from '@/lib/platform';
 import { revealProjectFolder } from '@/services/project-folder';
-import { confirmDialog } from '@/stores/dialogStore';
+import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
+import { reportFileUpdateError } from '@/components/artifacts/fileUpdateError';
 import { expandTreeSelection, FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
 import ConvertActions from '@/components/artifacts/ConvertActions';
 import IconButton from '@/components/ui/IconButton';
@@ -151,9 +154,7 @@ export default function ArtifactsPane() {
   const hasProjectFolder = can(Capability.ProjectFolder);
   const createFile = useCruxStore((s) => s.createFile);
   const uploadFiles = useCruxStore((s) => s.uploadFiles);
-  const uploadFile = useCruxStore((s) => s.uploadFile);
   const uploadProgress = useCruxStore((s) => s.uploadProgress);
-  const moveArtifact = useCruxStore((s) => s.moveArtifact);
   const renameArtifact = useCruxStore((s) => s.renameArtifact);
   const isViewingSnapshot = useCruxStore((s) => s.viewingSnapshotId !== null);
   const openFile = useUIStore((s) => s.openFile);
@@ -256,116 +257,121 @@ export default function ArtifactsPane() {
     [uiStore, cancelFileOperation, cruxStore, createFile],
   );
 
-  const handleMove = useCallback(
-    async (id: string, newParentPath: string | null) => {
-      const { artifacts } = cruxStore.getState();
-      const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
-
-      // If it's a folder (id starts with "folder:"), move all children
-      if (id.startsWith('folder:')) {
-        const folderPath = id.replace('folder:', '');
-        const children = artifacts.filter((a) => pathOf(a).startsWith(folderPath + '/'));
-        const folderName = basename(folderPath) || '';
-        const destFolderPath = newParentPath ? `${newParentPath}/${folderName}` : folderName;
-        const newPaths = children.map((child) => {
-          const oldPath = pathOf(child);
-          const relativePath = oldPath.slice(folderPath.length);
-          return newParentPath
-            ? `${newParentPath}/${folderName}${relativePath}`
-            : `${folderName}${relativePath}`;
+  const renameSelection = useCallback(
+    async (
+      moves: { source: Artifact; path: string }[],
+      artifacts: Artifact[],
+      mergeMessage?: string,
+    ) => {
+      const captured = moves
+        .filter(({ source, path }) => pathOf(source) !== path)
+        .map(({ source, path }) => ({
+          source: structuredClone(source),
+          path,
+          target: structuredClone(
+            artifacts.find((file) => pathOf(file) === path && file.id !== source.id) ?? null,
+          ),
+        }));
+      if (!captured.length) return;
+      const conflicts = captured.filter((move) => move.target);
+      if (
+        (conflicts.length || mergeMessage) &&
+        !(await confirmDialog({
+          message:
+            mergeMessage ??
+            (conflicts.length === 1
+              ? `"${conflicts[0]!.path}" already exists. Replace it?`
+              : `${conflicts.length} files already exist. Replace them?`),
+          confirmLabel: 'Replace',
+          danger: true,
+        }))
+      )
+        return;
+      let completed = 0;
+      try {
+        for (const move of captured) {
+          if (cruxStore.getState().crux?.id !== move.source.resourceId)
+            throw new Error('The active Crux changed. Return to the original Crux to continue.');
+          await renameArtifact(move.source.id, move.path, {
+            source: move.source,
+            target: move.target,
+          });
+          completed++;
+        }
+      } catch (error) {
+        const remaining = captured.length - completed - 1;
+        await reportFileUpdateError(cruxStore, error, {
+          title: 'Rename failed',
+          fallback: 'Could not rename these files.',
+          message: `${completed ? `${completed} files were renamed. ` : ''}${error instanceof Error ? error.message : String(error)}${remaining ? ` ${remaining} remaining files were not renamed. Select them again to retry.` : ''}`,
         });
-        const destFolderExists =
-          destFolderPath !== folderPath &&
-          artifacts.some((a) => pathOf(a).startsWith(destFolderPath + '/'));
-        const fileConflicts = newPaths.filter(
-          (p) => existingPaths.has(p) && !children.some((c) => pathOf(c) === p),
-        );
-        if (destFolderExists || fileConflicts.length > 0) {
-          const msg = destFolderExists
-            ? `A folder named "${folderName}" already exists at the destination. Merge contents?`
-            : fileConflicts.length === 1
-              ? `"${fileConflicts[0]}" already exists. Replace it?`
-              : `${fileConflicts.length} files already exist. Replace them?`;
-          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace' }))) return;
-        }
-        for (let i = 0; i < children.length; i++) {
-          await renameArtifact(children[i]!.id, newPaths[i]!);
-        }
-      } else {
-        const art = artifacts.find((a) => a.id === id);
-        if (art) {
-          const oldPath = pathOf(art);
-          const filename = basename(oldPath) || art.filename;
-          const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
-          if (newPath !== oldPath && existingPaths.has(newPath)) {
-            if (
-              !(await confirmDialog({
-                message: `"${newPath}" already exists. Replace it?`,
-                confirmLabel: 'Replace',
-              }))
-            )
-              return;
-          }
-        }
-        await moveArtifact(id, newParentPath);
       }
     },
-    [cruxStore, moveArtifact, renameArtifact],
+    [cruxStore, renameArtifact],
+  );
+
+  const handleMove = useCallback(
+    async (id: string, newParentPath: string | null) => {
+      const artifacts = cruxStore.getState().artifacts;
+      if (id.startsWith(FOLDER_ID_PREFIX)) {
+        const folder = id.slice(FOLDER_ID_PREFIX.length);
+        const destination = newParentPath
+          ? `${newParentPath}/${basename(folder)}`
+          : basename(folder);
+        await renameSelection(
+          artifacts
+            .filter((file) => isUnder(folder, pathOf(file)))
+            .map((source) => ({ source, path: destination + pathOf(source).slice(folder.length) })),
+          artifacts,
+          destination !== folder &&
+            artifacts.some((file) => pathOf(file).startsWith(destination + '/'))
+            ? `A folder named "${basename(folder)}" already exists at the destination. Merge contents?`
+            : undefined,
+        );
+      } else {
+        const source = artifacts.find((file) => file.id === id);
+        if (source)
+          await renameSelection(
+            [
+              {
+                source,
+                path: newParentPath
+                  ? `${newParentPath}/${basename(pathOf(source))}`
+                  : pathOf(source).split('/').pop()!,
+              },
+            ],
+            artifacts,
+          );
+      }
+    },
+    [cruxStore, renameSelection],
   );
 
   const handleRename = useCallback(
     async (id: string, newName: string) => {
       const artifacts = cruxStore.getState().artifacts;
-      const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
-
       if (id.startsWith(FOLDER_ID_PREFIX)) {
-        // Folder: batch-rename every artifact under it
-        const oldFolderPath = id.slice(FOLDER_ID_PREFIX.length);
-        const parts = oldFolderPath.split('/');
+        const folder = id.slice(FOLDER_ID_PREFIX.length);
+        const parts = folder.split('/');
         parts[parts.length - 1] = newName;
-        const newFolderPath = parts.join('/');
-        if (newFolderPath === oldFolderPath) return;
-
-        const children = artifacts.filter((a) => isUnder(oldFolderPath, pathOf(a)));
-        const moves = children.map((child) => ({
-          id: child.id,
-          newPath: newFolderPath + pathOf(child).slice(oldFolderPath.length),
-        }));
-        // Renaming onto an existing sibling used to merge into it silently and
-        // overwrite whatever collided. Ask, like folder MOVE already did.
-        const collisions = moves.filter((m) => existingPaths.has(m.newPath));
-        if (collisions.length > 0) {
-          const msg =
-            collisions.length === 1
-              ? `"${collisions[0]!.newPath}" already exists. Replace it?`
-              : `"${newFolderPath}" already exists — ${collisions.length} files would be replaced. Continue?`;
-          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace', danger: true })))
-            return;
-        }
-        for (const m of moves) await renameArtifact(m.id, m.newPath);
+        await renameSelection(
+          artifacts
+            .filter((file) => isUnder(folder, pathOf(file)))
+            .map((source) => ({
+              source,
+              path: parts.join('/') + pathOf(source).slice(folder.length),
+            })),
+          artifacts,
+        );
       } else {
-        // File: swap the last path segment
-        const artifact = artifacts.find((a) => a.id === id);
-        if (!artifact) return;
-        const oldPath = pathOf(artifact);
-        const pathParts = oldPath.split('/');
-        pathParts[pathParts.length - 1] = newName;
-        const newPath = pathParts.join('/');
-        if (newPath === oldPath) return;
-        if (existingPaths.has(newPath)) {
-          if (
-            !(await confirmDialog({
-              message: `"${newPath}" already exists. Replace it?`,
-              confirmLabel: 'Replace',
-              danger: true,
-            }))
-          )
-            return;
-        }
-        await renameArtifact(id, newPath);
+        const source = artifacts.find((file) => file.id === id);
+        if (!source) return;
+        const parts = pathOf(source).split('/');
+        parts[parts.length - 1] = newName;
+        await renameSelection([{ source, path: parts.join('/') }], artifacts);
       }
     },
-    [cruxStore, renameArtifact],
+    [cruxStore, renameSelection],
   );
 
   // Close any newly-created folders after an import (folders not yet in saved state
@@ -386,18 +392,38 @@ export default function ArtifactsPane() {
     [setFolderOpen, uiStore],
   );
 
-  const confirmOverwrite = useCallback(
-    async (entries: { path: string }[]): Promise<boolean> => {
-      const existingPaths = new Set(cruxStore.getState().artifacts.map((a) => pathOf(a)));
-      const conflicts = entries.filter((e) => existingPaths.has(e.path));
-      if (conflicts.length === 0) return true;
-      const msg =
-        conflicts.length === 1
-          ? `"${conflicts[0]!.path}" already exists. Replace it?`
-          : `${conflicts.length} files already exist. Replace them?`;
-      return confirmDialog({ message: msg, confirmLabel: 'Replace' });
+  const confirmOverwrite = useCallback(async (entries: ArtifactUploadEntry[]): Promise<boolean> => {
+    const conflicts = entries.filter((entry) => entry.expected !== null);
+    if (conflicts.length === 0) return true;
+    const msg =
+      conflicts.length === 1
+        ? `"${conflicts[0]!.path}" already exists. Replace it?`
+        : `${conflicts.length} files already exist. Replace them?`;
+    return confirmDialog({ message: msg, confirmLabel: 'Replace' });
+  }, []);
+
+  const uploadEntries = useCallback(
+    async (entries: UploadFileEntry[], ownerId = cruxStore.getState().crux?.id): Promise<void> => {
+      try {
+        const current = new Map(cruxStore.getState().artifacts.map((file) => [pathOf(file), file]));
+        const selection = entries.map(({ file, path }) => ({
+          file,
+          path,
+          expected: structuredClone(current.get(path) ?? null),
+        }));
+        if (!(await confirmOverwrite(selection))) return;
+        if (cruxStore.getState().crux?.id !== ownerId)
+          throw new Error('The active Crux changed. Choose the files again in their destination.');
+        await uploadFiles(selection);
+        closeFoldersFromPaths(selection.map((entry) => entry.path));
+      } catch (error) {
+        await reportFileUpdateError(cruxStore, error, {
+          title: 'Upload failed',
+          fallback: 'Could not add these files. Choose them again to retry.',
+        });
+      }
     },
-    [cruxStore],
+    [cruxStore, confirmOverwrite, uploadFiles, closeFoldersFromPaths],
   );
 
   const handleUploadFiles = useCallback(
@@ -406,11 +432,9 @@ export default function ArtifactsPane() {
         file: f.file,
         path: parentPath ? `${parentPath}/${f.path}` : f.path,
       }));
-      if (!(await confirmOverwrite(entries))) return;
-      await uploadFiles(entries);
-      closeFoldersFromPaths(entries.map((e) => e.path));
+      await uploadEntries(entries);
     },
-    [uploadFiles, closeFoldersFromPaths, confirmOverwrite],
+    [uploadEntries],
   );
 
   const handleDelete = useCallback(
@@ -434,31 +458,23 @@ export default function ArtifactsPane() {
 
   const handleFileInputChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
+      const files = Array.from(e.currentTarget.files || []);
+      e.currentTarget.value = '';
       if (files.length === 0) return;
       const parentPath = getParentPath();
       const entries = files.map((f) => ({
         file: f,
         path: parentPath ? `${parentPath}/${f.name}` : f.name,
       }));
-      if (!(await confirmOverwrite(entries))) {
-        e.target.value = '';
-        return;
-      }
-      if (entries.length === 1) {
-        await uploadFile(entries[0]!.file, parentPath);
-      } else {
-        await uploadFiles(entries);
-      }
-      closeFoldersFromPaths(entries.map((en) => en.path));
-      e.target.value = '';
+      await uploadEntries(entries);
     },
-    [uploadFile, uploadFiles, getParentPath, closeFoldersFromPaths, confirmOverwrite],
+    [uploadEntries, getParentPath],
   );
 
   const handleFolderInputChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
+      const files = Array.from(e.currentTarget.files || []);
+      e.currentTarget.value = '';
       if (files.length === 0) return;
       const parentPath = getParentPath();
       const entries = files.map((f) => ({
@@ -467,15 +483,9 @@ export default function ArtifactsPane() {
           ? `${parentPath}/${f.webkitRelativePath || f.name}`
           : f.webkitRelativePath || f.name,
       }));
-      if (!(await confirmOverwrite(entries))) {
-        e.target.value = '';
-        return;
-      }
-      await uploadFiles(entries);
-      closeFoldersFromPaths(entries.map((en) => en.path));
-      e.target.value = '';
+      await uploadEntries(entries);
     },
-    [uploadFiles, getParentPath, closeFoldersFromPaths, confirmOverwrite],
+    [uploadEntries, getParentPath],
   );
 
   useEffect(() => {
@@ -516,34 +526,34 @@ export default function ArtifactsPane() {
       e.preventDefault();
       emptyDragCountRef.current = 0;
       setIsDraggingOverEmpty(false);
-
-      const items = Array.from(e.dataTransfer.items);
-      const entries = items
-        .map((item) => item.webkitGetAsEntry?.())
-        .filter((entry): entry is FileSystemEntry => entry != null);
-
-      if (entries.length > 0) {
-        const fileEntries: { file: File; path: string }[] = [];
-        for (const entry of entries) {
-          fileEntries.push(...(await walkEntry(entry, '')));
-        }
-        if (fileEntries.length > 0) {
-          if (!(await confirmOverwrite(fileEntries))) return;
-          await uploadFiles(fileEntries);
-          closeFoldersFromPaths(fileEntries.map((e) => e.path));
-          return;
-        }
-      }
-
+      const ownerId = cruxStore.getState().crux?.id;
       const files = Array.from(e.dataTransfer.files);
-      if (files.length > 0) {
-        const fileEntries = files.map((f) => ({ file: f, path: f.name }));
-        if (!(await confirmOverwrite(fileEntries))) return;
-        await uploadFiles(fileEntries);
-        closeFoldersFromPaths(fileEntries.map((e) => e.path));
+      try {
+        const entries = Array.from(e.dataTransfer.items)
+          .map((item) => item.webkitGetAsEntry?.())
+          .filter((entry): entry is FileSystemEntry => entry != null);
+
+        if (entries.length > 0) {
+          const fileEntries: UploadFileEntry[] = [];
+          for (const entry of entries) fileEntries.push(...(await walkEntry(entry, '')));
+          if (fileEntries.length > 0) {
+            await uploadEntries(fileEntries, ownerId);
+            return;
+          }
+        }
+        if (files.length > 0)
+          await uploadEntries(
+            files.map((file) => ({ file, path: file.name })),
+            ownerId,
+          );
+      } catch (error) {
+        await alertDialog(
+          error instanceof Error ? error.message : 'Could not read the dropped files.',
+          'Upload failed',
+        );
       }
     },
-    [uploadFiles, closeFoldersFromPaths, confirmOverwrite],
+    [cruxStore, uploadEntries],
   );
 
   const actionButtons = (

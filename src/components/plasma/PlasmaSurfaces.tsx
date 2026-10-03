@@ -44,6 +44,12 @@ const MIN_SIDE = 96;
 
 function isSurface(el: HTMLElement) {
   if (CONTROLS.has(el.tagName)) return false;
+  if (el.closest('details:not([open]) > :not(summary)')) return false;
+  // A closed <details> can leave its contents with nonzero layout bounds.
+  // Registering those hidden rectangles draws a ghost plate across the panes
+  // beneath them. Ignore opacity: the material's own forming transition hides
+  // content temporarily without hiding its surface.
+  if (!el.checkVisibility({ visibilityProperty: true })) return false;
   // Claimed by an overlay (a menu growing out of the top bar draws the bar on
   // its own canvas meanwhile): the ground leaves it alone until it is back.
   if (el.hasAttribute(CLAIMED_ATTR)) return false;
@@ -74,6 +80,7 @@ export default function PlasmaSurfaces() {
     if (import.meta.env.DEV)
       (window as unknown as { __plasmaRenderer?: unknown }).__plasmaRenderer = renderer;
     const handles = new Map<HTMLElement, ShapeHandle>();
+    const disclosures = new Set<HTMLDetailsElement>();
 
     const radiusOf = (el: HTMLElement) => {
       const r = parseFloat(getComputedStyle(el).borderTopLeftRadius);
@@ -83,8 +90,29 @@ export default function PlasmaSurfaces() {
 
     const sync = () => {
       const wanted = new Set<HTMLElement>();
+      const currentDisclosures = new Set<HTMLDetailsElement>();
       document.querySelectorAll<HTMLElement>(FUSING).forEach((el) => {
+        // The disclosure's box changes when its content becomes renderable;
+        // a hidden child's own bounds can stay nonzero and unchanged.
+        for (
+          let parent = el.closest('details');
+          parent;
+          parent = parent.parentElement?.closest('details') ?? null
+        )
+          currentDisclosures.add(parent);
         if (isSurface(el)) wanted.add(el);
+      });
+      disclosures.forEach((el) => {
+        if (!currentDisclosures.has(el)) {
+          disclosureLayout.unobserve(el);
+          disclosures.delete(el);
+        }
+      });
+      currentDisclosures.forEach((el) => {
+        if (!disclosures.has(el)) {
+          disclosureLayout.observe(el);
+          disclosures.add(el);
+        }
       });
       // Flat chrome (the Mood's plasmaChrome): the docks are not surfaces.
       if (document.documentElement.getAttribute('data-plasma-chrome') !== 'flat')
@@ -146,6 +174,7 @@ export default function PlasmaSurfaces() {
           ),
       );
 
+    const disclosureLayout = new ResizeObserver(schedule);
     sync();
     // A Mood change moves the corner radius (Office asks for 0 where Plasma
     // had 16); the surfaces already registered take the new one.
@@ -160,11 +189,12 @@ export default function PlasmaSurfaces() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: [CLAIMED_ATTR],
+      attributeFilter: [CLAIMED_ATTR, 'open', 'hidden'],
     });
     return () => {
       document.removeEventListener('palette-change', recorner);
       observer.disconnect();
+      disclosureLayout.disconnect();
       if (queued) cancelAnimationFrame(queued);
       handles.forEach((h) => h.remove());
       handles.clear();

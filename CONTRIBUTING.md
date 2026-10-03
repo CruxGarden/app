@@ -1,16 +1,18 @@
 # Contributing to Crux Garden (app)
 
-Thanks for helping. This repo is the desktop app (Electron) and the web app it wraps.
+Thanks for helping. This repo contains the desktop app (Electron + React) and its public web surfaces.
 
 ## Ground rules
 
 - Be kind; see `CODE_OF_CONDUCT.md`.
 - Security issues go to keeper@crux.garden, not to a public issue (`SECURITY.md`).
-- Vocabulary matters: use the glossary terms (Crux, Artifact, Collaboration, Growth, Mood, Project
-  Folder, Publish, Plan). The glossary (`NEXT-AGENT-HANDOFF.md`) and the Architecture Decision Records
-  (`docs/adr/0001-…` onwards) live one directory above this repo in the Crux Garden workspace
-  checkout, not in this repository and not (yet) at a public URL — ask if you need a copy. Propose
-  a new ADR rather than silently reversing one.
+- Start with the [architecture guide](docs/architecture.md): vocabulary, storage ownership,
+  workspace lifetime, publication, extension boundaries and the public decision summary.
+  It and the [API runtime map](https://github.com/CruxGarden/api#local-runtime) are available
+  from the public repositories; no private parent checkout is needed. Describe changes to
+  those boundaries and their alternatives in your PR, then update the relevant guide.
+- Preserve existing behavior assertions, including Playwright against the actual desktop app.
+  Migrate old storage fixtures onto native commands before removing their fallback paths.
 
 ## Setup
 
@@ -18,10 +20,15 @@ The desktop runtime is Electron 44 and requires macOS 13 or later on Mac.
 Use Node 22.12 or later for development (the repository's `.nvmrc` selects Node 22).
 
 ```bash
-nvm use                      # the version in .nvmrc
-npm ci && npm run dev   # web app on :8080
-cd electron && nvm use && npm ci && npm run dev   # desktop shell against the dev server
+nvm use                      # Node22 from .nvmrc
+npm ci
+npm --prefix electron ci
+npm run dev:app               # macOS/Linux: desktop + Vite dev server
 ```
+
+On Windows, use two terminals: `npm run dev:site` and
+`npm --prefix electron run dev`. Vite serves the renderer for Electron; browser
+authoring is retired, while public Explore/docs/published views remain supported.
 
 The app repository is sufficient to install the desktop: its pinned local API package
 is committed under `electron/vendor/`, with provenance and a license. A sibling API
@@ -101,13 +108,17 @@ verification gates and actual native-media/import/render journeys after rebuildi
 
 ## The one gate
 
-`npm run verify` in `./` and in `./electron` is the definition of green: typecheck, lint, tests,
-build. UI behaviour is covered by Playwright against the real desktop app:
+`npm run verify` in `./` and in `./electron` is the definition of green for those repositories.
+The app gate checks types, lint, runtime parity, tool integration, tests and renderer build;
+the Electron gate compiles the host, checks lint and runs its unit project. UI behavior
+requires Playwright against the real desktop app as well:
 
 ```bash
 cd electron && nvm use
 npm run binaries:build        # first setup only; see rebuild instructions above
-npm run build:all && npm run test:e2e
+npm run build:all
+npm run test:e2e -- --project=gate
+# Also run the affected workflow specs outside the named gate.
 ```
 
 Tests run isolated from your real garden (throwaway userData + garden root). A mock API

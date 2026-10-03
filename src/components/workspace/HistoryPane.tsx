@@ -17,7 +17,7 @@ export default function HistoryPane() {
   const { createSnapshot, isCreatingGrowth } = useGrowthCreation();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="px-3 pt-3 shrink-0">
         <button
           onClick={() => setExploring(true)}

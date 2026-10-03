@@ -122,6 +122,34 @@ export async function hidePane(page: Page, pane: GardenPane) {
   await expect(page.getByTestId(`pane-body-${PANE_TYPE[pane]}`)).toHaveCount(0);
 }
 
+const SETTINGS_SECTIONS = {
+  'Getting started': 'start',
+  'Tools and Moods': 'library',
+  Account: 'account',
+  'AI and agents': 'ai',
+  'Garden and backups': 'garden',
+  'Appearance and panels': 'appearance',
+} as const;
+
+/** The section chooser is compact in a narrow pane and a stable rail when wide. */
+export async function chooseSettingsSection(page: Page, label: keyof typeof SETTINGS_SECTIONS) {
+  const navigation = page.getByRole('navigation', { name: 'Settings sections', exact: true });
+  const chooser = navigation.getByRole('combobox', { name: 'Settings section', exact: true });
+  const button = navigation.getByRole('button', { name: label, exact: true });
+  await expect
+    .poll(async () => (await chooser.isVisible()) || (await button.isVisible()))
+    .toBe(true);
+  if (await chooser.isVisible()) {
+    await chooser.selectOption({ label });
+    await expect(chooser).toHaveValue(SETTINGS_SECTIONS[label]);
+    await navigation.getByRole('button', { name: 'Go to selected section', exact: true }).click();
+  } else {
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect(button).toHaveAttribute('aria-current', 'location');
+  }
+}
+
 /** Settings → AI: turn the collaborator on with a (fake) Anthropic key, then close Settings. */
 export async function enableAi(page: Page) {
   const settings = await showPane(page, 'Settings');

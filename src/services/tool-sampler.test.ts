@@ -1,6 +1,7 @@
 import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { cruxes } from '@/api';
+import { captureAuth } from '@/api/session';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
@@ -101,9 +102,10 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
     if (type === 'excalidraw') {
       // Reach the publish-state check without contacting a real service.
       const probe = vi.spyOn(cruxes, 'get').mockRejectedValue(new Error('Publish probe offline'));
+      const context = captureAuth();
       try {
         await expect(publishPipeline(crux, artifacts)).rejects.toThrow('Publish probe offline');
-        expect(probe).toHaveBeenCalledWith(crux.id);
+        expect(probe).toHaveBeenCalledWith(crux.id, context);
       } finally {
         probe.mockRestore();
       }

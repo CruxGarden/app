@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import * as syncApi from '@/api/sync';
-import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
+import { assertAuthCurrent, captureAuth, type AuthContext } from '@/api/session';
+import { confirmAndImportGarden } from '@/services/garden-io';
+import { backupGarden } from '@/services/backup';
 import { Spinner, Button, Toggle, SectionLabel } from '@/components/ui';
 import {
   isAutoBackupOn,
@@ -24,6 +26,47 @@ import * as usageApi from '@/api/usage';
 
 export default function SyncSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const accountId = useAuthStore((s) => s.account?.id);
+  if (!isAuthenticated || !accountId) return null;
+  const context = captureAuth();
+  // Backup metadata belongs to this exact connection. Disconnecting, switching
+  // accounts or reconnecting must discard its state before showing another one.
+  return (
+    <ConnectedSyncSettings
+      key={`${context.endpoint}:${context.revision}:${accountId}`}
+      accountId={accountId}
+      context={context}
+    />
+  );
+}
+
+function ConnectedSyncSettings({
+  accountId,
+  context,
+}: {
+  accountId: string;
+  context: AuthContext;
+}) {
+  const [owner] = useState(() => ({ accountId, context }));
+  const live = useRef(true);
+  const loadGeneration = useRef(0);
+  const isCurrent = useCallback(() => {
+    const auth = useAuthStore.getState();
+    if (!live.current || !auth.isAuthenticated || auth.account?.id !== owner.accountId)
+      return false;
+    try {
+      assertAuthCurrent(owner.context);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [owner]);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
 
   const [gardenStatus, setGardenStatus] = useState<GardenStatus | null>(null);
   const [budget, setBudget] = useState<usageApi.BudgetLine | null>(null);
@@ -42,6 +85,7 @@ export default function SyncSettings() {
   }, []);
   const [syncedCruxes, setSyncedCruxes] = useState<SyncedCrux[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [pushing, setPushing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -50,55 +94,62 @@ export default function SyncSettings() {
   const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
+    if (!isCurrent()) return;
+    const generation = ++loadGeneration.current;
+    const canApply = () => isCurrent() && generation === loadGeneration.current;
     setLoading(true);
+    setLoadError('');
+    setGardenStatus(null);
+    setSyncedCruxes([]);
     try {
       const [gs, cruxes] = await Promise.all([
-        syncApi.getGardenStatus(),
-        syncApi.listSyncedCruxes(),
+        syncApi.getGardenStatus(owner.context),
+        syncApi.listSyncedCruxes(owner.context),
       ]);
+      if (!canApply()) return;
       setGardenStatus(gs);
       setSyncedCruxes(cruxes);
     } catch {
-      // Not critical — just show empty state
+      if (canApply())
+        setLoadError('Could not load cloud backups. Check your connection and try again.');
     } finally {
-      setLoading(false);
+      if (canApply()) setLoading(false);
     }
-  }, []);
+  }, [isCurrent, owner.context]);
 
   useEffect(() => {
-    if (isAuthenticated) refresh();
-  }, [isAuthenticated, refresh]);
+    void refresh();
+  }, [refresh]);
   useEffect(() => {
-    if (!isAuthenticated) return;
     let cancelled = false;
     usageApi
       .me()
-      .then((u) => !cancelled && setBudget(u.budgets.storage))
+      .then((u) => !cancelled && isCurrent() && setBudget(u.budgets.storage))
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, gardenStatus]);
-
-  if (!isAuthenticated) return null;
+  }, [isCurrent, gardenStatus]);
 
   const handlePush = async () => {
     setPushing(true);
     setError('');
     setStatus('Exporting garden...');
     try {
-      const result = await exportGarden({ onProgress: setStatus });
-      setStatus('Uploading to cloud...');
-      const meta = await syncApi.pushGarden(result.blob);
+      const meta = await backupGarden((message) => {
+        if (isCurrent()) setStatus(message);
+      }, owner.context);
+      if (!isCurrent()) return;
       setGardenStatus(meta);
       setStatus('Garden pushed successfully');
       notifyUsageChanged();
     } catch (err) {
       console.error('Garden push failed:', err);
-      setError('Push failed');
+      if (!isCurrent()) return;
+      setError(err instanceof Error ? err.message : 'Push failed');
       setStatus('');
     } finally {
-      setPushing(false);
+      if (isCurrent()) setPushing(false);
     }
   };
 
@@ -131,12 +182,15 @@ export default function SyncSettings() {
     setError('');
     setStatus('Downloading from cloud...');
     try {
-      const blob = await syncApi.pullGarden();
+      const blob = await syncApi.pullGarden(owner.context);
       setStatus('Importing garden...');
 
       const imported = await confirmAndImportGarden({
         data: blob,
-        onProgress: setStatus,
+        beforeCommit: () => assertAuthCurrent(owner.context),
+        onProgress: (message) => {
+          if (isCurrent()) setStatus(message);
+        },
         onPostImport: async () => {
           await useAppStore.getState().ensureAuthor();
         },
@@ -146,17 +200,18 @@ export default function SyncSettings() {
       notifyUsageChanged();
     } catch (err) {
       console.error('Garden pull failed:', err);
-      setError('Pull failed');
+      if (!isCurrent()) return;
+      setError(err instanceof Error ? err.message : 'Pull failed');
       setStatus('');
     } finally {
-      setPulling(false); // success path used to leave the button spinning forever
+      if (isCurrent()) setPulling(false);
     }
   };
 
   const handleDeleteCrux = async (cruxId: string) => {
     setDeletingId(cruxId);
     try {
-      await syncApi.deleteSyncedCrux(cruxId);
+      await syncApi.deleteSyncedCrux(cruxId, owner.context);
       setSyncedCruxes((prev) => prev.filter((c) => c.cruxId !== cruxId));
       notifyUsageChanged();
     } catch {
@@ -180,7 +235,7 @@ export default function SyncSettings() {
     setDeletingGarden(true);
     setError('');
     try {
-      await syncApi.deleteGarden();
+      await syncApi.deleteGarden(owner.context);
       setGardenStatus(null);
       setStatus('Cloud backup deleted');
       notifyUsageChanged();
@@ -230,6 +285,17 @@ export default function SyncSettings() {
           <Toggle checked={auto} onChange={(on) => setAutoBackup(on)} label="Automatic backup" />
         </div>
 
+        {loadError && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <p role="alert" className="text-xs text-error flex-1 min-w-0">
+              {loadError}
+            </p>
+            <Button size="sm" variant="secondary" onClick={() => void refresh()} disabled={busy}>
+              Retry
+            </Button>
+          </div>
+        )}
+
         {/* Garden backup */}
         <SectionLabel as="h3" className="mb-2">
           Garden Backup
@@ -266,7 +332,7 @@ export default function SyncSettings() {
             variant="secondary"
             size="sm"
             onClick={handlePull}
-            disabled={busy}
+            disabled={busy || loading || !!loadError || !gardenStatus}
             loading={pulling}
           >
             {pulling ? 'Pulling...' : 'Pull garden'}
@@ -291,10 +357,10 @@ export default function SyncSettings() {
         </SectionLabel>
 
         {loading ? (
-          <div className="flex items-center gap-2 text-xs text-text-muted">
+          <div role="status" className="flex items-center gap-2 text-xs text-text-muted">
             <Spinner size={12} /> Loading...
           </div>
-        ) : syncedCruxes.length === 0 ? (
+        ) : loadError ? null : syncedCruxes.length === 0 ? (
           <p className="text-xs text-text-muted">No cruxes synced to cloud yet.</p>
         ) : (
           <div className="space-y-2">
@@ -320,8 +386,16 @@ export default function SyncSettings() {
           </div>
         )}
 
-        {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
-        {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
+        {status && (
+          <p role="status" className="text-xs font-mono text-text-muted mt-3">
+            {status}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-xs font-mono text-error mt-3">
+            {error}
+          </p>
+        )}
       </div>
     </SettingsSection>
   );

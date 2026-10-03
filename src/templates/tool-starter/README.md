@@ -19,3 +19,24 @@ To resume authoring after marking this a Tool template, change Kind back to Web 
 Downloaded host JavaScript is never evaluated in the Garden renderer or Electron main process. Tool code runs in the preview. Custom AI command adapters and arbitrary executable desktop plugins are not provided by this starter; ordinary file editing remains available to collaborators.
 
 A Tool template publishes the editor package. Sharing a visitor-facing edition of a project made with an editor is a separate capability; this starter leaves it disabled.
+
+## An optional public edition
+
+To offer a visitor-facing result, add standalone files under `public/`, including `public/index.html`, then declare their scope in `crux-tool.json`:
+
+```json
+{
+  "share": true,
+  "publication": {
+    "type": "static",
+    "root": "public/",
+    "include": ["data/project.json", "data/assets/"]
+  }
+}
+```
+
+Sharing copies `public/index.html` to the website's `index.html`, and likewise strips `public/` from its other visitor files. The explicitly included document and assets keep their paths. A visitor script can fetch `data/project.json` and render the saved document; it must work without `garden/client.js` or the Garden parent bridge. Use text-safe DOM methods such as `textContent` for document text.
+
+The whole included document becomes public. Keep private notes in separate, unlisted files or supply a separate public document. Other editor files, Collaboration and history are not included. Every file below the declared root or included directory is public, so review those directories before sharing. Directory includes end with `/`; file includes name one exact file. Empty asset directories are allowed. The entry and every declared exact file must exist. Private/system paths, root-folder sharing, wildcards, commands and duplicate output paths are refused. Downloaded host code is never evaluated.
+
+Package updates apply to new projects. Existing projects retain their own manifest snapshot and publication contract. Test the edition after a clean installation: edit a new project, Share it, and open the uploaded page in a browser outside Garden. Removing the installation must not change that project's files or contract.

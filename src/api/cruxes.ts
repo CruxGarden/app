@@ -67,18 +67,25 @@ export async function listAll(context: AuthContext = captureAuth()): Promise<Cru
   }
 }
 
-export async function get(identifier: string): Promise<Crux> {
-  const res = await client.get<Crux>(`/cruxes/${identifier}`);
+export async function get(identifier: string, context: AuthContext = captureAuth()): Promise<Crux> {
+  const res = await client.get<Crux>(`/cruxes/${identifier}`, { authContext: context });
   return res.data;
 }
 
-export async function create(dto: CreateCruxDto): Promise<Crux> {
-  const res = await client.post<Crux>('/cruxes', dto);
+export async function create(
+  dto: CreateCruxDto,
+  context: AuthContext = captureAuth(),
+): Promise<Crux> {
+  const res = await client.post<Crux>('/cruxes', dto, { authContext: context });
   return res.data;
 }
 
-export async function update(id: string, dto: UpdateCruxDto): Promise<Crux> {
-  const res = await client.patch<Crux>(`/cruxes/${id}`, dto);
+export async function update(
+  id: string,
+  dto: UpdateCruxDto,
+  context: AuthContext = captureAuth(),
+): Promise<Crux> {
+  const res = await client.patch<Crux>(`/cruxes/${id}`, dto, { authContext: context });
   return res.data;
 }
 
@@ -159,6 +166,7 @@ export async function deleteArtifact(artifactId: string): Promise<void> {
 export async function publish(
   cruxId: string,
   files: Array<{ blob: Blob; path: string; type?: string; kind?: string; mimeType: string }>,
+  context: AuthContext = captureAuth(),
 ): Promise<Crux> {
   const form = new FormData();
   const metas: Array<{ path: string; type?: string; kind?: string }> = [];
@@ -172,17 +180,22 @@ export async function publish(
   form.append('meta', JSON.stringify(metas));
 
   const res = await client.post<Crux>(`/cruxes/${cruxId}/publish`, form, {
+    authContext: context,
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
   });
   return res.data;
 }
 
-export async function unpublish(cruxId: string): Promise<Crux> {
+export async function unpublish(
+  cruxId: string,
+  context: AuthContext = captureAuth(),
+): Promise<Crux> {
   const res = await client.post<Crux>(
     `/cruxes/${cruxId}/unpublish`,
     {},
     {
+      authContext: context,
       timeout: 60000,
     },
   );
@@ -196,7 +209,15 @@ export async function getTags(cruxId: string): Promise<Tag[]> {
   return res.data;
 }
 
-export async function syncTags(cruxId: string, labels: string[]): Promise<Tag[]> {
-  const res = await client.put<Tag[]>(`/cruxes/${cruxId}/tags`, { labels });
+export async function syncTags(
+  cruxId: string,
+  labels: string[],
+  context: AuthContext = captureAuth(),
+): Promise<Tag[]> {
+  const res = await client.put<Tag[]>(
+    `/cruxes/${cruxId}/tags`,
+    { labels },
+    { authContext: context },
+  );
   return res.data;
 }

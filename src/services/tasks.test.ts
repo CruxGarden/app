@@ -34,6 +34,7 @@ import { getSqliteClient } from './sqlite/client';
 let native: Awaited<ReturnType<typeof createLocalApiTestClient>>;
 beforeEach(async () => {
   native = await createLocalApiTestClient();
+  native.installProjectBridge();
   setSqliteClient(native.client);
   useGardenContext.getState().initialize(await native.client.enterLocalGarden!());
   await initServices();
@@ -411,6 +412,78 @@ describe('parallel tasks', () => {
     expect(useWorkspaceRegistry.getState().entries).toHaveLength(0);
     expect(await read(b.id)).toBe('<h1>Base</h1>');
   });
+  for (const closeFirst of [false, true])
+    it(`refuses closing during native Task admission, preserving work and permitting quit after completion (close preparation first: ${closeFirst})`, async () => {
+      const main = await getServices().crux.create({
+        title: 'Delayed Task owner',
+        type: 'workspace',
+      });
+      await write(main.id, 'Preserved Main');
+      const workspace = await openWorkspace(main.id);
+      const head = await native.client.fileContent!.head(main.id);
+      let releaseTask!: () => void;
+      let taskEntered!: () => void;
+      const taskGate = new Promise<void>((resolve) => {
+        releaseTask = resolve;
+      });
+      const taskHit = new Promise<void>((resolve) => {
+        taskEntered = resolve;
+      });
+      const create = native.client.createWorkingCopy!;
+      const admission = vi
+        .spyOn(native.client, 'createWorkingCopy')
+        .mockImplementation(async (input) => {
+          taskEntered();
+          await taskGate;
+          return create(input);
+        });
+      let close: Promise<void> | undefined;
+      let releaseClose = () => {};
+      if (closeFirst) {
+        let recoveryEntered!: () => void;
+        const recoveryHit = new Promise<void>((resolve) => {
+          recoveryEntered = resolve;
+        });
+        const recoveryGate = new Promise<void>((resolve) => {
+          releaseClose = resolve;
+        });
+        const recover = workspace.data.getState().recoverFileUpdates;
+        vi.spyOn(workspace.data.getState(), 'recoverFileUpdates').mockImplementationOnce(
+          async (...args) => {
+            recoveryEntered();
+            await recoveryGate;
+            return recover(...args);
+          },
+        );
+        close = closeWorkspace(main.id, { documents: 'save' });
+        // Attach a handler before releasing either operation to avoid an
+        // intentionally refused close becoming an unhandled rejection.
+        void close.catch(() => {});
+        await recoveryHit;
+      }
+      const task = createTask(main.id, 'Delayed Task');
+      await taskHit;
+      expect(workspace.data.getState().closing).toBe(true);
+      releaseClose();
+      await expect(close ?? shutdownWorkspaces('save')).rejects.toThrow(
+        'Wait for this workspace’s task operation to finish before closing.',
+      );
+      expect(allWorkspaces()).toContain(workspace);
+      expect(workspace.data.getState().crux?.id).toBe(main.id);
+      releaseTask();
+      const created = await task;
+      admission.mockRestore();
+      expect(created.phase).toBe('ready');
+      expect(workspace.data.getState().closing).toBe(false);
+      expect(await read(main.id)).toBe('Preserved Main');
+      expect(await read(created.id)).toBe('Preserved Main');
+      expect(await native.client.fileContent!.head(main.id)).toEqual(head);
+      await expect(shutdownWorkspaces('save')).resolves.toBeUndefined();
+      expect(allWorkspaces()).toHaveLength(0);
+      await native.restart();
+      expect(await read(main.id)).toBe('Preserved Main');
+      expect(await read(created.id)).toBe('Preserved Main');
+    });
   it('refused Task checkpoint retains bytes and conversation; retry records one Growth', async () => {
     const { a } = await fixture();
     await write(a.id, 'Result');

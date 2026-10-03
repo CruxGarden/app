@@ -79,6 +79,15 @@ export interface FileContentBridge {
   list(input: FileContentSelection): ReturnType<LocalGraphRuntime['listFileContent']>;
   lookup(input: FileContentRead): ReturnType<LocalGraphRuntime['lookupFileContent']>;
   read(input: FileContentRead): ReturnType<LocalGraphRuntime['readFileContent']>;
+  rename(
+    input: import('@cruxgarden/local-api').FileContentRename,
+  ): ReturnType<LocalGraphRuntime['renameFileContent']>;
+  write(
+    input: import('@cruxgarden/local-api').FileContentWrite,
+  ): ReturnType<LocalGraphRuntime['writeFileContent']>;
+  delete(
+    input: import('@cruxgarden/local-api').FileContentDelete,
+  ): ReturnType<LocalGraphRuntime['deleteFileContent']>;
   edit(input: FileContentEdit): ReturnType<LocalGraphRuntime['editFileContent']>;
   snapshot(input: GrowthSnapshotCreate): ReturnType<LocalGraphRuntime['createGrowthSnapshot']>;
   restore(input: GrowthContentRestore): ReturnType<LocalGraphRuntime['restoreGrowthContent']>;

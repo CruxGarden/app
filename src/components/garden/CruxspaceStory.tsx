@@ -7,6 +7,7 @@ import { Modal, SectionLabel } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import GrowthInspector from '@/components/growth/GrowthInspector';
 import { laneColor } from '@/components/growth/graph-style';
+import { useGraphAppearance } from '@/components/growth/useGraphAppearance';
 import {
   loadCruxspaceHistory,
   type CruxspaceHistory,
@@ -36,6 +37,7 @@ export default function CruxspaceStory({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const appearance = useGraphAppearance();
   const [history, setHistory] = useState<CruxspaceHistory | null>(null);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -288,7 +290,7 @@ export default function CruxspaceStory({
                     <span
                       aria-hidden
                       className="mt-1 h-3 w-3 rounded-full shrink-0"
-                      style={{ background: laneColor(laneIndex(history, m.id)) }}
+                      style={{ background: laneColor(appearance, laneIndex(history, m.id)) }}
                     />
                     <span>
                       <button
@@ -377,7 +379,12 @@ export default function CruxspaceStory({
             </section>
           </aside>
           <div className="flex-1 min-w-0 flex flex-col">
-            <div ref={canvasRef} className="flex-1 min-h-0 relative" data-testid="cruxspace-canvas">
+            <div
+              ref={canvasRef}
+              className="growth-graph flex-1 min-h-0 relative"
+              data-testid="cruxspace-canvas"
+              style={{ backgroundColor: appearance.background, color: appearance.text }}
+            >
               {display && size.width > 0 && (
                 <ErrorBoundary
                   fallback={
@@ -402,6 +409,7 @@ export default function CruxspaceStory({
                       onSelect={select}
                       fit={fit}
                       reducedMotion={reducedMotion}
+                      appearance={appearance}
                     />
                   </Suspense>
                 </ErrorBoundary>
@@ -414,20 +422,21 @@ export default function CruxspaceStory({
                   {graph.lanes.map((lane, i) => (
                     <li
                       key={lane.id}
-                      className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5"
+                      className="flex items-center gap-1 rounded bg-surface px-1.5 py-0.5"
                     >
                       <span
                         aria-hidden
                         className="h-2 w-2 rounded-full"
-                        style={{ background: laneColor(i) }}
+                        style={{ background: laneColor(appearance, i) }}
                       />
                       {lane.title}
                     </li>
                   ))}
-                  <li className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5">
+                  <li className="flex items-center gap-1 rounded bg-surface px-1.5 py-0.5">
                     <span
                       aria-hidden
-                      className="h-0 w-4 border-t-2 border-dashed border-[#df94ab]"
+                      className="h-0 w-4 border-t-2 border-dashed"
+                      style={{ borderColor: appearance.transferLink }}
                     />
                     output used by another member
                   </li>

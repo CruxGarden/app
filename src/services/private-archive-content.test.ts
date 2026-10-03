@@ -18,7 +18,7 @@ const catalog = vi.hoisted(() =>
   }),
 );
 vi.mock('@/templates', () => ({ loadTemplate: catalog }));
-const native = localApiFixture();
+const native = localApiFixture({ project: true });
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

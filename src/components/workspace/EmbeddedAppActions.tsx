@@ -8,6 +8,7 @@ import { documentsFor } from '@/services/workspace-documents';
 import { createTask } from '@/services/tasks';
 import { copyIdentity } from '@/services/working-copies';
 import { isEmbeddedApp, isLocalCreationTool, embeddedContentRoot } from '@/services/embedded-app';
+import { publicationPlan } from '@/services/publication-plan';
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
 import { can, Capability } from '@/lib/platform';
@@ -16,6 +17,7 @@ import { Modal, Button, buttonClass, fieldClass } from '@/components/ui';
 /** Make a source-editing Task through the same save and copy boundary as TaskBar. */
 export default function EmbeddedAppActions() {
   const crux = useCruxStore((s) => s.crux);
+  const artifacts = useCruxStore((s) => s.artifacts);
   const historical = useCruxStore((s) => !!s.viewingSnapshotId);
   const data = useCruxStoreApi();
   const ui = useWorkspaceUIStoreApi();
@@ -27,6 +29,7 @@ export default function EmbeddedAppActions() {
   const aiEnabled = useAiEnabled();
   if (!isEmbeddedApp(crux) || !crux || historical) return null;
   const identity = copyIdentity(crux);
+  const publication = publicationPlan(crux, artifacts);
   const showPane = (pane: 'publish' | 'export') => {
     ui.getState().setPaneVisible(pane, true);
     ui.getState().setMobileActivePane(pane);
@@ -93,7 +96,11 @@ export default function EmbeddedAppActions() {
         <>
           {!isLocalCreationTool(crux) && (
             <button className={button} onClick={() => showPane('publish')}>
-              Share selected content
+              {publication.kind === 'garden-package'
+                ? 'Share workspace'
+                : publication.kind === 'unavailable'
+                  ? 'Sharing options'
+                  : 'Share selected content'}
             </button>
           )}
           <button className={button} onClick={() => showPane('export')}>

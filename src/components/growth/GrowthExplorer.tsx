@@ -8,7 +8,8 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { growthNodeKindLabel, loadGrowthGraph, type GrowthGraph } from '@/services/growth-graph';
 import { TASKS_CHANGED } from '@/services/working-copies';
 import GrowthInspector from './GrowthInspector';
-import { GRAPH_BG, GRAPH_TEXT, laneColor } from './graph-style';
+import { laneColor } from './graph-style';
+import { useGraphAppearance } from './useGraphAppearance';
 
 const Canvas2D = lazy(() => import('./GrowthGraphCanvas'));
 const Canvas3D = lazy(() => import('./GrowthGraph3D'));
@@ -25,6 +26,7 @@ export default function GrowthExplorer({
   initialSelectedId?: string | null;
 }) {
   const aiEnabled = useAiEnabled();
+  const appearance = useGraphAppearance();
   const [graph, setGraph] = useState<GrowthGraph | null>(null);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'2d' | '3d'>('2d');
@@ -107,6 +109,7 @@ export default function GrowthExplorer({
     onSelect: select,
     fit,
     reducedMotion,
+    appearance,
   };
 
   // Modal renders at <body> itself.
@@ -205,7 +208,7 @@ export default function GrowthExplorer({
                   <span
                     aria-hidden="true"
                     className="w-2 h-2 rounded-full"
-                    style={{ background: laneColor(index) }}
+                    style={{ background: laneColor(appearance, index) }}
                   />
                   {lane.title}
                   {lane.phase !== 'main'
@@ -216,8 +219,8 @@ export default function GrowthExplorer({
             </div>
             <div
               ref={canvasRef}
-              className="flex-1 min-h-0 relative overflow-hidden"
-              style={{ backgroundColor: GRAPH_BG, color: GRAPH_TEXT }}
+              className="growth-graph flex-1 min-h-0 relative overflow-hidden"
+              style={{ backgroundColor: appearance.background, color: appearance.text }}
               data-testid={`growth-canvas-${mode}`}
             >
               {canvasProps &&

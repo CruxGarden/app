@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { showPane } from './panel-helpers';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, openFullThemeBuilder } from './multi-crux-helpers';
 
 const html = (page: Page) => page.locator('html');
 async function goToMyGarden(page: Page) {
@@ -31,7 +31,7 @@ test('a look changed in a Garden is kept for it only when asked', async () => {
 
     // Change the look here: the Mood pane offers to keep it.
     const mood = await showPane(page, 'Mood');
-    await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+    await openFullThemeBuilder(page);
     await mood.getByRole('button', { name: 'Ivory' }).click();
     await expect(html(page)).toHaveClass(/\blight\b/);
     const keep = mood.getByRole('button', { name: 'Keep for Studio', exact: true });
@@ -44,7 +44,7 @@ test('a look changed in a Garden is kept for it only when asked', async () => {
     await expect(keep).toHaveCount(0);
 
     // Kept: it becomes Studio's own Mood and returns with Studio.
-    await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+    await openFullThemeBuilder(page);
     await mood.getByRole('button', { name: 'Ivory' }).click();
     await keep.click();
     await expect(keep).toHaveCount(0);

@@ -1,9 +1,11 @@
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { localApiFixture } from '@/test/local-api-fixture';
 import { useGardenContext } from '@/stores/gardenContext';
 import { initServices, getServices } from './index';
-import { createCruxspace } from './cruxspaces';
+import { createCruxspace, getCruxspace, listCruxspaces } from './cruxspaces';
 import { exportCruxspace, importCruxspace, peekCruxspace } from './cruxspace-package';
 
 const native = localApiFixture();
@@ -11,8 +13,8 @@ beforeEach(() => initServices());
 
 async function packageOfWork() {
   const { crux, artifact } = getServices();
-  const first = await crux.create({ title: 'First' });
-  const second = await crux.create({ title: 'Second' });
+  const first = await crux.create({ title: 'First', type: 'workspace' });
+  const second = await crux.create({ title: 'Second', type: 'workspace' });
   for (const member of [first, second])
     await artifact.create({
       resourceId: member.id,
@@ -145,3 +147,140 @@ it('keeps the selected destination and chooser values captured before asynchrono
     (await native().client.gardenMembership!.parents(imported.space.id)).map((p) => p.id),
   ).toEqual([original]);
 });
+
+it('exports only the reviewed Garden members and captures the caller’s selection before asynchronous reads', async () => {
+  const { manifest, space } = await packageOfWork();
+  const expectedMemberIds = manifest.members.map((member) => member.id);
+  const options = { spaceId: space.id, expectedMemberIds };
+  const pending = exportCruxspace(options);
+  options.spaceId = crypto.randomUUID();
+  expectedMemberIds.length = 0;
+  expect((await pending).manifest.members.map((member) => member.id).sort()).toEqual(
+    manifest.members.map((member) => member.id).sort(),
+  );
+
+  const additional = await getServices().crux.create({ title: 'Later member', type: 'workspace' });
+  await native().client.gardenMembership!.add({ gardenId: space.id, memberId: additional.id });
+  await expect(
+    exportCruxspace({
+      spaceId: space.id,
+      expectedMemberIds: manifest.members.map((member) => member.id),
+    }),
+  ).rejects.toThrow('This Garden’s members changed. Review the list before exporting.');
+  const reviewed = (await getCruxspace(space.id)).cruxIds;
+  expect(
+    (await exportCruxspace({ spaceId: space.id, expectedMemberIds: reviewed })).manifest.members
+      .map((member) => member.id)
+      .sort(),
+  ).toEqual([...reviewed].sort());
+});
+
+it('refuses a reviewed member disappearing between membership and live reads before exporting any archive', async () => {
+  const { manifest, space } = await packageOfWork();
+  const expectedMemberIds = manifest.members.map((member) => member.id);
+  const removedId = expectedMemberIds[1]!;
+  const { crux } = getServices();
+  const listAll = crux.listAll.bind(crux);
+  const list = vi.spyOn(crux, 'listAll').mockImplementationOnce(async () => {
+    await crux.trash(removedId);
+    return listAll();
+  });
+  const exporting = vi.spyOn(native().client.privateArchive!, 'export');
+  const before = await Promise.all(
+    expectedMemberIds.map((id) => native().client.fileContent!.head(id)),
+  );
+  try {
+    await expect(exportCruxspace({ spaceId: space.id, expectedMemberIds })).rejects.toThrow(
+      'This Garden’s members changed. Review the list before exporting.',
+    );
+    expect(exporting).not.toHaveBeenCalled();
+    expect(
+      await Promise.all(expectedMemberIds.map((id) => native().client.fileContent!.head(id))),
+    ).toEqual(before);
+  } finally {
+    list.mockRestore();
+    exporting.mockRestore();
+  }
+  await crux.restore(removedId);
+  await native().restart();
+  expect(
+    (await exportCruxspace({ spaceId: space.id, expectedMemberIds })).manifest.members
+      .map((member) => member.id)
+      .sort(),
+  ).toEqual([...expectedMemberIds].sort());
+});
+
+for (const cleanup of ['available', 'refused', 'member refused'] as const)
+  it(`reports native second-member import refusal with cleanup ${cleanup}, preserving original work through restart and retry`, async () => {
+    const { blob, manifest, space } = await packageOfWork();
+    const originalIds = (await identities()).map((row) => (row as { id: string }).id);
+    const originals = await Promise.all(
+      manifest.members.map(async (member) => {
+        const owner = await getServices().crux.findById(member.id);
+        return {
+          owner,
+          head: await native().client.fileContent!.head(member.id),
+          files: await getServices().artifact.findByResource('crux', member.id),
+        };
+      }),
+    );
+    const refusedTitle = manifest.members[1]!.title.replaceAll("'", "''");
+    await native().faultSql(
+      `CREATE TRIGGER refuse_second_member BEFORE INSERT ON cruxes WHEN NEW.title = '${refusedTitle}' BEGIN SELECT RAISE(ABORT, 'Second member storage refused'); END`,
+    );
+    if (cleanup !== 'available')
+      await native().faultSql(
+        `CREATE TRIGGER refuse_package_cleanup BEFORE DELETE ON cruxes ${cleanup === 'member refused' ? "WHEN OLD.kind IS NOT 'garden'" : ''} BEGIN SELECT RAISE(ABORT, 'Cleanup storage refused'); END`,
+      );
+    const error = await importCruxspace({ data: blob, mode: 'clone', name: 'Incoming work' }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(error).toBeInstanceOf(Error);
+    if (cleanup === 'available') {
+      expect((error as Error).message).toContain('Second member storage refused');
+      expect((await identities()).map((row) => (row as { id: string }).id)).toEqual(originalIds);
+    } else {
+      expect(error).toBeInstanceOf(AggregateError);
+      expect((error as Error).message).toContain('Garden "Incoming work"');
+      expect((error as Error).message).toContain(`"${manifest.members[0]!.title}"`);
+      expect((error as Error).message).toContain('Review and remove the partial Garden');
+      const partial = (await listCruxspaces()).filter((item) => item.name === 'Incoming work');
+      expect(partial).toHaveLength(1);
+      expect(partial[0]!.cruxIds).toHaveLength(1);
+      const imported = await getServices().crux.findById(partial[0]!.cruxIds[0]!);
+      expect(readFileSync(join(imported.meta!.projectFolder as string, 'hello.txt'), 'utf8')).toBe(
+        manifest.members[0]!.title,
+      );
+    }
+    await native().faultSql('DROP TRIGGER refuse_second_member');
+    if (cleanup !== 'available') await native().faultSql('DROP TRIGGER refuse_package_cleanup');
+    await native().restart();
+    for (const { owner, head, files } of originals) {
+      expect(await native().client.fileContent!.head(owner.id)).toEqual(head);
+      expect(await getServices().artifact.readContent(files[0]!)).toBe(owner.title);
+      expect(readFileSync(join(owner.meta!.projectFolder as string, 'hello.txt'), 'utf8')).toBe(
+        owner.title,
+      );
+    }
+    expect((await getCruxspace(space.id)).cruxIds.sort()).toEqual(
+      manifest.members.map((member) => member.id).sort(),
+    );
+    const partials = (await listCruxspaces()).filter((item) => item.name === 'Incoming work');
+    expect(partials).toHaveLength(cleanup === 'available' ? 0 : 1);
+    // Follow the reported recovery instruction, using the ordinary native
+    // deletion command before deliberately requesting another independent copy.
+    for (const partial of partials) {
+      for (const member of partial.cruxIds) await getServices().crux.delete(member);
+      await getServices().crux.delete(partial.id);
+    }
+    const retry = await importCruxspace({ data: blob, mode: 'clone', name: 'Incoming work' });
+    expect(retry.members).toHaveLength(2);
+    await native().restart();
+    expect((await listCruxspaces()).filter((item) => item.name === 'Incoming work')).toHaveLength(
+      1,
+    );
+    expect((await getCruxspace(space.id)).cruxIds.sort()).toEqual(
+      manifest.members.map((member) => member.id).sort(),
+    );
+  });

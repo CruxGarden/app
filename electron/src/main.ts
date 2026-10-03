@@ -465,6 +465,21 @@ async function setupIpc() {
   fromGarden('content:lookup', (_e: unknown, input: FileContentRead) =>
     fileContent().lookup(input),
   );
+  fromGarden(
+    'content:rename',
+    (_e: unknown, input: import('@cruxgarden/local-api').FileContentRename) =>
+      fileContent().rename(input),
+  );
+  fromGarden(
+    'content:write',
+    (_e: unknown, input: import('@cruxgarden/local-api').FileContentWrite) =>
+      fileContent().write(input),
+  );
+  fromGarden(
+    'content:delete',
+    (_e: unknown, input: import('@cruxgarden/local-api').FileContentDelete) =>
+      fileContent().delete(input),
+  );
   fromGarden('content:edit', (_e: unknown, input: FileContentEdit) => fileContent().edit(input));
   fromGarden('content:restore', (_e: unknown, input: GrowthContentRestore) =>
     fileContent().restore(input),
@@ -669,6 +684,15 @@ async function setupIpc() {
       if (projects.listFiles(folder).some((path: string) => !wanted.has(path)))
         throw new Error('Project Folder changed during restoration');
     },
+  );
+
+  localDb.setProjectionOperationHost(
+    (
+      folder: string,
+      intent: import('@cruxgarden/local-api').FileProjectionIntent,
+      apply: boolean,
+      bytes?: Uint8Array,
+    ) => projects.projectOperation(folder, intent, apply, bytes),
   );
 
   localDb.setImportHost(

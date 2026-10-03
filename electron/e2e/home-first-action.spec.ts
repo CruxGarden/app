@@ -14,8 +14,11 @@ test('an empty Garden puts both starting choices in view in a small split worksp
     await enterGarden(page);
     const settings = await showPane(page, 'Settings');
     await expect(
-      settings.getByRole('button', { name: 'Getting started', exact: true }),
+      settings.getByRole('combobox', { name: 'Settings section', exact: true }),
     ).toBeVisible();
+    await expect(
+      settings.getByRole('combobox', { name: 'Settings section', exact: true }),
+    ).toHaveValue('start');
     const home = page.getByTestId('pane-body-home');
     const collection = home.getByRole('button', {
       name: 'Explore undertakings — a collection of projects',

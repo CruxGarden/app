@@ -25,7 +25,7 @@ const png = () =>
     ],
     { type: 'image/png' },
   );
-localApiFixture();
+localApiFixture({ project: true });
 beforeEach(() => initServices());
 it.each([
   'javascript:alert(1)',

@@ -5,6 +5,67 @@ type Content = NonNullable<SqliteBridge['fileContent']>;
 export type FileReference = Parameters<Content['read']>[0];
 export type SelectedFiles = Awaited<ReturnType<Content['list']>>;
 
+/** A content head committed, but its admitted filesystem operation is unfinished. */
+export class FileProjectionPendingError extends Error {
+  readonly ownerId: string;
+  readonly paths: readonly string[];
+  constructor(ownerId: string, paths: readonly string[], cause: unknown) {
+    super(
+      `Your file update is saved in Garden, but the Project Folder update is unfinished. Retry file update to continue. ${cause instanceof Error ? cause.message : String(cause)}`,
+      { cause },
+    );
+    this.name = 'FileProjectionPendingError';
+    this.ownerId = ownerId;
+    this.paths = [...paths];
+  }
+}
+
+export function pendingFileProjection(error: unknown): FileProjectionPendingError | undefined {
+  if (error instanceof FileProjectionPendingError) return error;
+  if (error instanceof AggregateError)
+    for (const nested of error.errors) {
+      const pending = pendingFileProjection(nested);
+      if (pending) return pending;
+    }
+  return undefined;
+}
+
+/** Wrap only the filesystem step after a command returned its committed head. */
+export async function finishFileProjection(
+  ownerId: string,
+  paths: readonly string[],
+  finish?: Content['finishProjection'],
+): Promise<boolean> {
+  const apply = finish ?? getSqliteClient().fileContent?.finishProjection;
+  if (!apply) throw new Error('File recovery is unavailable.');
+  const capturedPaths = [...paths];
+  try {
+    return await apply(ownerId);
+  } catch (error) {
+    throw new FileProjectionPendingError(ownerId, capturedPaths, error);
+  }
+}
+
+/** Resume the captured owner's existing intent; never submit a replacement mutation.
+ * Reconcile after completion because watcher events may have met the pending fence. */
+export async function recoverPendingFileUpdates(
+  ownerId: string,
+  reconcile = false,
+): Promise<boolean> {
+  const db = getSqliteClient();
+  const ingestion = await import('./ingestion');
+  let pending = false;
+  await ingestion.serializeIngestion(async () => {
+    pending = !!(await db.get('SELECT key FROM settings WHERE key = ?', [
+      `cruxgarden:content-projection:${ownerId}`,
+    ]));
+    if (pending) await finishFileProjection(ownerId, [], db.fileContent?.finishProjection);
+  });
+  if (getSqliteClient() !== db) throw new Error('The Garden changed during file recovery.');
+  if (pending || reconcile) await ingestion.recoverProjectFolders([ownerId]);
+  return pending;
+}
+
 /** Finish previously committed filesystem work before ingestion or portable export. */
 export async function finishPendingContentProjections(owners?: readonly string[]): Promise<void> {
   const db = getSqliteClient();

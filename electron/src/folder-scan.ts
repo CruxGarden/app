@@ -1,3 +1,4 @@
+import { isPrivateProjectPath } from './project-private';
 /**
  * Looking at a folder before taking it in.
  *
@@ -34,6 +35,7 @@ export const DEFAULT_IGNORES = [
   'dist/',
   '.astro/',
   '.git/',
+  '.crux-recovery/',
   '.crux/', // app-internal per-folder state (MCP token, ADR 0013) — never ingested or published
   '.DS_Store',
   'Thumbs.db',
@@ -75,6 +77,7 @@ function layerFor(base: string, patterns: string[]): Layer {
 
 /** Whether any layer covering this path ignores it. */
 function ignored(layers: Layer[], rel: string, isDir: boolean): boolean {
+  if (isPrivateProjectPath(rel)) return true;
   for (const layer of layers) {
     if (layer.base && !rel.startsWith(`${layer.base}/`)) continue;
     const within = layer.base ? rel.slice(layer.base.length + 1) : rel;

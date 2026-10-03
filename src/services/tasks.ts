@@ -167,7 +167,7 @@ async function provision(
       : ((await getServices().crux.findById(owner.id)).meta ?? {});
   const meta = {
     ...Object.fromEntries(
-      ['kind', 'template', 'contentModel', 'personaSnapshots', 'authorSnapshots']
+      ['kind', 'template', 'toolManifest', 'contentModel', 'personaSnapshots', 'authorSnapshots']
         .filter((k) => sourceMeta[k] !== undefined)
         .map((k) => [k, sourceMeta[k]]),
     ),

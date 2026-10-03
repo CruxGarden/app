@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { createCrux, enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
+import { togglePanel } from './panel-helpers';
 
 /**
  * Files journey: the Artifacts pane against a real Project Folder.
@@ -19,10 +21,9 @@ test.describe('files (Artifacts pane + Project Folder)', () => {
   test.setTimeout(120_000);
 
   test('create, rename, folder, delete — tree and disk agree', async () => {
-    const { app, page, dir } = await launchApp();
-    const gardenRoot = join(dir, 'garden');
-    const projectFolder = () => join(gardenRoot, readdirSync(gardenRoot)[0]!);
-    const onDisk = (rel: string) => existsSync(join(projectFolder(), rel));
+    const { app, page } = await launchApp();
+    let projectFolder: string;
+    const onDisk = (rel: string) => existsSync(join(projectFolder, rel));
 
     try {
       // Fresh garden → empty Crux → explicitly open file tools
@@ -36,6 +37,8 @@ test.describe('files (Artifacts pane + Project Folder)', () => {
       // An empty crux shows a drop zone, not a tree — the toolbar is the anchor.
       const newFile = page.getByRole('button', { name: 'New file' });
       await expect(newFile).toBeVisible({ timeout: 30_000 });
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      projectFolder = (await storedCrux(page, id)).projectFolder;
 
       // ── New file ─────────────────────────────────────────────────────────
       await newFile.click();
@@ -118,4 +121,75 @@ test.describe('files (Artifacts pane + Project Folder)', () => {
       await app.close();
     }
   });
+});
+
+test('rename Replace preserves recoverable originals and unrelated work across restart', async () => {
+  test.setTimeout(180_000);
+  let instance = await launchApp();
+  const { dir } = instance;
+  try {
+    let page = instance.page;
+    await enterGarden(page);
+    const id = await createCrux(page, 'Rename replacement');
+    await togglePanel(page, 'Toggle artifacts');
+    const folder = (await storedCrux(page, id)).projectFolder as string;
+    const files = [
+      ['source.txt', 'Source original'],
+      ['target.txt', 'Target original'],
+    ];
+    for (const [name, bytes] of files) writeFileSync(join(dir, name!), bytes!);
+    await page.getByRole('button', { name: 'Upload', exact: true }).click();
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Files…', exact: true }).click();
+    await (await chooser).setFiles(files.map(([name]) => join(dir, name!)));
+    const tree = page.getByRole('tree');
+    await expect(tree.getByText('source.txt', { exact: true })).toBeVisible();
+    await expect(tree.getByText('target.txt', { exact: true })).toBeVisible();
+    writeFileSync(join(folder, 'unrelated.txt'), 'External work survives');
+    await tree.getByText('source.txt', { exact: true }).click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
+    await tree.getByRole('textbox').fill('target.txt');
+    await tree.getByRole('textbox').press('Enter');
+    const conflict = page.getByRole('dialog').filter({ hasText: 'already exists' });
+    await expect(conflict).toBeVisible();
+    await conflict.getByRole('button', { name: 'Replace', exact: true }).click();
+    await expect(tree.getByText('source.txt', { exact: true })).toHaveCount(0);
+    await expect
+      .poll(() => readFileSync(join(folder, 'target.txt'), 'utf8'))
+      .toBe('Source original');
+    expect(readFileSync(join(folder, 'unrelated.txt'), 'utf8')).toBe('External work survives');
+    const safety = await page.evaluate(async (id) => {
+      const content = window.electronAPI!.sqlite.fileContent!;
+      const history = await content.history(id);
+      for (const checkpoint of history.checkpoints.filter((x) => x.reason === 'safety')) {
+        const inspected = await content.inspectCheckpoint(id, checkpoint.id);
+        if (
+          inspected.files.some((x) => x.path === 'source.txt') &&
+          inspected.files.some((x) => x.path === 'target.txt')
+        )
+          return checkpoint;
+      }
+      return null;
+    }, id);
+    expect(safety).not.toBeNull();
+    await page.screenshot({ path: 'e2e/.results/files-replace.png' });
+    await instance.app.close();
+    instance = await launchApp({ dir });
+    page = instance.page;
+    await reenterWorkspace(page, 'Rename replacement');
+    expect(existsSync(join(folder, 'source.txt'))).toBe(false);
+    expect(readFileSync(join(folder, 'target.txt'), 'utf8')).toBe('Source original');
+    expect(readFileSync(join(folder, 'unrelated.txt'), 'utf8')).toBe('External work survives');
+    expect(
+      await page.evaluate(
+        async ({ id, checkpoint }) => {
+          const content = window.electronAPI!.sqlite.fileContent!;
+          return (await content.inspectCheckpoint(id, checkpoint!)).files.map((x) => x.path);
+        },
+        { id, checkpoint: safety?.id },
+      ),
+    ).toEqual(expect.arrayContaining(['source.txt', 'target.txt']));
+  } finally {
+    await instance.app.close();
+  }
 });

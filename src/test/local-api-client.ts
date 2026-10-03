@@ -1,4 +1,8 @@
-import { mkdtemp, mkdir, rm, writeFile, chmod } from 'node:fs/promises';
+import { nativeProjectHost } from './native-project-host';
+import { importedWorkspacePreparer } from '../../electron/src/import-workspaces';
+import { projectFileOperation } from '../../electron/src/project-file-operation';
+import { projectRename } from '../../electron/src/project-rename';
+import { mkdtemp, mkdir, rm, writeFile, chmod, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { SqliteApi } from '../../electron/src/sqlite-api';
@@ -13,6 +17,8 @@ export async function createLocalApiTestClient() {
   const filename = join(dir, 'garden.db');
   const blobs = join(dir, 'blobs');
   let api = await SqliteApi.open(filename, blobs);
+  const { projects, bridge: project } = await nativeProjectHost(dir, blobs);
+  let restoreWindow: (() => void) | undefined;
   const folders = new Set<string>();
   let importFailure: string | undefined;
   const folder = async (id: string) => {
@@ -20,14 +26,36 @@ export async function createLocalApiTestClient() {
     const path = join(dir, 'projects', id);
     await mkdir(path, { recursive: true });
     folders.add(path);
+    projects.registerFolder(path);
     return path;
   };
   const configure = () => {
+    api.setProjectionOperationHost((path, intent, apply, bytes) => {
+      if (!folders.has(path)) throw new Error('Rename outside the isolated test folders refused.');
+      if (intent.kind === 'rename')
+        projectRename(
+          path,
+          join(path, intent.source.path),
+          join(path, intent.entry.path),
+          intent,
+          apply,
+        );
+      else
+        projectFileOperation(
+          path,
+          join(path, intent.kind === 'write' ? intent.entry.path : intent.source.path),
+          intent,
+          apply,
+          bytes,
+        );
+    });
     api.setProjectionHost(async (path, entries) => {
       if (!folders.has(path))
         throw new Error('Projection outside the isolated test folders refused.');
-      await rm(path, { recursive: true, force: true });
       await mkdir(path, { recursive: true });
+      for (const entry of await readdir(path))
+        if (entry !== '.crux-recovery')
+          await rm(join(path, entry), { recursive: true, force: true });
       for (const entry of entries) {
         const target = join(path, entry.path);
         await mkdir(dirname(target), { recursive: true });
@@ -43,7 +71,9 @@ export async function createLocalApiTestClient() {
       }
       // Replacement must prepare a fresh folder, never reuse the previous
       // registration; allocation is isolated exactly like ordinary creation.
-      return folder(`${input.id}-${crypto.randomUUID()}`);
+      const path = await importedWorkspacePreparer(projects, blobs)(input);
+      folders.add(path);
+      return path;
     });
   };
   configure();
@@ -104,11 +134,32 @@ export async function createLocalApiTestClient() {
     blobWipeAll: async () => api.blobWipeAll(),
     close: async () => {
       await api.close();
+      restoreWindow?.();
       await rm(dir, { recursive: true, force: true });
     },
   };
   return {
     client,
+    project,
+    /** Enable actual desktop filesystem projection for service journeys. */
+    installProjectBridge() {
+      if (restoreWindow) return;
+      const previous = Object.getOwnPropertyDescriptor(globalThis, 'window');
+      const window = Object.assign(new EventTarget(), {
+        electronAPI: { project },
+        requestAnimationFrame: (callback: FrameRequestCallback) => setTimeout(() => callback(0), 0),
+      });
+      Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        writable: true,
+        value: window,
+      });
+      restoreWindow = () => {
+        if (previous) Object.defineProperty(globalThis, 'window', previous);
+        else Reflect.deleteProperty(globalThis, 'window');
+        restoreWindow = undefined;
+      };
+    },
     faultSql: (sql: string, params?: unknown[]) => api.run(sql, params),
     failNextImportHost(message: string) {
       importFailure = message;

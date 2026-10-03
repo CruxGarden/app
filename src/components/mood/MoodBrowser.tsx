@@ -1,4 +1,5 @@
 import { confirmDialog } from '@/stores/dialogStore';
+import { assertAuthCurrent, captureAuth } from '@/api/session';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { linkClass } from '@/components/ui/button-class';
@@ -295,6 +296,7 @@ export default function MoodBrowser() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const doPublish = async (pkg: MoodPackage) => {
+    const authContext = captureAuth();
     setBusy(pkg.id);
     try {
       const [{ publishMood }, { getServices }, { readBlob }, { publishPipeline }] =
@@ -304,6 +306,7 @@ export default function MoodBrowser() {
           import('@/services/blobs'),
           import('@/services/publish'),
         ]);
+      assertAuthCurrent(authContext);
       const published = await publishMood(pkg, {
         services: async () => {
           const svc = getServices();
@@ -322,7 +325,7 @@ export default function MoodBrowser() {
           };
         },
         readBlob,
-        publish: (crux, artifacts) => publishPipeline(crux, artifacts as never),
+        publish: (crux, artifacts) => publishPipeline(crux, artifacts as never, { authContext }),
       });
       say(`Shared "${published.name}" — it's on crux.garden and in Explore → Moods.`);
     } catch (err) {
@@ -332,6 +335,7 @@ export default function MoodBrowser() {
     }
   };
   const doUnshare = async (pkg: MoodPackage) => {
+    const authContext = captureAuth();
     if (
       !(await confirmDialog({
         title: `Unshare ${pkg.name}?`,
@@ -349,9 +353,10 @@ export default function MoodBrowser() {
         import('@/services'),
         import('@/services/publish'),
       ]);
+      assertAuthCurrent(authContext);
       await unshareMood(pkg, {
         findCrux: (id) => getServices().crux.findById(id),
-        unpublish: unpublishPipeline,
+        unpublish: (crux) => unpublishPipeline(crux, { authContext }),
       });
       say(`Unshared "${pkg.name}". Your saved Mood is still here.`);
     } catch (error) {

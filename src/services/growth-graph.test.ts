@@ -29,7 +29,7 @@ import {
   type GrowthLane,
 } from './growth-graph';
 
-const native = localApiFixture();
+const native = localApiFixture({ project: true });
 
 beforeEach(async () => {
   await initServices();
@@ -85,7 +85,9 @@ describe('whole Crux Growth projection', () => {
     }
     await native().restart();
     expect((await loadGrowthGraph(main.id)).lanes.map((lane) => lane.id)).toContain(copy.id);
-    const [file] = await getServices().artifact.findByResource('crux', copy.id);
+    const file = (await getServices().artifact.findByResource('crux', copy.id)).find(
+      (file) => file.meta?.path === 'index.html',
+    );
     expect(await getServices().artifact.readContent(file!)).toBe('Keep bytes');
   });
 

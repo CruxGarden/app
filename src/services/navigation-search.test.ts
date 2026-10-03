@@ -1,11 +1,12 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { searchNavigation } from './navigation-search';
 import type { CruxKind } from '@/api/types';
+const native = localApiFixture();
 beforeEach(async () => {
   await initServices();
-  await getSqliteClient().run('ALTER TABLE dimensions ADD COLUMN deleted TEXT');
 });
 const node = (title: string, kind?: CruxKind) => getServices().crux.create({ title, kind });
 const place = (parent: string, child: string) =>
@@ -39,7 +40,7 @@ it('keeps unplaced or ambiguous content discoverable without inventing a path, a
   await place(a.id, item.id);
   await place(b.id, item.id);
   expect((await searchNavigation('Study')).items[0]?.locationState).toBe('ambiguous');
-  await getSqliteClient().run('DELETE FROM dimensions WHERE source_id = ?', [b.id]);
+  await native().faultSql('DELETE FROM dimensions WHERE source_id = ?', [b.id]);
   await place(b.id, a.id);
   await place(a.id, b.id);
   expect((await searchNavigation('Study')).items[0]?.locationState).toBe('cycle');
@@ -62,7 +63,7 @@ it('does not expose deleted ancestor titles or claim a complete excessively deep
   const home = await node('Hidden ancestor', 'garden');
   const item = await node('Study');
   await place(home.id, item.id);
-  await getSqliteClient().run('UPDATE cruxes SET deleted = ? WHERE id = ?', ['gone', home.id]);
+  await native().faultSql('UPDATE cruxes SET deleted = ? WHERE id = ?', ['gone', home.id]);
   const result = await searchNavigation('Study');
   expect(result.items[0]?.locationState).toBe('unavailable');
   expect(JSON.stringify(result)).not.toContain('Hidden ancestor');

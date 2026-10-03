@@ -1,3 +1,4 @@
+import { pendingFileProjection, recoverPendingFileUpdates } from '@/services/file-content';
 import {
   prepareWorkspacePublication,
   assertPublicationWorkspace,
@@ -12,7 +13,8 @@ import { create, useStore, type StoreApi } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, workspaceSelection, trackWorkspacePromise } from './workspaceSelection';
 import type { Crux, ChatMessage, Artifact, CruxSummary, Dimension, ToolCall } from '@/api/types';
-import type { UpdateCruxInput } from '@/services/types';
+import { captureAuth, assertAuthCurrent } from '@/api/session';
+import type { ArtifactUploadEntry, UpdateCruxInput } from '@/services/types';
 import { getServices } from '@/services';
 import { guessMimeType } from '@/lib/mime';
 import { hasContentChanged } from '@/services/publish';
@@ -131,6 +133,8 @@ export interface CruxState {
   setStreamToolCalls: (calls: ToolCall[]) => void;
   /** Re-read the workspace's artifacts from the store (snapshot-view aware). */
   refreshArtifacts: () => Promise<void>;
+  /** Finish already-admitted filesystem work without repeating its original mutation. */
+  recoverFileUpdates: (ownerId?: string, onlyIfPending?: boolean) => Promise<void>;
   /** Refresh descriptive details only; preserve live conversation, files and history. */
   refreshDetails: (fields: readonly string[], metaKeys: readonly string[]) => Promise<void>;
   setArtifacts: (artifacts: Artifact[]) => void;
@@ -164,11 +168,15 @@ export interface CruxState {
   uploadFile: (file: File, parentPath?: string) => Promise<Artifact>;
   /** Save a paste in this workspace; retain the text in its draft if storage refuses. */
   pasteAsArtifact: (text: string) => Promise<void>;
-  uploadFiles: (files: { file: File; path: string }[]) => Promise<void>;
+  uploadFiles: (files: ArtifactUploadEntry[]) => Promise<void>;
   moveArtifact: (id: string, newParentPath: string | null) => Promise<void>;
-  renameArtifact: (id: string, newPath: string) => Promise<void>;
+  renameArtifact: (
+    id: string,
+    newPath: string,
+    selection?: { source: Artifact; target: Artifact | null },
+  ) => Promise<void>;
   deleteArtifact: (id: string) => Promise<void>;
-  deleteArtifacts: (ids: string[]) => Promise<void>;
+  deleteArtifacts: (ids: string[], selection?: readonly Artifact[]) => Promise<void>;
   /** Persist editor content; resolves with the updated artifact (undefined if unknown id). */
   saveArtifactContent: (id: string, content: string) => Promise<Artifact | undefined>;
 
@@ -213,6 +221,7 @@ export const selectHasUnpublishedChanges = (s: CruxState): boolean =>
   hasContentChanged(
     s.artifacts,
     s.crux?.meta?.publishedFingerprints as Record<string, string> | undefined,
+    s.crux ?? undefined,
   );
 
 /**
@@ -260,6 +269,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
   let metadataTail: Promise<unknown> = Promise.resolve();
   let snapshotTail: Promise<unknown> = Promise.resolve();
+  let uploadGeneration = 0;
   const store = create<CruxState>((set, get) => ({
     closing: false,
     cancelPendingDeletes: () => {
@@ -312,6 +322,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const gen = ++loadGeneration;
       const stillCurrent = () => gen === loadGeneration;
       const { crux: cruxService, artifact } = getServices();
+      await recoverPendingFileUpdates(id);
       const crux = await cruxService.findById(id);
       const artifacts = await artifact.findByResource('crux', id);
       if (!stillCurrent()) return;
@@ -532,6 +543,24 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       set({ streamingToolCalls: calls });
     },
 
+    recoverFileUpdates: async (ownerId = get().crux?.id, onlyIfPending = false) => {
+      if (!ownerId) throw new Error('Select the Crux whose file update needs recovery.');
+      const before = get();
+      const liveIds =
+        before.crux?.id === ownerId
+          ? (before.workspaceArtifacts ?? before.artifacts).map((file) => file.id)
+          : [];
+      const pending = await recoverPendingFileUpdates(ownerId, !onlyIfPending);
+      if ((!pending && onlyIfPending) || get().crux?.id !== ownerId) return;
+      await get().refreshArtifacts();
+      const after = get();
+      // Growth owns its selected tabs. A late recovery must also leave a newly
+      // selected owner alone; only absent files from this live view are closed.
+      if (after.crux?.id !== ownerId || after.viewingSnapshotId) return;
+      const retained = new Set(after.artifacts.map((file) => file.id));
+      for (const id of liveIds) if (!retained.has(id)) ui.getState().closeTab(id);
+    },
+
     refreshArtifacts: async () => {
       const { crux } = get();
       if (!crux) return;
@@ -724,9 +753,11 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     publishCrux: async () => {
       const { crux, publishPhase } = get();
       if (!crux || publishPhase) return false;
+      const authContext = captureAuth();
       set({ publishFailure: null, publishPhase: 'sync' });
       try {
         const prepared = await prepareWorkspacePublication(store, ui, crux.id);
+        assertAuthCurrent(authContext);
         const { functionFiles, listPublishedFunctions, putRemoteSecret } =
           await import('@/services/crux-functions');
         const { localSecrets } = await import('@/services/function-secrets');
@@ -735,10 +766,13 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         // a newly live handler without the credentials it needs.
         const secrets = hasFunctions ? await localSecrets(crux.id) : {};
         assertPublicationWorkspace(store, ui, crux.id);
+        assertAuthCurrent(authContext);
         const mergedCrux = await publishPipeline(prepared.crux, prepared.artifacts || [], {
+          authContext,
           messages: prepared.messages,
           onProgress: (phase) => set({ publishPhase: phase }),
         });
+        assertAuthCurrent(authContext);
         if (get().crux?.id !== crux.id)
           throw new Error(
             'The Crux was shared, but this workspace changed. Reopen it to refresh its status.',
@@ -748,8 +782,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         if (hasFunctions) {
           try {
             for (const [name, value] of Object.entries(secrets))
-              await putRemoteSecret(mergedCrux.id, name, value);
-            await listPublishedFunctions(mergedCrux.id);
+              await putRemoteSecret(mergedCrux.id, name, value, authContext);
+            await listPublishedFunctions(mergedCrux.id, authContext);
           } catch {
             // Do not forward an Axios error that may include a secret request body.
             throw new Error(
@@ -858,6 +892,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const newArtifact = await artifact.upload({
         resourceId: crux.id,
         blob: file,
+        retention: 'safety',
         mimeType: file.type || undefined,
         meta: { path },
       });
@@ -894,36 +929,34 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       }));
     },
 
-    renameArtifact: async (id: string, newPath: string) => {
-      const { artifact } = getServices();
-      await artifact.update(get().artifacts.find((file) => file.id === id)!, {
-        meta: { path: newPath },
-      });
-      await get().refreshArtifacts();
-      set((state) => ({
-        artifacts: state.artifacts.map((a) =>
-          a.id === id
-            ? {
-                ...a,
-                meta: { ...a.meta, path: newPath },
-                filename: newPath.split('/').pop() || a.filename,
-              }
-            : a,
-        ),
-      }));
+    renameArtifact: async (id, newPath, selection) => {
+      const state = get();
+      if (state.viewingSnapshotId || state.closing)
+        throw new Error('Return to the current workspace before renaming files.');
+      const source = structuredClone(
+        selection?.source ?? state.artifacts.find((file) => file.id === id),
+      );
+      const target = selection?.target ? structuredClone(selection.target) : undefined;
+      if (!source) throw new Error('Select the file before renaming it.');
+      try {
+        await getServices().artifact.update(source, { meta: { path: newPath }, replace: target });
+      } finally {
+        if (get().crux?.id === source.resourceId) await get().refreshArtifacts();
+      }
     },
 
     deleteArtifact: async (id: string) => {
       await get().deleteArtifacts([id]);
     },
 
-    deleteArtifacts: async (ids: string[]) => {
+    deleteArtifacts: async (ids: string[], selection?: readonly Artifact[]) => {
       if (!ids.length) return;
       const current = get();
       if (current.viewingSnapshotId) throw new Error('Growth files are read-only.');
       const ownerId = current.crux?.id;
+      const approved = structuredClone(selection ?? current.artifacts);
       const files = [...new Set(ids)].map((id) => {
-        const file = current.artifacts.find((item) => item.id === id);
+        const file = approved.find((item) => item.id === id);
         if (!file || file.resourceId !== ownerId)
           throw new Error('The selected file is no longer in this Crux. Refresh and try again.');
         return file;
@@ -949,45 +982,98 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           ? [{ file: files[index]!, reason: result.reason as unknown }]
           : [],
       );
-      if (failures.length)
+      if (failures.length) {
+        const pending = failures.filter(({ reason }) => pendingFileProjection(reason));
+        const refused = failures.filter(({ reason }) => !pendingFileProjection(reason));
         throw new AggregateError(
           failures.map((failure) => failure.reason),
-          `Could not delete ${failures.map(({ file }) => file.meta?.path ?? file.filename).join(', ')}. Review the remaining files and try again.`,
+          [
+            pending.length
+              ? `Deletion is saved in Garden, but the Project Folder update is pending for ${pending.map(({ file }) => file.meta?.path ?? file.filename).join(', ')}. Retry file update to finish it.`
+              : '',
+            refused.length
+              ? `Could not delete ${refused.map(({ file }) => file.meta?.path ?? file.filename).join(', ')}. Review the remaining files and try again.`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
         );
+      }
     },
 
-    uploadFiles: async (files: { file: File; path: string }[]) => {
-      const { crux } = get();
+    uploadFiles: async (files: ArtifactUploadEntry[]) => {
+      const { crux, artifacts, viewingSnapshotId, closing } = get();
       if (!crux) throw new Error('No active crux');
+      if (viewingSnapshotId || closing)
+        throw new Error('Return to the current files in this Crux before adding files.');
+      const ownerId = crux.id;
+      const entries = files.map(({ file, path, expected }) => ({
+        file,
+        path,
+        expected: structuredClone(
+          expected === undefined
+            ? (artifacts.find((artifact) => artifact.meta?.path === path) ?? null)
+            : expected,
+        ),
+      }));
+      if (!entries.length) return;
+      const generation = ++uploadGeneration;
       const { artifact } = getServices();
       set({
-        uploadProgress: { total: files.length, completed: 0, currentFile: files[0]?.path || '' },
+        uploadProgress: { total: entries.length, completed: 0, currentFile: entries[0]!.path },
       });
       const newArtifacts: Artifact[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const { file, path } = files[i]!;
-        set({ uploadProgress: { total: files.length, completed: i, currentFile: path } });
+      const failures: { path: string; reason: unknown }[] = [];
+      for (let i = 0; i < entries.length; i++) {
+        const { file, path, expected } = entries[i]!;
+        if (get().crux?.id === ownerId && generation === uploadGeneration)
+          set({ uploadProgress: { total: entries.length, completed: i, currentFile: path } });
         try {
           const newArtifact = await artifact.upload({
-            resourceId: crux.id,
+            resourceId: ownerId,
             blob: file,
+            expected,
+            retention: 'safety',
             mimeType: file.type || undefined,
             meta: { path },
           });
           newArtifacts.push(newArtifact);
-        } catch (err) {
-          console.warn(`Failed to upload: ${path}`, err);
+        } catch (reason) {
+          failures.push({ path, reason });
         }
       }
       set((state) => {
-        const merged = [...state.artifacts];
+        if (state.crux?.id !== ownerId)
+          return generation === uploadGeneration ? { uploadProgress: null } : state;
+        const merged = [...(state.workspaceArtifacts ?? state.artifacts)];
         for (const a of newArtifacts) {
           const idx = merged.findIndex((e) => e.id === a.id);
           if (idx >= 0) merged[idx] = a;
           else merged.push(a);
         }
-        return { artifacts: merged, uploadProgress: null };
+        return {
+          ...liveArtifactPatch(state, merged),
+          ...(generation === uploadGeneration ? { uploadProgress: null } : {}),
+        };
       });
+      if (failures.length) {
+        const pending = failures.filter(({ reason }) => pendingFileProjection(reason));
+        const refused = failures.filter(({ reason }) => !pendingFileProjection(reason));
+        throw new AggregateError(
+          failures.map(({ reason }) => reason),
+          [
+            `${newArtifacts.length} of ${entries.length} files added.`,
+            pending.length
+              ? `${pending.length} saved in Garden with a Project Folder update pending: ${pending.map(({ path }) => path).join(', ')}. Retry file update to finish it.`
+              : '',
+            refused.length
+              ? `Could not add ${refused.map(({ path }) => path).join(', ')}. Files already added were kept. Choose the failed files to retry.`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
+        );
+      }
     },
 
     saveArtifactContent: async (id: string, content: string) => {

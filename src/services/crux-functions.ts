@@ -1,5 +1,6 @@
 import type { Artifact } from '@/api/types';
 import client from '@/api/client';
+import { captureAuth, type AuthContext } from '@/api/session';
 import { pathOf } from '@/lib/artifact-path';
 import { getServices } from './index';
 
@@ -252,8 +253,11 @@ export async function writeStarterFunction(cruxId: string, name = 'hello'): Prom
 }
 
 /** What the API can run for a published crux. */
-export async function listPublishedFunctions(cruxId: string): Promise<FunctionFile[]> {
-  const res = await client.get<FunctionFile[]>(`/fn/${cruxId}`);
+export async function listPublishedFunctions(
+  cruxId: string,
+  context: AuthContext = captureAuth(),
+): Promise<FunctionFile[]> {
+  const res = await client.get<FunctionFile[]>(`/fn/${cruxId}`, { authContext: context });
   return res.data;
 }
 
@@ -302,8 +306,17 @@ export async function listRemoteSecrets(
   const res = await client.get<{ name: string; updated: string }[]>(`/fn/${cruxId}/secrets`);
   return res.data;
 }
-export async function putRemoteSecret(cruxId: string, name: string, value: string): Promise<void> {
-  await client.put(`/fn/${cruxId}/secrets/${encodeURIComponent(name)}`, { value });
+export async function putRemoteSecret(
+  cruxId: string,
+  name: string,
+  value: string,
+  context: AuthContext = captureAuth(),
+): Promise<void> {
+  await client.put(
+    `/fn/${cruxId}/secrets/${encodeURIComponent(name)}`,
+    { value },
+    { authContext: context },
+  );
 }
 export async function deleteRemoteSecret(cruxId: string, name: string): Promise<void> {
   await client.delete(`/fn/${cruxId}/secrets/${encodeURIComponent(name)}`);

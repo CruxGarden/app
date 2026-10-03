@@ -78,10 +78,16 @@ export async function restoreSyncedCrux(
   row: Pick<CloudOnlyCrux, 'id' | 'published'>,
   onProgress?: (msg: string) => void,
 ): Promise<{ cruxId: string; title: string }> {
+  const context = captureAuth();
   onProgress?.('Downloading…');
-  const blob = await syncApi.pullCrux(row.id);
+  const blob = await syncApi.pullCrux(row.id, context);
   onProgress?.('Importing…');
-  const result = await importCrux({ data: blob, mode: 'restore' });
+  const result = await importCrux({
+    data: blob,
+    mode: 'restore',
+    beforeCommit: () => assertAuthCurrent(context),
+  });
+  assertAuthCurrent(context);
   const meta = row.published?.meta as Record<string, unknown> | undefined;
   if (meta?.publishedAt) {
     const { crux: cruxService } = getServices();
@@ -92,6 +98,7 @@ export async function restoreSyncedCrux(
         publishLayout: meta.publishLayout,
       },
     });
+    assertAuthCurrent(context);
   }
   return { cruxId: result.cruxId, title: result.title };
 }

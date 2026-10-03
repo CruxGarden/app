@@ -46,14 +46,16 @@ export async function importPrivateCrux(options: ImportOptions): Promise<ImportR
   const info = await api.inspect(bytes);
   if (info.roots.length !== 1) throw new Error('Choose an archive with one selected root Crux.');
   options.onProgress?.(0, 1);
-  const admit = (replacementToken?: string) =>
-    api.import(bytes, {
+  const admit = (replacementToken?: string) => {
+    options.beforeCommit?.();
+    return api.import(bytes, {
       requestId,
       mode: mode === 'clone' ? 'copy' : mode,
       destination: identity,
       ...(gardenId ? { gardenId } : {}),
       ...(replacementToken ? { replacementToken } : {}),
     });
+  };
   const result = await (async () => {
     if (mode !== 'replace') return admit();
     if (info.includeMembers)

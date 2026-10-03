@@ -420,7 +420,7 @@ export function initIngestion(): void {
 }
 
 /** Reconcile offline/crash-time edits before consumers read the persisted index. */
-export async function recoverProjectFolders(): Promise<void> {
+export async function recoverProjectFolders(owners?: readonly string[]): Promise<void> {
   const api = bridge();
   if (!api?.reconcile) return;
   const db = getSqliteClient();
@@ -449,6 +449,7 @@ export async function recoverProjectFolders(): Promise<void> {
     if (copy.project_folder) folders.set(copy.id, copy.project_folder);
   }
   for (const [id, folder] of folders) {
+    if (owners && !owners.includes(id)) continue;
     // Keep scan + ingestion in the same queue as watcher batches. All consumers
     // await service initialization, and Growth also waits for this queue.
     let failure: unknown;

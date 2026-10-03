@@ -1,5 +1,5 @@
 import { useAiEnabled } from '@/hooks/useAiEnabled';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { pullCrux, useSyncPull, IDLE_PULL } from '@/services/sync-pull';
@@ -7,6 +7,7 @@ import { backupCrux, backupOf, contentRevision } from '@/services/backup';
 import { cruxesChangedSince } from '@/services/drift';
 import { isAutoBackupOn, autoBackupPause, AUTO_BACKUP_CHANGED } from '@/services/auto-backup';
 import * as syncApi from '@/api/sync';
+import { assertAuthCurrent, captureAuth } from '@/api/session';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import * as usageApi from '@/api/usage';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
@@ -65,27 +66,72 @@ export default function SyncPane() {
   const crux = useCruxStore((s) => s.crux);
   const store = useCruxStoreApi();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const accountId = useAuthStore((s) => s.account?.id);
+  const { endpoint, revision } = captureAuth();
+  const context = useMemo(() => ({ endpoint, revision }), [endpoint, revision]);
+  const owner = `${endpoint}:${revision}:${accountId}:${crux?.id}`;
 
   const [pushing, setPushing] = useState(false);
   const pull = useSyncPull((s) => (crux ? s[crux.id] : undefined) ?? IDLE_PULL);
   const pulling = pull.busy;
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
-  const [lastSynced, setLastSynced] = useState<{ at: string; size: number } | null>(null);
+  const [checkingPull, setCheckingPull] = useState(false);
+  const pullPreparation = useRef(false);
+  const activeLoad = useRef<object | undefined>(undefined);
+  const [remote, setRemote] = useState<{
+    owner: string;
+    loading: boolean;
+    error: string;
+    lastSynced: { at: string; size: number } | null;
+    budget: usageApi.BudgetLine | null;
+  } | null>(null);
+  // Never render an earlier connection's inventory, even before effects run.
+  const currentRemote = remote?.owner === owner ? remote : null;
+  const lastSynced = currentRemote?.lastSynced ?? null;
+  const budget = currentRemote?.budget ?? null;
+  const loading = currentRemote?.loading ?? true;
+  const loadError = currentRemote?.error ?? '';
   const [autoNote, setAutoNote] = useState(() => autoBackupLine());
-  // Scenario 8: say where the plan stands before a push fails on it
-  const [budget, setBudget] = useState<usageApi.BudgetLine | null>(null);
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let cancelled = false;
-    usageApi
-      .me()
-      .then((u) => !cancelled && setBudget(u.budgets.storage))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
+  const cruxId = crux?.id;
+  const refresh = useCallback(async () => {
+    if (!cruxId || !isAuthenticated) return;
+    const request = {};
+    activeLoad.current = request;
+    const canApply = () => {
+      if (request !== activeLoad.current) return false;
+      try {
+        assertAuthCurrent(context);
+        return useAuthStore.getState().account?.id === accountId;
+      } catch {
+        return false;
+      }
     };
-  }, [isAuthenticated, lastSynced]);
+    setRemote({ owner, loading: true, error: '', lastSynced: null, budget: null });
+    const [listing, usage] = await Promise.allSettled([
+      syncApi.listSyncedCruxes(context),
+      usageApi.me(),
+    ]);
+    if (!canApply()) return;
+    const entry =
+      listing.status === 'fulfilled' ? listing.value.find((c) => c.cruxId === cruxId) : null;
+    setRemote({
+      owner,
+      loading: false,
+      error:
+        listing.status === 'rejected'
+          ? 'Could not load cloud backup. Check your connection and try again.'
+          : '',
+      lastSynced: entry ? { at: entry.updatedAt, size: entry.size } : null,
+      budget: usage.status === 'fulfilled' ? usage.value.budgets.storage : null,
+    });
+  }, [cruxId, isAuthenticated, context, accountId, owner]);
+  useEffect(() => {
+    void refresh();
+    return () => {
+      activeLoad.current = undefined;
+    };
+  }, [refresh]);
   useEffect(() => {
     const sync = () => setAutoNote(autoBackupLine());
     window.addEventListener(AUTO_BACKUP_CHANGED, sync);
@@ -94,77 +140,71 @@ export default function SyncPane() {
 
   const { ref, isTooNarrow } = usePaneWidth(200);
 
-  // Fetch sync status for this crux on mount
-  useEffect(() => {
-    if (!crux || !isAuthenticated) return;
-    let cancelled = false;
-    syncApi
-      .listSyncedCruxes()
-      .then((list) => {
-        if (cancelled) return;
-        const entry = list.find((c) => c.cruxId === crux.id);
-        if (entry) setLastSynced({ at: entry.updatedAt, size: entry.size });
-      })
-      .catch(() => {
-        /* non-critical */
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [crux?.id, isAuthenticated]);
-
   const handlePush = useCallback(async () => {
     if (!crux) return;
     useSyncPull.setState({ [crux.id]: IDLE_PULL });
     setPushing(true);
     setError('');
     try {
-      const record = await backupCrux(store, setProgress);
-      setLastSynced({ at: record.at, size: record.size });
+      await backupCrux(store, setProgress, context);
+      assertAuthCurrent(context);
+      await refresh();
       setProgress('Pushed successfully');
     } catch (err) {
       console.error('Crux push failed:', err);
-      setError('Push failed');
+      setError(err instanceof Error ? err.message : 'Push failed');
       setProgress('');
     } finally {
       setPushing(false);
     }
-  }, [crux, store]);
+  }, [crux, store, context, refresh]);
 
   const growthCount = useCruxStore((s) => s.growthCount);
   const handlePull = useCallback(async () => {
-    if (!crux) return;
-    // Scenario 6: never quietly overwrite work done here since the last push
-    const local = backupOf(crux);
-    const behind = local ? Math.max(0, growthCount - local.growthCount) : null;
-    // Desktop keeps file edits in Edit history, not on the Crux row: the
-    // revision the push saw against the revision now.
-    const revisionNow = await contentRevision(crux.id);
-    const editedSince = local
-      ? (await cruxesChangedSince([crux], local.at, 1_000)).length > 0 ||
-        (revisionNow !== undefined && revisionNow > (local.contentRevision ?? 0))
-      : true;
-    const changedHere = local === null || (behind ?? 0) > 0 || editedSince;
-    if (
-      !(await confirmDialog({
-        title: 'Pull from cloud',
-        message: changedHere
-          ? local
-            ? `This crux changed here after its last push${behind ? ` — ${behind} snapshot${behind === 1 ? '' : 's'}` : ''}. Pull replaces those changes with the cloud copy. Push first if you want to keep them.`
-            : 'This machine never pushed this crux, so the cloud copy is not its backup. Pull replaces everything here with it.'
-          : 'Pull will replace this crux with the cloud version. Continue?',
-        confirmLabel: changedHere ? 'Pull anyway' : 'Pull',
-        danger: true,
-      }))
-    )
-      return;
+    if (!crux || pullPreparation.current) return;
+    const authContext = captureAuth();
+    pullPreparation.current = true;
+    setCheckingPull(true);
     setError('');
-    setProgress('');
-    await pullCrux(crux.id);
+    try {
+      // Scenario 6: never quietly overwrite work done here since the last push
+      const local = backupOf(crux);
+      const behind = local ? Math.max(0, growthCount - local.growthCount) : null;
+      // Desktop keeps file edits in Edit history, not on the Crux row: the
+      // revision the push saw against the revision now.
+      const revisionNow = await contentRevision(crux.id);
+      const editedSince = local
+        ? (await cruxesChangedSince([crux], local.at, 1_000)).length > 0 ||
+          (revisionNow !== undefined && revisionNow > (local.contentRevision ?? 0))
+        : true;
+      const changedHere = local === null || (behind ?? 0) > 0 || editedSince;
+      assertAuthCurrent(authContext);
+      if (
+        !(await confirmDialog({
+          title: 'Pull from cloud',
+          message: changedHere
+            ? local
+              ? `This crux changed here after its last push${behind ? ` — ${behind} snapshot${behind === 1 ? '' : 's'}` : ''}. Pull replaces those changes with the cloud copy. Push first if you want to keep them.`
+              : 'This machine never pushed this crux, so the cloud copy is not its backup. Pull replaces everything here with it.'
+            : 'Pull will replace this crux with the cloud version. Continue?',
+          confirmLabel: changedHere ? 'Pull anyway' : 'Pull',
+          danger: true,
+        }))
+      )
+        return;
+      assertAuthCurrent(authContext);
+      setError('');
+      setProgress('');
+      await pullCrux(crux.id, authContext);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Pull failed');
+    } finally {
+      pullPreparation.current = false;
+      setCheckingPull(false);
+    }
   }, [crux, growthCount]);
 
-  const busy = pushing || pulling;
+  const busy = pushing || pulling || checkingPull;
 
   return (
     <div ref={ref} className="flex flex-col h-full">
@@ -192,7 +232,18 @@ export default function SyncPane() {
             aside={lastSynced ? formatBytes(lastSynced.size) : undefined}
             tone={lastSynced ? 'default' : 'dashed'}
           >
-            {lastSynced ? (
+            {loading ? (
+              <PaneNote>Loading cloud backup…</PaneNote>
+            ) : loadError ? (
+              <div role="alert" className="flex flex-col gap-2">
+                <PaneNote tone="error" className="whitespace-normal">
+                  {loadError}
+                </PaneNote>
+                <PaneAction onClick={refresh} disabled={busy}>
+                  Retry
+                </PaneAction>
+              </div>
+            ) : lastSynced ? (
               <div className="flex items-center gap-1.5 text-xxs font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
                 <span className="text-text">Synced {formatDateTime(lastSynced.at)}</span>
@@ -252,7 +303,7 @@ export default function SyncPane() {
               <PaneAction
                 tone="secondary"
                 onClick={handlePull}
-                disabled={busy}
+                disabled={busy || loading || !!loadError || !lastSynced}
                 busy={pulling && 'Pulling...'}
                 icon={<CloudDownIcon />}
               >

@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { setSetting } from './settings';
 import { SettingsKey } from '@/lib/constants';
 import { DEFAULT_PERSONA, getPersonaFingerprint } from './persona';
@@ -6,6 +7,8 @@ import { runGardenTool } from '@/ai/garden-tools';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { initServices, getServices } from './index';
 import { applyTemplateToCrux } from './crux-create';
+
+localApiFixture();
 
 describe('applyTemplateToCrux', () => {
   beforeEach(async () => {
@@ -36,7 +39,7 @@ describe('applyTemplateToCrux', () => {
     expect(result.crux.meta?.contentModel).toBeTruthy();
     expect(result.messages?.[0]?.role).toBe('assistant');
     expect(result.layout).toBeTruthy();
-    // No Project Folder in the test environment → no AGENTS.md (Desktop Mode writes it)
+    // No Electron project bridge in this service fixture; desktop journeys cover AGENTS.md.
     expect(paths).not.toContain('AGENTS.md');
   });
 
@@ -93,7 +96,7 @@ describe('applyTemplateToCrux', () => {
     expect(result.crux.meta?.settings).toMatchObject({ entryFile: 'index.html' });
     for (const name of ['Silkscreen-Regular', 'Silkscreen-Bold']) {
       const file = files.find((file) => file.meta?.path === `assets/fonts/${name}.ttf`)!;
-      const bytes = new Uint8Array(await (await artifact.downloadBlob(file.id)).arrayBuffer());
+      const bytes = new Uint8Array(await (await artifact.downloadBlob(file)).arrayBuffer());
       const { readFileSync } = await import('node:fs');
       const original = readFileSync(
         new URL(`../../onebigsky-crux/assets/fonts/${name}.ttf`, import.meta.url),

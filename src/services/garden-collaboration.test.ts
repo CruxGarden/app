@@ -1,7 +1,10 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { loadGardenCollaboration, saveGardenCollaboration } from './garden-collaboration';
 import { cruxUpsertFields } from './publish';
+
+localApiFixture();
 
 describe('Garden-owned Collaboration', () => {
   beforeEach(async () => {

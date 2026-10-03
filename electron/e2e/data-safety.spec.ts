@@ -146,10 +146,13 @@ test.describe('data safety: export, import, wipe, restore', () => {
       await expect(page.getByRole('button', { name: 'Wipe garden' })).toBeDisabled();
       await page.getByPlaceholder('delete me').fill('delete me');
       await page.getByRole('button', { name: 'Wipe garden' }).click();
-      await page.getByRole('button', { name: 'Wipe without a copy', exact: true }).click();
       await expect(page.getByText(/Close all open Crux workspaces/)).toBeVisible({
         timeout: 15_000,
       });
+      // The successful .garden export is still recent, so no duplicate copy offer is needed.
+      await expect(
+        page.getByRole('button', { name: 'Wipe without a copy', exact: true }),
+      ).toHaveCount(0);
       await page.keyboard.press('Escape');
       await hidePane(page, 'Settings');
       // The imported copy is the active workspace; the switcher offers
@@ -166,7 +169,9 @@ test.describe('data safety: export, import, wipe, restore', () => {
       await openGardenSettings(page);
       await page.getByPlaceholder('delete me').fill('delete me');
       await page.getByRole('button', { name: 'Wipe garden' }).click();
-      await page.getByRole('button', { name: 'Wipe without a copy', exact: true }).click();
+      await expect(
+        page.getByRole('button', { name: 'Wipe without a copy', exact: true }),
+      ).toHaveCount(0);
       await expect(page.getByRole('button', { name: /enter/i })).toBeVisible({ timeout: 60_000 });
 
       // ── Restore from the .garden file: the crux is back, with its file ──

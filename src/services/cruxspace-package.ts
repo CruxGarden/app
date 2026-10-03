@@ -104,6 +104,8 @@ export function missingTools(
 
 export interface ExportCruxspaceOptions {
   spaceId: string;
+  /** The member identities shown in the person's export review, when provided. */
+  expectedMemberIds?: readonly string[];
   onProgress?: (status: string) => void;
 }
 export interface ExportCruxspaceResult {
@@ -118,8 +120,18 @@ export async function exportCruxspace(
   options: ExportCruxspaceOptions,
 ): Promise<ExportCruxspaceResult> {
   const { spaceId, onProgress } = options;
+  const expectedMemberIds = options.expectedMemberIds
+    ? new Set(options.expectedMemberIds)
+    : undefined;
   archiveService();
   const { space, live } = await cruxspaceMembers(spaceId);
+  const memberIds = [...space.cruxIds];
+  if (
+    expectedMemberIds &&
+    (expectedMemberIds.size !== memberIds.length ||
+      memberIds.some((id) => !expectedMemberIds.has(id) || !live.has(id)))
+  )
+    throw new Error('This Garden’s members changed. Review the list before exporting.');
   const { artifact } = getServices();
   const assets = await listCruxspaceAssets(spaceId);
   const zip = new JSZip();
@@ -129,7 +141,7 @@ export async function exportCruxspace(
   const unavailable: string[] = [];
   const failed: string[] = [];
 
-  for (const id of space.cruxIds) {
+  for (const id of memberIds) {
     const member = live.get(id);
     if (!member) {
       unavailable.push(id);
@@ -343,8 +355,48 @@ export async function importCruxspace(
       missingTools: missingTools(manifest),
     };
   } catch (err) {
-    for (const member of imported) await crux.delete(member.id).catch(() => undefined);
-    await crux.delete(garden.id).catch(() => undefined);
+    const cleanupErrors: unknown[] = [];
+    const presence = async (id: string): Promise<'present' | 'absent' | 'unknown'> => {
+      try {
+        return (await absentOrFound(() => crux.findById(id))) ? 'present' : 'absent';
+      } catch (error) {
+        cleanupErrors.push(error);
+        return 'unknown';
+      }
+    };
+    const remove = async (id: string) => {
+      try {
+        await crux.delete(id);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      return presence(id);
+    };
+    const remaining: string[] = [];
+    let uncertain = false;
+    for (const member of imported) {
+      const result = await remove(member.id);
+      if (result !== 'absent') remaining.push(member.title || 'Untitled Crux');
+      if (result === 'unknown') uncertain = true;
+    }
+    // A refused member cleanup must keep its Garden as a discoverable home.
+    // Removing the container first could hide the work that still needs review.
+    const gardenState = remaining.length ? await presence(garden.id) : await remove(garden.id);
+    collectionsChanged();
+    if (remaining.length || gardenState !== 'absent')
+      throw new AggregateError(
+        [err, ...cleanupErrors],
+        `Importing Garden "${name}" failed and cleanup could not finish. ${
+          uncertain || gardenState === 'unknown'
+            ? 'A partial copy may remain.'
+            : 'A partial copy remains.'
+        }${
+          remaining.length
+            ? ` Imported Cruxes ${uncertain ? 'retained or awaiting verification' : 'retained'}: ${remaining.map((title) => `"${title}"`).join(', ')}.`
+            : ''
+        } Review and remove the partial Garden "${name}" before importing again.`,
+        { cause: err },
+      );
     throw err;
   }
 }

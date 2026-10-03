@@ -1,17 +1,16 @@
-import { useState } from 'react';
 import { ApiKeySetup, Toggle } from '@/components/ui';
 import SettingsSection from './SettingsSection';
 
-import { getSetting, setSetting } from '@/services/settings';
+import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { useUIStore } from '@/stores/uiStore';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import AgentMetricsSection from './AgentMetricsSection';
 
 export default function AiSettings() {
-  const [aiEnabled, setAiEnabled] = useState(() => getSetting(SettingsKey.AiEnabled) === 'true');
+  const aiEnabled = useAiEnabled();
 
   const handleAiToggle = (enabled: boolean) => {
-    setAiEnabled(enabled);
     setSetting(SettingsKey.AiEnabled, enabled ? 'true' : 'false');
     useUIStore.getState().setAiEnabled(enabled);
   };

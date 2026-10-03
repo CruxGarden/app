@@ -22,6 +22,13 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
     const rootId = new URL(page.url()).searchParams.get('garden')!;
     await page.getByRole('button', { name: 'New Garden', exact: true }).click();
     await page.getByRole('textbox', { name: 'Garden name' }).fill('Observatory');
+    const memberships = () =>
+      page.evaluate(() =>
+        window.electronAPI!.sqlite.all(
+          "SELECT id, source_id, target_id FROM dimensions WHERE type = 'garden' AND kind = 'membership' ORDER BY id",
+        ),
+      );
+    const membershipsBefore = await memberships();
     await page.evaluate(() =>
       window.electronAPI!.sqlite.run(`
       CREATE TRIGGER garden_workspace_refusal BEFORE INSERT ON dimensions
@@ -30,12 +37,14 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
     `),
     );
     await page.getByRole('button', { name: 'Create Garden', exact: true }).click();
-    await expect(page.getByRole('alert')).toContainText('Membership temporarily unavailable');
+    // The native API exposes its Dimension error; the injected SQLite message is its cause.
+    await expect(page.getByRole('alert')).toContainText('Dimension creation error');
     expect(
       await page.evaluate(() =>
         window.electronAPI!.sqlite.all("SELECT id FROM cruxes WHERE title = 'Observatory'"),
       ),
     ).toEqual([]);
+    expect(await memberships()).toEqual(membershipsBefore);
     await page.evaluate(() =>
       window.electronAPI!.sqlite.run('DROP TRIGGER garden_workspace_refusal'),
     );
@@ -45,6 +54,20 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
     );
     const childId = new URL(page.url()).searchParams.get('garden')!;
     expect(childId).not.toBe(rootId);
+    expect(
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.all("SELECT id FROM cruxes WHERE title = 'Observatory'"),
+      ),
+    ).toEqual([{ id: childId }]);
+    expect(
+      await page.evaluate(
+        async (id) =>
+          (await window.electronAPI!.sqlite.gardenMembership!.parents(id)).map(
+            (parent) => parent.id,
+          ),
+        childId,
+      ),
+    ).toEqual([rootId]);
     const project = await createCrux(page, 'Night atlas');
     expect(new URL(page.url()).searchParams.get('garden')).toBe(childId);
     {

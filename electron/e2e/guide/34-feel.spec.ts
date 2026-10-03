@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, storedCrux } from '../multi-crux-helpers';
-import { showPane, hidePane } from '../panel-helpers';
+import { showPane, hidePane, chooseSettingsSection } from '../panel-helpers';
 import { connectAccount } from '../journeys/journey-helpers';
 
 /**
@@ -129,14 +129,13 @@ test.describe('guide 34 · Accessibility, polish and states', () => {
       const body = page.getByTestId('pane-body-settings');
       await expect(body).toBeVisible({ timeout: 30_000 });
       const pane = body;
-      const navigation = pane.getByRole('navigation', { name: 'Settings sections' });
       for (const name of [
         'Account',
         'AI and agents',
         'Garden and backups',
         'Appearance and panels',
-      ]) {
-        await navigation.getByRole('button', { name, exact: true }).click();
+      ] as const) {
+        await chooseSettingsSection(page, name);
         await expect(pane.getByRole('region', { name, exact: true }).first()).toBeInViewport();
       }
       // Every folded section open.

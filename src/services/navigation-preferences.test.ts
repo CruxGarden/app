@@ -1,14 +1,14 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { localApiFixture } from '@/test/local-api-fixture';
+import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
-import { getSqliteClient } from './sqlite/client';
 import {
   readNavigationPreferences,
   saveGardenNavigation,
   saveUserNavigation,
 } from './navigation-preferences';
+const native = localApiFixture();
 beforeEach(async () => {
   await initServices();
-  await getSqliteClient().run('ALTER TABLE dimensions ADD COLUMN deleted TEXT');
 });
 const garden = (title: string) => getServices().crux.create({ title, kind: 'garden' });
 const place = (parent: string, child: string) =>
@@ -75,7 +75,7 @@ it('refuses ambiguous and cyclic inheritance, deleted owners and unsupported pre
   await place(a.id, c.id);
   await place(b.id, c.id);
   await expect(readNavigationPreferences('alice', c.id)).rejects.toThrow('multiple');
-  await getSqliteClient().run('DELETE FROM dimensions WHERE source_id = ?', [b.id]);
+  await native().faultSql('DELETE FROM dimensions WHERE source_id = ?', [b.id]);
   await place(c.id, a.id);
   await expect(readNavigationPreferences('alice', c.id)).rejects.toThrow('cycle');
   await saveGardenNavigation(c.id, 'tree');
@@ -88,14 +88,16 @@ it('refuses ambiguous and cyclic inheritance, deleted owners and unsupported pre
 });
 it('does not report a failed preference save as successful and can retry it', async () => {
   const a = await garden('A');
-  const db = getSqliteClient();
-  const run = vi.spyOn(db, 'run');
-  run.mockRejectedValueOnce(new Error('Disk unavailable'));
+  await native().faultSql(
+    "CREATE TRIGGER refuse_navigation BEFORE INSERT ON settings WHEN NEW.key LIKE 'cruxgarden:navigation:%' BEGIN SELECT RAISE(ABORT, 'Disk unavailable'); END",
+  );
   await expect(
     saveUserNavigation('alice', { gardenId: a.id, view: 'neighborhood' }),
   ).rejects.toThrow('Disk unavailable');
   expect((await readNavigationPreferences('alice', a.id)).view).toBe('tree');
+  await native().faultSql('DROP TRIGGER refuse_navigation');
   await saveUserNavigation('alice', { gardenId: a.id, view: 'neighborhood' });
+  await native().restart();
   expect((await readNavigationPreferences('alice', a.id)).view).toBe('neighborhood');
 });
 
@@ -105,14 +107,14 @@ it('detects ignored settings writes and keeps author intent portable without per
   const { portableMeta } = await import('./portable-metadata');
   const portable = portableMeta((await getServices().crux.findById(a.id)).meta);
   expect(portable.navigation).toEqual({ version: 1, view: 'neighborhood' });
-  await getSqliteClient().run(
+  await native().faultSql(
     "CREATE TRIGGER ignore_navigation BEFORE INSERT ON settings WHEN NEW.key LIKE 'cruxgarden:navigation:%' BEGIN SELECT RAISE(IGNORE); END",
   );
   await expect(saveUserNavigation('alice', { gardenId: a.id, view: 'tree' })).rejects.toThrow(
     'not saved',
   );
   expect((await readNavigationPreferences('alice', a.id)).view).toBe('neighborhood');
-  await getSqliteClient().run('DROP TRIGGER ignore_navigation');
+  await native().faultSql('DROP TRIGGER ignore_navigation');
   await saveUserNavigation('alice', { gardenId: a.id, view: 'tree' });
   expect(portableMeta((await getServices().crux.findById(a.id)).meta)).toEqual(portable);
 });
