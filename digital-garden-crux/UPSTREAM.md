@@ -19,3 +19,5 @@
 - `.cruxignore` keeps `node_modules/`, `dist/` and `.astro/` out of Growth.
 
 Tests: `npm run test:garden` (the link index, node:test, no install needed); `pnpm exec astro check` and `pnpm exec astro build` after `pnpm install`.
+
+- **Release dependency review (2026-10-02):** pin Astro’s transitive `devalue` to patched 5.9.3 for the six serialization/parse advisories affecting 5.9.2 (including GHSA-j22f-vq7h-c4qm). The lockfile travels with newly created Digital Gardens. `http-cache-semantics` remains an unpatched upstream remote-image build-cache finding; current seed images are local and the published build is static.

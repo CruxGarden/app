@@ -125,7 +125,7 @@ for (const count of (process.env.CRUX_PERF_FILES ?? '1000,10000').split(',').map
         await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
         const [chooser] = await Promise.all([
           page.waitForEvent('filechooser'),
-          page.getByRole('button', { name: 'Import .crux file', exact: true }).click(),
+          page.getByRole('button', { name: 'Import Crux, tool or Mood', exact: true }).click(),
         ]);
         await chooser.setFiles(archive);
         await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 300_000 });

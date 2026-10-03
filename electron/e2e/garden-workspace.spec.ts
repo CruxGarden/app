@@ -37,8 +37,13 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
     `),
     );
     await page.getByRole('button', { name: 'Create Garden', exact: true }).click();
-    // The native API exposes its Dimension error; the injected SQLite message is its cause.
-    await expect(page.getByRole('alert')).toContainText('Dimension creation error');
+    await expect(page.getByRole('alert')).toContainText(
+      'Could not create the Garden. Keep the name and try Create Garden again.',
+    );
+    await expect(page.getByRole('textbox', { name: 'Garden name' })).toHaveValue('Observatory');
+    await expect(page.getByRole('alert').locator('pre')).toBeHidden();
+    await page.getByRole('alert').getByText('Technical details', { exact: true }).click();
+    await expect(page.getByRole('alert').locator('pre')).toContainText('Dimension creation error');
     expect(
       await page.evaluate(() =>
         window.electronAPI!.sqlite.all("SELECT id FROM cruxes WHERE title = 'Observatory'"),

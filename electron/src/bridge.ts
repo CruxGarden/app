@@ -277,7 +277,28 @@ export interface ChangeBatch {
   events: WatchEvent[];
 }
 
+export interface RecoveryOperation {
+  folder: string;
+  kind: string;
+  id: string;
+  originalPath: string;
+  completedAt: number | null;
+  fileCount: number;
+  bytes: number;
+  token: string;
+  reason: string | null;
+  hasPayload: boolean;
+}
+export interface RecoveryOverview {
+  operations: RecoveryOperation[];
+  warnings: string[];
+  bytes: number;
+}
+
 export interface ProjectBridge {
+  recoveryOverview?(): Promise<RecoveryOverview>;
+  revealRecovery?(folder: string, kind: string, id: string): Promise<void>;
+  trashRecovery?(selection: RecoveryOperation): Promise<boolean>;
   /** Stable capture of eligible Artifacts for task creation/review. Rejects symlinks. */
   capture?(folder: string): Promise<{ path: string; data: Uint8Array; mode: number }[]>;
   /** Which of these paths the folder's ignore rules (defaults + `.cruxignore`) cover. */

@@ -1,3 +1,5 @@
+import ActionError from '@/components/ui/ActionError';
+import { actionFailure, type ActionFailure } from '@/lib/action-failure';
 import { useRef, useState } from 'react';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useGardenContext, gardenPath } from '@/stores/gardenContext';
@@ -18,7 +20,7 @@ export default function GardenActions() {
   const [available, setAvailable] = useState<
     { crux: Crux; parents: { id: string; title?: string; slug: string }[] }[]
   >([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ActionFailure | null>(null);
   const [busy, setBusy] = useState(false);
   const packageInput = useRef<HTMLInputElement>(null);
   const navigate = useMoodNavigate();
@@ -26,7 +28,7 @@ export default function GardenActions() {
   const finish = () => {
     setMode(null);
     setTitle('');
-    setError('');
+    setError(null);
     void useGardenStore.getState().refresh();
   };
   return (
@@ -37,7 +39,7 @@ export default function GardenActions() {
           aria-expanded={mode === 'new'}
           onClick={() => {
             setMode('new');
-            setError('');
+            setError(null);
           }}
         >
           New Garden
@@ -47,7 +49,7 @@ export default function GardenActions() {
           aria-expanded={mode === 'add'}
           onClick={() => {
             setMode('add');
-            setError('');
+            setError(null);
             setAvailable([]);
             setBusy(true);
             const destination = garden.id;
@@ -70,7 +72,12 @@ export default function GardenActions() {
               })
               .catch((err) => {
                 if (useGardenContext.getState().garden?.id === destination)
-                  setError((err as Error).message);
+                  setError(
+                    actionFailure(
+                      err,
+                      'Could not load your Cruxes. Close this list and try Add existing Crux again.',
+                    ),
+                  );
               })
               .finally(() => setBusy(false));
           }}
@@ -97,13 +104,20 @@ export default function GardenActions() {
             const destination = garden.id;
             const origin = window.location.href;
             setBusy(true);
-            setError('');
+            setError(null);
             void importGardenPackage(file, destination)
               .then((id) => {
                 finish();
                 if (window.location.href === origin) navigate(gardenPath(id));
               })
-              .catch((err) => setError((err as Error).message))
+              .catch((err) =>
+                setError(
+                  actionFailure(
+                    err,
+                    'Import could not finish. Check what was added before retrying; the details explain where it stopped.',
+                  ),
+                ),
+              )
               .finally(() => setBusy(false));
           }}
         />
@@ -117,14 +131,21 @@ export default function GardenActions() {
             const destination = garden.id;
             const origin = window.location.href;
             setBusy(true);
-            setError('');
+            setError(null);
             void getServices()
               .crux.create({ title: title.trim(), kind: 'garden', gardenId: destination })
               .then((created) => {
                 finish();
                 if (window.location.href === origin) navigate(gardenPath(created.id));
               })
-              .catch((err) => setError((err as Error).message))
+              .catch((err) =>
+                setError(
+                  actionFailure(
+                    err,
+                    'Could not create the Garden. Keep the name and try Create Garden again.',
+                  ),
+                ),
+              )
               .finally(() => setBusy(false));
           }}
         >
@@ -184,7 +205,7 @@ export default function GardenActions() {
                     onClick={() => {
                       const destination = garden.id;
                       setBusy(true);
-                      setError('');
+                      setError(null);
                       const membership = getSqliteClient().gardenMembership!;
                       const request = parents.length
                         ? membership.move({
@@ -198,7 +219,14 @@ export default function GardenActions() {
                           setAvailable((rows) => rows.filter((item) => item.crux.id !== row.id));
                           void useGardenStore.getState().refresh();
                         })
-                        .catch((err) => setError((err as Error).message))
+                        .catch((err) =>
+                          setError(
+                            actionFailure(
+                              err,
+                              'Could not update this Garden. Reopen Add existing Crux to refresh its locations, then retry.',
+                            ),
+                          ),
+                        )
                         .finally(() => setBusy(false));
                     }}
                   >
@@ -212,11 +240,7 @@ export default function GardenActions() {
           )}
         </div>
       )}
-      {error && (
-        <p role="alert" className="mt-2 text-sm text-error">
-          {error}
-        </p>
-      )}
+      <ActionError failure={error} />
     </section>
   );
 }

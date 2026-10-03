@@ -941,6 +941,49 @@ async function setupIpc() {
     });
   });
 
+  const { ProjectRecovery } = require('./project-recovery');
+  const recovery = new ProjectRecovery((folder: string) => projects.resolveKnownFolder(folder));
+  fromGarden('project:recovery-overview', () => recovery.overview(projects.registeredFolders()));
+  fromGarden('project:reveal-recovery', (_e: any, folder: string, kind: string, id: string) =>
+    shell.showItemInFolder(recovery.reveal(folder, kind, id)),
+  );
+  let recoveryBusy = false;
+  fromGarden(
+    'project:trash-recovery',
+    async (_e: any, selection: import('./bridge').RecoveryOperation) => {
+      if (recoveryBusy) throw new Error('Recovery maintenance is already in progress.');
+      recoveryBusy = true;
+      try {
+        const current = recovery
+          .overview([selection.folder])
+          .operations.find(
+            (item: import('./bridge').RecoveryOperation) =>
+              item.kind === selection.kind && item.id === selection.id,
+          );
+        if (!current || current.reason || current.token !== selection.token)
+          throw new Error(
+            'Recovery files changed or are unfinished. Refresh the review before trying again.',
+          );
+        const result = await dialog.showMessageBox({
+          type: 'warning',
+          title: 'Move retained files to Trash?',
+          message: current.originalPath,
+          detail:
+            'Close external editors and copy any recovery files you need elsewhere first. An already-open editor can still change these files. This moves only the retained safety files for this completed operation to the system Trash. Current Artifacts, Growth and the completion receipt stay in place. Disk space is not freed until you empty the Trash. If this stops partway, refresh to review what remains.',
+          buttons: ['Cancel', 'Editors are closed — move files to Trash'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+        });
+        if (result.response !== 1) return false;
+        await recovery.trash(current, (file: string) => shell.trashItem(file));
+        return true;
+      } finally {
+        recoveryBusy = false;
+      }
+    },
+  );
+
   fromGarden('project:create-folder', (_e: any, slug: string) => {
     const folder = projects.createFolder(slug);
     watcher.watch(folder);

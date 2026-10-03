@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from '../e2e/launch';
 import { enterGarden, createCrux, switchCrux } from '../e2e/multi-crux-helpers';
-import { showPane, hidePane, openPanel } from '../e2e/panel-helpers';
+import { showPane, hidePane, openPanel, chooseSettingsSection } from '../e2e/panel-helpers';
 
 // Ordinary production behavior: no CSS/audio/cleanup overrides. Forced GC at
 // checkpoints separates retained JS objects from transient allocation; RSS is
@@ -51,7 +51,8 @@ test('sustained sound and workspace switching release closed workspaces', async 
   try {
     await enterGarden(page);
     const settings = await showPane(page, 'Settings');
-    await settings.locator('h2', { hasText: /^AI$/ }).click();
+    await chooseSettingsSection(page, 'AI and agents');
+    await settings.getByRole('button', { name: 'AI', exact: true }).click();
     const aiSwitch = settings.getByRole('switch', { name: 'Enable AI Tools' });
     await expect(aiSwitch).toHaveAttribute('aria-checked', 'false');
     await aiSwitch.click();

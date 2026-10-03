@@ -1,6 +1,6 @@
 import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium, type Page } from '@playwright/test';
-import { existsSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -246,6 +246,12 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('Compost').first()).toBeVisible();
       await page.screenshot({ path: join(evidence, 'garden-reopened.png') });
+      // Local dependencies must not travel in the private backup. Preview may
+      // reinstall them immediately on import, so assert a local-only sentinel
+      // and the authoritative manifest instead of racing directory creation.
+      const dependencySentinel = join(folder, 'node_modules/crux-local-only.txt');
+      mkdirSync(join(folder, 'node_modules'), { recursive: true });
+      writeFileSync(dependencySentinel, 'This local dependency must not travel.');
       await exportNativeCrux(page, archive, second.app, async () => {
         await togglePanel(page, 'Toggle export');
         await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
@@ -271,7 +277,13 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       await expect.poll(() => existsSync(note('moss')), { timeout: 60000 }).toBe(true);
       expect(existsSync(note('compost'))).toBe(true);
       expect(existsSync(join(folder, 'src/lib/wiki/links.mjs'))).toBe(true);
-      expect(existsSync(join(folder, 'node_modules'))).toBe(false);
+      expect(existsSync(join(folder, 'node_modules/crux-local-only.txt'))).toBe(false);
+      const importedPaths = await page.evaluate(async (cruxId) => {
+        const content = window.electronAPI!.sqlite.fileContent!;
+        const head = await content.head(cruxId);
+        return (await content.list({ cruxId, expected: head! })).entries.map((file) => file.path);
+      }, importedId);
+      expect(importedPaths.some((path) => path.split('/').includes('node_modules'))).toBe(false);
       await openBuilder(page);
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await page.screenshot({ path: join(evidence, 'garden-imported.png') });

@@ -1,3 +1,5 @@
+import ActionError from '@/components/ui/ActionError';
+import { actionFailure, type ActionFailure } from '@/lib/action-failure';
 import { useState } from 'react';
 import { useCruxStore, useCruxStoreApi, selectHasUnpublishedChanges } from '@/stores/cruxStore';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
@@ -20,7 +22,7 @@ export default function WorkspaceStatus() {
     (s) => s.entries.find((entry) => entry.id === crux?.id)?.dirty ?? false,
   );
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ActionFailure | null>(null);
   const backup = backupOf(crux);
   const publication = phase
     ? 'Publishing…'
@@ -62,10 +64,17 @@ export default function WorkspaceStatus() {
             disabled={busy || historical || missing}
             onClick={() => {
               setBusy(true);
-              setError('');
+              setError(null);
               void documentsFor(data, ui)
                 .saveAll()
-                .catch((e) => setError(String(e)))
+                .catch((e) =>
+                  setError(
+                    actionFailure(
+                      e,
+                      'Could not save all editor changes. Keep this Crux open, check the details, then retry Save editor changes.',
+                    ),
+                  ),
+                )
                 .finally(() => setBusy(false));
             }}
           >
@@ -78,11 +87,7 @@ export default function WorkspaceStatus() {
             Backups
           </Button>
         </div>
-        {error && (
-          <p role="alert" className="text-error">
-            {error}
-          </p>
-        )}
+        <ActionError failure={error} />
       </div>
     </details>
   );

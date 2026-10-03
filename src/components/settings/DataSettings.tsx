@@ -1,3 +1,6 @@
+import RecoverySettings from './RecoverySettings';
+import ActionError from '@/components/ui/ActionError';
+import { actionFailure, type ActionFailure } from '@/lib/action-failure';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import PrivateBackupDescription from '@/components/garden/PrivateBackupDescription';
 import SettingsSection from './SettingsSection';
@@ -24,7 +27,7 @@ export default function DataSettings() {
   const [wiping, setWiping] = useState(false);
   const [wipeConfirm, setWipeConfirm] = useState('');
   const [status, setStatus] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ActionFailure | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const desktop = can(Capability.ProjectFolder);
   const [gardenRoot, setGardenRoot] = useState<string | null>(null);
@@ -40,7 +43,7 @@ export default function DataSettings() {
 
   const handleExport = useCallback(async () => {
     setExporting(true);
-    setError('');
+    setError(null);
     try {
       const result = await exportGarden({
         onProgress: setStatus,
@@ -53,7 +56,12 @@ export default function DataSettings() {
       return true;
     } catch (err) {
       console.error('Garden export failed:', err);
-      setError(err instanceof Error ? err.message : 'Export failed');
+      setError(
+        actionFailure(
+          err,
+          'Could not export the Garden. Check the details, then retry Export garden.',
+        ),
+      );
       setStatus('');
       return false;
     } finally {
@@ -66,7 +74,7 @@ export default function DataSettings() {
     if (!file) return;
 
     setImporting(true);
-    setError('');
+    setError(null);
     try {
       const imported = await confirmAndImportGarden({
         data: file,
@@ -81,7 +89,12 @@ export default function DataSettings() {
       }
     } catch (err) {
       console.error('Garden import failed:', err);
-      setError(err instanceof Error ? err.message : 'Import failed — the file may be corrupted');
+      setError(
+        actionFailure(
+          err,
+          'Import could not finish. Check what was added before retrying; keep your original backup file.',
+        ),
+      );
       setStatus('');
     } finally {
       setImporting(false);
@@ -105,7 +118,7 @@ export default function DataSettings() {
       if (choice === 'export' && !(await handleExport())) return;
     }
     setWiping(true);
-    setError('');
+    setError(null);
     try {
       await wipeGarden(setStatus);
       setWipeConfirm('');
@@ -117,9 +130,12 @@ export default function DataSettings() {
       console.error('Garden wipe failed:', err);
       // ADR 0018: open workspaces must be closed first — say so, not just "failed"
       setError(
-        err instanceof Error && /open Crux workspaces/.test(err.message)
-          ? err.message
-          : 'Wipe failed',
+        actionFailure(
+          err,
+          err instanceof Error && /open Crux workspaces/.test(err.message)
+            ? err.message
+            : 'Wipe could not finish. Check the Garden and the details before retrying.',
+        ),
       );
       setStatus('');
     } finally {
@@ -193,6 +209,8 @@ export default function DataSettings() {
 
         <hr className="divider my-6" />
 
+        {desktop && <RecoverySettings />}
+
         <h3 className="font-display text-sm font-medium text-error mb-2">Danger zone</h3>
         <p className="text-xs text-text-muted mb-3">
           Permanently delete all cruxes, files, {aiEnabled ? 'conversations, ' : ''}and settings.
@@ -224,7 +242,7 @@ export default function DataSettings() {
         </div>
 
         {status && <p className="text-xs font-mono text-text-muted mt-2">{status}</p>}
-        {error && <p className="text-xs font-mono text-error mt-2">{error}</p>}
+        <ActionError failure={error} />
       </div>
     </SettingsSection>
   );

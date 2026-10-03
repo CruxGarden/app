@@ -237,6 +237,11 @@ const api: ElectronBridge = {
   },
 
   project: {
+    recoveryOverview: () => ipcRenderer.invoke('project:recovery-overview'),
+    revealRecovery: (folder: string, kind: string, id: string) =>
+      ipcRenderer.invoke('project:reveal-recovery', folder, kind, id),
+    trashRecovery: (selection: import('./bridge').RecoveryOperation) =>
+      ipcRenderer.invoke('project:trash-recovery', selection),
     capture: (folder: string) => ipcRenderer.invoke('project:capture', folder),
     ignoredPaths: (folder: string, paths: string[]) =>
       ipcRenderer.invoke('project:ignored-paths', folder, paths) as Promise<string[]>,

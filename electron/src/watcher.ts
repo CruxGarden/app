@@ -63,7 +63,8 @@ class FolderWatch {
   ) {
     this.loadIgnores();
     this.watcher = chokidar.watch(folder, {
-      ...(nativeMacWatch ? { useFsEvents: true } : {}),
+      // Registered folders are literal paths, never glob expressions (GHSA-vfj7-8cjw-p6xm).
+      ...(nativeMacWatch ? { useFsEvents: true, disableGlobbing: true } : {}),
       ignoreInitial: true,
       ignored: (p: string) => this.isIgnored(p),
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },

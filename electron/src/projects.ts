@@ -119,6 +119,10 @@ function sanitizeFolderName(slug: string): string {
 export class ProjectFolders {
   private folders = new Map<string, string>();
 
+  registeredFolders(): string[] {
+    return [...new Set(this.folders.values())];
+  }
+
   constructor(private config: DesktopConfig) {}
 
   ensureGardenRoot(): string {

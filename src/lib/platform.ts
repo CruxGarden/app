@@ -22,6 +22,8 @@ export type {
   LocalGraphChange,
   DesktopBridge,
   ProjectBridge,
+  RecoveryOperation,
+  RecoveryOverview,
   PreviewBridge,
   ToolchainBridge,
   DevServerBridge,

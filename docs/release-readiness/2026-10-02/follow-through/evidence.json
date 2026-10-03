@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-02",
+  "status": "local app and desktop accepted; performance/package/native checks pending",
+  "appGate": {
+    "log": "/tmp/crux-followthrough-app-release.log",
+    "tests": 1814,
+    "files": 288,
+    "skips": 18,
+    "build": true
+  },
+  "electronGate": {
+    "log": "/tmp/crux-followthrough-electron-final.log",
+    "tests": 87,
+    "skips": 1
+  },
+  "desktop": {
+    "initialLog": "/tmp/crux-followthrough-desktop-final.log",
+    "initialPass": 7,
+    "followupLog": "/tmp/crux-followthrough-desktop-replay.log",
+    "followupPass": 3,
+    "note": "All10 named desktop journeys accepted in two batches. Restart fixture corrected; dependency exclusion asserts local sentinel and manifest because Preview reinstalls dependencies."
+  },
+  "game": {
+    "stories": 126,
+    "criteria": 1246,
+    "evidence": "docs/manual-testing/story-guide-evidence/verification.json",
+    "fixes": [
+      "concurrent-tab compare-before-save preserves both runs",
+      "valid >5MB evidence files can be reimported",
+      "record/input size bounds aligned without silent truncation",
+      "new recovery criteria; old IDs preserved"
+    ]
+  },
+  "cli": {
+    "commit": "559d83b",
+    "verify": 5,
+    "audit": 0,
+    "log": "/tmp/crux-followthrough-cli-verify.log"
+  },
+  "remaining": [
+    "startup/project-scale/workspace-memory",
+    "package smoke and manual launch shortcut",
+    "app commit/push and exact-source native CI"
+  ],
+  "noLiveProviderCalls": true,
+  "preserved": [
+    "real Garden",
+    "existing manual Garden",
+    "unrelated working changes"
+  ]
+}
