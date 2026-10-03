@@ -45,16 +45,18 @@ test('Settings reviews real recovery files, refuses unfinished cleanup and prese
     const id = await createCrux(page, 'Recovery review');
     await writeFirstFile(page, 'target.txt', 'Current content');
     const folder = (await storedCrux(page, id)).projectFolder;
-    const overview = () => page.evaluate(() => window.electronAPI!.project.recoveryOverview!());
     await expect
-      .poll(
-        async () =>
-          (await overview()).operations.filter((r) => r.folder === folder && r.hasPayload).length,
-      )
-      .toBeGreaterThan(0);
-    const operation = (await overview()).operations.find(
-      (r) => r.folder === folder && r.hasPayload,
-    )!;
+      .poll(() => readFileSync(join(folder, 'target.txt'), 'utf8'))
+      .toBe('Current content');
+    const overview = () => page.evaluate(() => window.electronAPI!.project.recoveryOverview!());
+    // The replacement retains two names for the original inode. Selecting the
+    // first UUID sometimes picked the simpler empty-file creation instead.
+    const replacements = async () =>
+      (await overview()).operations.filter(
+        (r) => r.folder === folder && r.hasPayload && !r.reason && r.fileCount >= 5,
+      );
+    await expect.poll(async () => (await replacements()).length).toBeGreaterThan(0);
+    const operation = (await replacements())[0]!;
     const stage = join(folder, '.crux-recovery', operation.kind, operation.id);
     const receipt = readFileSync(join(stage, 'completed.json'), 'utf8');
     expect(operation.reason, receipt).toBeNull();
