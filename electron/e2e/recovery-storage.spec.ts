@@ -1,11 +1,39 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import {
+  readFileSync,
+  readdirSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  lstatSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { writeFirstFile } from './journeys/journey-helpers';
 import { showPane, chooseSettingsSection } from './panel-helpers';
+
+/** Small, content-free failure evidence for platform-specific OS Trash behavior. */
+function retainedStats(stage: string) {
+  const entries: Record<string, unknown> = {};
+  const walk = (relative: string, depth: number) => {
+    const file = join(stage, relative);
+    const stat = lstatSync(file);
+    entries[relative] = {
+      ino: stat.ino,
+      mode: stat.mode,
+      size: stat.size,
+      mtime: stat.mtimeMs,
+      ctime: stat.ctimeMs,
+      links: stat.nlink,
+    };
+    if (depth < 3 && stat.isDirectory() && !stat.isSymbolicLink())
+      for (const name of readdirSync(file).sort()) walk(join(relative, name), depth + 1);
+  };
+  walk('', 0);
+  return entries;
+}
 
 test('Settings reviews real recovery files, refuses unfinished cleanup and preserves live content through Trash and restart', async () => {
   test.setTimeout(120_000);
@@ -65,12 +93,20 @@ test('Settings reviews real recovery files, refuses unfinished cleanup and prese
         checkboxChecked: false,
       })) as typeof dialog.showMessageBox;
     });
+    const beforeCleanup = retainedStats(stage);
     await completed.getByRole('button', { name: 'Move retained files to Trash' }).click();
-    // Keep native refusal details in CI annotations; a missing success locator
-    // alone hides the distinction between an OS failure and unfinished UI work.
-    await expect(review.getByRole('status').or(review.getByRole('alert'))).toContainText(
-      'Retained files moved to Trash',
-    );
+    try {
+      // Keep native refusal details in CI annotations; a missing success locator
+      // alone hides the distinction between an OS failure and unfinished UI work.
+      await expect(review.getByRole('status').or(review.getByRole('alert'))).toContainText(
+        'Retained files moved to Trash',
+      );
+    } catch (error) {
+      throw new Error(
+        `${String(error)}\nRecovery inventory: ${JSON.stringify({ before: beforeCleanup, after: retainedStats(stage) })}`,
+        { cause: error },
+      );
+    }
     expect(readdirSync(stage).sort()).toEqual(['README.txt', 'completed.json']);
     expect(readFileSync(join(stage, 'completed.json'), 'utf8')).toBe(receipt);
     expect(readFileSync(join(folder, 'target.txt'), 'utf8')).toBe('Current content');
