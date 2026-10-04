@@ -361,6 +361,7 @@ export async function emitLocal(
   data: unknown,
   visitorId: string | null = null,
   depth = 0,
+  broadcast = true,
 ): Promise<LocalEmitResult> {
   const out: LocalEmitResult = { event: name, handlers: 0, results: {}, refused: null };
   if (depth > MAX_DEPTH) return out;
@@ -385,7 +386,7 @@ export async function emitLocal(
       };
   }
   // Pages listening with crux.on hear it (the proxy forwards to frames).
-  if (typeof window !== 'undefined')
+  if (broadcast && typeof window !== 'undefined')
     window.dispatchEvent(new CustomEvent('crux:functions:event', { detail: { cruxId, event } }));
   return out;
 }

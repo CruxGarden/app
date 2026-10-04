@@ -42,8 +42,20 @@ async function storeWriteHook(
   if (!functionFiles(artifacts).some((f) => f.kind === 'event')) return null;
   const { emitLocal } = await import('@/services/functions-runner');
   const { store } = getServices();
-  const before = await store.get(cruxId, key, visitorId).catch(() => null);
-  const r = await emitLocal(cruxId, 'store:write', { key, value, mode, before }, visitorId);
+  // Capture value and privacy mode from the same read; a requested public mode
+  // must not expose an existing protected value through the validation event.
+  const entries = (await store.list(cruxId)).filter((entry) => entry.key === key);
+  const prior =
+    (visitorId ? entries.find((entry) => entry.visitorId === visitorId) : undefined) ??
+    entries.find((entry) => entry.visitorId === null);
+  const r = await emitLocal(
+    cruxId,
+    'store:write',
+    { key, value, mode, before: prior?.value ?? null },
+    visitorId,
+    0,
+    mode === 'public' && prior?.mode !== 'protected',
+  );
   return r.refused;
 }
 

@@ -1,3 +1,4 @@
+import { get as httpGet, type ClientRequest } from 'node:http';
 import { test, expect, chromium, type BrowserContext, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
@@ -9,6 +10,7 @@ test('published Private Requests signs in two visitors, isolates records, refuse
   test.setTimeout(240000);
   const desktop = await launchApp({ ai: false });
   let api: PrivateApi | undefined;
+  let stream: ClientRequest | undefined;
   const browser = await chromium.launch();
   try {
     const { page } = desktop;
@@ -24,6 +26,16 @@ test('published Private Requests signs in two visitors, isolates records, refuse
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     api = await startPrivateApi((await storedCrux(page, id)).projectFolder);
     const server = api;
+    let publicEvents = '';
+    await new Promise<void>((resolve, reject) => {
+      stream = httpGet(server.url + '/events/' + server.crux, (response) => {
+        response.on('data', (chunk) => {
+          publicEvents += chunk.toString();
+        });
+        resolve();
+      });
+      stream.on('error', reject);
+    });
     let loseNextSaveResponse = false;
     let holdNextSaveResponse = false;
     let releaseSave: (() => void) | undefined;
@@ -120,6 +132,23 @@ test('published Private Requests signs in two visitors, isolates records, refuse
         ),
       'requests/' + aliceId,
     );
+    // A conflicting public-mode attempt must not leak the previous protected value either.
+    const refusedMode = await bob.evaluate(async (key) => {
+      try {
+        await (window as any).crux.store.set(key, 'promotion attempt', { mode: 'public' });
+        return false;
+      } catch {
+        return true;
+      }
+    }, 'requests/' + aliceId);
+    expect(refusedMode).toBe(true);
+    await bob.evaluate(async () =>
+      (window as any).crux.store.set('public-note', 'Safe public note', { mode: 'public' }),
+    );
+    await expect.poll(() => publicEvents).toContain('Safe public note');
+    expect(publicEvents).not.toContain('not Alice');
+    expect(publicEvents).not.toContain('Alice private details');
+    expect(publicEvents).not.toContain('Bob private details');
     const ownerCall = async (body: unknown) => {
       const r = await fetch(server.url + '/fn/' + server.crux + '/requests', {
         method: 'POST',
@@ -196,6 +225,7 @@ test('published Private Requests signs in two visitors, isolates records, refuse
     await expect(bob.locator('body')).not.toContainText('Bob private details');
     expect(await invoke(bob, { action: 'list' })).toMatchObject({ ok: false });
   } finally {
+    stream?.destroy();
     const cleanup = await Promise.allSettled([browser.close(), api?.stop(), desktop.app.close()]);
     const failed = cleanup.find((r) => r.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
