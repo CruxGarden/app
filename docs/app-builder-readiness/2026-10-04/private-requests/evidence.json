@@ -1,19 +1,22 @@
 {
-  "status": "Accepted locally; fresh package and exact-source CI pending",
+  "status": "Accepted locally and in fresh Mac package; exact-source remote CI pending",
   "scope": "Narrow v1 private Functions + Store example and failure recovery; general AB03\u2013AB12 remain post-v1",
-  "api": "9bdb0f2fcf1bc20035b528ce2c770eb491351048",
+  "api": "f01eac3eb46b62a29f078945085067dac3e2bae2",
   "red": {
     "storeIdentity": "/tmp/crux-private-identity-red.log",
     "localOwnerDelete": "/tmp/crux-private-delete-red.log",
     "publishedValidationMessage": "/tmp/crux-private-hosted-second.log",
-    "pendingSignout": "/tmp/crux-private-signout-red.log"
+    "pendingSignout": "/tmp/crux-private-signout-red.log",
+    "repeatedParentHandshake": "/tmp/crux-private-handshake-red.log"
   },
   "tests": {
     "app": "1830 passed / 292 files +18 skips; full verify/build; /tmp/crux-private-app-verify.log",
     "electron": "99 passed /1 platform skip; /tmp/crux-private-electron-final.log",
-    "api": "1189 unit +5 skips, 411 integration, build/local runtime; /tmp/crux-private-api-final.log",
+    "api": "1190 unit +5 skips, 411 integration, build/local runtime; /tmp/crux-private-api-handshake-final.log",
     "actualDesktop": "8 passed in1.8m; /tmp/crux-private-final-desktop.log",
-    "manualGame": "129 stories /1275 criteria /72 choices /zero unmapped; /tmp/crux-private-guide.log"
+    "manualGame": "129 stories /1275 criteria /72 choices /zero unmapped; /tmp/crux-private-guide.log",
+    "packagedMac": "5 passed47.3s; startup/SQLite/CLI +Private Requests +Order Desk3; /tmp/crux-private-packaged.log",
+    "latestSdkBrowser": "1 passed14.9s; /tmp/crux-private-handshake-browser.log"
   },
   "acceptance": [
     "Create actual template in Electron; native protected Store, duplicate submit, restart, cancel/confirm delete of another visitor row",
@@ -21,7 +24,8 @@
     "Distinct Alice/Bob scoped sign-ins; private records, forged JSON/visitor identity refused; creator email on visitor page does not become platform owner",
     "Real server rejection preserves draft and helpful message; content-free error diagnostics",
     "Save commits but acknowledgement is lost: text retained and retry converges to one record",
-    "Sign-out during pending save immediately removes private fields; old acknowledgement cannot re-expose data"
+    "Sign-out during pending save immediately removes private fields; old acknowledgement cannot re-expose data",
+    "Repeated same-visitor Garden handshake updates metadata without authchange; actual different visitor/sign-out still notify. Published SDK regression red/green plus actual browser replay."
   ],
   "boundaries": [
     "One customer-editable request; no immutable workflow, transaction or exactly-once guarantee",
@@ -35,5 +39,29 @@
     "windows": "29 passed, native96/four skips",
     "linux": "28 passed, Order Desk refusal pointer step did not submit; native99/one skip",
     "followThrough": "Refusal/retry now uses real keyboard submission; original pointer order journey retained; all preservation/refusal assertions unchanged. New native run still required."
-  }
+  },
+  "app": "cdc47f17375c4fb449febf8a34fa03edf5f76bdc",
+  "manualCandidate": {
+    "path": "electron/release/manual-testing-private-oct4/mac-arm64/Crux Garden.app",
+    "launcher": "electron/release/manual-testing-current/Launch Manual Testing.command",
+    "asarSha256": "5554ae6d502c314bdc1c9b1f1fe05bbb1f6c1b6f25baad7ae1f2397ce4096610",
+    "rendererTreeSha256": "21afbd8c10a1118f2317fa044276eae689828371066d0efd4a060416d7c9cf9b",
+    "rendererFiles": 1169,
+    "rendererMatchesSource": true,
+    "signature": "ad-hoc; codesign --verify --deep --strict passed; not notarized",
+    "manualProfileEntries": 0,
+    "manualProfileOpened": false
+  },
+  "ci": {
+    "native": 37215995764,
+    "fullApiBrowser": "pending final API pin",
+    "status": "pending",
+    "fullApiBrowserInitial": {
+      "run": 37215995841,
+      "status": "success",
+      "api": "9bdb0f2"
+    }
+  },
+  "apiImplementation": "9bdb0f2fcf1bc20035b528ce2c770eb491351048",
+  "visual": "customer.png and owner.png reviewed: clear privacy/runtime identity, readable fields, owner confirmation and real customer rows."
 }
