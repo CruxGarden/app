@@ -1,0 +1,39 @@
+{
+  "status": "Accepted locally; fresh package and exact-source CI pending",
+  "scope": "Narrow v1 private Functions + Store example and failure recovery; general AB03\u2013AB12 remain post-v1",
+  "api": "9bdb0f2fcf1bc20035b528ce2c770eb491351048",
+  "red": {
+    "storeIdentity": "/tmp/crux-private-identity-red.log",
+    "localOwnerDelete": "/tmp/crux-private-delete-red.log",
+    "publishedValidationMessage": "/tmp/crux-private-hosted-second.log",
+    "pendingSignout": "/tmp/crux-private-signout-red.log"
+  },
+  "tests": {
+    "app": "1830 passed / 292 files +18 skips; full verify/build; /tmp/crux-private-app-verify.log",
+    "electron": "99 passed /1 platform skip; /tmp/crux-private-electron-final.log",
+    "api": "1189 unit +5 skips, 411 integration, build/local runtime; /tmp/crux-private-api-final.log",
+    "actualDesktop": "8 passed in1.8m; /tmp/crux-private-final-desktop.log",
+    "manualGame": "129 stories /1275 criteria /72 choices /zero unmapped; /tmp/crux-private-guide.log"
+  },
+  "acceptance": [
+    "Create actual template in Electron; native protected Store, duplicate submit, restart, cancel/confirm delete of another visitor row",
+    "Actual template bytes through publish injection; real Nest HTTP/auth, PostgreSQL schema, Function isolate and Store; fixture email/Redis/object storage and DNS/TLS transport",
+    "Distinct Alice/Bob scoped sign-ins; private records, forged JSON/visitor identity refused; creator email on visitor page does not become platform owner",
+    "Real server rejection preserves draft and helpful message; content-free error diagnostics",
+    "Save commits but acknowledgement is lost: text retained and retry converges to one record",
+    "Sign-out during pending save immediately removes private fields; old acknowledgement cannot re-expose data"
+  ],
+  "boundaries": [
+    "One customer-editable request; no immutable workflow, transaction or exactly-once guarantee",
+    "Owner online administration uses trusted Share Functions controls; no broad owner session in published page",
+    "Deploy companion API and republish to receive the updated injected SDK before hosted manual acceptance",
+    "Local test Garden remains static-only; no full backend staging",
+    "No live AI, production publishing/deploy or merge; manual profile remains empty"
+  ],
+  "priorCI": {
+    "run": "37212906802",
+    "windows": "29 passed, native96/four skips",
+    "linux": "28 passed, Order Desk refusal pointer step did not submit; native99/one skip",
+    "followThrough": "Refusal/retry now uses real keyboard submission; original pointer order journey retained; all preservation/refusal assertions unchanged. New native run still required."
+  }
+}

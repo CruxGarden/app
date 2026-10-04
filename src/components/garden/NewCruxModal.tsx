@@ -231,6 +231,17 @@ const OWN_TEMPLATES: Template[] = [
     defaultTitle: 'My Order Desk',
   },
   {
+    order: 48,
+    id: 'private-requests',
+    label: 'Private Requests',
+    description:
+      'Functions + Store — signed-in customers keep a private request; the owner reads and handles the inbox',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Private Requests',
+  },
+  {
     order: 49,
     id: 'onebigsky',
     label: 'One Big Sky',

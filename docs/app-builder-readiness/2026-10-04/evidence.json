@@ -1,5 +1,5 @@
 {
-  "status": "accepted locally and in fresh Mac package; remote Windows/Linux acceptance pending",
+  "status": "Accepted locally and in fresh Mac package; Windows accepted, Linux refusal-step follow-through recorded in private-requests/evidence.json",
   "scope": "AB01 public example/current SDK and pending/refused submission; AB02 static environment disclosure",
   "baseline": {
     "app": "877bf388b",
@@ -23,8 +23,10 @@
     "run": "37212906802",
     "url": "https://github.com/CruxGarden/app/actions/runs/37212906802",
     "source": "34e9f1dfd3ef494aa3ed551367e204407608dbeb",
-    "status": "in_progress",
-    "coverage": "Order Desk3 and local Functions1 added to regular gate and both native portable jobs"
+    "status": "completed",
+    "coverage": "Order Desk3 and local Functions1 added to regular gate and both native portable jobs",
+    "conclusion": "failure",
+    "detail": "Windows29 passed; Linux28 passed/one Order Desk pointer refusal-step failure. See private-requests/evidence.json for follow-through."
   },
   "correction": "First app verify failed after Prettier inserted blank lines before Use when in two skill headers. Restored required line2 metadata; focused skills and full gate passed. No test assertions removed.",
   "boundaries": [

@@ -200,10 +200,20 @@ export async function runLocalHandler(
               case 'list':
                 value = (await store.list(cruxId))
                   .filter((e) => e.key.startsWith(String(args[0] ?? '')))
-                  .map((e) => ({ key: e.key, value: e.value, mode: e.mode }));
+                  .map((e) => ({
+                    key: e.key,
+                    value: e.value,
+                    mode: e.mode,
+                    visitorId: e.visitorId,
+                  }));
                 break;
               case 'delete':
-                await store.delete(cruxId, args[0] as string, visitorId);
+                // Trusted Functions delete the entire key, matching the hosted API.
+                // The public Store bridge remains restricted to the caller's slot.
+                for (const entry of await store.list(cruxId)) {
+                  if (entry.key === String(args[0]))
+                    await store.delete(cruxId, entry.key, entry.visitorId);
+                }
                 break;
             }
             worker.postMessage({ op: 'answer', id: m.id, value });

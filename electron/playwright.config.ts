@@ -13,6 +13,7 @@ const gateSpecs = [
   '**/subscriber.spec.ts',
   '**/local-staging.spec.ts',
   '**/order-desk.spec.ts',
+  '**/private-requests.spec.ts',
   '**/functions-local.spec.ts',
   '**/recovery-storage.spec.ts',
   '**/artifact-file-safety.spec.ts',

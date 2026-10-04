@@ -18,7 +18,7 @@ Direct published Store writes require sign-in. Await `crux.whenReady()` first. I
 
 Handle rejected writes visibly, preserve input and offer sign-in or retry as appropriate. Batch writes rather than loops; respect rate/quota refusals. A transport error may follow a successful write: do not blindly replay a non-idempotent operation.
 
-Functions are trusted backend code with broader Store access. A callable Function is not automatically sign-in-only: explicitly validate `ctx.visitor`, input and app-level permissions before reading/writing private data. Do not expose unfiltered `ctx.store.list()` results. A published visitor session deliberately has no platform-owner authority, even for the creator. Atomic increment does not make a sequence of writes transactional.
+Functions are trusted backend code with broader Store access. A callable Function is not automatically sign-in-only: explicitly validate `ctx.visitor`, input and app-level permissions before reading/writing private data. Do not expose unfiltered `ctx.store.list()` results. Trusted Function lists include each persisted row’s `visitorId`; use that metadata (plus mode and canonical key), never identity fields inside customer-editable JSON. `ctx.store.del(key)` deletes all slots for the key. See the Private Requests starter for a protected, customer-editable record and trusted owner inbox; it does not supply immutable approval or payment states. A published visitor session deliberately has no platform-owner authority, even for the creator. Atomic increment does not make a sequence of writes transactional.
 
 ```js
 await crux.whenReady();

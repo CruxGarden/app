@@ -135,17 +135,18 @@ test('Order Desk preserves a refused draft and submits only once while an order 
 
     await form.getByLabel('Your name').fill('Grace');
     await form.getByLabel('Quantity').fill('99');
+    // The main order journey covers pointer activation; exercise keyboard submission here.
     // Skip browser validation to exercise the actual handler's refusal and recovery.
     await form.evaluate((element: HTMLFormElement) => {
       element.noValidate = true;
     });
-    await form.getByRole('button', { name: 'Place order', exact: true }).click();
+    await form.getByRole('button', { name: 'Place order', exact: true }).press('Enter');
     await expect(frame.locator('#placed')).toHaveText('Quantity is 1 to 50.');
     await expect(form.getByLabel('Your name')).toHaveValue('Grace');
     await expect(form.getByLabel('Quantity')).toHaveValue('99');
     await expect(frame.locator('#orders li')).toHaveCount(1);
     await form.getByLabel('Quantity').fill('2');
-    await form.getByRole('button', { name: 'Place order', exact: true }).click();
+    await form.getByRole('button', { name: 'Place order', exact: true }).press('Enter');
     await expect(frame.locator('#placed')).toContainText('Order #0002 placed.');
     await expect(frame.locator('#orders li')).toHaveCount(2);
   } finally {

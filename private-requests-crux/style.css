@@ -1,0 +1,155 @@
+:root {
+  color-scheme: light;
+  --ink: #24342f;
+  --paper: #f5f4ef;
+  --card: #ffffff;
+  --line: #ced6d0;
+  --accent: #25634f;
+  --on-accent: #ffffff;
+  --muted: #53655d;
+  --error: #9b302a;
+  --disabled: #718079;
+  --corner: 16px;
+}
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font:
+    16px/1.55 system-ui,
+    sans-serif;
+}
+header,
+main,
+footer {
+  max-width: 66rem;
+  margin: auto;
+  padding: 1.5rem;
+}
+header {
+  padding-top: 2.5rem;
+}
+h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  margin: 0.5rem 0;
+}
+h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+p {
+  margin: 0.5rem 0 1rem;
+}
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--corner);
+  padding: 1.4rem;
+  min-width: 0;
+}
+form,
+label {
+  display: grid;
+  gap: 0.6rem;
+}
+form {
+  gap: 1rem;
+}
+label {
+  font-weight: 600;
+}
+input,
+textarea,
+button {
+  font: inherit;
+}
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--corner) / 2);
+  background: var(--card);
+  color: var(--ink);
+  padding: 0.7rem;
+}
+textarea {
+  resize: vertical;
+}
+button {
+  border: 1px solid var(--accent);
+  border-radius: calc(var(--corner) / 2);
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+button.secondary {
+  color: var(--accent);
+  background: var(--card);
+}
+button:disabled {
+  color: var(--on-accent);
+  background: var(--disabled);
+  border-color: var(--disabled);
+  cursor: wait;
+}
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.muted,
+footer {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+#status {
+  margin-top: 1rem;
+}
+#status.error {
+  color: var(--error);
+}
+#inbox article {
+  border-top: 1px solid var(--line);
+  margin-top: 1rem;
+  padding-top: 1rem;
+  overflow-wrap: anywhere;
+}
+#inbox h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.request-details {
+  white-space: pre-wrap;
+}
+pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+}
