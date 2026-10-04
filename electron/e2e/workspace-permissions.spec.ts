@@ -121,6 +121,7 @@ test('only live workspace frames can ask for media, and every request needs cons
         const button = document.createElement('button');
         button.textContent = 'Share a screen';
         button.onclick = async () => {
+          document.body.dataset.capture = 'pending';
           try {
             const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             stream.getTracks().forEach((track) => track.stop());
@@ -131,8 +132,28 @@ test('only live workspace frames can ask for media, and every request needs cons
         };
         document.body.append(button);
       });
+      // Each request replaces the iframe beneath the previous pointer position.
+      // Leave that discarded surface before clicking the new real control.
+      await instance.page.mouse.move(0, 0);
       await frame.getByRole('button', { name: 'Share a screen' }).click();
-      await expect(frame.locator('body')).toHaveAttribute('data-capture', error);
+      try {
+        await expect(frame.locator('body')).toHaveAttribute('data-capture', error);
+      } catch (failure) {
+        console.log(
+          'Display consent diagnostic',
+          await instance.app.evaluate(() => {
+            const state = (globalThis as any).permissionProof;
+            return { prompts: state.prompts, displayRequests: state.displayRequests };
+          }),
+          await frame
+            .locator('body')
+            .evaluate(() => ({
+              capture: document.body.dataset.capture,
+              focused: document.hasFocus(),
+            })),
+        );
+        throw failure;
+      }
     };
     // Denied generic media consent never reaches source enumeration.
     await requestDisplay(ownedUrl);
