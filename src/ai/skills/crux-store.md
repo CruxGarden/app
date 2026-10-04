@@ -1,20 +1,26 @@
 # Skill: crux-store
 Use when: a crux needs state — counters, guestbooks, votes, forms.
 
-Published cruxes have a persistent key-value store at `window.crux.store`. It works in both preview (local SQLite) and published (API) mode with no code changes.
+`window.crux.store` is a JSON key/value Store. Workspace preview uses local SQLite; published pages use the hosted API's separate Store. Publishing files does not copy local test records. The Local test Garden is static: it has no Store, Functions or visitor sign-in.
 
-- `await crux.store.get(key)` — read a value (null if not found).
-- `await crux.store.set(key, value)` — write a JSON-serializable value.
-- `await crux.store.increment(key, by?)` — atomic increment (default +1, race-safe). Use it instead of get + set for counters.
-- `await crux.store.delete(key)` — delete a key.
-- `await crux.store.list()` — list all keys (author only).
+- `await crux.store.get(key)` — value or null.
+- `await crux.store.set(key, value, { mode })` — write JSON; mode defaults to `protected`.
+- `await crux.store.increment(key, by?)` — atomic counter; do not implement counters with get + set.
+- `await crux.store.delete(key)` — delete a value.
+- `await crux.store.list()` — authoring only; refused in published visitor sessions.
 
-Every write — set, increment, delete — needs a crux.garden account: there are no anonymous writes, so abuse is one username and can be stopped. Reads are where the two modes differ. A key's mode is chosen by its first write — `crux.store.set(key, value, { mode })`, default `protected` — and fixed from then on (a different mode later is refused); the author can flip a key's mode in the Store pane.
-- **public** — one value per key belonging to the crux: anyone reads it, a signed-in visitor writes it (counters, leaderboards, guestbooks, shared lists, a group's settings). The page maintains the value — read, change, write back; any convention inside it (one entry per name, say) is the page's, not the store's, and a signed-in visitor could write anything. Re-read once right before writing to narrow races; the last writer wins.
-- **protected** — scoped per visitor and private to them (preferences, saves). For a signed-out visitor, protected `get` returns null — always provide fallback defaults.
+A key's first write chooses its mode; subsequent writes cannot change it. The owner can change modes in the Store pane.
 
-Signed out, every write rejects with the API's message ("Writing to the store requires a signed-in account"); catch it and show the sign-in instead. A page opened at its own published URL has no visitor token — the SDK gets one only from a host frame (the crux.garden page or the workshop preview, which proxy the calls with the viewer's credentials). For writes from a standalone page, sign the visitor in on the page (the API's email-code flow) and call `PUT {apiBase}/store/{cruxId}/{key}` with `{ value, mode }` and `Authorization: Bearer <token>` yourself; `window.crux.publish` gives `cruxId` and `apiBase`. Writes are capped per account (60 a minute by default; 429 beyond) — batch, do not loop.
+- **public**: anyone can read; signed-in visitors can write. Never put private names, addresses, credentials or customer notes here. A JSON convention is not an access policy.
+- **protected**: a private value per visitor. Signed-out reads return null. Supply defaults, and test with two distinct visitors.
+
+Direct published Store writes require sign-in. Await `crux.whenReady()` first. In published pages, `crux.auth.profile()` returns the current visitor and `crux.auth.isHosted()` tells whether sign-in is inherited from the Garden parent. In inherited mode, sign in/out in the parent. At a standalone published address, use `crux.auth.requestCode(email)`, then `crux.auth.login(email, code)`; use `crux.auth.logout()` to end that session. Listen for `crux:authchange` and refresh identity/data without discarding unsent input. The SDK owns scoped credentials and refresh; never put ordinary account tokens in a page or call account login endpoints yourself. The workspace preview has local identity, not a standalone hosted login flow.
+
+Handle rejected writes visibly, preserve input and offer sign-in or retry as appropriate. Batch writes rather than loops; respect rate/quota refusals. A transport error may follow a successful write: do not blindly replay a non-idempotent operation.
+
+Functions are trusted backend code with broader Store access. A callable Function is not automatically sign-in-only: explicitly validate `ctx.visitor`, input and app-level permissions before reading/writing private data. Do not expose unfiltered `ctx.store.list()` results. A published visitor session deliberately has no platform-owner authority, even for the creator. Atomic increment does not make a sequence of writes transactional.
 
 ```js
-const prefs = (await crux.store.get("prefs")) ?? DEFAULT_PREFS;
+await crux.whenReady();
+const prefs = (await crux.store.get('prefs')) ?? DEFAULT_PREFS;
 ```

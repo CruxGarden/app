@@ -4,6 +4,7 @@ import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { stageWebsite, openLocalTestGarden, websiteSourceHash } from '@/services/local-staging';
 import { openExternal } from '@/services/desktop';
+import { functionFiles } from '@/services/crux-functions';
 import { buttonClass } from '@/components/ui/button-class';
 import { confirmDialog } from '@/stores/dialogStore';
 import { formatDateTime } from '@/lib/format';
@@ -14,6 +15,7 @@ export default function LocalTestPublication() {
   const ui = useWorkspaceUIStoreApi();
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
+  const hasFunctions = functionFiles(artifacts).length > 0;
   const id = crux?.id;
   const [site, setSite] = useState<StagedSite | null>(null);
   const [busy, setBusy] = useState(false);
@@ -83,7 +85,8 @@ export default function LocalTestPublication() {
       data-testid="local-test-publication"
     >
       <summary className="cursor-pointer text-sm font-medium">
-        Test locally first <span className="text-text-muted">· optional</span>
+        Test locally first{' '}
+        <span className="text-text-muted">· {hasFunctions ? 'static only' : 'optional'}</span>
       </summary>
       <div className="mt-3 space-y-3">
         <p className="text-sm text-text">Local test Garden</p>
@@ -96,6 +99,13 @@ export default function LocalTestPublication() {
           form submissions are not available here. External images and fonts may still use the
           internet.
         </p>
+        {hasFunctions && (
+          <p className="text-xs text-text leading-relaxed">
+            <strong>This Crux uses Functions.</strong> This test copy shows static files only. Use
+            Workshop to test Functions with your local Store. Test published visitor accounts and
+            server data on the online site or in a full API development environment.
+          </p>
+        )}
         {site && (
           <p role="status" className="text-xs text-text-muted">
             Test copy saved {formatDateTime(site.savedAt)}.{' '}
@@ -104,6 +114,9 @@ export default function LocalTestPublication() {
                 ? 'Matches your saved files.'
                 : 'You have changes to test.'
               : 'Publish an update to include later edits.'}
+            {hasFunctions && (
+              <span className="block mt-1">Functions and Store operations were not tested.</span>
+            )}
           </p>
         )}
         {error && (
@@ -132,9 +145,13 @@ export default function LocalTestPublication() {
           >
             {busy
               ? 'Preparing test copy…'
-              : site
-                ? 'Update local test copy'
-                : 'Publish to local test Garden'}
+              : hasFunctions
+                ? site
+                  ? 'Update static-only test copy'
+                  : 'Save static-only test copy'
+                : site
+                  ? 'Update local test copy'
+                  : 'Publish to local test Garden'}
           </button>
           {site && (
             <button

@@ -1,0 +1,31 @@
+{
+  "status": "local source accepted; package acceptance pending",
+  "scope": "AB01 public example/current SDK and pending/refused submission; AB02 static environment disclosure",
+  "baseline": {
+    "app": "877bf388b",
+    "api": "fa632ef"
+  },
+  "red": {
+    "pending_submit": "/tmp/crux-ab01-order-red.log",
+    "static_disclosure": "/tmp/crux-ab02-staging-red.log"
+  },
+  "tests": {
+    "pending_submit_green": "1 passed8.2s; /tmp/crux-ab01-order-green.log",
+    "app_verify": "1,830 passed/292 files+18 existing skips; typecheck/lint/runtime/tool checks and production build; /tmp/crux-ab01-app-accepted.log",
+    "electron_verify": "99 passed/one platform skip11.5s; /tmp/crux-ab01-electron-final.log",
+    "actual_desktop": "6 passed1.5m; real local Functions/Store hooks, existing static staging2 and Order Desk3; /tmp/crux-ab01-desktop.log",
+    "skills": "12 passed; /tmp/crux-ab01-skills.log",
+    "manual_game": "128 stories/1,269 criteria, all346 baseline checks and71 choices mapped; offline acceptance passed /tmp/crux-ab01-guide.log"
+  },
+  "visual": "backend-environment.png reviewed: public demo notice, Function-specific static warning, save status and actions are readable in actual1600x1000 desktop window",
+  "ci": "Order Desk and local Functions specs added to regular desktop gate and Windows/Linux portable workflow; new remote run not yet accepted",
+  "correction": "First app verify failed after Prettier inserted blank lines before Use when in two skill headers. Restored required line2 metadata; focused skills and full gate passed. No test assertions removed.",
+  "boundaries": [
+    "No server idempotency/multi-key transaction added",
+    "No private customer-record starter or new hosted two-visitor acceptance yet",
+    "No full backend local staging",
+    "No new dependency; library shortlist in root ROADMAP",
+    "No API/runtime changes, live AI, production publishing/deployment or merge",
+    "Manual profile remains empty and unopened"
+  ]
+}

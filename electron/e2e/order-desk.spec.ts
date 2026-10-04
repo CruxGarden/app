@@ -107,3 +107,87 @@ test('Order Desk: orders are numbered, moved by the owner, summarised, and never
     await app.close();
   }
 });
+
+test('Order Desk preserves a refused draft and submits only once while an order is pending', async () => {
+  const { app, page } = await launchApp({ ai: false });
+  try {
+    await enterGarden(page);
+    await page.getByRole('button', { name: 'Add Crux' }).click();
+    await page.getByRole('button', { name: /^Order Desk/ }).click();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    const frame = page.frameLocator('iframe[data-crux-id]');
+    const form = frame.locator('#order-form');
+    await expect(frame.locator('#item option')).toHaveCount(4);
+    await form.getByLabel('Your name').fill('Ada');
+    await form.getByLabel('Quantity').fill('3');
+    // Native form submissions can re-enter before the first Function resolves.
+    // Exercise both against the real runner/Store, with no substituted response.
+    const pending = await form.evaluate((element: HTMLFormElement) => {
+      element.requestSubmit();
+      const disabled = element.querySelector<HTMLButtonElement>('button[type=submit]')!.disabled;
+      element.requestSubmit();
+      return disabled;
+    });
+    expect(pending).toBe(true);
+    await expect(frame.locator('#placed')).toContainText('Order #0001 placed.');
+    await expect(frame.locator('#orders li')).toHaveCount(1);
+    await expect(form.getByRole('button', { name: 'Place order', exact: true })).toBeEnabled();
+
+    await form.getByLabel('Your name').fill('Grace');
+    await form.getByLabel('Quantity').fill('99');
+    // Skip browser validation to exercise the actual handler's refusal and recovery.
+    await form.evaluate((element: HTMLFormElement) => {
+      element.noValidate = true;
+    });
+    await form.getByRole('button', { name: 'Place order', exact: true }).click();
+    await expect(frame.locator('#placed')).toHaveText('Quantity is 1 to 50.');
+    await expect(form.getByLabel('Your name')).toHaveValue('Grace');
+    await expect(form.getByLabel('Quantity')).toHaveValue('99');
+    await expect(frame.locator('#orders li')).toHaveCount(1);
+    await form.getByLabel('Quantity').fill('2');
+    await form.getByRole('button', { name: 'Place order', exact: true }).click();
+    await expect(frame.locator('#placed')).toContainText('Order #0002 placed.');
+    await expect(frame.locator('#orders li')).toHaveCount(2);
+  } finally {
+    await app.close();
+  }
+});
+
+test('Order Desk distinguishes a static test copy from its working Functions and Store', async () => {
+  const { app, page } = await launchApp({ ai: false });
+  try {
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await enterGarden(page);
+    await page.getByRole('button', { name: 'Add Crux' }).click();
+    await page.getByRole('button', { name: /^Order Desk/ }).click();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    const frame = page.frameLocator('iframe[data-crux-id]');
+    await expect(
+      frame.getByText('Public demo: use made-up names and notes.', { exact: false }),
+    ).toBeVisible();
+    await togglePanel(page, 'Toggle share');
+    const local = page.getByTestId('local-test-publication');
+    await local.getByText('Test locally first', { exact: false }).click();
+    await expect(local.getByText('This Crux uses Functions.', { exact: false })).toBeVisible();
+    await local.getByRole('button', { name: 'Save static-only test copy', exact: true }).click();
+    await expect(
+      local.getByText('Functions and Store operations were not tested.', { exact: false }),
+    ).toBeVisible();
+    const sites = await page.evaluate(() => window.electronAPI!.staging!.list());
+    expect(sites).toHaveLength(1);
+    expect(await (await fetch(sites[0].url)).text()).toContain('id="order-form"');
+    expect((await fetch(new URL('functions/order.js', sites[0].url))).status).toBe(404);
+    await local.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: test.info().outputPath('backend-environment.png') });
+    await page.getByText('Optional enhancements', { exact: true }).click();
+    const functions = page.getByTestId('functions-section');
+    await expect(functions.getByTestId('functions-list').locator('li')).toHaveCount(7);
+    await functions
+      .getByTestId('function-menu')
+      .getByRole('button', { name: 'Run', exact: true })
+      .click();
+    await expect(functions.getByTestId('function-result-menu')).toContainText('Bloom & Ink');
+  } finally {
+    await app.close();
+  }
+});

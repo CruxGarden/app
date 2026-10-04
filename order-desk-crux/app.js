@@ -14,6 +14,7 @@
   var summary = document.getElementById('summary');
   var itemSelect = document.getElementById('item');
   var owner = false;
+  var placing = false;
   var STEPS = ['new', 'printing', 'ready', 'done'];
 
   function esc(s) {
@@ -35,12 +36,26 @@
       li.dataset.id = o.id;
       var next = STEPS[STEPS.indexOf(o.status) + 1];
       li.innerHTML =
-        '<span class="id">#' + esc(o.id) + '</span>' +
-        '<span><strong>' + esc(o.qty) + ' × ' + esc(o.item) + '</strong>' +
+        '<span class="id">#' +
+        esc(o.id) +
+        '</span>' +
+        '<span><strong>' +
+        esc(o.qty) +
+        ' × ' +
+        esc(o.item) +
+        '</strong>' +
         (o.note ? ' <span class="muted">— ' + esc(o.note) + '</span>' : '') +
-        '<br><span class="who">for ' + esc(o.name) + '</span></span>' +
-        '<span class="actions"><span class="status ' + esc(o.status) + '">' + esc(o.status) + '</span>' +
-        (owner && next ? '<button class="small" data-next="' + next + '">Mark ' + next + '</button>' : '') +
+        '<br><span class="who">for ' +
+        esc(o.name) +
+        '</span></span>' +
+        '<span class="actions"><span class="status ' +
+        esc(o.status) +
+        '">' +
+        esc(o.status) +
+        '</span>' +
+        (owner && next
+          ? '<button class="small" data-next="' + next + '">Mark ' + next + '</button>'
+          : '') +
         '</span>';
       list.appendChild(li);
     });
@@ -67,27 +82,54 @@
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (placing) return;
     var data = Object.fromEntries(new FormData(form).entries());
     data.qty = Number(data.qty);
+    placing = true;
+    var controls = Array.from(form.querySelectorAll('input, select, button'));
+    controls.forEach(function (control) {
+      control.disabled = true;
+    });
+    form.setAttribute('aria-busy', 'true');
     say('Placing…');
-    crux.fn('order', data).then(
-      function (o) {
-        say('Order #' + o.id + ' placed. ' + o.qty + ' × ' + o.item + ' for ' + o.name + '.');
-        form.reset();
-        return refresh();
-      },
-      function (err) { say(err.message, true); }
-    );
+    crux
+      .fn('order', data)
+      .then(
+        function (o) {
+          say('Order #' + o.id + ' placed. ' + o.qty + ' × ' + o.item + ' for ' + o.name + '.');
+          form.reset();
+          return refresh().catch(function () {
+            say('Order #' + o.id + ' was saved. The queue could not refresh; reload to see it.');
+          });
+        },
+        function (err) {
+          say(err.message, true);
+        },
+      )
+      .finally(function () {
+        placing = false;
+        controls.forEach(function (control) {
+          control.disabled = false;
+        });
+        form.removeAttribute('aria-busy');
+      });
   });
 
   crux.fn('menu').then(function (menu) {
     document.getElementById('shop-name').textContent = menu.shop;
     document.getElementById('tagline').textContent = menu.tagline;
     itemSelect.innerHTML = menu.items
-      .map(function (i) { return '<option value="' + esc(i.name) + '">' + esc(i.name) + ' — ' + esc(i.price) + '</option>'; })
+      .map(function (i) {
+        return (
+          '<option value="' + esc(i.name) + '">' + esc(i.name) + ' — ' + esc(i.price) + '</option>'
+        );
+      })
       .join('');
   });
-  crux.fn('whoami').then(function (me) { owner = !!me.owner; return refresh(); });
+  crux.fn('whoami').then(function (me) {
+    owner = !!me.owner;
+    return refresh();
+  });
   crux.on('*', function (data, ev) {
     if (ev.name.indexOf('order:') === 0) refresh();
   });

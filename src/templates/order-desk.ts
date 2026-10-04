@@ -29,6 +29,6 @@ const template: TemplateDefinition = {
   layout: LAYOUT_WORKSHOP,
   meta: { settings: { entryFile: 'index.html' } },
   greeting:
-    "Your Order Desk is open. The page takes orders; the crux's own functions number them, keep the queue in the Store and refuse anyone but you changing an order's status — a backend with nothing to host. Place an order in the preview, mark it ready, and watch the queue follow. The Share pane's Functions section runs each handler by hand. Ask me to change the menu, add a field to the form, or hook something to order:placed.",
+    'Your Order Desk demonstrates Functions + Store. Use made-up names and notes: this is a public demo queue, not a private customer system. Place an order in Workshop, move it along as the local owner, and inspect its records in Store. Share → Optional enhancements → Functions runs handlers by hand. A static Local test Garden copy cannot run this backend. Published visitor sessions do not receive owner controls; see README.md before adapting it for customers.',
 };
 export default template;

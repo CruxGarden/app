@@ -224,7 +224,7 @@ const OWN_TEMPLATES: Template[] = [
     id: 'order-desk',
     label: 'Order Desk',
     description:
-      'An order queue with a real backend — the Store keeps the orders, the crux’s functions are the only way they change',
+      'Functions + Store example — a public demo order queue with validation, events and owner actions in the workspace',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
     kind: 'webapp',

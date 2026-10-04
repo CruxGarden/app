@@ -1,27 +1,43 @@
-# Order Desk
+# Order Desk — Functions + Store example
 
-A small shop's order queue with a real backend, and nothing to host: the crux's Store keeps the orders, the crux's functions are the only way they change.
+A public demonstration queue for a fictional print shop. Use made-up names and notes: the queue, notes and summary are readable by everyone after publishing. This is a learning example, not a private customer-order system or a checkout.
+
+## Try it
+
+1. Create **Order Desk** from **Add Crux**, then place two orders in Workshop. No online account or AI key is needed in the workspace.
+2. Move an order through printing, ready and done. The workspace preview runs as the local owner.
+3. Open **Panels → Store** to inspect `orders/0001`, `orders/0002`, `orders:next` and `orders:summary` in the **Local** Store.
+4. Open **Share → Optional enhancements → Functions** to inspect and run the handlers.
 
 ## How it works
 
-| File | Role |
-| --- | --- |
-| `index.html`, `style.css`, `app.js` | the page: an order form and the live queue |
-| `crux.js` | the page's handle on its crux (`crux.fn`, `crux.on`, `crux.store`); works in the workspace preview and at the shared address |
-| `functions/menu.js` | what the desk sells — the one list the page and the validator both read |
-| `functions/order.js` | `crux.fn('order', …)`: validates, takes a number from an atomic counter, writes `orders/<id>`, emits `order:placed` |
-| `functions/orders.js` | `crux.fn('orders')`: the queue plus the rollup |
-| `functions/status.js` | `crux.fn('status', { id, status })`: the owner moves an order along; anyone else is refused (403) |
-| `functions/on-order.js` | runs after every `order:*` event and rebuilds `orders:summary` |
-| `functions/on-store.js` | a Store hook: a page writing `orders/*` or `orders:*` directly is refused before the write lands |
-| `functions/whoami.js` | tells the page whether the visitor is the owner, so it shows the desk's buttons |
+| File                                | Role                                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------- |
+| `index.html`, `style.css`, `app.js` | The form and queue; calls Functions instead of writing order records directly          |
+| `crux.js`                           | Workspace bridge; the published SDK takes over at the online address                   |
+| `functions/menu.js`                 | The displayed menu; keep its item names aligned with the validator in `order.js`       |
+| `functions/order.js`                | Validates, increments an atomic counter, writes `orders/<id>` and emits `order:placed` |
+| `functions/orders.js`               | Reads the public queue and summary                                                     |
+| `functions/status.js`               | Requires trusted owner authority to update a known status                              |
+| `functions/on-order.js`             | Rebuilds `orders:summary` after `order:*` events                                       |
+| `functions/on-store.js`             | Rejects direct page writes to order keys; Function writes use the trusted backend path |
+| `functions/whoami.js`               | Reports visitor identity and whether the caller has owner authority                    |
 
-Try it in the preview: place two orders (they are #0001 and #0002), mark one *ready* (you are the owner here), and watch the queue and the summary follow through `crux.on`. The Share pane's **Functions** section runs and emits each handler by hand.
+The form prevents repeated submissions while a request is pending and keeps a refused draft. This does not provide server-side idempotency: after a lost response, inspect the queue before submitting again. Numbering, saving and updating the summary are separate operations, not one transaction. The status handler accepts known states; it does not enforce a forward-only workflow.
 
-Share the crux and the same handlers run at the address as each signed-in visitor: customers place orders under their own account, only you can move them, and every run counts on your usage.
+## Workspace, static test copy and online app
+
+Workspace preview runs Functions against the local Store. The **Local test Garden** serves static files only: it cannot run this app's Functions or Store operations. Use Workshop to try the example, and a full test API for hosted acceptance. Online publication has a separate Store; local test orders are not copied there. Schedules run only on the full API's clock.
+
+This example's `order` Function deliberately accepts anonymous requests and saves public records. Direct Store writes and Function calls have different authority; do not infer a sign-in requirement from the Store's direct-write policy.
+
+Published visitor sessions deliberately have no platform-owner authority, including when the creator signs in. The online page will not show the workspace's owner controls. Use the trusted app's Function controls for owner operations. A real staff dashboard needs an explicit app-role policy, not ordinary account credentials embedded in a page.
+
+For standalone visitor sign-in, use the published SDK's `crux.auth.requestCode`, `login`, `profile` and `logout`; hosted pages inherit identity from the Garden parent. Do not call account-auth endpoints or copy account tokens into the page. This public demo does not require a sign-in form.
 
 ## Make it yours
 
-- Change the items in `functions/menu.js` (and the copy of the list in `functions/order.js`).
-- Add a field to the form, carry it through `order.js`, show it in `app.js`.
-- Add `functions/on-order-placed.js` (`export const match = 'order:placed'`) to do something when an order arrives — a rollup, another event, a log line.
+- Change items in both `functions/menu.js` and `functions/order.js`.
+- Add a non-sensitive field to the form, validate it in `order.js`, and display it in `app.js`.
+- Add an event handler with `export const match = 'order:placed'` for a follow-up action.
+- Before adapting it for real customers, add private record policies, authenticated customer/staff roles, request idempotency and a two-visitor full-API test. Do not just hide public fields in the UI.
