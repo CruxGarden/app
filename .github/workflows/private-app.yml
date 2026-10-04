@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: CruxGarden/api
-          ref: f01eac3eb46b62a29f078945085067dac3e2bae2
+          ref: 6d5be615361d470a13fa933199da407f3982f70e
           path: api
       - uses: actions/setup-node@v4
         with:
