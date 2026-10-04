@@ -54,14 +54,62 @@
   },
   "ci": {
     "native": 37215995764,
-    "fullApiBrowser": "pending final API pin",
-    "status": "pending",
+    "fullApiBrowser": 37216931262,
+    "status": "superseded by eventPrivacy.ci",
     "fullApiBrowserInitial": {
       "run": 37215995841,
       "status": "success",
       "api": "9bdb0f2"
+    },
+    "linux": {
+      "status": "success",
+      "journeys": 30,
+      "native": 99,
+      "skipped": 1,
+      "duration": "7.6m journeys"
+    },
+    "windows": {
+      "status": "failure",
+      "note": "functions-local missed click on a replaced preview frame (run 37215995764); addressed in 9537eac6d"
     }
   },
   "apiImplementation": "9bdb0f2fcf1bc20035b528ce2c770eb491351048",
-  "visual": "customer.png and owner.png reviewed: clear privacy/runtime identity, readable fields, owner confirmation and real customer rows."
+  "visual": "customer.png and owner.png reviewed: clear privacy/runtime identity, readable fields, owner confirmation and real customer rows.",
+  "eventPrivacy": {
+    "defect": "direct protected Store writes, and refused public-mode overwrites of protected values, broadcast value/before on the public event stream and to preview crux.on listeners",
+    "api": ["df83aca", "6d5be61"],
+    "app": "9537eac6d",
+    "ciApiPin": "91dff632b",
+    "red": {
+      "hosted": "/tmp/crux-private-events-red.log",
+      "local": "/tmp/crux-private-events-local-red.log"
+    },
+    "green": "/tmp/crux-private-events-green.log (2/2, 27.4s)",
+    "gates": {
+      "app": "1830 passed, 18 skipped, 292 files, build",
+      "electron": "99 passed, 1 skipped",
+      "api": "1193 unit, 5 skipped; 411 integration; build; runtime"
+    },
+    "package": {
+      "path": "electron/release/manual-testing-private-events-oct4/mac-arm64/Crux Garden.app",
+      "checks": "5/5",
+      "log": "/tmp/crux-private-events-packaged.log",
+      "note": "functions-local.spec.ts does not run against packages (also fails on the previous package); local event regression accepted on the development build"
+    },
+    "ci": {
+      "native": {
+        "run": 37224626497,
+        "status": "success",
+        "linux": "30 journeys, 99 native, 1 skipped",
+        "windows": "30 journeys, 96 native, 4 skipped"
+      },
+      "fullApiBrowser": {
+        "run": 37224640423,
+        "status": "success",
+        "app": "91dff632b",
+        "api": "6d5be61"
+      }
+    },
+    "boundaries": "no hosted deployment, republishing, live AI or merge"
+  }
 }
