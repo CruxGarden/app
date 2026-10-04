@@ -36,6 +36,7 @@ const gateSpecs = [
   '**/composer-keyboard.spec.ts',
   '**/conversation-reading.spec.ts',
   '**/share-feedback.spec.ts',
+  '**/agent-metrics.spec.ts',
   '**/memory.spec.ts',
   '**/memory-file.spec.ts',
   '**/usage-domains.spec.ts',

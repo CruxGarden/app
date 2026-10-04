@@ -11,20 +11,28 @@
     "ime": "/tmp/crux-v1-keyboard-red.log",
     "sharing": "/tmp/crux-v1-share-red.log",
     "domain_validation": "/tmp/crux-v1-polish-acceptance.log",
-    "memory_mirror": "/tmp/crux-v1-polish-final-focused.log"
+    "memory_mirror": "/tmp/crux-v1-polish-final-focused.log",
+    "metrics_append": "/tmp/crux-v1-metrics-red-detail.log"
   },
   "tests": {
     "new_actual_desktop": "9 new cases accepted: eight passed in /tmp/crux-v1-desktop-acceptance.log; Memory external-edit/reload/restart passed11.8s in /tmp/crux-v1-memory-replay-accepted.log",
-    "electron_verify": "96 passed, 1 platform skip; typecheck/lint passed (/tmp/crux-v1-final-electron-verify.log)",
-    "app_verify": "1,830 passed / 292 files; 18 existing skips; typecheck, lint, tool/runtime checks and production build passed (/tmp/crux-v1-final-app-verify.log)",
+    "electron_verify": "99 passed / 1 platform skip; /tmp/crux-v1-metrics-native.log",
+    "app_verify": "1,830 / 292 passed +18 existing skips, full production build/typecheck/lint/runtime checks; /tmp/crux-v1-metrics-app-gate.log; final error-copy scoped typecheck/lint passed",
     "story_game": "128 stories / 1,266 criteria; all 346 baseline checks and 71 creation choices mapped; offline acceptance passed (/tmp/crux-v1-polish-guide.log)",
     "affected_actual_desktop": "14 passed / one new-test setup failure in first combined batch; corrected setup and accepted Memory replay. Original memory, usage-domains, IPC3 and visual audit passed.",
-    "desktop_gate": "127-case replay pending"
+    "desktop_gate": "Initial127-case replay deliberately interrupted after16 passes to repair the reproduced metrics append failure; final expanded replay pending.",
+    "metrics_native": "99 passed / 1 platform skip; /tmp/crux-v1-metrics-native.log",
+    "metrics_actual_desktop": "Metrics append/refusal/retry/reset and IPC3: 4 passed14.1s; /tmp/crux-v1-metrics-desktop.log"
   },
   "boundaries": [
     "No live AI calls or provider quality/spend acceptance",
     "No production publication, deployment, signing, or notarization",
     "Manual profile left empty and unopened",
     "Existing dependency advisories and broader AR06 retirement unchanged"
-  ]
+  ],
+  "implementation": "76680ffce559af870c6cee94a477c49d7ab98ace",
+  "native_ci": {
+    "initial_implementation": 37165704334,
+    "status": "in_progress; metrics follow-through requires its own run"
+  }
 }

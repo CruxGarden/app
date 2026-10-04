@@ -201,6 +201,7 @@ export interface DesktopBridge {
   completeClose?(approved: boolean): void;
   config(): Promise<{ gardenRoot: string }>;
   /** Fixed memory.md only; never accepts a path or grants access to the Garden Root. */
+  appendMetricsReport(relative: string, text: string): Promise<string>;
   readMemory(): Promise<string | null>;
   writeMemory(text: string, expected: string | null): Promise<void>;
   chooseGardenRoot(): Promise<string | null>;

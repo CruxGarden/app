@@ -1,3 +1,4 @@
+import { appendMetricsReport } from './metrics-report';
 import { readGardenMemory, writeGardenMemory } from './garden-memory';
 import { PackageImports } from './package-imports';
 import { installDesktopCli } from './desktop-cli-install';
@@ -744,6 +745,9 @@ async function setupIpc() {
     gardenRoot: desktopConfig.gardenRoot,
   }));
 
+  fromGarden('desktop:append-metrics-report', (_event: unknown, relative: string, text: string) =>
+    appendMetricsReport(desktopConfig.gardenRoot, relative, text, projects.registeredFolders()),
+  );
   fromGarden('desktop:read-memory', () => readGardenMemory(desktopConfig.gardenRoot));
   fromGarden('desktop:write-memory', (_event: unknown, text: string, expected: string | null) =>
     writeGardenMemory(desktopConfig.gardenRoot, text, expected),

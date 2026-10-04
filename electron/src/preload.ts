@@ -216,6 +216,8 @@ const api: ElectronBridge = {
     },
     completeClose: (approved) => ipcRenderer.send('workspace:close-response', approved),
     config: () => ipcRenderer.invoke('desktop:config') as Promise<{ gardenRoot: string }>,
+    appendMetricsReport: (relative: string, text: string) =>
+      ipcRenderer.invoke('desktop:append-metrics-report', relative, text) as Promise<string>,
     readMemory: () => ipcRenderer.invoke('desktop:read-memory') as Promise<string | null>,
     writeMemory: (text: string, expected: string | null) =>
       ipcRenderer.invoke('desktop:write-memory', text, expected) as Promise<void>,

@@ -11,9 +11,11 @@ This pass reviews the existing desktop creation → collaboration/editing → Gr
 - Task models use their readable names. Memory explains its scope and provider route concisely, with external editing details folded away.
 - Memory's promised `memory.md` file now uses dedicated, fixed-file native commands. The Garden Root remains outside Project Folder grants. Reviewed writes refuse outside edits, links and oversized files; Settings retains the unsaved draft and confirms reload. See root ADR0079.
 
+- Metrics report append also uses dedicated native authority, preserving nested report destinations and prior entries while refusing unrelated files, links and Project Folder targets. Busy and failure states are explicit; Copy and Reset remain available. See root ADR0080.
+
 ## Evidence
 
-`evidence.json` records exact acceptance results and remaining boundaries. New actual Electron tests are `composer-files`, `composer-keyboard`, `conversation-reading`, `share-feedback` and `memory-file`. Existing Memory and usage/domain journeys retain their expected outcomes; their navigation helpers now use the current panel controls. Native Memory filesystem and untrusted-renderer tests supplement the UI journeys.
+`evidence.json` records exact acceptance results and remaining boundaries. New actual Electron tests are `composer-files`, `composer-keyboard`, `conversation-reading`, `share-feedback` and `memory-file`. Existing Memory, agent-metrics and usage/domain journeys retain their expected outcomes; their navigation helpers now use the current panel controls. Native Memory filesystem and untrusted-renderer tests supplement the UI journeys.
 
 Screenshots here show the actual desktop app, including interrupted operations. The scratch visual review additionally inspected Gateway/Home, creation, editing, Growth/Tasks, Share, all six Settings sections and Moods. The manual story game appends six criteria without replacing prior progress IDs.
 

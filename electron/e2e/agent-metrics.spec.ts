@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
+import { showPane, hidePane, chooseSettingsSection } from './panel-helpers';
 
 /**
  * Agent metrics (2026-09-18) through the UI it ships with: turn the meter on
@@ -18,17 +19,20 @@ test('agent metrics: a turn is counted and the report lands in the Garden Root',
   try {
     await enterGarden(page);
 
-    // Switch the meter on. Settings → AI holds the section.
-    await page.keyboard.press('ControlOrMeta+,');
-    // The Settings pane carries no dialog role; reach the section by its heading.
-    await page.locator('h2', { hasText: /^AI$/ }).click();
+    const openMetrics = async () => {
+      const settings = await showPane(page, 'Settings');
+      await chooseSettingsSection(page, 'AI and agents');
+      const expand = settings.getByRole('button', { name: 'AI', exact: true });
+      if ((await expand.getAttribute('aria-expanded')) === 'false') await expand.click();
+    };
+    await openMetrics();
     const metrics = page.getByTestId('agent-metrics');
     await expect(metrics).toBeVisible();
     const toggle = metrics.getByRole('switch', { name: 'Record agent metrics' });
     if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await expect(metrics.getByRole('button', { name: 'Append report' })).toBeDisabled();
-    await page.keyboard.press('Escape');
+    await hidePane(page, 'Settings');
 
     // One turn with a tool call.
     await createCrux(page, 'Metered');
@@ -40,16 +44,17 @@ test('agent metrics: a turn is counted and the report lands in the Garden Root',
     });
 
     // Read it back.
-    await page.keyboard.press('ControlOrMeta+,');
-    await page.locator('h2', { hasText: /^AI$/ }).click();
+    await openMetrics();
     await metrics.getByRole('button', { name: 'Refresh' }).click();
     const stat = (label: string) =>
       metrics.locator('dl > div', { has: page.locator('dt', { hasText: label }) }).locator('dd');
     await expect(stat('Turns')).toHaveText('1');
-    await expect(stat('Tool calls')).toHaveText('1');
+    // The current fixture writes once, then its unreviewed repeat is refused.
+    await expect(stat('Tool calls')).toHaveText('2');
     await expect(stat('Named nothing')).toHaveText('0.0%');
     await metrics.getByText('Full report').click();
     await expect(metrics.locator('pre')).toContainText('write_file');
+    await expect(metrics.locator('pre')).toContainText('write_file: 2 calls, 1 failed');
 
     // Append the report under the Garden Root, at the path shown.
     const pathField = metrics.getByLabel('Report file path, relative to the Garden Root');
@@ -61,6 +66,18 @@ test('agent metrics: a turn is counted and the report lands in the Garden Root',
     const text = readFileSync(file, 'utf8');
     expect(text).toContain('write_file');
     expect(text).not.toContain('Please write hello'); // counts, never content
+
+    // An unrelated file is never silently treated as an empty report.
+    const other = join(dir, 'garden', 'private.txt');
+    writeFileSync(other, 'Keep my notes');
+    await pathField.fill('private.txt');
+    await metrics.getByRole('button', { name: 'Append report' }).click();
+    await expect(metrics.getByRole('alert')).toContainText('not a metrics report');
+    expect(readFileSync(other, 'utf8')).toBe('Keep my notes');
+    await pathField.fill('reports/agent-metrics.md');
+    await metrics.getByRole('button', { name: 'Append report' }).click();
+    await expect(metrics.getByRole('status')).toContainText('Appended to');
+    expect(readFileSync(file, 'utf8').split('Agent metrics since')).toHaveLength(3);
 
     // Reset clears the counters; the file stays.
     await metrics.getByRole('button', { name: 'Reset' }).click();

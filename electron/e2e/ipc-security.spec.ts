@@ -28,6 +28,7 @@ test('an unrelated renderer with the preload cannot read or change the Garden', 
       const calls = [
         () => api.desktop.config(),
         () => api.desktop.readMemory(),
+        () => api.desktop.appendMetricsReport('report.md', 'Untrusted'),
         () => api.desktop.writeMemory('Untrusted', null),
         () => api.project.writeFile(folder, 'untrusted.txt', new TextEncoder().encode('untrusted')),
         () => api.project.listFiles(folder),

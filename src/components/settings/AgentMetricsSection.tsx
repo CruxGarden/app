@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { downloadBlob } from '@/lib/download';
+import { plainError } from '@/lib/error-text';
 import { Button, Input, Toggle } from '@/components/ui';
 import {
   DEFAULT_METRICS_PATH,
@@ -14,8 +15,8 @@ import {
 } from '@/services/agent-metrics';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
-import { appendGardenFile, getGardenRoot, shortenHomePath } from '@/services/desktop';
-import { isDesktop } from '@/lib/platform';
+import { appendMetricsReport, getGardenRoot, shortenHomePath } from '@/services/desktop';
+import { can, Capability } from '@/lib/platform';
 
 /**
  * Agent metrics — what the collaborator cost, in time and in wasted work.
@@ -33,9 +34,11 @@ export default function AgentMetricsSection() {
   const [root, setRoot] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
-    if (!isDesktop()) return;
+    if (!can(Capability.ProjectFolder)) return;
     let live = true;
     getGardenRoot()
       .then((r) => live && setRoot(r))
@@ -61,6 +64,9 @@ export default function AgentMetricsSection() {
   };
 
   const save = useCallback(async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     setStatus('');
     setError('');
     const current = { ...readMetrics() };
@@ -68,7 +74,7 @@ export default function AgentMetricsSection() {
     const entry = logEntry(current);
     const relPath = path.trim() || DEFAULT_METRICS_PATH;
     try {
-      const written = await appendGardenFile(relPath, entry);
+      const written = await appendMetricsReport(relPath, entry);
       if (written) {
         setStatus(`Appended to ${shortenHomePath(written)}`);
         return;
@@ -79,7 +85,10 @@ export default function AgentMetricsSection() {
       );
       setStatus('Downloaded');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The report could not be saved.');
+      setError(plainError(err, 'The report could not be saved.'));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }, [path]);
 
@@ -121,13 +130,14 @@ export default function AgentMetricsSection() {
         <Stat label="Since" value={metrics.since.slice(0, 10)} />
       </dl>
 
-      {isDesktop() && (
+      {can(Capability.ProjectFolder) && (
         <label className="block space-y-1 min-w-0">
           <span className="block text-xs text-text-muted break-all">
             Append to{root ? ` ${shortenHomePath(root)}/` : ' the Garden Root: '}
           </span>
           <Input
             value={path}
+            disabled={saving}
             onChange={(e) => savePath(e.target.value)}
             placeholder={DEFAULT_METRICS_PATH}
             aria-label="Report file path, relative to the Garden Root"
@@ -136,8 +146,12 @@ export default function AgentMetricsSection() {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" onClick={save} disabled={!metrics.turns}>
-          {isDesktop() ? 'Append report' : 'Download report'}
+        <Button size="sm" variant="secondary" onClick={save} disabled={!metrics.turns || saving}>
+          {saving
+            ? 'Saving report…'
+            : can(Capability.ProjectFolder)
+              ? 'Append report'
+              : 'Download report'}
         </Button>
         <Button size="sm" variant="ghost" onClick={copy} disabled={!metrics.turns}>
           Copy
@@ -150,8 +164,16 @@ export default function AgentMetricsSection() {
         </Button>
       </div>
 
-      {status && <p className="text-xs text-text-muted">{status}</p>}
-      {error && <p className="text-xs text-error">{error}</p>}
+      {status && (
+        <p role="status" className="text-xs text-text-muted">
+          {status}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-error">
+          {error}
+        </p>
+      )}
 
       {metrics.turns > 0 && (
         <details className="group">
