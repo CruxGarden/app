@@ -17,7 +17,8 @@ import { type PublishPhase } from '@/services/publish';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import ConnectAccount from '@/components/auth/ConnectAccount';
-import { Toggle } from '@/components/ui';
+import PublicationVisibility from './PublicationVisibility';
+import { captureAuth, assertAuthCurrent } from '@/api/session';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 import UsageSection from './UsageSection';
 import { confirmDialog, choiceDialog } from '@/stores/dialogStore';
@@ -65,7 +66,6 @@ export default function PublishPane() {
 
   const { ref, isTooNarrow } = usePaneWidth(270);
 
-  const updateCrux = useCruxStore((s) => s.updateCrux);
   const isPublished = crux?.meta?.publishedAt != null;
 
   const lastEditedAt = useMemo(() => {
@@ -197,45 +197,60 @@ export default function PublishPane() {
     doPublish();
   }, [doPublish]);
 
+  const [unsharing, setUnsharing] = useState<'reviewing' | 'unsharing' | null>(null);
   const [unshareError, setUnshareError] = useState<string | null>(null);
   const handleUnpublish = useCallback(async () => {
-    // Say what goes with it before it goes: custom domains stop serving and the
-    // live Crux Store is deleted. Both are looked up now so the message is exact.
-    const [domains, rows] = await Promise.all([
-      crux?.id ? domainsApi.list(crux.id).catch(() => []) : [],
-      crux?.id ? liveStore.listLive(crux.id).catch(() => []) : [],
-    ]);
-    const parts = ['Takes the site offline. Your files and history stay here.'];
-    if (domains.length)
-      parts.push(
-        `${domains.map((d) => d.hostname).join(', ')} will stop serving; reconnect later and the same records verify.`,
-      );
-    if (rows.length) {
-      const keys = new Set(rows.map((r) => r.key)).size;
-      parts.push(
-        `Everything visitors wrote to the Crux Store is deleted — ${keys} key${keys === 1 ? '' : 's'}, ${rows.length} row${rows.length === 1 ? '' : 's'}. Export it from the Store pane first if you want to keep it.`,
-      );
-    }
-    if (
-      !(await confirmDialog({
-        title: 'Unshare this crux',
-        message: parts.join(' '),
-        confirmLabel: 'Unshare',
-        danger: true,
-      }))
-    )
-      return;
-    setPublishing(true);
+    if (!crux?.id || publishing || unsharing) return;
+    const ownerId = crux.id;
+    const context = captureAuth();
+    setUnsharing('reviewing');
     setUnshareError(null);
     try {
+      // An unavailable impact review is not an empty list of consequences.
+      let domains: Awaited<ReturnType<typeof domainsApi.list>>;
+      let rows: Awaited<ReturnType<typeof liveStore.listLive>>;
+      try {
+        [domains, rows] = await Promise.all([
+          domainsApi.list(ownerId, context),
+          liveStore.listLive(ownerId, context),
+        ]);
+      } catch {
+        throw new Error(
+          'Could not review the domains and visitor data affected. Nothing was unshared. Try again.',
+        );
+      }
+      assertAuthCurrent(context);
+      const parts = ['Takes the site offline. Your files and history stay here.'];
+      if (domains.length)
+        parts.push(
+          `${domains.map((d) => d.hostname).join(', ')} will stop serving; reconnect later and the same records verify.`,
+        );
+      if (rows.length) {
+        const keys = new Set(rows.map((r) => r.key)).size;
+        parts.push(
+          `Everything visitors wrote to the Crux Store is deleted — ${keys} key${keys === 1 ? '' : 's'}, ${rows.length} row${rows.length === 1 ? '' : 's'}. Export it from the Store pane first if you want to keep it.`,
+        );
+      }
+      if (
+        !(await confirmDialog({
+          title: 'Unshare this crux',
+          message: parts.join(' '),
+          confirmLabel: 'Unshare',
+          danger: true,
+        }))
+      )
+        return;
+      assertAuthCurrent(context);
+      if (store.getState().crux?.id !== ownerId)
+        throw new Error('The open Crux changed. Review Unshare again.');
+      setUnsharing('unsharing');
       await unpublishCrux();
     } catch (err) {
-      // A swallowed failure here reads as "the button does nothing".
       setUnshareError(err instanceof Error ? err.message : 'Unshare failed');
     } finally {
-      setPublishing(false);
+      setUnsharing(null);
     }
-  }, [unpublishCrux, crux?.id]);
+  }, [unpublishCrux, crux?.id, publishing, unsharing, store]);
 
   const handleCopyUrl = useCallback(async () => {
     if (!publicUrl) return;
@@ -381,6 +396,12 @@ export default function PublishPane() {
             <PaneNote tone="error">{plan.explanation}</PaneNote>
           ) : backingUp ? (
             <PaneAction busy="Backing up...">Share</PaneAction>
+          ) : unsharing ? (
+            <PaneHint>
+              {unsharing === 'reviewing'
+                ? 'Reviewing what Unshare affects…'
+                : 'Taking this site offline…'}
+            </PaneHint>
           ) : publishing ? (
             <PaneAction busy={PHASE_LABELS[phase ?? 'sync']}>Share</PaneAction>
           ) : showConnect ? (
@@ -556,25 +577,7 @@ export default function PublishPane() {
           )}
           {/* Visibility */}
           <GuideLink page="guides/sharing/">What happens when I share?</GuideLink>
-          <PaneSection label="Visibility">
-            <div className="flex flex-col gap-0.5">
-              <Toggle
-                checked={!!crux.discoverable}
-                onChange={(on) => {
-                  void updateCrux({ discoverable: on });
-                  // A shared Crux tells the listing now, not at the next update.
-                  if (isPublished && isAuthenticated)
-                    void cruxesApi.update(crux.id, { discoverable: on }).catch(() => {});
-                }}
-                label="Discoverable"
-              />
-              <span className="text-xxs text-text-muted">
-                {crux.discoverable
-                  ? 'Listed in search on crux.garden'
-                  : 'Not listed in Explore. Anyone with the link can view it.'}
-              </span>
-            </div>
-          </PaneSection>
+          <PublicationVisibility key={crux.id} crux={crux} />
 
           {!isEmbeddedApp(crux) && (
             <details className="rounded-[var(--radius-sm)] border border-border p-3">
@@ -606,7 +609,8 @@ export default function PublishPane() {
               <button
                 type="button"
                 onClick={handleUnpublish}
-                disabled={publishing}
+                disabled={publishing || !!unsharing}
+                aria-label="Unshare"
                 className={buttonClass(
                   'secondary',
                   'sm',
@@ -614,10 +618,14 @@ export default function PublishPane() {
                 )}
               >
                 <PowerIcon size={13} />
-                Unshare
+                {unsharing === 'reviewing' ? 'Reviewing…' : unsharing ? 'Unsharing…' : 'Unshare'}
               </button>
               <PaneHint>Takes this crux offline. Your files and history stay here.</PaneHint>
-              {unshareError && <PaneNote tone="error">{unshareError}</PaneNote>}
+              {unshareError && (
+                <div role="alert">
+                  <PaneNote tone="error">{unshareError}</PaneNote>
+                </div>
+              )}
             </div>
           )}
         </div>

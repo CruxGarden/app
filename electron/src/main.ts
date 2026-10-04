@@ -1,3 +1,4 @@
+import { readGardenMemory, writeGardenMemory } from './garden-memory';
 import { PackageImports } from './package-imports';
 import { installDesktopCli } from './desktop-cli-install';
 import { readLaunchSettings } from './launch-settings';
@@ -742,6 +743,11 @@ async function setupIpc() {
   fromGarden('desktop:config', () => ({
     gardenRoot: desktopConfig.gardenRoot,
   }));
+
+  fromGarden('desktop:read-memory', () => readGardenMemory(desktopConfig.gardenRoot));
+  fromGarden('desktop:write-memory', (_event: unknown, text: string, expected: string | null) =>
+    writeGardenMemory(desktopConfig.gardenRoot, text, expected),
+  );
 
   fromGarden('desktop:choose-garden-root', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {

@@ -1,0 +1,30 @@
+{
+  "status": "in_progress",
+  "baseline": {
+    "app": "e91d8ad1b",
+    "api": "fa632ef"
+  },
+  "scope": "Desktop v1 breadth review and reproduced high-impact UX friction; not an exhaustive third-party editor audit",
+  "red": {
+    "attachments": "/tmp/crux-v1-composer-files-red.log",
+    "reading": "/tmp/crux-v1-reading-red.log",
+    "ime": "/tmp/crux-v1-keyboard-red.log",
+    "sharing": "/tmp/crux-v1-share-red.log",
+    "domain_validation": "/tmp/crux-v1-polish-acceptance.log",
+    "memory_mirror": "/tmp/crux-v1-polish-final-focused.log"
+  },
+  "tests": {
+    "new_actual_desktop": "9 new cases accepted: eight passed in /tmp/crux-v1-desktop-acceptance.log; Memory external-edit/reload/restart passed11.8s in /tmp/crux-v1-memory-replay-accepted.log",
+    "electron_verify": "96 passed, 1 platform skip; typecheck/lint passed (/tmp/crux-v1-final-electron-verify.log)",
+    "app_verify": "1,830 passed / 292 files; 18 existing skips; typecheck, lint, tool/runtime checks and production build passed (/tmp/crux-v1-final-app-verify.log)",
+    "story_game": "128 stories / 1,266 criteria; all 346 baseline checks and 71 creation choices mapped; offline acceptance passed (/tmp/crux-v1-polish-guide.log)",
+    "affected_actual_desktop": "14 passed / one new-test setup failure in first combined batch; corrected setup and accepted Memory replay. Original memory, usage-domains, IPC3 and visual audit passed.",
+    "desktop_gate": "127-case replay pending"
+  },
+  "boundaries": [
+    "No live AI calls or provider quality/spend acceptance",
+    "No production publication, deployment, signing, or notarization",
+    "Manual profile left empty and unopened",
+    "Existing dependency advisories and broader AR06 retirement unchanged"
+  ]
+}

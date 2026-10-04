@@ -1,5 +1,5 @@
 import { finishSetupAtHome } from './multi-crux-helpers';
-import { togglePanel } from './panel-helpers';
+import { togglePanel, hidePane, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -127,7 +127,8 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(settings.getByTestId('settlement-note')).toContainText(/settle 48 hours/);
       await expect(settings.getByTestId('settlement-note')).toContainText(/CloudFront: matches/);
       await page.screenshot({ path: 'e2e/.results/usage-domains-2-settings.png' });
-      await page.keyboard.press('Escape');
+      await hidePane(page, 'Settings');
+      await openPanel(page, 'publish', 'Toggle share');
 
       // Remove the domain: confirmDialog first (a live domain says "Disconnect")
       await dom.getByRole('button', { name: 'Remove blog.example.com' }).click();

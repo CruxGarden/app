@@ -1,6 +1,7 @@
 import { assertMainWorkspace } from '@/services/working-copies';
 import { isServicesReady } from '@/services';
 import client from './client';
+import { captureAuth, type AuthContext } from './session';
 import type { StoreExport } from '@/lib/store-export';
 
 /**
@@ -16,9 +17,12 @@ export interface LiveStoreEntry {
   updatedAt: string;
 }
 
-export async function listLive(cruxId: string): Promise<LiveStoreEntry[]> {
+export async function listLive(
+  cruxId: string,
+  context: AuthContext = captureAuth(),
+): Promise<LiveStoreEntry[]> {
   if (isServicesReady()) await assertMainWorkspace(cruxId);
-  const { data } = await client.get<LiveStoreEntry[]>(`/store/${cruxId}`);
+  const { data } = await client.get<LiveStoreEntry[]>(`/store/${cruxId}`, { authContext: context });
   return data;
 }
 

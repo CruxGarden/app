@@ -200,6 +200,9 @@ export interface DesktopBridge {
   onCloseRequest?(callback: () => void): () => void;
   completeClose?(approved: boolean): void;
   config(): Promise<{ gardenRoot: string }>;
+  /** Fixed memory.md only; never accepts a path or grants access to the Garden Root. */
+  readMemory(): Promise<string | null>;
+  writeMemory(text: string, expected: string | null): Promise<void>;
   chooseGardenRoot(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
   /** Open an https URL in the system browser (checkout, billing portal, docs). */

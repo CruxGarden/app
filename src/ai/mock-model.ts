@@ -2822,6 +2822,7 @@ export function getMockLanguageModel(): LanguageModel {
             );
         }
         const text = lastUserText(prompt);
+        if (text === 'Stream a reading review') return readingReviewStream(abortSignal);
         // "slowly": hold the tool call back so a test can act mid-turn
         if (/\bslowly\b/i.test(text)) await new Promise((r) => setTimeout(r, 1500));
         // "backdrop": the model sets a workspace image as the Mood background
@@ -3917,4 +3918,40 @@ function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | 
     default:
       return textStream(`Unknown Glow Garden step: ${marker}.`);
   }
+}
+
+/** Provider-boundary fixture for actual-app reading-position tests. */
+function readingReviewStream(signal?: AbortSignal) {
+  let cancelled = false;
+  return {
+    stream: new ReadableStream<LanguageModelV4StreamPart>({
+      async start(controller) {
+        try {
+          controller.enqueue({ type: 'stream-start', warnings: [] });
+          controller.enqueue({ type: 'text-start', id: 'reading' });
+          for (let n = 1; n <= 120; n++) {
+            await think(150, signal);
+            if (cancelled) return;
+            controller.enqueue({
+              type: 'text-delta',
+              id: 'reading',
+              delta: `Reading note ${n}: Here is a paragraph to review at your own pace.\n\n`,
+            });
+          }
+          controller.enqueue({ type: 'text-end', id: 'reading' });
+          controller.enqueue({
+            type: 'finish',
+            finishReason: { unified: 'stop', raw: undefined },
+            usage: USAGE,
+          });
+          controller.close();
+        } catch (error) {
+          if (!cancelled) controller.error(error);
+        }
+      },
+      cancel() {
+        cancelled = true;
+      },
+    }),
+  };
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { linkClass } from '@/components/ui/button-class';
 import { Button } from '@/components/ui';
 import * as domainsApi from '@/api/domains';
 import * as usageApi from '@/api/usage';
@@ -19,26 +20,48 @@ const STATUS_LABEL: Record<domainsApi.DomainStatus, string> = {
 };
 
 function apiMessage(err: unknown, fallback: string): string {
-  const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
-    ?.message;
-  return Array.isArray(msg) ? msg.join(', ') : msg || fallback;
+  // API errors deliberately omit response bodies (which may contain secrets).
+  // Translate the safe status into an action instead of expecting that body.
+  const status = (err as { response?: { status?: number } })?.response?.status;
+  if (status === 401) return 'Connect your account again, then retry.';
+  if (status === 403)
+    return 'Your account cannot change this domain. Check your plan and permissions.';
+  if (status === 409) return 'That domain is already connected. Check your existing connections.';
+  if (status === 429) return 'Too many requests. Wait a moment, then retry.';
+  return fallback;
 }
 
 function CopyValue({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   return (
     <button
       type="button"
-      onClick={() => {
-        void navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+      onClick={async () => {
+        setCopyError(false);
+        setCopied(false);
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          setCopyError(true);
+        }
       }}
       title="Copy"
       className="text-left font-mono text-xxs text-accent hover:underline break-all cursor-pointer"
     >
       {value}
-      {copied && <span className="ml-1 text-text-muted">copied</span>}
+      {copied && (
+        <span role="status" className="ml-1 text-text-muted">
+          copied
+        </span>
+      )}
+      {copyError && (
+        <span role="alert" className="ml-1 text-error">
+          Could not copy. Select the text to copy it manually.
+        </span>
+      )}
     </button>
   );
 }
@@ -53,13 +76,19 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   // How many domains the account's plan allows; null until known. Zero means
   // the feature is Gardener's and the section says so instead of a form.
+  const [loadError, setLoadError] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [allowance, setAllowance] = useState<number | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       setDomains(await domainsApi.list(cruxId));
+      setLoadError(false);
     } catch {
-      /* the section simply stays empty */
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
     try {
       setAllowance((await usageApi.me()).plan.customDomains);
@@ -88,7 +117,12 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
       setHostname('');
       setAdding(false);
     } catch (err) {
-      setError(apiMessage(err, 'Could not add that domain'));
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      setError(
+        status === 400
+          ? 'Enter a domain like blog.example.com, without https:// or a path.'
+          : apiMessage(err, 'Could not add that domain. Check your connection and retry.'),
+      );
     } finally {
       setBusy(null);
     }
@@ -130,6 +164,19 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
   return (
     <PaneSection label="Custom domain" data-testid="custom-domains">
       <div className="flex flex-col gap-2.5">
+        {loading && (
+          <p role="status" className="text-xxs text-text-muted">
+            Checking domains…
+          </p>
+        )}
+        {loadError && (
+          <div role="alert" className="text-xxs text-error">
+            Could not load your domains. Existing connections have not been changed.{' '}
+            <button disabled={loading} className={linkClass()} onClick={() => void load()}>
+              Retry loading domains
+            </button>
+          </div>
+        )}
         {domains.map((d) => (
           <div
             key={d.id}
@@ -252,7 +299,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
               </Button>
             </div>
           </form>
-        ) : allowance === 0 && domains.length === 0 ? (
+        ) : !loadError && !loading && allowance === 0 && domains.length === 0 ? (
           <div data-testid="domains-gardener">
             <PaneHint align="left">
               Your own address for this crux comes with Gardener — two DNS records and a click,

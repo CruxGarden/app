@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import ConversationViewport from './ConversationViewport';
 import type { ChatMessage } from '@/api/types';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
@@ -31,9 +31,7 @@ export default function MessageList({
   isStreaming,
   truncatedAfter,
 }: MessageListProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const hasScrolledRef = useRef(false);
+  const cruxId = useCruxStore((s) => s.crux?.id);
   const author = useAppStore((s) => s.author);
   // The work as it happens, folded under the reply being written — the same
   // one expandable line the finished reply keeps, and the same line the
@@ -45,29 +43,13 @@ export default function MessageList({
   const started = messages.some((m) => m.role === 'user');
   const avatarUrl = useAvatarUrl(author);
 
-  // A smooth scroll per token queues an animation on top of the one still
-  // running, and a long reply arrives in hundreds of tokens: the pane fights
-  // itself and lags. A new message is an event worth animating; text arriving
-  // inside the reply already on screen is not.
-  const messageCount = messages.length;
-  useEffect(() => {
-    if (!hasScrolledRef.current) {
-      // First render: jump to bottom instantly
-      bottomRef.current?.scrollIntoView({ behavior: 'instant' });
-      hasScrolledRef.current = true;
-    } else {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messageCount]);
-
-  useEffect(() => {
-    if (!hasScrolledRef.current) return;
-    if (!streamingContent && liveToolCalls.length === 0) return;
-    bottomRef.current?.scrollIntoView({ behavior: 'instant' });
-  }, [streamingContent, liveToolCalls]);
-
   return (
-    <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-5">
+    <ConversationViewport
+      label="Collaboration messages"
+      resetKey={cruxId}
+      sentCount={messages.filter((message) => message.role === 'user').length}
+      className="space-y-5"
+    >
       {messages.length === 0 && !isStreaming && (
         <div className="text-text-muted">
           <p className="text-sm font-medium">What would you like to make?</p>
@@ -94,10 +76,11 @@ export default function MessageList({
               type="button"
               style={{ '--enter-index': i } as React.CSSProperties}
               className={chipClass(false, 'h-7 px-3 font-body text-xs motion-enter-card')}
-              onClick={() => {
+              onClick={(event) => {
                 setComposerDraft(example);
                 // This pane's composer: several workspaces can be mounted at once.
-                listRef.current?.parentElement
+                event.currentTarget
+                  .closest('[data-testid="pane-body-collaboration"]')
                   ?.querySelector<HTMLTextAreaElement>('[data-testid="composer"] textarea')
                   ?.focus();
               }}
@@ -140,8 +123,6 @@ export default function MessageList({
       )}
 
       {isStreaming && <TurnStatus quiet={!!streamingContent} />}
-
-      <div ref={bottomRef} />
-    </div>
+    </ConversationViewport>
   );
 }

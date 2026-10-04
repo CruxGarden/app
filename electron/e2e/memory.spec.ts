@@ -1,5 +1,5 @@
 import { finishSetupAtHome } from './multi-crux-helpers';
-import { hidePane } from './panel-helpers';
+import { hidePane, showPane, chooseSettingsSection } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -31,8 +31,8 @@ async function newBlankCrux(page: Page) {
 }
 
 async function openSettings(page: Page) {
-  await page.keyboard.press('ControlOrMeta+,');
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await showPane(page, 'Settings');
+  await chooseSettingsSection(page, 'AI and agents');
   await expect(page.getByRole('heading', { name: 'Memory', exact: true })).toBeVisible();
 }
 

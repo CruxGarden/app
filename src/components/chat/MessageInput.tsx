@@ -1,7 +1,10 @@
 import { useWorkspaceUIStore, useWorkspaceUIStoreApi } from '@/stores/uiStore';
-import { useRef, useCallback, useEffect } from 'react';
-import { useCruxStore } from '@/stores/cruxStore';
+import { useRef, useCallback, useEffect, useState } from 'react';
+import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
+import { confirmDialog } from '@/stores/dialogStore';
+import { reportFileUpdateError } from '@/components/artifacts/fileUpdateError';
+import { linkClass } from '@/components/ui/button-class';
 
 interface MessageInputProps {
   /** Send — or, while a Background Turn runs, queue behind it. */
@@ -24,7 +27,12 @@ export default function MessageInput({
   history = [],
 }: MessageInputProps) {
   const ui = useWorkspaceUIStoreApi();
-  const uploadFile = useCruxStore((s) => s.uploadFile);
+  const store = useCruxStoreApi();
+  const uploadFiles = useCruxStore((s) => s.uploadFiles);
+  const uploadProgress = useCruxStore((s) => s.uploadProgress);
+  const [addingFiles, setAddingFiles] = useState(false);
+  const [fileNotice, setFileNotice] = useState('');
+  const addingRef = useRef(false);
   const cruxId = useCruxStore((s) => s.crux?.id);
   const pasteAsArtifact = useCruxStore((s) => s.pasteAsArtifact);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -68,19 +76,21 @@ export default function MessageInput({
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled || addingRef.current) return;
     onSend(trimmed);
     clear();
   }, [value, disabled, onSend, clear]);
 
   const handleSteer = useCallback(() => {
     const trimmed = value.trim();
-    if (!trimmed || disabled || !onSteer) return;
+    if (!trimmed || disabled || addingRef.current || !onSteer) return;
     onSteer(trimmed);
     clear();
   }, [value, disabled, onSteer, clear]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Enter can commit an IME candidate; it must not send or recall history.
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -125,6 +135,52 @@ export default function MessageInput({
     el.style.height = Math.min(el.scrollHeight, 200) + 'px';
   };
 
+  const addFiles = async (files: File[]) => {
+    if (!files.length || addingRef.current) return;
+    addingRef.current = true;
+    setAddingFiles(true);
+    setFileNotice('');
+    const ownerId = store.getState().crux?.id;
+    try {
+      const current = store.getState().artifacts;
+      const selection = files.map((file) => ({
+        file,
+        path: file.name,
+        expected: structuredClone(
+          current.find((item) => (item.meta?.path || item.filename) === file.name) ?? null,
+        ),
+      }));
+      const conflicts = selection.filter((entry) => entry.expected !== null);
+      if (
+        conflicts.length &&
+        !(await confirmDialog({
+          message:
+            conflicts.length === 1
+              ? `"${conflicts[0]!.path}" already exists. Replace it?`
+              : `${conflicts.length} files already exist. Replace them?`,
+          confirmLabel: 'Replace',
+        }))
+      )
+        return;
+      if (!ownerId || store.getState().crux?.id !== ownerId)
+        throw new Error('The active Crux changed. Choose the files again in their destination.');
+      await uploadFiles(selection);
+      setFileNotice(
+        `Added ${files.length === 1 ? '1 file' : `${files.length} files`} to Artifacts.`,
+      );
+    } catch (error) {
+      await reportFileUpdateError(store, error, {
+        title: 'Could not add files',
+        fallback: 'Could not add these files. Choose them again to retry.',
+      });
+    } finally {
+      addingRef.current = false;
+      setAddingFiles(false);
+      const input = textareaRef.current;
+      if (input?.getClientRects().length && !input.closest('[inert]')) input.focus();
+    }
+  };
+
   const round =
     'w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed';
   const pill = 'px-3 h-8 shrink-0 rounded-full text-xs font-body transition-colors cursor-pointer';
@@ -134,6 +190,29 @@ export default function MessageInput({
   // chip and the check controls sit beneath it in the panel.
   return (
     <div className="px-3 pb-2 pt-2 bg-chat-composer">
+      {(addingFiles || fileNotice) && (
+        <div
+          role="status"
+          className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-chat-text-muted"
+        >
+          <span>
+            {addingFiles
+              ? uploadProgress
+                ? `Adding ${uploadProgress.completed + 1} of ${uploadProgress.total}: ${uploadProgress.currentFile}`
+                : 'Preparing files…'
+              : fileNotice}
+          </span>
+          {!addingFiles && (
+            <button
+              type="button"
+              className={linkClass()}
+              onClick={() => ui.getState().setPaneVisible('artifacts', true)}
+            >
+              Show files
+            </button>
+          )}
+        </div>
+      )}
       {history.length === 0 && !isStreaming && value.trim() && (
         <p className="text-xs text-text-muted mb-2">
           Your idea is ready. Press Enter or choose Send to start with AI.
@@ -154,14 +233,14 @@ export default function MessageInput({
           onChange={(e) => {
             const files = Array.from(e.target.files ?? []);
             e.target.value = '';
-            for (const f of files) void uploadFile(f);
+            void addFiles(files);
           }}
         />
         <button
           type="button"
           aria-label="Add a file"
           title="Add a file to Artifacts"
-          disabled={disabled}
+          disabled={disabled || addingFiles}
           onClick={() => fileRef.current?.click()}
           className={cn(round, 'text-chat-text-muted hover:text-text hover:bg-surface-hover')}
         >
@@ -199,6 +278,7 @@ export default function MessageInput({
             {value.trim() && onSteer && (
               <button
                 onClick={handleSteer}
+                disabled={disabled || addingFiles}
                 title="Stop the current turn and send this now"
                 className={cn(
                   pill,
@@ -211,6 +291,7 @@ export default function MessageInput({
             {value.trim() && (
               <button
                 onClick={handleSubmit}
+                disabled={disabled || addingFiles}
                 title="Send after the current turn finishes"
                 className={cn(
                   pill,
@@ -237,7 +318,7 @@ export default function MessageInput({
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={!value.trim() || disabled}
+            disabled={!value.trim() || disabled || addingFiles}
             aria-label="Send"
             title="Send (Enter)"
             className={cn(

@@ -1,3 +1,4 @@
+import { getModelShortName } from '@/ai/providers';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Input, SectionLabel, fieldClass } from '@/components/ui';
@@ -150,7 +151,9 @@ export default function TaskDetails() {
         {aiEnabled && row?.model && (
           <>
             <dt className="text-text-muted">Model</dt>
-            <dd className="font-mono">{row.model}</dd>
+            <dd className="min-w-0 break-words" title={row.model}>
+              {getModelShortName(row.model) || row.model}
+            </dd>
           </>
         )}
       </dl>
