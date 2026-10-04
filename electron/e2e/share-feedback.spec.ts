@@ -93,13 +93,18 @@ test('unshare refuses an incomplete impact review and domain loading offers reco
       .getByRole('button', { name: 'Share without a backup' })
       .click();
     await expect(share).toContainText('Up to date', { timeout: 30000 });
+    const published = api.state.published[id].map((file) => ({
+      ...file,
+      bytes: Buffer.from(file.bytes),
+    }));
+    expect(published.some((file) => file.path === 'index.html')).toBe(true);
     await expect(share.getByTestId('custom-domains')).toContainText('Could not load your domains.');
     await share.getByRole('button', { name: 'Unshare', exact: true }).click();
     await expect(share).toContainText(
       'Could not review the domains and visitor data affected. Nothing was unshared. Try again.',
     );
     await expect(page.getByRole('dialog', { name: 'Unshare this crux' })).toHaveCount(0);
-    expect(api.state.published[id]).toHaveLength(1);
+    expect(api.state.published[id]).toEqual(published);
     await page.unroute(`${api.url}/cruxes/${id}/domains`);
     await share.getByRole('button', { name: 'Retry loading domains' }).click();
     await expect(share.getByTestId('custom-domains')).not.toContainText(
@@ -109,7 +114,7 @@ test('unshare refuses an incomplete impact review and domain loading offers reco
     const review = page.getByRole('dialog', { name: 'Unshare this crux' });
     await expect(review).toContainText('Takes the site offline. Your files and history stay here.');
     await review.getByRole('button', { name: 'Cancel', exact: true }).click();
-    expect(api.state.published[id]).toHaveLength(1);
+    expect(api.state.published[id]).toEqual(published);
   } finally {
     await app.close();
     await api.close();

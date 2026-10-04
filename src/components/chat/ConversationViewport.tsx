@@ -46,13 +46,13 @@ export default function ConversationViewport({
     return () => observer.disconnect();
   }, [sync]);
   return (
-    <div className="relative flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0">
       <div
         ref={viewport}
         role="region"
         aria-label={label}
         tabIndex={0}
-        className="h-full overflow-y-auto [overflow-anchor:none]"
+        className="flex-1 min-h-0 overflow-y-auto [overflow-anchor:none]"
         onWheel={(event) => {
           if (event.deltaY < 0) following.current = false;
         }}
@@ -78,14 +78,14 @@ export default function ConversationViewport({
         </div>
       </div>
       {showLatest && (
-        <div className="absolute bottom-3 inset-x-0 flex justify-center pointer-events-none">
+        <div className="shrink-0 flex justify-center py-2">
           <button
             type="button"
             onClick={() => {
               latest();
               viewport.current?.focus({ preventScroll: true });
             }}
-            className={buttonClass('secondary', 'xs', 'pointer-events-auto')}
+            className={buttonClass('secondary', 'xs')}
           >
             Latest reply
           </button>

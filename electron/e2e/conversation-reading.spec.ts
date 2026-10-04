@@ -16,11 +16,34 @@ test('reading earlier Collaboration stays put during a reply and can return to f
     await expect(reply).toContainText('Reading note 20:', { timeout: 30000 });
     const scroller = pane.getByRole('region', { name: 'Collaboration messages', exact: true });
     await scroller.hover();
+    const beforeWheel = await scroller.evaluate((el) => el.scrollTop);
     await page.mouse.wheel(0, -10000);
-    await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeLessThan(10);
-    await expect(reply).toContainText('Reading note 35:');
-    expect(await scroller.evaluate((el) => el.scrollTop)).toBeLessThan(10);
+    // Native wheel scrolling may stop short of zero (Linux CI: 1171 → 105).
+    // Require real upward movement, then preserve the settled reading position.
+    let previous = -1;
+    let settled = 0;
+    await expect
+      .poll(
+        async () => {
+          const top = await scroller.evaluate((el) => el.scrollTop);
+          settled = top < beforeWheel - 20 && Math.abs(top - previous) < 1 ? settled + 1 : 0;
+          previous = top;
+          return settled;
+        },
+        { intervals: [100, 200, 250] },
+      )
+      .toBeGreaterThanOrEqual(2);
+    const readingTop = await scroller.evaluate((el) => el.scrollTop);
+    const notes = (await reply.innerText()).matchAll(/Reading note (\d+):/g);
+    const nextNote = Math.min(120, Math.max(...Array.from(notes, (m) => Number(m[1]))) + 10);
+    await expect(reply).toContainText(`Reading note ${nextNote}:`);
+    expect(Math.abs((await scroller.evaluate((el) => el.scrollTop)) - readingTop)).toBeLessThan(2);
     await expect(pane.getByRole('button', { name: 'Latest reply', exact: true })).toBeVisible();
+    const viewportBox = (await scroller.boundingBox())!;
+    const latestBox = (await pane
+      .getByRole('button', { name: 'Latest reply', exact: true })
+      .boundingBox())!;
+    expect(latestBox.y).toBeGreaterThanOrEqual(viewportBox.y + viewportBox.height);
     await page.screenshot({ path: test.info().outputPath('reading-paused.png') });
     await pane.getByRole('button', { name: 'Latest reply', exact: true }).click();
     await expect(scroller).toBeFocused();
@@ -53,6 +76,11 @@ test('Garden conversation preserves reading position through completion and foll
     await expect(scroller).toContainText('Reading note 35:');
     expect(await scroller.evaluate((el) => el.scrollTop)).toBeLessThan(10);
     await expect(pane.getByRole('button', { name: 'Latest reply', exact: true })).toBeVisible();
+    const viewportBox = (await scroller.boundingBox())!;
+    const latestBox = (await pane
+      .getByRole('button', { name: 'Latest reply', exact: true })
+      .boundingBox())!;
+    expect(latestBox.y).toBeGreaterThanOrEqual(viewportBox.y + viewportBox.height);
     await page.screenshot({ path: test.info().outputPath('reading-paused.png') });
     await expect(scroller).toContainText('Reading note 120:', { timeout: 30000 });
     await expect(pane.getByTestId('keeper-status')).toBeHidden();

@@ -12,17 +12,19 @@
     "sharing": "/tmp/crux-v1-share-red.log",
     "domain_validation": "/tmp/crux-v1-polish-acceptance.log",
     "memory_mirror": "/tmp/crux-v1-polish-final-focused.log",
-    "metrics_append": "/tmp/crux-v1-metrics-red-detail.log"
+    "metrics_append": "/tmp/crux-v1-metrics-red-detail.log",
+    "reading_control_overlap": "/tmp/crux-v1-reading-layout-red.log"
   },
   "tests": {
     "new_actual_desktop": "9 new cases accepted: eight passed in /tmp/crux-v1-desktop-acceptance.log; Memory external-edit/reload/restart passed11.8s in /tmp/crux-v1-memory-replay-accepted.log",
     "electron_verify": "99 passed / 1 platform skip; /tmp/crux-v1-metrics-native.log",
-    "app_verify": "1,830 / 292 passed +18 existing skips, full production build/typecheck/lint/runtime checks; /tmp/crux-v1-metrics-app-gate.log; final error-copy scoped typecheck/lint passed",
+    "app_verify": "1,830 / 292 passed +18 existing skips, full production build/typecheck/lint/runtime checks; /tmp/crux-v1-reading-final-app-gate.log",
     "story_game": "128 stories / 1,266 criteria; all 346 baseline checks and 71 creation choices mapped; offline acceptance passed (/tmp/crux-v1-polish-guide.log)",
     "affected_actual_desktop": "14 passed / one new-test setup failure in first combined batch; corrected setup and accepted Memory replay. Original memory, usage-domains, IPC3 and visual audit passed.",
     "desktop_gate": "Initial127-case replay deliberately interrupted after16 passes to repair the reproduced metrics append failure; final expanded replay pending.",
     "metrics_native": "99 passed / 1 platform skip; /tmp/crux-v1-metrics-native.log",
-    "metrics_actual_desktop": "Metrics append/refusal/retry/reset and IPC3: 4 passed14.1s; /tmp/crux-v1-metrics-desktop.log"
+    "metrics_actual_desktop": "Metrics append/refusal/retry/reset and IPC3: 4 passed14.1s; /tmp/crux-v1-metrics-desktop.log",
+    "final_visual_desktop": "Reading2 (non-overlap geometry, actual movement/preservation/resume), Memory1 and Share2: five passed1.3m; /tmp/crux-v1-final-visual-desktop.log"
   },
   "boundaries": [
     "No live AI calls or provider quality/spend acceptance",
@@ -32,7 +34,9 @@
   ],
   "implementation": "76680ffce559af870c6cee94a477c49d7ab98ace",
   "native_ci": {
-    "initial_implementation": 37165704334,
-    "status": "in_progress; metrics follow-through requires its own run"
+    "initial_implementation": "37165704334 Linux22pass/2 test portability failures; Windows pending",
+    "status": "in_progress; metrics follow-through requires its own run",
+    "follow_through": "37166458676 queued; superseding final source pending",
+    "linux_diagnosis": "Published cover image makes exact file-count assumption invalid; preserve complete captured published bytes instead. Wheel trace1171\u2192105 remains stable; assert actual upward movement and held reading position rather than pixel zero. Downloaded artifact11289985341 verified SHA256 bab96d61f5dc7b172bd33608d64d1cedb538e59fcb94d9c07a817d193ca5b94c."
   }
 }

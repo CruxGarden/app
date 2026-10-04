@@ -17,6 +17,7 @@ test('Memory refuses an outside edit without losing the draft, reloads and saves
     const toggle = pane.getByRole('switch', { name: 'Enable AI Tools' });
     if (!(await toggle.isChecked())) await toggle.click();
     await expect(toggle).toBeChecked();
+    if ((await expand.getAttribute('aria-expanded')) === 'true') await expand.click();
     return launched.page.getByTestId('memory-text');
   };
   try {
@@ -35,6 +36,8 @@ test('Memory refuses an outside edit without losing the draft, reloads and saves
     await expect(error).toContainText('Memory changed in another app');
     await expect(input).toHaveValue(/My unsaved draft/);
     expect(readFileSync(file, 'utf8')).toContain('Written in another editor');
+    await error.scrollIntoViewIfNeeded();
+    await expect(error).toBeInViewport();
     await launched.page.screenshot({ path: test.info().outputPath('memory-conflict.png') });
     await error.getByRole('button', { name: 'Reload memory' }).click();
     const confirmation = launched.page.getByRole('dialog', { name: 'Reload memory' });
