@@ -30,6 +30,9 @@ import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
 import { reportFileUpdateError } from '@/components/artifacts/fileUpdateError';
 import { expandTreeSelection, FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
 import ConvertActions from '@/components/artifacts/ConvertActions';
+import FindInFiles from '@/components/artifacts/FindInFiles';
+import type { FindFileResult, FindMatch } from '@/services/find-in-files';
+import { requestEditorReveal } from './editor-reveal';
 import IconButton from '@/components/ui/IconButton';
 import { buttonClass, menuItemClass } from '@/components/ui/button-class';
 
@@ -205,6 +208,17 @@ export default function ArtifactsPane() {
       if (!uiStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
     },
     [cruxStore, openFile, setPaneVisible, uiStore],
+  );
+
+  // A find-in-files result: the file's source, at that line, the match selected.
+  const handleOpenMatch = useCallback(
+    (file: FindFileResult, match: FindMatch) => {
+      requestEditorReveal(file.id, match);
+      openFile(file.id, file.path);
+      uiStore.getState().setTabViewMode(file.id, 'source');
+      if (!uiStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
+    },
+    [openFile, setPaneVisible, uiStore],
   );
 
   const handleSelectionChange = useCallback((ids: string[]) => {
@@ -715,75 +729,77 @@ export default function ArtifactsPane() {
         onChange={handleFolderInputChange}
       />
 
-      <div
-        className="flex-1 overflow-hidden min-h-0 flex flex-col"
-        onContextMenu={(e) => {
-          e.preventDefault();
-          showContextMenu({
-            x: e.clientX,
-            y: e.clientY,
-            targetId: null,
-            targetPath: '',
-            isFolder: true,
-            selectedIds,
-          });
-        }}
-      >
-        {showTree ? (
-          <ArboristFileTree
-            ref={treeRef}
-            artifacts={artifacts}
-            selectedId={activeTabId}
-            onSelect={handleSelect}
-            onSelectionChange={handleSelectionChange}
-            onContextMenu={handleContextMenu}
-            onMove={handleMove}
-            onRename={handleRename}
-            onUploadFiles={handleUploadFiles}
-            onDelete={handleDelete}
-            activeFileOperation={activeFileOperation}
-            onCreateFile={handleCreateFile}
-            onCreateFolder={handleCreateFolder}
-            onCancelOperation={cancelFileOperation}
-            initialOpenState={folderOpenState}
-            onFolderToggle={setFolderOpen}
-          />
-        ) : (
-          <div
-            className="relative flex-1 flex items-center justify-center"
-            onDragEnter={handleEmptyDragEnter}
-            onDragLeave={handleEmptyDragLeave}
-            onDragOver={handleEmptyDragOver}
-            onDrop={handleEmptyDrop}
-          >
-            {isDraggingOverEmpty ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/(--tint-trace) border-2 border-dashed border-accent/(--tint-muted) rounded-[var(--radius)] pointer-events-none">
-                <div className="flex flex-col items-center gap-1 text-accent">
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                  <span className="text-xs font-mono">Drop files or folders here</span>
+      <FindInFiles artifacts={artifacts} onOpen={handleOpenMatch}>
+        <div
+          className="flex-1 overflow-hidden min-h-0 flex flex-col"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            showContextMenu({
+              x: e.clientX,
+              y: e.clientY,
+              targetId: null,
+              targetPath: '',
+              isFolder: true,
+              selectedIds,
+            });
+          }}
+        >
+          {showTree ? (
+            <ArboristFileTree
+              ref={treeRef}
+              artifacts={artifacts}
+              selectedId={activeTabId}
+              onSelect={handleSelect}
+              onSelectionChange={handleSelectionChange}
+              onContextMenu={handleContextMenu}
+              onMove={handleMove}
+              onRename={handleRename}
+              onUploadFiles={handleUploadFiles}
+              onDelete={handleDelete}
+              activeFileOperation={activeFileOperation}
+              onCreateFile={handleCreateFile}
+              onCreateFolder={handleCreateFolder}
+              onCancelOperation={cancelFileOperation}
+              initialOpenState={folderOpenState}
+              onFolderToggle={setFolderOpen}
+            />
+          ) : (
+            <div
+              className="relative flex-1 flex items-center justify-center"
+              onDragEnter={handleEmptyDragEnter}
+              onDragLeave={handleEmptyDragLeave}
+              onDragOver={handleEmptyDragOver}
+              onDrop={handleEmptyDrop}
+            >
+              {isDraggingOverEmpty ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/(--tint-trace) border-2 border-dashed border-accent/(--tint-muted) rounded-[var(--radius)] pointer-events-none">
+                  <div className="flex flex-col items-center gap-1 text-accent">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span className="text-xs font-mono">Drop files or folders here</span>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="text-xs text-center text-text-muted">
-                Create or import an artifact to get started
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+              ) : (
+                <p className="text-xs text-center text-text-muted">
+                  Create or import an artifact to get started
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </FindInFiles>
 
       {/* ── Selected file info ── */}
       {selectedArtifact && (

@@ -1,5 +1,7 @@
 import { APP_NAME } from '@/lib/constants';
+import { useState } from 'react';
 import { iconButtonClass } from '@/components/ui/button-class';
+import ReportDialog from '@/components/public/ReportDialog';
 
 interface PublicTopBarProps {
   title?: string;
@@ -7,6 +9,8 @@ interface PublicTopBarProps {
   hasMetadata?: boolean;
   metadataOpen?: boolean;
   onToggleMetadata?: () => void;
+  /** The published creation this bar is over; gives visitors a Report action. */
+  reportCruxId?: string;
 }
 
 export default function PublicTopBar({
@@ -15,7 +19,11 @@ export default function PublicTopBar({
   hasMetadata,
   metadataOpen,
   onToggleMetadata,
+  reportCruxId,
 }: PublicTopBarProps) {
+  const [reporting, setReporting] = useState(false);
+  const link =
+    'text-2xs font-mono px-2 py-1 rounded-[var(--radius-sm)] text-public-top-bar-link hover:text-public-top-bar-link-hover hover:bg-action-button-hover transition-colors';
   return (
     <header className="relative z-20 flex items-center justify-between h-8 px-3 border-b border-public-top-bar-border bg-public-top-bar shrink-0">
       <div className="flex items-center gap-1.5 min-w-0 text-2xs font-mono">
@@ -41,10 +49,17 @@ export default function PublicTopBar({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <a
-          href="/explore"
-          className="text-2xs font-mono px-2 py-1 rounded-[var(--radius-sm)] text-public-top-bar-link hover:text-public-top-bar-link-hover hover:bg-action-button-hover transition-colors"
-        >
+        {reportCruxId && (
+          <button
+            type="button"
+            onClick={() => setReporting(true)}
+            aria-haspopup="dialog"
+            className={`${link} cursor-pointer`}
+          >
+            Report
+          </button>
+        )}
+        <a href="/explore" className={link}>
           Explore
         </a>
         {hasMetadata && onToggleMetadata && (
@@ -70,6 +85,15 @@ export default function PublicTopBar({
           </button>
         )}
       </div>
+      {reportCruxId && (
+        <ReportDialog
+          open={reporting}
+          cruxId={reportCruxId}
+          title={title}
+          // Modal returns focus to the control that opened it.
+          onClose={() => setReporting(false)}
+        />
+      )}
     </header>
   );
 }

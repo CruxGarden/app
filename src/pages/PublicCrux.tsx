@@ -11,6 +11,9 @@ import type { Crux, Artifact } from '@/api/types';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 import MetadataContent from '@/components/workspace/MetadataContent';
+import { canonicalUrl, usePageMeta } from '@/hooks/usePageMeta';
+import { metaDescription } from '@/lib/page-meta';
+import { publicCoverUrl } from '@/lib/public-cover';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -105,15 +108,20 @@ export default function PublicCrux() {
     };
   }, [username, slug, attempt]);
 
-  // Set document title
-  useEffect(() => {
-    if (crux?.title) {
-      document.title = crux.title;
-    }
-    return () => {
-      document.title = APP_NAME;
-    };
-  }, [crux?.title]);
+  // Title, description and link-preview tags for this creation
+  const handle = (username || '').replace(/^@/, '');
+  usePageMeta(
+    crux && state === 'ready'
+      ? {
+          title: `${crux.title || crux.slug} — ${APP_NAME}`,
+          description:
+            metaDescription(purpose) ?? `A creation by @${handle} published with ${APP_NAME}.`,
+          canonical: canonicalUrl(`/${handle}/${crux.slug}`),
+          // Tools and Moods publish a package, not a site, so they have no cover file.
+          image: crux.kind === 'tool' || crux.kind === 'mood' ? undefined : publicCoverUrl(crux.id),
+        }
+      : null,
+  );
 
   if (state === 'loading') {
     return <PublicLoading label="Loading creation…" username={username} />;
@@ -141,6 +149,7 @@ export default function PublicCrux() {
       <PublicTopBar
         title={crux?.title}
         username={username || ''}
+        reportCruxId={crux?.id}
         hasMetadata={hasMetadata}
         metadataOpen={metadataOpen}
         onToggleMetadata={() => setMetadataOpen((v) => !v)}

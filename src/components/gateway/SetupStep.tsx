@@ -1,3 +1,4 @@
+import { isReservedUsername } from '@/lib/site';
 import { useIncludedAccess } from '@/services/included-access';
 import IncludedStatus from '@/components/chat/IncludedStatus';
 import { useState, useRef, useEffect } from 'react';
@@ -83,6 +84,7 @@ export function SetupStep({ onBack }: { onBack: () => void }) {
     if (!name) return '';
     if (name.length < 3) return 'At least 3 characters';
     if (!/^[a-zA-Z0-9_-]+$/.test(name)) return 'Letters, numbers, hyphens, underscores only';
+    if (isReservedUsername(name)) return 'That name is kept for the website';
     return '';
   };
 

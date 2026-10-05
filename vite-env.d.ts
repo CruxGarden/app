@@ -8,6 +8,8 @@ declare module '*.sql?raw' {
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
   readonly VITE_PREVIEW_ORIGIN?: string;
+  /** Contact address shown on the legal pages; unset means the issue tracker. */
+  readonly VITE_CONTACT_EMAIL?: string;
 }
 
 interface ImportMeta {

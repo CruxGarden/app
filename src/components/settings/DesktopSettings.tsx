@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import SettingsSection from './SettingsSection';
+import AboutSettings from './AboutSettings';
 import { Button, Toggle } from '@/components/ui';
 import { Capability, can } from '@/lib/platform';
 import type { DesktopInfo, UpdateState } from '@/lib/platform';
@@ -76,114 +77,118 @@ export default function DesktopSettings() {
   })();
 
   return (
-    <SettingsSection
-      title="Desktop"
-      testId="desktop-settings"
-      aside={
-        info && (
-          <span className="text-xxs font-mono text-text-muted">
-            v{info.version} · {info.platform}-{info.arch}
-            {info.packaged ? '' : ' · dev'}
-          </span>
-        )
-      }
-    >
-      <div className="flex flex-col gap-3 text-xs">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-text">Updates</div>
-            <div className="text-text-muted" data-testid="update-status">
-              {statusText}
+    <>
+      <SettingsSection
+        title="Desktop"
+        testId="desktop-settings"
+        aside={
+          info && (
+            <span className="text-xxs font-mono text-text-muted">
+              v{info.version} · {info.platform}-{info.arch}
+              {info.packaged ? '' : ' · dev'}
+            </span>
+          )
+        }
+      >
+        <div className="flex flex-col gap-3 text-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-text">Updates</div>
+              <div className="text-text-muted" data-testid="update-status">
+                {statusText}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {state?.status === 'available' && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={busy}
+                  onClick={() => run(() => updates.download())}
+                >
+                  Download
+                </Button>
+              )}
+              {state?.status === 'downloaded' && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={busy}
+                  onClick={() => run(() => updates.install())}
+                >
+                  Restart to update
+                </Button>
+              )}
+              {state?.status === 'error' && state.failedAction === 'download' && (
+                <Button size="sm" variant="secondary" onClick={() => void openWeb(RELEASES_URL)}>
+                  Get it from GitHub
+                </Button>
+              )}
+              {state && !['downloading', 'downloaded', 'disabled'].includes(state.status) && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy || state.status === 'checking'}
+                  onClick={() => run(() => updates.check())}
+                >
+                  Check for updates
+                </Button>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {state?.status === 'available' && (
-              <Button
-                size="sm"
-                variant="primary"
-                disabled={busy}
-                onClick={() => run(() => updates.download())}
-              >
-                Download
-              </Button>
-            )}
-            {state?.status === 'downloaded' && (
-              <Button
-                size="sm"
-                variant="primary"
-                disabled={busy}
-                onClick={() => run(() => updates.install())}
-              >
-                Restart to update
-              </Button>
-            )}
-            {state?.status === 'error' && state.failedAction === 'download' && (
-              <Button size="sm" variant="secondary" onClick={() => void openWeb(RELEASES_URL)}>
-                Get it from GitHub
-              </Button>
-            )}
-            {state && !['downloading', 'downloaded', 'disabled'].includes(state.status) && (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={busy || state.status === 'checking'}
-                onClick={() => run(() => updates.check())}
-              >
-                Check for updates
-              </Button>
-            )}
+          <Toggle
+            label="Check for updates when the app starts"
+            checked={state?.autoCheck ?? true}
+            disabled={!state || state.status === 'disabled'}
+            onChange={(on) => run(() => updates.setAutoCheck(on))}
+          />
+          <p className="text-xxs text-text-muted">
+            The update check is the only routine network call this app makes on its own. Nothing
+            downloads without your click; once downloaded, the update installs when you quit the app
+            or click Restart to update.
+          </p>
+
+          <div className="divider my-1" />
+
+          <Toggle
+            label="Keep running in the menu bar when the window closes"
+            checked={dockedMode}
+            onChange={(on) => {
+              setDocked(on);
+              void setDockedMode(on);
+            }}
+          />
+          <p className="text-xxs text-text-muted">
+            Docked mode: closing the window puts it away and the garden keeps running — Schedules
+            tick, Alerts collect — with Open and Quit in the menu bar. Off, closing the window
+            closes the app.
+          </p>
+
+          <div className="divider my-1" />
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-text">Logs</div>
+              <div className="text-text-muted font-mono break-all">
+                {info ? shortenHomePath(info.logsDir) : ''}
+              </div>
+              <div className="text-xxs text-text-muted">
+                Written locally, never sent. Attach main.log to a GitHub issue when something
+                breaks.
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="shrink-0"
+              onClick={() => void openLogs()}
+            >
+              Open logs folder
+            </Button>
           </div>
         </div>
-        <Toggle
-          label="Check for updates when the app starts"
-          checked={state?.autoCheck ?? true}
-          disabled={!state || state.status === 'disabled'}
-          onChange={(on) => run(() => updates.setAutoCheck(on))}
-        />
-        <p className="text-xxs text-text-muted">
-          The update check is the only routine network call this app makes on its own. Nothing
-          downloads without your click; once downloaded, the update installs when you quit the app
-          or click Restart to update.
-        </p>
-
-        <div className="divider my-1" />
-
-        <Toggle
-          label="Keep running in the menu bar when the window closes"
-          checked={dockedMode}
-          onChange={(on) => {
-            setDocked(on);
-            void setDockedMode(on);
-          }}
-        />
-        <p className="text-xxs text-text-muted">
-          Docked mode: closing the window puts it away and the garden keeps running — Schedules
-          tick, Alerts collect — with Open and Quit in the menu bar. Off, closing the window closes
-          the app.
-        </p>
-
-        <div className="divider my-1" />
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-text">Logs</div>
-            <div className="text-text-muted font-mono break-all">
-              {info ? shortenHomePath(info.logsDir) : ''}
-            </div>
-            <div className="text-xxs text-text-muted">
-              Written locally, never sent. Attach main.log to a GitHub issue when something breaks.
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="shrink-0"
-            onClick={() => void openLogs()}
-          >
-            Open logs folder
-          </Button>
-        </div>
-      </div>
-    </SettingsSection>
+      </SettingsSection>
+      <AboutSettings />
+    </>
   );
 }

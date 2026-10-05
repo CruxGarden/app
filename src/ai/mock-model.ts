@@ -68,6 +68,8 @@ function lastUserText(prompt: LanguageModelV4Prompt): string {
 }
 
 let instance: MockLanguageModelV4 | null = null;
+/** One refusal per launch for the "[mock:refused-once]" script. */
+let refusedOnce = false;
 
 export function getMockLanguageModel(): LanguageModel {
   if (!instance) {
@@ -102,6 +104,13 @@ export function getMockLanguageModel(): LanguageModel {
             ...input,
           });
         };
+
+        // "[mock:refused-once]": the provider refuses the first attempt the way
+        // a revoked key does (401), then answers — a failed turn and its "Try again".
+        if (lastUserText(prompt).includes('[mock:refused-once]') && !refusedOnce) {
+          refusedOnce = true;
+          throw Object.assign(new Error('Mock provider: invalid x-api-key'), { statusCode: 401 });
+        }
 
         // The tutorial journey exercises the real turn/tool pipeline with a
         // deterministic provider. Pause so it can verify background feedback.

@@ -87,6 +87,10 @@ export interface MockApi {
         verifies: number;
       }
     >;
+    /** Reports visitors sent about published creations (POST /explore/reports). */
+    reports?: Array<Record<string, unknown>>;
+    /** Answer the next reports with this status instead of 201 (429, 500…). */
+    reportStatus?: number;
     /** Author-side Crux Store rows (what visitors wrote); seeded on first read. */
     store?: Array<{
       key: string;
@@ -218,6 +222,15 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     });
 
     // ── Explore (public) ──
+    if (path === '/explore/reports' && method === 'POST') {
+      if (state.reportStatus) return send(state.reportStatus, { message: 'refused' });
+      const report = bodyJson();
+      const reasons = ['illegal', 'harmful', 'spam', 'copyright', 'other'];
+      if (typeof report.cruxId !== 'string' || !reasons.includes(String(report.reason)))
+        return send(400, { message: 'invalid report' });
+      (state.reports ??= []).push(report);
+      return send(201, { ok: true });
+    }
     if (path === '/explore/tags') {
       // The tags people used, most-used first, optionally for one kind.
       const kind = parsedUrl.searchParams.get('kind');

@@ -11,6 +11,7 @@ import Editor from '@/lib/monaco-editor';
 
 const FORM_AUTOSAVE_MS = 300;
 import type * as Monaco from 'monaco-editor';
+import { applyEditorReveal, onEditorReveal, takeEditorReveal } from './editor-reveal';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { useThemeStore } from '@/stores/themeStore';
@@ -436,6 +437,9 @@ export default function EditorContent({
       if (!savedView && tab.scrollTop > 0) {
         editor.setScrollTop(tab.scrollTop);
       }
+      // Opened from find in files: go to the line, with the match selected.
+      const reveal = takeEditorReveal(artifact.id);
+      if (reveal) applyEditorReveal(editor, reveal);
 
       // Track scroll position (debounced via rAF, guarded against unmount)
       editor.onDidScrollChange(() => {
@@ -453,7 +457,20 @@ export default function EditorContent({
         saveHandlerRef.current();
       });
     },
-    [documentSession, tab.scrollTop, tab.id, themeName, setTabScrollTop],
+    [documentSession, tab.scrollTop, tab.id, themeName, setTabScrollTop, artifact.id],
+  );
+
+  // The same request for a file whose source editor is already on screen. An
+  // editor that has left the page leaves the request for the one that mounts.
+  useEffect(
+    () =>
+      onEditorReveal(artifact.id, () => {
+        const editor = editorRef.current;
+        if (!editor || disposedRef.current || !editor.getDomNode()?.isConnected) return;
+        const reveal = takeEditorReveal(artifact.id);
+        if (reveal) applyEditorReveal(editor, reveal);
+      }),
+    [artifact.id],
   );
 
   // External content arrived (first load is handled by defaultValue; later

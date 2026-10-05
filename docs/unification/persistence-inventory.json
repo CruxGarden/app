@@ -635,6 +635,13 @@
       "ledger": "cruxgarden:ui"
     },
     {
+      "key": "cruxgarden:update-notice-later",
+      "sources": [
+        "src/lib/update-notice.ts"
+      ],
+      "ledger": "cruxgarden:update-notice-later"
+    },
+    {
       "key": "cruxgarden:weather",
       "sources": [
         "src/services/weather.ts"

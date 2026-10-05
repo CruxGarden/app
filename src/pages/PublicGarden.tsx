@@ -10,6 +10,9 @@ import { PublicTopBar } from '@/components/display';
 import PublishedCreationCard from '@/components/explore/PublishedCreationCard';
 import { Avatar, Button, Panel, SegmentedControl, fieldClass, buttonClass } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
+import { canonicalUrl, usePageMeta } from '@/hooks/usePageMeta';
+import { metaDescription } from '@/lib/page-meta';
+import { PublicFooter } from '@/components/public/LegalLinks';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
@@ -104,14 +107,19 @@ export default function PublicGarden() {
     }
   };
 
-  useEffect(() => {
-    if (author?.username) {
-      document.title = `${author.username} - ${APP_NAME}`;
-    }
-    return () => {
-      document.title = APP_NAME;
-    };
-  }, [author?.username]);
+  const avatarUrl = resolveAvatarUrl(author);
+  usePageMeta(
+    author?.username && state === 'ready'
+      ? {
+          title: `${author.displayName || author.username} (@${author.username}) — ${APP_NAME}`,
+          description:
+            metaDescription(author.bio) ??
+            `Creations published by @${author.username} on ${APP_NAME}.`,
+          canonical: canonicalUrl(`/${author.username}`),
+          image: avatarUrl && /^https?:/.test(avatarUrl) ? avatarUrl : undefined,
+        }
+      : null,
+  );
 
   // Client-side search + sort
   const filteredCruxes = useMemo(() => {
@@ -134,7 +142,6 @@ export default function PublicGarden() {
     );
   }, [cruxes, search, sortBy, kind]);
 
-  const avatarUrl = resolveAvatarUrl(author);
   if (state === 'loading') {
     return <PublicLoading label="Loading garden…" username={username} />;
   }
@@ -299,6 +306,7 @@ export default function PublicGarden() {
             </Button>
           </div>
         )}
+        <PublicFooter className="mt-6" />
       </div>
     </div>
   );

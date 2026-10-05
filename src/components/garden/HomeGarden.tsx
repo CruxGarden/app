@@ -325,6 +325,7 @@ export default function HomeGarden() {
               options={[
                 { value: 'created', label: 'Created' },
                 { value: 'updated', label: 'Updated' },
+                { value: 'name', label: 'Name' },
               ]}
               className="h-9 shrink-0"
             />

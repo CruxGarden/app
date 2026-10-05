@@ -38,6 +38,7 @@ import { buildPromptParts, buildWorkspaceContext } from './system-prompt';
 import { estimateTokens, fitToContextWindow, evictedTranscript, compactionNote } from './context';
 import { getModelInfo, getProviderForModel, resolveModel } from './providers';
 import { isAiMock } from '@/lib/platform';
+import { describeProviderError } from './provider-errors';
 
 /** Events yielded by the conversation engine */
 export type ConversationEvent =
@@ -56,7 +57,8 @@ export type ConversationEvent =
    */
   | { type: 'step_end'; index: number }
   | { type: 'done'; textContent: string; hadMutation: boolean }
-  | { type: 'error'; message: string }
+  /** `detail` is the provider's own wording, when the message is our plain reading of it. */
+  | { type: 'error'; message: string; detail?: string }
   | { type: 'info'; message: string }
   | { type: 'usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number };
 
@@ -435,7 +437,7 @@ export async function* runConversation(
           return;
 
         case 'error': {
-          yield { type: 'error', message: friendlyError(part.error) };
+          yield { type: 'error', ...friendlyError(part.error, model) };
           return;
         }
       }
@@ -443,7 +445,7 @@ export async function* runConversation(
   } catch (err: unknown) {
     const e = err as Error;
     if (e.name === 'AbortError' || signal?.aborted) return;
-    yield { type: 'error', message: friendlyError(err) };
+    yield { type: 'error', ...friendlyError(err, model) };
     return;
   }
 
@@ -531,13 +533,8 @@ async function summarizeEvicted(
   }
 }
 
-/** Map SDK/provider errors to user-facing messages. */
-function friendlyError(error: unknown): string {
-  const e = error as { statusCode?: number; status?: number; message?: string };
-  const status = e?.statusCode ?? e?.status;
-  if (e?.message?.includes('Included collaboration:')) return e.message;
-  if (status === 429 || status === 529 || status === 503) {
-    return 'The AI service is temporarily overloaded. Please try again in a moment.';
-  }
-  return e?.message || String(error);
+/** Map SDK/provider errors to user-facing messages (see provider-errors.ts for the table). */
+function friendlyError(error: unknown, model: string): { message: string; detail?: string } {
+  const { message, detail } = describeProviderError(error, model);
+  return { message, ...(detail ? { detail } : {}) };
 }

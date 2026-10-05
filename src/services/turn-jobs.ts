@@ -92,6 +92,8 @@ export interface TurnJob {
   startedAt: string;
   endedAt?: string;
   error?: string;
+  /** The provider's own wording behind `error`, shown as a secondary detail. */
+  errorDetail?: string;
   /** Why the job ended early, when it did. */
   stopReason?: TurnStopReason;
   /** Snapshot crux ids this job took, in order (the last one is what Restore offers). */
@@ -373,7 +375,13 @@ export function finishCheck(job: TurnJob, verdict: CheckVerdictRecord): TurnJob 
  */
 export function continueJobForFix(job: TurnJob, problems: string[]): TurnJob {
   const title = `Fix: ${promptPreview(problems.join('; '))}`;
-  const { endedAt: _endedAt, stopReason: _stopReason, error: _error, ...rest } = job;
+  const {
+    endedAt: _endedAt,
+    stopReason: _stopReason,
+    error: _error,
+    errorDetail: _errorDetail,
+    ...rest
+  } = job;
   return {
     ...rest,
     status: 'running',
@@ -587,7 +595,11 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
           sawError = true;
           content += `\n\n*Error: ${event.message}*`;
           deps.onText?.(`\n\n*Error: ${event.message}*`);
-          await publish({ ...job, error: event.message });
+          await publish({
+            ...job,
+            error: event.message,
+            ...(event.detail ? { errorDetail: event.detail } : {}),
+          });
           break;
 
         case 'done':

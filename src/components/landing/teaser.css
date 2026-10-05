@@ -298,3 +298,28 @@
   background: rgb(6 16 22 / 0.9);
   box-shadow: 0 12px 48px rgb(0 0 0 / 0.3);
 }
+
+/* Terms, Privacy, Contact: one quiet line at the foot of the field, outside the
+   stage's flow so it never changes the distance between the two surfaces. */
+.teaser-legal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+.teaser-legal a {
+  color: #9fb6c0;
+  text-decoration: none;
+  text-shadow: 0 1px 2px #04111c;
+}
+.teaser-legal a:hover,
+.teaser-legal a:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}

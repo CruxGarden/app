@@ -28,3 +28,13 @@ test('docs and journal deep links resolve their own HTML; unrelated routes and a
     assert.equal(request.headers.host.value, 'crux.garden');
   }
 });
+test('the sitemap is handed to the API; pages that only resemble it are left alone', () => {
+  const answer = handler({ request: { uri: '/sitemap.xml', querystring: {}, headers: {} } });
+  assert.equal(answer.statusCode, 302);
+  assert.equal(answer.headers.location.value, 'https://api.crux.garden/explore/sitemap.xml');
+  for (const uri of ['/sitemap.xml/', '/alice/sitemap.xml', '/robots.txt', '/terms', '/privacy']) {
+    const request = { uri, querystring: {}, headers: {} };
+    assert.equal(handler({ request }), request);
+    assert.equal(request.uri, uri);
+  }
+});

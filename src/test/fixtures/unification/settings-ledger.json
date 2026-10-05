@@ -673,6 +673,13 @@
       "target": "installation/settings",
       "preservation": "First successfully published Crux marker; prevents repeat acknowledgements across restarts.",
       "status": "implemented"
+    },
+    {
+      "key": "cruxgarden:update-notice-later",
+      "group": "device-presentation",
+      "target": "session only (sessionStorage)",
+      "preservation": "Dismissed update notice per kind and version; deliberately not persisted across launches or exported.",
+      "status": "implemented"
     }
   ]
 }

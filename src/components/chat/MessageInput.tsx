@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import { confirmDialog } from '@/stores/dialogStore';
 import { reportFileUpdateError } from '@/components/artifacts/fileUpdateError';
 import { linkClass } from '@/components/ui/button-class';
+import { carriesFiles, droppedFiles, namePastedImages, pastedImages } from './composer-files';
 
 interface MessageInputProps {
   /** Send — or, while a Background Turn runs, queue behind it. */
@@ -122,6 +123,15 @@ export default function MessageInput({
   // collaborator reads it, Growth keeps it, and the message stays a sentence.
   const PASTE_AS_FILE_CHARS = 1500;
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // A pasted image goes where "Add a file" puts files (EF06). A paste that
+    // carries words is left to the text path below, exactly as before.
+    const images = cruxId && !disabled ? pastedImages(e.clipboardData) : [];
+    if (images.length > 0) {
+      e.preventDefault();
+      const paths = store.getState().artifacts.map((item) => item.meta?.path || item.filename);
+      void addFiles(namePastedImages(images, paths));
+      return;
+    }
     const text = e.clipboardData?.getData('text/plain') ?? '';
     if (!cruxId || text.length < PASTE_AS_FILE_CHARS || disabled) return;
     e.preventDefault();
@@ -181,6 +191,44 @@ export default function MessageInput({
     }
   };
 
+  // Files dragged in from the OS land here and nowhere else: the drop is
+  // consumed, so no pane or window handler beneath also receives it.
+  const [dropping, setDropping] = useState(false);
+  const dragDepth = useRef(0);
+  const endDrag = () => {
+    dragDepth.current = 0;
+    setDropping(false);
+  };
+  const dropHandlers = {
+    onDragEnter: (e: React.DragEvent) => {
+      if (!carriesFiles(e.dataTransfer)) return;
+      e.preventDefault();
+      dragDepth.current += 1;
+      setDropping(true);
+    },
+    onDragOver: (e: React.DragEvent) => {
+      if (!carriesFiles(e.dataTransfer)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = disabled || addingRef.current ? 'none' : 'copy';
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (!carriesFiles(e.dataTransfer)) return;
+      dragDepth.current -= 1;
+      if (dragDepth.current <= 0) endDrag();
+    },
+    onDrop: (e: React.DragEvent) => {
+      if (!carriesFiles(e.dataTransfer)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      endDrag();
+      if (disabled || addingRef.current) return;
+      const { files, folders } = droppedFiles(e.dataTransfer);
+      if (files.length > 0) void addFiles(files);
+      else if (folders > 0) setFileNotice('Folders are added from Artifacts. Drop files here.');
+    },
+  };
+
   const round =
     'w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed';
   const pill = 'px-3 h-8 shrink-0 rounded-full text-xs font-body transition-colors cursor-pointer';
@@ -189,8 +237,13 @@ export default function MessageInput({
   // Send (or Stop, Steer, Queue while a turn runs) on the right. The model
   // chip and the check controls sit beneath it in the panel.
   return (
-    <div className="px-3 pb-2 pt-2 bg-chat-composer">
-      {(addingFiles || fileNotice) && (
+    <div className="px-3 pb-2 pt-2 bg-chat-composer" data-dropping={dropping} {...dropHandlers}>
+      {dropping && !addingFiles && (
+        <p className="mb-2 text-xs text-chat-text-muted" data-testid="composer-drop-hint">
+          Drop to add to Artifacts
+        </p>
+      )}
+      {(addingFiles || fileNotice) && !dropping && (
         <div
           role="status"
           className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-chat-text-muted"
@@ -222,6 +275,7 @@ export default function MessageInput({
         className={cn(
           'flex items-end gap-1.5 rounded-[22px] border px-2 py-1.5',
           'bg-chat-input border-chat-input-border focus-within:border-chat-input-border-focus transition-colors',
+          dropping && 'border-dashed border-chat-input-border-focus',
         )}
         data-testid="composer"
       >

@@ -6,6 +6,7 @@ import type { ChatMessage } from '@/api/types';
 import ToolCallRows from './ToolCallRows';
 import { getModelShortName } from '@/ai/providers';
 import MarkdownRenderer from './MarkdownRenderer';
+import MessageCopy from './MessageCopy';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -159,10 +160,11 @@ export default function MessageBubble({
   if (isUser) {
     return (
       <div
-        className="flex gap-2 items-end justify-end motion-enter-bubble"
+        className="group/message flex gap-2 items-end justify-end motion-enter-bubble"
         data-role="user"
         {...(fromCheck ? { 'data-testid': 'check-message' } : {})}
       >
+        <MessageCopy content={message.content} className="mb-1.5" />
         <div className="max-w-[82%] min-w-0">
           {authorName && (
             <div className="text-2xs font-mono text-chat-text-muted/(--tint-dense) mb-1 text-right">
@@ -187,7 +189,10 @@ export default function MessageBubble({
   // face, the work it did folded beneath it, the record of the turn in a
   // quiet footer line.
   return (
-    <div className="flex gap-1.5 items-start motion-enter-bubble" data-role="assistant">
+    <div
+      className="group/message flex gap-1.5 items-start motion-enter-bubble"
+      data-role="assistant"
+    >
       <div className="pt-0.5">
         <MessageAvatar fingerprint={message.personaFingerprint} />
       </div>
@@ -216,11 +221,14 @@ export default function MessageBubble({
         )}
         {message.job?.check && <CheckLine check={message.job.check} />}
 
-        {footer.length > 0 && (
-          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/(--tint-balanced)">
-            {footer.join(' · ')}
-          </div>
-        )}
+        <div className="mt-1 flex items-center gap-1.5">
+          {footer.length > 0 && (
+            <div className="text-2xs font-mono text-chat-text-muted/(--tint-balanced)">
+              {footer.join(' · ')}
+            </div>
+          )}
+          <MessageCopy content={message.content} className="first:-ml-1.5" />
+        </div>
       </div>
     </div>
   );

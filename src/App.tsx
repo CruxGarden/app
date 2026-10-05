@@ -3,7 +3,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { registerNavigator } from '@/lib/navigate';
 import PlasmaStage from '@/components/plasma/PlasmaStage';
 import PlasmaSurfaces from '@/components/plasma/PlasmaSurfaces';
-import { isPublicSite } from '@/lib/site';
+import { isPublicSite, LEGAL_PAGES } from '@/lib/site';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import TitleTooltips from '@/components/ui/TitleTooltips';
 import Toaster from '@/components/ui/Toaster';
@@ -20,6 +20,7 @@ const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
 const PublicGarden = lazy(() => import('@/pages/PublicGarden'));
 const ExplorePage = lazy(() => import('@/pages/Explore').then((m) => ({ default: m.ExplorePage })));
 const StaticPublication = lazy(() => import('@/pages/StaticPublication'));
+const Legal = lazy(() => import('@/pages/Legal'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // When running inside a workspace preview iframe, the preview system injects
@@ -79,6 +80,15 @@ const router = createBrowserRouter(
         </ErrorBoundary>
       ),
     },
+    // Static, so the router ranks them above `/:username` (see RESERVED_USERNAMES).
+    ...LEGAL_PAGES.map(({ path }) => ({
+      path,
+      element: (
+        <ErrorBoundary>
+          <Legal page={path} />
+        </ErrorBoundary>
+      ),
+    })),
     {
       path: '/:username/:slug/*',
       element: (

@@ -24,7 +24,10 @@ import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
 import { gardenIpc, isGardenUrl } from './garden-ipc';
 import { installWorkspacePermissions } from './workspace-permissions';
-import { INSTALLATION_COMMANDS, type InstallationCommand } from './bridge';
+import { INSTALLATION_COMMANDS, type InstallationCommand, type MenuCommand } from './bridge';
+import { WindowStateFile, restoreWindowState, trackWindowState } from './window-state';
+import { SessionMarker, isRendererCrash, type PreviousCrash } from './crash-marker';
+import { buildMenuTemplate, WEBSITE_URL } from './app-menu';
 const { app, BrowserWindow, protocol, dialog, shell } = require('electron');
 const { Readable } = require('node:stream');
 const path = require('path');
@@ -175,7 +178,8 @@ const userDataPath = fs.realpathSync(requestedUserData);
 app.setPath('userData', userDataPath);
 // Acquire before opening logs, SQLite, watchers or agent servers. Keep the lock
 // through teardown; Electron releases it when this process exits (including crash).
-if (!app.requestSingleInstanceLock()) app.exit(0);
+const primaryInstance: boolean = app.requestSingleInstanceLock();
+if (!primaryInstance) app.exit(0);
 app.on('second-instance', (_event: Electron.Event, argv: string[], cwd: string) => {
   packageImports.add(argv.slice(1), cwd);
   // Electron emits this after ready, but asynchronous API startup may still be
@@ -211,6 +215,74 @@ function debugLog(msg: string) {
   appLog.info(msg);
 }
 debugLog(`Starting Crux Garden ${app.getVersion()}. isDev=${isDev}, isPackaged=${app.isPackaged}`);
+
+// How the last session ended (EF04, ADR 0008): a marker under userData, written
+// now and removed on a clean quit. Local only; the renderer is told once, and
+// offers "Report a problem" — nothing is ever sent on its own. Only the
+// instance that owns the profile may read or clear the marker.
+const sessionMarker = new SessionMarker(userDataPath);
+let previousCrash: PreviousCrash | null = primaryInstance
+  ? sessionMarker.begin(app.getVersion())
+  : null;
+if (previousCrash)
+  appLog.warn(
+    `previous session ended badly: ${previousCrash.kind} version=${previousCrash.version ?? 'unknown'} at=${previousCrash.at ?? 'unknown'}`,
+  );
+if (!launchSettings.crashNotice) previousCrash = null;
+app.on(
+  'render-process-gone',
+  (_event: unknown, contents: Electron.WebContents, details: Electron.RenderProcessGoneDetails) => {
+    // Only the app's own window: a preview capture or a helper going away is not a crash to report.
+    if (mainWindow && !mainWindow.isDestroyed() && contents === mainWindow.webContents)
+      if (isRendererCrash(details?.reason)) sessionMarker.noteRendererCrash();
+  },
+);
+// `quit` also follows app.exit(code): only a zero exit is a clean end.
+app.on('quit', (_event: unknown, exitCode: number) => {
+  if (primaryInstance && exitCode === 0) sessionMarker.end();
+});
+
+// Where the window was (EF08). Beside the rest of the profile, so an isolated
+// test profile restores only what that profile saved.
+const windowStateFile = new WindowStateFile(userDataPath);
+const WINDOW_DEFAULTS = { width: 1400, height: 900, minWidth: 800, minHeight: 600 };
+/** True while a companion layout (beside Figma or Blender) is placing the window on purpose. */
+let windowPlacementHeld: () => boolean = () => false;
+
+// A menu command chosen while no window could hear it (macOS keeps the menu
+// with every window closed) waits here until the renderer says it is listening.
+let queuedMenuCommand: { command: MenuCommand; accelerator: boolean } | null = null;
+function sendMenuCommand(command: MenuCommand, accelerator: boolean) {
+  if (quitting) return;
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    queuedMenuCommand = { command, accelerator: false };
+    void startup.then(() => !quitting && showMainWindow()).catch(() => undefined);
+    return;
+  }
+  if (!mainWindow.isVisible() || mainWindow.isMinimized()) showMainWindow();
+  mainWindow.webContents.send('menu:command', { command, accelerator });
+}
+gardenBridge.on('menu:listening', (event: Electron.IpcMainEvent) => {
+  const queued = queuedMenuCommand;
+  queuedMenuCommand = null;
+  if (queued) event.sender.send('menu:command', queued);
+});
+function installApplicationMenu() {
+  const { Menu } = require('electron');
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      buildMenuTemplate(
+        { platform: process.platform, dev: !app.isPackaged, appName: 'Crux Garden' },
+        {
+          command: sendMenuCommand,
+          openLogs: () => void shell.openPath(logsDir),
+          openWebsite: () => void shell.openExternal(WEBSITE_URL),
+          minimize: () => mainWindow && !mainWindow.isDestroyed() && mainWindow.minimize(),
+        },
+      ),
+    ),
+  );
+}
 
 function getDbPath(): string {
   const userDataPath = app.getPath('userData');
@@ -279,11 +351,28 @@ function setupLocalAiCors(session: any) {
 }
 
 function createWindow() {
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const savedWindowState = windowStateFile.read();
+  const placement = restoreWindowState(
+    savedWindowState,
+    [
+      primaryDisplay.workArea,
+      ...screen
+        .getAllDisplays()
+        .filter((display: Electron.Display) => display.id !== primaryDisplay.id)
+        .map((display: Electron.Display) => display.workArea),
+    ],
+    WINDOW_DEFAULTS,
+  );
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 800,
-    minHeight: 600,
+    width: placement.width,
+    height: placement.height,
+    ...(placement.x !== undefined && placement.y !== undefined
+      ? { x: placement.x, y: placement.y }
+      : {}),
+    minWidth: WINDOW_DEFAULTS.minWidth,
+    minHeight: WINDOW_DEFAULTS.minHeight,
     icon: path.join(
       __dirname,
       '../build/icon' +
@@ -303,6 +392,16 @@ function createWindow() {
       backgroundThrottling: false,
     },
   });
+
+  if (placement.maximized) mainWindow.maximize();
+  if (placement.fullscreen) mainWindow.setFullScreen(true);
+  trackWindowState(mainWindow, windowStateFile, {
+    held: () => windowPlacementHeld(),
+    initial: savedWindowState,
+  });
+  // A hung window is worth a line in the local log (ADR 0008); no content, only that it happened.
+  mainWindow.on('unresponsive', () => appLog.warn('window unresponsive'));
+  mainWindow.on('responsive', () => appLog.info('window responsive again'));
 
   agentHostReady = false;
   mainWindow.webContents.on(
@@ -715,6 +814,9 @@ async function setupIpc() {
       systemPreferences,
       'blender',
     );
+    // Their side-by-side bounds are an arrangement, not where the window lives (EF08).
+    windowPlacementHeld = () =>
+      !!figmaDesktop.status().arranged || !!blenderDesktop.status().arranged;
     fromGarden('blender:open', (_event: any) => {
       return blenderDesktop.open();
     });
@@ -1099,12 +1201,19 @@ async function setupIpc() {
     version: app.getVersion(),
     electron: process.versions.electron,
     platform: process.platform,
+    osVersion: process.getSystemVersion(),
     arch: process.arch,
     packaged: app.isPackaged,
     logsDir,
     userDataDir: app.getPath('userData'),
   }));
   fromGarden('desktop:set-docked', (_e: any, on: boolean) => setDocked(!!on));
+  // Told once: asking again (a reload, a second mount) answers null.
+  fromGarden('desktop:previous-crash', () => {
+    const crash = previousCrash;
+    previousCrash = null;
+    return crash;
+  });
   fromGarden('desktop:open-logs', () => {
     shell.openPath(logsDir);
   });
@@ -1815,6 +1924,7 @@ const startup: Promise<void> = app.whenReady().then(async () => {
     return;
   }
 
+  installApplicationMenu();
   createWindow();
 
   app.on('activate', () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import PageHeader from '@/components/layout/PageHeader';
+import { PublicFooter } from '@/components/public/LegalLinks';
 import { buttonClass, linkClass } from '@/components/ui/button-class';
 
 const releases = 'https://github.com/CruxGarden/app/releases';
@@ -166,6 +167,7 @@ export default function Download() {
           See plans and included AI
         </a>
       </main>
+      <PublicFooter className="pt-0 pb-10" />
     </div>
   );
 }

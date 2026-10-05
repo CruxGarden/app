@@ -222,3 +222,27 @@ export async function exploreTags(
   const body = await res.json();
   return body.data;
 }
+
+// ── Reports ───────────────────────────────────────────
+
+export const REPORT_REASONS = ['illegal', 'harmful', 'spam', 'copyright', 'other'] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export interface CruxReport {
+  cruxId: string;
+  reason: ReportReason;
+  details?: string;
+  email?: string;
+}
+
+/** Report a published creation. Anyone may; the API rate-limits (429). */
+export async function reportCrux(report: CruxReport, signal?: AbortSignal): Promise<void> {
+  const timeout = AbortSignal.timeout(20_000);
+  const res = await fetch(`${base()}/explore/reports`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(report),
+    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+  });
+  if (!res.ok) throw new PublicApiError(res.status);
+}

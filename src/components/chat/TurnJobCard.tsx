@@ -335,7 +335,12 @@ function CheckShot({ fingerprint, ok }: { fingerprint: string; ok: boolean }) {
  */
 export default function TurnJobCard() {
   const toast = useMotionRole('toast');
-  const { checkNow, dismissJob, removeQueued, runNextQueued, stopTurn } = useTurns();
+  const { canRetry, checkNow, dismissJob, removeQueued, retryTurn, runNextQueued, stopTurn } =
+    useTurns();
+  // "Try again" (EF05): the same request, once more, only while nothing else runs.
+  const retryable = useCruxStore((s) => s.turnJob?.status === 'failed' && canRetry());
+  const retryBlocked = useCruxStore((s) => s.closing || s.isStreaming || s.turnSettling);
+  const [retrying, setRetrying] = useState(false);
   const job = useCruxStore((s) => s.turnJob);
   const queue = useCruxStore((s) => s.turnQueue);
   const growths = useCruxStore((s) => s.growths);
@@ -465,7 +470,18 @@ export default function TurnJobCard() {
           )}
 
           {job.error && job.stopReason !== 'closed' && (
-            <div className="text-2xs text-error/(--tint-dense) break-words">{job.error}</div>
+            <div
+              className="text-2xs text-error/(--tint-dense) break-words"
+              data-testid="turn-error"
+            >
+              {job.error}
+            </div>
+          )}
+          {job.errorDetail && job.stopReason !== 'closed' && (
+            <details className="text-2xs text-text-muted" data-testid="turn-error-detail">
+              <summary className={linkClass('text-text-muted')}>Details</summary>
+              <div className="mt-0.5 font-mono break-words">{job.errorDetail}</div>
+            </details>
           )}
 
           {job.check && job.check.problems.length > 0 && (
@@ -510,6 +526,28 @@ export default function TurnJobCard() {
                     title={lastSnapshotLabel ?? undefined}
                   >
                     Restore last snapshot
+                  </button>
+                )}
+                {retryable && (
+                  <button
+                    onClick={async () => {
+                      setRetrying(true);
+                      try {
+                        await retryTurn();
+                      } catch (error) {
+                        await alertDialog(
+                          error instanceof Error ? error.message : 'Could not try again.',
+                          'Could not try again',
+                        );
+                      } finally {
+                        setRetrying(false);
+                      }
+                    }}
+                    disabled={retryBlocked || retrying || restoring}
+                    className={lastSnapshotId ? btn : buttonClass('primary', 'xs')}
+                    title="Send the same request again"
+                  >
+                    Try again
                   </button>
                 )}
                 {job.check && (

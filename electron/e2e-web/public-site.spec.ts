@@ -432,3 +432,114 @@ test('download failure has a useful retry and never offers a draft release', asy
     'https://github.com/CruxGarden/app/releases',
   );
 });
+
+test('legal pages render, are linked from the public footer and from the teaser', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/explore');
+  const legal = page.getByRole('navigation', { name: 'Legal' });
+  for (const [name, path, phrase] of [
+    ['Terms', '/terms', 'What you make is yours'],
+    ['Privacy', '/privacy', 'What stays on your device'],
+    ['Contact', '/contact', 'Report a published creation'],
+  ] as const) {
+    await legal.getByRole('link', { name, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`${path}$`));
+    await expect(page.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: phrase })).toBeVisible();
+    await expect(page.getByText(/Last updated \d+ \w+ \d{4}/)).toBeVisible();
+    await expect(page).toHaveTitle(`${name} — Crux Garden`);
+    expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(
+      new RegExp(`${path}$`),
+    );
+    // Readable on a phone: the page never scrolls sideways.
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+  // No contact address is configured in this build, so the issue tracker is offered.
+  await expect(page.getByRole('link', { name: 'GitHub issues' })).toHaveAttribute(
+    'href',
+    'https://github.com/CruxGarden/app/issues',
+  );
+  // A word that is also a page is never read as somebody's garden.
+  await expect(page.getByText('No garden here')).toHaveCount(0);
+
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Legal' })
+    .getByRole('link', { name: 'Privacy' })
+    .click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible();
+  await page.goto('/plans');
+  await expect(page.getByText(/By subscribing you agree to the/)).toBeVisible();
+  // Leaving a page puts the site's own title back.
+  await page.goto('/terms');
+  await page.getByRole('link', { name: 'Crux Garden', exact: true }).first().click();
+  await expect(page).toHaveTitle('Crux Garden');
+});
+
+test('a visitor can report a published creation; refusals keep what they wrote', async ({
+  page,
+}) => {
+  api.state.reports = [];
+  await page.goto('/@tester/garden-notes');
+  await expect(page).toHaveTitle('Garden Notes — Crux Garden');
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    'content',
+    /\/tester\/garden-notes$/,
+  );
+  const trigger = page.getByRole('button', { name: 'Report', exact: true });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: 'Report this creation' });
+  await expect(dialog).toBeVisible();
+
+  // A reason is required before anything is sent.
+  await dialog.getByRole('button', { name: 'Send report' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('Choose a reason for the report.');
+  expect(api.state.reports).toHaveLength(0);
+
+  await dialog.getByLabel('What is wrong with it?').selectOption('spam');
+  await dialog.getByLabel('Details (optional)').fill('Sells tickets that do not exist.');
+  await dialog.getByLabel(/Your email/).fill('reader@example.invalid');
+
+  // Too many reports: said plainly, and the form is untouched.
+  api.state.reportStatus = 429;
+  await dialog.getByRole('button', { name: 'Send report' }).click();
+  await expect(dialog.getByRole('alert')).toContainText(/try again later/i);
+  await expect(dialog.getByLabel('Details (optional)')).toHaveValue(
+    'Sells tickets that do not exist.',
+  );
+
+  // A server failure: the same, and closing and reopening still keeps the draft.
+  api.state.reportStatus = 500;
+  await dialog.getByRole('button', { name: 'Send again' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('could not be sent');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(dialog.getByLabel('Details (optional)')).toHaveValue(
+    'Sells tickets that do not exist.',
+  );
+  await expect(dialog.getByLabel('What is wrong with it?')).toHaveValue('spam');
+
+  api.state.reportStatus = undefined;
+  await dialog.getByRole('button', { name: 'Send report' }).click();
+  await expect(dialog.getByRole('status')).toContainText('Your report was sent');
+  expect(api.state.reports).toEqual([
+    {
+      cruxId: ID,
+      reason: 'spam',
+      details: 'Sells tickets that do not exist.',
+      email: 'reader@example.invalid',
+    },
+  ]);
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(trigger).toBeFocused();
+
+  // A garden page is not a creation: nothing to report there.
+  await page.goto('/@tester');
+  await expect(page.getByRole('button', { name: 'Report', exact: true })).toHaveCount(0);
+});

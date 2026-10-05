@@ -1,3 +1,5 @@
+import { canonicalUrl, usePageMeta } from '@/hooks/usePageMeta';
+import { PublicFooter } from '@/components/public/LegalLinks';
 import {
   Avatar,
   Panel,
@@ -723,13 +725,12 @@ export default function Explore({
 /* ── Public route page (with URL param syncing) ────────── */
 
 export function ExplorePage() {
-  // Page title
-  useEffect(() => {
-    document.title = `Explore - ${APP_NAME}`;
-    return () => {
-      document.title = APP_NAME;
-    };
-  }, []);
+  usePageMeta({
+    title: `Explore — ${APP_NAME}`,
+    description:
+      'Browse what people have made and published with Crux Garden: creations, creators, tools and Moods.',
+    canonical: canonicalUrl('/explore'),
+  });
 
   // Filters live in the URL so every search is a link (the website embeds this
   // page). Values are validated here — anything can arrive in a query string.
@@ -775,6 +776,7 @@ export function ExplorePage() {
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-7xl mx-auto w-full">
         <Explore key={epoch} initial={initial} onStateChange={onStateChange} />
+        <PublicFooter className="mt-6" />
       </div>
     </div>
   );

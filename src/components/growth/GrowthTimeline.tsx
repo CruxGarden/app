@@ -2,7 +2,10 @@ import { useAiEnabled } from '@/hooks/useAiEnabled';
 import EditHistory from './EditHistory';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useCruxStoreApi } from '@/stores/cruxStore';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import { getServices } from '@/services';
+import { compareFilesOf } from '@/services/version-compare';
+import type { CompareSource } from './CompareVersions';
 import type { Dimension, CruxSummary as CruxSummaryType } from '@/api/types';
 import { LoadingPanel, SegmentedControl, buttonClass, fieldClass } from '@/components/ui';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -11,6 +14,8 @@ import CruxSummary from './CruxSummary';
 import GrowthCard from './GrowthCard';
 import GrowthDetail from './GrowthDetail';
 import { PaneAction, PaneEmpty } from '@/components/workspace/pane-ui';
+
+const CompareVersions = lazy(() => import('./CompareVersions'));
 
 function LayersIcon() {
   return (
@@ -84,6 +89,8 @@ export default function GrowthTimeline({
     if (showLabelInput) labelInputRef.current?.focus();
   }, [showLabelInput]);
 
+  // Compare with current: read-only, so it is offered while viewing a version too.
+  const [compare, setCompare] = useState<CompareSource | null>(null);
   const [removing, setRemoving] = useState(false);
   const handleRemoveLatest = async () => {
     const tip = growths[growths.length - 1];
@@ -133,7 +140,7 @@ export default function GrowthTimeline({
       )}
       <div className="flex-1 overflow-y-auto min-h-0">
         {view === 'history' && crux ? (
-          <EditHistory key={crux.id} cruxId={crux.id} />
+          <EditHistory key={crux.id} cruxId={crux.id} onCompare={setCompare} />
         ) : (
           <>
             {detailGrowth && detailIndex !== null ? (
@@ -241,6 +248,20 @@ export default function GrowthTimeline({
                             isActive={detailIndex === originalIndex}
                             isViewing={viewingSnapshotIndex === originalIndex}
                             onClick={() => onViewSnapshot(growth.targetId, originalIndex)}
+                            onCompare={() =>
+                              setCompare({
+                                title:
+                                  (growth.meta?.label as string | undefined) ||
+                                  `Snapshot ${originalIndex + 1}`,
+                                load: async () =>
+                                  compareFilesOf(
+                                    await getServices().artifact.findByResource(
+                                      'crux',
+                                      growth.targetId,
+                                    ),
+                                  ),
+                              })
+                            }
                             onDetailClick={(e) => {
                               e.stopPropagation();
                               setDetailIndex(detailIndex === originalIndex ? null : originalIndex);
@@ -264,6 +285,11 @@ export default function GrowthTimeline({
           </>
         )}
       </div>
+      {compare && (
+        <Suspense fallback={null}>
+          <CompareVersions source={compare} onClose={() => setCompare(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }

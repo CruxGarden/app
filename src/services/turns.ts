@@ -32,6 +32,7 @@ import {
   isJobActive,
   newCheckJob,
   newTurnJob,
+  promptPreview,
   runTurnJob,
   shouldAutoCheck,
   stampJob,
@@ -137,6 +138,28 @@ export function buildNormalizedMessages(allMessages: ChatMessage[]): NormalizedM
   }
 
   return result;
+}
+
+/**
+ * The request a failed job can run again ("Try again"): the index of the
+ * person's message that started it, or null when a retry would not be the same
+ * request. A check's failure has "Check it"; a message addressed to another
+ * Persona is sent again rather than retried.
+ */
+export function retryableRequest(
+  job: TurnJob | null,
+  messages: ChatMessage[],
+  personaFingerprint: string,
+): number | null {
+  if (!job || job.status !== 'failed' || job.check) return null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]!;
+    if (m.role !== 'user') continue;
+    if (m.origin === 'check') return null;
+    if (m.personaFingerprint && m.personaFingerprint !== personaFingerprint) return null;
+    return m.content === job.prompt || promptPreview(m.content) === job.prompt ? i : null;
+  }
+  return null;
 }
 
 const taskSlots = createTaskSlots(() =>
@@ -249,6 +272,59 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     await startTurn(next);
   }
 
+  /** Is "Try again" on offer for the job on the card? */
+  function canRetry(): boolean {
+    const s = useCruxStore.getState();
+    if (s.turnJob?.status !== 'failed') return false;
+    return retryableRequest(s.turnJob, s.messages, getPersonaFingerprint(getPersona())) !== null;
+  }
+
+  /**
+   * "Try again" on a failed job: run the same request once more. The person's
+   * message is already in the transcript and is not added a second time; the
+   * failed reply that only carried the error is taken back out (a reply that
+   * did work stays, and the model continues from what it did). Refused while
+   * anything else runs, and bound by the same Task rules as a normal send.
+   */
+  async function retryTurn(): Promise<void> {
+    const s = useCruxStore.getState();
+    const crux = s.crux;
+    if (!crux || s.closing || starting || isJobActive(s.turnJob) || activeRuns.has(crux.id)) return;
+    const failed = s.turnJob;
+    const pf = getPersonaFingerprint(getPersona());
+    if (retryableRequest(failed, s.messages, pf) === null || !failed) return;
+    starting = true;
+    try {
+      const cruxId = crux.id;
+      await assertCopyWritable(cruxId);
+      const { model, providerId, apiKey, reason } = await resolveModelAndKey(crux);
+      const live = useCruxStore.getState();
+      if (live.closing || live.crux?.id !== cruxId || live.turnJob?.id !== failed.id) return;
+      if (retryableRequest(failed, live.messages, pf) === null) return;
+      if (!apiKey) {
+        live.addMessage({
+          role: 'assistant',
+          content: unavailableNotice(model, providerId, reason),
+        });
+        return;
+      }
+      // Only the live segment is this session's to rewrite: an earlier one
+      // belongs to the Growth version that captured it.
+      const lastIndex = live.messages.length - 1;
+      const last = live.messages[lastIndex];
+      if (
+        last?.role === 'assistant' &&
+        last.job?.status === 'failed' &&
+        !last.toolCalls?.length &&
+        lastIndex >= live.messageSegmentStart
+      )
+        live.setMessages(live.messages.slice(0, lastIndex));
+      await launch({ cruxId, job: newTurnJob(cruxId, failed.prompt), apiKey, model, pf });
+    } finally {
+      starting = false;
+    }
+  }
+
   /** Clear a finished job's card. */
   async function dismissJob(): Promise<void> {
     const s = useCruxStore.getState();
@@ -287,6 +363,15 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     return { model, providerId, apiKey, reason: null as string | null };
   }
 
+  /** What the Collaboration says when no provider can run the turn. */
+  function unavailableNotice(model: string, providerId: string, reason: string | null): string {
+    return isAgentModel(model)
+      ? `${reason ?? 'The agent is unavailable.'} Check its installation and sign-in, or pick another model.`
+      : providerId === 'included'
+        ? 'Sign in to your Crux Garden account in Settings to use your included collaborator.'
+        : `No API key configured for ${providerId}. Add one in Settings to start chatting.`;
+  }
+
   async function startTurn(content: string): Promise<void> {
     const store = useCruxStore.getState();
     const crux = store.crux;
@@ -300,11 +385,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     if (!apiKey) {
       store.addMessage({
         role: 'assistant',
-        content: isAgentModel(model)
-          ? `${reason ?? 'The agent is unavailable.'} Check its installation and sign-in, or pick another model.`
-          : providerId === 'included'
-            ? 'Sign in to your Crux Garden account in Settings to use your included collaborator.'
-            : `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
+        content: unavailableNotice(model, providerId, reason),
       });
       return;
     }
@@ -365,6 +446,14 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     const personaMessages = allMessages.filter(
       (m) => m.personaFingerprint === pf || (!m.personaFingerprint && !hasOtherPersona),
     );
+    // A turn answers the person (or the tool results it left behind). A reply
+    // with no tool work at the end of the transcript is a failed turn's note —
+    // only a retry sees one — and is not something for the model to continue.
+    while (personaMessages.length > 0) {
+      const tail = personaMessages[personaMessages.length - 1]!;
+      if (tail.role !== 'assistant' || tail.toolCalls?.length) break;
+      personaMessages.pop();
+    }
     return buildNormalizedMessages(personaMessages);
   }
 
@@ -954,6 +1043,8 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     removeQueued: trackWorkspaceOperation(useCruxStore, removeQueued),
     runNextQueued: trackWorkspaceOperation(useCruxStore, runNextQueued),
     dismissJob: trackWorkspaceOperation(useCruxStore, dismissJob),
+    canRetry,
+    retryTurn: trackWorkspaceOperation(useCruxStore, retryTurn),
     canCollaborate,
     checkNow: trackWorkspaceOperation(useCruxStore, checkNow),
     runParallelJob: trackWorkspaceOperation(useCruxStore, runParallelJob),

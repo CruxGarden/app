@@ -9,9 +9,17 @@ import {
 import { getSqliteClient } from '@/services/sqlite/client';
 import { confirmDialog } from '@/stores/dialogStore';
 import { Button } from '@/components/ui';
+import type { CompareSource } from './CompareVersions';
 type History = Awaited<ReturnType<typeof listEditHistory>>;
 
-export default function EditHistory({ cruxId }: { cruxId: string }) {
+export default function EditHistory({
+  cruxId,
+  onCompare,
+}: {
+  cruxId: string;
+  /** Open the comparison of a recovery point with the current files. */
+  onCompare?: (source: CompareSource) => void;
+}) {
   const aiEnabled = useAiEnabled();
   const [history, setHistory] = useState<History | null>(null);
   const [error, setError] = useState('');
@@ -128,6 +136,31 @@ export default function EditHistory({ cruxId }: { cruxId: string }) {
                 >
                   Files
                 </Button>
+                {onCompare && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    aria-label={`Compare recovery point ${index + 1} with current`}
+                    onClick={() =>
+                      onCompare({
+                        title: `${checkpoint.reason === 'safety' ? 'Safety copy' : 'Autosave'}, ${new Date(checkpoint.created).toLocaleString()}`,
+                        load: async () =>
+                          (await inspectEditCheckpoint(cruxId, checkpoint.id)).files.map(
+                            (file) => ({
+                              path: file.path,
+                              fingerprint: file.fingerprint,
+                              size: file.size,
+                              mimeType: file.mimeType,
+                              encoding: file.encoding,
+                            }),
+                          ),
+                      })
+                    }
+                  >
+                    Compare
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

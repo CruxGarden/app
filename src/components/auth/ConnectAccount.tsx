@@ -3,6 +3,7 @@ import { buttonClass } from '@/components/ui/button-class';
 import { useAuthStore } from '@/stores/authStore';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { LegalAgreement } from '@/components/public/LegalLinks';
 import { useShallow } from 'zustand/react/shallow';
 
 const btnClass = cn(buttonClass('secondary', 'xs'));
@@ -200,6 +201,7 @@ export default function ConnectAccount({
           Retry saved connection
         </button>
       )}
+      <LegalAgreement action="connecting an account" />
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { cn } from '@/lib/cn';
 import { getApiKey, setApiKey, removeApiKey } from '@/ai/keys';
 import { isLocalModel } from '@/ai/local';
 import { PROVIDERS, isAgentModel } from '@/ai/providers';
+import { checkApiKey, keyCheckMessage, type KeyCheckResult } from '@/ai/key-check';
+import { isAiMock } from '@/lib/platform';
 import { agentStatus } from '@/services/agent-provider';
 import { Capability, can } from '@/lib/platform';
 import type { AgentStatus } from '../../../electron/src/bridge';
@@ -47,6 +49,34 @@ export default function ApiKeySetup({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const pending = useRef(new Set<string>());
+  // The check after a save (EF07): it reports beside the key and never holds
+  // the save back. A newer save or a removal makes an older answer stale.
+  const [checks, setChecks] = useState<Record<string, 'checking' | KeyCheckResult>>({});
+  const checkRun = useRef<Record<string, number>>({});
+  const mounted = useRef(true);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
+  const verifyKey = (providerId: string, value: string | null) => {
+    const run = (checkRun.current[providerId] ?? 0) + 1;
+    checkRun.current[providerId] = run;
+    const show = (state: 'checking' | KeyCheckResult | null) => {
+      if (!mounted.current || checkRun.current[providerId] !== run) return;
+      setChecks((current) => {
+        const next = { ...current };
+        if (state === null) delete next[providerId];
+        else next[providerId] = state;
+        return next;
+      });
+    };
+    // The scripted model of the test suite has no provider to ask.
+    if (value === null || !PROVIDERS[providerId]?.keyCheck || isAiMock()) return show(null);
+    show('checking');
+    void checkApiKey(providerId, value).then(show);
+  };
 
   // Load each provider independently: one locked key must not hide the others.
   useEffect(() => {
@@ -91,6 +121,7 @@ export default function ApiKeySetup({
       });
       setInputs((current) => ({ ...current, [providerId]: '' }));
       setErrors((current) => ({ ...current, [providerId]: '' }));
+      verifyKey(providerId, value);
     } catch {
       setErrors((current) => ({
         ...current,
@@ -237,6 +268,23 @@ export default function ApiKeySetup({
             {errors[providerId] && (
               <p role="alert" className="text-xs text-error">
                 {errors[providerId]}
+              </p>
+            )}
+            {checks[providerId] && !errors[providerId] && (
+              <p
+                role="status"
+                data-testid={`${providerId}-key-check`}
+                data-state={checks[providerId]}
+                className={cn(
+                  'text-xs',
+                  checks[providerId] === 'refused'
+                    ? 'text-error'
+                    : checks[providerId] === 'valid'
+                      ? 'text-accent'
+                      : 'text-text-muted',
+                )}
+              >
+                {keyCheckMessage(checks[providerId]!, provider.name)}
               </p>
             )}
           </div>

@@ -38,12 +38,18 @@ export default function BillingReturn() {
               ? 'Return to Settings → Plan in Crux Garden to check your current plan or start checkout again.'
               : 'Return to Settings → Plan in Crux Garden to verify any changes. Updates may take a moment to arrive.'}
         </p>
-        <div className="mt-5 flex justify-center gap-3 text-xs font-mono">
+        <div className="mt-5 flex flex-wrap justify-center gap-3 text-xs font-mono">
           <Link to="/" className="text-text-muted hover:text-text">
             crux.garden
           </Link>
           <Link to="/explore" className="text-text-muted hover:text-text">
             Explore
+          </Link>
+          <Link to="/terms" className="text-text-muted hover:text-text">
+            Terms
+          </Link>
+          <Link to="/privacy" className="text-text-muted hover:text-text">
+            Privacy
           </Link>
         </div>
       </div>

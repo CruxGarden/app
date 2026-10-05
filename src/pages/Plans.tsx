@@ -4,6 +4,8 @@ import * as billingApi from '@/api/billing';
 import { formatBytes } from '@/lib/format';
 import { APP_NAME } from '@/lib/constants';
 import PageHeader from '@/components/layout/PageHeader';
+import { LegalAgreement, PublicFooter } from '@/components/public/LegalLinks';
+import { canonicalUrl, usePageMeta } from '@/hooks/usePageMeta';
 
 /**
  * crux.garden/plans — the one place prices live on the website. The landing
@@ -16,21 +18,23 @@ export default function Plans() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    document.title = `Plans — ${APP_NAME}`;
     billingApi
       .plans()
       .then(setCatalog)
       .catch(() => setError(true));
-    return () => {
-      document.title = APP_NAME;
-    };
   }, []);
+  usePageMeta({
+    title: `Plans — ${APP_NAME}`,
+    description:
+      'The Crux Garden app, Moods, Growth and basic publishing are free. Paid plans add hosting room, your own domains and included collaboration.',
+    canonical: canonicalUrl('/plans'),
+  });
 
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeader title="Plans" />
 
-      <main className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-8 py-10 rounded-[var(--radius)] bg-panel border border-panel-border shadow-panel mt-6 mb-12 text-panel-text">
+      <main className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-8 py-10 rounded-[var(--radius)] bg-panel border border-panel-border shadow-panel mt-6 mb-6 text-panel-text">
         <h1 className="font-display text-3xl text-text">Plans</h1>
         <p className="text-sm text-text-muted mt-2 max-w-2xl">
           The app, Moods, Growth and basic publishing are free. Use your own AI key on any plan.
@@ -99,9 +103,11 @@ export default function Plans() {
               </a>
               .
             </p>
+            <LegalAgreement action="subscribing" className="mt-2" />
           </>
         )}
       </main>
+      <PublicFooter className="pt-0 pb-10" />
     </div>
   );
 }

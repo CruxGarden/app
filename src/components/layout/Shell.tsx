@@ -1,6 +1,12 @@
 import PendingPackageImports from '@/components/garden/PendingPackageImports';
 import FieldGuide from '@/components/explore/FieldGuide';
 import CommandPalette from './CommandPalette';
+import ShellDialogs from './ShellDialogs';
+import { runMenuCommand, toggleMood, toggleSettings } from './app-commands';
+import { claimShortcut, matchesShortcut, shortcut } from '@/lib/shortcuts';
+import { openShellDialog } from '@/stores/shellDialogs';
+import { toast } from '@/stores/toastStore';
+import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useCommandPalette } from '@/stores/commandPalette';
 import { gardenPath, useGardenContext } from '@/stores/gardenContext';
 import {
@@ -147,7 +153,6 @@ export default function Shell() {
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const meta = e.metaKey || e.ctrlKey;
       // A modal or an editable control that already handled this key owns it.
       if (e.defaultPrevented) return;
       const t = e.target as HTMLElement | null;
@@ -169,17 +174,18 @@ export default function Shell() {
         return;
       }
 
-      // Cmd+M → toggle the Mood pane
-      if (meta && e.key === 'm') {
+      // Cmd+M → toggle the Mood pane. The desktop menu carries the same keys
+      // (so they work while an embedded frame has the keyboard); one press, one toggle.
+      if (matchesShortcut(shortcut('mood'), e)) {
         e.preventDefault();
-        useUIStore.getState().toggleMoodPane();
+        if (claimShortcut('mood', 'key')) toggleMood();
         return;
       }
 
       // Cmd+, → toggle settings
-      if (meta && e.key === ',') {
+      if (matchesShortcut(shortcut('settings'), e)) {
         e.preventDefault();
-        currentWorkspaceUI().getState().togglePane('settings');
+        if (claimShortcut('settings', 'key')) toggleSettings();
         return;
       }
     };
@@ -217,6 +223,34 @@ export default function Shell() {
     };
   }, [aiEnabled]);
 
+  // The desktop application menu: each item names a command; the same
+  // functions the command palette runs answer it. One listener for the app.
+  const moodNavigate = useMoodNavigate();
+  const menuNavigate = useRef(moodNavigate);
+  menuNavigate.current = moodNavigate;
+  useEffect(() => {
+    if (!servicesReady) return;
+    return window.electronAPI?.desktop.onMenuCommand?.((command, viaAccelerator) =>
+      runMenuCommand(command, viaAccelerator, (to) => void menuNavigate.current(to)),
+    );
+  }, [servicesReady]);
+
+  // The last session crashed or was killed: say so once, quietly, and offer
+  // the report dialog. Nothing is sent (ADR 0008).
+  useEffect(() => {
+    if (!servicesReady) return;
+    void window.electronAPI?.desktop
+      .previousCrash?.()
+      .then((crash) => {
+        if (!crash) return;
+        toast("Crux Garden didn't close properly last time.", {
+          duration: 15000,
+          action: { label: 'Report a problem', run: () => openShellDialog('report-problem') },
+        });
+      })
+      .catch(() => undefined);
+  }, [servicesReady]);
+
   return (
     // Motion never applies its own reduced-motion rule: the person's motion intensity (ADR 0041)
     // already maps prefers-reduced-motion to instant through the tokens every role reads.
@@ -225,6 +259,7 @@ export default function Shell() {
         <WorkspaceLifecycle />
         {servicesReady && <CommandPalette />}
         {servicesReady && <FieldGuide />}
+        {servicesReady && <ShellDialogs />}
         {servicesReady && <TendingNotifications />}
         <MoodTextureLayers />
         {/* Top bar */}

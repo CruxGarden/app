@@ -205,6 +205,20 @@ const api: ElectronBridge = {
       ipcRenderer.on('workspace:command', handler);
       return () => ipcRenderer.removeListener('workspace:command', handler);
     },
+    onMenuCommand: (callback) => {
+      const handler = (
+        _event: unknown,
+        payload: { command: import('./bridge').MenuCommand; accelerator: boolean },
+      ) => callback(payload.command, payload.accelerator);
+      ipcRenderer.on('menu:command', handler);
+      // Listening is said out loud: a command chosen before this window could hear is sent now.
+      ipcRenderer.send('menu:listening');
+      return () => ipcRenderer.removeListener('menu:command', handler);
+    },
+    previousCrash: () =>
+      ipcRenderer.invoke('desktop:previous-crash') as Promise<
+        import('./bridge').PreviousCrash | null
+      >,
     onCloseRequest: (callback) => {
       const handler = () => callback();
       ipcRenderer.on('workspace:close-request', handler);

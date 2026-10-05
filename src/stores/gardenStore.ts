@@ -8,7 +8,7 @@ import { getServices } from '@/services';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { WORKSPACE_THUMBNAIL_PATH } from '@/lib/artifact-path';
 
-export type SortField = 'created' | 'updated';
+export type SortField = 'created' | 'updated' | 'name';
 
 /** How long a deleted crux waits in the Trash before it is purged for good. */
 export const TRASH_RETENTION_DAYS = 30;
@@ -35,23 +35,41 @@ interface GardenState {
   restoreCrux: (id: string) => Promise<void>;
   /** Delete a trashed crux for good — rows gone, the Project Folder left where it is. */
   destroyCrux: (id: string) => Promise<void>;
+  /**
+   * Rename a Crux from Home: the Details pane's own title edit (`crux.update`
+   * with only the title), so the slug and any shared address stay as they are.
+   */
+  renameCrux: (id: string, title: string) => Promise<void>;
   setSearch: (query: string) => void;
   setSortBy: (field: SortField) => void;
   refresh: () => Promise<void>;
 }
 
-function filterAndSort(cruxes: Crux[], search: string, sortBy: SortField): Crux[] {
-  const needle = search.toLowerCase();
-  const filtered = needle
-    ? cruxes.filter(
-        (c) =>
-          (c.title || '').toLowerCase().includes(needle) ||
-          (c.slug || '').toLowerCase().includes(needle) ||
-          (c.description || '').toLowerCase().includes(needle),
-      )
-    : cruxes;
+const byName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const nameOf = (crux: Crux) => crux.title || crux.slug || '';
+const tagsOf = (crux: Crux): string[] =>
+  Array.isArray(crux.meta?.tags) ? (crux.meta.tags as unknown[]).map(String) : [];
+
+/** Plain words search the title, slug, description and tags; `#word` searches tags alone. */
+export function filterAndSort(cruxes: Crux[], search: string, sortBy: SortField): Crux[] {
+  const query = search.trim().toLowerCase();
+  const tagOnly = query.startsWith('#');
+  const needle = tagOnly ? query.slice(1).trim() : query;
+  const tagged = (c: Crux) => tagsOf(c).some((tag) => tag.toLowerCase().includes(needle));
+  const filtered = !query
+    ? cruxes
+    : cruxes.filter((c) =>
+        tagOnly
+          ? tagged(c)
+          : (c.title || '').toLowerCase().includes(needle) ||
+            (c.slug || '').toLowerCase().includes(needle) ||
+            (c.description || '').toLowerCase().includes(needle) ||
+            tagged(c),
+      );
   return [...filtered].sort(
-    (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
+    sortBy === 'name'
+      ? (a, b) => byName.compare(nameOf(a), nameOf(b))
+      : (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
   );
 }
 
@@ -149,6 +167,14 @@ export const useGardenStore = create<GardenState>((set, get) => {
     destroyCrux: async (id: string) => {
       await getServices().crux.delete(id);
       await get().load();
+    },
+
+    renameCrux: async (id: string, title: string) => {
+      const next = title.trim();
+      const current = get().allCruxes.find((crux) => crux.id === id);
+      if (current && next === (current.title ?? '')) return;
+      await getServices().crux.update(id, { title: next });
+      await get().refresh();
     },
 
     load: async () => {

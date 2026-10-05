@@ -34,6 +34,10 @@ export function readLaunchSettings(packaged: boolean, env: NodeJS.ProcessEnv = p
     devServer: !packaged ? env.CRUX_DEV_SERVER : undefined,
     fakeMedia: testing && test.CRUX_FAKE_MEDIA === '1',
     selfTest: testing && test.CRUX_SELFTEST === '1',
+    // "The last session did not close cleanly" is for installed builds. A
+    // development process is killed all day (Ctrl+C, a test's teardown), so it
+    // stays quiet there unless a journey asks for it.
+    crashNotice: packaged || (testing && test.CRUX_CRASH_NOTICE === '1'),
     renderer,
   };
 }

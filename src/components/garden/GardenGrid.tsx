@@ -1,12 +1,13 @@
 import { memo } from 'react';
 import type { Crux } from '@/api/types';
+import type { SortField } from '@/stores/gardenStore';
 import CruxCard from './CruxCard';
 
 interface GardenGridProps {
   cruxes: Crux[];
   linkBuilder?: (crux: Crux) => string;
   onDelete?: (id: string) => void;
-  sortBy?: 'created' | 'updated';
+  sortBy?: SortField;
   hideMenu?: boolean;
   /** cruxId → Blob Store fingerprint of its preview.jpg (local gardens). */
   thumbnails?: Record<string, string>;

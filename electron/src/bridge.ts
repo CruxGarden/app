@@ -191,12 +191,36 @@ export interface SqliteBridge {
 // ── desktop ─────────────────────────────────────────────────────────────────
 
 export type WorkspaceCommand = 'navigate' | 'search' | 'next' | 'previous' | 'commit' | 'cancel';
+/** What an application-menu item asks the window to do (app-menu.ts). */
+export type MenuCommand =
+  | 'about'
+  | 'settings'
+  | 'check-updates'
+  | 'new-crux'
+  | 'mood'
+  | 'field-guide'
+  | 'shortcuts'
+  | 'report-problem';
+/** How the previous session ended, when it ended badly. Never content (ADR 0008). */
+export interface PreviousCrash {
+  kind: 'unclean-exit' | 'renderer';
+  at: string | null;
+  version: string | null;
+}
 export interface DesktopBridge {
   /** Creative input, including cross-origin Workshop apps. No content or coordinates. */
   onCreativeActivity?(
     callback: (kind: 'writing' | 'interaction' | 'arranging') => void,
   ): () => void;
   onWorkspaceCommand?(callback: (command: WorkspaceCommand) => void): () => void;
+  /**
+   * Application-menu commands. One listener (the Shell); subscribing tells the
+   * main process the window is ready, which delivers a command chosen before it was.
+   * `viaAccelerator`: the item's keys were pressed rather than the item clicked.
+   */
+  onMenuCommand?(callback: (command: MenuCommand, viaAccelerator: boolean) => void): () => void;
+  /** Once per launch: the previous session crashed or was killed. Null otherwise, and afterwards. */
+  previousCrash?(): Promise<PreviousCrash | null>;
   onCloseRequest?(callback: () => void): () => void;
   completeClose?(approved: boolean): void;
   config(): Promise<{ gardenRoot: string }>;
@@ -224,6 +248,8 @@ export interface DesktopInfo {
   version: string;
   electron: string;
   platform: string;
+  /** The operating system's own version (e.g. macOS 15.1), for a problem report. */
+  osVersion?: string;
   arch: string;
   packaged: boolean;
   logsDir: string;

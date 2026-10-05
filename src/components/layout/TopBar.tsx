@@ -5,6 +5,7 @@ import NavigationHistory from './NavigationHistory';
 import { useUIStore, useWorkspaceUIStore, type PaneType } from '@/stores/uiStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import AlertsBell from '@/components/tending/AlertsBell';
+import UpdateNotice from './UpdateNotice';
 import TimerChip from '@/components/tending/TimerChip';
 import PanelPicker from './PanelPicker';
 import { COMMAND_SHORTCUT } from './command-score';
@@ -178,6 +179,7 @@ export default function TopBar() {
       {/* Right: what is yours */}
       <div className="flex flex-1 basis-60 min-w-0 items-center justify-end">
         <div className="flex items-center gap-3" style={noDrag}>
+          <UpdateNotice />
           <button
             onClick={() => openFieldGuide()}
             aria-label="Help and field guide"

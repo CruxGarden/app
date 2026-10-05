@@ -1,3 +1,4 @@
+import { isReservedUsername } from '@/lib/site';
 import CloseAccount from './CloseAccount';
 import { useState, useRef, useEffect } from 'react';
 import SettingsSection from './SettingsSection';
@@ -10,6 +11,7 @@ import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import ConnectAccount from '@/components/auth/ConnectAccount';
+import LegalLinks from '@/components/public/LegalLinks';
 import AvatarUpload from '@/components/auth/AvatarUpload';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -34,6 +36,7 @@ export default function AccountSettings() {
     if (!name) return '';
     if (name.length < 3) return 'At least 3 characters';
     if (!/^[a-zA-Z0-9_-]+$/.test(name)) return 'Letters, numbers, hyphens, underscores only';
+    if (isReservedUsername(name)) return 'That name is kept for the website';
     return '';
   };
 
@@ -215,6 +218,7 @@ export default function AccountSettings() {
         </p>
         <ApiAddress />
       </details>
+      <LegalLinks className="mt-5 border-t border-border pt-4" />
       {isAuthenticated && <CloseAccount />}
     </SettingsSection>
   );

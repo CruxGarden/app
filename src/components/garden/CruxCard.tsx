@@ -1,9 +1,10 @@
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { alertDialog } from '@/stores/dialogStore';
-import { useGardenStore } from '@/stores/gardenStore';
+import { useGardenStore, type SortField } from '@/stores/gardenStore';
 import { cruxPath, gardenPath, useGardenContext } from '@/stores/gardenContext';
 import { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import { Button, Input, Modal } from '@/components/ui';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { Link } from 'react-router-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
@@ -20,7 +21,7 @@ interface CruxCardProps {
   crux: Crux;
   linkTo?: string;
   onDelete?: (id: string) => void;
-  sortBy?: 'created' | 'updated';
+  sortBy?: SortField;
   /** Hide the three-dot action menu (e.g. on public pages) */
   hideMenu?: boolean;
   /** Blob Store fingerprint of the crux's preview.jpg, when one has been captured. */
@@ -87,6 +88,24 @@ export default function CruxCard({
     }
   };
   const [exportOpen, setExportOpen] = useState(false);
+  // Rename is the Details pane's title edit, reachable without opening the Crux.
+  const [renameDraft, setRenameDraft] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState('');
+  const rename = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (renameDraft === null || renaming) return;
+    setRenaming(true);
+    setRenameError('');
+    try {
+      await useGardenStore.getState().renameCrux(crux.id, renameDraft);
+      setRenameDraft(null);
+    } catch (error) {
+      setRenameError((error as Error).message || 'Could not rename this Crux.');
+    } finally {
+      setRenaming(false);
+    }
+  };
   const menuRef = useRef<HTMLDivElement>(null);
 
   const blobUrl = useBlobUrl(thumbnailFingerprint, 'image/jpeg');
@@ -225,6 +244,20 @@ export default function CruxCard({
               >
                 Export...
               </button>
+              {onDelete && (
+                <button
+                  role="menuitem"
+                  className={menuItemClass('default', 'text-xs')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    setRenameError('');
+                    setRenameDraft(crux.title ?? '');
+                  }}
+                >
+                  Rename
+                </button>
+              )}
               {onDelete && crux.kind !== 'garden' && (
                 <button
                   role="menuitem"
@@ -278,6 +311,42 @@ export default function CruxCard({
         <p role="status" className="px-3 pb-3 text-xs text-text-muted">
           {copyStatus}
         </p>
+      )}
+      {renameDraft !== null && (
+        <Modal
+          open
+          size="sm"
+          title="Rename"
+          onClose={() => {
+            if (!renaming) setRenameDraft(null);
+          }}
+        >
+          <form onSubmit={rename} className="flex flex-col gap-4">
+            <Input
+              autoFocus
+              aria-label="Crux name"
+              value={renameDraft}
+              disabled={renaming}
+              error={renameError || undefined}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={renaming}
+                onClick={() => setRenameDraft(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" loading={renaming}>
+                Rename
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
       {exportOpen && (
         <Suspense fallback={null}>

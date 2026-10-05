@@ -8,12 +8,7 @@ import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
 import { gardenPath, inGarden, useGardenContext } from '@/stores/gardenContext';
-import {
-  useUIStore,
-  useWorkspaceUIStore,
-  useWorkspaceUIStoreApi,
-  type PaneType,
-} from '@/stores/uiStore';
+import { useWorkspaceUIStore, useWorkspaceUIStoreApi, type PaneType } from '@/stores/uiStore';
 import { useWorkspaceRegistry } from '@/stores/workspaceRegistry';
 import { workspaceSelection } from '@/stores/workspaceSelection';
 import { useThemeStore } from '@/stores/themeStore';
@@ -25,6 +20,9 @@ import { chooseMood } from '@/services/garden-mood';
 import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
 import { getInstalledMoods } from '@/lib/moods/packages';
 import { requestUi } from '@/lib/ui-requests';
+import { shortcut, shortcutText } from '@/lib/shortcuts';
+import { openShellDialog } from '@/stores/shellDialogs';
+import { newCrux, openSettings } from './app-commands';
 import { ThemeMode } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import {
@@ -203,11 +201,7 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
       label: 'New Crux…',
       keywords: 'create make start project idea',
       icon: <PlusIcon size={14} />,
-      run: () => {
-        if (inCrux && garden) navigate(gardenPath(garden.id));
-        else show('home');
-        requestUi('new-crux');
-      },
+      run: () => newCrux(navigate, ui),
     });
     if (inCrux) {
       out.push({
@@ -332,10 +326,34 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
       id: 'settings',
       section: 'Settings',
       label: 'Open Settings',
-      hint: isMac ? '⌘,' : 'Ctrl ,',
+      hint: shortcutText(shortcut('settings'), isMac),
       keywords: 'preferences account names data',
       icon: <SlidersIcon size={14} />,
-      run: () => useUIStore.getState().setSettingsOpen(true),
+      run: openSettings,
+    });
+    out.push({
+      id: 'shortcuts',
+      section: 'Settings',
+      label: 'Keyboard shortcuts',
+      keywords: 'keys hotkeys keybindings accelerators help',
+      icon: <SlidersIcon size={14} />,
+      run: () => openShellDialog('shortcuts'),
+    });
+    out.push({
+      id: 'report-problem',
+      section: 'Settings',
+      label: 'Report a problem',
+      keywords: 'bug issue feedback crash broken support logs github',
+      icon: <ShareIcon size={14} />,
+      run: () => openShellDialog('report-problem'),
+    });
+    out.push({
+      id: 'about',
+      section: 'Settings',
+      label: 'About Crux Garden',
+      keywords: 'version licence license open source notices credits',
+      icon: <SproutIcon size={14} />,
+      run: () => openShellDialog('about'),
     });
     return out;
   }, [

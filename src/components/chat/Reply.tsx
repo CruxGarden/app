@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ToolCall } from '@/api/types';
 import MarkdownRenderer from './MarkdownRenderer';
+import MessageCopy from './MessageCopy';
 import ToolCallRows from './ToolCallRows';
 
 /**
@@ -28,7 +29,7 @@ export function Reply({
 }) {
   return (
     <div
-      className="flex gap-1.5 items-start motion-enter-bubble"
+      className="group/message flex gap-1.5 items-start motion-enter-bubble"
       data-role="assistant"
       {...(streaming ? { 'data-streaming': 'true' } : {})}
     >
@@ -47,9 +48,14 @@ export function Reply({
           </div>
         )}
         {children}
-        {footer && footer.length > 0 && (
-          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/(--tint-balanced)">
-            {footer.join(' · ')}
+        {((footer && footer.length > 0) || (!streaming && content.trim())) && (
+          <div className="mt-1 flex items-center gap-1.5">
+            {footer && footer.length > 0 && (
+              <div className="text-2xs font-mono text-chat-text-muted/(--tint-balanced)">
+                {footer.join(' · ')}
+              </div>
+            )}
+            {!streaming && <MessageCopy content={content} />}
           </div>
         )}
       </div>
@@ -71,9 +77,10 @@ export function PersonPill({
 }) {
   return (
     <div
-      className="flex gap-2 items-end justify-end motion-enter-bubble"
+      className="group/message flex gap-2 items-end justify-end motion-enter-bubble"
       {...(testId ? { 'data-testid': testId } : {})}
     >
+      <MessageCopy content={content} className="mb-1.5" />
       <div className="max-w-[82%] min-w-0">
         {name && (
           <div className="text-2xs font-mono text-chat-text-muted/(--tint-dense) mb-1 text-right">

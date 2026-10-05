@@ -5,6 +5,7 @@ import { appChangesLabel } from '@/services/app-changes';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { cn } from '@/lib/cn';
+import { linkClass } from '@/components/ui/button-class';
 import type { Dimension, Artifact } from '@/api/types';
 import { getServices } from '@/services';
 import { pathOf, basename } from '@/lib/artifact-path';
@@ -16,6 +17,8 @@ interface GrowthCardProps {
   isViewing: boolean;
   onClick: () => void;
   onDetailClick: (e: React.MouseEvent) => void;
+  /** Open the comparison of this version with the current files. */
+  onCompare?: () => void;
 }
 
 interface PreviewInfo {
@@ -204,6 +207,7 @@ export default function GrowthCard({
   isViewing,
   onClick,
   onDetailClick,
+  onCompare,
 }: GrowthCardProps) {
   const label = (growth.meta?.label as string) || null;
   const summary = (growth.meta?.summary as string) || null;
@@ -369,6 +373,21 @@ export default function GrowthCard({
             Summarizing…
           </p>
         ) : null}
+
+        {onCompare && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompare();
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+            className={linkClass('mt-1 self-start text-xs')}
+            data-testid="growth-compare"
+          >
+            Compare with current
+          </button>
+        )}
       </div>
     </div>
   );

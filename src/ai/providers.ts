@@ -32,6 +32,11 @@ export interface ProviderInfo {
   models: ModelInfo[];
   capabilities: ProviderCapability[];
   keyUrl: string;
+  /**
+   * The cheapest call that proves a pasted key (ai/key-check.ts): a read-only
+   * model listing, the key in a header — never in the URL, where it could be logged.
+   */
+  keyCheck?: { url: string; headers: (apiKey: string) => Record<string, string> };
 }
 
 /** The app-wide default chat model (used when a crux has no model setting). */
@@ -92,6 +97,14 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files'],
     keyUrl: 'https://console.anthropic.com/settings/keys',
+    keyCheck: {
+      url: 'https://api.anthropic.com/v1/models?limit=1',
+      headers: (apiKey) => ({
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      }),
+    },
   },
   [CLAUDE_CODE_PROVIDER]: {
     agent: true,
@@ -127,6 +140,10 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files', 'Images'],
     keyUrl: 'https://platform.openai.com/api-keys',
+    keyCheck: {
+      url: 'https://api.openai.com/v1/models',
+      headers: (apiKey) => ({ Authorization: `Bearer ${apiKey}` }),
+    },
   },
   google: {
     id: 'google',
@@ -178,6 +195,10 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files', 'Images'],
     keyUrl: 'https://aistudio.google.com/apikey',
+    keyCheck: {
+      url: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1',
+      headers: (apiKey) => ({ 'x-goog-api-key': apiKey }),
+    },
   },
   // Local inference (Phase A4) — models are discovered at runtime via the
   // localai bridge (see src/ai/local.ts), so the static lists stay empty.

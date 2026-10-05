@@ -92,6 +92,21 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
   const surfaceSolid = colorHex('--surface-solid');
   const border = colorHex('--border');
 
+  // Compare view (DiffEditor): added and removed text wear the Mood's own
+  // success and error colours, at the same strengths the highlights above use.
+  const added = colorHex('--success');
+  const removed = colorHex('--error');
+  const diffColors = {
+    'diffEditor.insertedTextBackground': `${added}40`,
+    'diffEditor.removedTextBackground': `${removed}40`,
+    'diffEditor.insertedLineBackground': `${added}18`,
+    'diffEditor.removedLineBackground': `${removed}18`,
+    'diffEditorGutter.insertedLineBackground': `${added}30`,
+    'diffEditorGutter.removedLineBackground': `${removed}30`,
+    'diffEditor.border': `${border}30`,
+    'diffEditor.diagonalFill': `${border}30`,
+  };
+
   const comment = tokenHex('--syntax-comment');
   const keyword = tokenHex('--syntax-keyword');
   const string = tokenHex('--syntax-string');
@@ -196,6 +211,7 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'input.border': `${border}30`,
       'input.foreground': text,
       focusBorder: `${accent}50`,
+      ...diffColors,
     },
   });
 
@@ -232,6 +248,7 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'input.border': `${border}30`,
       'input.foreground': text,
       focusBorder: `${accent}50`,
+      ...diffColors,
     },
   });
 }

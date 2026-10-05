@@ -1,4 +1,5 @@
 import BillingHealth from './BillingHealth';
+import { LegalLink } from '@/components/public/LegalLinks';
 import { useState } from 'react';
 import { useBillingSettings } from './useBillingSettings';
 import SettingsSection from './SettingsSection';
@@ -226,7 +227,9 @@ function AccountPlanSettings({ accountId }: { accountId: string }) {
               ) : (
                 <>
                   Checkout is Stripe's — Apple Pay, Google Pay and Link work, and no card details
-                  ever reach Crux Garden.{catalog.trialDays > 0 ? ' Trials need no card.' : ''}
+                  ever reach Crux Garden.{catalog.trialDays > 0 ? ' Trials need no card.' : ''} By
+                  subscribing you agree to the <LegalLink to="/terms">Terms</LegalLink> and{' '}
+                  <LegalLink to="/privacy">Privacy</LegalLink> pages.
                 </>
               )}
             </p>
