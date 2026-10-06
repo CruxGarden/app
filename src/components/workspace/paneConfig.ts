@@ -87,7 +87,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'tree gardens browse',
   },
   home: {
-    label: 'Home',
+    label: 'Garden Home',
     icon: HomeIcon,
     color: 'var(--pane-workshop)',
     prefix: '--pane-workshop',

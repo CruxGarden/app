@@ -76,7 +76,7 @@ test.describe('guide 31 · Public garden and public Crux', () => {
       await crumbs.getByRole('link', { name: 'tester', exact: true }).click();
       await expect(page).toHaveURL(/\/tester$/, { timeout: 30_000 });
       await expect(page.getByRole('heading', { name: 'tester' })).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText('Public Garden')).toBeVisible();
+      await expect(page.getByText('Published in Explore', { exact: false })).toBeVisible();
       // A card opens the Crux again.
       await page.getByRole('button', { name: 'Open Rainy Garden Notes', exact: true }).click();
       await expect(page).toHaveURL(/\/tester\/rainy-garden-notes/);
@@ -86,7 +86,9 @@ test.describe('guide 31 · Public garden and public Crux', () => {
       // Back returns to the garden page.
       await page.goBack();
       await expect(page).toHaveURL(/\/tester$/);
-      await expect(page.getByText('Public Garden')).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('Published in Explore', { exact: false })).toBeVisible({
+        timeout: 30_000,
+      });
     } finally {
       await app.close();
       await api.close();
@@ -137,11 +139,11 @@ test.describe('guide 31 · Public garden and public Crux', () => {
       await enterGarden(page);
       // An unknown author.
       await visit(page, '/nobody');
-      await expect(page.getByRole('heading', { name: 'No garden here' })).toBeVisible({
+      await expect(page.getByRole('heading', { name: 'Creator not found' })).toBeVisible({
         timeout: 30_000,
       });
       await expect(page.getByText('There is no @nobody at this address.')).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Return to Garden' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Explore Home' })).toBeVisible();
       // A malformed, over-long address: every public path is an author or a Crux address,
       // so this lands on the Crux page's not-found (the 404 page is for nothing else).
       await visit(page, '/tester/no-such-crux/deep/path/that/goes/nowhere');
@@ -153,14 +155,15 @@ test.describe('guide 31 · Public garden and public Crux', () => {
       // Recovery is offered here too, not a dead end.
       await expect(
         page
-          .getByRole('button', { name: 'Return to Garden' })
-          .or(page.getByRole('link', { name: /crux\.garden|Return|Explore/ })),
+          .getByRole('button', { name: 'Explore Home' })
+          .or(page.getByRole('link', { name: 'Explore Home', exact: true })),
       ).toBeVisible();
       // The way back works.
       await visit(page, '/nobody');
-      await page.getByRole('button', { name: 'Return to Garden' }).click();
-      await page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
-      await expect(page.getByTestId('pane-body-home')).toBeVisible({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Explore Home' }).click();
+      await expect(page.getByRole('heading', { name: 'Explore Home', exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
     } finally {
       await app.close();
       await api.close();

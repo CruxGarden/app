@@ -387,7 +387,7 @@ export default function MoodBrowser() {
       !(await confirmDialog({
         title: `Unshare ${pkg.name}?`,
         message:
-          'Remove this Mood from your public Garden, Explore and its shared link. Your saved Mood and its assets stay here. Downloaded copies belong to their recipients.',
+          'Remove this Mood from your creator profile, Explore results and its shared link. Your saved Mood and its assets stay here. Downloaded copies belong to their recipients.',
         confirmLabel: 'Unshare',
         danger: true,
       }))
@@ -637,7 +637,10 @@ export default function MoodBrowser() {
         <SectionLabel as="h3" className="mt-3">
           Yours
           {updates.length > 0 && (
-            <span className="ml-2 normal-case tracking-normal text-accent" data-testid="mood-updates">
+            <span
+              className="ml-2 normal-case tracking-normal text-accent"
+              data-testid="mood-updates"
+            >
               {updates.length} update{updates.length === 1 ? '' : 's'}
             </span>
           )}

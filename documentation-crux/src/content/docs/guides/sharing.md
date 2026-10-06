@@ -45,9 +45,9 @@ Published Cruxes can use the embedded library’s authentication and permitted S
 
 ## Share and install tools and Moods
 
-Explore and public Garden pages distinguish **Creations**, **Tools**, and **Moods**. A tool installs an editor you can use to create your own Cruxes. A Mood installs a look and sound for your Garden. Neither requires AI.
+Explore and creator profiles distinguish **Creations**, **Tools**, and **Moods**. A tool installs an editor you can use to create your own Cruxes. A Mood installs a look and sound for your Garden. Neither requires AI.
 
-Open a tool or Mood's public link to install it in an open Garden, or download its file for later. In the app, choose **Add Crux → Import Crux, tool or Mood** and select the file:
+On a tool or Mood’s published page, choose **Open in Garden** to review and install it in the desktop app, or download its file for later. In the app, choose **Add Crux → Import Crux, tool or Mood** and select the file:
 
 - **`.cruxtool`** installs a reusable editor. It then appears in Add Crux.
 - **`.cruxmood`** imports a Mood to your library; preview it before keeping it for your Garden.

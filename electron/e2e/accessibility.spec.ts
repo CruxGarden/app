@@ -79,7 +79,7 @@ test('accessibility scan of entry, creation, Settings and workspace', async () =
     await page.getByRole('button', { name: /enter/i }).click();
     await expect(page.getByText('Plant a new garden')).toBeVisible();
     await scan(page, 'garden-choice');
-    // The Setup wizard: every step is scanned, then "Go to Home instead" lands at Home
+    // The Setup wizard: every step is scanned, then "Go to Garden Home instead" lands at Home
     // without a first Crux (the old setup panel's Welcome without walkthrough).
     const wizard = await openSetupWizard(page);
     for (const step of ['need', 'garden', 'ai', 'mood'] as const) {
@@ -89,7 +89,7 @@ test('accessibility scan of entry, creation, Settings and workspace', async () =
     }
     await expect(wizard).toHaveAttribute('data-step', 'crux');
     await scan(page, 'garden-setup-crux');
-    await wizard.getByRole('button', { name: 'Go to Home instead', exact: true }).click();
+    await wizard.getByRole('button', { name: 'Go to Garden Home instead', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible({
       timeout: 60_000,
     });

@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-06",
+  "scope": "Garden and Explore navigation and terminology",
+  "behavior": [
+    "Garden and Explore have independent remembered routes within the window",
+    "Garden Home opens the current Garden; Explore Home clears search",
+    "Browser Back/Forward restores Explore filters",
+    "Open Crux, unsent Collaboration draft and unsaved editor work survive area switching",
+    "Native Quit still offers Cancel for unsaved work while in Explore",
+    "Creator profiles and published Cruxes use Explore navigation",
+    "Visitor previews do not change remembered Explore location",
+    "Existing teaser signup, subscription return and music behavior preserved"
+  ],
+  "verification": {
+    "app": {
+      "command": "npm run verify",
+      "passed": 2090,
+      "skipped": 18,
+      "files": 324,
+      "build": "passed",
+      "log": "/tmp/crux-areas-final-verify.log"
+    },
+    "electron": {
+      "command": "npm run verify",
+      "passed": 205,
+      "skipped": 1,
+      "log": "/tmp/crux-areas-electron-verify.log"
+    },
+    "public": {
+      "passed": 20,
+      "log": "/tmp/crux-areas-public-complete.log",
+      "followup": "After fixing Home URL state synchronization, all six affected discovery/navigation journeys pass, including Home/Back/Forward.",
+      "followupLog": "/tmp/crux-areas-public-navigation-fix.log"
+    },
+    "desktop": {
+      "navigationAndTaskRestart": 2,
+      "log": "/tmp/crux-areas-navigation-fixed.log",
+      "setupPreviewAndTutorial": 2,
+      "setupLog": "/tmp/crux-areas-desktop-accepted.log",
+      "accessibilityAndFinalNavigation": 2,
+      "finalLog": "/tmp/crux-areas-accessibility.log",
+      "accessibilityScreens": 23,
+      "automatedViolations": 0
+    },
+    "guide": {
+      "build": "passed",
+      "log": "/tmp/crux-areas-guide-build.log"
+    }
+  },
+  "fixesFoundDuringVerification": [
+    "Explore Home effect race repeatedly restored the old URL and aborted results; reset route state before committing old search effects",
+    "Loading the relocated close guard under the Router Suspense boundary stalled existing-Garden entry; it now has its own boundary"
+  ],
+  "visuals": ["explore-home.png", "garden-home-compact.png", "explore-public.png"],
+  "limits": [
+    "Local Mac and browser verification; no fresh Windows/Linux certification",
+    "Not merged or deployed",
+    "No changes to real or manual Garden contents",
+    "Earlier failed logs are retained for diagnosis; only the named passing replays establish acceptance"
+  ]
+}

@@ -292,9 +292,9 @@ export default function HomeGarden() {
                 {can(Capability.LocalStaging) && <LocalTestGarden />}
                 {author && (
                   <IconButton
-                    label="Public Garden on crux.garden"
+                    label="Your creator profile in Explore"
                     size="sm"
-                    tooltip={{ label: 'Public Garden on crux.garden' }}
+                    tooltip={{ label: 'Your creator profile in Explore' }}
                     onClick={() => void openGardenPage(`/${author.username}`)}
                   >
                     <GlobeIcon />

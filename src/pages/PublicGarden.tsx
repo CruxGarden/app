@@ -143,13 +143,13 @@ export default function PublicGarden() {
   }, [cruxes, search, sortBy, kind]);
 
   if (state === 'loading') {
-    return <PublicLoading label="Loading garden…" username={username} />;
+    return <PublicLoading label="Loading creator…" username={username} />;
   }
 
   if (state === 'not-found') {
     return (
       <Missing
-        title="No garden here"
+        title="Creator not found"
         body={`There is no @${username?.replace(/^@/, '')} at this address.`}
       />
     );
@@ -157,10 +157,10 @@ export default function PublicGarden() {
 
   if (state === 'error') {
     return (
-      <DeadEnd title="Couldn't reach this garden" body="Check your connection and try again.">
+      <DeadEnd title="Couldn't reach this creator" body="Check your connection and try again.">
         <Button onClick={() => setAttempt((value) => value + 1)}>Try again</Button>
         <Link to="/explore" className={buttonClass('ghost', 'sm')}>
-          Explore
+          Explore Home
         </Link>
       </DeadEnd>
     );
@@ -186,7 +186,7 @@ export default function PublicGarden() {
                 {author?.displayName || author?.username || username}
               </h1>
               <p className="text-sm text-text-muted">
-                @{(author?.username || username || '').replace(/^@/, '')} · Public Garden
+                @{(author?.username || username || '').replace(/^@/, '')} · Published in Explore
               </p>
             </div>
           </div>
@@ -231,7 +231,8 @@ export default function PublicGarden() {
 
         <p className="text-sm text-text-muted bg-panel border border-panel-border rounded-[var(--radius-md)] px-3 py-2 mb-4">
           {filteredCruxes.length} {filteredCruxes.length === 1 ? 'creation' : 'creations'} shown.{' '}
-          {currentPage < totalPages && 'Load more below, or search this creator’s whole Garden.'}{' '}
+          {currentPage < totalPages &&
+            'Load more below, or search this creator’s published Cruxes.'}{' '}
           <Link
             className={buttonClass('ghost', 'sm')}
             to={`/explore?author=${encodeURIComponent(username?.replace(/^@/, '') ?? '')}`}

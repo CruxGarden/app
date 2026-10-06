@@ -400,7 +400,8 @@ export default function PublishPane() {
           <div>
             <h2 className="text-sm font-medium text-text">Publish to crux.garden</h2>
             <p className="mt-1 text-xs text-text-muted">
-              Put your reviewed website online. Anyone with its link can visit.
+              Put your reviewed website online. Anyone with its link can visit. Your editable Crux
+              stays in your Garden.
             </p>
           </div>
           {/* Status */}
@@ -643,7 +644,7 @@ export default function PublishPane() {
                   )}
                 >
                   <ExternalLinkIcon />
-                  Open
+                  View published Crux
                 </a>
               </div>
             </PaneSection>

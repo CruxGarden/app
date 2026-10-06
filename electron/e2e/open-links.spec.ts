@@ -62,7 +62,7 @@ test.describe('links out of the app', () => {
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
 
       // Share pane → Open
-      await page.getByRole('link', { name: 'Open' }).click();
+      await page.getByRole('link', { name: 'View published Crux', exact: true }).click();
       await expect
         .poll(opened)
         .toEqual([expect.stringMatching(/^https:\/\/crux\.garden\/tester\//)]);
@@ -70,7 +70,7 @@ test.describe('links out of the app', () => {
       // Garden Home → Public Garden
       await goHome(page);
       await page
-        .getByRole('button', { name: 'Public Garden on crux.garden' })
+        .getByRole('button', { name: 'Your creator profile in Explore' })
         .click({ timeout: 30_000 });
       await expect.poll(opened).toHaveLength(2);
       expect((await opened())[1]).toBe('https://crux.garden/tester');

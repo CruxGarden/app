@@ -410,12 +410,13 @@ export default function Explore({
       }
     >
       <div className="mb-3 @xl:flex @xl:items-center @xl:justify-between @xl:gap-4">
-        {!appReady && (
-          <header className="py-1 mb-2 @xl:mb-0">
-            <h2 className="text-2xl font-display font-medium text-text">Find your next spark.</h2>
-            <p className="mt-1 text-sm text-text-muted">Explore what people are making.</p>
-          </header>
-        )}
+        <header className="rounded-[var(--radius)] border border-panel-border bg-panel px-3 py-2 mb-2 @xl:mb-0 @xl:flex-1">
+          <h2 className="text-2xl font-display font-medium text-text">Explore Home</h2>
+          <p className="mt-1 text-sm text-text-muted">
+            Discover published Cruxes, creators, tools and Moods. Your own work stays in your
+            Garden.
+          </p>
+        </header>
         {view === 'all' && !q && !author && activeTags.length === 0 && (
           <DocumentationCard local={appReady} />
         )}
@@ -648,11 +649,15 @@ export default function Explore({
           <p className="text-text text-sm mb-1">{emptyCatalogCopy(view).title}</p>
           <p className="text-xs text-text-muted mb-3">{emptyCatalogCopy(view).body}</p>
           {appReady && view === 'tools' && (
-            <Button variant="secondary" size="sm" onClick={() =>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
                 void import('@/components/layout/app-commands').then((commands) =>
                   commands.newCrux(navigate),
                 )
-              }>
+              }
+            >
               Make a tool
             </Button>
           )}
@@ -748,7 +753,7 @@ export default function Explore({
 
 export function ExplorePage() {
   usePageMeta({
-    title: `Explore — ${APP_NAME}`,
+    title: `Explore Home — ${APP_NAME}`,
     description:
       'Browse what people have made and published with Crux Garden: creations, creators, tools and Moods.',
     canonical: canonicalUrl('/explore'),
@@ -764,14 +769,16 @@ export function ExplorePage() {
   // When the URL changes for another reason — a link into this page while it
   // is already mounted, back/forward — remount Explore so it picks the new
   // filters up. Changes we wrote ourselves are recognised and leave it alone.
-  const lastWritten = useRef<string | null>(null);
-  const [epoch, setEpoch] = useState(0);
-  useEffect(() => {
-    if (lastWritten.current !== null && lastWritten.current !== paramsKey) {
-      setEpoch((e) => e + 1);
-    }
+  const lastWritten = useRef(paramsKey);
+  const [routeState, setRouteState] = useState({ key: paramsKey, epoch: 0 });
+  if (routeState.key !== paramsKey) {
+    // Reset external navigation before committing the old search's effects.
+    // Doing this in an effect let the old search write its URL back while Home
+    // was resetting it, repeatedly remounting the results and aborting requests.
+    const ownUpdate = lastWritten.current === paramsKey;
     lastWritten.current = paramsKey;
-  }, [paramsKey]);
+    setRouteState({ key: paramsKey, epoch: routeState.epoch + (ownUpdate ? 0 : 1) });
+  }
 
   const onStateChange = useCallback(
     (s: ExploreState) => {
@@ -794,10 +801,10 @@ export function ExplorePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader title="Explore" />
+      <PageHeader title="Explore Home" area="explore" />
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-7xl mx-auto w-full">
-        <Explore key={epoch} initial={initial} onStateChange={onStateChange} />
+        <Explore key={routeState.epoch} initial={initial} onStateChange={onStateChange} />
         <PublicFooter className="mt-6" />
       </div>
     </div>

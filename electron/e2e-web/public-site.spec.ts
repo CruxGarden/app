@@ -125,8 +125,17 @@ test.describe('public site', () => {
     await expect(page.getByRole('heading', { name: 'Checkout closed' })).toBeVisible();
   });
 
-  test('Explore, a public crux page and a public garden page', async ({ page }) => {
+  test('Explore Home, a published Crux and a creator profile', async ({ page }) => {
     await page.goto('/explore');
+    await expect(page.getByRole('link', { name: 'Explore Home', exact: true })).toHaveAttribute(
+      'href',
+      '/explore',
+    );
+    await expect(page.getByRole('link', { name: 'Get Crux Garden', exact: true })).toHaveAttribute(
+      'href',
+      '/#download',
+    );
+    await expect(page.getByRole('navigation', { name: 'Garden and Explore' })).toHaveCount(0);
     await expect(page.getByText('Garden Notes').first()).toBeVisible();
     await page.goto('/@tester/garden-notes');
     await expect(page.getByText('Garden Notes').first()).toBeVisible({ timeout: 30_000 });
@@ -162,14 +171,14 @@ test('direct Explore links load; creation loading, failure and retry stay useful
   await expect(page.frameLocator('iframe').first().getByText('Garden Notes live')).toBeVisible();
   await page.goto('/@nobody/missing');
   await expect(page.getByRole('heading', { name: 'Not found', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Explore', exact: true }).first().click();
+  await page.getByRole('link', { name: 'Explore Home', exact: true }).first().click();
   await expect(page.getByText('Garden Notes').first()).toBeVisible();
 });
 
 test('Garden outages offer retry, and Explore clears pending search', async ({ page }) => {
   await page.route('**/authors/tester', (route) => route.fulfill({ status: 500, body: '{}' }));
   await page.goto('/@tester');
-  await expect(page.getByRole('heading', { name: "Couldn't reach this garden" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Couldn't reach this creator" })).toBeVisible();
   await page.unroute('**/authors/tester');
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByText('Garden Notes').first()).toBeVisible();
@@ -180,6 +189,18 @@ test('Garden outages offer retry, and Explore clears pending search', async ({ p
   await page.waitForTimeout(400);
   await expect(search).toHaveValue('');
   expect(new URL(page.url()).searchParams.get('q')).toBeNull();
+  await search.fill('notes');
+  await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe('notes');
+  await page.getByRole('link', { name: 'Explore Home', exact: true }).click();
+  await expect(page.getByText('Looking…', { exact: true })).toBeHidden();
+  await expect(page).toHaveURL(/\/explore$/);
+  await expect(search).toHaveValue('');
+  await expect(page.getByTestId(`explore-crux-${ID}`)).toBeVisible();
+  await page.goBack();
+  await expect(search).toHaveValue('notes');
+  await page.goForward();
+  await expect(search).toHaveValue('');
+  await expect(page.getByText('Looking…', { exact: true })).toBeHidden();
 });
 
 test('public Gardens load another page on demand and preserve results on refusal', async ({
@@ -357,10 +378,10 @@ test('a creator Garden presents tools and Moods with their own actions and categ
     await expect(
       page
         .getByTestId('explore-tool-unknown-community-tool')
-        .getByRole('link', { name: 'Open in Crux Garden' }),
+        .getByRole('link', { name: 'Open in Garden' }),
     ).toHaveAttribute('href', `crux-garden://install/tool/${ids[0]}`);
     await expect(
-      page.getByTestId(`explore-mood-${ids[1]}`).getByRole('link', { name: 'Open in Crux Garden' }),
+      page.getByTestId(`explore-mood-${ids[1]}`).getByRole('link', { name: 'Open in Garden' }),
     ).toHaveAttribute('href', `crux-garden://install/mood/${ids[1]}`);
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
@@ -488,7 +509,7 @@ test('legal pages render, are linked from the public footer and from the teaser'
     'https://github.com/CruxGarden/app/issues',
   );
   // A word that is also a page is never read as somebody's garden.
-  await expect(page.getByText('No garden here')).toHaveCount(0);
+  await expect(page.getByText('Creator not found')).toHaveCount(0);
 
   await page.goto('/plans');
   await page

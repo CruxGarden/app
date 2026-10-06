@@ -203,8 +203,8 @@ export default function StepFirstCrux({
                   </>
                 ) : (
                   <p className="text-sm text-text-muted">
-                    No starting point is available in this build. You can go to Home and add one
-                    later.
+                    No starting point is available in this build. You can go to Garden Home and add
+                    one later.
                   </p>
                 )}
               </>
@@ -260,7 +260,7 @@ export default function StepFirstCrux({
         {offerCrux ? (
           <>
             <Button variant="ghost" size="sm" onClick={onNotNow} disabled={busy}>
-              {choices.mode === 'first' ? 'Go to Home instead' : 'Save without a new Crux'}
+              {choices.mode === 'first' ? 'Go to Garden Home instead' : 'Save without a new Crux'}
             </Button>
             <Button onClick={() => entry && onCreate(entry)} disabled={!entry} loading={busy}>
               Create &amp; open

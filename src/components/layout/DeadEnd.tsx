@@ -1,3 +1,4 @@
+import AreaNavigation from './AreaNavigation';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CruxBloom from '@/components/brand/CruxBloom';
@@ -16,7 +17,7 @@ export default function DeadEnd({
 }: {
   title: string;
   body: ReactNode;
-  /** The ways back; the Garden by default. */
+  /** The ways back; Explore Home by default. */
   children?: ReactNode;
 }) {
   const navigate = useNavigate();
@@ -28,6 +29,9 @@ export default function DeadEnd({
         padding="lg"
         className="relative z-10 w-full max-w-md text-center motion-enter-card"
       >
+        <div className="flex justify-center mb-4">
+          <AreaNavigation area="explore" />
+        </div>
         <CruxBloom size={48} className="mx-auto mb-5 opacity-[var(--decoration-opacity)]" />
         <h1 className="font-display text-2xl text-heading mb-2">{title}</h1>
         <p className="text-sm text-text-muted mb-6">{body}</p>
@@ -36,9 +40,9 @@ export default function DeadEnd({
             <button
               type="button"
               className={buttonClass('secondary', 'sm')}
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/explore')}
             >
-              Return to Garden
+              Explore Home
             </button>
           )}
         </nav>

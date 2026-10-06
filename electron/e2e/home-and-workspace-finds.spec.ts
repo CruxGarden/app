@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { startMockApi } from './api-mock';
 import {
   addArtifact,
   createCrux,
@@ -210,5 +211,107 @@ test('Artifacts: find in files works with AI Tools off and opens the file at the
     await expect(page.getByRole('tree')).toBeVisible();
   } finally {
     await app.close();
+  }
+});
+
+test('Garden and Explore have separate homes and remember their locations', async () => {
+  test.setTimeout(120_000);
+  const api = await startMockApi();
+  const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
+  try {
+    await enterGarden(page);
+    const id = await createCrux(page, 'My private workspace');
+    const gardenLocation = page.url();
+    const collaboration = await ensurePane(page, 'collaboration', 'Toggle collaboration');
+    const composer = collaboration.getByPlaceholder('Send a message...');
+    await composer.fill('Keep this draft while I explore.');
+    await addArtifact(page, 'unsaved.txt');
+    await page.locator('.monaco-editor').first().click();
+    await page.keyboard.type('An unfinished edit');
+    await expect(page.getByTestId('workspace-status')).toContainText('Unsaved edits');
+    const areas = page.getByRole('navigation', { name: 'Garden and Explore' });
+    await expect(areas.getByRole('link', { name: 'Garden', exact: true })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    await areas.getByRole('link', { name: 'Explore', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Explore Home', exact: true })).toBeVisible();
+    await page.getByRole('textbox', { name: 'Search Explore' }).fill('watercolors');
+    await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe('watercolors');
+    const exploration = page.url();
+    // Browsing published work must not remove the native unsaved-work guard.
+    await app.evaluate(({ app }) => app.quit());
+    const close = page.getByRole('dialog', { name: 'Close Crux Garden', exact: true });
+    await expect(close).toBeVisible();
+    await close.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(close).toBeHidden();
+    await areas.getByRole('link', { name: 'Garden', exact: true }).click();
+    await expect(page).toHaveURL(gardenLocation);
+    await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', id);
+    await expect(composer).toHaveValue('Keep this draft while I explore.');
+    await page.getByRole('link', { name: 'Garden Home', exact: true }).click();
+    await expect(page.getByTestId('pane-body-home')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Open My private workspace', exact: true }),
+    ).toBeVisible();
+    await areas.getByRole('link', { name: 'Explore', exact: true }).click();
+    await expect(page).toHaveURL(exploration);
+    await expect(page.getByRole('textbox', { name: 'Search Explore' })).toHaveValue('watercolors');
+    await page.getByRole('link', { name: 'Explore Home', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'Search Explore' })).toHaveValue('');
+    await expect(page.getByText('Looking…', { exact: true })).toBeHidden();
+    await expect(page).toHaveURL(/\/explore$/);
+    await page.goBack();
+    await expect(page.getByRole('textbox', { name: 'Search Explore' })).toHaveValue('watercolors');
+    await page.goForward();
+    await expect(page.getByRole('textbox', { name: 'Search Explore' })).toHaveValue('');
+    await expect(page.getByText('Looking…', { exact: true })).toBeHidden();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    writeFileSync(
+      test.info().outputPath('explore-home.png'),
+      Buffer.from(
+        await app.evaluate(async ({ BrowserWindow }) =>
+          (await BrowserWindow.getAllWindows()[0]!.webContents.capturePage())
+            .toPNG()
+            .toString('base64'),
+        ),
+        'base64',
+      ),
+    );
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]!.setContentSize(820, 720),
+    );
+    await expect.poll(() => page.evaluate(() => innerWidth)).toBe(820);
+    await expect(areas).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      820,
+    );
+    await areas.getByRole('link', { name: 'Garden', exact: true }).click();
+    await expect(page.getByTestId('pane-body-home')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Garden Home', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      820,
+    );
+    // Let the Mood's surface resize finish before recording its pixels.
+    await page.waitForTimeout(500);
+    writeFileSync(
+      test.info().outputPath('garden-home-compact.png'),
+      Buffer.from(
+        await app.evaluate(async ({ BrowserWindow }) =>
+          (await BrowserWindow.getAllWindows()[0]!.webContents.capturePage())
+            .toPNG()
+            .toString('base64'),
+        ),
+        'base64',
+      ),
+    );
+  } finally {
+    await app.close();
+    await api.close();
   }
 });

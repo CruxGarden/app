@@ -106,7 +106,7 @@ export default function MoodResultCard({
               className={buttonClass('secondary', 'sm')}
               data-testid="open-in-crux-garden"
             >
-              Open in Crux Garden
+              Open in Garden
             </a>
           </div>
         )}

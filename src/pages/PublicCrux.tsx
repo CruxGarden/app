@@ -29,10 +29,7 @@ function WayBack({ username }: { username?: string }) {
         </Link>
       )}
       <Link to="/explore" className={link}>
-        Explore
-      </Link>
-      <Link to="/" className={buttonClass('secondary', 'sm')}>
-        Home
+        Explore Home
       </Link>
     </>
   );

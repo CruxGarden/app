@@ -183,7 +183,7 @@ export default function AccountSettings() {
         </div>
         {editingUsername && (
           <p className="text-xs text-text-muted text-right">
-            Be aware. Changing your username also changes your public garden URL
+            Be aware. Changing your username also changes your Explore profile URL
           </p>
         )}
         {usernameError && <p className="text-xs text-error text-right">{usernameError}</p>}

@@ -67,7 +67,7 @@ test('discovery shows large previews and creators, remembers topics, and support
   );
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/explore');
-  await expect(page.getByRole('heading', { name: 'Find your next spark.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Explore Home' })).toBeVisible();
   await expect(page.getByTestId('explore-tags')).toContainText('Popular tags');
   const card = page.getByTestId('explore-crux-discovery-0');
   const preview = card.getByRole('img', { name: 'Preview of Paper planets' });
@@ -78,9 +78,11 @@ test('discovery shows large previews and creators, remembers topics, and support
   const box = await preview.boundingBox();
   expect(box!.width).toBeGreaterThan(300);
   expect(box!.height).toBeGreaterThan(190);
-  const authorBox = await card.getByRole('link', { name: "Visit Tester's Garden" }).boundingBox();
+  const authorBox = await card
+    .getByRole('link', { name: "View Tester's published Cruxes" })
+    .boundingBox();
   expect(authorBox!.y + authorBox!.height).toBeLessThanOrEqual(720);
-  await expect(card.getByRole('link', { name: "Visit Tester's Garden" })).toHaveAttribute(
+  await expect(card.getByRole('link', { name: "View Tester's published Cruxes" })).toHaveAttribute(
     'href',
     '/tester',
   );
@@ -91,7 +93,7 @@ test('discovery shows large previews and creators, remembers topics, and support
   await expect
     .poll(() =>
       card
-        .getByRole('link', { name: "Visit Tester's Garden" })
+        .getByRole('link', { name: "View Tester's published Cruxes" })
         .locator('img')
         .evaluate((el: HTMLImageElement) => el.naturalWidth),
     )
@@ -107,7 +109,7 @@ test('discovery shows large previews and creators, remembers topics, and support
     .getByRole('button', { name: '#worlds' })
     .click();
   await expect(page.getByTestId('active-filters')).toContainText('#worlds');
-  await card.getByRole('link', { name: "Visit Tester's Garden" }).click();
+  await card.getByRole('link', { name: "View Tester's published Cruxes" }).click();
   await expect(page).toHaveURL(/\/tester$/);
   await page.goBack();
   await expect(page.getByTestId('active-filters')).toContainText('#worlds');
@@ -137,7 +139,7 @@ test('phone discovery handles broken previews and avatars without horizontal ove
   await page.goto('/explore');
   const card = page.getByTestId('explore-crux-discovery-0');
   await expect(card.getByText('Preview coming soon')).toBeVisible();
-  const creator = card.getByRole('link', { name: "Visit Tester's Garden" });
+  const creator = card.getByRole('link', { name: "View Tester's published Cruxes" });
   await expect(creator.getByRole('img')).toHaveCount(0);
   await expect(creator.getByText('T', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);

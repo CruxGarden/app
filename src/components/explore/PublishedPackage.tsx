@@ -29,7 +29,10 @@ export default function PublishedPackage({
   );
   const inApp = useAppStore((s) => s.ready);
   const summary = tool
-    ? toolSummaryOf({ ...(crux as Crux & { toolSummary?: unknown }), author_username: username.replace(/^@/, "") })
+    ? toolSummaryOf({
+        ...(crux as Crux & { toolSummary?: unknown }),
+        author_username: username.replace(/^@/, ''),
+      })
     : null;
   const listing: ExploreCrux = {
     ...crux,
@@ -50,7 +53,7 @@ export default function PublishedPackage({
           : 'A look and sound you can choose for your Garden.'}{' '}
         {inApp
           ? 'Install it above, or download the file to keep or send it.'
-          : 'Use Open in Crux Garden to review and install it there. Or download the file, then open Crux Garden → Add Crux → Import Crux, tool or Mood.'}{' '}
+          : 'Use Open in Garden to review and install it there. Or download the file, then open Crux Garden → Add Crux → Import Crux, tool or Mood.'}{' '}
         AI is optional.
       </p>
       <Button

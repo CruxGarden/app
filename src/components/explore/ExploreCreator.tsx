@@ -9,7 +9,7 @@ export default function ExploreCreator({ crux }: { crux: ExploreCrux }) {
   return (
     <Link
       to={`/${crux.author_username}`}
-      aria-label={`Visit ${name}'s Garden`}
+      aria-label={`View ${name}'s published Cruxes`}
       className="my-2 flex w-fit max-w-full items-center gap-2.5 rounded-sm text-text-muted hover:text-accent focus-visible:outline-2 focus-visible:outline-accent"
     >
       <Avatar

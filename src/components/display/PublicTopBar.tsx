@@ -1,9 +1,15 @@
-import { APP_NAME } from '@/lib/constants';
+import { Capability, can } from '@/lib/platform';
+import { cn } from '@/lib/cn';
+import { Link } from 'react-router-dom';
+import AreaNavigation from '@/components/layout/AreaNavigation';
+import { isPublicSite } from '@/lib/site';
 import { useState } from 'react';
 import { iconButtonClass } from '@/components/ui/button-class';
 import ReportDialog from '@/components/public/ReportDialog';
 
 interface PublicTopBarProps {
+  /** A visitor preview inside the Garden is not navigation into Explore. */
+  preview?: boolean;
   title?: string;
   username: string;
   hasMetadata?: boolean;
@@ -20,26 +26,33 @@ export default function PublicTopBar({
   metadataOpen,
   onToggleMetadata,
   reportCruxId,
+  preview = false,
 }: PublicTopBarProps) {
   const [reporting, setReporting] = useState(false);
   const link =
     'text-2xs font-mono px-2 py-1 rounded-[var(--radius-sm)] text-public-top-bar-link hover:text-public-top-bar-link-hover hover:bg-action-button-hover transition-colors';
   return (
-    <header className="relative z-20 flex items-center justify-between h-8 px-3 border-b border-public-top-bar-border bg-public-top-bar shrink-0">
-      <div className="flex items-center gap-1.5 min-w-0 text-2xs font-mono">
-        <a
-          href="https://crux.garden"
+    <header
+      className={cn(
+        'relative z-20 flex items-center flex-wrap gap-y-1 justify-between min-h-8 py-1 px-3 border-b border-public-top-bar-border bg-public-top-bar shrink-0',
+        !preview && can(Capability.DesktopChrome) && 'pl-24',
+      )}
+    >
+      <div className="flex flex-wrap flex-1 basis-60 items-center gap-1.5 min-w-0 text-2xs font-mono">
+        {!preview && <AreaNavigation area="explore" />}
+        <Link
+          to="/explore"
           className="shrink-0 text-public-top-bar-link hover:text-public-top-bar-link-hover hover:underline"
         >
-          {APP_NAME}
-        </a>
+          Explore Home
+        </Link>
         <span className="text-public-top-bar-text-muted/(--tint-muted)">/</span>
-        <a
-          href={`/${username}`}
+        <Link
+          to={`/${username}`}
           className="shrink-0 text-public-top-bar-link hover:text-public-top-bar-link-hover hover:underline"
         >
           {username}
-        </a>
+        </Link>
         {title && (
           <>
             <span className="text-public-top-bar-text-muted/(--tint-muted)">/</span>
@@ -59,9 +72,11 @@ export default function PublicTopBar({
             Report
           </button>
         )}
-        <a href="/explore" className={link}>
-          Explore
-        </a>
+        {isPublicSite() && (
+          <Link to="/#download" className={link}>
+            Get Crux Garden
+          </Link>
+        )}
         {hasMetadata && onToggleMetadata && (
           <button
             onClick={onToggleMetadata}

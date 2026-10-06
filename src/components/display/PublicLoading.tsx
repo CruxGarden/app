@@ -18,7 +18,7 @@ export default function PublicLoading({
           <LoadingPanel label={label} />
         </div>
         <Link to="/explore" className={buttonClass('ghost', 'sm')}>
-          Explore the garden
+          Browse Explore
         </Link>
       </main>
     </div>

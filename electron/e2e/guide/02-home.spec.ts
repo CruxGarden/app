@@ -121,7 +121,7 @@ test.describe('guide 02 · Home Garden', () => {
       await expect(settings.getByText(/Connected/)).toBeVisible({ timeout: 30_000 });
       await page.locator('.mosaic-window.pane-settings .pane-toolbar-close').click();
       const before = api.log.length;
-      const globe = page.getByRole('button', { name: 'Public Garden on crux.garden' });
+      const globe = page.getByRole('button', { name: 'Your creator profile in Explore' });
       await expect(globe).toBeVisible({ timeout: 30_000 });
       await globe.click();
       await expect.poll(opened).toEqual(['https://crux.garden/tester']);

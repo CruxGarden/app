@@ -108,8 +108,8 @@ export default function CloseAccount() {
         <div className="mt-3 space-y-3 text-sm">
           <p>
             Closing <strong>{account?.email}</strong> at{' '}
-            <strong>{new URL(apiBaseUrl()).host}</strong> removes your public Garden, shared sites,
-            tools and Moods, custom-domain routes and hosted backups.
+            <strong>{new URL(apiBaseUrl()).host}</strong> removes your Explore profile, shared
+            sites, tools and Moods, custom-domain routes and hosted backups.
           </p>
           <p data-testid="close-account-plan-note">{CLOSING_PLAN_NOTE}</p>
           {invoices.status === 'ready' && invoices.invoices.length > 0 && (

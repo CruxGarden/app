@@ -94,7 +94,7 @@ test.describe('home garden, crux picker, narrow panes', () => {
       await goHome(page);
       await expect(cards(page)).toHaveCount(3);
       await expect(
-        page.getByRole('button', { name: 'Public Garden on crux.garden' }),
+        page.getByRole('button', { name: 'Your creator profile in Explore' }),
       ).toBeVisible();
 
       // ── Search filters the cards (debounced input) ──

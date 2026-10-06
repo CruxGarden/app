@@ -1,3 +1,4 @@
+import { useAppStore } from '@/stores/appStore';
 import { lazy, Suspense, useSyncExternalStore } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { registerNavigator } from '@/lib/navigate';
@@ -9,6 +10,7 @@ import TitleTooltips from '@/components/ui/TitleTooltips';
 import Toaster from '@/components/ui/Toaster';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 
+const WorkspaceLifecycle = lazy(() => import('@/components/layout/WorkspaceLifecycle'));
 const Shell = lazy(() => import('@/components/layout/Shell'));
 const Gateway = lazy(() => import('@/pages/Gateway'));
 const Landing = lazy(() => import('@/pages/Landing'));
@@ -164,6 +166,7 @@ const onEntryPage = () =>
 
 export default function App() {
   const entry = useSyncExternalStore(subscribeRoute, onEntryPage);
+  const ready = useAppStore((s) => s.ready);
   return (
     <ErrorBoundary>
       {!entry && <AnimatedBackground />}
@@ -178,10 +181,9 @@ export default function App() {
         <Suspense fallback={null}>
           <RouterProvider router={router} />
           {/* Website "Open in Crux Garden" links (ADR 0085): asks, never installs. */}
-          {!publicSite && (
-            <DeepLinkInstalls navigate={navigateTo} pathname={currentPathname} />
-          )}
+          {!publicSite && <DeepLinkInstalls navigate={navigateTo} pathname={currentPathname} />}
         </Suspense>
+        <Suspense fallback={null}>{!publicSite && ready && <WorkspaceLifecycle />}</Suspense>
       </PlasmaStage>
     </ErrorBoundary>
   );

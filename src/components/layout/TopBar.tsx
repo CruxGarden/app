@@ -1,3 +1,7 @@
+import { Link } from 'react-router-dom';
+import AreaNavigation from './AreaNavigation';
+import { inGarden } from '@/stores/gardenContext';
+import { buttonClass } from '@/components/ui';
 import { openFieldGuide } from '@/stores/fieldGuide';
 import { useGardenContext } from '@/stores/gardenContext';
 import GardenLocation from './GardenLocation';
@@ -74,10 +78,13 @@ export default function TopBar() {
       }}
     >
       {/* Left: where you are */}
-      <div className="flex flex-1 basis-60 min-w-0 items-center">
+      <div className="flex flex-wrap flex-1 basis-60 min-w-0 items-center gap-1">
+        <div style={noDrag}>
+          <AreaNavigation area="garden" />
+        </div>
         <nav
           aria-label="Workspace breadcrumbs"
-          className="flex items-center gap-1.5 min-w-0"
+          className="flex flex-wrap items-center gap-1.5 min-w-0"
           style={noDrag}
         >
           <IconButton
@@ -90,6 +97,9 @@ export default function TopBar() {
             <PlusCircleIcon />
           </IconButton>
           <NavigationHistory />
+          <Link to={inGarden('/home')} className={buttonClass('ghost', 'xs')}>
+            Garden Home
+          </Link>
           <GardenLocation />
           {scope === 'crux' && activeCruxId && (
             <span className="text-toolbar-text-muted shrink-0">

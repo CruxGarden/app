@@ -424,8 +424,8 @@ export default function SetupWizard({
         role="alertdialog"
       >
         <p className="text-sm text-text-muted">
-          Go to Home without creating a project. We’ll keep the choices you’ve made and use the
-          defaults for the rest. You can run setup again any time from Help.
+          Go to Garden Home without creating a project. We’ll keep the choices you’ve made and use
+          the defaults for the rest. You can run setup again any time from Help.
         </p>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="secondary" size="sm" onClick={() => setConfirmSkip(false)}>

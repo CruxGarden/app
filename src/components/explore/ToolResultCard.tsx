@@ -110,7 +110,7 @@ export default function ToolResultCard({
             className={buttonClass('secondary', 'sm')}
             data-testid="open-in-crux-garden"
           >
-            Open in Crux Garden
+            Open in Garden
           </a>
         )}
         {busy && (

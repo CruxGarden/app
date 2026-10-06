@@ -89,6 +89,7 @@ export default function VisitorPreview({
           Preview as a visitor — from this computer. Nothing is uploaded.
         </div>
         <PublicTopBar
+          preview
           title={crux.title}
           username={handle}
           hasMetadata

@@ -16,7 +16,6 @@ import {
 } from '@/services/garden-navigation';
 import TendingNotifications from '@/components/tending/TendingNotifications';
 import { startTendingCatalog } from '@/stores/tendingStore';
-import WorkspaceLifecycle from './WorkspaceLifecycle';
 import { restoreWorkspaceList } from '@/stores/workspaceRegistry';
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -257,7 +256,6 @@ export default function Shell() {
     // already maps prefers-reduced-motion to instant through the tokens every role reads.
     <MotionConfig reducedMotion="never">
       <div className="flex flex-col h-screen overflow-hidden">
-        <WorkspaceLifecycle />
         {servicesReady && <CommandPalette />}
         {servicesReady && <FieldGuide />}
         {servicesReady && <ShellDialogs />}
