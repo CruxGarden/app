@@ -71,26 +71,27 @@ export default function StepAi() {
             onChange={() => set({ noAi: false })}
             title="With a collaborator"
             badge={<Recommended />}
-            description="Talk ideas through and get a hand making things."
+            description="Get AI help with writing, ideas and changes to your project."
           />
           <Choice
             name="setup-ai"
             checked={noAi}
             onChange={() => set({ noAi: true, openSection: null })}
             title="No AI"
-            description="Make everything by hand with forms, editors and tools."
+            description="Use the built-in editors and creative tools yourself. No account needed to start."
           />
         </div>
       </fieldset>
 
       {noAi ? (
         <p className="text-xs text-text-muted" aria-live="polite">
-          Everything works by hand. You can change this later in Settings.
+          You can use the tools without setting up AI. Add AI help later in Settings if you want it.
         </p>
       ) : (
         <>
           <p className="text-xs text-text-muted">
-            Everything here is optional. Set up what you like; the rest can wait.
+            AI help is optional. If you’re not sure, choose Later and start with the tools. You can
+            set this up in Settings any time.
           </p>
           {sections.includes('collaborator') && (
             <CollaboratorSection {...props('collaborator')} saved={saved} />

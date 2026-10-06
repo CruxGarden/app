@@ -47,7 +47,13 @@ export default function StepNeed() {
                         {choice.label}
                       </span>
                     </span>
-                    <span className="text-xs text-text-muted">{choice.description}</span>
+                    <span
+                      className="text-xs text-text-muted"
+                      aria-live={selected ? 'polite' : undefined}
+                      data-testid={selected ? 'setup-benefits' : undefined}
+                    >
+                      {selected ? NEED_BENEFITS[choice.id] : choice.description}
+                    </span>
                   </span>
                   {selected && <ReadyMark />}
                 </span>
@@ -56,11 +62,6 @@ export default function StepNeed() {
           })}
         </div>
       </fieldset>
-      {need && (
-        <p className="text-sm text-text" aria-live="polite" data-testid="setup-benefits">
-          {NEED_BENEFITS[need]}
-        </p>
-      )}
       <AdvancedModeToggle
         checked={advancedMode}
         onChange={(on) => set({ advancedMode: on, aiSeeded: false, openSection: null })}

@@ -236,7 +236,7 @@ const OWN_TEMPLATES: Template[] = [
     id: 'order-desk',
     label: 'Order Desk',
     description:
-      'Functions + Store example — a public demo order queue with validation, events and owner actions in the workspace',
+      'Try a public sample order queue. Use made-up orders, track their progress, and manage the queue.',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
     kind: 'webapp',
@@ -247,7 +247,7 @@ const OWN_TEMPLATES: Template[] = [
     id: 'private-requests',
     label: 'Private Requests',
     description:
-      'Functions + Store — signed-in customers keep a private request; the owner reads and handles the inbox',
+      'Let signed-in customers send private requests, then read and manage them in your inbox.',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
     kind: 'webapp',

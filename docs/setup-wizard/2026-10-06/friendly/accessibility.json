@@ -1,0 +1,122 @@
+{
+  "status": "passed",
+  "screens": [
+    {
+      "name": "entry",
+      "passes": 18,
+      "violations": []
+    },
+    {
+      "name": "garden-choice",
+      "passes": 18,
+      "violations": []
+    },
+    {
+      "name": "garden-setup-need",
+      "passes": 24,
+      "violations": []
+    },
+    {
+      "name": "garden-setup-garden",
+      "passes": 24,
+      "violations": []
+    },
+    {
+      "name": "garden-setup-ai",
+      "passes": 28,
+      "violations": []
+    },
+    {
+      "name": "garden-setup-mood",
+      "passes": 25,
+      "violations": []
+    },
+    {
+      "name": "garden-setup-crux",
+      "passes": 26,
+      "violations": []
+    },
+    {
+      "name": "garden",
+      "passes": 22,
+      "violations": []
+    },
+    {
+      "name": "explore",
+      "passes": 22,
+      "violations": []
+    },
+    {
+      "name": "creation",
+      "passes": 24,
+      "violations": []
+    },
+    {
+      "name": "settings-Getting started",
+      "passes": 31,
+      "violations": []
+    },
+    {
+      "name": "settings-Tools and Moods",
+      "passes": 31,
+      "violations": []
+    },
+    {
+      "name": "settings-Account",
+      "passes": 32,
+      "violations": []
+    },
+    {
+      "name": "settings-AI and agents",
+      "passes": 31,
+      "violations": []
+    },
+    {
+      "name": "settings-Garden and backups",
+      "passes": 31,
+      "violations": []
+    },
+    {
+      "name": "settings-Appearance and panels",
+      "passes": 31,
+      "violations": []
+    },
+    {
+      "name": "workspace",
+      "passes": 22,
+      "violations": []
+    },
+    {
+      "name": "work-status-expanded",
+      "passes": 23,
+      "violations": []
+    },
+    {
+      "name": "models",
+      "passes": 25,
+      "violations": []
+    },
+    {
+      "name": "Toggle tasks",
+      "passes": 27,
+      "violations": []
+    },
+    {
+      "name": "Toggle share",
+      "passes": 23,
+      "violations": []
+    },
+    {
+      "name": "Toggle growth",
+      "passes": 23,
+      "violations": []
+    },
+    {
+      "name": "zoomed-command-palette",
+      "passes": 24,
+      "violations": []
+    }
+  ],
+  "idReferences": "The same actual-app scan validates visible ARIA references and supported labeling roles; all passed.",
+  "limits": "Automated host-UI scan; excludes embedded tool interiors and does not certify all accessibility requirements."
+}

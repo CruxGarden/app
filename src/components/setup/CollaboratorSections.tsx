@@ -90,7 +90,7 @@ export function CollaboratorSection({ open, onOpen, onLater, saved }: SectionPro
       onLater={onLater}
     >
       <p className="text-xs text-text-muted">
-        Someone to talk ideas through with, who can also make changes for you.
+        An AI assistant you can talk to, ask for ideas, and invite to make changes to your project.
       </p>
       <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-border px-3 py-2.5">
         <div className="flex flex-wrap items-center gap-2">

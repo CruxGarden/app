@@ -79,7 +79,6 @@ export default function SetupSection({
             type="button"
             className={buttonClass('secondary', 'xs')}
             aria-expanded="false"
-            aria-controls={bodyId}
             aria-label={`${ready ? 'Change' : 'Set up'}: ${title}`}
             onClick={onOpen}
           >

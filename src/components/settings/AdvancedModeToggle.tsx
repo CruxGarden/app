@@ -19,9 +19,9 @@ export default function AdvancedModeToggle({
         describedBy={description}
       />
       <p id={description} className="text-xs text-text-muted">
-        Show code, data and connection controls, with less step-by-step guidance. Applies throughout
-        this installation. Change it any time in Settings → Getting started. Existing work and open
-        editors stay as they are.
+        Leave this off for a simpler workspace with helpful tips. Turn it on for code, data and
+        connection controls. You can change it later in Settings → Getting started; it applies
+        across this app.
       </p>
     </div>
   );

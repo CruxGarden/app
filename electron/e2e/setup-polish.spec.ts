@@ -7,6 +7,7 @@ async function ready(page: Page, advanced = false) {
   const wizard = await openSetupWizard(page);
   await wizard.locator('[data-need="writing"]').click();
   await expect(wizard.getByTestId('setup-benefits')).toContainText('Write and organize notes');
+  await expect(wizard.getByTestId('setup-benefits')).toBeInViewport();
   if (advanced) await wizard.getByRole('switch', { name: 'Advanced Mode', exact: true }).click();
   await page.screenshot({ path: test.info().outputPath('introduction-writing.png') });
   for (const step of ['need', 'garden', 'ai', 'mood']) {

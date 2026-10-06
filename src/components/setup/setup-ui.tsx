@@ -60,7 +60,7 @@ export function Disclosure({
       <button
         type="button"
         aria-expanded={open}
-        aria-controls={bodyId}
+        aria-controls={open ? bodyId : undefined}
         onClick={() => {
           setOwn(!open);
           onToggle?.(!open);

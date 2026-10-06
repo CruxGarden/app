@@ -34,22 +34,22 @@ const STEPS: Record<SetupStepId, { short: string; title: string; lead: string }>
   need: {
     short: 'Make',
     title: 'What would you like to make?',
-    lead: 'Choose something you want to do. We’ll put the right tools within reach and help you try them in your first Crux — one project with its own workspace.',
+    lead: 'Choose something you want to do. We’ll put the right tools within reach and help you try them in your first Crux — one project with its own workspace. You can try other tools later.',
   },
   garden: {
     short: 'Garden',
     title: 'Your garden',
-    lead: 'Give your collection of projects a name. Your work saves on this computer; an account is optional until you want online services.',
+    lead: 'A Garden keeps your projects together. Give yours a name, or keep “My Garden”. You don’t need an account to get started.',
   },
   ai: {
-    short: 'Collaborators',
-    title: 'Would you like a collaborator?',
-    lead: 'Get help writing, building and exploring ideas, or work directly with the editors and creative tools. You can change this later.',
+    short: 'AI help',
+    title: 'Would you like AI help?',
+    lead: 'An AI collaborator can help you write, build and explore ideas. You can also use the creative tools yourself, without AI.',
   },
   mood: {
     short: 'Mood',
     title: 'Choose a Mood',
-    lead: 'Make this a place you enjoy working. Preview the colours, background and sound before you choose.',
+    lead: 'A Mood is the look and feel of your workspace: its colours, background and sound. Try one now; you can change it later.',
   },
   crux: {
     short: 'Ready',
@@ -62,7 +62,7 @@ const STEPS: Record<SetupStepId, { short: string; title: string; lead: string }>
 const BY_HAND = {
   short: 'By hand',
   title: 'How would you like to work?',
-  lead: 'Everything works by hand: forms, editors and tools.',
+  lead: 'Write, draw, make music and build with the tools yourself. No AI setup is needed.',
 };
 const copyFor = (id: SetupStepId, noAi: boolean) => (id === 'ai' && noAi ? BY_HAND : STEPS[id]);
 
@@ -409,7 +409,7 @@ export default function SetupWizard({
             {state.returnToSummary
               ? 'Back to summary'
               : nextStep(state) === 'crux'
-                ? 'Almost there'
+                ? 'Preview my workspace'
                 : 'Continue'}
           </Button>
         </div>
@@ -424,8 +424,8 @@ export default function SetupWizard({
         role="alertdialog"
       >
         <p className="text-sm text-text-muted">
-          Your garden will be planted with the defaults, keeping anything you chose so far. You can
-          run setup again any time from Help.
+          Go to Home without creating a project. We’ll keep the choices you’ve made and use the
+          defaults for the rest. You can run setup again any time from Help.
         </p>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="secondary" size="sm" onClick={() => setConfirmSkip(false)}>

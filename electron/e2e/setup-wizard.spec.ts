@@ -100,7 +100,7 @@ test.describe('Setup wizard', () => {
         /url\(/,
       );
       await page.locator('[data-mood="parchment"]').click();
-      await wizard(page).getByRole('button', { name: 'Almost there', exact: true }).click();
+      await wizard(page).getByRole('button', { name: 'Preview my workspace', exact: true }).click();
 
       // 5 · Here's your garden, with Edit links, then Create & open
       await expect(wizard(page)).toHaveAttribute('data-step', 'crux');
@@ -165,7 +165,7 @@ test.describe('Setup wizard', () => {
       // …and the summary's Edit comes back to the summary
       for (let i = 0; i < 3; i++)
         await wizard(page)
-          .getByRole('button', { name: /^(Continue|Almost there)$/ })
+          .getByRole('button', { name: /^(Continue|Preview my workspace)$/ })
           .click();
       await expect(wizard(page)).toHaveAttribute('data-step', 'crux');
       await page.getByTestId('setup-summary').locator('summary').click();
@@ -259,7 +259,7 @@ test.describe('Setup wizard', () => {
       await dialog.getByLabel('Name your garden', { exact: true }).fill('Renamed Garden');
       await dialog.getByRole('button', { name: 'Continue', exact: true }).click();
       await dialog.getByRole('button', { name: 'Continue', exact: true }).click();
-      await dialog.getByRole('button', { name: 'Almost there', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Preview my workspace', exact: true }).click();
       // Running again keeps the first Crux folded away unless asked
       await expect(dialog.getByTestId('setup-starting-point')).toHaveCount(0);
       await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();

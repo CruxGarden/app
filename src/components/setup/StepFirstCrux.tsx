@@ -176,8 +176,8 @@ export default function StepFirstCrux({
                         {startKind === 'guided'
                           ? 'Your Crux will open with tips for your first activity. Try things at your own pace; you can fold the tips away any time.'
                           : startKind === 'empty'
-                            ? 'A fresh space for your own files and ideas.'
-                            : 'Ready to explore and change. Your edits save automatically.'}
+                            ? 'A blank project with no example content or walkthrough. Choose a template if you’d like something to try first.'
+                            : 'A template is a ready-made example you can change. Your edits save automatically.'}
                       </p>
                     </div>
                     <label className="flex flex-col gap-1.5">
