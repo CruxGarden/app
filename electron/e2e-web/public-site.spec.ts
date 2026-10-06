@@ -354,7 +354,14 @@ test('a creator Garden presents tools and Moods with their own actions and categ
     await page.goto('/tester');
     await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
     await expect(page.getByTestId(`explore-mood-${ids[1]}`)).toBeVisible();
-    await expect(page.getByText('Open Crux Garden to install')).toBeVisible();
+    await expect(
+      page
+        .getByTestId('explore-tool-unknown-community-tool')
+        .getByRole('link', { name: 'Open in Crux Garden' }),
+    ).toHaveAttribute('href', `crux-garden://install/tool/${ids[0]}`);
+    await expect(
+      page.getByTestId(`explore-mood-${ids[1]}`).getByRole('link', { name: 'Open in Crux Garden' }),
+    ).toHaveAttribute('href', `crux-garden://install/mood/${ids[1]}`);
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
     await expect(page.getByTestId(`explore-mood-${ids[1]}`)).toHaveCount(0);
