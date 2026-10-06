@@ -35,24 +35,24 @@
     "binaries:build": "python3 scripts/build-ffmpeg.py"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.266",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.289",
     "@cruxgarden/local-api": "file:vendor/cruxgarden-local-api-0.0.0-unification.ra1435e5dc008.h2d03f470.tgz",
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "better-sqlite3": "13.0.3",
     "chokidar": "^4.0.3",
     "chokidar-fsevents": "npm:chokidar@3.6.0",
     "electron-updater": "^6.8.9",
-    "ignore": "^7.0.5",
+    "ignore": "^7.0.12",
     "pnpm": "^10.34.6",
     "yaml": "2.9.1",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@electron/rebuild": "^4.0.3",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "@types/better-sqlite3": "^7.6.13",
-    "electron": "^44.4.5",
+    "electron": "^44.5.1",
     "electron-builder": "^26.17.0",
     "playwright": "^1.62.1",
     "typescript": "^5.7.0"
