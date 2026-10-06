@@ -15,7 +15,7 @@ interface AvatarUploadProps {
 
 /**
  * Reusable avatar upload.
- * Used in Settings (AccountSettings) and Gateway (SetupStep).
+ * Used in Settings (AccountSettings).
  */
 export default function AvatarUpload({ compact }: AvatarUploadProps) {
   const author = useAppStore((s) => s.author);

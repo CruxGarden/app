@@ -71,6 +71,7 @@ for (const platform of ['darwin', 'win32', 'linux'] as const) {
       'mood',
       'field-guide',
       'shortcuts',
+      'setup-again',
       'report-problem',
     ]) {
       const matching = all(template).filter((item) => item.id === id);
@@ -85,6 +86,7 @@ for (const platform of ['darwin', 'win32', 'linux'] as const) {
       'mood:false',
       'field-guide:false',
       'shortcuts:false',
+      'setup-again:false',
       'report-problem:false',
     ]);
     const help = template.find((menu) => menu.role === 'help')!;
@@ -92,6 +94,7 @@ for (const platform of ['darwin', 'win32', 'linux'] as const) {
       expect.arrayContaining([
         'field-guide',
         'shortcuts',
+        'setup-again',
         'report-problem',
         'open-logs',
         'website',

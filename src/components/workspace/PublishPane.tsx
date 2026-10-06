@@ -101,7 +101,11 @@ function PublishWarnings() {
       {warnings.map((warning) => (
         <PaneNote key={warning.kind} tone="muted" className="text-left whitespace-normal">
           {warning.message}{' '}
-          <button type="button" className={linkClass()} onClick={() => openSettings()}>
+          <button
+            type="button"
+            className={linkClass()}
+            onClick={() => openSettings({ section: 'usage' })}
+          >
             See Usage in Settings
           </button>
         </PaneNote>

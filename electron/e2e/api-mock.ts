@@ -224,12 +224,33 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         return {}; // multipart (publish) — parsed separately
       }
     };
-    const publicCrux = (c: Record<string, unknown>) => ({
-      ...c,
+    // Tools carry the API's sanitized trust summary in public meta (ADR 0084).
+    const withToolSummary = (c: Record<string, unknown>) => {
+      if (c.kind !== 'tool') return c;
+      const meta = (c.meta as Record<string, unknown> | undefined) ?? {};
+      const manifest = (meta.toolManifest as Record<string, unknown> | undefined) ?? {};
+      const pkg = (meta.toolPackage as Record<string, unknown> | undefined) ?? {};
+      return {
+        ...c,
+        meta: {
+          ...meta,
+          toolSummary: {
+            name: String(manifest.name ?? c.title ?? ''),
+            version: manifest.releaseVersion ?? manifest.version,
+            publisher: AUTHOR.username,
+            sizeBytes: typeof pkg.size === 'number' ? pkg.size : undefined,
+            permissions: [],
+            sandboxed: true,
+          },
+        },
+      };
+    };
+    const publicCrux = (raw: Record<string, unknown>) => ({
+      ...withToolSummary(raw),
       author_username: AUTHOR.username,
       author_display_name: AUTHOR.displayName,
       author_meta: {},
-      tags: ((c.meta as Record<string, unknown> | undefined)?.tags as string[] | undefined) ?? [],
+      tags: ((raw.meta as Record<string, unknown> | undefined)?.tags as string[] | undefined) ?? [],
     });
 
     // ── Explore (public) ──
@@ -258,6 +279,14 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
       return send(200, { data });
     }
+    // Install links: one published Tool or Mood by id, Discoverable not required.
+    const byId = /^\/explore\/cruxes\/([^/]+)$/.exec(path);
+    if (byId && method === 'GET') {
+      const c = state.cruxes[byId[1]!];
+      return c && c.visibility === 'public' && (c.kind === 'tool' || c.kind === 'mood')
+        ? send(200, publicCrux(c))
+        : send(404, { message: 'Not found' });
+    }
     if (path === '/explore' && method === 'GET') {
       // People: the one author this mock knows, when the term fits.
       if (parsedUrl.searchParams.get('type') === 'authors') {
@@ -265,7 +294,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         const hit =
           !term ||
           AUTHOR.username.toLowerCase().includes(term) ||
-          String(AUTHOR.display_name ?? '')
+          String(AUTHOR.displayName ?? '')
             .toLowerCase()
             .includes(term);
         res.setHeader('Pagination', JSON.stringify({ currentPage: 1, lastPage: 1 }));
@@ -1127,7 +1156,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         return send(200, doc);
       }
       if (storeIo?.[2] === 'import' && method === 'POST') {
-        const doc = body as {
+        const doc = bodyJson() as {
           public?: Record<string, unknown>;
           protected?: Record<string, Record<string, unknown>>;
         };

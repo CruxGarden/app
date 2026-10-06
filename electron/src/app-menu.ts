@@ -139,6 +139,7 @@ export function buildMenuTemplate(
     submenu: [
       send('field-guide', 'Field Guide'),
       send('shortcuts', 'Keyboard Shortcuts'),
+      send('setup-again', 'Run Setup Again…'),
       separator,
       send('report-problem', 'Report a Problem…'),
       { id: 'open-logs', label: 'Open Logs', click: () => actions.openLogs() },

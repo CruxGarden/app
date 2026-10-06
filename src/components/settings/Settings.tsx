@@ -1,7 +1,7 @@
 import AppearanceSettings from './AppearanceSettings';
 import StartSettings from './StartSettings';
 import LibrarySettings from './LibrarySettings';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { Button, Select, SectionLabel } from '@/components/ui';
 import { rowClass } from '@/components/ui/button-class';
@@ -17,6 +17,12 @@ import DesktopSettings from '@/components/settings/DesktopSettings';
 import AiSettings from '@/components/settings/AiSettings';
 import AgentsSettings from '@/components/settings/AgentsSettings';
 import MemorySettings from '@/components/settings/MemorySettings';
+import {
+  onSettingsSection,
+  settingsPlace,
+  takeSettingsSection,
+  type SettingsSection,
+} from '@/components/settings/settings-target';
 
 export default function Settings() {
   // With AI tools off, what only the collaborator uses is not shown at all.
@@ -86,6 +92,43 @@ export default function Settings() {
     });
     if (focus) section.focus({ preventScroll: true });
   };
+  // A place asked for by name ("See Usage in Settings"): taken on mount, and
+  // heard while open. Shown after layout so the cards above it have height.
+  useEffect(() => {
+    let frame = 0;
+    const reveal = (target: SettingsSection) => {
+      const { group, card } = settingsPlace(target);
+      const container = scroller.current;
+      const groupElement = sections.current[group];
+      const element =
+        (card ? groupElement?.querySelector<HTMLElement>(card) : null) ?? groupElement;
+      if (!element || !container) return;
+      setCurrentSection(group);
+      // Layout coordinates (Plasma can transform a pane), summed up to the scroller.
+      let top = 0;
+      for (let node: HTMLElement | null = element; node && node !== container; ) {
+        top += node.offsetTop;
+        node = node.offsetParent as HTMLElement | null;
+      }
+      container.scrollTo({ top });
+      element.focus({ preventScroll: true });
+    };
+    // Taken inside the frame, so a mount that is undone before it (Strict
+    // Mode) leaves the request for the mount that stays.
+    const show = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const target = takeSettingsSection();
+        if (target) reveal(target);
+      });
+    };
+    show();
+    const off = onSettingsSection(show);
+    return () => {
+      off();
+      cancelAnimationFrame(frame);
+    };
+  }, []);
   const trackSection = () => {
     const container = scroller.current;
     if (!container) return;

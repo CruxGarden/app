@@ -11,6 +11,7 @@ import {
   goHome,
 } from './multi-crux-helpers';
 import { openPanel } from './panel-helpers';
+import { setupWithFirstHomePage } from './setup-helpers';
 import { fileText } from './content-helpers';
 import { connectAccount, writeFirstFile } from './journeys/journey-helpers';
 
@@ -166,9 +167,7 @@ test('a fresh home page reaches a saved local visitor edition without hosted ser
   let running = await launchApp({ ai: false });
   try {
     let { page } = running;
-    await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.getByText('Plant a new garden').click();
-    await page.getByRole('button', { name: 'Make my home page', exact: true }).click();
+    await setupWithFirstHomePage(page);
     await expect(
       page.getByRole('button', { name: 'Edit my home page', exact: true }),
     ).toBeVisible();

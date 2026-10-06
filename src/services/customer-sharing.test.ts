@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { findPublished, routeDeepLink, type DeepLinkRoutes } from './install-requests';
+import { routeDeepLink, type DeepLinkRoutes } from './install-requests';
 import { checkForUpdates, moodUpdateAvailable, toolUpdateAvailable } from './update-notices';
 import {
   catalogFromExplore,
@@ -47,24 +47,6 @@ describe('install from the website (deep links)', () => {
     const r = routes();
     expect(await routeDeepLink({ kind: 'billing-return', status: 'success' }, r)).toBe('ignored');
     expect(r.askToInstall).not.toHaveBeenCalled();
-  });
-
-  it('finds the published item across pages, matching ids case-insensitively', async () => {
-    const explore = vi.fn(async (params: { page: number }) => ({
-      items:
-        params.page === 2
-          ? [{ id: 'ABC', kind: 'mood', slug: 's', author_username: 'a' }]
-          : [{ id: 'other', kind: 'mood' }],
-      totalPages: 3,
-    }));
-    const found = await findPublished({ type: 'mood', cruxId: 'abc' }, explore);
-    expect(found?.slug).toBe('s');
-    expect(explore).toHaveBeenCalledTimes(2);
-    const none = await findPublished({ type: 'tool', cruxId: 'abc' }, async () => ({
-      items: [],
-      totalPages: 1,
-    }));
-    expect(none).toBeNull();
   });
 });
 

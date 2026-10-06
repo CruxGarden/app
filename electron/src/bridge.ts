@@ -200,6 +200,7 @@ export type MenuCommand =
   | 'mood'
   | 'field-guide'
   | 'shortcuts'
+  | 'setup-again'
   | 'report-problem';
 /** How the previous session ended, when it ended badly. Never content (ADR 0008). */
 export interface PreviousCrash {

@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react';
 import { useGardenContext } from '@/stores/gardenContext';
 import { useUIStore } from '@/stores/uiStore';
 import { PaneEmpty } from './pane-ui';
+import { openSettings } from '@/components/layout/app-commands';
+import { linkClass } from '@/components/ui/button-class';
 
 const Console = lazy(() => import('@/components/keeper/Console'));
 
@@ -14,7 +16,19 @@ export default function ConsolePane() {
     return (
       <PaneEmpty
         title="The collaborator is off"
-        description="Turn it on in Settings → AI to talk with this Garden."
+        description={
+          <>
+            Turn it on in{' '}
+            <button
+              type="button"
+              className={linkClass()}
+              onClick={() => openSettings({ section: 'ai' })}
+            >
+              Settings → AI
+            </button>{' '}
+            to talk with this Garden.
+          </>
+        }
         className="h-full"
       />
     );

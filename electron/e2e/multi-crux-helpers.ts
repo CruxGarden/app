@@ -1,12 +1,10 @@
+import { skipSetupToHome } from './setup-helpers';
 import { togglePanel } from './panel-helpers';
 import { expect, type Page, type FrameLocator, type Locator } from '@playwright/test';
 export async function enterGarden(page: Page) {
   const start = Date.now();
-  await page.getByRole('button', { name: /enter/i }).click();
-  await page.getByText('Plant a new garden').click();
-  await page.getByRole('checkbox', { name: /Include a first home page walkthrough/ }).uncheck();
-  await page.getByRole('button', { name: 'Welcome' }).click();
-  await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 60_000 });
+  // The Setup wizard's fast path: defaults everywhere, no first Crux, Home.
+  await skipSetupToHome(page);
   if (process.env.CRUX_E2E_DIAGNOSTICS)
     console.log(`Fresh Garden ready in ${Date.now() - start}ms`);
 }
@@ -176,18 +174,9 @@ export async function openFullThemeBuilder(page: Page) {
 /** Preserve the existing Home + optional seeded starter fixture for older feature journeys.
  * First-use tests deliberately exercise the direct Make my home page destination instead. */
 export async function finishSetupAtHome(surface: Page | FrameLocator | Locator) {
-  await surface.getByRole('heading', { name: 'Set up your garden', exact: true }).waitFor();
-  const firstPage = surface.getByRole('button', { name: 'Make my home page', exact: true });
-  const opensPage = await firstPage.isVisible();
-  if (opensPage) {
-    await firstPage.click();
-    await surface.getByRole('button', { name: 'Garden location', exact: true }).click();
-    await surface
-      .getByRole('dialog', { name: 'Garden location', exact: true })
-      .getByRole('button', { name: 'Close crux', exact: true })
-      .click();
-  } else {
-    await surface.getByRole('button', { name: 'Welcome', exact: true }).click();
-  }
-  await surface.getByRole('button', { name: 'Add Crux', exact: true }).waitFor();
+  // The caller planted a new garden; the Setup wizard's Skip applies the
+  // defaults and lands on Home without a first Crux.
+  await surface.getByTestId('setup-wizard').waitFor({ timeout: 30_000 });
+  await surface.getByRole('button', { name: 'Skip setup', exact: true }).click();
+  await surface.getByRole('button', { name: 'Add Crux', exact: true }).waitFor({ timeout: 60_000 });
 }

@@ -88,7 +88,18 @@ export default defineConfig({
   projects: [
     { name: 'unit', testMatch: '**/*.unit.spec.ts' },
     { name: 'gate', testMatch: gateSpecs },
-    { name: 'desktop', testIgnore: ['**/*.unit.spec.ts', ...gateSpecs] },
+    {
+      name: 'desktop',
+      testIgnore: [
+        '**/*.unit.spec.ts',
+        ...gateSpecs,
+        // Import SQL.js-era fixtures retired in a86edc435 (ADR 0060); their purposes
+        // moved to native-storage tests. Rewrite or remove; until then they would
+        // stop the whole project from loading.
+        '**/native-storage.spec.ts',
+        '**/unification-preservation.spec.ts',
+      ],
+    },
   ],
   // Keep exact failed assertions visible in CI annotations, even when job logs
   // require an authenticated GitHub session.

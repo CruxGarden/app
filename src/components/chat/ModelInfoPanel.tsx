@@ -4,6 +4,8 @@ import { getModelInfo, PROVIDERS, getProviderForModel } from '@/ai/providers';
 import { defaultToolDefinitions } from '@/ai/tools';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
+import { linkClass } from '@/components/ui/button-class';
+import { openSettings } from '@/components/layout/app-commands';
 
 interface ModelInfoPanelProps {
   model: string;
@@ -199,7 +201,15 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
           <div>
             {providerId === 'included' ? (
               <span className="text-text-muted text-xxs">
-                Included allowance is in Settings → Usage.
+                Included allowance is in{' '}
+                <button
+                  type="button"
+                  className={linkClass()}
+                  onClick={() => openSettings({ section: 'usage' })}
+                >
+                  Settings → Usage
+                </button>
+                .
               </span>
             ) : (
               <a

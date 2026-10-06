@@ -22,7 +22,8 @@ import { importGarden } from '@/services/garden-io';
 import * as syncApi from '@/api/sync';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
-import { SetupStep } from '../components/gateway/SetupStep';
+import SetupWizard from '@/components/setup/SetupWizard';
+import { useSetupWizard } from '@/components/setup/setup-store';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ export default function Gateway() {
   useEffect(() => {
     void wearGatewayMood().catch(() => {});
   }, []);
+  const wornAccent = useWornAccent();
 
   // The curtain lifts first, then the banner arrives. After fifteen idle
   // seconds it rests; pointer or keyboard activity brings it back immediately.
@@ -209,6 +211,7 @@ export default function Gateway() {
               style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
             />
           )}
+          {step === Step.Setup && <PreviewBackdrop />}
           {curtain !== 'gone' && (
             <div
               aria-hidden
@@ -225,7 +228,10 @@ export default function Gateway() {
             data-visible={visible ? 'true' : 'false'}
             data-entrance={entrance ? 'true' : undefined}
             onClickCapture={guardHiddenClick}
-            className="gateway-stage relative w-full max-w-[30rem] flex flex-col items-center"
+            className={cn(
+              'gateway-stage relative w-full flex flex-col items-center',
+              step === Step.Setup ? 'max-w-[38rem]' : 'max-w-[30rem]',
+            )}
           >
             <Draggable id="banner" label="Banner" className="w-full">
               <div className="w-full flex flex-col items-center gap-6">
@@ -237,7 +243,15 @@ export default function Gateway() {
                   />
                 )}
                 {step === Step.Choose && <ChooseStep onChoice={setStep} />}
-                {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
+                {step === Step.Setup && (
+                  <Panel
+                    padding="lg"
+                    style={wornAccent}
+                    className="w-full motion-enter-dialog flex flex-col max-h-[calc(100vh-4rem)]"
+                  >
+                    <SetupWizard mode="first" onCancel={() => setStep(Step.Choose)} />
+                  </Panel>
+                )}
                 {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
                 {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
               </div>
@@ -246,6 +260,60 @@ export default function Gateway() {
         </div>
       </TeaserMaterial>
     </div>
+  );
+}
+
+// ── Setup: the previewed Mood reaches the Gateway ─────
+
+/**
+ * The entry teaser pins its own accent; inside the wizard the person is
+ * choosing a Mood, so the wizard wears the Mood's accent instead.
+ */
+function useWornAccent(): React.CSSProperties | undefined {
+  const read = () => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    return value ? ({ '--accent': value } as React.CSSProperties) : undefined;
+  };
+  const [style, setStyle] = useState(read);
+  useEffect(() => {
+    const update = () => setStyle(read());
+    document.addEventListener('palette-change', update);
+    return () => document.removeEventListener('palette-change', update);
+  }, []);
+  return style;
+}
+
+/**
+ * While a Mood is previewed in setup, its background shows behind the wizard
+ * (the Gateway does not mount the app's background layer). The Default Mood
+ * keeps the teaser's own field.
+ */
+function PreviewBackdrop() {
+  const moodId = useSetupWizard((s) => s.moodId);
+  const [image, setImage] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    if (!moodId) {
+      setImage(null);
+      return;
+    }
+    void import('@/lib/moods/bundled-moods').then(({ bundledMood }) => {
+      if (live) setImage(bundledMood(moodId)?.bundled?.background ?? null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [moodId]);
+  if (!moodId || moodId === 'plasma') return null;
+  return (
+    <div
+      aria-hidden
+      data-testid="gateway-mood-backdrop"
+      data-mood={moodId}
+      key={moodId}
+      className="fixed inset-0 bg-bg bg-cover bg-center motion-enter-pane pointer-events-none"
+      style={image ? { backgroundImage: `url("${image}")` } : undefined}
+    />
   );
 }
 

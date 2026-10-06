@@ -63,6 +63,8 @@ interface Template {
   desktopOnly?: boolean;
   /** A v2 feature (Capability.V2): not in the single-user v1 release */
   v2?: boolean;
+  /** The description with AI Tools off, when the usual one speaks of agents (nothing AI on screen). */
+  descriptionWithoutAi?: string;
 }
 
 // ── Thumbnails ──────────────────────────────────────────
@@ -87,7 +89,7 @@ const OWN_TEMPLATES: Template[] = [
     order: 0.5,
     id: 'hello-world',
     label: 'Hello, world',
-    description: 'Make your first home page with a name and photo. No AI needed.',
+    description: 'Make your first home page with a name and photo.',
     icon: <HomeIcon />,
     thumb: <HomeThumb />,
     kind: 'webapp',
@@ -292,6 +294,7 @@ const OWN_TEMPLATES: Template[] = [
     kind: 'webapp',
     defaultTitle: 'Crux Garden: The Zen of Vibecoding',
     desktopOnly: true,
+    descriptionWithoutAi: 'Learn Tasks through a small playable garden',
   },
   {
     order: 51.5,
@@ -495,7 +498,10 @@ export default function NewCruxModal({
   initialView = 'crux',
   requestedImport,
 }: NewCruxModalProps) {
-  const TEMPLATES = templates();
+  const aiEnabled = useAiEnabled();
+  const TEMPLATES = templates().map((t) =>
+    !aiEnabled && t.descriptionWithoutAi ? { ...t, description: t.descriptionWithoutAi } : t,
+  );
   const [view, setView] = useState(initialView);
   useEffect(() => {
     if (open) setView(initialView);
@@ -515,7 +521,6 @@ export default function NewCruxModal({
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
   // Chosen from the list by hand: the idea stops choosing for the person.
   const [pickedByHand, setPickedByHand] = useState(false);
-  const aiEnabled = useAiEnabled();
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -560,10 +565,7 @@ export default function NewCruxModal({
     )
     .sort((a, b) => {
       const groups = ['Start here', 'More starting points', 'Tools to install', 'Coming soon'];
-      return (
-        groups.indexOf(groupOf(a)) - groups.indexOf(groupOf(b)) ||
-        a.order - b.order
-      );
+      return groups.indexOf(groupOf(a)) - groups.indexOf(groupOf(b)) || a.order - b.order;
     });
   const selectionVisible = choices.some((item) => item.id === selectedTemplate);
   const uninstalledCount = supported.filter((item) => !isToolAvailable(item.id)).length;

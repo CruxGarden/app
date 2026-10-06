@@ -13,6 +13,10 @@ const mock = vi.hoisted(() => ({
 vi.mock('./sqlite/client', () => ({ getSqliteClient: () => mock.db }));
 vi.mock('@/services/settings', () => ({
   getSetting: (key: string) => mock.settings.get(key) ?? null,
+  removeSetting: (key: string) => {
+    mock.settings.delete(key);
+    mock.settingListeners.forEach((fn) => fn(key));
+  },
   setSetting: (key: string, value: string) => {
     mock.settings.set(key, value);
     mock.settingListeners.forEach((fn) => fn(key));
@@ -32,7 +36,9 @@ import { useGardenContext } from '@/stores/gardenContext';
 import { SettingsKey } from '@/lib/constants';
 import { setSetting } from '@/services/settings';
 import {
+  captureLook,
   lookEdited,
+  restoreLook,
   projectActiveGarden,
   readGardenMood,
   setGardenMoodMode,
@@ -183,4 +189,37 @@ it('a change to the look here is an edit; painting the Garden’s Mood is not', 
   useGardenContext.getState().select({ id: 'studio', slug: 'studio', title: 'Studio' });
   await projectActiveGarden();
   expect(lookEdited()).toBe(false);
+});
+
+it('an abandoned preview puts the look back exactly, and is not left as an edit', async () => {
+  mock.db.gardenMood.resolve.mockResolvedValue(own('dusk-id'));
+  await projectActiveGarden();
+  mock.settings.set(SettingsKey.MoodPresetDark, 'user-dusk');
+  mock.settings.set(SettingsKey.WornMoodId, 'dusk-portable');
+  const before = captureLook();
+  expect(lookEdited()).toBe(false);
+  // A look-only preview (the Setup wizard's Mood step) writes the look keys.
+  setSetting(SettingsKey.MoodPresetDark, 'user-parchment');
+  setSetting(SettingsKey.WornMoodId, 'parchment');
+  setSetting(SettingsKey.BackgroundImage, 'fingerprint-of-preview');
+  expect(lookEdited()).toBe(true);
+  const repaint = vi.fn();
+  await restoreLook(before, repaint);
+  expect(repaint).toHaveBeenCalledTimes(1);
+  expect(mock.settings.get(SettingsKey.MoodPresetDark)).toBe('user-dusk');
+  expect(mock.settings.get(SettingsKey.WornMoodId)).toBe('dusk-portable');
+  expect(mock.settings.has(SettingsKey.BackgroundImage)).toBe(false);
+  expect(lookEdited()).toBe(false);
+});
+
+it('restoring keeps an edit the person had made before the preview', async () => {
+  mock.db.gardenMood.resolve.mockResolvedValue(own('dusk-id'));
+  await projectActiveGarden();
+  setSetting(SettingsKey.MoodThemeDark, '{"accent":"#456"}');
+  expect(lookEdited()).toBe(true);
+  const before = captureLook();
+  setSetting(SettingsKey.MoodThemeDark, '{}');
+  await restoreLook(before, () => {});
+  expect(mock.settings.get(SettingsKey.MoodThemeDark)).toBe('{"accent":"#456"}');
+  expect(lookEdited()).toBe(true);
 });

@@ -5,6 +5,7 @@ import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
 import { closeWorkspace } from './journeys/journey-helpers';
 import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
+import { openSetupWizard } from './setup-helpers';
 import { showPane, hidePane, togglePanel, openPanel, chooseSettingsSection } from './panel-helpers';
 
 // Host UI only: upstream editors and user-created previews need separate audits.
@@ -78,15 +79,20 @@ test('accessibility scan of entry, creation, Settings and workspace', async () =
     await page.getByRole('button', { name: /enter/i }).click();
     await expect(page.getByText('Plant a new garden')).toBeVisible();
     await scan(page, 'garden-choice');
-    await page.getByText('Plant a new garden').click();
-    const walkthrough = page.getByRole('checkbox', {
-      name: /Include a first home page walkthrough/,
+    // The Setup wizard: every step is scanned, then "Not now" lands at Home
+    // without a first Crux (the old setup panel's Welcome without walkthrough).
+    const wizard = await openSetupWizard(page);
+    for (const step of ['need', 'garden', 'ai', 'mood'] as const) {
+      await expect(wizard).toHaveAttribute('data-step', step);
+      await scan(page, `garden-setup-${step}`);
+      await wizard.getByRole('button', { name: /^(Continue|Almost there)$/ }).click();
+    }
+    await expect(wizard).toHaveAttribute('data-step', 'crux');
+    await scan(page, 'garden-setup-crux');
+    await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible({
+      timeout: 60_000,
     });
-    await expect(walkthrough).toBeVisible();
-    await scan(page, 'garden-setup');
-    await walkthrough.uncheck();
-    await page.getByRole('button', { name: 'Welcome' }).click();
-    await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible();
     await scan(page, 'garden');
     await showPane(page, 'Explore');
     await scan(page, 'explore');

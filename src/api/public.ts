@@ -210,6 +210,16 @@ export async function explore(
   };
 }
 
+/**
+ * One published Tool or Mood by id — Discoverable or link-only — in the shape of
+ * one `explore` result (install links, ADR 0085). Throws `PublicApiError` 404
+ * when the id is not a live published Tool or Mood, and 400 when it is not a UUID.
+ */
+export async function getPublishedPackage(id: string, signal?: AbortSignal): Promise<ExploreCrux> {
+  const res = await request(`${base()}/explore/cruxes/${encodeURIComponent(id)}`, signal);
+  return res.json();
+}
+
 export async function exploreTags(
   limit?: number,
   kind?: string,

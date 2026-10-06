@@ -14,6 +14,8 @@ import { usePaneWidth } from '@/hooks/usePaneWidth';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import { PaneEmpty, PaneSection, PaneAction, PaneNote, PaneHint } from './pane-ui';
 import { confirmDialog } from '@/stores/dialogStore';
+import { openSettings } from '@/components/layout/app-commands';
+import { linkClass } from '@/components/ui/button-class';
 
 function CloudUpIcon() {
   return (
@@ -275,9 +277,21 @@ export default function SyncPane() {
                   tone={budget.over ? 'error' : 'muted'}
                   className="text-left whitespace-normal"
                 >
-                  {budget.over
-                    ? `Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit. Free up space or upgrade in Settings → Plan.`
-                    : `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan.`}
+                  {budget.over ? (
+                    <>
+                      {`Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit. Free up space or upgrade in `}
+                      <button
+                        type="button"
+                        className={linkClass()}
+                        onClick={() => openSettings({ section: 'plan' })}
+                      >
+                        Settings → Plan
+                      </button>
+                      .
+                    </>
+                  ) : (
+                    `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan.`
+                  )}
                 </PaneNote>
               </div>
             )}

@@ -10,6 +10,7 @@ import {
   createCrux,
   goHome,
 } from './multi-crux-helpers';
+import { skipSetupToHome } from './setup-helpers';
 
 test('offline field guide has working search and creates an editable ordinary Crux without AI', async () => {
   test.setTimeout(300_000);
@@ -20,10 +21,7 @@ test('offline field guide has working search and creates an editable ordinary Cr
   try {
     // Block renderer HTTP; the native toolchain may install dependencies for the editable copy.
     await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, (route) => route.abort());
-    await page.getByRole('button', { name: 'Enter', exact: true }).click();
-    await page.getByText('Plant a new garden').click();
-    await page.getByRole('checkbox', { name: /Include a first home page/ }).uncheck();
-    await page.getByRole('button', { name: 'Welcome', exact: true }).click();
+    await skipSetupToHome(page);
     await showPane(page, 'Explore');
     await page.getByRole('button', { name: 'Read the field guide →', exact: true }).click();
     const guide = page.frameLocator('iframe[title="Crux Garden documentation"]');
@@ -127,7 +125,9 @@ test('help returns to the current work and the tutorial starts as a fresh Crux',
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Start here', exact: true })).toBeVisible();
     await expect(page.getByText('not installed', { exact: true })).toHaveCount(0);
-    await page.screenshot({ path: '../docs/product-review/2026-09-30/polished-creation-picker.png' });
+    await page.screenshot({
+      path: '../docs/product-review/2026-09-30/polished-creation-picker.png',
+    });
     await page.getByRole('combobox', { name: 'Starting point category' }).selectOption('Websites');
     await expect(page.locator('[data-template-id="hello-world"]')).toBeVisible();
     await expect(page.locator('[data-template-id="notes"]')).toHaveCount(0);

@@ -9,6 +9,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { applyTemplateToCrux } from '@/services/crux-create';
 
 import { useFieldGuide } from '@/stores/fieldGuide';
+import { openSetupAgain } from '@/components/setup/setup-store';
 
 /** One reader for the bundled publication; closing restores the current workspace. */
 export default function FieldGuide() {
@@ -65,6 +66,17 @@ export default function FieldGuide() {
         <p className="text-xs text-text-muted">
           Your copy has its own Artifacts, Growth and Share.
         </p>
+        <span className="flex-1" />
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            close();
+            openSetupAgain();
+          }}
+        >
+          Run setup again
+        </Button>
         {can(Capability.Build) && (
           <Button size="sm" onClick={() => void copy()} disabled={busy}>
             {busy ? 'Making your copy…' : 'Make a copy'}

@@ -17,6 +17,7 @@ import { PANES } from '@/components/workspace/paneConfig';
 import { seedExplore } from '@/components/workspace/explore-seed';
 import { searchNavigation, type NavigationSearchItem } from '@/services/navigation-search';
 import { chooseMood } from '@/services/garden-mood';
+import { openSetupAgain } from '@/components/setup/setup-store';
 import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
 import { getInstalledMoods } from '@/lib/moods/packages';
 import { requestUi } from '@/lib/ui-requests';
@@ -196,6 +197,14 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
       run: () => openFieldGuide(),
     });
     out.push({
+      id: 'setup-again',
+      section: 'Actions',
+      label: 'Run setup again',
+      keywords: 'help setup wizard welcome onboarding garden name collaborator mood start',
+      icon: <SproutIcon size={14} />,
+      run: () => openSetupAgain(),
+    });
+    out.push({
       id: 'new-crux',
       section: 'Actions',
       label: 'New Crux…',
@@ -329,7 +338,7 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
       hint: shortcutText(shortcut('settings'), isMac),
       keywords: 'preferences account names data',
       icon: <SlidersIcon size={14} />,
-      run: openSettings,
+      run: () => openSettings(),
     });
     out.push({
       id: 'shortcuts',

@@ -2,6 +2,7 @@ import PendingPackageImports from '@/components/garden/PendingPackageImports';
 import FieldGuide from '@/components/explore/FieldGuide';
 import CommandPalette from './CommandPalette';
 import ShellDialogs from './ShellDialogs';
+import SetupAgainHost from '@/components/setup/SetupAgainHost';
 import { runMenuCommand, toggleMood, toggleSettings } from './app-commands';
 import { claimShortcut, matchesShortcut, shortcut } from '@/lib/shortcuts';
 import { openShellDialog } from '@/stores/shellDialogs';
@@ -260,6 +261,7 @@ export default function Shell() {
         {servicesReady && <CommandPalette />}
         {servicesReady && <FieldGuide />}
         {servicesReady && <ShellDialogs />}
+        {servicesReady && <SetupAgainHost />}
         {servicesReady && <TendingNotifications />}
         <MoodTextureLayers />
         {/* Top bar */}

@@ -668,6 +668,13 @@
       "status": "implemented"
     },
     {
+      "key": "cruxgarden:setupNeed",
+      "group": "device-presentation",
+      "target": "installation/settings",
+      "preservation": "What the person said they want to make in the Setup wizard; only preselects step 1 when setup is run again. Never selects content or creates anything.",
+      "status": "implemented"
+    },
+    {
       "key": "cruxgarden:firstPublication",
       "group": "device-presentation",
       "target": "installation/settings",

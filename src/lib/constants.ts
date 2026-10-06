@@ -128,6 +128,8 @@ export enum SettingsKey {
   KeeperConversations = 'cruxgarden:keeper-conversations',
 
   // Misc
+  /** What the person said they want to make in the Setup wizard; running setup again starts from it */
+  SetupNeed = 'cruxgarden:setupNeed',
   TutorialSeeded = 'cruxgarden:tutorialSeeded',
   ApiKeyBannerDismissed = 'cruxgarden:apiKeyBannerDismissed',
 

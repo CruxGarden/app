@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { createPortal } from 'react-dom';
-import {
-  useWorkspaceUIStore,
-  useWorkspaceUIStoreApi,
-  useUIStore,
-  type PaneType,
-} from '@/stores/uiStore';
+import { useWorkspaceUIStore, useWorkspaceUIStoreApi, type PaneType } from '@/stores/uiStore';
 import { offeredPanes } from './panel-order';
+import { openSettings } from './app-commands';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
 import { PANES } from '@/components/workspace/paneConfig';
 import { LayoutIcon } from '@/components/ui/icons';
@@ -248,7 +244,7 @@ export default function PanelPicker() {
                 className={menuItemClass()}
                 onClick={() => {
                   finish();
-                  useUIStore.getState().setSettingsOpen(true);
+                  openSettings({ section: 'layouts' });
                 }}
               >
                 Workspace layouts…

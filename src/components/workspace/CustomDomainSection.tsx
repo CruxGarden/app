@@ -6,6 +6,7 @@ import * as domainsApi from '@/api/domains';
 import * as usageApi from '@/api/usage';
 import { confirmDialog } from '@/stores/dialogStore';
 import { PaneSection, PaneHint, PaneNote } from './pane-ui';
+import { openSettings } from '@/components/layout/app-commands';
 
 /**
  * Connect your own domain to a published crux: enter it, create the two DNS
@@ -303,7 +304,15 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
           <div data-testid="domains-gardener">
             <PaneHint align="left">
               Your own address for this crux comes with Gardener — two DNS records and a click,
-              certificate included. Upgrade in Settings → Plan.
+              certificate included. Upgrade in{' '}
+              <button
+                type="button"
+                className={linkClass()}
+                onClick={() => openSettings({ section: 'plan' })}
+              >
+                Settings → Plan
+              </button>
+              .
             </PaneHint>
           </div>
         ) : (

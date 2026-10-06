@@ -249,7 +249,8 @@ function CruxRow({
   );
 }
 
-function ConnectPanel({
+/** The MCP snippets and token for one running server (also shown by the Setup wizard). */
+export function ConnectPanel({
   server,
   busy,
   onRegenerate,
@@ -331,7 +332,7 @@ function ConnectPanel({
   );
 }
 
-function CopyButton({ text, label }: { text: string; label: string }) {
+export function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button

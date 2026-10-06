@@ -6,17 +6,17 @@ const marker = 'home-page-v1';
 const pending = new Map<string | undefined, Promise<string>>();
 
 /** Called only by new-Garden setup, never by startup, import or recovery. */
-export function seedWelcomeCrux(gardenId?: string): Promise<string> {
+export function seedWelcomeCrux(gardenId?: string, title = 'Hello, world'): Promise<string> {
   const current = pending.get(gardenId);
   if (current) return current;
-  const result = seed(gardenId).finally(() => {
+  const result = seed(gardenId, title.trim() || 'Hello, world').finally(() => {
     pending.delete(gardenId);
   });
   pending.set(gardenId, result);
   return result;
 }
 
-async function seed(gardenId?: string): Promise<string> {
+async function seed(gardenId: string | undefined, title: string): Promise<string> {
   const { crux } = getServices();
   const members = gardenId ? await gardenMembers(gardenId) : await crux.listAll();
   const existing = members.find((item) => item.meta?.welcome === marker);
@@ -26,7 +26,7 @@ async function seed(gardenId?: string): Promise<string> {
   const project =
     existing ??
     (await crux.create({
-      title: 'Hello, world',
+      title,
       description: 'Your first home page — add your name and photo, preview it, and share.',
       type: 'workspace',
       kind: 'webapp',

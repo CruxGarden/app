@@ -4,6 +4,7 @@ import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
+import { openSettings } from '@/components/layout/app-commands';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -44,7 +45,7 @@ export default function UserMenu() {
       await disconnectAccount();
     } catch {
       // The shared account form displays the persisted-removal failure and retry.
-      useUIStore.getState().setSettingsOpen(true);
+      openSettings({ section: 'account' });
     }
   };
 

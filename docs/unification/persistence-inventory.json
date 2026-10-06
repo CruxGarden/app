@@ -572,6 +572,13 @@
       "ledger": "cruxgarden:selftest"
     },
     {
+      "key": "cruxgarden:setupNeed",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:setupNeed"
+    },
+    {
       "key": "cruxgarden:soundEnabled",
       "sources": [
         "src/lib/constants.ts"

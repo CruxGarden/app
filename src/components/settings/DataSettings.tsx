@@ -13,6 +13,7 @@ import { choiceDialog } from '@/stores/dialogStore';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
 import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
+import { openSetupAgain } from '@/components/setup/setup-store';
 
 const WIPE_CONFIRMATION = 'delete me';
 /** An export this recent counts as "you have a copy" — the wipe skips the offer. */
@@ -148,6 +149,16 @@ export default function DataSettings() {
   return (
     <SettingsSection title="Garden" collapsible>
       <div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <p className="text-xs text-text-muted min-w-0 flex-1">
+            Change your garden&rsquo;s name, collaborators and Mood step by step. Nothing is
+            removed.
+          </p>
+          <Button variant="secondary" size="sm" onClick={openSetupAgain} disabled={busy}>
+            Run setup again
+          </Button>
+        </div>
+
         <p className="text-xs text-text-muted mb-4">
           Export or import your entire garden — all cruxes, files, conversations, and settings.
         </p>

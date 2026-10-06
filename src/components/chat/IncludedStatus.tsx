@@ -6,14 +6,26 @@ import {
 } from '@/services/included-access';
 import { composerAllowance, formatRelease, remainingLine } from '@/services/included-allowance';
 import { linkClass } from '@/components/ui/button-class';
-import { useUIStore } from '@/stores/uiStore';
+import { openSettings } from '@/components/layout/app-commands';
 
 /**
  * Plain-language subscription status where the person is about to use it.
  * With `contextTokens` (the composer), the status answers for the next turn
  * of this conversation: paused, shorter replies, or nearly at the limit.
  */
-export default function IncludedStatus({ contextTokens }: { contextTokens?: number } = {}) {
+export default function IncludedStatus({
+  contextTokens,
+  onSettingsLink,
+}: {
+  contextTokens?: number;
+  /**
+   * Where the "Use your own key" / "View account and allowance" links go when
+   * Settings is not the place (the Setup wizard routes them to its own sections).
+   */
+  onSettingsLink?: (section: 'ai' | 'usage') => void;
+} = {}) {
+  const goTo = (section: 'ai' | 'usage') =>
+    onSettingsLink ? onSettingsLink(section) : openSettings({ section });
   const { status, usage } = useIncludedAccess();
   const composer = contextTokens !== undefined;
   useEffect(() => {
@@ -47,7 +59,6 @@ export default function IncludedStatus({ contextTokens }: { contextTokens?: numb
                     ? 'Included collaboration is nearly at its limit. No extra charges.'
                     : 'Included with your plan · no API key needed';
   const remaining = ready && usage ? remainingLine(usage) : null;
-  const openSettings = () => useUIStore.getState().setSettingsOpen(true);
   return (
     <div
       data-testid="included-status"
@@ -73,13 +84,13 @@ export default function IncludedStatus({ contextTokens }: { contextTokens?: numb
           </button>
         ) : null}
         {allowance?.kind === 'paused' && (
-          <button className={linkClass()} onClick={openSettings}>
+          <button className={linkClass()} onClick={() => goTo('ai')}>
             Use your own key
           </button>
         )}
         {status === 'signed-out' ||
         (known && (!usage?.eligible || (allowance && allowance.kind !== 'ok'))) ? (
-          <button className={linkClass()} onClick={openSettings}>
+          <button className={linkClass()} onClick={() => goTo('usage')}>
             View account and allowance
           </button>
         ) : null}

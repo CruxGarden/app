@@ -4,6 +4,7 @@ import { startMockApi } from './api-mock';
 import { enterGarden } from './multi-crux-helpers';
 import { showPane, chooseSettingsSection } from './panel-helpers';
 import { connectAccount } from './journeys/journey-helpers';
+import { openSetupWizard } from './setup-helpers';
 
 /**
  * Customer review (October 5): CR02 composer warnings, CR03 plan allowance in
@@ -135,12 +136,19 @@ test.describe('customer review: plans, attention, composer and disk use', () => 
         data.byCrux = [];
         await route.fulfill({ response, json: data });
       });
-      await page.getByRole('button', { name: /enter/i }).click();
-      await page.getByText('Plant a new garden').click();
-      await connectAccount(page);
-      await expect(page.getByText('Included with your plan', { exact: true })).toBeVisible();
-      await page.getByRole('checkbox', { name: /Include a first home page walkthrough/ }).uncheck();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      // The Setup wizard's collaborator step: signing in to the plan is the setup.
+      const wizard = await openSetupWizard(page);
+      await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+      await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+      await expect(wizard).toHaveAttribute('data-step', 'ai');
+      await connectAccount(page, page.locator('[data-setup-section="collaborator"]'));
+      await expect(page.getByTestId('setup-status-collaborator')).toHaveText(
+        'Included with your plan',
+        { timeout: 30_000 },
+      );
+      await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+      await wizard.getByRole('button', { name: 'Keep the default', exact: true }).click();
+      await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByPlaceholder('My Crux').fill('Allowance check');

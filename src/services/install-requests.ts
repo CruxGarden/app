@@ -60,31 +60,48 @@ export async function routeDeepLink(
   return 'ignored';
 }
 
+/** What looking up an install link's item found. */
+export type PublishedLookup =
+  | { kind: 'found'; crux: ExploreCrux }
+  /** Not a live published Tool or Mood of the link's type (unpublished, taken down, mistyped). */
+  | { kind: 'missing' }
+  /** crux.garden did not answer (offline, timed out, a server error). */
+  | { kind: 'offline' };
+
 /**
- * Find a published Tool or Mood by id in Explore. A link-only Mood is not
- * listed, so null is a normal answer: the confirmation then points the person
- * back to the page's download.
+ * Find the published Tool or Mood an install link names, by id — link-only
+ * items included, so nothing needs to be listed in Explore. Never installs:
+ * the answer only fills the confirmation.
  */
-export async function findPublished(
+export async function lookUpPublished(
   request: InstallRequest,
-  explore: (
-    params: { type: 'cruxes'; kind: string; perPage: number; page: number },
-    signal?: AbortSignal,
-  ) => Promise<{ items: unknown[]; totalPages: number }>,
+  getPublishedPackage: (id: string, signal?: AbortSignal) => Promise<ExploreCrux>,
   signal?: AbortSignal,
-  maxPages = 5,
-): Promise<ExploreCrux | null> {
-  for (let page = 1; page <= maxPages; page++) {
-    const result = await explore(
-      { type: 'cruxes', kind: request.type, perPage: 100, page },
-      signal,
-    );
-    const found = (result.items as ExploreCrux[]).find(
-      (item) =>
-        item?.id?.toLowerCase() === request.cruxId.toLowerCase() && item.kind === request.type,
-    );
-    if (found) return found;
-    if (page >= result.totalPages) break;
+): Promise<PublishedLookup> {
+  try {
+    const crux = await getPublishedPackage(request.cruxId, signal);
+    // A tool link to a Mood (or the reverse) is not what the page offered.
+    if (!crux || crux.kind !== request.type) return { kind: 'missing' };
+    return { kind: 'found', crux };
+  } catch (error) {
+    const status = (error as { status?: unknown } | null)?.status;
+    return status === 404 || status === 400 ? { kind: 'missing' } : { kind: 'offline' };
   }
-  return null;
+}
+
+/** What the confirmation says when the item cannot be shown: plain words and the way round. */
+export function installFallbackCopy(
+  type: InstallRequest['type'],
+  kind: Exclude<PublishedLookup['kind'], 'found'>,
+): { message: string; file: string; link: string } {
+  const noun = type === 'tool' ? 'Tool' : 'Mood';
+  const file = type === 'tool' ? '.cruxtool' : '.cruxmood';
+  return {
+    message:
+      kind === 'offline'
+        ? `Could not reach crux.garden to find this ${noun}. Try the link again when you are online, or download its ${file} file from its page and import it from Add Crux.`
+        : `This ${noun} is not published on crux.garden any more, or the link is incomplete. If you have its ${file} file, import it from Add Crux.`,
+    file,
+    link: `Find ${type === 'tool' ? 'Tools' : 'Moods'} on crux.garden`,
+  };
 }

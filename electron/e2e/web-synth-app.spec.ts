@@ -55,10 +55,8 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
       // The Tasks pane opens with every app Crux now; the tool wants the width.
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
       await expectPanelBarReady(page);
-      const tasks = page
-        .locator('header')
-        .getByRole('button', { name: 'Toggle tasks', exact: true });
-      if ((await tasks.getAttribute('aria-pressed')) === 'true') await tasks.click();
+      if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+        await togglePanel(page, 'Toggle tasks');
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;

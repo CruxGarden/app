@@ -21,6 +21,8 @@ interface ApiKeySetupProps {
   onKeySaved?: () => void;
   onKeyChange?: () => void;
   autoFocus?: boolean;
+  /** Only these providers (by id), in this order; every provider when omitted. */
+  providers?: string[];
 }
 
 export default function ApiKeySetup({
@@ -28,19 +30,25 @@ export default function ApiKeySetup({
   onKeySaved,
   onKeyChange,
   autoFocus,
+  providers,
 }: ApiKeySetupProps) {
   // Claude Code (ADR 0019) is a provider without a key; desktop only.
-  const providerIds = Object.keys(PROVIDERS).filter(
-    (id) => id !== 'included' && (!isAgentModel(id) || can(Capability.AgentHost)),
+  const providerIds = (providers ?? Object.keys(PROVIDERS)).filter(
+    (id) =>
+      !!PROVIDERS[id] && id !== 'included' && (!isAgentModel(id) || can(Capability.AgentHost)),
   );
   const [agents, setAgents] = useState<Record<string, AgentStatus>>({});
   useEffect(() => {
     if (can(Capability.AgentHost))
-      for (const provider of Object.values(PROVIDERS).filter((provider) => provider.agent)) {
+      for (const provider of Object.values(PROVIDERS).filter(
+        (provider) => provider.agent && (!providers || providers.includes(provider.id)),
+      )) {
         void agentStatus(true, provider.id).then((status) =>
           setAgents((current) => ({ ...current, [provider.id]: status })),
         );
       }
+    // The list is fixed for the component's life; asking once is the point.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [hints, setHints] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});

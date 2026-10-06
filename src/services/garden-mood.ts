@@ -1,5 +1,5 @@
 import type { MoodPackage } from '@/lib/moods/packages';
-import { getSetting, onSettingChange, setSetting } from '@/services/settings';
+import { getSetting, onSettingChange, removeSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
 import { getSqliteClient } from './sqlite/client';
@@ -148,6 +148,40 @@ function setEdited(next: boolean) {
 onSettingChange((key) => {
   if (painting_ === 0 && LOOK_KEYS.has(key)) setEdited(true);
 });
+/**
+ * A preview (the Setup wizard's Mood step) changes the look without choosing
+ * anything. These are the settings a look-only wear writes; a snapshot of
+ * them, plus whether the look was already an edit here, puts everything back
+ * exactly when the preview is abandoned.
+ */
+const PREVIEW_KEYS = [...LOOK_KEYS, SettingsKey.WornMoodId, SettingsKey.MoodUserPresets];
+export interface LookSnapshot {
+  values: [string, string | null][];
+  edited: boolean;
+}
+export function captureLook(): LookSnapshot {
+  return { values: PREVIEW_KEYS.map((key) => [key, getSetting(key)]), edited };
+}
+/** Restore a snapshot; `repaint` redraws the look from settings. Not counted as an edit. */
+export async function restoreLook(
+  snapshot: LookSnapshot,
+  repaint: () => Promise<void> | void,
+): Promise<void> {
+  painting_++;
+  try {
+    for (const [key, value] of snapshot.values) {
+      if (getSetting(key) === value) continue;
+      if (value === null) removeSetting(key);
+      else setSetting(key, value);
+    }
+    await repaint();
+  } finally {
+    painting_--;
+  }
+  setEdited(snapshot.edited);
+  listeners.forEach((fn) => fn());
+}
+
 async function paint(pkg: MoodPackage) {
   const { applyMood } = await import('@/lib/moods/packages');
   painting_++;

@@ -8,13 +8,26 @@ import { currentWorkspaceUI, useUIStore, type UIState } from '@/stores/uiStore';
 import { requestUi } from '@/lib/ui-requests';
 import { claimShortcut } from '@/lib/shortcuts';
 import { updates } from '@/services/desktop';
+import {
+  requestSettingsSection,
+  type SettingsSection,
+} from '@/components/settings/settings-target';
+import { openSetupAgain } from '@/components/setup/setup-store';
 
 /**
  * Commands with more than one way in — the command palette, a keyboard
  * shortcut, the desktop application menu — written once. The palette and the
  * Shell's menu listener both call these; neither re-implements them.
  */
-export function openSettings() {
+export interface OpenSettingsOptions {
+  /** The group or card to show — what the calling copy names ("See Usage in Settings" → `usage`). */
+  section?: SettingsSection;
+}
+
+/** Open Settings; with a section, show that place whether Settings was open or not. */
+export function openSettings(options?: OpenSettingsOptions) {
+  const section = options?.section;
+  if (section) requestSettingsSection(section);
   useUIStore.getState().setSettingsOpen(true);
 }
 
@@ -49,7 +62,7 @@ export async function checkForUpdates() {
   }
   const state = await updates.check();
   if (!state) return;
-  const settings = { label: 'Settings', run: openSettings };
+  const settings = { label: 'Settings', run: () => openSettings({ section: 'desktop' }) };
   if (state.status === 'not-available') toast('You have the latest version.');
   else if (state.status === 'error')
     toast(`Update check failed: ${state.error ?? 'unknown error'}`, {
@@ -82,6 +95,9 @@ export function runMenuCommand(
       return;
     case 'field-guide':
       openFieldGuide();
+      return;
+    case 'setup-again':
+      openSetupAgain();
       return;
     case 'shortcuts':
     case 'report-problem':

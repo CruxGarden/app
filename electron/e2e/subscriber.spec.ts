@@ -4,6 +4,7 @@ import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
 import { reenterWorkspace } from './multi-crux-helpers';
+import { openSetupWizard } from './setup-helpers';
 
 test('a subscriber signs in with no keys, creates with included AI and keeps the work after restart', async ({}, info) => {
   const api = await startMockApi();
@@ -11,15 +12,23 @@ test('a subscriber signs in with no keys, creates with included AI and keeps the
   const env = { CRUX_API_URL: api.url, CRUX_AI_MOCK: '0' };
   let { app, page, dir } = await launchApp({ ai: false, env });
   try {
-    await page.getByRole('button', { name: /enter/i }).click();
-    await page.getByText('Plant a new garden').click();
-    await page.getByPlaceholder('email@example.com').fill('subscriber@example.com');
-    await page.getByRole('button', { name: 'Send Code' }).click();
-    await page.getByPlaceholder('Enter code').fill('123456');
-    await page.getByRole('button', { name: 'Connect', exact: true }).click();
-    await expect(page.getByText('Included with your plan', { exact: true })).toBeVisible();
-    await page.getByRole('checkbox', { name: /Include a first home page walkthrough/ }).uncheck();
-    await page.getByRole('button', { name: 'Welcome' }).click();
+    // The Setup wizard's collaborator step: signing in to the plan is the setup.
+    const wizard = await openSetupWizard(page);
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(wizard).toHaveAttribute('data-step', 'ai');
+    const collaborator = page.locator('[data-setup-section="collaborator"]');
+    await collaborator.getByPlaceholder('email@example.com').fill('subscriber@example.com');
+    await collaborator.getByRole('button', { name: 'Send Code' }).click();
+    await collaborator.getByPlaceholder('Enter code').fill('123456');
+    await collaborator.getByRole('button', { name: 'Connect', exact: true }).click();
+    await expect(page.getByTestId('setup-status-collaborator')).toHaveText(
+      'Included with your plan',
+      { timeout: 30_000 },
+    );
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await wizard.getByRole('button', { name: 'Keep the default', exact: true }).click();
+    await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Blank/ }).click();
     await page.getByLabel('What do you want to make?').fill('Make a simple home page');
@@ -117,25 +126,40 @@ test('an explicit manual-only choice survives paid sign-in, refresh and restart'
   const env = { CRUX_API_URL: api.url, CRUX_AI_MOCK: '0' };
   let { app, page, dir } = await launchApp({ ai: false, env });
   try {
-    await page.getByRole('button', { name: /enter/i }).click();
-    await page.getByText('Plant a new garden').click();
-    await page.getByRole('button', { name: /AI collaborator/ }).click();
-    const toggle = page.getByRole('switch', { name: 'Enable AI Tools' });
-    await toggle.click();
-    await toggle.click();
-    await expect(toggle).not.toBeChecked();
-    await page.getByRole('button', { name: /Connect to crux.garden/ }).click();
-    await page.getByPlaceholder('email@example.com').fill('manual-subscriber@example.com');
-    await page.getByRole('button', { name: 'Send Code' }).click();
-    await page.getByPlaceholder('Enter code').fill('123456');
-    await page.getByRole('button', { name: 'Connect', exact: true }).click();
-    await page.getByRole('button', { name: /AI collaborator/ }).click();
-    await expect(toggle).not.toBeChecked();
-    await expect(page.getByTestId('included-status')).toContainText('no API key needed');
+    // The Setup wizard: choose No AI first, then sign in to a paid plan.
+    const wizard = await openSetupWizard(page);
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(wizard).toHaveAttribute('data-step', 'ai');
+    const manual = page.getByRole('radio', { name: /^No AI/ });
+    await page.getByText('No AI', { exact: true }).click();
+    await expect(manual).toBeChecked();
+    await wizard.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(wizard).toHaveAttribute('data-step', 'garden');
+    await page.getByRole('button', { name: /More options/ }).click();
+    const more = page.getByTestId('setup-garden-more');
+    await more.getByPlaceholder('email@example.com').fill('manual-subscriber@example.com');
+    await more.getByRole('button', { name: 'Send Code' }).click();
+    await more.getByPlaceholder('Enter code').fill('123456');
+    await more.getByRole('button', { name: 'Connect', exact: true }).click();
+    // The paid sign-in landed…
+    await expect(more.getByText('Signed in to crux.garden', { exact: true })).toBeVisible();
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(wizard).toHaveAttribute('data-step', 'ai');
+    // …and the explicit manual choice stands, also after the plan refreshes.
+    await expect(manual).toBeChecked();
     await page.evaluate(() => window.dispatchEvent(new Event('crux:usage-changed')));
-    await expect(toggle).not.toBeChecked();
-    await page.getByRole('checkbox', { name: /Include a first home page walkthrough/ }).uncheck();
-    await page.getByRole('button', { name: 'Welcome' }).click();
+    await expect(manual).toBeChecked();
+    await expect(page.locator('[data-setup-section]')).toHaveCount(0);
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await wizard.getByRole('button', { name: 'Keep the default', exact: true }).click();
+    await expect(page.getByTestId('setup-summary').locator('[data-summary="ai"]')).toHaveText(
+      'By hand',
+    );
+    await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
     await app.close();
     ({ app, page } = await launchApp({ dir, ai: false, env }));
     await page.getByRole('button', { name: /enter/i }).click();

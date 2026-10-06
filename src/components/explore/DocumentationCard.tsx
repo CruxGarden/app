@@ -10,7 +10,7 @@ export default function DocumentationCard({ local }: { local: boolean }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-medium text-text">New here? Start with something small.</h3>
-          <p className="text-xs text-text-muted">Make your first page. No AI needed.</p>
+          <p className="text-xs text-text-muted">Make your first page.</p>
         </div>
         {local ? (
           <button className={buttonClass('secondary', 'sm')} onClick={() => openFieldGuide()}>

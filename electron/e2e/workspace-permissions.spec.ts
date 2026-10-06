@@ -145,12 +145,10 @@ test('only live workspace frames can ask for media, and every request needs cons
             const state = (globalThis as any).permissionProof;
             return { prompts: state.prompts, displayRequests: state.displayRequests };
           }),
-          await frame
-            .locator('body')
-            .evaluate(() => ({
-              capture: document.body.dataset.capture,
-              focused: document.hasFocus(),
-            })),
+          await frame.locator('body').evaluate(() => ({
+            capture: document.body.dataset.capture,
+            focused: document.hasFocus(),
+          })),
         );
         throw failure;
       }
