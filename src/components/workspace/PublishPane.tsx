@@ -1,3 +1,5 @@
+import PaneOptions from './PaneOptions';
+import { executeAppTool } from '@/services/embedded-app-tool-registry';
 import { downloadShareCard } from '@/services/share-card';
 import LocalTestPublication from './LocalTestPublication';
 import GuideLink from '@/components/explore/GuideLink';
@@ -404,6 +406,53 @@ export default function PublishPane() {
               stays in your Garden.
             </p>
           </div>
+          {!advancedMode && (
+            <ol
+              className="text-xs text-text-muted list-decimal pl-5 space-y-1"
+              aria-label="Publishing steps"
+            >
+              <li>
+                Review what visitors will see. Nothing is online yet unless you have already
+                published.
+              </li>
+              <li>
+                Choose Share and sign in if asked. Your account’s plan and storage limits apply.
+              </li>
+              <li>
+                When sharing finishes, copy your link below. Future edits need an Update to go
+                online.
+              </li>
+            </ol>
+          )}
+          {crux.kind === 'notes' && (
+            <div className="space-y-2">
+              <p className="text-xs text-text-muted">
+                Only the notes you select become public. Choose at least one, then preview it before
+                sharing.
+              </p>
+              <button
+                className={buttonClass('secondary', 'sm')}
+                onClick={() => {
+                  setShareError('');
+                  void executeAppTool(crux.id, 'guide_notebook', { action: 'choose-pages' }).catch(
+                    (error) =>
+                      setShareError(
+                        error instanceof Error
+                          ? error.message
+                          : 'Open your notebook in Workshop and try again.',
+                      ),
+                  );
+                }}
+              >
+                Choose notes to share
+              </button>
+              {shareError && (
+                <p role="alert" className="text-xs text-error">
+                  {shareError}
+                </p>
+              )}
+            </div>
+          )}
           {/* Status */}
           {isPublished && publishedAt ? (
             <PaneSection label="Status" aside={`v${publishedVersion}`}>
@@ -518,7 +567,11 @@ export default function PublishPane() {
           {can(Capability.LocalStaging) &&
             (!isEmbeddedApp(crux) || plan.kind === 'static') &&
             plan.kind !== 'unavailable' &&
-            plan.kind !== 'tool-package' && <LocalTestPublication />}
+            plan.kind !== 'tool-package' && (
+              <PaneOptions pane="publish" label="Local test website (optional)">
+                <LocalTestPublication />
+              </PaneOptions>
+            )}
 
           {/* Failure — a silent no-op is indistinguishable from success here */}
           {backupError && <PaneNote tone="error">{backupError}</PaneNote>}
@@ -567,9 +620,11 @@ export default function PublishPane() {
                 {failure.message}
               </p>
               {failure.log && (
-                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xxs leading-relaxed text-text-muted">
-                  {failure.log.slice(-2000)}
-                </pre>
+                <PaneOptions pane="publish" label="Technical details">
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xxs leading-relaxed text-text-muted">
+                    {failure.log.slice(-2000)}
+                  </pre>
+                </PaneOptions>
               )}
             </div>
           )}

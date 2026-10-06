@@ -1,3 +1,4 @@
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { Button } from '@/components/ui';
 import { setBackgroundFromBlob } from '@/services/background';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
@@ -99,7 +100,9 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
 }
 
 export default function MoodEditor() {
-  const [fullBuilder, setFullBuilder] = useState(false);
+  const advancedMode = useAdvancedMode();
+  const [builderChoice, setFullBuilder] = useState<boolean | null>(null);
+  const fullBuilder = builderChoice ?? advancedMode;
   const [chosenTab, setTab] = useState<Tab>(() => useUIStore.getState().moodTab ?? 'moods');
   const requested = useUIStore((s) => s.moodTab);
   // The Persona is the collaborator's; without AI tools there is none to dress.

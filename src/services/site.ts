@@ -19,6 +19,7 @@ import { guessMimeType } from '@/lib/mime';
 import { pathOf, type ArtifactPathSource } from '@/lib/artifact-path';
 import { createLeasePool } from '@/lib/lease';
 import type { PublishFile } from './publish';
+import type { Artifact } from '@/api/types';
 
 /** What a build hands to the publish pipeline. */
 type PublishableFile = PublishFile;
@@ -175,6 +176,19 @@ export async function checkSiteBuild(cruxId: string): Promise<{ ok: boolean; log
   await ensureInstalled(cruxId);
   const result = await api.toolchain.build(folder);
   return { ok: result.code === 0, log: result.log };
+}
+
+/** Capture installed source files before the build can produce new changes. */
+export async function preparePublishSources(cruxId: string): Promise<Artifact[]> {
+  await ensureInstalled(cruxId);
+  const [{ settleIngestion }, { getServices }] = await Promise.all([
+    import('./ingestion'),
+    import('./index'),
+  ]);
+  const folder = await folderForCrux(cruxId);
+  if (!folder) throw new SiteBuildError('This crux has no project folder', '');
+  await settleIngestion(folder);
+  return getServices().artifact.findByResource('crux', cruxId);
 }
 
 /**

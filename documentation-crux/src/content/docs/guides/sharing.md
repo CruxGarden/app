@@ -5,6 +5,23 @@ sidebar:
   order: 4
 ---
 
+## Your first notebook website
+
+1. In setup, choose **Writing and notes**, then **Create & open**. Keep Advanced Mode off for a simpler workspace.
+2. Choose **Write in my note** in the walkthrough and type your own text. Change the title above the note if you like. Wait for **Saved** below.
+3. Choose **Next: choose public notes**, then **Choose notes to share**. Check only the notes you want visitors to read. Unchecked notes stay private. Give the public edition a title and choose **Done choosing**. This does not put anything online.
+4. Choose **Next: publish**, then **Open Share**. Use **Preview as a visitor** to review the public result. Choose **Back to editing** to return to the notebook and change the selection if needed.
+5. Choose **Share selected content**. Connect your account if asked; your plan and storage limits apply. Choose whether to make a separate backup of the editable project and history.
+6. Wait for **Up to date**, then choose **Copy link** or **View published Crux**. Send that link to your visitors.
+
+Later edits remain on your computer until you choose **Update shared content**. If a step fails, your local notes remain available; read the message, correct the problem and retry. Do not assume the website changed until sharing succeeds.
+
+## Help at your own pace
+
+The walkthrough remembers your step. **Hide tips** folds it away; click its title to reopen it. **All steps and more help** lets you revisit a step and open this guide. The question mark beside each panel’s name explains what that panel does.
+
+Normal mode puts secondary controls in named sections. Advanced Mode expands those controls across the app; it does not turn AI on or publish anything. Change it in **Settings → Getting started** whenever you like.
+
 ## Preview stays local
 
 Preview lets you inspect a creation without publishing it. For a Site Crux, the first run may download build dependencies. A failed preview or build should show a useful error; fix it before publishing.
@@ -15,7 +32,7 @@ For websites and declared static editions, Share → **Test locally first** → 
 
 This is a staging area on **this computer only**, available while Crux Garden is running. Test copies survive app restart; their local addresses may change. These are not internet links. Each website has its own origin, separate from the Garden index and your app.
 
-Hosted visitor accounts, Functions and form submissions are not available. The test server blocks cross-origin API requests and form submission, but external images/fonts may still connect to the internet. Verify hosted features separately before treating a site as ready. Specialized creation tools continue to use their own preview/export flows.
+Hosted visitor accounts, Functions and form submissions are not available. The test server blocks cross-origin API requests and form submission, but external images/fonts may still connect to the internet. Verify hosted features separately before treating a site as ready. The Notes visitor preview also builds its selected public notes on this local test server. Other specialized creation tools continue to use their own preview/export flows.
 
 Removing a local test copy leaves your editable project and live website unchanged. Test copies are not backups and are not included in project or Garden archives. Each test copy supports up to 5,000 files and 100 MB.
 

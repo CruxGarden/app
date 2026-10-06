@@ -1,3 +1,4 @@
+import PaneOptions from './PaneOptions';
 import GuideLink from '@/components/explore/GuideLink';
 import TaskProgress from '@/components/chat/TaskProgress';
 import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
@@ -513,12 +514,11 @@ export default function TaskBar() {
             ))}
             {!review.conflicts.length && <ReviewDiff review={review} targetName={targetName} />}
             {review.verificationLog && (
-              <details>
-                <summary>Verification result</summary>
+              <PaneOptions pane="tasks" label="Verification result">
                 <pre className="text-xs max-h-40 overflow-auto whitespace-pre-wrap">
                   {review.verificationLog}
                 </pre>
-              </details>
+              </PaneOptions>
             )}
             <CombinedPreview review={review} />
             <label className="flex items-center gap-2">

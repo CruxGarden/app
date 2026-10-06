@@ -69,10 +69,10 @@ export default function SetupSection({
             className={buttonClass('ghost', 'xs')}
             aria-expanded="true"
             aria-controls={bodyId}
-            aria-label={`Later: ${title}`}
+            aria-label={`Close: ${title}`}
             onClick={onLater}
           >
-            Later
+            Close
           </button>
         ) : (
           <button

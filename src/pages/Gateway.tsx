@@ -357,7 +357,7 @@ function BannerStep({
           size="lg"
           onClick={onEnter}
           disabled={checking}
-          className="!w-14 !h-14 rounded-full !text-accent hover:bg-accent/15 hover:!text-accent"
+          className="!w-14 !h-14"
         >
           {checking ? <Spinner size={20} /> : <PlusCircleIcon size={40} />}
         </IconButton>
@@ -379,7 +379,7 @@ function ChooseStep({ onChoice }: { onChoice: (s: Step) => void }) {
         <OptionCard
           icon={<SproutIcon size={28} />}
           title="Plant a new garden"
-          description="Begin fresh with an empty workspace"
+          description="Set up your workspace and make your first project with guidance"
           onClick={() => onChoice(Step.Setup)}
         />
         <OptionCard

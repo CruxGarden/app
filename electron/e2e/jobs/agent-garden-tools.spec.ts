@@ -1,3 +1,4 @@
+import { revealOptionsFor } from '../panel-helpers';
 import { togglePanel } from '../panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
@@ -22,6 +23,7 @@ test('the agent in the pane can reach the garden tools', async () => {
     const body = page.getByTestId('pane-body-collaboration');
     if (!(await body.isVisible().catch(() => false)))
       await togglePanel(page, 'Toggle collaboration');
+    await revealOptionsFor(body.getByTestId('model-selector'));
     await body.getByTestId('model-selector').click();
     await page
       .getByTestId('model-group-claude-code')

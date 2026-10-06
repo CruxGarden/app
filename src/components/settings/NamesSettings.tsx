@@ -1,3 +1,4 @@
+import PaneOptions from '@/components/workspace/PaneOptions';
 import { useEffect, useState } from 'react';
 import { paneOffered } from '@/components/workspace/paneConfig';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
@@ -87,10 +88,7 @@ export default function NamesSettings() {
           </span>
         )}
       </label>
-      <details>
-        <summary className="cursor-pointer text-sm text-text rounded-[var(--radius-sm)] px-1 py-1">
-          Custom panel names
-        </summary>
+      <PaneOptions pane="settings" label="Custom panel names">
         <p className="text-xs text-text-muted my-2">
           Optional: make the workspace vocabulary your own. Leave a field empty to use its usual
           name.
@@ -112,7 +110,7 @@ export default function NamesSettings() {
             </label>
           ))}
         </div>
-      </details>
+      </PaneOptions>
     </SettingsSection>
   );
 }

@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { launchApp } from './launch';
@@ -72,7 +73,8 @@ test('polish pass: resting and answering states', async () => {
       await togglePanel(page, `Toggle ${label}`).catch(() => {});
     await shot('10-crux-panes', 1500);
     const selector = page.getByTestId('model-selector');
-    if (await selector.isVisible().catch(() => false)) {
+    if (await selector.count()) {
+      await revealOptionsFor(selector);
       await selector.click();
       await shot('11-model-picker', 600);
       await page.keyboard.press('Escape');

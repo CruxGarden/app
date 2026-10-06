@@ -1,0 +1,131 @@
+{
+  "automatedViolations": 0,
+  "screens": [
+    {
+      "screen": "Toggle growth",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "Toggle share",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "Toggle tasks",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "creation",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "delete-confirmation",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "entry",
+      "violations": 0,
+      "manualReviewRules": []
+    },
+    {
+      "screen": "explore",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "garden",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "garden-choice",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "garden-setup-ai",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "garden-setup-crux",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "garden-setup-garden",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "garden-setup-mood",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "garden-setup-need",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "models",
+      "violations": 0,
+      "manualReviewRules": ["aria-valid-attr-value", "color-contrast"]
+    },
+    {
+      "screen": "moods",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "settings-AI and agents",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "settings-Account",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "settings-Appearance and panels",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "settings-Garden and backups",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "settings-Getting started",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "settings-Tools and Moods",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "work-status-expanded",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "workspace",
+      "violations": 0,
+      "manualReviewRules": ["color-contrast"]
+    },
+    {
+      "screen": "zoomed-command-palette",
+      "violations": 0,
+      "manualReviewRules": ["bypass", "color-contrast"]
+    }
+  ],
+  "limit": "Automated axe results; glass/background-image contrast still requires visual review."
+}

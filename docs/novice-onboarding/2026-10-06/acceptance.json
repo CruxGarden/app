@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-06",
+  "branch": "codex/api-app-unification",
+  "sourceBase": "b866aa31690f60cefee2d8a91e2aaf2e49afc5aa",
+  "scope": [
+    "Normal and Advanced presentation profiles required for all 20 registered panels",
+    "Contextual panel help and state-preserving secondary-control disclosures",
+    "Simpler interest-led setup, explicit AI deferral/cost expectations and consistent Skip confirmation",
+    "Guided home-page and Notes write, select, preview, publish and copy-link journeys",
+    "Installed-source publication baseline fixes false first-publish changes without hiding later edits",
+    "Notes visitor preview serves the selected public build with a visible return to editing",
+    "First-install lockfile ingestion does not reload a running embedded editor or discard an in-flight save reply",
+    "Gateway Enter icon uses paired Mood hover colors instead of a forced accent foreground"
+  ],
+  "verification": {
+    "app": {
+      "command": "npm run verify",
+      "passed": 2093,
+      "skipped": 18,
+      "testFiles": 324,
+      "typecheck": "passed",
+      "lint": "passed",
+      "productionBuild": "passed",
+      "log": "/tmp/crux-novice-shipping-verify.log"
+    },
+    "electron": {
+      "command": "npm run verify",
+      "passed": 205,
+      "skipped": 1,
+      "log": "/tmp/crux-novice-electron-final.log"
+    },
+    "desktop": [
+      {
+        "run": "Broad affected journeys",
+        "passed": 39,
+        "failed": 7,
+        "log": "/tmp/crux-novice-desktop-final.log",
+        "disposition": "Superseded failures: model disclosure race fixed; staging helper, hidden Settings selectors, Metrics mode precondition and retired two-pane Notes test selector corrected."
+      },
+      {
+        "run": "Affected replay including accessibility, modes, staging, settings, setup, homepage, Notes document/compact and publishing",
+        "passed": 23,
+        "failed": 3,
+        "log": "/tmp/crux-novice-final-replay.log",
+        "disposition": "Notes preview missing visible exit fixed; two Settings keyboard assertions updated for the current Advanced Mode and interest controls. All three rechecked below."
+      },
+      {
+        "run": "Final production-build preview, publishing, all Settings clarity paths and homepage replay",
+        "passed": 8,
+        "failed": 0,
+        "duration": "2.0m",
+        "log": "/tmp/crux-novice-accepted-replay.log"
+      },
+      {
+        "run": "Shipping build with lockfile reload fix and entry hover polish",
+        "passed": 2,
+        "failed": 0,
+        "log": "/tmp/crux-novice-shipping-native.log",
+        "checks": "Preview requires exactly one notebook frame navigation, retains edited text on return, excludes private notes, and never publishes; hosted mock publication and later unpublished changes also pass."
+      }
+    ],
+    "accessibility": {
+      "scans": 25,
+      "automatedViolations": 0,
+      "summary": "accessibility-summary.json",
+      "limit": "Includes 23 main-flow screens plus expanded work-status and confirmation scans. Image/glass contrast requires manual review; this is not a claim of complete accessibility certification."
+    },
+    "reloadRegression": {
+      "redLog": "/tmp/crux-novice-reload-red.log",
+      "greenLog": "/tmp/crux-novice-reload-green.log",
+      "focusedPassed": 42,
+      "diagnostic": "The first packaged preview run timed out awaiting the app save. Two of three successful diagnostic repeats still navigated runtime/index.html from v=1 to v=2; the strengthened test forbids this editor reload."
+    },
+    "gatewayStyle": {
+      "change": "Removed local accent/hover overrides; uses standard icon-button Mood tokens.",
+      "typecheck": "passed",
+      "lint": "passed",
+      "format": "passed",
+      "visual": "Passed in refreshed package with contrasting monochrome Mood token values; icon and hover fill use their separate tokens, keyboard focus has a visible outline.",
+      "evidence": "entry-hover-check.json"
+    }
+  },
+  "package": {
+    "status": "passed",
+    "path": "electron/release/manual-testing-novice-oct6/mac-arm64/Crux Garden.app",
+    "signature": "ad-hoc signature verified with codesign --verify --deep --strict",
+    "bytes": {
+      "comparedFiles": 910,
+      "missing": [],
+      "different": [],
+      "rendererIndexSha256": "fa4abcbf704ca7b83468ea0d0f49e2240385812fed6effe3bd4215f45fe7e5cf"
+    },
+    "log": "/tmp/crux-novice-shipping-packaged.log",
+    "initialRun": {
+      "passed": 7,
+      "failed": 1,
+      "log": "/tmp/crux-novice-packaged.log",
+      "failure": "Intermittent lost notebook save acknowledgement during first-install editor reload. Superseded by the reload-key fix and strengthened acceptance."
+    },
+    "passed": 8,
+    "failed": 0,
+    "duration": "1.8m"
+  },
+  "limits": [
+    "Isolated temporary Gardens only; real and manual-testing profiles were not opened.",
+    "Hosted publication uses a local mock account/upload API in source desktop acceptance; no production publication or deployment.",
+    "No fresh native Windows/Linux certification or Developer ID signing/notarization.",
+    "Automated and visual acceptance, not a usability study with nontechnical participants.",
+    "All host panels have presentation profiles; upstream embedded tool internals are not all redesigned.",
+    "Inherited pale wide Notes sidebar headers remain a separate appearance follow-up.",
+    "Unrelated dirty documentation, vendor archives and private notes excluded from this change."
+  ]
+}

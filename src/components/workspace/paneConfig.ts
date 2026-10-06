@@ -53,7 +53,13 @@ export type PaneType =
   | 'navigator'
   | 'tending';
 
+export interface PaneLayout {
+  /** Normal layouts disclose secondary controls; advanced layouts keep them within reach. */
+  options: 'collapsed' | 'expanded';
+  guidance: string;
+}
 export interface PaneSpec {
+  layouts: { normal: PaneLayout; advanced: PaneLayout };
   /** The usual word for it; Names in Settings and a Mood can change it. */
   label: string;
   /** A shorter word for the phone-width switcher, when the label is long. */
@@ -77,6 +83,16 @@ export interface PaneSpec {
 
 export const PANES: Record<PaneType, PaneSpec> = {
   navigator: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Find your Gardens and projects here. Choose one to open it.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Find your Gardens and projects here. Choose one to open it.',
+      },
+    },
     label: 'Navigator',
     short: 'Navigate',
     icon: PlusCircleIcon,
@@ -87,6 +103,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'tree gardens browse',
   },
   home: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Open a project to continue, or choose Add Crux to make something new.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Open a project to continue, or choose Add Crux to make something new.',
+      },
+    },
     label: 'Garden Home',
     icon: HomeIcon,
     color: 'var(--pane-workshop)',
@@ -95,6 +121,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     minWidth: 360,
   },
   tasks: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Try changes in a Task, then review them before bringing them into your main project.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Try changes in a Task, then review them before bringing them into your main project.',
+      },
+    },
     label: 'Tasks',
     icon: ActivityIcon,
     color: 'var(--pane-tasks)',
@@ -103,6 +141,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     minWidth: 110,
   },
   collaboration: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Describe what you want to make or ask for help. Review changes before sharing your work.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Describe what you want to make or ask for help. Review changes before sharing your work.',
+      },
+    },
     label: 'Collaboration',
     short: 'Collab',
     icon: ChatIcon,
@@ -114,6 +164,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'chat conversation ai',
   },
   console: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Ask for help organizing your Garden or finding your projects.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Ask for help organizing your Garden or finding your projects.',
+      },
+    },
     label: 'Garden Collaboration',
     short: 'Garden',
     icon: SproutIcon,
@@ -125,6 +185,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'keeper chat garden ai',
   },
   artifacts: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'These are your project’s files. Open one to view or edit it. Your work stays on this computer until you share it.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'These are your project’s files. Open one to view or edit it. Your work stays on this computer until you share it.',
+      },
+    },
     label: 'Artifacts',
     short: 'Files',
     icon: FolderIcon,
@@ -135,6 +207,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'files folder tree',
   },
   workshop: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Make and try your creation here. Use the walkthrough for help with your next step.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Make and try your creation here. Use the walkthrough for help with your next step.',
+      },
+    },
     label: 'Workshop',
     icon: CodeIcon,
     color: 'var(--pane-workshop)',
@@ -144,6 +228,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'editor preview code',
   },
   details: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Give your project a name and description. Extra settings are optional.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Give your project a name and description. Extra settings are optional.',
+      },
+    },
     label: 'Details',
     icon: TagIcon,
     color: 'var(--pane-details)',
@@ -153,6 +247,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'metadata settings info title description tags entry',
   },
   history: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Your work saves automatically. Mark a version to keep a named point you can return to.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Your work saves automatically. Mark a version to keep a named point you can return to.',
+      },
+    },
     label: 'Growth',
     icon: StackIcon,
     color: 'var(--pane-history)',
@@ -162,6 +268,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'history versions snapshots checkpoints edits undo',
   },
   export: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Save a copy to keep or give to someone. Exporting does not put anything online.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Save a copy to keep or give to someone. Exporting does not put anything online.',
+      },
+    },
     label: 'Export',
     icon: ExportIcon,
     color: 'var(--pane-export)',
@@ -171,6 +287,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'download archive backup zip',
   },
   sync: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Back up your project and history to your account. Backing up does not publish it.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Back up your project and history to your account. Backing up does not publish it.',
+      },
+    },
     label: 'Sync',
     icon: SyncIcon,
     color: 'var(--pane-sync)',
@@ -180,6 +308,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'cloud push pull backup',
   },
   publish: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Review what visitors will see, publish it, then copy your link. Your editable project stays here.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Review what visitors will see, publish it, then copy your link. Your editable project stays here.',
+      },
+    },
     label: 'Share',
     icon: ShareIcon,
     color: 'var(--pane-publish)',
@@ -189,6 +329,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'publish live website link',
   },
   store: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Advanced Mode provides access to the data used by your app.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Advanced Mode provides access to the data used by your app.',
+      },
+    },
     advanced: true,
     label: 'Store',
     icon: StoreIcon,
@@ -198,6 +348,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     minWidth: 280,
   },
   media: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Search for a picture or sound, then add it to your project. Check the usage rights shown with each result.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Search for a picture or sound, then add it to your project. Check the usage rights shown with each result.',
+      },
+    },
     label: 'Find media',
     icon: SearchIcon,
     color: 'var(--pane-media)',
@@ -207,6 +369,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'images sounds stock photos',
   },
   mood: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Choose the look and feel of your workspace. You can change it whenever you like.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Choose the look and feel of your workspace. You can change it whenever you like.',
+      },
+    },
     label: 'Mood',
     icon: MoodIcon,
     color: 'var(--pane-mood)',
@@ -215,6 +389,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     minWidth: 360,
   },
   synth: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Choose a sound and press Play. Sound and volume are always under your control.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Choose a sound and press Play. Sound and volume are always under your control.',
+      },
+    },
     label: 'Crux Synth',
     icon: SlidersIcon,
     color: 'var(--pane-synth)',
@@ -223,6 +407,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     minWidth: 300,
   },
   browser: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Visit a website inside your workspace. The address here is separate from your own published page.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Visit a website inside your workspace. The address here is separate from your own published page.',
+      },
+    },
     label: 'WWW',
     icon: GlobeIcon,
     color: 'var(--pane-browser)',
@@ -231,6 +427,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     minWidth: 200,
   },
   settings: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Adjust your preferences here. Getting started lets you change Advanced Mode or run setup again.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Adjust your preferences here. Getting started lets you change Advanced Mode or run setup again.',
+      },
+    },
     label: 'Settings',
     icon: SlidersIcon,
     color: 'var(--pane-settings)',
@@ -239,6 +447,18 @@ export const PANES: Record<PaneType, PaneSpec> = {
     minWidth: 360,
   },
   explore: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance:
+          'Discover published creations. Open one in your Garden when you want your own editable copy.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance:
+          'Discover published creations. Open one in your Garden when you want your own editable copy.',
+      },
+    },
     label: 'Explore',
     icon: SearchIcon,
     color: 'var(--pane-explore)',
@@ -248,6 +468,16 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'search community published discover',
   },
   tending: {
+    layouts: {
+      normal: {
+        options: 'collapsed',
+        guidance: 'Review scheduled work and requests that need your attention.',
+      },
+      advanced: {
+        options: 'expanded',
+        guidance: 'Review scheduled work and requests that need your attention.',
+      },
+    },
     label: 'Tending',
     icon: BellIcon,
     color: 'var(--pane-tasks)',

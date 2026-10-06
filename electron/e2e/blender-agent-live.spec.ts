@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -98,6 +99,7 @@ test('live Blender access through the Garden Claude Code provider', async () => 
     });
     const chat = page.getByTestId('pane-body-collaboration');
     if (!previous) {
+      await revealOptionsFor(chat.getByTestId('model-selector'));
       await chat.getByTestId('model-selector').click();
       await page
         .getByTestId('model-group-claude-code')

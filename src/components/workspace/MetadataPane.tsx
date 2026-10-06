@@ -1,3 +1,4 @@
+import PaneOptions from './PaneOptions';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import ToolInfoSettings from './ToolInfoSettings';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -26,10 +27,6 @@ export default function MetadataPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <EntryFileSettings />
-      {aiEnabled && <CheckSettings />}
-      <NotesSharingSettings />
-      <ToolInfoSettings />
       <MetadataContent
         crux={crux}
         summary={summary}
@@ -37,6 +34,12 @@ export default function MetadataPane() {
         messages={messages}
         onUpdate={updateCrux}
       />
+      <PaneOptions pane="details" label="More project settings">
+        <EntryFileSettings />
+        {aiEnabled && <CheckSettings />}
+        <NotesSharingSettings />
+        <ToolInfoSettings />
+      </PaneOptions>
     </div>
   );
 }

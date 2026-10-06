@@ -211,3 +211,17 @@ export async function newTaskButton(page: Page) {
   await expect(button).toBeVisible({ timeout: 30_000 });
   return button;
 }
+
+/** Open the user's optional sections before interacting with a nested control. */
+export async function revealOptionsFor(control: Locator) {
+  await expect(control).toBeAttached();
+  const sections = await control.locator('xpath=ancestor::details').all();
+  // A summary is already visible while its own section is folded.
+  if (await control.locator('xpath=ancestor-or-self::summary').count()) sections.pop();
+  for (const section of sections) {
+    if ((await section.getAttribute('open')) === null)
+      await section.locator(':scope > summary').click();
+    await expect(section).toHaveAttribute('open');
+  }
+  await expect(control).toBeVisible();
+}

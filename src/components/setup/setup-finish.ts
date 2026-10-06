@@ -42,8 +42,8 @@ export function aiDecision(
   current: string | null,
 ): boolean | null {
   if (choices.noAi) return current === 'false' ? null : false;
-  // Turned the switch back off, or set something up: collaboration is wanted.
-  const wanted = choices.aiUsed || choices.aiAtStart === 'false';
+  // A preference is not a configured provider. Only turn on newly configured AI.
+  const wanted = choices.aiUsed;
   if (wanted && current !== 'true') return true;
   return null;
 }

@@ -113,7 +113,7 @@ const OWN_TEMPLATES: Template[] = [
     order: 1,
     id: 'notes',
     label: 'Notes',
-    description: 'A local Markdown notebook you can customize and publish',
+    description: 'Write and organize notes, then choose which ones to share as a website',
     icon: <PencilIcon />,
     thumb: <BlankThumb />,
     kind: 'notes',

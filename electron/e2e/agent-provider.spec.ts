@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
@@ -38,6 +39,7 @@ test.describe('agent provider (mock Claude Code)', () => {
 
       // The picker offers the agent under its own heading
       const picker = page.getByTestId('pane-body-collaboration').getByTestId('model-selector');
+      await revealOptionsFor(picker);
       await picker.click();
       const group = page.getByTestId('model-group-claude-code');
       await expect(group).toContainText('Your agent');

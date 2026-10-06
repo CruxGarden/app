@@ -1,3 +1,4 @@
+import PaneOptions from '@/components/workspace/PaneOptions';
 import AppearanceSettings from './AppearanceSettings';
 import StartSettings from './StartSettings';
 import LibrarySettings from './LibrarySettings';
@@ -70,7 +71,9 @@ export default function Settings() {
         <>
           <DesktopSettings />
           <DataSettings />
-          <DiskUsage />
+          <PaneOptions pane="settings" label="Storage details">
+            <DiskUsage />
+          </PaneOptions>
           <SyncSettings />
         </>
       ),
@@ -82,7 +85,9 @@ export default function Settings() {
         <>
           <AppearanceSettings />
           <NamesSettings />
-          <WorkspaceLayoutsSettings />
+          <PaneOptions pane="settings" label="Saved panel layouts">
+            <WorkspaceLayoutsSettings />
+          </PaneOptions>
         </>
       ),
     },
@@ -111,6 +116,13 @@ export default function Settings() {
         (card ? groupElement?.querySelector<HTMLElement>(card) : null) ?? groupElement;
       if (!element || !container) return;
       setCurrentSection(group);
+      for (
+        let node: HTMLElement | null = element.parentElement;
+        node && node !== container;
+        node = node.parentElement
+      ) {
+        if (node instanceof HTMLDetailsElement) node.open = true;
+      }
       // Layout coordinates (Plasma can transform a pane), summed up to the scroller.
       let top = 0;
       for (let node: HTMLElement | null = element; node && node !== container; ) {

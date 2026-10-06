@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -218,6 +219,9 @@ for (const entry of catalog.filter((t) => !selected || selected.includes(t.id)))
         await expect
           .poll(() => readFileSync(join(folder, 'notebook/The first page.md'), 'utf8'))
           .toContain('A sentence of my own.');
+        await revealOptionsFor(
+          book.getByRole('button', { includeHidden: true, name: 'Save book (EPUB)', exact: true }),
+        );
         await book.getByRole('button', { name: 'Save book (EPUB)', exact: true }).click();
         await expect
           .poll(() => existsSync(join(folder, 'dist/my-short-book.epub')), { timeout: 9 * 60_000 })

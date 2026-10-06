@@ -138,12 +138,9 @@ export default function SchedulesSection() {
         <div>
           <h2 className="font-display text-base text-heading">Schedules</h2>
           <p className="text-xs text-text-muted">
-            A cron for the garden: at a time, on an interval, on a cron line, a timer with phases,
-            at dawn or dusk, when something happens, when the weather turns, or when a Crux sits
-            untouched — then alert, sound a cue, notify, wear a Mood
-            {aiEnabled ? ', send a prompt, or run a tool' : ' or call a function'}. They run while
-            the app is open, or from the menu bar in docked mode; one that comes due while it is
-            closed says so when you are back.
+            Set a reminder or repeat an activity at a time you choose. Schedules run while the app
+            is open, including docked mode. If the app was closed when something was due, it tells
+            you when you return. Advanced Mode adds custom timing rules and tools.
           </p>
         </div>
         <Button size="sm" variant="secondary" onClick={() => setAdding((v) => !v)}>

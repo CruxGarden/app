@@ -121,6 +121,7 @@ test.describe('Setup wizard', () => {
       // Creation opens the Crux directly; its own walkthrough takes over.
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60_000 });
       await expect(page.getByText('Your first home page', { exact: true })).toBeVisible();
+      await page.getByText('All steps and more help', { exact: true }).click();
       await expect(page.getByRole('navigation', { name: 'Home page walkthrough' })).toBeVisible();
       // No AI took effect: no Collaboration pane
       await expect(page.getByTestId('pane-body-collaboration')).toHaveCount(0);

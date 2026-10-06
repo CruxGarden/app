@@ -69,3 +69,15 @@ it('keeps the embedded app alive while saving reusable outputs and origin record
   expect(appPreviewKey(mosh, after)).toBe(appPreviewKey(mosh, before));
   expect(appChanges(mosh, before, after)).toEqual({ app: 0, content: 3 });
 });
+
+it('keeps an embedded editor alive when publishing installs a lockfile, without hiding source changes', () => {
+  const before = [file('runtime/index.html', 'runtime')];
+  const installed = [...before, file('pnpm-lock.yaml', 'installed')];
+  expect(appPreviewKey(crux, installed)).toBe(appPreviewKey(crux, before));
+  expect(appChanges(crux, before, installed)).toEqual({ app: 1, content: 0 });
+  expect(appPreviewKey(crux, [file('runtime/index.html', 'new-runtime')])).not.toBe(
+    appPreviewKey(crux, before),
+  );
+  const site = { kind: 'webapp' } as Crux;
+  expect(appPreviewKey(site, installed)).not.toBe(appPreviewKey(site, before));
+});

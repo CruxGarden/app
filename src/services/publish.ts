@@ -62,6 +62,8 @@ export interface PublishDeps {
   };
   site: {
     isSiteCrux(artifacts: Artifact[]): boolean;
+    /** Install prerequisites and capture source files before building. */
+    preparePublishSources?(cruxId: string): Promise<Artifact[]>;
     buildForPublish(cruxId: string): Promise<PublishFile[]>;
   };
 }
@@ -110,6 +112,7 @@ async function defaultDeps(context: AuthContext): Promise<PublishDeps> {
     },
     site: {
       isSiteCrux: site.isSiteCrux,
+      preparePublishSources: site.preparePublishSources,
       buildForPublish: site.buildForPublish,
     },
   };
@@ -283,6 +286,27 @@ export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<s
   };
 }
 
+/** The public-note selection is identical for preview and publication. */
+export async function validateNotebookPublication(
+  artifacts: Artifact[],
+  read: (artifact: Artifact) => Promise<Blob>,
+): Promise<void> {
+  const manifest = artifacts.find((a) => pathOf(a) === 'notebook/publish.json');
+  if (!manifest) throw new Error('The notebook publication settings are missing.');
+  const selected = JSON.parse(await (await read(manifest)).text());
+  if (!Array.isArray(selected.pages) || !selected.pages.length)
+    throw new Error('Select at least one note using “Choose notes to share”, then try again.');
+  if (
+    selected.pages.some(
+      (path: unknown) =>
+        typeof path !== 'string' ||
+        !/\.md$/i.test(path) ||
+        !artifacts.some((a) => pathOf(a) === 'notebook/' + path),
+    )
+  )
+    throw new Error('A selected public note is missing. Update the notebook publication settings.');
+}
+
 /**
  * Publish a crux. Returns the updated crux (API publish metadata + fresh
  * publishedFingerprints merged into meta, persisted locally).
@@ -303,7 +327,7 @@ export async function publishPipeline(
   const context = opts?.authContext ?? captureAuth();
   assertAuthCurrent(context);
   artifacts = structuredClone(artifacts);
-  const plan = publicationPlan(crux, artifacts, opts?.deps?.site.isSiteCrux(artifacts));
+  let plan = publicationPlan(crux, artifacts, opts?.deps?.site.isSiteCrux(artifacts));
   if (plan.kind === 'unavailable') throw new Error(plan.explanation);
   if (plan.kind === 'garden-package')
     throw new Error(
@@ -314,26 +338,18 @@ export async function publishPipeline(
   if (!opts?.deps) await assertCopyWritable(crux.id);
   const deps = opts?.deps ?? (await defaultDeps(context));
   const progress = opts?.onProgress ?? (() => {});
-  if (crux.kind === 'notes' && plan.kind === 'build') {
-    const manifest = artifacts.find((a) => pathOf(a) === 'notebook/publish.json');
-    if (!manifest) throw new Error('The notebook publication settings are missing.');
-    const selected = JSON.parse(await (await deps.local.downloadBlob(manifest)).text());
-    if (!Array.isArray(selected.pages) || !selected.pages.length)
-      throw new Error(
-        'Select at least one note with “Include in public edition” before publishing.',
-      );
-    if (
-      selected.pages.some(
-        (path: unknown) =>
-          typeof path !== 'string' ||
-          !/\.md$/i.test(path) ||
-          !artifacts.some((a) => pathOf(a) === 'notebook/' + path),
-      )
-    )
-      throw new Error(
-        'A selected public note is missing. Update the notebook publication settings.',
-      );
+  if (plan.kind === 'build' && deps.site.preparePublishSources) {
+    progress('build');
+    // First installation may create a lockfile. Include it in the pre-build
+    // baseline, but never absorb edits made during the build/upload afterward.
+    artifacts = structuredClone(await deps.site.preparePublishSources(crux.id));
+    assertAuthCurrent(context);
+    plan = publicationPlan(crux, artifacts, deps.site.isSiteCrux(artifacts));
+    if (plan.kind !== 'build')
+      throw new Error('The project changed while preparing to publish. Review it and try again.');
   }
+  if (crux.kind === 'notes' && plan.kind === 'build')
+    await validateNotebookPublication(artifacts, deps.local.downloadBlob);
 
   if (plan.kind === 'build' && isMoqira(crux)) {
     const readJson = async (path: string) => {

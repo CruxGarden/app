@@ -1,3 +1,4 @@
+import { revealOptionsFor } from '../panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -114,6 +115,7 @@ test.describe('guide 23 · AI and Memory', () => {
       await createCrux(page, 'Included or not');
       const menu = page.getByTestId('model-selector-menu');
       // Signed out: no allowance section, no included choice in the picker.
+      await revealOptionsFor(page.getByTestId('model-selector'));
       await page.getByTestId('model-selector').click();
       await expect(menu).toBeVisible();
       await expect(menu.getByText('Included collaborator')).toHaveCount(0);
@@ -128,6 +130,7 @@ test.describe('guide 23 · AI and Memory', () => {
       await expect(included.getByRole('progressbar')).toHaveCount(0);
       await expect(included).not.toContainText('Loading included allowance');
       await hidePane(page, 'Settings');
+      await revealOptionsFor(page.getByTestId('model-selector'));
       await page.getByTestId('model-selector').click();
       await expect(menu.getByText('Included collaborator')).toHaveCount(0);
       await page.keyboard.press('Escape');
@@ -142,6 +145,7 @@ test.describe('guide 23 · AI and Memory', () => {
       ).toHaveAttribute('aria-valuenow', '25', { timeout: 30_000 });
       await hidePane(page, 'Settings');
       await createCrux(page, 'Now eligible');
+      await revealOptionsFor(page.getByTestId('model-selector'));
       await page.getByTestId('model-selector').click();
       await expect(menu.getByText('Included collaborator')).toBeVisible({ timeout: 30_000 });
       await page.keyboard.press('Escape');

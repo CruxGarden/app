@@ -1,3 +1,4 @@
+import PaneOptions from '@/components/workspace/PaneOptions';
 import IncludedStatus from './IncludedStatus';
 import { copyIdentity } from '@/services/working-copies';
 import { useMemo } from 'react';
@@ -83,9 +84,11 @@ export default function ChatPanel() {
           {/* Beneath the composer: the model chip and its usage. */}
           <div className="px-3 pb-2 flex items-center gap-x-3 gap-y-1.5 flex-wrap">
             <div className="flex-1 min-w-[200px]">
-              <ModelInfoPanel model={model}>
-                <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
-              </ModelInfoPanel>
+              <PaneOptions pane="collaboration" label="AI model and options">
+                <ModelInfoPanel model={model}>
+                  <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
+                </ModelInfoPanel>
+              </PaneOptions>
             </div>
           </div>
         </div>

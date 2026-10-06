@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
@@ -157,6 +158,7 @@ test('author the persistent Psychedelic Garden through its real tools', async ()
               await togglePanel(page, 'Toggle collaboration');
             const chat = page.getByTestId('pane-body-collaboration');
             if (!(await chat.getByRole('button', { name: 'Claude Code', exact: true }).count())) {
+              await revealOptionsFor(chat.getByTestId('model-selector'));
               await chat.getByTestId('model-selector').click();
               await page
                 .getByTestId('model-group-claude-code')

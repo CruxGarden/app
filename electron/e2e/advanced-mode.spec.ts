@@ -31,6 +31,7 @@ test('Advanced Mode starts the first-project guide folded, with guidance still a
     const guide = page.getByRole('navigation', { name: 'Home page walkthrough' });
     await expect(guide).toBeHidden();
     await page.getByText('Your first home page', { exact: true }).click();
+    await page.getByText('All steps and more help', { exact: true }).click();
     await expect(guide).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Edit my home page', exact: true }),
@@ -49,18 +50,32 @@ test('Advanced Mode changes actual controls with AI off, preserves work, and sur
     await createCrux(page, 'Kept in either mode');
     const workshop = page.getByTestId('workshop-view');
     await expect(workshop.getByRole('button', { name: 'Advanced', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Help with Workshop', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Help with Workshop' })).toContainText(
+      'Your work is kept',
+    );
+    await page.keyboard.press('Escape');
+    await togglePanel(page, 'Toggle details');
+    const extraSettings = page.locator('[data-panel-options="details"]');
+    await expect(extraSettings).not.toHaveAttribute('open');
     await storeOffered(page, false);
     await expect(await settings(page)).not.toBeChecked();
     await page.getByLabel('What I want to make').selectOption('writing');
     await (await settings(page)).click();
     await expect(page.getByTestId('pane-body-collaboration')).toHaveCount(0);
     await expect(workshop.getByRole('button', { name: 'Advanced', exact: true })).toBeVisible();
+    await expect(extraSettings).toHaveAttribute('open');
+    await togglePanel(page, 'Toggle details');
     await storeOffered(page, true);
     await togglePanel(page, 'Toggle store');
     await expect(page.getByTestId('pane-body-store')).toBeVisible();
     await (await settings(page)).click();
-    // Existing panels and editor state are retained; only discovery changes.
+    // Existing panels and state are retained; technical controls are covered in normal mode.
     await expect(page.getByTestId('pane-body-store')).toBeVisible();
+    await expect(page.getByTestId('pane-body-store')).toHaveAttribute('data-panel-mode', 'normal');
+    await expect(
+      page.getByTestId('pane-body-store').getByRole('tablist', { name: 'Store source' }),
+    ).toBeHidden();
     await expect(page.locator('[data-workspace-id]')).toBeVisible();
     await storeOffered(page, false);
     await (await settings(page)).click();
@@ -106,6 +121,10 @@ test('an app interest keeps setup simple until Advanced Mode is chosen; cancel d
     await wizard.getByRole('button', { name: 'Back', exact: true }).click();
     await wizard.getByRole('switch', { name: 'Advanced Mode' }).click();
     await wizard.getByRole('button', { name: 'Skip setup', exact: true }).click();
+    await page
+      .getByRole('alertdialog', { name: 'Skip setup?' })
+      .getByRole('button', { name: 'Skip setup', exact: true })
+      .click();
     await expect(await settings(page)).toBeChecked();
     await chooseSettingsSection(page, 'Garden and backups');
     await page.getByRole('button', { name: 'Garden', exact: true }).click();

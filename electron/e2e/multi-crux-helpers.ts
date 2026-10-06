@@ -178,5 +178,9 @@ export async function finishSetupAtHome(surface: Page | FrameLocator | Locator) 
   // defaults and lands on Home without a first Crux.
   await surface.getByTestId('setup-wizard').waitFor({ timeout: 30_000 });
   await surface.getByRole('button', { name: 'Skip setup', exact: true }).click();
+  await surface
+    .getByRole('alertdialog', { name: 'Skip setup?' })
+    .getByRole('button', { name: 'Skip setup', exact: true })
+    .click();
   await surface.getByRole('button', { name: 'Add Crux', exact: true }).waitFor({ timeout: 60_000 });
 }

@@ -16,7 +16,7 @@ const steps = [
   {
     title: 'See your page',
     action: 'Preview my page',
-    text: 'Look at your page as a visitor would. The first preview downloads the Astro dependencies and may take a minute. Use step 1 whenever you want to change something.',
+    text: 'Look at your page as a visitor would. The first preview needs an internet connection and may take a minute to prepare. Use step 1 whenever you want to change something.',
   },
   {
     title: 'Watch it grow',
@@ -42,15 +42,22 @@ export default function FirstProjectGuide({
 }) {
   const advancedMode = useAdvancedMode();
   const crux = useCruxStore((state) => state.crux)!;
-  const [expanded, setExpanded] = useState(() =>
-    crux.meta?.setupStartKind ? crux.meta.setupStartKind === 'guided' : !advancedMode,
-  );
+  const expandedKey = `cruxgarden:first-project:${crux.id}:expanded`;
+  const [expanded, setExpanded] = useState(() => {
+    const saved = getSetting(expandedKey);
+    return saved === null
+      ? crux.meta?.setupStartKind
+        ? crux.meta.setupStartKind === 'guided'
+        : !advancedMode
+      : saved === 'true';
+  });
   const ui = useWorkspaceUIStore((state) => state);
   const key = `cruxgarden:first-project:${crux.id}`;
   const [step, setStep] = useState(() =>
     Math.min(3, Math.max(0, Math.floor(Number(getSetting(key))) || 0)),
   );
   const current = steps[step]!;
+  const next = step === 0 ? 1 : step === 1 ? 3 : null;
   const run = () => {
     if (step === 0) onEdit();
     else if (step === 1) onPreview();
@@ -64,34 +71,56 @@ export default function FirstProjectGuide({
     <details
       className="shrink-0 max-h-[35%] overflow-y-auto border-b border-border bg-surface px-3 py-2"
       open={expanded}
-      onToggle={(event) => setExpanded(event.currentTarget.open)}
+      onToggle={(event) => {
+        setExpanded(event.currentTarget.open);
+        setSetting(expandedKey, String(event.currentTarget.open));
+      }}
     >
       <summary className="cursor-pointer text-sm font-medium text-accent">
         {model.guide!.title}
       </summary>
       <div className="mt-2 space-y-3 max-w-3xl">
         <p className="text-xs text-text-muted">{model.guide!.introduction}</p>
-        <nav aria-label="Home page walkthrough" className="flex flex-wrap gap-2">
-          {[0, 1, 3, 2].map((index, position) => (
-            <button
-              key={steps[index]!.title}
-              aria-current={step === index ? 'step' : undefined}
-              className={buttonClass(step === index ? 'primary' : 'secondary', 'xs')}
-              onClick={() => {
-                setStep(index);
-                setSetting(key, String(index));
-              }}
-            >
-              {index === 2 ? 'Optional: ' : `${position + 1}. `}
-              {steps[index]!.title}
-            </button>
-          ))}
-        </nav>
+        <details>
+          <summary className="cursor-pointer text-xs text-accent">All steps and more help</summary>
+          <nav aria-label="Home page walkthrough" className="flex flex-wrap gap-2">
+            {[0, 1, 3, 2].map((index, position) => (
+              <button
+                key={steps[index]!.title}
+                aria-current={step === index ? 'step' : undefined}
+                className={buttonClass(step === index ? 'primary' : 'secondary', 'xs')}
+                onClick={() => {
+                  setStep(index);
+                  setSetting(key, String(index));
+                }}
+              >
+                {index === 2 ? 'Optional: ' : `${position + 1}. `}
+                {steps[index]!.title}
+              </button>
+            ))}
+          </nav>
+        </details>
         <p className="text-sm text-text-muted">{current.text}</p>
         <div className="flex flex-wrap items-center gap-3">
           <button className={buttonClass('secondary', 'sm')} onClick={run}>
             {current.action}
           </button>
+          {next !== null && (
+            <button
+              className={buttonClass('primary', 'sm')}
+              onClick={() => {
+                setStep(next);
+                setSetting(key, String(next));
+                if (next === 1) onPreview();
+                else {
+                  ui.setPaneVisible('publish', true);
+                  ui.setMobileActivePane('publish');
+                }
+              }}
+            >
+              {next === 1 ? 'Next: preview my page' : 'Next: publish my page'}
+            </button>
+          )}
           <GuideLink page="start/first-home/">Step-by-step help</GuideLink>
         </div>
         {!!crux.meta?.publishedAt && (

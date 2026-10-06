@@ -46,11 +46,14 @@ for (const scenario of [
         await expect(wizard).toHaveAttribute('data-step', step);
         await wizard
           .getByRole('button', {
-            name: step === 'mood' ? 'Keep the default' : 'Later',
+            name:
+              step === 'mood' ? 'Keep the default' : step === 'ai' ? 'Set up AI later' : 'Continue',
             exact: true,
           })
           .click();
       }
+      if (!(await wizard.getByLabel('How would you like to start?', { exact: true }).isVisible()))
+        await wizard.getByTestId('setup-alternatives').locator('summary').click();
       await wizard
         .getByLabel('How would you like to start?', { exact: true })
         .selectOption(scenario.start);
@@ -123,10 +126,11 @@ for (const scenario of [
         ).toContainText('My first request', { timeout: 60_000 });
       if (scenario.need === 'writing' && scenario.start === 'guided') {
         const guide = page.getByTestId('setup-project-guide');
-        await guide.getByRole('button', { name: '2. Keep a version', exact: true }).click();
-        await guide.getByRole('button', { name: 'Open Growth', exact: true }).click();
-        await expect(page.getByTestId('pane-body-history')).toBeVisible();
-        await guide.getByRole('button', { name: 'Finish walkthrough', exact: true }).click();
+        await guide.getByText('All steps and more help', { exact: true }).click();
+        await guide.getByRole('button', { name: '3. Publish and get a link', exact: true }).click();
+        await guide.getByRole('button', { name: 'Open Share', exact: true }).click();
+        await expect(page.getByTestId('pane-body-publish')).toBeVisible();
+        await guide.getByRole('button', { name: 'Hide tips', exact: true }).click();
         const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
         await expect.poll(async () => (await storedCrux(page, id)).setupGuide.dismissed).toBe(true);
         await page.reload({ waitUntil: 'domcontentloaded' });

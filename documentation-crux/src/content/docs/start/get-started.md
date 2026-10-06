@@ -17,7 +17,7 @@ The desktop targets macOS, Windows and Linux. Build and runtime checks are not a
 2. Choose **Plant a new garden**. Your Garden is a place for your projects on your computer. Restore is for people bringing back existing work.
 3. Choose what you would like to make. **Advanced Mode** offers more technical controls; **AI Tools** is a separate, optional choice.
 4. Customize your Garden and its Mood, then choose **Preview my workspace**. You can leave identity and account setup for later.
-5. Choose a walkthrough, a template or an empty Crux. Create it to open your workspace and begin. A walkthrough guides you inside that Crux; you can also start with [your first home page](../first-home/).
+5. Keep the suggested project and choose **Create & open**. **Choose a different starting point or guidance** offers other templates, an empty Crux, or a different amount of help. A walkthrough guides you inside that Crux; you can also start with [your first home page](../first-home/).
 
 ## What do I need?
 

@@ -1,3 +1,4 @@
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
@@ -64,6 +65,7 @@ function autoBackupLine(): { text: string; tone: 'muted' | 'error' } | null {
 }
 
 export default function SyncPane() {
+  const advancedMode = useAdvancedMode();
   const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux);
   const store = useCruxStoreApi();
@@ -228,6 +230,13 @@ export default function SyncPane() {
         <PaneEmpty title="No crux loaded" />
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
+          {!advancedMode && (
+            <p className="text-xs text-text-muted">
+              Push to cloud saves a backup of this project and its history. Pull restores the
+              account’s copy onto this computer; review the confirmation before replacing local
+              work. Neither action publishes a website.
+            </p>
+          )}
           {/* Status */}
           <PaneSection
             label="Cloud status"

@@ -19,6 +19,9 @@ export function appPreviewKey(crux: Crux | null, artifacts: Artifact[]): string 
       return (
         !root ||
         (!path.startsWith(root) &&
+          // First publication installs this file; it does not change the running
+          // compiled editor. Reloading here can lose its pending save reply.
+          path !== 'pnpm-lock.yaml' &&
           !isOutputData(path) &&
           !isWorkspaceThumbnail(path) &&
           !isGeneratedGuidePath(path))

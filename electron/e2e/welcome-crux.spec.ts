@@ -30,6 +30,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       folder = (await storedCrux(page, id)).projectFolder;
       await expect(page.getByTestId('pane-body-collaboration')).toHaveCount(0);
       await expect(page.getByText('Your first home page', { exact: true })).toBeVisible();
+      await expect(page.getByLabel('Your Name', { exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'Edit my home page', exact: true }).click();
       await expect(page.getByTestId('workshop-view')).toHaveAttribute('data-view', 'clean');
       await expect(page.getByLabel('Public address', { exact: true })).toHaveCount(0);
@@ -56,6 +57,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       await page
         .getByTestId('workshop-view')
         .screenshot({ path: join(illustrations, 'first-home-form.png') });
+      await page.getByText('All steps and more help', { exact: true }).click();
       await page.getByRole('button', { name: '2. See your page', exact: true }).click();
       // Switching immediately after typing must flush the form's pending save.
       await page
@@ -105,6 +107,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
       const { page } = again;
       await page.getByRole('button', { name: 'Enter', exact: true }).click();
       await page.getByRole('button', { name: 'Open Hello, world', exact: true }).click();
+      await page.getByText('All steps and more help', { exact: true }).click();
       await expect(page.getByRole('button', { name: '3. Share it', exact: true })).toHaveAttribute(
         'aria-current',
         'step',
@@ -122,6 +125,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
         path: join(illustrations, 'first-home-share.png'),
         clip: { ...shareBox, height: helpBox.y + helpBox.height + 12 - shareBox.y },
       });
+      await share.getByText('Local test website (optional)', { exact: true }).click();
       await share.getByText('Test locally first', { exact: false }).click();
       await share
         .getByRole('button', { name: 'Publish to local test Garden', exact: true })

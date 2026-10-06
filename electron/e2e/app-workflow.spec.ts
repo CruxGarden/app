@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { togglePanel, revealOptionsFor } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import {
   readFileSync,
@@ -64,6 +64,13 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     await expect(status()).toHaveText('Saved', { timeout: 120000 });
     // The actual Tigrana (ADR 0040): the bar's Import notebook folder… takes the folder through
     // the host; the notebook reloads with Imported/<name> in its tree.
+    await revealOptionsFor(
+      frame().getByRole('button', {
+        includeHidden: true,
+        name: 'Import notebook folder…',
+        exact: true,
+      }),
+    );
     const chooser = page.waitForEvent('filechooser');
     await frame().getByRole('button', { name: 'Import notebook folder…', exact: true }).click();
     await (await chooser).setFiles(vault);
@@ -113,6 +120,11 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       .toEqual(['Imported/Novel/Outline.md', 'Imported/Novel/Chapters/One.md']);
     await frame().getByRole('button', { name: 'Public edition…' }).click();
     await expect(status()).toHaveText('Saved');
+    await revealOptionsFor(
+      page
+        .getByTestId('workshop-view')
+        .getByRole('button', { includeHidden: true, name: 'Customize app', exact: true }),
+    );
     await page
       .getByTestId('workshop-view')
       .getByRole('button', { name: 'Customize app', exact: true })

@@ -209,6 +209,20 @@ async function renderPanel() {
   const notes = listNotes ? await listNotes() : [];
   const chosen = new Set(publication.pages);
   panel.innerHTML = '';
+  const help = document.createElement('p');
+  help.textContent =
+    'Choose the notes visitors may read. Unchecked notes stay private. These choices save automatically; nothing goes online until you publish in Share.';
+  panel.append(help);
+  const done = document.createElement('button');
+  done.type = 'button';
+  done.textContent = 'Done choosing';
+  done.onclick = () => {
+    panel?.removeAttribute('data-open');
+    const toggle = bar?.querySelector<HTMLButtonElement>('[data-publication]');
+    toggle?.setAttribute('aria-expanded', 'false');
+    toggle?.focus();
+  };
+  panel.append(done);
   const title = document.createElement('label');
   title.textContent = 'Public edition title ';
   const input = document.createElement('input');
@@ -379,6 +393,28 @@ async function saveBook() {
   }
 }
 async function runCommand(command: Record<string, unknown>) {
+  if (command.op === 'guide') {
+    if (command.action === 'write') {
+      const editor = document.querySelector<HTMLElement>('.tiptap[contenteditable="true"]');
+      if (!editor) throw new Error('Your note is still opening. Try again in a moment.');
+      panel?.removeAttribute('data-open');
+      bar?.querySelector('[data-publication]')?.setAttribute('aria-expanded', 'false');
+      editor.focus();
+      editor.scrollIntoView({ block: 'nearest' });
+      return { focused: true };
+    }
+    if (command.action === 'choose-pages') {
+      if (!panel) throw new Error('Your notebook is still opening. Try again in a moment.');
+      await flush();
+      await loadPublication();
+      await renderPanel();
+      panel.setAttribute('data-open', '');
+      bar?.querySelector('[data-publication]')?.setAttribute('aria-expanded', 'true');
+      panel.querySelector('input')?.focus();
+      return { opened: true };
+    }
+    throw new Error('Unknown notebook guidance action.');
+  }
   if (['read-note', 'replace-text', 'append-text'].includes(String(command.op))) {
     const editor = openEditor;
     if (!editor || editor.path !== activeNote)
@@ -440,15 +476,18 @@ function mountBar() {
     '#garden-project [role=status]{flex:1}#garden-project [role=alert]{flex:1;color:#ffb4a8}#garden-project button,#garden-project select{padding:3px 8px;color:#e6e4dc;background:#2f3a34;border:1px solid #556059;border-radius:3px;font:inherit}' +
     '#garden-project [hidden]{display:none}#garden-publication{position:fixed;right:10px;bottom:40px;z-index:100000;display:none;flex-direction:column;gap:6px;min-width:280px;max-height:50vh;overflow:auto;padding:12px;background:#1f2a24;color:#e6e4dc;border:1px solid #3a403c;border-radius:6px;font:12px system-ui}' +
     '#garden-publication[data-open]{display:flex}#garden-publication input:not([type=checkbox]){margin-left:6px;padding:2px 6px;background:#2f3a34;color:#e6e4dc;border:1px solid #556059;border-radius:3px}' +
+    '#garden-project details>div{position:absolute;bottom:36px;left:10px;display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--app-bg);border:1px solid currentColor;max-height:50vh;overflow:auto}#garden-project summary{cursor:pointer}#garden-publication{max-width:calc(100vw - 20px);box-sizing:border-box}' +
     '#root{height:calc(100vh - 34px)!important;min-height:0!important}';
   document.head.append(style);
   bar.innerHTML =
     '<span role="status">Opening Garden notebook…</span><span role="alert" hidden></span>' +
     '<button type="button" data-reload hidden>Discard draft and reload</button>' +
+    '<details data-notebook-options><summary>More notebook options</summary><div>' +
     '<button type="button" data-import>Import notebook folder…</button>' +
     '<button type="button" data-import-document>Import document…</button>' +
     '<button type="button" data-export-docx>Export note as DOCX</button>' +
     '<button type="button" data-save-book>Save book (EPUB)</button>' +
+    '</div></details>' +
     '<button type="button" data-publication aria-expanded="false">Public edition…</button>' +
     '<label>Appearance <select aria-label="App appearance"><option value="garden">Garden Mood</option><option value="app">App appearance</option></select></label>';
   document.body.append(bar);

@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { showPane, togglePanel } from './panel-helpers';
 import { test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -159,7 +160,8 @@ test('plasma across every page', async () => {
 
     // The model picker, expanded model info, then the publish dialog.
     const selector = page.getByTestId('model-selector');
-    if (await selector.isVisible().catch(() => false)) {
+    if (await selector.count()) {
+      await revealOptionsFor(selector);
       await selector.click();
       await shot('19-model-selector', 700);
       await esc();

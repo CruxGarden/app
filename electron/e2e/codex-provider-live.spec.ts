@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -30,6 +31,7 @@ test('real Codex discovers Garden tools and saves an Artifact from Collaboration
     persistedCruxId = await createCrux(page, 'Codex readiness check');
     const chat = page.getByTestId('pane-body-collaboration');
     if (!(await chat.isVisible())) await togglePanel(page, 'Toggle collaboration');
+    await revealOptionsFor(chat.getByTestId('model-selector'));
     await chat.getByTestId('model-selector').click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     const composer = page.getByPlaceholder('Send a message...');

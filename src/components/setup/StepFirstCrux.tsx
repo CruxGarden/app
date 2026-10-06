@@ -130,37 +130,46 @@ export default function StepFirstCrux({
               </p>
             ) : (
               <>
-                <label className="flex flex-col gap-1.5 text-sm">
-                  How would you like to start?
-                  <Select
-                    aria-label="How would you like to start?"
-                    value={startKind}
-                    onChange={(e) =>
-                      set({ startKind: e.target.value as 'guided' | 'template' | 'empty' })
-                    }
-                  >
-                    <option value="guided">Walk me through it</option>
-                    <option value="template">Start with a template</option>
-                    <option value="empty">Start with an empty Crux</option>
-                  </Select>
-                </label>
-                {startKind !== 'empty' && (
+                <details
+                  open={choices.advancedMode || undefined}
+                  className="space-y-3"
+                  data-testid="setup-alternatives"
+                >
+                  <summary className="cursor-pointer text-sm text-accent">
+                    Choose a different starting point or guidance
+                  </summary>
                   <label className="flex flex-col gap-1.5 text-sm">
-                    Starting point
+                    How would you like to start?
                     <Select
-                      aria-label="Starting point"
-                      value={entry?.id ?? ''}
-                      onChange={(e) => set({ templateId: e.target.value })}
+                      aria-label="How would you like to start?"
+                      value={startKind}
+                      onChange={(e) =>
+                        set({ startKind: e.target.value as 'guided' | 'template' | 'empty' })
+                      }
                     >
-                      {options(true).length > 0 && (
-                        <optgroup label="For your interests">{options(true)}</optgroup>
-                      )}
-                      {options(false).length > 0 && (
-                        <optgroup label="Explore something else">{options(false)}</optgroup>
-                      )}
+                      <option value="guided">Walk me through it</option>
+                      <option value="template">Start with a template</option>
+                      <option value="empty">Start with an empty Crux</option>
                     </Select>
                   </label>
-                )}
+                  {startKind !== 'empty' && (
+                    <label className="flex flex-col gap-1.5 text-sm">
+                      Starting point
+                      <Select
+                        aria-label="Starting point"
+                        value={entry?.id ?? ''}
+                        onChange={(e) => set({ templateId: e.target.value })}
+                      >
+                        {options(true).length > 0 && (
+                          <optgroup label="For your interests">{options(true)}</optgroup>
+                        )}
+                        {options(false).length > 0 && (
+                          <optgroup label="Explore something else">{options(false)}</optgroup>
+                        )}
+                      </Select>
+                    </label>
+                  )}
+                </details>
                 {entry ? (
                   <>
                     <div
@@ -180,6 +189,12 @@ export default function StepFirstCrux({
                             : 'A template is a ready-made example you can change. Your edits save automatically.'}
                       </p>
                     </div>
+                    <WorkspacePreview
+                      templateId={entry.id}
+                      need={choices.need}
+                      advancedMode={choices.advancedMode}
+                      aiEnabled={aiEnabled}
+                    />
                     <label className="flex flex-col gap-1.5">
                       <SectionLabel tone="muted">Name</SectionLabel>
                       <Input
@@ -194,12 +209,6 @@ export default function StepFirstCrux({
                         }}
                       />
                     </label>
-                    <WorkspacePreview
-                      templateId={entry.id}
-                      need={choices.need}
-                      advancedMode={choices.advancedMode}
-                      aiEnabled={aiEnabled}
-                    />
                   </>
                 ) : (
                   <p className="text-sm text-text-muted">

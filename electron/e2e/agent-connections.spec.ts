@@ -108,6 +108,10 @@ test('the wizard configures an outside agent before the first Crux exists', asyn
     expect(config.url.startsWith('http://127.0.0.1:')).toBe(true);
     await expect(page.getByTestId('setup-status-outside')).toContainText('1 connection ready');
     await wizard.getByRole('button', { name: 'Skip setup', exact: true }).click();
+    await page
+      .getByRole('alertdialog', { name: 'Skip setup?' })
+      .getByRole('button', { name: 'Skip setup', exact: true })
+      .click();
     await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible();
     await showPane(page, 'Settings');
     await expect(page.getByTestId('agent-connection')).toContainText('Wizard agent');

@@ -1,3 +1,4 @@
+import { revealOptionsFor } from '../panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -77,6 +78,7 @@ test.describe('guide 09 · Workshop', () => {
       await frame.getByRole('link', { name: 'Home' }).click();
       await expect(frame.getByRole('heading')).toHaveText('Alpha site');
       // Reload keeps the same site.
+      await revealOptionsFor(page.getByTestId('preview-refresh'));
       await page.getByTestId('preview-refresh').click();
       await expect(frame.getByRole('heading')).toHaveText('Alpha site');
 

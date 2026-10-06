@@ -3,6 +3,18 @@ import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 /** Tigrana Notes App Tools: read the notebook, bring a Word document in, hand a note out as one. */
 export const NOTES_TOOLS: AppToolDefinition[] = [
   {
+    name: 'guide_notebook',
+    description:
+      'Focus the open note for the person to write, or open the public-page picker. Does not edit, select or publish anything.',
+    input_schema: {
+      type: 'object',
+      properties: { action: { type: 'string', enum: ['write', 'choose-pages'] } },
+      required: ['action'],
+      additionalProperties: false,
+    },
+    writes: [],
+  },
+  {
     name: 'inspect_notebook',
     description:
       'List the notes in this Tigrana notebook (paths and titles), the note that is open, and the public edition choices.',
@@ -134,6 +146,14 @@ export function notesCommand(name: string, input: Record<string, unknown>) {
     )
       throw new Error('Append plain text of 1–8,000 characters.');
     return { ...input, op: editOp[name] };
+  }
+  if (name === 'guide_notebook') {
+    if (
+      Object.keys(input).length !== 1 ||
+      !['write', 'choose-pages'].includes(String(input.action))
+    )
+      throw new Error('Choose write or choose-pages.');
+    return { op: 'guide', action: input.action };
   }
   if (name === 'inspect_notebook' && !Object.keys(input).length) return { op: 'inspect' };
   if (name === 'export_note_docx') {

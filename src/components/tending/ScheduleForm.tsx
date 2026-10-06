@@ -1,3 +1,4 @@
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { chipClass } from '@/components/ui/button-class';
 import type { Crux } from '@/api/types';
@@ -230,6 +231,7 @@ export default function ScheduleForm({
   onDone: () => void;
 }) {
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
   const events = GARDEN_EVENTS.filter((ev) => aiEnabled || !AI_EVENTS.has(ev.id));
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
@@ -371,7 +373,7 @@ export default function ScheduleForm({
         >
           <option value="at">At a time (once)</option>
           <option value="every">Every N minutes</option>
-          <option value="cron">On a cron line</option>
+          {(advancedMode || kind === 'cron') && <option value="cron">On a cron line</option>}
           <option value="timer">A timer with phases (a pomodoro)</option>
           <option value="event">When something happens in the garden</option>
           <option value="sun">At dawn, sunrise, sunset or dusk</option>
@@ -637,7 +639,10 @@ export default function ScheduleForm({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-text-muted">Then</span>
           {(Object.keys(ACTION_LABEL) as Action['kind'][])
-            .filter((k) => aiEnabled || !AI_ACTIONS.has(k))
+            .filter(
+              (k) =>
+                (aiEnabled || !AI_ACTIONS.has(k)) && (advancedMode || (k !== 'tool' && k !== 'fn')),
+            )
             .map((k) => (
               <button
                 key={k}

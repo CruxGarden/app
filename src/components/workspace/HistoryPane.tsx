@@ -1,3 +1,4 @@
+import PaneOptions from './PaneOptions';
 import { useCruxStore } from '@/stores/cruxStore';
 import { buttonClass } from '@/components/ui/button-class';
 import { useGrowthCreation } from '@/hooks/useGrowthCreation';
@@ -18,7 +19,7 @@ export default function HistoryPane() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="px-3 pt-3 shrink-0">
+      <PaneOptions pane="history" label="Branches and merges">
         <button
           onClick={() => setExploring(true)}
           disabled={!ownerId}
@@ -26,7 +27,7 @@ export default function HistoryPane() {
         >
           Whole Crux · branches & merges
         </button>
-      </div>
+      </PaneOptions>
       {exploring && ownerId && (
         <Suspense
           fallback={

@@ -1,3 +1,4 @@
+import { revealOptionsFor, enableAdvancedMode } from './panel-helpers';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { resolve } from 'node:path';
@@ -104,12 +105,23 @@ for (const mode of ['Light', 'Dark'] as const) {
       await expect(
         appearance.getByRole('button', { name: 'Customize appearance', exact: true }),
       ).toBeFocused();
-      const draft = appearance.getByRole('textbox', { name: 'Workspace layout name', exact: true });
+      const draft = appearance.getByRole('textbox', {
+        includeHidden: true,
+        name: 'Workspace layout name',
+        exact: true,
+      });
+      await revealOptionsFor(draft);
       await draft.fill('Unfinished layout');
       await chooseSettingsSection(page, 'Getting started');
       await expect(
         settings.getByRole('region', { name: 'Getting started', exact: true }),
       ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        settings.getByRole('switch', { name: 'Advanced Mode', exact: true }),
+      ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(settings.getByLabel('What I want to make')).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(
         settings.getByRole('switch', { name: 'Resume my last workspace on startup', exact: true }),
@@ -137,6 +149,12 @@ for (const mode of ['Light', 'Dark'] as const) {
       await expect(
         settings.getByRole('region', { name: 'Getting started', exact: true }),
       ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        settings.getByRole('switch', { name: 'Advanced Mode', exact: true }),
+      ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(settings.getByLabel('What I want to make')).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(
         settings.getByRole('switch', { name: 'Resume my last workspace on startup', exact: true }),
@@ -246,6 +264,8 @@ test('AI Settings stay consistent when another open workspace changes the shared
       return settings.getByRole('region', { name: 'AI', exact: true });
     };
 
+    // Metrics are an Advanced Mode control; keep the shared-setting assertion in that mode.
+    await enableAdvancedMode(page);
     await createCrux(page, 'First AI workspace');
     let ai = await openAiSettings();
     await expect(ai.getByRole('switch', { name: 'Enable AI Tools' })).not.toBeChecked();

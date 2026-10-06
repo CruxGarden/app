@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -50,6 +51,7 @@ test('Mood and Synth live beside a Crux, reuse controls and restore through save
     await expect(synth.getByRole('combobox', { name: 'Synth harmony' })).toHaveValue('minor');
     expect(page.url()).toBe(route);
     await page.keyboard.press('ControlOrMeta+,');
+    await revealOptionsFor(page.getByRole('textbox', { includeHidden: true, name: 'Workspace layout name' }));
     await page.getByRole('textbox', { name: 'Workspace layout name' }).fill('Mood and music');
     await page.getByRole('button', { name: 'Save workspace layout', exact: true }).click();
     await page.keyboard.press('Escape');

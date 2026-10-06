@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test';
 
 const gateSpecs = [
   '**/setup-wizard.spec.ts',
+  '**/novice-publishing.spec.ts',
+  '**/novice-preview.spec.ts',
   '**/setup-polish.spec.ts',
   '**/setup-environment.spec.ts',
   '**/agent-connections.spec.ts',

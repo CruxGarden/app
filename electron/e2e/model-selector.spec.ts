@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect, type Page, type ElectronApplication } from '@playwright/test';
 import { launchApp } from './launch';
@@ -40,6 +41,7 @@ async function newBlankCrux(page: Page) {
 async function closeMenu(page: Page) {
   const menu = page.getByTestId('model-selector-menu');
   if (await menu.isVisible()) {
+    await revealOptionsFor(page.getByTestId('model-selector'));
     await page.getByTestId('model-selector').click();
     await expect(menu).toBeHidden();
   }
@@ -48,6 +50,7 @@ async function closeMenu(page: Page) {
 /** Open the picker and report where the menu landed relative to the window. */
 async function openMenu(page: Page) {
   await closeMenu(page);
+  await revealOptionsFor(page.getByTestId('model-selector'));
   await page.getByTestId('model-selector').click();
   const menu = page.getByTestId('model-selector-menu');
   await expect(menu).toBeVisible();

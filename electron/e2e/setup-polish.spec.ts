@@ -13,7 +13,10 @@ async function ready(page: Page, advanced = false) {
   for (const step of ['need', 'garden', 'ai', 'mood']) {
     await expect(wizard).toHaveAttribute('data-step', step);
     await wizard
-      .getByRole('button', { name: step === 'mood' ? 'Keep the default' : 'Later', exact: true })
+      .getByRole('button', {
+        name: step === 'mood' ? 'Keep the default' : step === 'ai' ? 'Set up AI later' : 'Continue',
+        exact: true,
+      })
       .click();
   }
   return wizard;
@@ -98,24 +101,25 @@ test('a new Crux keeps room for its tool and resumes its own tutorial', async ()
     const workshop = (await page.getByTestId('pane-body-workshop').boundingBox())!;
     expect((await guide.boundingBox())!.height).toBeLessThanOrEqual(workshop.height * 0.4);
     expect((await page.locator('iframe[data-crux-id]').boundingBox())!.height).toBeGreaterThan(160);
-    await guide.getByRole('button', { name: 'Next tip', exact: true }).click();
+    await guide.getByRole('button', { name: /Next:/ }).click();
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     await expect.poll(async () => (await storedCrux(page, id)).setupGuide.step).toBe(1);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(guide).toContainText('Step 2 of 3');
+    await guide.getByText('All steps and more help', { exact: true }).click();
     await expect(
-      guide.getByRole('button', { name: '2. Keep a version', exact: true }),
+      guide.getByRole('button', { name: '2. Choose public notes', exact: true }),
     ).toHaveAttribute('aria-current', 'step');
     await expect(
       page.frameLocator('iframe[data-crux-id]').getByLabel('Note title', { exact: true }),
     ).toHaveValue('Welcome');
     await page.screenshot({ path: test.info().outputPath('notebook-tutorial.png') });
-    await guide.getByRole('button', { name: 'Next tip', exact: true }).click();
-    await guide.getByRole('button', { name: 'Finish walkthrough', exact: true }).click();
+    await guide.getByRole('button', { name: /Next:/ }).click();
+    await guide.getByRole('button', { name: 'Hide tips', exact: true }).click();
     await expect.poll(async () => (await storedCrux(page, id)).setupGuide.dismissed).toBe(true);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(guide).not.toHaveAttribute('open');
-    await guide.locator('summary').click();
+    await guide.locator(':scope > summary').click();
     await expect(guide).toContainText('Step 3 of 3');
     await expect(guide.getByRole('button', { name: 'Open Share', exact: true })).toBeVisible();
   } finally {

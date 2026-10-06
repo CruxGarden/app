@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -128,6 +129,7 @@ test('a Garden connects a website, finished artwork and a tracker, retaining sel
     expect(origin.sourceCruxId).toBe(artwork);
     expect(origin.spaceName).toBe('Album release');
     await page.keyboard.press('Escape');
+    await revealOptionsFor(page.getByTestId('preview-refresh'));
     await page.getByTestId('preview-refresh').click();
     const image = page
       .frameLocator('iframe[data-crux-id]')

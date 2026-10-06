@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
@@ -70,6 +71,7 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
       );
       await togglePanel(page, 'Toggle details');
       const format = page.getByLabel('Book edition', { exact: true });
+      await revealOptionsFor(format);
       await expect(format).toHaveValue('web');
       await format.selectOption('epub');
       await expect.poll(() => publication().format).toBe('epub');
@@ -92,6 +94,9 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
       expect(publication().format).toBe('epub');
       expect(publication().pages).toEqual(['Start.md', 'Second.md']);
       const alert = frameOf(page).locator('#garden-project [role=alert]');
+      await revealOptionsFor(
+        frameOf(page).getByRole('button', { includeHidden: true, name: 'Save book (EPUB)' }),
+      );
       await frameOf(page).getByRole('button', { name: 'Save book (EPUB)' }).click();
       await expect(status(page)).toHaveText('Building the book…');
       // The first build installs the edition's renderer into the folder (minutes); the

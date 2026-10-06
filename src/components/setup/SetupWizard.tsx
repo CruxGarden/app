@@ -234,6 +234,7 @@ export default function SetupWizard({
       setUsernameError('');
     }
     if (state.step === 'mood') keepMood();
+    if (state.step === 'ai') state.set({ noAi: true });
     state.next();
   };
 
@@ -313,12 +314,7 @@ export default function SetupWizard({
           </ol>
         </nav>
         {mode === 'first' && !state.planted && (
-          <Button
-            variant="ghost"
-            size="xs"
-            disabled={busy}
-            onClick={() => void finish({ kind: 'home' }, true)}
-          >
+          <Button variant="ghost" size="xs" disabled={busy} onClick={() => setConfirmSkip(true)}>
             Skip setup
           </Button>
         )}
@@ -398,7 +394,9 @@ export default function SetupWizard({
               ? mode === 'first'
                 ? 'Keep the default'
                 : 'Keep my Mood'
-              : 'Later'}
+              : state.step === 'ai'
+                ? 'Set up AI later'
+                : 'Keep these choices'}
           </Button>
           <Button
             size="sm"

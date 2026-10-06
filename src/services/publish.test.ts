@@ -344,6 +344,38 @@ describe('publishPipeline', () => {
     expect(state.publishedFiles!.map((f) => f.path)).toEqual(['index.html']);
   });
 
+  it('includes installation files in the baseline without hiding edits made during the build', async () => {
+    const { deps } = makeDeps({ exists: true, isSite: true });
+    const sources = [
+      makeArtifact('astro.config.mjs', 'config'),
+      makeArtifact('pnpm-lock.yaml', 'installed'),
+    ];
+    deps.site.preparePublishSources = vi.fn().mockResolvedValue(sources);
+    const build = deps.site.buildForPublish;
+    deps.site.buildForPublish = async (id) => {
+      sources[1]!.fingerprint = 'edited-during-build';
+      return build(id);
+    };
+    const result = await publishPipeline(makeCrux(), [sources[0]!], { deps });
+    expect(deps.site.preparePublishSources).toHaveBeenCalledWith('crux-1');
+    const snapshot = result.meta!.publishedFingerprints as Record<string, string>;
+    expect(snapshot['pnpm-lock.yaml']).toBe('installed');
+    expect(
+      hasContentChanged([sources[0]!, makeArtifact('pnpm-lock.yaml', 'installed')], snapshot),
+    ).toBe(false);
+    expect(hasContentChanged(sources, snapshot)).toBe(true);
+  });
+
+  it('does not publish anything when installation or source capture fails', async () => {
+    const { deps, state } = makeDeps({ isSite: true });
+    deps.site.preparePublishSources = vi.fn().mockRejectedValue(new Error('Install failed'));
+    await expect(publishPipeline(makeCrux(), [], { deps })).rejects.toThrow('Install failed');
+    expect(state.built).toBe(false);
+    expect(state.created).toEqual([]);
+    expect(state.publishedFiles).toBeNull();
+    expect(state.localMetaWrites).toEqual([]);
+  });
+
   it('merges API publish meta over local meta, keeps local-only fields, snapshots fingerprints, and persists', async () => {
     const { deps, state } = makeDeps({ exists: true });
     const artifacts = [makeArtifact('index.html', 'fp1'), makeArtifact('a.css', 'fp2')];

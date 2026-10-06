@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -33,6 +34,7 @@ test('a website can be tested locally without an account, restarted and publishe
     const folder = (await storedCrux(page, id)).projectFolder;
     let share = await openPanel(page, 'publish', 'Toggle share');
     await expect(share.getByRole('heading', { name: 'Publish to crux.garden' })).toBeVisible();
+    await revealOptionsFor(share.getByText('Test locally first', { exact: false }));
     await share.getByText('Test locally first', { exact: false }).click();
     await share.getByRole('button', { name: 'Publish to local test Garden', exact: true }).click();
     await expect(share.getByRole('button', { name: 'Open test website' })).toBeVisible();
@@ -90,6 +92,7 @@ test('a website can be tested locally without an account, restarted and publishe
     page = running.page;
     await reenterWorkspace(page, 'My first website');
     share = await openPanel(page, 'publish', 'Toggle share');
+    await revealOptionsFor(share.getByText('Test locally first', { exact: false }));
     await share.getByText('Test locally first', { exact: false }).click();
     await expect(share.getByRole('button', { name: 'Update local test copy' })).toBeVisible();
     sites = await page.evaluate(() => window.electronAPI!.staging!.list());
@@ -173,9 +176,13 @@ test('a fresh home page reaches a saved local visitor edition without hosted ser
     ).toBeVisible();
     await page.getByRole('button', { name: 'Edit my home page', exact: true }).click();
     await page.getByLabel('Your Name', { exact: true }).fill('My local home');
+    await revealOptionsFor(
+      page.getByRole('button', { includeHidden: true, name: '3. Share it', exact: true }),
+    );
     await page.getByRole('button', { name: '3. Share it', exact: true }).click();
     await page.getByRole('button', { name: 'Open Share', exact: true }).click();
     const share = page.getByTestId('pane-body-publish');
+    await revealOptionsFor(share.getByText('Test locally first', { exact: false }));
     await share.getByText('Test locally first', { exact: false }).click();
     await share.getByRole('button', { name: 'Publish to local test Garden', exact: true }).click();
     await expect(share.getByRole('button', { name: 'Open test website' })).toBeVisible({

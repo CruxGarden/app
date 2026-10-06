@@ -1,3 +1,4 @@
+import { revealOptionsFor } from '../panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -177,6 +178,9 @@ test.describe('guide 04 · Undertakings', () => {
       if (left) expect(publication().pages).not.toContain(left);
       await frame.getByRole('button', { name: 'Public edition…' }).click();
 
+      await revealOptionsFor(
+        frame.getByRole('button', { includeHidden: true, name: 'Save book (EPUB)', exact: true }),
+      );
       await frame.getByRole('button', { name: 'Save book (EPUB)', exact: true }).click();
       const findEpub = () => walk(folder).find((p) => p.endsWith('.epub'));
       await expect.poll(findEpub, { timeout: 9 * 60_000 }).toBeTruthy();

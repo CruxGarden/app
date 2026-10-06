@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -46,6 +47,7 @@ test('Garden agent edits a disposable Penpot design and brings its real SVG back
       await createCrux(page, 'Penpot connection proof');
       const chat = page.getByTestId('pane-body-collaboration');
       if (!(await chat.isVisible())) await togglePanel(page, 'Toggle collaboration');
+      await revealOptionsFor(chat.getByTestId('model-selector'));
       await chat.getByTestId('model-selector').click();
       await page
         .getByTestId(`model-group-${provider}`)

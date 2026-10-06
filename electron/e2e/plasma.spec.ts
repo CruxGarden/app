@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { showPane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -150,6 +151,7 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
     await createCrux(page, 'Plasma gate');
+    await revealOptionsFor(page.getByTestId('model-selector'));
     await page.getByTestId('model-selector').click();
     // The picker: raised on the pane by its own overlay canvas where the
     // material can run (plate gone), a painted plate where it cannot.

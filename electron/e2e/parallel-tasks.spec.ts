@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { togglePanel, newTaskButton } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, realpathSync } from 'node:fs';
@@ -190,6 +191,9 @@ test('Claude Code task turns use separate sessions and directories and route hid
   try {
     await enterGarden(page);
     await createCrux(page, 'Agent tasks');
+    await revealOptionsFor(
+      page.getByTestId('pane-body-collaboration').getByTestId('model-selector'),
+    );
     await page.getByTestId('pane-body-collaboration').getByTestId('model-selector').click();
     await page
       .getByTestId('model-group-claude-code')

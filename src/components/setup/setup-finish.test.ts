@@ -83,12 +83,12 @@ describe('applying setup', () => {
     ]);
   });
 
-  it('turns collaboration on only when something was set up, or the switch was turned back', () => {
+  it('turns collaboration on only when something was set up', () => {
     const base = { noAi: false, aiUsed: false, aiAtStart: null };
     expect(aiDecision(base, null)).toBeNull();
     expect(aiDecision({ ...base, aiUsed: true }, null)).toBe(true);
     expect(aiDecision({ ...base, aiUsed: true }, 'true')).toBeNull();
-    expect(aiDecision({ ...base, aiAtStart: 'false' }, 'false')).toBe(true);
+    expect(aiDecision({ ...base, aiAtStart: 'false' }, 'false')).toBeNull();
     expect(aiDecision({ ...base, noAi: true }, 'true')).toBe(false);
     expect(aiDecision({ ...base, noAi: true }, 'false')).toBeNull();
   });

@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -29,7 +30,9 @@ test('Notes documents: DOCX in through the bar and the collaborator, notes out a
   let folder = '';
   const note = (path: string) => join(folder, 'notebook', path);
   const openNote = async (section: string, title: string) => {
-    await frame().locator(`.folder-row[data-folder-path="${section}"]`).click();
+    const show = frame().getByRole('button', { name: 'Show left sidebar', exact: true });
+    if (await show.isVisible()) await show.click();
+    await frame().locator(`.unified-folder-row[data-folder-path="${section}"]`).click();
     // The folder and its note can share a name; pick the note row.
     await frame()
       .locator('.unified-tree-pane .unified-note-row')
@@ -52,6 +55,7 @@ test('Notes documents: DOCX in through the bar and the collaborator, notes out a
     await expect(status()).toHaveText('Saved', { timeout: 120000 });
 
     await test.step('a person imports a Word document; it is a note with its list, table and image', async () => {
+      await frame().getByText('More notebook options', { exact: true }).click();
       const chooser = page.waitForEvent('filechooser');
       await frame().getByRole('button', { name: 'Import document…', exact: true }).click();
       await (await chooser).setFiles(fixture);
@@ -83,6 +87,13 @@ test('Notes documents: DOCX in through the bar and the collaborator, notes out a
     });
 
     await test.step('the note goes back out as a Word document output', async () => {
+      await revealOptionsFor(
+        frame().getByRole('button', {
+          includeHidden: true,
+          name: 'Export note as DOCX',
+          exact: true,
+        }),
+      );
       await frame().getByRole('button', { name: 'Export note as DOCX', exact: true }).click();
       await expect(status()).toContainText('Exported Letter as a Word document', {
         timeout: 60000,

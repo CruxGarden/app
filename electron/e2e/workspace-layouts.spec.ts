@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { enableAdvancedMode } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
@@ -33,7 +34,14 @@ test('saved layouts are shared by UI and outside agents, reusable across Cruxes 
       expect(result.isError, text).not.toBe(true);
       return JSON.parse(text);
     };
-    const settings = page.getByRole('region', { name: 'Workspace layouts', exact: true });
+    const settings = page.getByRole('region', {
+      includeHidden: true,
+      name: 'Workspace layouts',
+      exact: true,
+    });
+    await revealOptionsFor(
+      settings.getByRole('textbox', { includeHidden: true, name: 'Workspace layout name' }),
+    );
     await settings.getByRole('textbox', { name: 'Workspace layout name' }).fill('Original');
     await settings.getByRole('button', { name: 'Save workspace layout', exact: true }).click();
     const original = (await call({ action: 'list' })).current;

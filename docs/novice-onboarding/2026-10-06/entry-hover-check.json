@@ -1,0 +1,12 @@
+{
+  "hover": {
+    "color": "rgb(24, 24, 24)",
+    "background": "rgb(204, 204, 204)",
+    "iconColor": "rgb(24, 24, 24)"
+  },
+  "focus": {
+    "focused": true,
+    "visible": true,
+    "outline": "solid"
+  }
+}

@@ -38,9 +38,11 @@ export default function WorkspacePreview({
       data-testid="setup-workspace-preview"
     >
       <h3 className="text-sm font-medium text-text">Your workspace</h3>
-      <div className="h-36" aria-hidden>
-        <Layout node={layout} />
-      </div>
+      {advancedMode && (
+        <div className="h-36" aria-hidden>
+          <Layout node={layout} />
+        </div>
+      )}
       <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-xs text-text-muted">
         {getMosaicLeaves(layout).map((pane) => (
           <li key={pane}>

@@ -1,3 +1,4 @@
+import PaneOptions from '@/components/workspace/PaneOptions';
 import { automaticModel } from '@/ai/keys';
 import { useIncludedAccess } from '@/services/included-access';
 import IncludedStatus from '@/components/chat/IncludedStatus';
@@ -286,7 +287,13 @@ export default function Console() {
               }}
             />
             <div className="px-3 pb-2">
-              <ModelSelector value={model} onChange={changeModel} disabled={!loaded || streaming} />
+              <PaneOptions pane="console" label="AI model and options">
+                <ModelSelector
+                  value={model}
+                  onChange={changeModel}
+                  disabled={!loaded || streaming}
+                />
+              </PaneOptions>
             </div>
           </div>
         </div>

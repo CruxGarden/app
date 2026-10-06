@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
@@ -168,6 +169,7 @@ test('Order Desk distinguishes a static test copy from its working Functions and
     ).toBeVisible();
     await togglePanel(page, 'Toggle share');
     const local = page.getByTestId('local-test-publication');
+    await revealOptionsFor(local.getByText('Test locally first', { exact: false }));
     await local.getByText('Test locally first', { exact: false }).click();
     await expect(local.getByText('This Crux uses Functions.', { exact: false })).toBeVisible();
     await local.getByRole('button', { name: 'Save static-only test copy', exact: true }).click();

@@ -1,3 +1,4 @@
+import { revealOptionsFor } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
@@ -122,6 +123,7 @@ test('accessibility scan of entry, creation, Settings and workspace', async () =
     await page.getByTestId('workspace-status').locator('summary').click();
     await scan(page, 'work-status-expanded');
     await page.getByTestId('workspace-status').locator('summary').click();
+    await revealOptionsFor(page.getByTestId('model-selector'));
     await page.getByTestId('model-selector').click();
     await scan(page, 'models');
     await page.keyboard.press('Escape');
@@ -189,7 +191,9 @@ test('model chooser supports keyboard selection, dismissal and announced selecti
     await enterGarden(page);
     await createCrux(page, 'Keyboard models');
     const trigger = page.getByTestId('model-selector');
+    await revealOptionsFor(trigger);
     await trigger.focus();
+    await expect(trigger).toBeFocused();
     await page.keyboard.press('Enter');
     const picker = page.getByRole('dialog', { name: 'Choose a model' });
     await expect(picker).toBeVisible();

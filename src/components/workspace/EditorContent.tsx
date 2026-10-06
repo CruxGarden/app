@@ -1,3 +1,5 @@
+import PaneOptions from './PaneOptions';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { deferNotebookAction } from '@/services/notebook-lifecycle';
 import { buttonClass } from '@/components/ui/button-class';
 import { linkClass } from '@/components/ui/button-class';
@@ -73,6 +75,7 @@ export default function EditorContent({
   captureRef,
   clean = false,
 }: EditorContentProps) {
+  const advancedMode = useAdvancedMode();
   const historical = useCruxStore((s) => s.viewingSnapshotId !== null);
   const readOnlyTask = useCruxStore((s) => {
     const copy = copyIdentity(s.crux);
@@ -703,82 +706,88 @@ export default function EditorContent({
       {mainContent}
       {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
       {target.kind === 'iframe' && target.localBase && (
-        <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-2xs font-mono text-text-muted">
-          {site.isSite && !clean && (
-            <SitePreviewControls
-              site={site}
-              onRefresh={() => {
-                const refresh = () => {
-                  const iframe = previewIframeRef.current;
-                  if (!iframe) return;
-                  try {
-                    iframe.contentWindow?.location.reload();
-                  } catch {
-                    const src = iframe.src;
-                    iframe.src = 'about:blank';
-                    requestAnimationFrame(() => {
-                      iframe.src = src;
-                    });
-                  }
-                };
-                if (!deferNotebookAction(cruxId, refresh)) refresh();
+        <PaneOptions pane="workshop" label="Preview tools">
+          <div className="min-w-0 w-full flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-2xs font-mono text-text-muted">
+            {site.isSite && !clean && (
+              <SitePreviewControls
+                site={site}
+                onRefresh={() => {
+                  const refresh = () => {
+                    const iframe = previewIframeRef.current;
+                    if (!iframe) return;
+                    try {
+                      iframe.contentWindow?.location.reload();
+                    } catch {
+                      const src = iframe.src;
+                      iframe.src = 'about:blank';
+                      requestAnimationFrame(() => {
+                        iframe.src = src;
+                      });
+                    }
+                  };
+                  if (!deferNotebookAction(cruxId, refresh)) refresh();
+                }}
+              />
+            )}
+            {(clean || !site.isSite) && (
+              <button
+                className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
+                title="Return to the entry page"
+                onClick={() => {
+                  const home = () => {
+                    const iframe = previewIframeRef.current;
+                    if (iframe && iframeSrc) iframe.src = iframeSrc;
+                  };
+                  if (!deferNotebookAction(cruxId, home)) home();
+                }}
+              >
+                Home
+              </button>
+            )}
+            {(clean || !site.isSite) && (
+              <button
+                data-testid="preview-refresh"
+                className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
+                title="Reload the preview"
+                onClick={() => {
+                  const refresh = () => {
+                    const iframe = previewIframeRef.current;
+                    if (iframe) iframe.setAttribute('src', iframe.src);
+                  };
+                  if (!deferNotebookAction(cruxId, refresh)) refresh();
+                }}
+              >
+                Refresh
+              </button>
+            )}
+            <span className="truncate flex-1" title={target.localBase}>
+              {clean ? path : target.localBase}
+            </span>
+            <button
+              onClick={() => navigator.clipboard?.writeText(target.localBase!)}
+              className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
+              title="Copy URL"
+            >
+              Copy
+            </button>
+            <button
+              onClick={() => {
+                import('@/services/desktop').then(({ openExternal }) =>
+                  openExternal(target.localBase!),
+                );
               }}
+              className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
+              title="Open in browser"
+            >
+              Open ↗
+            </button>
+            <PreviewCaptureActions
+              cruxId={cruxId}
+              base={target.localBase}
+              page={clean ? path : ''}
             />
-          )}
-          {(clean || !site.isSite) && (
-            <button
-              className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
-              title="Return to the entry page"
-              onClick={() => {
-                const home = () => {
-                  const iframe = previewIframeRef.current;
-                  if (iframe && iframeSrc) iframe.src = iframeSrc;
-                };
-                if (!deferNotebookAction(cruxId, home)) home();
-              }}
-            >
-              Home
-            </button>
-          )}
-          {(clean || !site.isSite) && (
-            <button
-              data-testid="preview-refresh"
-              className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
-              title="Reload the preview"
-              onClick={() => {
-                const refresh = () => {
-                  const iframe = previewIframeRef.current;
-                  if (iframe) iframe.setAttribute('src', iframe.src);
-                };
-                if (!deferNotebookAction(cruxId, refresh)) refresh();
-              }}
-            >
-              Refresh
-            </button>
-          )}
-          <span className="truncate flex-1" title={target.localBase}>
-            {clean ? path : target.localBase}
-          </span>
-          <button
-            onClick={() => navigator.clipboard?.writeText(target.localBase!)}
-            className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
-            title="Copy URL"
-          >
-            Copy
-          </button>
-          <button
-            onClick={() => {
-              import('@/services/desktop').then(({ openExternal }) =>
-                openExternal(target.localBase!),
-              );
-            }}
-            className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
-            title="Open in browser"
-          >
-            Open ↗
-          </button>
-          <PreviewCaptureActions cruxId={cruxId} base={target.localBase} page={clean ? path : ''} />
-        </div>
+          </div>
+        </PaneOptions>
       )}
       {/* Site crux: dev server is installing/starting (or failed) */}
       {target.kind === 'site-status' && (
@@ -788,10 +797,10 @@ export default function EditorContent({
               <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
               <p className="text-xs text-text-muted">
                 {target.phase === 'installing'
-                  ? 'Preparing project (first run installs dependencies)…'
-                  : 'Starting dev server…'}
+                  ? 'Preparing your first preview. This may take a minute and needs an internet connection…'
+                  : 'Opening your preview…'}
               </p>
-              {target.detail && (
+              {advancedMode && target.detail && (
                 <p className="text-2xs font-mono text-subtle max-w-md truncate">{target.detail}</p>
               )}
             </>

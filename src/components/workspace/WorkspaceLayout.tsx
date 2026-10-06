@@ -58,7 +58,9 @@ const SynthPane = lazy(() => import('./SynthPane'));
 const BrowserPane = lazy(() => import('./BrowserPane'));
 const SettingsPane = lazy(() => import('./SettingsPane'));
 const ExplorePane = lazy(() => import('./ExplorePane'));
-import { PANE_VAR_PREFIX } from './paneConfig';
+import PaneHelp from './PaneHelp';
+import { PANES, PANE_VAR_PREFIX } from './paneConfig';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import PaneIcon from './PaneIcon';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
@@ -165,6 +167,8 @@ function PaneFrame({
 }) {
   const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
   const labels = usePaneLabels();
+  const advanced = useAdvancedMode();
+  const presentation = PANES[paneType].layouts[advanced ? 'advanced' : 'normal'];
   // Under Plasma the pane's contents mount once its surface has formed, so
   // Monaco, an app's iframe or a long conversation do not compete with the
   // material's arrival for the same frames.
@@ -175,6 +179,8 @@ function PaneFrame({
       ref={ref}
       className="h-full min-h-0 flex flex-col"
       data-testid={`pane-body-${paneType}`}
+      data-panel-mode={advanced ? 'advanced' : 'normal'}
+      data-options-layout={presentation.options}
       {...paneRegion(paneType, labels[paneType])}
     >
       {!formed ? null : gated ? (
@@ -186,7 +192,17 @@ function PaneFrame({
           className="h-full"
         />
       ) : (
-        <MemoizedPaneContent paneType={paneType} />
+        <>
+          {!advanced && PANES[paneType].advanced && (
+            <PaneEmpty
+              title="Advanced controls"
+              description="Turn on Advanced Mode in Settings → Getting started to use this panel. Your data is unchanged."
+            />
+          )}
+          <div className={!advanced && PANES[paneType].advanced ? 'hidden' : 'contents'}>
+            <MemoizedPaneContent paneType={paneType} />
+          </div>
+        </>
       )}
     </div>
   );
@@ -312,6 +328,7 @@ export function PaneMosaic({ Body }: { Body: ComponentType<{ paneType: PaneType 
                   {labels[paneType]}
                 </span>
               </div>
+              <PaneHelp pane={paneType} label={labels[paneType]} />
               <PaneFocusButton pane={paneType} label={labels[paneType]} />
               {/* Home is the Garden's anchor: it stays. */}
               {paneType !== 'home' && (

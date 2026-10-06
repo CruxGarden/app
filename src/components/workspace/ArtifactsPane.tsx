@@ -1,3 +1,4 @@
+import PaneOptions from './PaneOptions';
 import type { Artifact } from '@/api/types';
 import type { ArtifactUploadEntry } from '@/services/types';
 import CopyArtifactsDialog, { type ArtifactCopySelection } from './CopyArtifactsDialog';
@@ -867,15 +868,17 @@ export default function ArtifactsPane() {
             {artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}
           </span>
           {aiEnabled && agentFileCount > 0 && (
-            <button
-              type="button"
-              aria-pressed={showAgentFiles}
-              onClick={() => setShowAgentFiles((v) => !v)}
-              title="AGENTS.md and CLAUDE.md: what Crux Garden tells agents working in this folder"
-              className="-my-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer"
-            >
-              {showAgentFiles ? 'Hide agent files' : `Agent files (${agentFileCount})`}
-            </button>
+            <PaneOptions pane="artifacts" label="Agent instructions">
+              <button
+                type="button"
+                aria-pressed={showAgentFiles}
+                onClick={() => setShowAgentFiles((v) => !v)}
+                title="AGENTS.md and CLAUDE.md: what Crux Garden tells agents working in this folder"
+                className="-my-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer"
+              >
+                {showAgentFiles ? 'Hide agent files' : `Agent files (${agentFileCount})`}
+              </button>
+            </PaneOptions>
           )}
           <span className="ml-auto">{totalSize}</span>
         </div>

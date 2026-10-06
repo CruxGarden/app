@@ -1,3 +1,4 @@
+import { revealOptionsFor } from '../panel-helpers';
 import { togglePanel } from '../panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import type { ElectronApplication, DownloadItem } from 'playwright';
@@ -82,6 +83,9 @@ test('make the ad with Crux Garden', async () => {
     await ensurePane(page, 'collaboration', 'Toggle collaboration');
 
     // Claude Code is the collaborator.
+    await revealOptionsFor(
+      page.getByTestId('pane-body-collaboration').getByTestId('model-selector'),
+    );
     await page.getByTestId('pane-body-collaboration').getByTestId('model-selector').click();
     await page
       .getByTestId('model-group-claude-code')

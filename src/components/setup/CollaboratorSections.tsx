@@ -58,11 +58,11 @@ export function CollaboratorSection({ open, onOpen, onLater, saved }: SectionPro
   // Signing in to a plan that includes collaboration is setting it up.
   const wasReady = useRef(included.ready);
   useEffect(() => {
-    if (included.ready) set({ aiUsed: true });
+    if (included.ready || keyed) set({ aiUsed: true });
     if (included.ready && !wasReady.current)
       toast('Your plan includes a collaborator. You’re all set.');
     wasReady.current = included.ready;
-  }, [included.ready, set]);
+  }, [included.ready, keyed, set]);
 
   const checking = !saved.loaded || (isAuthenticated && included.status === 'checking');
   const status = checking
@@ -104,7 +104,7 @@ export function CollaboratorSection({ open, onOpen, onLater, saved }: SectionPro
         ) : (
           <ConnectAccount
             compact
-            description="Sign in with your email. Nothing to install and no key to manage."
+            description="AI requires a plan with available usage. Sign in to check your access; signing in alone does not buy a plan. You can start creating without AI."
           />
         )}
       </div>
@@ -144,8 +144,8 @@ export function CollaboratorSection({ open, onOpen, onLater, saved }: SectionPro
           <>
             <p className="text-xs text-text-muted">
               {can(Capability.SecureSecrets)
-                ? 'Have a key from Anthropic, OpenAI or Google? Paste it here. It stays on this computer, locked in your system’s secure storage.'
-                : 'Have a key from Anthropic, OpenAI or Google? Paste it here.'}
+                ? 'Have a key from Anthropic, OpenAI or Google? Paste it here. Your provider’s charges apply. It stays on this computer, locked in your system’s secure storage.'
+                : 'Have a key from Anthropic, OpenAI or Google? Paste it here. Your provider’s charges apply.'}
             </p>
             <ApiKeySetup
               compact

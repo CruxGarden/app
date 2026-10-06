@@ -6,6 +6,7 @@ describe('Notes App Tools', () => {
   it('a Notes Crux gets the notebook tools', () => {
     const adapter = embeddedAppToolAdapter({ kind: 'notes', meta: { template: 'notes' } })!;
     expect(adapter.tools.map((t) => t.name)).toEqual([
+      'guide_notebook',
       'inspect_notebook',
       'export_note_docx',
       'save_notebook_book',
@@ -19,6 +20,13 @@ describe('Notes App Tools', () => {
     expect(() => notesCommand('save_notebook_book', { note: 'x' })).toThrow(/no arguments/);
   });
   it('prepares the bridge commands and refuses bad input', () => {
+    expect(notesCommand('guide_notebook', { action: 'write' })).toEqual({
+      op: 'guide',
+      action: 'write',
+    });
+    expect(() => notesCommand('guide_notebook', { action: 'publish' })).toThrow();
+    expect(() => notesCommand('guide_notebook', { action: 'write', note: 'private.md' })).toThrow();
+    expect(NOTES_TOOLS.find((t) => t.name === 'guide_notebook')!.writes).toEqual([]);
     expect(notesCommand('inspect_notebook', {})).toEqual({ op: 'inspect' });
     expect(notesCommand('export_note_docx', {})).toEqual({ op: 'export-docx' });
     expect(notesCommand('export_note_docx', { note: 'Imported/Letter/Letter.md' })).toEqual({

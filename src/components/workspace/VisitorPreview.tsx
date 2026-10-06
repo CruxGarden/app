@@ -1,6 +1,10 @@
+import { useCruxStoreApi } from '@/stores/cruxStore';
+import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import { stageWebsite } from '@/services/local-staging';
+import { isEmbeddedApp } from '@/services/embedded-app';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Artifact, ChatMessage, Crux } from '@/api/types';
-import { Modal } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 import PublicCruxAbout from '@/components/public/PublicCruxAbout';
 import { getServices } from '@/services';
@@ -38,6 +42,13 @@ export default function VisitorPreview({
   username: string;
 }) {
   const [aboutOpen, setAboutOpen] = useState(true);
+  const data = useCruxStoreApi();
+  const ui = useWorkspaceUIStoreApi();
+  const plan = publicationPlan(crux, artifacts);
+  const builtPreview =
+    plan.kind === 'build' &&
+    (!isEmbeddedApp(crux) || crux.kind === 'notes') &&
+    can(Capability.LocalStaging);
   const files = useMemo(() => {
     const plan = publicationPlan(crux, artifacts);
     return plan.kind === 'static'
@@ -45,30 +56,44 @@ export default function VisitorPreview({
       : publishableArtifacts(artifacts);
   }, [crux, artifacts]);
   const entry = entryOf(crux, files);
-  const live = !!entry && can(Capability.PreviewServer);
+  const live = builtPreview || (!!entry && can(Capability.PreviewServer));
   const [serverUrl, setServerUrl] = useState<string | null>(null);
-  const [serverError, setServerError] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   // The same local server the Workshop uses (ADR 0003); leased, so the
   // Workshop's own preview keeps running when this dialog closes.
   useEffect(() => {
     if (!open || !live) return;
     let cancelled = false;
-    setServerError(false);
-    startPreviewServer(crux.id)
+    setServerError(null);
+    setServerUrl(null);
+    const start = async () => {
+      if (builtPreview) {
+        if (data.getState().crux?.id !== crux.id)
+          throw new Error('Reopen this Crux to preview it.');
+        // Serve the exact public build through the isolated local-test server.
+        // Pointing at the Project Folder would show the notebook editor instead.
+        return (await stageWebsite(data, ui)).url;
+      }
+      return startPreviewServer(crux.id);
+    };
+    start()
       .then((url) => {
         if (!cancelled) setServerUrl(url || null);
-        if (!cancelled && !url) setServerError(true);
+        if (!cancelled && !url) setServerError('Could not start the local preview.');
       })
-      .catch(() => {
-        if (!cancelled) setServerError(true);
+      .catch((error) => {
+        if (!cancelled)
+          setServerError(
+            error instanceof Error ? error.message : 'Could not prepare the public preview.',
+          );
       });
     return () => {
       cancelled = true;
       setServerUrl(null);
-      void stopPreviewServer(crux.id);
+      if (!builtPreview) void stopPreviewServer(crux.id);
     };
-  }, [open, live, crux.id]);
+  }, [open, live, crux.id, builtPreview, data, ui]);
 
   const downloadBlob = useCallback(
     async (artifactId: string) => {
@@ -85,8 +110,11 @@ export default function VisitorPreview({
   return (
     <Modal open={open} onClose={onClose} size="full" flush aria-label="Preview as a visitor">
       <div className="flex flex-col h-full min-h-0" data-testid="visitor-preview">
-        <div className="shrink-0 px-3 py-1.5 border-b border-border bg-panel text-xs text-text-muted">
-          Preview as a visitor — from this computer. Nothing is uploaded.
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-b border-border bg-panel text-xs text-text-muted">
+          <span>Preview as a visitor — from this computer. Nothing is uploaded.</span>
+          <Button size="xs" variant="secondary" onClick={onClose}>
+            Back to editing
+          </Button>
         </div>
         <PublicTopBar
           preview
@@ -102,13 +130,18 @@ export default function VisitorPreview({
               serverUrl ? (
                 <iframe
                   title={`${crux.title || 'Creation'} as visitors see it`}
-                  src={`${serverUrl}/${entry === 'index.html' ? '' : entry}`}
+                  src={
+                    builtPreview ? serverUrl : `${serverUrl}/${entry === 'index.html' ? '' : entry}`
+                  }
                   sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                   className="w-full h-full border-0"
                 />
               ) : (
                 <p className="p-4 text-sm text-text-muted" role="status">
-                  {serverError ? 'Could not start the local preview.' : 'Starting the preview…'}
+                  {serverError ??
+                    (builtPreview
+                      ? 'Preparing your public preview. This may take a minute…'
+                      : 'Starting the preview…')}
                 </p>
               )
             ) : entry ? (

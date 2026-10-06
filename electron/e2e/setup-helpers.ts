@@ -27,6 +27,10 @@ export async function openSetupWizard(page: Page) {
 export async function skipSetupToHome(page: Page) {
   await openSetupWizard(page);
   await page.getByRole('button', { name: 'Skip setup', exact: true }).click();
+  await page
+    .getByRole('alertdialog', { name: 'Skip setup?' })
+    .getByRole('button', { name: 'Skip setup', exact: true })
+    .click();
   await expect(page.getByRole('button', { name: 'Add Crux', exact: true })).toBeVisible({
     timeout: 60_000,
   });
@@ -44,7 +48,7 @@ export async function setupWithFirstHomePage(page: Page, name?: string) {
     await expect(wizard).toHaveAttribute('data-step', step);
     await wizard
       .getByRole('button', {
-        name: step === 'mood' ? 'Keep the default' : 'Later',
+        name: step === 'mood' ? 'Keep the default' : step === 'ai' ? 'Set up AI later' : 'Continue',
         exact: true,
       })
       .click();

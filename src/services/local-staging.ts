@@ -1,5 +1,5 @@
 import type { Crux, Artifact } from '@/api/types';
-import { buildFingerprintMap } from './publish';
+import { buildFingerprintMap, validateNotebookPublication } from './publish';
 import type { StoreApi } from 'zustand';
 import type { CruxState } from '@/stores/cruxStore';
 import type { UIState } from '@/stores/uiStore';
@@ -7,7 +7,7 @@ import { prepareWorkspacePublication, assertPublicationWorkspace } from './works
 import { isEmbeddedApp } from './embedded-app';
 import { publicationPlan } from './publication-plan';
 import { downloadPublicationBlob } from './publication-files';
-import { buildForPublish } from './site';
+import { buildForPublish, preparePublishSources } from './site';
 import { assertCopyWritable } from './working-copies';
 import { openExternal } from './desktop';
 
@@ -30,7 +30,7 @@ export async function stageWebsite(data: StoreApi<CruxState>, ui: StoreApi<UISta
   const prepared = await prepareWorkspacePublication(data, ui, id);
   const plan = publicationPlan(prepared.crux, prepared.artifacts);
   if (plan.kind === 'unavailable') throw new Error(plan.explanation);
-  if (isEmbeddedApp(prepared.crux) && plan.kind !== 'static')
+  if (isEmbeddedApp(prepared.crux) && plan.kind !== 'static' && prepared.crux.kind !== 'notes')
     throw new Error(
       'Local testing currently supports websites and declared static editions. Use this tool’s preview for its editable content.',
     );
@@ -38,8 +38,13 @@ export async function stageWebsite(data: StoreApi<CruxState>, ui: StoreApi<UISta
     throw new Error('Local testing is for websites, not editable packages.');
   const limit = 100 * 1024 * 1024;
   const files: { path: string; blob: Blob }[] = [];
-  if (plan.kind === 'build') files.push(...(await buildForPublish(id)));
-  else {
+  let sources = prepared.artifacts;
+  if (plan.kind === 'build') {
+    sources = structuredClone(await preparePublishSources(id));
+    if (prepared.crux.kind === 'notes')
+      await validateNotebookPublication(sources, downloadPublicationBlob);
+    files.push(...(await buildForPublish(id)));
+  } else {
     if (plan.files.length > 5000)
       throw new Error('Local test websites are limited to 5,000 files.');
     let size = 0;
@@ -61,7 +66,7 @@ export async function stageWebsite(data: StoreApi<CruxState>, ui: StoreApi<UISta
         data: new Uint8Array(await file.blob.arrayBuffer()),
       })),
   );
-  const sourceHash = await websiteSourceHash(prepared.crux, prepared.artifacts);
+  const sourceHash = await websiteSourceHash(prepared.crux, sources);
   assertPublicationWorkspace(data, ui, id);
   return bridge.publish({
     sourceHash,

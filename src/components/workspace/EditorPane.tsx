@@ -1,3 +1,4 @@
+import PaneOptions from './PaneOptions';
 import SetupProjectGuide from './SetupProjectGuide';
 import type { SetupNeed } from '@/components/setup/setup-plan';
 import FirstProjectGuide from './FirstProjectGuide';
@@ -188,7 +189,11 @@ export default function EditorPane() {
   );
   const entry = workshopEntry(crux, artifacts, entryFile);
   const hasBuilder = !!crux?.meta?.contentModel;
-  const [editingHome, setEditingHome] = useState<string | null>(null);
+  const [editingHome, setEditingHome] = useState<string | null>(() =>
+    !advancedMode && (crux?.meta?.contentModel as ContentModel | undefined)?.guide
+      ? crux!.id
+      : null,
+  );
   const homeSettings = artifacts.find((file) => pathOf(file) === settingsPathOf(crux?.meta));
   const showHomeForm =
     view === 'clean' && !viewingHistory && editingHome === crux?.id && !!homeSettings;
@@ -247,34 +252,36 @@ export default function EditorPane() {
               </button>
             ))}
         </div>
-        <EmbeddedAppActions />
-        <div className="flex-1" />
-        {view === 'advanced' && (
-          <button
-            className={button}
-            onClick={() => {
-              setPane('artifacts', true);
-              setMobilePane('artifacts');
-            }}
-          >
-            Browse Artifacts
+        <PaneOptions pane="workshop" label="More workspace options">
+          <EmbeddedAppActions />
+          <div className="flex-1" />
+          {view === 'advanced' && (
+            <button
+              className={button}
+              onClick={() => {
+                setPane('artifacts', true);
+                setMobilePane('artifacts');
+              }}
+            >
+              Browse Artifacts
+            </button>
+          )}
+          {hasBuilder && (
+            <button
+              className={button}
+              onClick={() => {
+                setActiveTab(null);
+                setView('advanced');
+              }}
+            >
+              Edit content
+            </button>
+          )}
+          <button className={button} onClick={settings}>
+            Details
           </button>
-        )}
-        {hasBuilder && (
-          <button
-            className={button}
-            onClick={() => {
-              setActiveTab(null);
-              setView('advanced');
-            }}
-          >
-            Edit content
-          </button>
-        )}
-        <button className={button} onClick={settings}>
-          Details
-        </button>
-        <CruxspaceAssetsButton />
+          <CruxspaceAssetsButton />
+        </PaneOptions>
       </div>
       {showHomeForm && crux && homeSettings ? (
         <div className="flex flex-col flex-1 min-h-0">

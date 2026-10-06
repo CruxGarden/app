@@ -90,8 +90,8 @@ export default function StepAi() {
       ) : (
         <>
           <p className="text-xs text-text-muted">
-            AI help is optional. If you’re not sure, choose Later and start with the tools. You can
-            set this up in Settings any time.
+            AI help is optional. If you’re not sure, choose “Set up AI later” and start with the
+            tools. You can set this up in Settings any time.
           </p>
           {sections.includes('collaborator') && (
             <CollaboratorSection {...props('collaborator')} saved={saved} />

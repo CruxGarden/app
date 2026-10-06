@@ -1,3 +1,4 @@
+import { revealOptionsFor } from '../panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -72,6 +73,7 @@ test.describe('guide 35 · Tools', () => {
         '<!doctype html><link rel="stylesheet" href="style.css"><h1 id="t">Hello again</h1><button id="b">Press</button><script src="script.js"></script>',
       );
       await page.getByRole('button', { name: 'Preview', exact: true }).click();
+      await revealOptionsFor(page.getByTestId('preview-refresh'));
       await page.getByTestId('preview-refresh').click();
       await expect(heading).toHaveText('Hello again', { timeout: 30_000 });
       await expect(heading).toHaveCSS('color', 'rgb(0, 0, 255)');

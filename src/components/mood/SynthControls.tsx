@@ -1,3 +1,4 @@
+import PaneOptions from '@/components/workspace/PaneOptions';
 import { useState } from 'react';
 import { buttonClass, fieldClass } from '@/components/ui';
 import { useShallow } from 'zustand/react/shallow';
@@ -180,8 +181,7 @@ export default function SynthControls() {
           />
         </label>
       </div>
-      <details className="text-xs text-text rounded border border-border p-3">
-        <summary className="cursor-pointer">Presets in this Mood ({synthPresets.length})</summary>
+      <PaneOptions pane="synth" label={`Presets in this Mood (${synthPresets.length})`}>
         <div className="flex gap-2 mt-3">
           <input
             aria-label="Synth preset name"
@@ -234,7 +234,7 @@ export default function SynthControls() {
           Presets stay with this Mood. Save the Mood, then export or share it to bring your sounds
           with it. Reusing a name replaces that preset.
         </p>
-      </details>
+      </PaneOptions>
       <div className="grid grid-cols-1 @[520px]:grid-cols-2 gap-3">
         {synth.tracks.map((t, i) => (
           <fieldset

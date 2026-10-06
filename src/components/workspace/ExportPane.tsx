@@ -1,3 +1,4 @@
+import PaneOptions from './PaneOptions';
 import { exportCreation, creationExportLabel } from '@/services/export-creation';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import PrivateBackupDescription from '@/components/garden/PrivateBackupDescription';
@@ -171,42 +172,44 @@ export default function ExportPane() {
               )}
             </PaneNote>
           )}
-          <PaneSection label="Archive" aside={formatBytes(totalSize)}>
-            <ul className="text-xxs font-mono text-text-muted flex flex-col gap-0.5">
-              {!installable && (aiEnabled || messageCount > 0) && (
-                <li className="flex justify-between gap-2">
-                  <span className="text-text">conversation</span>
-                  <span>
-                    {messageCount} message{messageCount === 1 ? '' : 's'}
-                  </span>
-                </li>
-              )}
-              {!installable && (
-                <li className="flex justify-between gap-2">
-                  <span className="text-text">history</span>
-                  <span>
-                    {growthCount} snapshot{growthCount === 1 ? '' : 's'}
-                  </span>
-                </li>
-              )}
-              <li className="flex justify-between gap-2">
-                <span className="text-text">files</span>
-                <span>
-                  {artifacts.length} artifact{artifacts.length === 1 ? '' : 's'}
-                </span>
-              </li>
-              {artifacts.slice(0, 6).map((a, i) => {
-                const path = (a.meta?.path as string) || a.filename || `file-${i + 1}`;
-                return (
-                  <li key={a.id} className="flex justify-between gap-2 pl-3">
-                    <span className="truncate">{path}</span>
-                    <span className="shrink-0">{formatBytes(Number(a.size) || 0)}</span>
+          <PaneOptions pane="export" label="What is in the backup">
+            <PaneSection label="Archive" aside={formatBytes(totalSize)}>
+              <ul className="text-xxs font-mono text-text-muted flex flex-col gap-0.5">
+                {!installable && (aiEnabled || messageCount > 0) && (
+                  <li className="flex justify-between gap-2">
+                    <span className="text-text">conversation</span>
+                    <span>
+                      {messageCount} message{messageCount === 1 ? '' : 's'}
+                    </span>
                   </li>
-                );
-              })}
-              {artifacts.length > 6 && <li className="pl-3">+ {artifacts.length - 6} more</li>}
-            </ul>
-          </PaneSection>
+                )}
+                {!installable && (
+                  <li className="flex justify-between gap-2">
+                    <span className="text-text">history</span>
+                    <span>
+                      {growthCount} snapshot{growthCount === 1 ? '' : 's'}
+                    </span>
+                  </li>
+                )}
+                <li className="flex justify-between gap-2">
+                  <span className="text-text">files</span>
+                  <span>
+                    {artifacts.length} artifact{artifacts.length === 1 ? '' : 's'}
+                  </span>
+                </li>
+                {artifacts.slice(0, 6).map((a, i) => {
+                  const path = (a.meta?.path as string) || a.filename || `file-${i + 1}`;
+                  return (
+                    <li key={a.id} className="flex justify-between gap-2 pl-3">
+                      <span className="truncate">{path}</span>
+                      <span className="shrink-0">{formatBytes(Number(a.size) || 0)}</span>
+                    </li>
+                  );
+                })}
+                {artifacts.length > 6 && <li className="pl-3">+ {artifacts.length - 6} more</li>}
+              </ul>
+            </PaneSection>
+          </PaneOptions>
 
           {!installable && <PrivateBackupDescription />}
           <div className="flex flex-col gap-1.5">
