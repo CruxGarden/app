@@ -20,7 +20,7 @@ Examples:
   crux --folder ./my-project call read_file '{"path":"index.html"}'
   printf '%s' '{"title":"New idea","template":"blank"}' | crux call plant_crux - --json
 
-Enable access in Crux Garden → Settings → Agents. The app must be running.
+Create a connection in Crux Garden → Settings → Agents and set CRUX_AGENT_TOKEN. The app must be running.
 --profile is the desktop userData directory. The installed launcher selects its profile.
 --timeout SECONDS bounds a request (default 300, including in-app approval time).
 JSON output: {ok:true,result:...} or {ok:false,error:{code,message}}.
@@ -61,8 +61,7 @@ function parse(argv: string[]) {
       if (!value) throw new CliError('USAGE', `${arg} requires a value`, 2);
       if (arg === '--timeout') timeout = Number(value);
       else if (arg === '--folder') config = resolve(value, '.crux', 'mcp.json');
-      else if (arg === '--profile')
-        config = resolve(value, 'garden-agent-host', '.crux', 'mcp.json');
+      else if (arg === '--profile') config = resolve(value, 'garden-agent-host', 'host.json');
       else config = resolve(value);
     } else if (arg.startsWith('--') && arg !== '--help') {
       throw new CliError('USAGE', `Unknown option: ${arg}`, 2);
@@ -106,6 +105,8 @@ async function main() {
   let selected: { url: string; token: string };
   try {
     selected = JSON.parse(readFileSync(config, 'utf8'));
+    if (!selected.token && process.env.CRUX_AGENT_TOKEN)
+      selected.token = process.env.CRUX_AGENT_TOKEN;
     const url = new URL(selected.url);
     if (
       url.protocol !== 'http:' ||
@@ -119,7 +120,7 @@ async function main() {
   } catch {
     throw new CliError(
       'HOST_OFF',
-      'No valid local Agent Host config. Enable access in Settings → Agents, or select --folder / --profile / --config.',
+      'No valid local Agent Host config or token. Create a connection in Settings → Agents and set CRUX_AGENT_TOKEN, or select --folder / --config.',
     );
   }
   let session: string | null = null;

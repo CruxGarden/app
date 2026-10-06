@@ -1,3 +1,5 @@
+import SetupProjectGuide from './SetupProjectGuide';
+import type { SetupNeed } from '@/components/setup/setup-plan';
 import FirstProjectGuide from './FirstProjectGuide';
 import type { ContentModel } from '@/templates';
 import { requiresLivePreview, settingsPathOf } from '@/lib/preview-decision';
@@ -165,6 +167,7 @@ function AdvancedEditor() {
 export default function EditorPane() {
   const advancedMode = useAdvancedMode();
   const crux = useCruxStore((s) => s.crux);
+  const setupGuide = crux?.meta?.setupGuide as { need: SetupNeed; dismissed?: boolean } | undefined;
   const viewingHistory = useCruxStore((s) => !!s.viewingSnapshotId);
   const historicalNotebook = useCruxStore((s) => isEmbeddedApp(s.crux) && !!s.viewingSnapshotId);
   const exitSnapshot = useCruxStore((s) => s.exitSnapshotView);
@@ -199,6 +202,15 @@ export default function EditorPane() {
   };
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="workshop-view" data-view={view}>
+      {!viewingHistory &&
+        setupGuide &&
+        !(crux?.meta?.contentModel as ContentModel | undefined)?.guide && (
+          <SetupProjectGuide
+            key={crux!.id}
+            need={setupGuide.need}
+            dismissed={setupGuide.dismissed}
+          />
+        )}
       {!viewingHistory && (crux?.meta?.contentModel as ContentModel | undefined)?.guide && (
         <FirstProjectGuide
           key={crux!.id}

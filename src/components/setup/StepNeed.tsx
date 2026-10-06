@@ -35,7 +35,7 @@ export default function StepNeed() {
                   name="setup-need"
                   value={choice.id}
                   checked={selected}
-                  onChange={() => set({ need: choice.id, aiSeeded: false })}
+                  onChange={() => set({ need: choice.id, aiSeeded: false, templateId: null })}
                   className="sr-only"
                 />
                 <span className="flex items-start gap-3">

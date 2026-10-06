@@ -27,6 +27,13 @@ test('an unrelated renderer with the preload cannot read or change the Garden', 
       const api = window.electronAPI!;
       const calls = [
         () => api.desktop.config(),
+        () => api.localai.hardware(),
+        () => api.agentHost.listConnections(),
+        () =>
+          api.agentHost.createConnection({ name: 'Untrusted', kind: 'other', scopes: ['read'] }),
+        () => api.agentHost.updateConnection('untrusted', { scopes: ['run'] }),
+        () => api.agentHost.rotateConnection('untrusted'),
+        () => api.agentHost.revokeConnection('untrusted'),
         () => api.desktop.readMemory(),
         () => api.desktop.appendMetricsReport('report.md', 'Untrusted'),
         () => api.desktop.writeMemory('Untrusted', null),

@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test';
 
 const gateSpecs = [
   '**/setup-wizard.spec.ts',
+  '**/setup-environment.spec.ts',
+  '**/agent-connections.spec.ts',
   '**/advanced-mode.spec.ts',
   '**/journeys/*.spec.ts',
   '**/ipc-security.spec.ts',

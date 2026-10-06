@@ -436,7 +436,13 @@ export interface LocalAiEndpoint {
   models: string[];
 }
 
+export interface LocalModelHardware {
+  memoryBytes: number;
+  unifiedMemory: boolean;
+  gpuMemoryBytes: number | null;
+}
 export interface LocalAiBridge {
+  hardware(): Promise<LocalModelHardware>;
   /** Probe localhost for running local inference servers and their models. */
   detect(): Promise<LocalAiEndpoint[]>;
 }
@@ -734,7 +740,26 @@ export interface AgentHostResponse {
   error?: string;
 }
 
+export interface AgentConnectionSecret {
+  stdio?: { command: string; args: string[] };
+  connection: import('./agent-connections').AgentConnection;
+  token: string;
+  url: string;
+}
 export interface AgentHostBridge {
+  listConnections(): Promise<import('./agent-connections').AgentConnection[]>;
+  createConnection(
+    input: import('./agent-connections').NewAgentConnection,
+  ): Promise<AgentConnectionSecret>;
+  updateConnection(
+    id: string,
+    patch: { name?: string; scopes?: import('./agent-scopes').AgentScope[] },
+  ): Promise<import('./agent-connections').AgentConnection>;
+  rotateConnection(id: string): Promise<AgentConnectionSecret>;
+  revokeConnection(id: string): Promise<void>;
+  onConnectionsChanged(
+    cb: (connections: import('./agent-connections').AgentConnection[]) => void,
+  ): () => void;
   installCli(): Promise<{ path: string; instructions: string }>;
   list(): Promise<AgentHostServer[]>;
   /** Start (or restart) the crux's server with a fresh token. */

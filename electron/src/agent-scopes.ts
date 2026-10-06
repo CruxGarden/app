@@ -21,7 +21,7 @@ export const SCOPE_LABELS: Record<AgentScope, { label: string; detail: string }>
   },
   edit: {
     label: 'Create and edit',
-    detail: 'Make new Cruxes, change files, take snapshots and export.',
+    detail: 'Make new Cruxes, change files, mark Growth versions and export.',
   },
   run: {
     label: 'Run collaborators and commands',

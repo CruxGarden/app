@@ -1,3 +1,4 @@
+import { addGardenConnection } from './connection-helpers';
 import { enableAdvancedMode } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { execFile } from 'node:child_process';
@@ -5,6 +6,8 @@ import { join, resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 // Execute the shipped entrypoint under Electron's bundled Node runtime.
 test('desktop CLI discovers tools, operates on real Cruxes and retains app approvals', async () => {
@@ -16,12 +19,13 @@ test('desktop CLI discovers tools, operates on real Cruxes and retains app appro
   );
   const executable = await app.evaluate(() => process.execPath);
   const profile = join(dir, 'userData');
+  let token = '';
   const cli = (args: string[], input?: string) =>
     new Promise<{ code: number; output: any }>((resolveResult) => {
       const child = execFile(
         executable,
         [resolve('dist/desktop-cli.js'), '--profile', profile, '--json', ...args],
-        { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } },
+        { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', CRUX_AGENT_TOKEN: token } },
         (error, stdout) => {
           resolveResult({ code: error ? Number(error.code) || 1 : 0, output: JSON.parse(stdout) });
         },
@@ -35,24 +39,12 @@ test('desktop CLI discovers tools, operates on real Cruxes and retains app appro
     await enterGarden(page);
     await enableAdvancedMode(page);
     await page.keyboard.press('ControlOrMeta+,');
-    await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
-    const connectBounds = await page.getByTestId('agents-connect').boundingBox();
-    for (const name of ['Claude Code', 'Codex', 'Cursor', 'stdio']) {
-      const bounds = await page
-        .getByTestId('agents-connect')
-        .getByRole('button', { name, exact: true })
-        .boundingBox();
-      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(
-        connectBounds!.x + connectBounds!.width,
-      );
-    }
+    token = (await addGardenConnection(page, 'CLI test')).token;
     await page.screenshot({
       path: test.info().outputPath('small-window-settings.png'),
       mask: [page.getByTestId('agents-snippet')],
     });
-    await expect
-      .poll(() => existsSync(join(profile, 'garden-agent-host/.crux/mcp.json')))
-      .toBe(true);
+    await expect.poll(() => existsSync(join(profile, 'garden-agent-host/host.json'))).toBe(true);
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     expect((await cli(['status'])).code).toBe(0);
     const discovery = await cli(['tools']);
@@ -77,6 +69,27 @@ test('desktop CLI discovers tools, operates on real Cruxes and retains app appro
     ).toBe(0);
     const { projectFolder } = await storedCrux(page, id);
     expect(readFileSync(join(projectFolder, 'cli.txt'), 'utf8')).toBe('Written through app tools');
+    // An exported Garden token must not replace a selected Crux's own credential.
+    await page.evaluate((cruxId) => window.electronAPI!.agentHost.enable(cruxId), id);
+    expect((await cli(['--folder', projectFolder, 'status'])).code).toBe(0);
+    for (const [config, tool] of [
+      [join(profile, 'garden-agent-host/host.json'), 'plant_crux'],
+      [join(projectFolder, '.crux/mcp.json'), 'write_file'],
+    ]) {
+      const client = new Client({ name: 'stdio token acceptance', version: '1' });
+      try {
+        await client.connect(
+          new StdioClientTransport({
+            command: executable,
+            args: [resolve('dist/mcp-stdio.js'), '--config', config!],
+            env: { ELECTRON_RUN_AS_NODE: '1', CRUX_AGENT_TOKEN: token },
+          }),
+        );
+        expect((await client.listTools()).tools.map((item) => item.name)).toContain(tool);
+      } finally {
+        await client.close();
+      }
+    }
     const deletion = call('delete_file', { path: 'cli.txt' });
     await expect(page.getByRole('button', { name: 'Keep', exact: true }).first()).toBeVisible();
     await page.getByRole('button', { name: 'Keep', exact: true }).first().click();

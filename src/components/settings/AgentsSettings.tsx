@@ -1,4 +1,4 @@
-import { GARDEN_HOST_ID } from '@/ai/garden-access';
+import AgentConnections from './AgentConnections';
 import SettingsSection from './SettingsSection';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Toggle } from '@/components/ui';
@@ -63,17 +63,15 @@ export default function AgentsSettings() {
       aside={
         <span className="text-xxs font-mono text-text-muted">
           {servers.length === 0
-            ? 'no servers running'
-            : `${servers.length} server${servers.length === 1 ? '' : 's'} running`}
+            ? 'no per-Crux servers running'
+            : `${servers.length} per-Crux server${servers.length === 1 ? '' : 's'} running`}
         </span>
       }
     >
       <div className="flex flex-col gap-3 text-xs">
         <p className="text-text-muted">
-          Bring your own agent. Choose whole garden access or switch on individual Cruxes. Each
-          connection gets its own MCP server on this machine (127.0.0.1 only) that Claude Code,
-          Codex, Cursor or any MCP client can connect to — the same tools the built-in collaborator
-          has.
+          Bring your own agent. Create a named connection with permissions across your Garden, or
+          switch on an individual Crux. Connections use MCP on this computer (127.0.0.1 only).
         </p>
 
         <div className="rounded-card border border-border p-3 flex flex-col gap-2">
@@ -100,8 +98,8 @@ export default function AgentsSettings() {
             </p>
           )}
           <p className="text-text-muted">
-            Installs in your home folder’s .local/bin. Existing commands are preserved. Whole garden
-            access enables <code>crux list</code>; use{' '}
+            Installs in your home folder’s .local/bin. Existing commands are preserved. A named
+            connection with Read permission enables <code>crux list</code>; use{' '}
             <code>crux --folder /path/to/project tools --json</code> for a single Crux.
           </p>
         </div>
@@ -121,39 +119,7 @@ export default function AgentsSettings() {
           or versioned, and changes every time you switch a crux on.
         </div>
 
-        <div
-          className="rounded-[var(--radius-sm)] border border-border px-3"
-          data-testid="agents-garden-access"
-        >
-          <p className="text-text-muted pt-3">
-            Whole garden access lets an agent create and open Cruxes, use their creative tools, run
-            collaborators, change Moods, search, snapshot and export. Publishing and file deletion
-            keep their in-app approvals. Garden actions appear in the Keeper’s conversation list
-            under the connected agent’s name. This connection has its own token, stored in your
-            desktop profile. Switch it off to revoke access.
-          </p>
-          <ul>
-            <CruxRow
-              crux={{ id: GARDEN_HOST_ID, title: 'Whole garden', slug: 'garden' }}
-              server={running.get(GARDEN_HOST_ID) ?? null}
-              busy={busy === GARDEN_HOST_ID}
-              expanded={open === GARDEN_HOST_ID}
-              onToggleExpanded={() => setOpen(open === GARDEN_HOST_ID ? null : GARDEN_HOST_ID)}
-              onSwitch={(on) =>
-                run(GARDEN_HOST_ID, async () => {
-                  if (on) {
-                    await agentHost.enable(GARDEN_HOST_ID);
-                    setOpen(GARDEN_HOST_ID);
-                  } else {
-                    await agentHost.disable(GARDEN_HOST_ID);
-                    setOpen(null);
-                  }
-                })
-              }
-              onRegenerate={() => run(GARDEN_HOST_ID, () => agentHost.regenerate(GARDEN_HOST_ID))}
-            />
-          </ul>
-        </div>
+        <AgentConnections />
 
         {error && (
           <p role="alert" className="text-error">

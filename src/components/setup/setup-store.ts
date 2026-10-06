@@ -37,6 +37,8 @@ export interface SetupChoices {
   moodId: string | null;
   /** Worn when the wizard opened, for Keep and cancel. */
   moodAtStart: string | null;
+  startKind: 'guided' | 'template' | 'empty' | null;
+  templateId: string | null;
   cruxTitle: string;
   /** The person typed the name; the suggestion stops naming it. */
   cruxTitleEdited: boolean;
@@ -91,6 +93,8 @@ export function initialChoices(start: SetupStart): SetupChoices {
     aiSeeded: false,
     moodId: null,
     moodAtStart: start.moodAtStart,
+    startKind: null,
+    templateId: null,
     cruxTitle: '',
     cruxTitleEdited: false,
     wantsCrux: false,

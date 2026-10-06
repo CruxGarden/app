@@ -1,3 +1,4 @@
+import { setupWorkspaceLayout, startingActivity, type StartKind } from './setup-workspace';
 import { SettingsKey } from '@/lib/constants';
 import { Capability, can } from '@/lib/platform';
 import { getSetting, setSetting } from '@/services/settings';
@@ -208,23 +209,81 @@ function collaborationWidth(templateId: string): number | undefined {
  * first-home-page path (its own walkthrough); everything else is made the way
  * Add Crux makes it.
  */
-export async function createFirstCrux(entry: CatalogEntry, title: string): Promise<string> {
+export async function createFirstCrux(
+  entry: CatalogEntry,
+  title: string,
+  options?: {
+    mode?: SetupMode;
+    need: SetupNeed | null;
+    advancedMode: boolean;
+    startKind: StartKind;
+  },
+): Promise<string> {
+  const activity = startingActivity(entry.id, options?.need ?? null);
+  const layout = options
+    ? setupWorkspaceLayout({
+        ...options,
+        need: entry.id === 'blank' ? options.need : activity,
+        aiEnabled: getSetting(SettingsKey.AiEnabled) === 'true',
+        width: window.innerWidth,
+      })
+    : undefined;
   const gardenId = captureGardenId();
   const name = title.trim();
-  if (entry.id === HOME_PAGE_TEMPLATE && can(Capability.Build)) {
+  if (entry.id === HOME_PAGE_TEMPLATE && can(Capability.Build) && options?.mode !== 'again') {
     const { seedWelcomeCrux } = await import('@/services/welcome-crux');
     const id = await seedWelcomeCrux(gardenId, name || undefined);
-    useUIStore.getState().seedCruxLayout(id, 22);
+    if (options) {
+      const { getServices } = await import('@/services');
+      const crux = await getServices().crux.findById(id);
+      await getServices().crux.update(id, {
+        meta: { ...crux.meta, setupStartKind: options.startKind },
+      });
+    }
+    useUIStore.getState().seedCruxLayout(id, 22, layout);
     return cruxPath({ id, kind: 'webapp' });
   }
   const [{ createCruxStore }, { applyTemplateToCrux }] = await Promise.all([
     import('@/stores/cruxStore'),
     import('@/services/crux-create'),
   ]);
-  const crux = await createCruxStore()
-    .getState()
-    .createCrux(name || entry.label, gardenId);
-  if (entry.id !== 'blank') await applyTemplateToCrux(crux, entry.id, entry.kind as CruxKind);
-  useUIStore.getState().seedCruxLayout(crux.id, collaborationWidth(entry.id));
+  const store = createCruxStore();
+  const crux = await store.getState().createCrux(name || entry.label, gardenId);
+  const made =
+    entry.id !== 'blank'
+      ? (await applyTemplateToCrux(crux, entry.id, entry.kind as CruxKind)).crux
+      : crux;
+  if (options) {
+    const { getServices } = await import('@/services');
+    await getServices().crux.update(crux.id, {
+      meta: {
+        ...made.meta,
+        setupStartKind: options.startKind,
+        ...(options.startKind === 'guided' ? { setupGuide: { need: activity } } : {}),
+      },
+    });
+  }
+  useUIStore.getState().seedCruxLayout(crux.id, collaborationWidth(entry.id), layout);
   return inGarden(`/c/${crux.id}`, gardenId);
+}
+
+export async function setupStartingPoints(need: SetupNeed | null): Promise<CatalogEntry[]> {
+  const [{ templateCatalog }, { isToolAvailable }, { needChoice }] = await Promise.all([
+    import('@/components/garden/NewCruxModal'),
+    import('@/services/crux-tools/registry'),
+    import('./setup-plan'),
+  ]);
+  const preferred = needChoice(need ?? 'exploring')?.templates ?? [];
+  return templateCatalog()
+    .filter(
+      (entry) =>
+        entry.id !== 'garden' &&
+        isToolAvailable(entry.id) &&
+        (!entry.desktopOnly || can(Capability.Build)),
+    )
+    .sort((a, b) => {
+      const rank = (id: string) =>
+        preferred.includes(id) ? preferred.indexOf(id) : preferred.length;
+      return rank(a.id) - rank(b.id);
+    });
 }

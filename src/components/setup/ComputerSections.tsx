@@ -1,28 +1,23 @@
+import { rankLocalModels } from './local-model-fit';
+import type { LocalModelHardware } from '../../../electron/src/bridge';
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Toggle } from '@/components/ui';
-import { GARDEN_HOST_ID } from '@/ai/garden-access';
+import { Button, Select } from '@/components/ui';
+import AgentConnections from '@/components/settings/AgentConnections';
 import { setDefaultModel } from '@/ai/keys';
 import { PROVIDERS } from '@/ai/providers';
 import { detectLocalEndpoints, isToolCapableLocalModel, sortLocalModels } from '@/ai/local';
 import { SettingsKey } from '@/lib/constants';
-import type { AgentHostServer, LocalAiEndpoint } from '@/lib/platform';
+import type { LocalAiEndpoint } from '@/lib/platform';
 import type { AgentStatus } from '../../../electron/src/bridge';
 import { useSetting } from '@/hooks/useSetting';
 import { agentStatus } from '@/services/agent-provider';
-import { agentHost } from '@/services/agent-host';
 import { openWeb } from '@/services/desktop';
-import { ConnectPanel, CopyButton } from '@/components/settings/AgentsSettings';
+import { CopyButton } from '@/components/settings/AgentsSettings';
 import SetupSection from './SetupSection';
 import { toast } from '@/stores/toastStore';
 import { useSetupWizard } from './setup-store';
 import { WINDOWS_PATH_LINE, pathLine } from './setup-plan';
-import {
-  LM_STUDIO_URL,
-  OLLAMA_DOWNLOAD_URL,
-  RECOMMENDED_LOCAL_MODEL,
-  formatBytes,
-  formatTimeLeft,
-} from './ollama-pull';
+import { LM_STUDIO_URL, OLLAMA_DOWNLOAD_URL, formatBytes, formatTimeLeft } from './ollama-pull';
 import {
   cancelRecommendedDownload,
   startRecommendedDownload,
@@ -40,7 +35,31 @@ export function LocalModelsSection({ open, onOpen, onLater }: SectionProps) {
   const set = useSetupWizard((s) => s.set);
   const defaultModel = useSetting(SettingsKey.DefaultModel);
   const [endpoints, setEndpoints] = useState<LocalAiEndpoint[] | null>(null);
-  const { pulling, progress, secondsLeft, error, revision } = useLocalDownload();
+  const {
+    pulling,
+    model: downloading,
+    progress,
+    secondsLeft,
+    error,
+    revision,
+  } = useLocalDownload();
+  const [hardware, setHardware] = useState<LocalModelHardware | null>(null);
+  const [selection, setSelection] = useState('');
+  useEffect(() => {
+    let live = true;
+    void window.electronAPI?.localai
+      .hardware()
+      .then((value) => {
+        if (live) setHardware(value);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  const ranked = rankLocalModels(hardware);
+  const recommended = ranked.find((m) => m.name === selection) ?? ranked[0]!;
+  const activeModel = pulling && downloading ? downloading : recommended;
   const detect = useCallback(async () => {
     setEndpoints(await detectLocalEndpoints(true));
   }, []);
@@ -74,7 +93,7 @@ export function LocalModelsSection({ open, onOpen, onLater }: SectionProps) {
             ? `${(ollama ?? lmstudio)!.name} is running · no suitable model yet`
             : 'Not found on this computer';
 
-  const total = progress?.total || RECOMMENDED_LOCAL_MODEL.approxBytes;
+  const total = progress?.total || activeModel.approxBytes;
   const percent = progress?.fraction != null ? Math.round(progress.fraction * 100) : null;
 
   return (
@@ -89,8 +108,8 @@ export function LocalModelsSection({ open, onOpen, onLater }: SectionProps) {
       onLater={onLater}
     >
       <p className="text-xs text-text-muted">
-        Free and private: nothing you make leaves your computer. Needs a recent computer with plenty
-        of memory, and replies are slower than online collaborators.
+        Local inference runs on your computer. Downloads need an internet connection; tools you ask
+        a model to use can still access online services.
       </p>
 
       {endpoints !== null && !ollama && !lmstudio && (
@@ -110,6 +129,11 @@ export function LocalModelsSection({ open, onOpen, onLater }: SectionProps) {
         </div>
       )}
 
+      {(ollama || lmstudio) && (
+        <Button variant="ghost" size="xs" onClick={() => void detect()}>
+          Check again
+        </Button>
+      )}
       {usable.length > 0 && (
         <ul className="flex flex-col gap-1" aria-label="Models ready to use">
           {usable.map((u) => (
@@ -130,18 +154,42 @@ export function LocalModelsSection({ open, onOpen, onLater }: SectionProps) {
         </ul>
       )}
 
-      {ollama && !usable.some((u) => u.endpoint === ollama.name) && (
+      {
         <div className="flex flex-col gap-2" data-testid="setup-local-download">
+          <label className="text-xs flex flex-col gap-1">
+            What fits my computer?
+            <Select
+              aria-label="What fits my computer?"
+              value={recommended.name}
+              disabled={pulling}
+              onChange={(e) => setSelection(e.target.value)}
+            >
+              {ranked.map((model, i) => (
+                <option key={model.name} value={model.name}>
+                  {model.label} · {formatBytes(model.approxBytes)}
+                  {i === 0 && hardware && model.fit !== 'tight' ? ' · Suggested' : ''}
+                </option>
+              ))}
+            </Select>
+          </label>
           <p className="text-xs text-text-muted">
-            Ollama is running. Download {RECOMMENDED_LOCAL_MODEL.label}, a model that can make
-            changes in your Crux ({progress?.total ? '' : 'about '}
+            {hardware
+              ? `${formatBytes(hardware.memoryBytes)} RAM${hardware.unifiedMemory ? ' shared with GPU' : hardware.gpuMemoryBytes ? ` · ${formatBytes(hardware.gpuMemoryBytes)} GPU memory` : ' · GPU memory unknown'}`
+              : 'Memory detection unavailable.'}{' '}
+            · {recommended.detail}. These are estimates; context length and other apps affect fit.
+            Smaller models are faster but less capable.
+          </p>
+          <p className="text-xs text-text-muted">
+            {ollama ? 'Ollama is running. Download ' : 'After installing Ollama, download '}
+            {activeModel.label}, a model that can make changes in your Crux (
+            {progress?.total ? '' : 'about '}
             {formatBytes(total)}).
           </p>
           {pulling ? (
             <div className="flex flex-col gap-1.5">
               <div
                 role="progressbar"
-                aria-label={`Downloading ${RECOMMENDED_LOCAL_MODEL.label}`}
+                aria-label={`Downloading ${activeModel.label}`}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={percent ?? undefined}
@@ -172,14 +220,21 @@ export function LocalModelsSection({ open, onOpen, onLater }: SectionProps) {
             <Button
               size="sm"
               className="self-start"
-              onClick={() => void startRecommendedDownload()}
+              disabled={!ollama}
+              onClick={() => void startRecommendedDownload(recommended)}
             >
               {error ? 'Try the download again' : 'Download a recommended model'}
             </Button>
           )}
         </div>
-      )}
+      }
 
+      {!ollama && lmstudio && (
+        <p className="text-xs text-text-muted">
+          In LM Studio, find {recommended.label}, download and load it, start the local server, then
+          choose Check again.
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-xs text-error">
           {error}
@@ -287,17 +342,25 @@ const windows = () => typeof navigator !== 'undefined' && /Windows/i.test(naviga
 /** Your own agent from outside: whole-garden Agent access, the `crux` command, PATH, MCP config. */
 export function OutsideAgentSection({ open, onOpen, onLater }: SectionProps) {
   const set = useSetupWizard((s) => s.set);
-  const [servers, setServers] = useState<AgentHostServer[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [cli, setCli] = useState<{ path: string } | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [connectionCount, setConnectionCount] = useState(0);
   useEffect(() => {
-    void agentHost.list().then(setServers);
-    return agentHost.onChanged(setServers);
+    const bridge = window.electronAPI!.agentHost;
+    let live = true;
+    void bridge
+      .listConnections()
+      .then((list) => {
+        if (live) setConnectionCount(list.length);
+      })
+      .catch(() => {});
+    const off = bridge.onConnectionsChanged((list) => setConnectionCount(list.length));
+    return () => {
+      live = false;
+      off();
+    };
   }, []);
-  const server = servers.find((s) => s.cruxId === GARDEN_HOST_ID) ?? null;
-
   const run = async (work: () => Promise<unknown>) => {
     setBusy(true);
     setError('');
@@ -310,20 +373,16 @@ export function OutsideAgentSection({ open, onOpen, onLater }: SectionProps) {
     }
   };
 
-  const status = server
-    ? cli
-      ? 'Agent access on · crux command installed'
-      : 'Agent access on'
-    : cli
-      ? 'crux command installed · Agent access off'
-      : 'Off';
-
   return (
     <SetupSection
       id="outside"
       title="Your own agent from outside"
-      status={status}
-      ready={!!server}
+      status={
+        connectionCount
+          ? `${connectionCount} connection${connectionCount === 1 ? '' : 's'} ready`
+          : 'No connections yet'
+      }
+      ready={connectionCount > 0}
       open={open}
       onOpen={onOpen}
       onLater={onLater}
@@ -332,44 +391,7 @@ export function OutsideAgentSection({ open, onOpen, onLater }: SectionProps) {
         For people who use an agent in a terminal or editor: let it list, open and change your
         Cruxes. Publishing and deleting files still ask you first.
       </p>
-      <Toggle
-        label="Agent access to this garden"
-        checked={!!server}
-        disabled={busy}
-        onChange={(on) =>
-          void run(async () => {
-            if (on) {
-              await agentHost.enable(GARDEN_HOST_ID);
-              set({ aiUsed: true });
-              setExpanded(true);
-              toast('Agent access is on. Copy the connection below into your agent.');
-            } else {
-              await agentHost.disable(GARDEN_HOST_ID);
-              toast('Agent access is off. Connected agents were disconnected.');
-            }
-          })
-        }
-      />
-      {server && (
-        <div className="flex flex-col gap-2">
-          <Button
-            variant="ghost"
-            size="xs"
-            className="self-start"
-            aria-expanded={expanded}
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? 'Hide connection details' : 'Show connection details'}
-          </Button>
-          {expanded && (
-            <ConnectPanel
-              server={server}
-              busy={busy}
-              onRegenerate={() => void run(() => agentHost.regenerate(GARDEN_HOST_ID))}
-            />
-          )}
-        </div>
-      )}
+      <AgentConnections onReady={() => set({ aiUsed: true })} />
 
       <div className="flex flex-col gap-2 border-t border-border pt-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

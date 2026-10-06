@@ -381,6 +381,7 @@ const api: ElectronBridge = {
   },
 
   localai: {
+    hardware: () => ipcRenderer.invoke('localai:hardware'),
     detect: () => ipcRenderer.invoke('localai:detect'),
   },
 
@@ -547,6 +548,12 @@ const api: ElectronBridge = {
   },
   // Agent Host (ADR 0013): per-crux MCP servers in main; tool calls run here.
   agentHost: {
+    listConnections: () => ipcRenderer.invoke('agent-host:connections'),
+    createConnection: (input) => ipcRenderer.invoke('agent-host:connection-create', input),
+    updateConnection: (id, patch) => ipcRenderer.invoke('agent-host:connection-update', id, patch),
+    rotateConnection: (id) => ipcRenderer.invoke('agent-host:connection-rotate', id),
+    revokeConnection: (id) => ipcRenderer.invoke('agent-host:connection-revoke', id),
+    onConnectionsChanged: (cb) => subscribe('agent-host:connections-changed', cb),
     installCli: () =>
       ipcRenderer.invoke('agent-host:install-cli') as Promise<{
         path: string;

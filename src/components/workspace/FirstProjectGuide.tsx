@@ -41,8 +41,10 @@ export default function FirstProjectGuide({
   onPreview: () => void;
 }) {
   const advancedMode = useAdvancedMode();
-  const [expanded, setExpanded] = useState(!advancedMode);
   const crux = useCruxStore((state) => state.crux)!;
+  const [expanded, setExpanded] = useState(() =>
+    crux.meta?.setupStartKind ? crux.meta.setupStartKind === 'guided' : !advancedMode,
+  );
   const ui = useWorkspaceUIStore((state) => state);
   const key = `cruxgarden:first-project:${crux.id}`;
   const [step, setStep] = useState(() =>

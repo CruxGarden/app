@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { LocalModelsSection } from '@/components/setup/ComputerSections';
 import IncludedStatus from '@/components/chat/IncludedStatus';
 import { useIncludedAccess } from '@/services/included-access';
 import { ApiKeySetup, Toggle } from '@/components/ui';
@@ -11,6 +13,7 @@ import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import AgentMetricsSection from './AgentMetricsSection';
 
 export default function AiSettings() {
+  const [localOpen, setLocalOpen] = useState(false);
   const aiEnabled = useAiEnabled();
   const advancedMode = useAdvancedMode();
   const included = useIncludedAccess((s) => s.usage?.eligible);
@@ -38,6 +41,13 @@ export default function AiSettings() {
           ) : (
             <ApiKeySetup />
           ))}
+        {aiEnabled && advancedMode && (
+          <LocalModelsSection
+            open={localOpen}
+            onOpen={() => setLocalOpen(true)}
+            onLater={() => setLocalOpen(false)}
+          />
+        )}
         {aiEnabled && advancedMode && (
           <div className="border-t border-border pt-4">
             <h3 className="mb-3 font-display text-xs font-medium text-text">Metrics</h3>

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Modal, linkClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { requestUi } from '@/lib/ui-requests';
 import { useAuthStore } from '@/stores/authStore';
 import { gardenPath, useGardenContext } from '@/stores/gardenContext';
 import { toast } from '@/stores/toastStore';
@@ -68,11 +67,7 @@ const BY_HAND = {
 };
 const copyFor = (id: SetupStepId, noAi: boolean) => (id === 'ai' && noAi ? BY_HAND : STEPS[id]);
 
-type After =
-  | { kind: 'stay' }
-  | { kind: 'home' }
-  | { kind: 'crux'; entry: CatalogEntry }
-  | { kind: 'other' };
+type After = { kind: 'stay' } | { kind: 'home' } | { kind: 'crux'; entry: CatalogEntry };
 
 /**
  * The Setup wizard (ROADMAP § Setup wizard): first run by need → garden →
@@ -190,8 +185,14 @@ export default function SetupWizard({
         ? new Promise((resolve) => setTimeout(resolve, still ? 900 : 1600))
         : Promise.resolve();
       let to: string | null = null;
-      if (after.kind === 'crux') to = await createFirstCrux(after.entry, choices.cruxTitle);
-      else if (after.kind === 'home' || after.kind === 'other') {
+      if (after.kind === 'crux')
+        to = await createFirstCrux(after.entry, choices.cruxTitle, {
+          mode: choices.mode,
+          need: choices.need,
+          advancedMode: choices.advancedMode,
+          startKind: choices.startKind ?? (choices.advancedMode ? 'template' : 'guided'),
+        });
+      else if (after.kind === 'home') {
         const garden = useGardenContext.getState().garden;
         to = mode === 'first' || !garden ? '/home' : gardenPath(garden.id);
       }
@@ -200,7 +201,6 @@ export default function SetupWizard({
       onDone?.();
       if (after.kind === 'stay') toast('Saved. Your garden is up to date.');
       if (to) navigate(to, { replace: mode === 'first' });
-      if (after.kind === 'other') requestUi('new-crux');
     } catch (err) {
       useSetupWizard.getState().set({ planted: false });
       setError(
@@ -362,7 +362,6 @@ export default function SetupWizard({
               <StepFirstCrux
                 busy={busy}
                 onCreate={(entry) => void finish({ kind: 'crux', entry })}
-                onChooseOther={() => void finish({ kind: 'other' })}
                 onNotNow={() => void finish(mode === 'first' ? { kind: 'home' } : { kind: 'stay' })}
                 onSave={() => void finish({ kind: 'stay' })}
               />

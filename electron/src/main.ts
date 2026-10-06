@@ -19,6 +19,7 @@ import { downloadMedia } from './media-download';
 import { requestMedia } from './media-transport';
 import { transcodeMedia } from './media-transcode';
 import type { TranscodeRequest } from './bridge';
+import { AgentConnectionStore } from './agent-connections';
 import { lookupProjectCrux } from './native-storage';
 import type { AgentRuntimeDeps } from './agent-runtime';
 import { registerBrowserPanel } from './www-browser';
@@ -809,6 +810,9 @@ async function setupIpc() {
   // ── Local inference (Ollama / LM Studio, Phase A4) ──────────
   const { detectLocalAi } = require('./localai');
   fromGarden('localai:detect', () => detectLocalAi());
+  fromGarden('localai:hardware', () =>
+    import('./local-model-hardware').then((m) => m.localModelHardware()),
+  );
 
   // ── Project Folders (ADR 0001) ──────────────────────────────
   const desktopConfig = new DesktopConfig(app.getPath('userData'), launchSettings.gardenRoot);
@@ -1695,6 +1699,13 @@ async function setupIpc() {
     agentHostReady = ready === true;
   });
   agentHost = new AgentHost({
+    connections: new AgentConnectionStore(path.join(app.getPath('userData'), 'garden-agent-host'), {
+      log: debugLog,
+      onChanged: (connections) => {
+        for (const w of BrowserWindow.getAllWindows())
+          w.webContents.send('agent-host:connections-changed', connections);
+      },
+    }),
     gardenHostFolder: path.join(app.getPath('userData'), 'garden-agent-host'),
     lookupCrux,
     resolveKnownFolder: (folder: string) => projects.resolveKnownFolder(folder),
@@ -1727,6 +1738,39 @@ async function setupIpc() {
         .replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep),
       profile: app.getPath('userData'),
     }),
+  );
+  const connectionSetup = async (pending: Promise<import('./bridge').AgentConnectionSecret>) => ({
+    ...(await pending),
+    stdio: {
+      command: process.execPath,
+      args: [
+        path
+          .join(__dirname, 'mcp-stdio.js')
+          .replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep),
+        '--config',
+        path.join(app.getPath('userData'), 'garden-agent-host', 'host.json'),
+      ],
+    },
+  });
+  fromGarden('agent-host:connections', () => agentHost.listConnections());
+  fromGarden(
+    'agent-host:connection-create',
+    (_e: unknown, input: import('./agent-connections').NewAgentConnection) =>
+      connectionSetup(agentHost.createConnection(input)),
+  );
+  fromGarden(
+    'agent-host:connection-update',
+    (
+      _e: unknown,
+      id: string,
+      patch: { name?: string; scopes?: import('./agent-scopes').AgentScope[] },
+    ) => agentHost.updateConnection(id, patch),
+  );
+  fromGarden('agent-host:connection-rotate', (_e: unknown, id: string) =>
+    connectionSetup(agentHost.rotateConnection(id)),
+  );
+  fromGarden('agent-host:connection-revoke', (_e: unknown, id: string) =>
+    agentHost.revokeConnection(id),
   );
   fromGarden('agent-host:list', () => agentHost.list());
   fromGarden('agent-host:enable', (_e: any, cruxId: string) => agentHost.enable(cruxId));

@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Button, Input, SectionLabel, linkClass } from '@/components/ui';
+import { Button, Input, Select, SectionLabel, linkClass } from '@/components/ui';
 import { SproutIcon } from '@/components/ui/icons';
-import { moodName, suggestedStartingPoint } from './setup-actions';
+import { moodName, setupStartingPoints } from './setup-actions';
 import { HOME_PAGE_TEMPLATE, needChoice, type CatalogEntry, type SetupStepId } from './setup-plan';
 import { useSetupWizard } from './setup-store';
 
 /** The name a starting point suggests, as Add Crux and the first home page always used. */
 function defaultName(entry: CatalogEntry): string {
-  return entry.id === HOME_PAGE_TEMPLATE ? 'Hello, world' : entry.label;
+  return entry.id === HOME_PAGE_TEMPLATE
+    ? 'Hello, world'
+    : entry.id === 'blank'
+      ? 'My Crux'
+      : entry.label;
 }
 
 /**
@@ -18,35 +22,42 @@ function defaultName(entry: CatalogEntry): string {
 export default function StepFirstCrux({
   busy,
   onCreate,
-  onChooseOther,
   onNotNow,
   onSave,
 }: {
   busy: boolean;
   onCreate: (entry: CatalogEntry) => void;
-  onChooseOther: () => void;
   onNotNow: () => void;
   /** Again: apply the changes without making anything. */
   onSave: () => void;
 }) {
   const choices = useSetupWizard();
   const set = choices.set;
-  const [entry, setEntry] = useState<CatalogEntry | null | undefined>(undefined);
+  const [catalog, setCatalog] = useState<CatalogEntry[] | null>(null);
+  const startKind = choices.startKind ?? (choices.advancedMode ? 'template' : 'guided');
+  const entry =
+    catalog === null
+      ? undefined
+      : startKind === 'empty'
+        ? (catalog.find((e) => e.id === 'blank') ?? null)
+        : (catalog.find((e) => e.id === choices.templateId) ??
+          catalog.find((e) => e.id !== 'blank') ??
+          null);
   const [mood, setMood] = useState('');
   const offerCrux = choices.mode === 'first' || choices.wantsCrux;
 
   useEffect(() => {
     let live = true;
-    void suggestedStartingPoint(choices.need).then((found) => {
-      if (!live) return;
-      setEntry(found ?? null);
-      if (found && !useSetupWizard.getState().cruxTitleEdited)
-        set({ cruxTitle: defaultName(found) });
+    void setupStartingPoints(choices.need).then((found) => {
+      if (live) setCatalog(found.filter((e) => choices.advancedMode || e.id !== 'tool-starter'));
     });
     return () => {
       live = false;
     };
-  }, [choices.need, set]);
+  }, [choices.need, choices.advancedMode, set]);
+  useEffect(() => {
+    if (entry && !useSetupWizard.getState().cruxTitleEdited) set({ cruxTitle: defaultName(entry) });
+  }, [entry, set]);
   const moodId = choices.moodId ?? choices.moodAtStart;
   useEffect(() => {
     let live = true;
@@ -125,6 +136,44 @@ export default function StepFirstCrux({
           <p className="text-sm text-text-muted">Finding a good place to start…</p>
         ) : (
           <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1.5 text-sm">
+              How would you like to start?
+              <Select
+                aria-label="How would you like to start?"
+                value={startKind}
+                onChange={(e) =>
+                  set({ startKind: e.target.value as 'guided' | 'template' | 'empty' })
+                }
+              >
+                <option value="guided">Walk me through it</option>
+                <option value="template">Start with a template</option>
+                <option value="empty">Start with an empty Crux</option>
+              </Select>
+            </label>
+            {startKind !== 'empty' && catalog && (
+              <label className="flex flex-col gap-1.5 text-sm">
+                Starting point
+                <Select
+                  aria-label="Starting point"
+                  value={entry?.id ?? ''}
+                  onChange={(e) => set({ templateId: e.target.value })}
+                >
+                  {catalog
+                    .filter((e) => e.id !== 'blank')
+                    .map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.label}
+                      </option>
+                    ))}
+                </Select>
+              </label>
+            )}
+            <p className="text-xs text-text-muted">
+              {choices.advancedMode
+                ? 'Technical panels will open beside Workshop where useful.'
+                : 'Workshop gets the space to create, with guidance when you want it.'}{' '}
+              You can resize or change the panels at any time.
+            </p>
             {entry ? (
               <>
                 <div
@@ -133,7 +182,9 @@ export default function StepFirstCrux({
                   data-template={entry.id}
                 >
                   <SectionLabel tone="muted">Your first Crux</SectionLabel>
-                  <div className="mt-1 text-sm font-medium text-text">{entry.label}</div>
+                  <div className="mt-1 text-sm font-medium text-text">
+                    {entry.id === 'blank' ? 'Empty Crux' : entry.label}
+                  </div>
                   <p className="text-xs text-text-muted">{entry.description}</p>
                 </div>
                 <label className="flex flex-col gap-1.5">
@@ -148,7 +199,6 @@ export default function StepFirstCrux({
                       }
                     }}
                     maxLength={200}
-                    autoFocus
                   />
                 </label>
               </>
@@ -161,9 +211,6 @@ export default function StepFirstCrux({
                   Create &amp; open
                 </Button>
               )}
-              <Button variant="secondary" onClick={onChooseOther} disabled={busy}>
-                Choose something else
-              </Button>
               <Button variant="ghost" onClick={onNotNow} disabled={busy}>
                 Not now
               </Button>

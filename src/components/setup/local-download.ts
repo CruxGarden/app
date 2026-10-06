@@ -1,14 +1,9 @@
+import { LOCAL_MODEL_CHOICES, type LocalModelChoice } from './local-model-fit';
 import { create } from 'zustand';
 import { setDefaultModel } from '@/ai/keys';
 import { detectLocalEndpoints } from '@/ai/local';
 import { toast } from '@/stores/toastStore';
-import {
-  PullError,
-  RECOMMENDED_LOCAL_MODEL,
-  createRateMeter,
-  pullOllamaModel,
-  type PullProgress,
-} from './ollama-pull';
+import { PullError, createRateMeter, pullOllamaModel, type PullProgress } from './ollama-pull';
 import { useSetupWizard } from './setup-store';
 
 /**
@@ -18,6 +13,7 @@ import { useSetupWizard } from './setup-store';
  */
 interface LocalDownload {
   pulling: boolean;
+  model: LocalModelChoice | null;
   progress: PullProgress | null;
   secondsLeft: number | null;
   error: string;
@@ -27,6 +23,7 @@ interface LocalDownload {
 
 export const useLocalDownload = create<LocalDownload>(() => ({
   pulling: false,
+  model: null,
   progress: null,
   secondsLeft: null,
   error: '',
@@ -35,13 +32,15 @@ export const useLocalDownload = create<LocalDownload>(() => ({
 
 let controller: AbortController | null = null;
 
-export async function startRecommendedDownload(): Promise<void> {
+export async function startRecommendedDownload(
+  model: LocalModelChoice = LOCAL_MODEL_CHOICES[2]!,
+): Promise<void> {
   if (controller) return;
   controller = new AbortController();
   const meter = createRateMeter();
-  useLocalDownload.setState({ pulling: true, progress: null, secondsLeft: null, error: '' });
+  useLocalDownload.setState({ model, pulling: true, progress: null, secondsLeft: null, error: '' });
   try {
-    await pullOllamaModel(RECOMMENDED_LOCAL_MODEL.name, {
+    await pullOllamaModel(model.name, {
       signal: controller.signal,
       onProgress: (progress) => {
         meter.sample(progress.completed, Date.now());
@@ -52,9 +51,9 @@ export async function startRecommendedDownload(): Promise<void> {
       },
     });
     await detectLocalEndpoints(true);
-    await setDefaultModel(`ollama/${RECOMMENDED_LOCAL_MODEL.name}`);
+    await setDefaultModel(`ollama/${model.name}`);
     if (useSetupWizard.getState().active) useSetupWizard.getState().set({ aiUsed: true });
-    toast(`${RECOMMENDED_LOCAL_MODEL.label} is downloaded and ready to help in your new Cruxes.`);
+    toast(`${model.label} is downloaded and ready to help in your new Cruxes.`);
   } catch (err) {
     useLocalDownload.setState({
       error: err instanceof PullError ? err.message : 'The download stopped. Try again.',

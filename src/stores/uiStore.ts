@@ -148,7 +148,11 @@ export interface UIState {
   // ── Layout actions ──
 
   /** Start a new Crux with Collaboration beside its clean preview. */
-  seedCruxLayout: (cruxId: string, collaborationPercent?: number) => void;
+  seedCruxLayout: (
+    cruxId: string,
+    collaborationPercent?: number,
+    layout?: MosaicNode<PaneType>,
+  ) => void;
   /** Which panes this workspace offers: a Crux's, or a Garden Home's. */
   workspaceScope: WorkspaceScope;
   setActiveCrux: (id: string | null) => void;
@@ -792,7 +796,21 @@ export function createUIStore(cruxId?: string, scope: WorkspaceScope = 'crux') {
 
     // ── Layout actions ──
 
-    seedCruxLayout: (cruxId, collaborationPercent) => {
+    seedCruxLayout: (cruxId, collaborationPercent, layout) => {
+      if (layout) {
+        const panes = getMosaicLeaves(layout);
+        setSetting(
+          layoutKey(cruxId),
+          JSON.stringify({
+            paneOrder: DEFAULT_PANE_ORDER,
+            paneVisibility: Object.fromEntries(
+              DEFAULT_PANE_ORDER.map((p) => [p, panes.includes(p)]),
+            ),
+            mosaicLayout: layout,
+          }),
+        );
+        return;
+      }
       const visibility: Record<string, boolean> = {};
       for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
       // Two panes, and the rest arrive when they are wanted (UX pass,
