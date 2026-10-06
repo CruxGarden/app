@@ -103,3 +103,18 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
+
+      - name: Verify the public homepage serves this build
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error --compressed --max-time 20 \
+              https://crux.garden/ -o /tmp/crux-deployed-index.html && \
+              cmp -s dist/index.html /tmp/crux-deployed-index.html; then
+              echo "crux.garden serves the verified build at $RELEASE_SHA"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::crux.garden did not serve the uploaded build; inspect S3 and CloudFront"
+          exit 1
