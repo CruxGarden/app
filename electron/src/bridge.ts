@@ -856,9 +856,63 @@ export interface BrowserPanelBridge {
   onChange(callback: (state: BrowserPanelState) => void): () => void;
 }
 
+// ── deep links (ADR 0085) ───────────────────────────────────────────────────
+
+export type { DeepLink, DeepLinkKind } from './deep-link-grammar';
+
+/**
+ * `crux-garden://` links, already parsed and validated by main. Main queues a
+ * link that arrives before anyone listens (launch, reload) and delivers it
+ * when a subscriber says it is ready. Use `subscribeDeepLinks` in
+ * `app/src/services/deep-links.ts`: it holds the one bridge subscription per
+ * document and fans out, so a second direct subscriber here never steals a
+ * queued link.
+ */
+export interface DeepLinksBridge {
+  subscribe(callback: (link: import('./deep-link-grammar').DeepLink) => void): () => void;
+}
+
+// ── local disk use (ADR 0085) ───────────────────────────────────────────────
+
+/**
+ * Bytes this Garden keeps on this machine. Categories do not overlap and sum
+ * to `totalBytes`: projectFolders + blobStore + history + toolInstalls +
+ * other + cache. `gardenBytes` is everything kept (totalBytes − cacheBytes).
+ */
+export interface DiskUsageSummary {
+  /** Everything kept for this Garden: totalBytes minus the regenerable caches. */
+  gardenBytes: number;
+  /** Registered Project Folders (Main and Task copies), without their `.crux-recovery`. */
+  projectFoldersBytes: number;
+  /** The content-addressed Blob Store (current and historical content), without tool packages. */
+  blobStoreBytes: number;
+  /** The local SQLite database (edit, Growth and Task history metadata) plus recovery points. */
+  historyBytes: number;
+  /** Installed Crux Tools (folders and packages), the Runtime Store and requested native tool installs. */
+  toolInstallsBytes: number;
+  /** Chromium HTTP, code and GPU shader caches — what `clearCaches` can free. */
+  cacheBytes: number;
+  /** The rest: Garden Root files outside Project Folders, settings, logs, local storage. */
+  otherBytes: number;
+  totalBytes: number;
+  /** False when the walk hit its time/entry budget; numbers are then lower bounds. */
+  complete: boolean;
+  measuredAt: string;
+  roots: { garden: string; userData: string };
+}
+
 // ── the whole bridge ────────────────────────────────────────────────────────
 
 export interface ElectronBridge {
+  /** `Capability.DeepLinks`. */
+  deepLinks?: DeepLinksBridge;
+  /**
+   * `Capability.DiskUsage`. Measured off the main thread's critical path with
+   * a time budget and reused for 60 s; `fresh` measures again.
+   */
+  diskUsage?(options?: { fresh?: boolean }): Promise<DiskUsageSummary>;
+  /** `Capability.DiskUsage`. Clears only regenerable Chromium caches (ADR 0085). */
+  clearCaches?(): Promise<{ freedBytes: number }>;
   packageImports?: {
     pending(): Promise<{ id: string; name: string }[]>;
     read(id: string): Promise<Uint8Array>;

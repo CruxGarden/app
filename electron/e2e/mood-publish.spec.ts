@@ -55,6 +55,12 @@ test.describe('publish + discover moods (mocked API)', () => {
       await page.getByRole('button', { name: 'Save', exact: true }).click();
       await expect(page.getByRole('status').filter({ hasText: 'Saved "Sea Glass"' })).toBeVisible();
       await page.getByRole('button', { name: 'Share Sea Glass' }).click();
+      // Sharing asks Discoverable or link only (default: listed in Explore).
+      await page
+        .getByRole('dialog')
+        .filter({ hasText: 'Discoverable' })
+        .getByRole('button', { name: 'Share', exact: true })
+        .click();
       await expect(page.getByRole('status').filter({ hasText: 'Shared "Sea Glass"' })).toBeVisible({
         timeout: 60_000,
       });
@@ -97,6 +103,12 @@ test.describe('publish + discover moods (mocked API)', () => {
       const visitor = await fetch(`${api.url}/authors/tester/cruxes/${moodCrux!.slug}`);
       expect(visitor.status).toBe(404);
       await page.getByRole('button', { name: 'Share Sea Glass', exact: true }).click();
+      // Sharing asks Discoverable or link only (default: listed in Explore).
+      await page
+        .getByRole('dialog')
+        .filter({ hasText: 'Discoverable' })
+        .getByRole('button', { name: 'Share', exact: true })
+        .click();
       await expect(
         page.getByRole('status').filter({ hasText: 'Shared "Sea Glass"' }),
       ).toBeVisible();

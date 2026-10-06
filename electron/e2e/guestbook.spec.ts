@@ -54,7 +54,9 @@ test('Guestbook: added from the Share pane, signed in the preview, added by the 
       const share = page.getByTestId('pane-body-publish');
       await share.getByText('Optional enhancements', { exact: true }).click();
       await share.getByRole('button', { name: 'Add a guestbook', exact: true }).click();
-      await expect(share.getByRole('status')).toHaveText('Added to index.html.');
+      await expect(
+        share.getByRole('status').filter({ hasText: 'Added to index.html.' }),
+      ).toHaveText('Added to index.html.');
       await expect(share.getByText('On index.html')).toBeVisible();
       await expect.poll(() => existsSync(join(folder, 'guestbook.js'))).toBe(true);
       await expect

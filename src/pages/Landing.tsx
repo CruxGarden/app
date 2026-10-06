@@ -141,7 +141,8 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
           <TeaserTrack />
 
           {/* Out of the flow, so the panel and the player keep their distance. */}
-          <nav className="teaser-legal" aria-label="Legal">
+          <nav className="teaser-legal" aria-label="Plans and legal">
+            <a href="/plans">Plans</a>
             {LEGAL_PAGES.map((page) => (
               <a key={page.path} href={page.path}>
                 {page.label}

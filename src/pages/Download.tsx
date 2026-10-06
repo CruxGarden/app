@@ -94,8 +94,8 @@ export default function Download() {
             crux.garden when you’re ready.
           </p>
           <p className="text-sm text-text-muted">
-            You can personalize the home page without AI or an account. Sign in for publishing and
-            your plan’s included AI. No personal AI key is needed for included access.
+            You can personalize the home page without a collaborator or an account. Sign in for
+            publishing and your plan’s included collaboration — no key of your own needed.
           </p>
         </div>
         {status === 'loading' && <p role="status">Finding the latest installers…</p>}
@@ -164,7 +164,7 @@ export default function Download() {
           </p>
         </section>
         <a className={linkClass()} href="/plans">
-          See plans and included AI
+          Plans
         </a>
       </main>
       <PublicFooter className="pt-0 pb-10" />

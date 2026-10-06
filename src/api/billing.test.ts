@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, formatPlanPrice, isBillingUrl, type CatalogPlan } from './billing';
+import {
+  allowanceLines,
+  attentionAction,
+  formatMicrodollars,
+  formatPrice,
+  formatPlanPrice,
+  isBillingUrl,
+  offersTrial,
+  scheduledEnd,
+  taxLine,
+  type CatalogPlan,
+} from './billing';
 
 describe('formatPrice', () => {
   it('formats USD cents in en-US regardless of the runner locale', () => {
@@ -45,5 +56,76 @@ describe('plan price availability', () => {
     expect(
       formatPlanPrice({ plan: { id: 'free' }, prices: [] } as unknown as CatalogPlan, 'year'),
     ).toBe('Free');
+  });
+});
+
+describe('plan copy in plain units', () => {
+  const plan = (included: CatalogPlan['includedCollaboration']) => ({
+    includedCollaboration: included,
+  });
+  it('states the allowance in dollars and the thinking depth', () => {
+    expect(
+      allowanceLines(
+        plan({ fiveHourMicrodollars: 750_000, thirtyDayMicrodollars: 4_000_000, effort: 'medium' }),
+      ),
+    ).toEqual([
+      '$4 of included collaboration every 30 days, up to $0.75 in any 5 hours',
+      'Balanced thinking on every reply',
+    ]);
+    expect(
+      allowanceLines(
+        plan({ fiveHourMicrodollars: 2_000_000, thirtyDayMicrodollars: 8_000_000, effort: 'high' }),
+      )?.[1],
+    ).toBe('Deeper thinking on every reply');
+  });
+  it('says nothing for a plan without, or a server that does not report, an allowance', () => {
+    expect(allowanceLines(plan(null))).toBeNull();
+    expect(allowanceLines(plan(undefined))).toBeNull();
+  });
+  it('floors microdollars to cents so an allowance is never overstated', () => {
+    expect(formatMicrodollars(1_109_999)).toBe('$1.10');
+    expect(formatMicrodollars(-5)).toBe('$0');
+  });
+  it('words tax by the catalog behaviour and stays silent when unknown', () => {
+    expect(taxLine('inclusive')).toBe('Prices include tax.');
+    expect(taxLine('exclusive')).toBe('Prices plus applicable tax.');
+    expect(taxLine('automatic')).toBe('Prices plus applicable tax.');
+    expect(taxLine(null)).toBeNull();
+    expect(taxLine(undefined)).toBeNull();
+  });
+  it('offers a trial only when trials exist and the account is eligible', () => {
+    expect(offersTrial({ trialDays: 0 })).toBe(false);
+    expect(offersTrial({ trialDays: 14 })).toBe(true);
+    expect(offersTrial({ trialDays: 14 }, { trialEligible: false })).toBe(false);
+    expect(offersTrial({ trialDays: 14 }, { trialEligible: true })).toBe(true);
+    // An older server that does not say keeps the catalog's answer.
+    expect(offersTrial({ trialDays: 14 }, {})).toBe(true);
+  });
+  it('maps attention to the action that fixes it', () => {
+    expect(attentionAction({ kind: 'unpaid', message: 'x', action: 'portal' })).toEqual({
+      kind: 'portal',
+      label: 'Manage billing',
+    });
+    expect(
+      attentionAction({ kind: 'payment_incomplete', message: 'x', action: 'checkout' }),
+    ).toEqual({ kind: 'checkout', label: 'Choose a plan' });
+  });
+  it('opens hosted invoices and their PDFs, but nothing that merely looks like them', () => {
+    expect(isBillingUrl('https://invoice.stripe.com/i/acct_1/test_123')).toBe(true);
+    expect(isBillingUrl('https://pay.stripe.com/invoice/acct_1/test_123/pdf')).toBe(true);
+    expect(isBillingUrl('https://invoice.stripe.com.evil.example/')).toBe(false);
+  });
+
+  it('reads a scheduled end from endsAt, falling back to the period end', () => {
+    const me = {
+      plan: { id: 'gardener' } as never,
+      cancelAtPeriodEnd: true,
+      renewsAt: '2026-11-01T00:00:00Z',
+      endsAt: '2026-10-20T00:00:00Z',
+    };
+    expect(scheduledEnd(me)).toBe('2026-10-20T00:00:00Z');
+    expect(scheduledEnd({ ...me, endsAt: undefined })).toBe('2026-11-01T00:00:00Z');
+    expect(scheduledEnd({ ...me, cancelAtPeriodEnd: false })).toBeNull();
+    expect(scheduledEnd({ ...me, plan: { id: 'free' } as never })).toBeNull();
   });
 });

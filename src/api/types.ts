@@ -129,7 +129,6 @@ export interface CreateCruxDto {
   status?: CruxStatus;
   visibility?: CruxVisibility;
   discoverable?: boolean;
-  tags?: string[];
   meta?: Record<string, unknown>;
 }
 
@@ -143,7 +142,6 @@ export interface UpdateCruxDto {
   status?: CruxStatus;
   visibility?: CruxVisibility;
   discoverable?: boolean;
-  tags?: string[];
   meta?: Record<string, unknown>;
 }
 
@@ -189,6 +187,12 @@ export interface ChatMessage {
    * as the person.
    */
   origin?: 'check';
+  /**
+   * Left out of the shared conversation (CR06). A crux-level override in
+   * `CruxMeta.conversationExclusions` wins, so messages in immutable Growth
+   * segments can still be included or left out.
+   */
+  excludedFromPublish?: boolean;
 }
 
 /** Compact record of a finished Background Turn — the transcript's "Ran 3 steps · 2 snapshots". */
@@ -266,6 +270,10 @@ export interface CruxMeta {
   reveal?: Reveal;
   /** 5Ws configuration: where the Shelf lives in the Project Folder, and when it was last played. */
   game?: { shelfPath: string; lastRoundAt?: string };
+  /** Share "How was this made?" with the Crux (CR06). Off unless explicitly true. */
+  conversationPublished?: boolean;
+  /** Per-message share overrides keyed by `messageShareKey` (true = left out). Private. */
+  conversationExclusions?: Record<string, boolean>;
   [key: string]: unknown;
 }
 

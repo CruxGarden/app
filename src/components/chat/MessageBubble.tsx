@@ -7,6 +7,7 @@ import ToolCallRows from './ToolCallRows';
 import { getModelShortName } from '@/ai/providers';
 import MarkdownRenderer from './MarkdownRenderer';
 import MessageCopy from './MessageCopy';
+import { MessageShareMarker, MessageShareToggle } from './MessageShareToggle';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -164,7 +165,10 @@ export default function MessageBubble({
         data-role="user"
         {...(fromCheck ? { 'data-testid': 'check-message' } : {})}
       >
-        <MessageCopy content={message.content} className="mb-1.5" />
+        <div className="flex flex-col items-center mb-1.5">
+          <MessageShareToggle message={message} />
+          <MessageCopy content={message.content} />
+        </div>
         <div className="max-w-[82%] min-w-0">
           {authorName && (
             <div className="text-2xs font-mono text-chat-text-muted/(--tint-dense) mb-1 text-right">
@@ -178,6 +182,9 @@ export default function MessageBubble({
             )}
           >
             <p className="whitespace-pre-wrap">{message.content}</p>
+          </div>
+          <div className="text-right">
+            <MessageShareMarker message={message} />
           </div>
         </div>
         <UserAvatar message={message} fallbackUrl={avatarUrl} fallbackInitial={userInitial} />
@@ -228,6 +235,8 @@ export default function MessageBubble({
             </div>
           )}
           <MessageCopy content={message.content} className="first:-ml-1.5" />
+          <MessageShareToggle message={message} />
+          <MessageShareMarker message={message} />
         </div>
       </div>
     </div>

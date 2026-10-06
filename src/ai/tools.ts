@@ -1731,7 +1731,7 @@ async function toolGenerateImage(
       return formatToolError('generate_image', 'The image to edit was not found in this Crux.');
     reference = await artifactService.downloadBlob(source);
   }
-  const generated = await generateImageBlob(prompt, size, chatModel, reference, signal);
+  const generated = await generateImageBlob(prompt, size, chatModel, reference, signal, cruxId);
   if ('error' in generated)
     return `Error in generate_image: ${generated.error} Do not repeat generation automatically; explain the problem and wait for the user.`;
 
@@ -1782,6 +1782,8 @@ export async function generateImageBlob(
   chatModel?: string,
   reference?: Blob,
   signal?: AbortSignal,
+  /** Attributes an included image to its Crux. */
+  cruxId?: string,
 ): Promise<{ blob: Blob; provider: string } | { error: string }> {
   const { getApiKey } = await import('./keys');
   const { getProviderForModel } = await import('./providers');
@@ -1792,7 +1794,7 @@ export async function generateImageBlob(
     try {
       const result = await (
         await import('@/api/inference')
-      ).includedImage(prompt, size, reference, signal);
+      ).includedImage(prompt, size, reference, signal, cruxId);
       return { blob: result.blob, provider: 'included' };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Included images are unavailable.' };

@@ -12,6 +12,7 @@ import SyncSettings from '@/components/settings/SyncSettings';
 import UsageSettings from '@/components/settings/UsageSettings';
 import PlanSettings from '@/components/settings/PlanSettings';
 import DataSettings from '@/components/settings/DataSettings';
+import DiskUsage from '@/components/settings/DiskUsage';
 import DesktopSettings from '@/components/settings/DesktopSettings';
 import AiSettings from '@/components/settings/AiSettings';
 import AgentsSettings from '@/components/settings/AgentsSettings';
@@ -56,6 +57,7 @@ export default function Settings() {
         <>
           <DesktopSettings />
           <DataSettings />
+          <DiskUsage />
           <SyncSettings />
         </>
       ),

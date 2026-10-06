@@ -10,7 +10,8 @@ import { publicApi } from '@/api';
 import type { Crux, Artifact } from '@/api/types';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
-import MetadataContent from '@/components/workspace/MetadataContent';
+import PublicCruxAbout from '@/components/public/PublicCruxAbout';
+import { publicConversationState, publicTranscript } from '@/services/shared-conversation';
 import { canonicalUrl, usePageMeta } from '@/hooks/usePageMeta';
 import { metaDescription } from '@/lib/page-meta';
 import { publicCoverUrl } from '@/lib/public-cover';
@@ -51,18 +52,10 @@ export default function PublicCrux() {
   const [metadataOpen, setMetadataOpen] = useState(false);
 
   const hasMetadata = !!crux;
-  const transcript = Array.isArray(crux?.meta?.messages)
-    ? crux.meta.messages.filter(
-        (message) =>
-          message &&
-          typeof message.content === 'string' &&
-          ['user', 'assistant'].includes(message.role),
-      )
-    : [];
+  const transcript = publicTranscript(crux);
   const purpose =
     crux?.description ||
     (typeof crux?.meta?.summary?.purpose === 'string' ? crux.meta.summary.purpose : '');
-  const [visibleMessages, setVisibleMessages] = useState(6);
 
   // Download function: always from API for public pages
   const downloadBlob = useCallback(
@@ -83,7 +76,6 @@ export default function PublicCrux() {
     setState('loading');
     setCrux(null);
     setMetadataOpen(false);
-    setVisibleMessages(6);
     Promise.all([
       publicApi.getCruxBySlug(username, slug, controller.signal),
       publicApi.getArtifacts(username, slug, controller.signal),
@@ -172,69 +164,12 @@ export default function PublicCrux() {
         </div>
 
         {metadataOpen && crux && (
-          <aside
-            aria-label="About this creation"
-            className="w-full sm:w-[360px] sm:max-w-[42%] shrink-0 border-l border-border bg-bg overflow-y-auto p-4 space-y-5"
-          >
-            <div>
-              <h1 className="text-xl font-medium text-text break-words">
-                {crux.title || crux.slug}
-              </h1>
-              <Link to={`/${username}`} className="inline-block mt-2 text-sm text-accent">
-                By @{username?.replace(/^@/, '')}
-              </Link>
-              {purpose && (
-                <p className="mt-3 text-sm leading-relaxed text-text-muted whitespace-pre-wrap break-words">
-                  {purpose}
-                </p>
-              )}
-            </div>
-            <div className="rounded-[var(--radius)] border border-border p-3">
-              <p className="text-sm mb-2">Make a little place for your own idea.</p>
-              <a href="/docs/start/get-started/" className={buttonClass('secondary', 'sm')}>
-                Get started with Crux Garden
-              </a>
-            </div>
-            {!!transcript.length && (
-              <details>
-                <summary className="cursor-pointer text-sm font-medium">How this was made</summary>
-                <p className="mt-2 text-xs text-text-muted">
-                  The conversation this creator published with the project.
-                </p>
-                <ol className="mt-3 space-y-4">
-                  {transcript.slice(0, visibleMessages).map((message, index) => (
-                    <li key={index} className="text-sm">
-                      <p className="font-medium text-accent mb-1">
-                        {message.role === 'assistant' ? 'Collaborator' : 'Person'}
-                      </p>
-                      <p className="whitespace-pre-wrap break-words leading-relaxed">
-                        {message.content || 'Worked with project tools.'}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-                {visibleMessages < transcript.length && (
-                  <button
-                    className={buttonClass('secondary', 'sm', 'mt-3')}
-                    onClick={() => setVisibleMessages((count) => count + 6)}
-                  >
-                    Read more of the conversation
-                  </button>
-                )}
-              </details>
-            )}
-            <details>
-              <summary className="cursor-pointer text-sm text-text-muted">Project details</summary>
-              <MetadataContent
-                crux={crux}
-                summary={crux.meta?.summary}
-                authorName={username}
-                messages={transcript}
-                readOnly
-                tagLink={(tag) => `/explore?tag=${encodeURIComponent(tag)}`}
-              />
-            </details>
-          </aside>
+          <PublicCruxAbout
+            crux={crux}
+            username={username || ''}
+            transcript={transcript}
+            conversation={publicConversationState(crux.meta, transcript.length)}
+          />
         )}
       </div>
     </div>

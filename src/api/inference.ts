@@ -21,6 +21,8 @@ export interface IncludedUsage {
   recentRequests: {
     id: string;
     model: string;
+    /** Absent on an older server. */
+    kind?: 'chat' | 'image';
     status: string;
     createdAt: string;
     allowancePercent: number | null;
@@ -30,13 +32,48 @@ export interface IncludedUsage {
   uncertainRequests: number;
   activeRequests: number;
   tokens: { input: number; output: number; cacheRead: number; cacheWrite: number };
+  /**
+   * Whether the next request fits, for a conversation of `contextTokens`.
+   * `fits` false: requests pause. `fullLengthFits` false: replies are shortened.
+   * Absent on an older server.
+   */
+  nextRequest?: {
+    contextTokens: number | null;
+    minimumMicrodollars: number;
+    fits: boolean;
+    fullLengthFits: boolean;
+  };
+  /** Spend in the 30-day window by Crux and kind; a null cruxId is unattributed. */
+  byCrux?: IncludedSpend[];
 }
-export async function includedUsage(): Promise<IncludedUsage> {
-  return (await client.get<IncludedUsage>('/inference/usage')).data;
+export interface IncludedSpend {
+  cruxId: string | null;
+  kind: 'chat' | 'image';
+  microdollars: number;
+  requests: number;
+}
+/** `contextTokens`: the current conversation's size, so the answer covers the next turn. */
+export async function includedUsage(contextTokens?: number | null): Promise<IncludedUsage> {
+  const params =
+    typeof contextTokens === 'number' && contextTokens > 0
+      ? { contextTokens: Math.round(contextTokens) }
+      : undefined;
+  return (await client.get<IncludedUsage>('/inference/usage', params ? { params } : undefined))
+    .data;
+}
+
+/** Only a Crux id goes in the attribution header; anything else is dropped. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const CRUX_ID_HEADER = 'x-crux-id';
+export function cruxIdHeader(cruxId: string | null | undefined): Record<string, string> {
+  return cruxId && UUID.test(cruxId) ? { [CRUX_ID_HEADER]: cruxId } : {};
 }
 /** JWT goes only to our API. Never forward an SDK API key or caller-supplied destination. */
 export const includedFetch: typeof fetch = async (_input, init) => {
   const requestId = crypto.randomUUID();
+  // The provider passes the Crux this conversation belongs to (languageModelFor);
+  // every other caller header is dropped.
+  const attribution = cruxIdHeader(new Headers(init?.headers).get(CRUX_ID_HEADER));
   const accountId = useAuthStore.getState().account?.id;
   const context = captureAuth();
   const accountToken = (await getStoredTokens(context)).accessToken;
@@ -53,6 +90,7 @@ export const includedFetch: typeof fetch = async (_input, init) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
         'X-Request-Id': requestId,
+        ...attribution,
       },
     });
   };
@@ -115,6 +153,7 @@ export async function includedImage(
   size: string,
   reference?: Blob,
   signal?: AbortSignal,
+  cruxId?: string,
 ) {
   const context = captureAuth();
   const accountId = useAuthStore.getState().account?.id;
@@ -134,7 +173,12 @@ export async function includedImage(
     const response = await client.post<{ image: string; mimeType: string; requestId: string }>(
       '/inference/images',
       { prompt, size, ...(image ? { image } : {}) },
-      { authContext: context, timeout: 310_000, signal, headers: { 'X-Request-Id': requestId } },
+      {
+        authContext: context,
+        timeout: 310_000,
+        signal,
+        headers: { 'X-Request-Id': requestId, ...cruxIdHeader(cruxId) },
+      },
     );
     assertAuthCurrent(context);
     if (accountId !== useAuthStore.getState().account?.id)

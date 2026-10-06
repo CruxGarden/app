@@ -42,6 +42,10 @@ export type {
   AgentHostRequest,
   AgentHostResponse,
   AgentToolDefinition,
+  DeepLink,
+  DeepLinkKind,
+  DeepLinksBridge,
+  DiskUsageSummary,
 } from '../../electron/src/bridge';
 
 declare global {
@@ -90,6 +94,10 @@ export enum Capability {
   ProjectRunner = 'projectRunner',
   /** The v2 features — gardens with people (GARDEN-MEMBERS-PLAN) — shown; a v1 release never has it. */
   V2 = 'v2',
+  /** `crux-garden://` links reach the app (ADR 0085); subscribe via services/deep-links. */
+  DeepLinks = 'deepLinks',
+  /** Local disk-use summary and regenerable-cache clearing (ADR 0085). */
+  DiskUsage = 'diskUsage',
 }
 
 function bridge(): Partial<ElectronBridge> | null {
@@ -142,6 +150,10 @@ export function can(capability: Capability): boolean {
       return !!api.containers;
     case Capability.ProjectRunner:
       return !!api.projectRunner;
+    case Capability.DeepLinks:
+      return !!api.deepLinks;
+    case Capability.DiskUsage:
+      return !!api.diskUsage && !!api.clearCaches;
   }
 }
 

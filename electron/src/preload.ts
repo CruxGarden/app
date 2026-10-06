@@ -46,6 +46,24 @@ const launch = JSON.parse(
 ) as Partial<Pick<ElectronBridge, 'config' | 'test'>>;
 
 const api: ElectronBridge = {
+  deepLinks: {
+    subscribe: (callback) => {
+      const handler = (_event: unknown, link: import('./bridge').DeepLink) => callback(link);
+      ipcRenderer.on('deep-link', handler);
+      // Listening is said out loud: main then delivers links that arrived first.
+      ipcRenderer.send('deep-link:listening');
+      return () => {
+        ipcRenderer.removeListener('deep-link', handler);
+        ipcRenderer.send('deep-link:unlisten');
+      };
+    },
+  },
+  diskUsage: (options) =>
+    ipcRenderer.invoke('disk-usage:summary', options?.fresh === true) as Promise<
+      import('./bridge').DiskUsageSummary
+    >,
+  clearCaches: () =>
+    ipcRenderer.invoke('disk-usage:clear-caches') as Promise<{ freedBytes: number }>,
   packageImports: {
     pending: () => ipcRenderer.invoke('package-imports:pending'),
     read: (id) => ipcRenderer.invoke('package-imports:read', id),

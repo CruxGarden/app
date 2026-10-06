@@ -22,6 +22,8 @@ const ExplorePage = lazy(() => import('@/pages/Explore').then((m) => ({ default:
 const StaticPublication = lazy(() => import('@/pages/StaticPublication'));
 const Legal = lazy(() => import('@/pages/Legal'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
+const Operator = lazy(() => import('@/pages/Operator'));
+const DeepLinkInstalls = lazy(() => import('@/components/explore/DeepLinkInstalls'));
 
 // When running inside a workspace preview iframe, the preview system injects
 // window.__CRUX_BASENAME__ so the router knows its path prefix
@@ -77,6 +79,15 @@ const router = createBrowserRouter(
       element: (
         <ErrorBoundary>
           <ExplorePage />
+        </ErrorBoundary>
+      ),
+    },
+    // Host moderation (CR08): unlisted; renders only for accounts the API calls admins.
+    {
+      path: '/operator',
+      element: (
+        <ErrorBoundary>
+          <Operator />
         </ErrorBoundary>
       ),
     },
@@ -143,6 +154,8 @@ const router = createBrowserRouter(
 registerNavigator((path) => router.navigate(path));
 
 const subscribeRoute = (changed: () => void) => router.subscribe(changed);
+const navigateTo = (to: string) => void router.navigate(to);
+const currentPathname = () => router.state.location.pathname;
 // Entry pages own the teaser material; keep the workspace provider mounted,
 // but give its canvas no work until the person enters the app.
 const onEntryPage = () =>
@@ -164,6 +177,10 @@ export default function App() {
         <PlasmaSurfaces />
         <Suspense fallback={null}>
           <RouterProvider router={router} />
+          {/* Website "Open in Crux Garden" links (ADR 0085): asks, never installs. */}
+          {!publicSite && (
+            <DeepLinkInstalls navigate={navigateTo} pathname={currentPathname} />
+          )}
         </Suspense>
       </PlasmaStage>
     </ErrorBoundary>

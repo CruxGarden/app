@@ -680,6 +680,13 @@
       "target": "session only (sessionStorage)",
       "preservation": "Dismissed update notice per kind and version; deliberately not persisted across launches or exported.",
       "status": "implemented"
+    },
+    {
+      "key": "cruxgarden:installedMoodSources",
+      "group": "installed-tools",
+      "target": "installation inventory (Mood source listing per installed Mood)",
+      "preservation": "Which published Mood each installed Mood came from and its revision, for update notices only; never sent, never exported; losing it only hides update notices.",
+      "status": "implemented"
     }
   ]
 }

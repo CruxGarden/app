@@ -5,6 +5,12 @@ import { apiBaseUrl } from '@/api/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input } from '@/components/ui';
 import { confirmDialog, alertDialog } from '@/stores/dialogStore';
+import { useInvoices } from '@/hooks/useInvoices';
+import { InvoiceList } from './Invoices';
+
+/** What closing does to a subscription, said once and the same everywhere. */
+export const CLOSING_PLAN_NOTE =
+  'Closing ends your plan now. Remaining time isn’t refunded. We’ll email your invoice links.';
 
 /** Kept separate from disconnecting: this is the server account's destructive lifecycle. */
 export default function CloseAccount() {
@@ -16,6 +22,7 @@ export default function CloseAccount() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const invoices = useInvoices(open ? account?.id : undefined);
   useEffect(() => {
     if (!open) return;
     let current = true;
@@ -51,7 +58,7 @@ export default function CloseAccount() {
     if (
       !(await confirmDialog({
         title: 'Permanently close this account?',
-        message: `Close ${account.email} at ${new URL(apiBaseUrl()).host}? Your local Garden stays on this device.`,
+        message: `Close ${account.email} at ${new URL(apiBaseUrl()).host}? ${CLOSING_PLAN_NOTE} Your local Garden stays on this device.`,
         confirmLabel: 'Close account',
         danger: true,
       }))
@@ -102,9 +109,17 @@ export default function CloseAccount() {
           <p>
             Closing <strong>{account?.email}</strong> at{' '}
             <strong>{new URL(apiBaseUrl()).host}</strong> removes your public Garden, shared sites,
-            tools and Moods, custom-domain routes and hosted backups. Active subscriptions stop
-            immediately.
+            tools and Moods, custom-domain routes and hosted backups.
           </p>
+          <p data-testid="close-account-plan-note">{CLOSING_PLAN_NOTE}</p>
+          {invoices.status === 'ready' && invoices.invoices.length > 0 && (
+            <div className="space-y-1" data-testid="close-account-invoices">
+              <p className="text-xs text-text-muted">
+                Download any invoices you need now; they may not be reachable here afterwards.
+              </p>
+              <InvoiceList invoices={invoices.invoices} />
+            </div>
+          )}
           <p>
             Your local Garden, files, history and installed tools stay on this device. Export any
             hosted Store data you want to keep first. Copies other people downloaded remain theirs.

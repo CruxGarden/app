@@ -26,6 +26,13 @@ import { alertDialog } from '@/stores/dialogStore';
 import { HomeIcon, LayoutIcon, PencilIcon } from '@/components/ui/icons';
 import { toolManifests, isToolAvailable } from '@/services/crux-tools/registry';
 import { useInstalledTools, forgetInstalledTool } from '@/services/crux-tools/installed';
+import { publicApi } from '@/api';
+import {
+  catalogFromExplore,
+  toolAvailability,
+  uninstalledToolCopy,
+  type ToolCatalog,
+} from '@/services/tool-catalog';
 import type { ToolIcon } from '@/services/crux-tools/manifest';
 import {
   BlankThumb,
@@ -519,6 +526,27 @@ export default function NewCruxModal({
 
   // Installed tools count as available; re-render as one arrives (Explore → Install).
   const installed = useInstalledTools();
+  // What crux.garden actually offers (CR07): an uninstalled tool is only sent
+  // to Explore when Explore can install it.
+  const [catalog, setCatalog] = useState<ToolCatalog>({ state: 'loading' });
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    setCatalog({ state: 'loading' });
+    publicApi
+      .explore({ type: 'cruxes', kind: 'tool', perPage: 100 }, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setCatalog(catalogFromExplore(result.items));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCatalog({ state: 'offline' });
+      });
+    return () => controller.abort();
+  }, [open]);
+  const comingSoon = (id: string) =>
+    !isToolAvailable(id) && toolAvailability(catalog, id) === 'coming-soon';
+  const groupOf = (item: Template) =>
+    comingSoon(item.id) ? 'Coming soon' : startingPointGroup(item);
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
   const supported = TEMPLATES.filter(
     (item) => (!item.desktopOnly || can(Capability.Build)) && (!item.v2 || can(Capability.V2)),
@@ -531,9 +559,9 @@ export default function NewCruxModal({
         `${item.label} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()),
     )
     .sort((a, b) => {
-      const groups = ['Start here', 'More starting points', 'Tools to install'];
+      const groups = ['Start here', 'More starting points', 'Tools to install', 'Coming soon'];
       return (
-        groups.indexOf(startingPointGroup(a)) - groups.indexOf(startingPointGroup(b)) ||
+        groups.indexOf(groupOf(a)) - groups.indexOf(groupOf(b)) ||
         a.order - b.order
       );
     });
@@ -961,10 +989,9 @@ export default function NewCruxModal({
                 )}
                 {choices.map((t, index) => (
                   <Fragment key={t.id}>
-                    {(!choices[index - 1] ||
-                      startingPointGroup(choices[index - 1]!) !== startingPointGroup(t)) && (
+                    {(!choices[index - 1] || groupOf(choices[index - 1]!) !== groupOf(t)) && (
                       <h3 className="px-3 pt-3 pb-1 text-xs font-medium text-text-muted">
-                        {startingPointGroup(t)}
+                        {groupOf(t)}
                       </h3>
                     )}
                     <button
@@ -1008,7 +1035,7 @@ export default function NewCruxModal({
                           {t.label}
                           {!isToolAvailable(t.id) && (
                             <span className="ml-2 text-2xs font-mono text-text-muted">
-                              not installed
+                              {comingSoon(t.id) ? 'not installed · coming soon' : 'not installed'}
                             </span>
                           )}
                         </span>
@@ -1052,8 +1079,10 @@ export default function NewCruxModal({
                 className="text-xxs text-text-muted mt-1.5 shrink-0"
                 data-testid="tool-not-bundled"
               >
-                {template.label} is not installed. Install it from Explore, or from its .cruxtool
-                package, to create from it.
+                {
+                  uninstalledToolCopy(template.label, toolAvailability(catalog, template.id))
+                    .message
+                }
               </p>
             ) : (
               template.id !== 'blank' && (
@@ -1162,15 +1191,18 @@ export default function NewCruxModal({
               >
                 Install from .crux…
               </Button>
-              <Button
-                onClick={() => {
-                  onClose();
-                  useUIStore.getState().openExplore('tool');
-                }}
-                disabled={creating || importing}
-              >
-                Install from Explore
-              </Button>
+              {uninstalledToolCopy(template.label, toolAvailability(catalog, template.id))
+                .offerExplore && (
+                <Button
+                  onClick={() => {
+                    onClose();
+                    useUIStore.getState().openExplore('tool');
+                  }}
+                  disabled={creating || importing}
+                >
+                  Install from Explore
+                </Button>
+              )}
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
-import { confirmDialog } from '@/stores/dialogStore';
+import { choiceDialog, confirmDialog } from '@/stores/dialogStore';
+import { installUpdate, useUpdateNotices } from '@/services/update-notices';
 import { assertAuthCurrent, captureAuth } from '@/api/session';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { captureGardenId, useGardenContext } from '@/stores/gardenContext';
@@ -112,10 +113,13 @@ function MoodCard({
   onPublish,
   onUnshare,
   onDelete,
+  onUpdate,
   canPublish,
   testId,
 }: {
   pkg: MoodPackage;
+  /** Its creator shared a newer edition; installs only when pressed. */
+  onUpdate?: () => void;
   worn: boolean;
   busy: boolean;
   onApply: () => void;
@@ -179,6 +183,17 @@ function MoodCard({
             <div className="text-2xs font-mono text-accent truncate">
               Published {formatDate(pkg.publishedAt)}
             </div>
+          )}
+          {onUpdate && (
+            <button
+              type="button"
+              onClick={onUpdate}
+              disabled={busy}
+              data-testid="mood-install-update"
+              className="text-2xs font-mono text-accent hover:underline cursor-pointer disabled:cursor-wait"
+            >
+              Install update
+            </button>
           )}
         </div>
         <div className="flex items-center shrink-0 opacity-[var(--secondary-action-opacity)] group-hover:opacity-100 transition-opacity">
@@ -297,6 +312,19 @@ export default function MoodBrowser() {
 
   const doPublish = async (pkg: MoodPackage) => {
     const authContext = captureAuth();
+    // Like a Crux, a Mood can be listed in Explore or shared by link only.
+    const answer = await choiceDialog({
+      title: pkg.publishedAt ? `Share the update of ${pkg.name}` : `Share ${pkg.name}`,
+      message:
+        'Anyone with the link can install it. Discoverable Moods are also listed in Explore → Moods.',
+      choices: [
+        { id: 'cancel', label: 'Cancel', variant: 'ghost' },
+        { id: 'share', label: 'Share' },
+      ],
+      checkbox: { label: 'Discoverable — list it in Explore', checked: true },
+    });
+    if (answer.choice !== 'share') return;
+    const discoverable = answer.checked;
     setBusy(pkg.id);
     try {
       const [{ publishMood }, { getServices }, { readBlob }, { publishPipeline }] =
@@ -325,11 +353,30 @@ export default function MoodBrowser() {
           };
         },
         readBlob,
+        discoverable,
         publish: (crux, artifacts) => publishPipeline(crux, artifacts as never, { authContext }),
       });
-      say(`Shared "${published.name}" — it's on crux.garden and in Explore → Moods.`);
+      say(
+        discoverable
+          ? `Shared "${published.name}" — it's on crux.garden and in Explore → Moods.`
+          : `Shared "${published.name}" by link only — it's on crux.garden, not listed in Explore.`,
+      );
     } catch (err) {
       say(err instanceof Error ? `Sharing failed: ${err.message}` : 'Sharing failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const updates = useUpdateNotices().filter((notice) => notice.kind === 'mood');
+  const doUpdate = async (pkg: MoodPackage) => {
+    const notice = updates.find((item) => item.id === pkg.id);
+    if (!notice) return;
+    setBusy(pkg.id);
+    try {
+      await installUpdate(notice);
+      say(`Updated "${pkg.name}".`);
+    } catch (err) {
+      say(err instanceof Error ? `Update failed: ${err.message}` : 'Update failed. Try again.');
     } finally {
       setBusy(null);
     }
@@ -589,6 +636,11 @@ export default function MoodBrowser() {
       <section className="flex flex-col gap-2">
         <SectionLabel as="h3" className="mt-3">
           Yours
+          {updates.length > 0 && (
+            <span className="ml-2 normal-case tracking-normal text-accent" data-testid="mood-updates">
+              {updates.length} update{updates.length === 1 ? '' : 's'}
+            </span>
+          )}
         </SectionLabel>
       </section>
 
@@ -612,6 +664,9 @@ export default function MoodBrowser() {
               onExport={() => void doExport(pkg)}
               onPublish={() => void doPublish(pkg)}
               onUnshare={() => void doUnshare(pkg)}
+              onUpdate={
+                updates.some((item) => item.id === pkg.id) ? () => void doUpdate(pkg) : undefined
+              }
               canPublish={isAuthenticated}
               onDelete={() => {
                 void (async () => {

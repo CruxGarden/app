@@ -4,6 +4,11 @@ import { Button } from '@/components/ui';
 import type { ExploreCrux, DownloadProgress } from '@/api/public';
 import { toolManifest } from '@/services/crux-tools/registry';
 import { useInstalledTools, publishedToolId } from '@/services/crux-tools/installed';
+import { toolUpdateAvailable } from '@/services/update-notices';
+import { deepLinkUrl } from '@/services/deep-links';
+import { buttonClass } from '@/components/ui/button-class';
+import ToolTrustDetails from './ToolTrustDetails';
+import { formatToolSize, toolSummaryOf } from './tool-trust';
 
 /**
  * A published Crux Tool in Explore (CRUX-TOOLS-DISTRIBUTION-PLAN §3.4): the
@@ -29,8 +34,8 @@ export default function ToolResultCard({
   const installed = useInstalledTools();
   const current = installed[publishedToolId(crux.id)];
   const packageRef = crux.meta?.toolPackage as { fingerprint?: string } | undefined;
-  const updateAvailable =
-    !!current && !!packageRef?.fingerprint && current.fingerprint !== packageRef.fingerprint;
+  const updateAvailable = toolUpdateAvailable(current, packageRef?.fingerprint);
+  const summary = toolSummaryOf(crux as ExploreCrux & { toolSummary?: unknown });
   const already = !!current && !updateAvailable;
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
@@ -61,15 +66,10 @@ export default function ToolResultCard({
     }
   };
   const name = crux.title ?? manifest?.name ?? crux.slug;
-  const bytes = typeof crux.meta?.publishedBytes === 'number' ? crux.meta.publishedBytes : null;
-  const size =
-    bytes === null
-      ? ''
-      : bytes >= 1024 * 1024 * 1024
-        ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
-        : bytes >= 1024 * 1024
-          ? `${Math.round(bytes / 1024 ** 2)} MB`
-          : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  const bytes =
+    summary?.sizeBytes ??
+    (typeof crux.meta?.publishedBytes === 'number' ? crux.meta.publishedBytes : null);
+  const size = formatToolSize(bytes);
   return (
     <div
       className="rounded-[var(--radius)] border border-border bg-panel p-4 flex flex-col gap-2 transition-[border-color,box-shadow] hover:border-action-button-border-hover hover:shadow-card-hover motion-enter-card"
@@ -86,6 +86,7 @@ export default function ToolResultCard({
         </p>
       </button>
       <ExploreCreator crux={crux} />
+      {summary && <ToolTrustDetails summary={summary} compact />}
       <div className="flex items-center gap-2 mt-auto">
         {already ? (
           <span className="text-xs text-text-muted" data-testid="tool-installed">
@@ -104,7 +105,13 @@ export default function ToolResultCard({
                   : 'Install'}
           </Button>
         ) : (
-          <span className="text-xs text-text-muted">Open Crux Garden to install</span>
+          <a
+            href={deepLinkUrl({ kind: 'install', type: 'tool', cruxId: crux.id })}
+            className={buttonClass('secondary', 'sm')}
+            data-testid="open-in-crux-garden"
+          >
+            Open in Crux Garden
+          </a>
         )}
         {busy && (
           <Button size="sm" variant="ghost" onClick={() => controller.current?.abort()}>

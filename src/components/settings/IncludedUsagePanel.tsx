@@ -8,12 +8,16 @@ import { getModelShortName } from '@/ai/providers';
 import { SettingsKey } from '@/lib/constants';
 import { setSetting } from '@/services/settings';
 import { useUIStore } from '@/stores/uiStore';
+import { useGardenStore } from '@/stores/gardenStore';
+import { SectionLabel } from '@/components/ui';
+import { dollars, spendByCrux } from '@/services/included-allowance';
 
 export default function IncludedUsagePanel() {
   const accountId = useAuthStore((s) => s.account?.id);
   const { usage, status } = useIncludedAccess();
   const error = status === 'unavailable';
   const [selected, setSelected] = useState(false);
+  const cruxes = useGardenStore((s) => s.allCruxes);
   useEffect(() => {
     setSelected(false);
     void refreshIncludedAccess();
@@ -34,7 +38,7 @@ export default function IncludedUsagePanel() {
         <>
           {!usage.available && (
             <p className="text-xs text-text-muted">
-              Included AI is temporarily unavailable. Please try again shortly.
+              Included collaboration is temporarily unavailable. Please try again shortly.
             </p>
           )}
           {!usage.eligible ? (
@@ -49,7 +53,7 @@ export default function IncludedUsagePanel() {
                   <Meter
                     key={w.durationHours}
                     label={w.durationHours === 5 ? 'Rolling five hours' : 'Rolling 30 days'}
-                    value={`${Math.round(w.limitMicrodollars > 0 ? (w.usedMicrodollars / w.limitMicrodollars) * 100 : 0)}% used`}
+                    value={`${dollars(w.usedMicrodollars)} of ${dollars(w.limitMicrodollars)} · ${Math.round(w.limitMicrodollars > 0 ? (w.usedMicrodollars / w.limitMicrodollars) * 100 : 0)}% used`}
                     pct={Math.min(
                       100,
                       w.limitMicrodollars > 0
@@ -83,11 +87,50 @@ export default function IncludedUsagePanel() {
               )}
               {usage.windows.some((w) => w.usedMicrodollars >= w.limitMicrodollars * 0.8) && (
                 <p className="text-xs text-warning">
-                  Your included allowance is nearly used. Requests pause when either window cannot
-                  cover the next request. Wait for allowance to return, upgrade, or choose your own
-                  API key. Extra spending is not enabled.
+                  Your included allowance is nearly used. Replies get shorter when only a short
+                  reply fits, and requests pause when either window cannot cover the next one. Wait
+                  for allowance to return, upgrade, or choose your own API key. Extra spending is
+                  not enabled.
                 </p>
               )}
+              {(() => {
+                const rows = spendByCrux(
+                  usage.byCrux ?? [],
+                  (id) => cruxes.find((c) => c.id === id)?.title,
+                );
+                if (!rows.length) return null;
+                return (
+                  <table className="w-full text-xxs" data-testid="included-by-crux">
+                    <caption className="text-left">
+                      <SectionLabel>Where it went · last 30 days</SectionLabel>
+                    </caption>
+                    <thead>
+                      <tr className="text-left text-caption font-mono uppercase tracking-wider text-2xs">
+                        <th className="py-1 font-normal">Crux</th>
+                        <th className="py-1 font-normal text-right">Chat</th>
+                        <th className="py-1 font-normal text-right">Images</th>
+                        <th className="py-1 font-normal text-right">Requests</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={row.key} className="border-t border-border/(--tint-medium)">
+                          <td className="py-1.5 text-text truncate max-w-[16rem]">{row.title}</td>
+                          <td className="py-1.5 text-right font-mono text-text-muted">
+                            {dollars(row.chatMicrodollars)}
+                          </td>
+                          <td className="py-1.5 text-right font-mono text-text-muted">
+                            {dollars(row.imageMicrodollars)}
+                          </td>
+                          <td className="py-1.5 text-right font-mono text-text-muted">
+                            {row.requests.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
               {usage.recentRequests?.length > 0 && (
                 <details className="text-xxs text-text-muted">
                   <summary className="cursor-pointer">Recent included requests</summary>
@@ -95,6 +138,7 @@ export default function IncludedUsagePanel() {
                     {usage.recentRequests.map((r) => (
                       <li key={r.id}>
                         {new Date(r.createdAt).toLocaleString()} ·{' '}
+                        {r.kind === 'image' ? 'Image · ' : r.kind === 'chat' ? 'Chat · ' : ''}
                         {getModelShortName(r.model) ?? r.model} ·{' '}
                         {r.status === 'complete'
                           ? 'Complete'

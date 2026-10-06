@@ -7,6 +7,11 @@ import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/packa
 import { manifestFor } from './crux-tools/registry';
 import { parseManifest } from './crux-tools/manifest';
 import { assertCopyWritable } from './working-copies';
+import {
+  sharedConversationFingerprint,
+  conversationShared,
+  sharedConversation,
+} from './shared-conversation';
 /**
  * Publish module — the whole publish/unpublish pipeline behind one interface.
  *
@@ -138,6 +143,14 @@ export function buildFingerprintMap(artifacts: Artifact[], crux?: Crux): Record<
   return map;
 }
 
+/** What the conversation part of a publication looks like (embedded apps never share one). */
+export function publishedConversationFingerprint(
+  crux: Crux,
+  messages: ChatMessage[] | undefined,
+): string {
+  return isEmbeddedApp(crux) ? 'private' : sharedConversationFingerprint(crux, messages);
+}
+
 /** Check if current artifacts differ from the published fingerprint snapshot */
 export function hasContentChanged(
   artifacts: Artifact[],
@@ -210,11 +223,48 @@ export function describePublishFailure(err: unknown): PublishFailure {
 
 // ── The pipeline ────────────────────────────────────────────────────────────
 
+// ── Publish warnings (soft limits) ──────────────────────────────────────────
+
+export interface PublishWarning {
+  kind: 'storage_soft_limit' | 'bandwidth_soft_limit' | string;
+  message: string;
+  usedBytes?: number;
+  limitBytes?: number;
+}
+
+/** The soft-limit warnings an upsert or publish response carries (deduplicated by kind). */
+export function publishWarningsOf(...responses: unknown[]): PublishWarning[] {
+  const found = new Map<string, PublishWarning>();
+  for (const response of responses) {
+    const list = (response as { warnings?: unknown } | null | undefined)?.warnings;
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const warning = item as Partial<PublishWarning> | null;
+      if (!warning || typeof warning.kind !== 'string' || typeof warning.message !== 'string')
+        continue;
+      found.set(warning.kind, {
+        kind: warning.kind,
+        message: warning.message,
+        ...(typeof warning.usedBytes === 'number' ? { usedBytes: warning.usedBytes } : {}),
+        ...(typeof warning.limitBytes === 'number' ? { limitBytes: warning.limitBytes } : {}),
+      });
+    }
+  }
+  return [...found.values()];
+}
+
 export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<string, unknown> {
   const publicMeta = portableMeta(crux.meta);
   // Garden Collaboration is private workspace state, never a public making-of transcript.
   delete publicMeta.gardenCollaboration;
   delete publicMeta.gardenSchedules;
+  // The conversation is private unless the creator chose to share it (CR06):
+  // no transcript leaves this machine, and the per-message choices stay here.
+  const stored = Array.isArray(publicMeta.messages) ? (publicMeta.messages as ChatMessage[]) : [];
+  delete publicMeta.messages;
+  delete publicMeta.conversationExclusions;
+  delete publicMeta.publishedConversationFingerprint;
+  const shared = isEmbeddedApp(crux) ? null : sharedConversation(crux, messages ?? stored);
   return {
     title: crux.title,
     slug: crux.slug,
@@ -224,8 +274,12 @@ export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<s
     kind: crux.kind,
     discoverable: crux.discoverable,
     meta: isEmbeddedApp(crux)
-      ? { messages: [] }
-      : { ...publicMeta, ...(messages ? { messages } : {}) },
+      ? { conversationPublished: false }
+      : {
+          ...publicMeta,
+          conversationPublished: conversationShared(crux),
+          ...(shared ? { messages: shared } : {}),
+        },
   };
 }
 
@@ -242,6 +296,8 @@ export async function publishPipeline(
     messages?: ChatMessage[];
     /** Captured before workspace preparation; direct callers capture at pipeline entry. */
     authContext?: AuthContext;
+    /** Soft-limit warnings the API returned for this publish (empty when none). */
+    onWarnings?: (warnings: PublishWarning[]) => void;
   },
 ): Promise<Crux> {
   const context = opts?.authContext ?? captureAuth();
@@ -417,11 +473,12 @@ export async function publishPipeline(
   assertAuthCurrent(context);
   const cruxExistsOnApi = await deps.api.exists(crux.id);
   assertAuthCurrent(context);
+  let upserted: unknown;
   if (cruxExistsOnApi) {
-    await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
+    upserted = await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
   } else {
     // The API handles slug conflicts by hard-deleting stale records
-    await deps.api.create({
+    upserted = await deps.api.create({
       id: crux.id,
       ...cruxUpsertFields(crux, opts?.messages),
       data: isEmbeddedApp(crux) ? '' : crux.data || '',
@@ -431,8 +488,10 @@ export async function publishPipeline(
   // 3. Publish — all files in one multipart request
   progress('upload');
   assertAuthCurrent(context);
-  const updated = await deps.api.publish(crux.id, filesToPublish);
+  const response = await deps.api.publish(crux.id, filesToPublish);
   assertAuthCurrent(context);
+  opts?.onWarnings?.(publishWarningsOf(upserted, response));
+  const { warnings: _warnings, ...updated } = response as Crux & { warnings?: unknown };
 
   // 4. Merge API publish metadata into the local crux (preserving local-only
   // meta) and snapshot fingerprints for change detection; persist locally.
@@ -445,13 +504,18 @@ export async function publishPipeline(
             .map(({ file, path }) => [path, file.fingerprint]),
         )
       : buildFingerprintMap(artifacts);
-  const mergedMeta = {
+  const mergedMeta: Record<string, unknown> = {
     ...(crux.meta as Record<string, unknown>),
     ...(updated.meta as Record<string, unknown>),
     publishedFingerprints,
     messages: crux.meta?.messages,
     settings: crux.meta?.settings,
   };
+  // Fingerprint the conversation as the merged Crux will judge it afterwards.
+  mergedMeta.publishedConversationFingerprint = publishedConversationFingerprint(
+    { ...crux, meta: mergedMeta as Crux['meta'] },
+    opts?.messages ?? (crux.meta?.messages as ChatMessage[] | undefined),
+  );
   await deps.local.updateCruxMeta(crux.id, mergedMeta);
   assertAuthCurrent(context);
   const mergedCrux: Crux = { ...crux, ...updated, meta: mergedMeta as Crux['meta'] };
@@ -492,6 +556,7 @@ export async function unpublishPipeline(
   delete meta.publishedAt;
   delete meta.publishedVersion;
   delete meta.publishedFingerprints;
+  delete meta.publishedConversationFingerprint;
   await deps.local.updateCruxMeta(crux.id, meta);
   assertAuthCurrent(context);
 

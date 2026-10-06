@@ -370,7 +370,12 @@ test('an unfamiliar installed tool shares its declared static edition with the r
       text: 'Made by the recipient — public postcard',
       image: imagePath,
     });
-    expect(api.state.cruxes[id]).toMatchObject({ data: '', meta: { messages: [] } });
+    expect(api.state.cruxes[id]).toMatchObject({
+      data: '',
+      meta: { conversationPublished: false },
+    });
+    // No conversation leaves with an embedded app's static edition (CR06).
+    expect(api.state.cruxes[id]?.meta).not.toHaveProperty('messages');
     const uploaded = published.map((file) => file.bytes.toString()).join('\n');
     expect(uploaded).not.toContain('PRIVATE_EDITOR_DRAFT_POSTCARD');
     expect(uploaded).not.toContain('PRIVATE_COLLABORATION_POSTCARD');

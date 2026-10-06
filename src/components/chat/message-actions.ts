@@ -25,3 +25,8 @@ export async function copyMessageText(
 export function copyLabel(state: 'idle' | CopyOutcome): string {
   return state === 'copied' ? 'Copied' : state === 'failed' ? 'Could not copy' : 'Copy message';
 }
+
+/** The share action's name says what pressing it will do (CR06). */
+export function shareToggleLabel(excluded: boolean): string {
+  return excluded ? 'Include in shared conversation' : 'Leave out of shared conversation';
+}

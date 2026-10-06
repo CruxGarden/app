@@ -1,3 +1,6 @@
+// Needs Daniel's legal review (2026-10-05): subscriptions, refunds, plan end
+// and usage limits were added from the customer review (ROADMAP § Customer
+// review, CR10) and describe what the code does, not reviewed legal wording.
 import { GITHUB_APP_URL, type LegalPath } from './site';
 
 /**
@@ -10,7 +13,7 @@ import { GITHUB_APP_URL, type LegalPath } from './site';
  *
  * Change the text → change LEGAL_LAST_UPDATED.
  */
-export const LEGAL_LAST_UPDATED = '2026-10-04';
+export const LEGAL_LAST_UPDATED = '2026-10-05';
 
 export interface LegalSection {
   heading: string;
@@ -91,10 +94,36 @@ export const TERMS: LegalDocument = {
     {
       heading: 'Plans and billing',
       paragraphs: [
-        'The app and basic publishing are free. Paid plans add hosting room, your own domains and included collaboration, and are billed monthly or yearly through Stripe. Stripe handles the payment; your card details never reach Crux Garden.',
-        'You can change or cancel a plan at any time from Settings → Plan in the app. Included collaboration pauses when it reaches its usage limits; there are no automatic overage charges. Storage above twice your plan’s limit pauses new uploads and publishes until you make room or change plan.',
+        'The app and basic publishing are free. Paid plans add hosting room, your own domains and included collaboration, and are billed monthly or yearly through Stripe. Stripe handles the payment; your card details never reach Crux Garden. Your own provider key works on every plan.',
       ],
       links: [{ label: 'See plans and prices', href: '/plans' }],
+    },
+    {
+      heading: 'Subscriptions and auto-renewal',
+      paragraphs: [
+        'A paid plan renews automatically at the end of each monthly or yearly period until you cancel. You can cancel at any time from Manage billing in Settings → Plan. When you cancel, your plan stays active until the end of the period you have paid for and does not renew.',
+      ],
+    },
+    {
+      heading: 'Refunds',
+      paragraphs: [
+        'We do not refund part of a period, including when you cancel or switch plans part-way through, except where the law requires it. Closing your account ends any plan immediately, without a refund for the remaining time.',
+      ],
+    },
+    {
+      heading: 'When a plan ends',
+      paragraphs: [
+        'When a paid plan ends, your account moves to Free. Published work stays online within the Free limits. Custom domains you already connected stay connected; connecting a new domain needs a paid plan. If your storage is above twice the Free limit, new uploads and publishes pause until you make room or choose a plan again.',
+      ],
+    },
+    {
+      heading: 'Usage limits',
+      list: [
+        'Hosting limits (storage, visits and Crux Store requests) are counted per calendar month and reset on the 1st of each month, UTC.',
+        'Included collaboration is limited over two rolling windows, the last 5 hours and the last 30 days; allowance returns as earlier requests age out.',
+        'Near its limits, included collaboration may give shorter replies, and it pauses when the next request cannot fit. Your own provider key is not affected.',
+        'There are no overage charges. Reaching a limit never adds to your bill.',
+      ],
     },
     {
       heading: 'Working with AI models',
@@ -105,7 +134,7 @@ export const TERMS: LegalDocument = {
     {
       heading: 'Closing your account',
       paragraphs: [
-        'You can close your hosted account at any time from Settings → Account in the app. Your public Garden, published creations and hosted backups are removed and any subscription stops. Everything on your own device stays where it is.',
+        'You can close your hosted account at any time from Settings → Account in the app. Your public Garden, published creations and hosted backups are removed, and any subscription ends immediately without a refund for the remaining time. We email you links to your recent invoices when the account closes. Everything on your own device stays where it is.',
       ],
     },
     {
@@ -150,7 +179,7 @@ export const PRIVACY: LegalDocument = {
       list: [
         'Your own provider key: requests go directly from your device to the provider you chose. They do not pass through Crux Garden.',
         'A model running on your device: nothing leaves your device.',
-        'Included collaboration on a paid plan: your conversation and the context you select pass through the Crux Garden API to the model provider (Anthropic for conversation; OpenAI for included images, which receive only the prompt and any reference image you select). We keep a usage ledger for your allowance: the model, token counts, cost, timestamps and whether the request completed. The ledger does not contain your conversation.',
+        'Included collaboration on a paid plan: your conversation and the context you select pass through the Crux Garden API to the model provider (Anthropic for conversation; OpenAI for included images, which receive only the prompt and any reference image you select). We keep a usage ledger for your allowance: the model, token counts, cost, timestamps, whether the request completed and which of your Cruxes it was for. The ledger does not contain your conversation.',
       ],
       after: ['AI is optional, and turning it off keeps all of these paths closed.'],
     },

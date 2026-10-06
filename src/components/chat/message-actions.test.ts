@@ -53,3 +53,11 @@ describe('the copy action on a message', () => {
     expect(reply(true)).not.toContain('message-copy');
   });
 });
+
+describe('the shared-conversation action (CR06)', () => {
+  it('names what pressing it will do', async () => {
+    const { shareToggleLabel } = await import('./message-actions');
+    expect(shareToggleLabel(false)).toBe('Leave out of shared conversation');
+    expect(shareToggleLabel(true)).toBe('Include in shared conversation');
+  });
+});

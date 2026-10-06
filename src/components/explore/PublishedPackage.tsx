@@ -6,6 +6,9 @@ import { Button } from '@/components/ui';
 import { downloadBlob } from '@/lib/download';
 import { pathOf } from '@/lib/artifact-path';
 import PublishedCreationCard from './PublishedCreationCard';
+import ToolTrustDetails from './ToolTrustDetails';
+import { useAppStore } from '@/stores/appStore';
+import { toolSummaryOf } from './tool-trust';
 
 /** A shared package link must work even when the visitor has no local Garden open. */
 export default function PublishedPackage({
@@ -24,6 +27,10 @@ export default function PublishedPackage({
   const file = artifacts.find(
     (item) => pathOf(item) === (tool ? '_crux/tool-package.zip' : 'mood.cruxmood'),
   );
+  const inApp = useAppStore((s) => s.ready);
+  const summary = tool
+    ? toolSummaryOf({ ...(crux as Crux & { toolSummary?: unknown }), author_username: username.replace(/^@/, "") })
+    : null;
   const listing: ExploreCrux = {
     ...crux,
     author_username: username.replace(/^@/, ''),
@@ -36,14 +43,18 @@ export default function PublishedPackage({
     >
       <h1 className="font-display text-2xl">{crux.title || crux.slug}</h1>
       <PublishedCreationCard crux={listing} onTag={() => {}} />
+      {summary && <ToolTrustDetails summary={summary} />}
       <p className="text-sm text-text-muted">
         {tool
           ? 'An editor you can use to make your own Cruxes.'
           : 'A look and sound you can choose for your Garden.'}{' '}
-        Download the file, then open Crux Garden → Add Crux → Import Crux, tool or Mood. AI is
-        optional.
+        {inApp
+          ? 'Install it above, or download the file to keep or send it.'
+          : 'Use Open in Crux Garden to review and install it there. Or download the file, then open Crux Garden → Add Crux → Import Crux, tool or Mood.'}{' '}
+        AI is optional.
       </p>
       <Button
+        variant="secondary"
         disabled={!file || busy}
         loading={busy}
         onClick={() => {

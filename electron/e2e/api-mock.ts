@@ -66,6 +66,17 @@ export interface MockApi {
     failSyncCruxList?: boolean;
     /** The email of the last login; other@example.com is a second account */
     loginEmail?: string;
+    /** GET /account role; 'admin' opens the operator routes (/admin/*), anyone else gets 403 */
+    accountRole?: 'author' | 'admin';
+    /** Operator fixtures: open reports and suspended accounts (id → reason) */
+    adminReports?: Array<{
+      id: string;
+      cruxId: string;
+      reason: string;
+      status: string;
+      note?: string;
+    }>;
+    suspended?: Record<string, string>;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
     billing: { planId: string; status: string; customer: boolean; checkouts: number };
     sync: {
@@ -516,6 +527,51 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         accessToken: 'pv_fixture',
         visitor: { id: 'visitor', username: 'tester', name: 'Tester' },
       });
+    // Operator routes (ADR 0081/0083/0084): admin only.
+    if (path.startsWith('/admin/')) {
+      if (state.accountRole !== 'admin') return send(403, { message: 'Forbidden' });
+      const reports = (state.adminReports ??= []);
+      const suspended = (state.suspended ??= {});
+      const accountView = (id: string) => ({
+        id,
+        email: id === 'acct-2' ? 'other@example.com' : 'tester@example.com',
+        username: id === 'acct-2' ? 'other' : 'tester',
+        suspended: suspended[id] ? '2026-10-05T00:00:00.000Z' : null,
+        suspendedReason: suspended[id] ?? null,
+      });
+      if (path === '/admin/reports/summary' && method === 'GET')
+        return send(200, {
+          open: reports.filter((r) => r.status === 'open').length,
+          resolvedLast30d: reports.filter((r) => r.status !== 'open').length,
+          takenDown: 0,
+        });
+      if (path === '/admin/reports' && method === 'GET') {
+        const status = parsedUrl.searchParams.get('status') ?? 'open';
+        return send(
+          200,
+          reports
+            .filter((r) => r.status === status)
+            .map((r) => ({ ...r, targetPath: '/tester/' + r.cruxId, created: AUTHOR.created })),
+        );
+      }
+      const report = /^\/admin\/reports\/([^/]+)$/.exec(path);
+      if (report && method === 'PATCH') {
+        const found = reports.find((r) => r.id === report[1]);
+        if (!found) return send(404, {});
+        found.status = String(bodyJson().status);
+        return send(200, found);
+      }
+      if (path === '/admin/takedowns' && method === 'GET') return send(200, []);
+      if (path === '/admin/accounts' && method === 'GET')
+        return send(200, ['acct-1', 'acct-2'].map(accountView));
+      const acct = /^\/admin\/accounts\/([^/]+)\/(suspend|unsuspend)$/.exec(path);
+      if (acct && method === 'POST') {
+        if (acct[2] === 'suspend') suspended[acct[1]] = String(bodyJson().reason ?? '');
+        else delete suspended[acct[1]];
+        return send(200, accountView(acct[1]));
+      }
+      return send(404, {});
+    }
     if (path === '/account/closure' && method === 'GET')
       return state.accountClosureSupported === false
         ? send(404, {})
@@ -558,7 +614,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       return send(200, {
         id: other ? 'acct-2' : 'acct-1',
         email: state.loginEmail ?? 'tester@example.com',
-        role: 'author',
+        role: state.accountRole ?? 'author',
         homeId: 'home-1',
         created: AUTHOR.created,
         updated: AUTHOR.updated,

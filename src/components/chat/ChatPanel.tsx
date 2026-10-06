@@ -22,6 +22,8 @@ export default function ChatPanel() {
   const locked = useCruxStore((s) => s.closing);
   const readOnlyTask = !!copy && copy.phase !== 'ready';
   const snapshotMessageCount = useCruxStore((s) => s.snapshotMessageCount);
+  // The conversation's current size: the included status answers for the next turn.
+  const contextTokens = useCruxStore((s) => s.tokenUsage.inputTokens);
 
   // When viewing a snapshot, truncate messages to what existed at that point
   const visibleMessages = useMemo(() => {
@@ -68,7 +70,7 @@ export default function ChatPanel() {
           <TurnJobCard />
           {model === 'garden-included' && (
             <div className="px-3 pt-2">
-              <IncludedStatus />
+              <IncludedStatus contextTokens={contextTokens} />
             </div>
           )}
           <MessageInput

@@ -38,6 +38,8 @@ test('an unrelated renderer with the preload cannot read or change the Garden', 
         () => api.packageImports!.read('untrusted'),
         () => api.packageImports!.dismiss('untrusted'),
         () => api.native.run({ cruxId: 'missing', tool: 'pandoc', args: [] }),
+        () => api.diskUsage!(),
+        () => api.clearCaches!(),
       ];
       return Promise.all(
         calls.map(async (call) => {

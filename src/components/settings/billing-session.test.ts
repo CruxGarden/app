@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BillingSettingsSession, type BillingSettingsState } from './billing-session';
+import {
+  BillingSettingsSession,
+  FOCUS_RECHECK_MS,
+  type BillingSettingsState,
+} from './billing-session';
 import type { BillingMe, Catalog } from '@/api/billing';
 
 const free: BillingMe = {
@@ -39,6 +43,7 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+const clock = { now: 0 };
 function fixture(initial = free) {
   const api = {
     me: vi.fn(async () => initial),
@@ -58,7 +63,7 @@ function fixture(initial = free) {
   const open = vi.fn(async () => true),
     usageChanged = vi.fn();
   const session = new BillingSettingsSession(
-    { api, open, usageChanged, isCurrent: () => current },
+    { api, open, usageChanged, isCurrent: () => current, now: () => clock.now },
     changed,
   );
   return {
@@ -208,5 +213,67 @@ describe('account-owned billing settings', () => {
     blocked.resolve({ url: 'https://checkout.stripe.com/test' });
     await choosing;
     f.session.dispose();
+  });
+
+  it('re-checks quietly on focus only for a pending checkout or a status older than five minutes', async () => {
+    clock.now = 1_000_000;
+    const f = fixture(paid);
+    await f.session.load();
+    f.api.sync.mockClear();
+    await f.session.focus();
+    expect(f.api.sync).not.toHaveBeenCalled();
+    clock.now += FOCUS_RECHECK_MS;
+    await f.session.focus();
+    expect(f.api.sync).toHaveBeenCalledTimes(1);
+    expect(f.state.notice).toBeNull();
+    const pending = fixture({ ...free, pendingCheckout: true });
+    await pending.session.load();
+    await pending.session.focus();
+    expect(pending.api.sync).toHaveBeenCalledTimes(1);
+    expect(pending.state.notice).toBeNull();
+    f.session.dispose();
+    pending.session.dispose();
+  });
+
+  it('keeps the server’s 409 reason and shows the subscription that caused it', async () => {
+    const f = fixture();
+    await f.session.load();
+    const attention = {
+      kind: 'unpaid' as const,
+      message: 'Your last payment failed.',
+      action: 'portal' as const,
+    };
+    f.api.checkout.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: { message: 'Fix the unpaid invoice in Manage billing first.' },
+      },
+    });
+    f.api.sync.mockResolvedValueOnce({ ...free, status: 'unpaid', canManage: true, attention });
+    await f.session.choose('gardener', 'month');
+    expect(f.state.error).toBe('Fix the unpaid invoice in Manage billing first.');
+    expect(f.state.me?.attention).toEqual(attention);
+    expect(f.open).not.toHaveBeenCalled();
+    expect(f.state.busy).toBeNull();
+  });
+
+  it('verifies at once on a billing return link and says a closed checkout changed nothing', async () => {
+    const f = fixture();
+    await f.session.load();
+    await f.session.choose('gardener', 'month');
+    expect(f.state.waiting).toBe(true);
+    await f.session.returned('cancel');
+    expect(f.api.sync).toHaveBeenCalled();
+    expect(f.state.waiting).toBe(false);
+    expect(f.state.notice).toContain('Checkout closed');
+    expect(vi.getTimerCount()).toBe(0);
+    const paidReturn = fixture();
+    await paidReturn.session.load();
+    await paidReturn.session.choose('gardener', 'month');
+    paidReturn.api.sync.mockResolvedValue(paid);
+    await paidReturn.session.returned('success');
+    expect(paidReturn.state.me).toEqual(paid);
+    expect(paidReturn.state.waiting).toBe(false);
+    expect(paidReturn.usageChanged).toHaveBeenCalled();
   });
 });

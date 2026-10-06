@@ -39,6 +39,8 @@ import {
 } from '@/components/explore/recent-tags';
 import { APP_NAME } from '@/lib/constants';
 import DocumentationCard from '@/components/explore/DocumentationCard';
+import { emptyCatalogCopy } from '@/services/tool-catalog';
+import InstallRequestDialog from '@/components/explore/InstallRequestDialog';
 import PageHeader from '@/components/layout/PageHeader';
 
 /**
@@ -636,6 +638,25 @@ export default function Explore({
             Try again
           </Button>
         </Panel>
+      ) : empty && !hasFilters && (view === 'tools' || view === 'moods') ? (
+        // CR07: an honest empty catalog, not an invitation to look again.
+        <Panel
+          padding="md"
+          className="flex flex-col items-center py-10 text-center"
+          data-testid={`explore-empty-${view}`}
+        >
+          <p className="text-text text-sm mb-1">{emptyCatalogCopy(view).title}</p>
+          <p className="text-xs text-text-muted mb-3">{emptyCatalogCopy(view).body}</p>
+          {appReady && view === 'tools' && (
+            <Button variant="secondary" size="sm" onClick={() =>
+                void import('@/components/layout/app-commands').then((commands) =>
+                  commands.newCrux(navigate),
+                )
+              }>
+              Make a tool
+            </Button>
+          )}
+        </Panel>
       ) : empty ? (
         <Panel padding="md" className="flex flex-col items-center py-10 text-center">
           <p className="text-text text-sm mb-1">
@@ -718,6 +739,7 @@ export default function Explore({
           )}
         </Panel>
       )}
+      {appReady && <InstallRequestDialog />}
     </div>
   );
 }

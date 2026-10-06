@@ -207,6 +207,15 @@
         "role": "Editor",
         "mimeType": "application/x-crux-mood"
       }
+    ],
+    "protocols": [
+      {
+        "name": "Crux Garden link",
+        "schemes": [
+          "crux-garden"
+        ],
+        "role": "Viewer"
+      }
     ]
   },
   "overrides": {

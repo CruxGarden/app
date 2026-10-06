@@ -10,6 +10,7 @@ import { useGardenStore } from '@/stores/gardenStore';
 import { Meter } from '@/components/workspace/UsageSection';
 import { periodDay as day } from '@/lib/period-day';
 import { onUsageChanged } from '@/lib/usage-events';
+import { cruxStoreRequests } from './usage-math';
 
 /** Account-wide storage and bandwidth for the billing period, against the plan. */
 export default function UsageSettings() {
@@ -102,7 +103,7 @@ export default function UsageSettings() {
             <Meter
               label="Crux Store requests"
               value={usage.store.requests.toLocaleString()}
-              hint={`of ${usage.plan.storeRequestsPerPeriod.toLocaleString()} this period · ${usage.store.reads.toLocaleString()} reads · ${usage.store.writes.toLocaleString()} writes · ${usage.store.keys.toLocaleString()} keys`}
+              hint={`of ${usage.plan.storeRequestsPerPeriod.toLocaleString()} this period · ${usage.store.reads.toLocaleString()} reads · ${usage.store.writes.toLocaleString()} writes · ${(usage.store.fnCalls ?? 0).toLocaleString()} function runs · ${usage.store.keys.toLocaleString()} keys`}
               pct={
                 usage.plan.storeRequestsPerPeriod
                   ? Math.min(100, (usage.store.requests / usage.plan.storeRequestsPerPeriod) * 100)
@@ -159,9 +160,9 @@ export default function UsageSettings() {
                     </td>
                     <td
                       className="py-1.5 text-right font-mono text-text-muted"
-                      title={`${formatBytes(c.storeBytes)} in ${c.storeKeys} keys`}
+                      title={`${c.storeReads.toLocaleString()} reads · ${c.storeWrites.toLocaleString()} writes · ${(c.fnCalls ?? 0).toLocaleString()} function runs · ${formatBytes(c.storeBytes)} in ${c.storeKeys} keys`}
                     >
-                      {(c.storeReads + c.storeWrites).toLocaleString()} req
+                      {cruxStoreRequests(c).toLocaleString()} req
                     </td>
                   </tr>
                 ))}
@@ -216,7 +217,7 @@ export default function UsageSettings() {
                   : ''
               : ''}
             . Storage is enforced above twice the plan limit; bandwidth and Crux Store request
-            limits are advisory.
+            limits are advisory. Hosting limits reset on the 1st of each month (UTC).
           </p>
         </div>
       )}

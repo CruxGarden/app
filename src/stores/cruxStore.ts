@@ -18,7 +18,7 @@ import { captureAuth, assertAuthCurrent } from '@/api/session';
 import type { ArtifactUploadEntry, UpdateCruxInput } from '@/services/types';
 import { getServices } from '@/services';
 import { guessMimeType } from '@/lib/mime';
-import { hasContentChanged } from '@/services/publish';
+import { hasContentChanged, publishedConversationFingerprint } from '@/services/publish';
 import {
   walkSnapshotChain,
   growthTip,
@@ -43,11 +43,13 @@ import {
   SAFETY_LABEL_RESTORE,
   SAFETY_LABEL_BRANCH,
 } from '@/services/growth';
+import { exclusionPatch, shareChoiceTargets } from '@/services/shared-conversation';
 import {
   publishPipeline,
   unpublishPipeline,
   describePublishFailure,
   type PublishPhase,
+  type PublishWarning,
   type PublishFailure,
 } from '@/services/publish';
 import { projectFolderExists, projectAllArtifacts } from '@/services/project-folder';
@@ -154,7 +156,13 @@ export interface CruxState {
   publishPhase: PublishPhase | null;
   /** Why the last publish failed (null after a success or a fresh attempt). */
   publishFailure: PublishFailure | null;
+  /** Soft-limit warnings from the last successful publish (CR usage). */
+  publishWarnings: PublishWarning[];
   unpublishCrux: () => Promise<void>;
+  /** Share "How was this made?" with this Crux (CR06); persisted in crux meta. */
+  setConversationPublished: (on: boolean) => Promise<void>;
+  /** Leave one Collaboration message out of (or back in) the shared conversation. */
+  setMessageExcludedFromPublish: (message: ChatMessage, excluded: boolean) => Promise<void>;
 
   // Upload progress
   uploadProgress: { total: number; completed: number; currentFile: string } | null;
@@ -222,7 +230,13 @@ export const selectHasUnpublishedChanges = (s: CruxState): boolean =>
     s.artifacts,
     s.crux?.meta?.publishedFingerprints as Record<string, string> | undefined,
     s.crux ?? undefined,
-  );
+  ) ||
+  // The shared conversation changed (switched on/off, a message left out or
+  // added) — that must reach the live page too, or a secret left out stays up.
+  (!!s.crux &&
+    s.crux.meta?.publishedAt != null &&
+    s.crux.meta?.publishedConversationFingerprint !==
+      publishedConversationFingerprint(s.crux, s.messages));
 
 /**
  * After the workspace's artifacts were replaced (revert, branch), every open
@@ -299,6 +313,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     folderMissing: false,
     publishPhase: null,
     publishFailure: null,
+    publishWarnings: [],
     uploadProgress: null,
     tokenUsage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 },
 
@@ -745,6 +760,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         isCreatingGrowth: false,
         ...CLOSED_SNAPSHOT_VIEW,
         pendingDeletes: [],
+        publishWarnings: [],
       });
     },
 
@@ -758,7 +774,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const { crux, publishPhase } = get();
       if (!crux || publishPhase) return false;
       const authContext = captureAuth();
-      set({ publishFailure: null, publishPhase: 'sync' });
+      set({ publishFailure: null, publishWarnings: [], publishPhase: 'sync' });
       try {
         const prepared = await prepareWorkspacePublication(store, ui, crux.id);
         assertAuthCurrent(authContext);
@@ -775,6 +791,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           authContext,
           messages: prepared.messages,
           onProgress: (phase) => set({ publishPhase: phase }),
+          onWarnings: (warnings) => set({ publishWarnings: warnings }),
         });
         assertAuthCurrent(authContext);
         if (get().crux?.id !== crux.id)
@@ -821,8 +838,33 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (!crux) return;
       const updated = await unpublishPipeline(crux);
       // A failure from an earlier publish attempt no longer describes anything.
-      set({ crux: updated, publishFailure: null });
+      set({ crux: updated, publishFailure: null, publishWarnings: [] });
       notifyUsageChanged();
+    },
+
+    // The shared conversation (CR06): crux meta through the ordinary metadata
+    // save, so it rides the same queue as the conversation itself.
+    setConversationPublished: async (on) => {
+      const { crux, patchCruxMeta, saveMeta } = get();
+      if (!crux) return;
+      patchCruxMeta({ conversationPublished: on });
+      await saveMeta();
+    },
+
+    setMessageExcludedFromPublish: async (message, excluded) => {
+      const { crux, messages, patchCruxMeta, saveMeta } = get();
+      if (!crux) return;
+      // A person's message carries its replies with it (they quote it).
+      const targets = new Set(shareChoiceTargets(messages, message));
+      // The crux-level record reaches every Growth segment; the flag on the
+      // message travels with the current segment (and its exports).
+      patchCruxMeta(exclusionPatch(crux, [...targets], excluded));
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          targets.has(m) ? { ...m, excludedFromPublish: excluded } : m,
+        ),
+      }));
+      await saveMeta();
     },
 
     // File CRUD actions

@@ -1,4 +1,4 @@
-import { includedFetch, INCLUDED_MODEL } from '@/api/inference';
+import { cruxIdHeader, includedFetch, INCLUDED_MODEL } from '@/api/inference';
 import { apiBaseUrl } from '@/api/client';
 /**
  * The Collaboration engine — the AI conversation loop behind one seam.
@@ -97,7 +97,8 @@ export async function primeMockModel(): Promise<void> {
   if (isAiMock() && !mockModel) mockModel = (await import('./mock-model')).getMockLanguageModel();
 }
 
-export function languageModelFor(model: string, apiKey: string): LanguageModel {
+/** `cruxId` attributes included requests to their Crux (Settings → Usage, "Where it went"). */
+export function languageModelFor(model: string, apiKey: string, cruxId?: string): LanguageModel {
   if (isAiMock()) {
     if (!mockModel) throw new Error('The scripted model was not primed at startup.');
     return mockModel;
@@ -108,6 +109,7 @@ export function languageModelFor(model: string, apiKey: string): LanguageModel {
     return createAnthropic({
       apiKey: 'included-session',
       baseURL: `${apiBaseUrl()}/inference/v1`,
+      headers: cruxIdHeader(cruxId),
       fetch: includedFetch,
     })(id);
   // Local inference (Ollama / LM Studio): OpenAI-compatible localhost API,
@@ -354,7 +356,7 @@ export async function* runConversation(
   let stepIndex = 0;
   try {
     const result = streamText({
-      model: options?.languageModel ?? languageModelFor(model, apiKey),
+      model: options?.languageModel ?? languageModelFor(model, apiKey, cruxId),
       instructions: {
         role: 'system',
         content: systemPrompt,

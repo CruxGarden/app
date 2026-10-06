@@ -185,4 +185,48 @@ describe('publishing a Mood', () => {
     expect(apiAsked).toBe(1);
     expect(viaApiAfterJunk?.publishedCruxId).toBe('c11');
   });
+
+  it('shares link-only when asked, keeps that choice on update, and stamps a revision', async () => {
+    const pkg = captureCurrentMood({ name: 'Quiet Room' });
+    const f = fakeServices();
+    let clock = 0;
+    const deps = {
+      services: async () => f.services,
+      readBlob: async () => new Uint8Array(),
+      publish: async (crux: Crux) => crux,
+      now: () => `2026-10-0${++clock}T00:00:00.000Z`,
+    };
+    const out = await publishMood(pkg, { ...deps, discoverable: false });
+    const crux = () => f.cruxes.get(out.publishedCruxId!)!;
+    expect(crux().discoverable).toBe(false);
+    const first = (crux().meta as { mood: { revision?: string } }).mood.revision;
+    expect(first).toBeTruthy();
+    await publishMood(out, deps); // no choice given: keeps link-only
+    expect(crux().discoverable).toBe(false);
+    expect((crux().meta as { mood: { revision?: string } }).mood.revision).not.toBe(first);
+    await publishMood(out, { ...deps, discoverable: true });
+    expect(crux().discoverable).toBe(true);
+  });
+
+  it('remembers where an installed Mood came from, for update notices', async () => {
+    const pkg = captureCurrentMood({ name: 'Sourced Mood' });
+    const zip = await exportMoodPackage(pkg, async () => new Uint8Array());
+    const installed = await installMoodFromPublished(
+      { id: 'c20', slug: 'sourced', author_username: 'bo', meta: { mood: { revision: 'r7' } } },
+      {
+        publishBaseUrl: () => 'https://nowhere',
+        fetchBlob: async () => zip,
+        apiArtifacts: async () => [],
+        apiDownload: async () => zip,
+        putBlob: async () => 'fp',
+      },
+    );
+    const { moodSources } = await import('@/services/update-notices');
+    expect(moodSources()[installed!.id]).toEqual({
+      publishedCruxId: 'c20',
+      author: 'bo',
+      slug: 'sourced',
+      revision: 'r7',
+    });
+  });
 });

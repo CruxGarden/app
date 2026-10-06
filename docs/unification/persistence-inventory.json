@@ -266,6 +266,13 @@
       "ledger": "cruxgarden:graph-import:"
     },
     {
+      "key": "cruxgarden:installedMoodSources",
+      "sources": [
+        "src/services/update-notices.ts"
+      ],
+      "ledger": "cruxgarden:installedMoodSources"
+    },
+    {
       "key": "cruxgarden:installedTools",
       "sources": [
         "src/lib/constants.ts"

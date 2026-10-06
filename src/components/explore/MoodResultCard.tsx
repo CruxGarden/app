@@ -5,6 +5,8 @@ import { Button } from '@/components/ui';
 import type { ExploreCrux } from '@/api/public';
 import type { MoodSummary } from '@/lib/moods/publish-mood';
 import { publishBaseUrlFor } from '@/lib/public-url';
+import { deepLinkUrl } from '@/services/deep-links';
+import { buttonClass } from '@/components/ui/button-class';
 
 /** A published Mood in Explore: swatch, facts, Install / Wear it (inside the app). */
 export default function MoodResultCard({
@@ -97,6 +99,17 @@ export default function MoodResultCard({
 
         <ExploreCreator crux={crux} />
 
+        {!canInstall && (
+          <div className="pt-1">
+            <a
+              href={deepLinkUrl({ kind: 'install', type: 'mood', cruxId: crux.id })}
+              className={buttonClass('secondary', 'sm')}
+              data-testid="open-in-crux-garden"
+            >
+              Open in Crux Garden
+            </a>
+          </div>
+        )}
         {canInstall && (
           <div className="flex items-center gap-1.5 pt-1">
             <Button size="sm" onClick={() => void run(true)} disabled={busy !== null}>

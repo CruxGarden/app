@@ -6,6 +6,7 @@ import { toolManifest } from '@/services/crux-tools/registry';
 import { useInstalledTools, forgetInstalledTool } from '@/services/crux-tools/installed';
 import { formatDateTime } from '@/lib/format';
 import { choiceDialog } from '@/stores/dialogStore';
+import { installUpdate, useUpdateNotices } from '@/services/update-notices';
 
 /**
  * Settings → Tools and Moods → Installed tools (CRUX-TOOLS-DISTRIBUTION-PLAN §3.6): the
@@ -20,6 +21,20 @@ export default function InstalledTools() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const list = Object.values(tools).sort((a, b) => a.id.localeCompare(b.id));
+  const updates = useUpdateNotices().filter((notice) => notice.kind === 'tool');
+  const update = async (id: string) => {
+    const notice = updates.find((item) => item.id === id);
+    if (!notice) return;
+    setBusy(id);
+    setError('');
+    try {
+      await installUpdate(notice);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
   const remove = async (id: string, cruxId: string) => {
     const name = toolManifest(id)?.name ?? id;
     const answer = await choiceDialog({
@@ -45,7 +60,14 @@ export default function InstalledTools() {
   };
   return (
     <div data-testid="installed-tools">
-      <h3 className="font-display text-sm font-medium text-text mb-2">Installed tools</h3>
+      <h3 className="font-display text-sm font-medium text-text mb-2">
+        Installed tools
+        {updates.length > 0 && (
+          <span className="ml-2 text-xs font-body text-accent" data-testid="tool-updates">
+            {updates.length} update{updates.length === 1 ? '' : 's'}
+          </span>
+        )}
+      </h3>
       <p className="text-xs text-text-muted mb-3">
         Crux Tools this garden installed from Explore or a .cruxtool file. Built-in tools are
         available from Add Crux and cannot be removed here. Source and updates opens the creator’s
@@ -57,7 +79,8 @@ export default function InstalledTools() {
       ) : (
         <ul className="flex flex-col gap-2">
           {list.map((t) => {
-            const m = toolManifest(t.id);
+            const m = t.manifest ?? toolManifest(t.id);
+            const hasUpdate = updates.some((item) => item.id === t.id);
             return (
               <li
                 key={t.id}
@@ -72,6 +95,16 @@ export default function InstalledTools() {
                   </p>
                 </div>
                 <div className="flex flex-wrap justify-end gap-2">
+                  {hasUpdate && (
+                    <Button
+                      size="sm"
+                      disabled={busy === t.id}
+                      onClick={() => void update(t.id)}
+                      data-testid={`install-update-${t.id}`}
+                    >
+                      Install update
+                    </Button>
+                  )}
                   {t.author && t.slug && (
                     <Button
                       size="sm"

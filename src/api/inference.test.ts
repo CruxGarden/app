@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { streamText } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { includedFetch, INCLUDED_MODEL } from './inference';
+import { cruxIdHeader, includedFetch, INCLUDED_MODEL } from './inference';
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: { getState: () => ({ account: { id: 'account-id' } }) },
 }));
@@ -137,5 +137,37 @@ describe('included SDK transport', () => {
     vi.stubGlobal('fetch', fetch);
     await expect(includedFetch('', { body: '{}' })).rejects.toThrow('disconnected');
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('included request attribution', () => {
+  it('forwards only a Crux id from the provider headers and drops every other caller header', async () => {
+    const fetch = vi.fn(async () => sse());
+    vi.stubGlobal('fetch', fetch);
+    const cruxId = '0b5c2d1e-7a3f-4c8e-9d21-5f6a7b8c9d0e';
+    const model = createAnthropic({
+      apiKey: 'must-not-forward',
+      headers: { ...cruxIdHeader(cruxId), 'x-other': 'dropped' },
+      fetch: includedFetch,
+    })(INCLUDED_MODEL);
+    await streamText({ model, prompt: 'Hi', maxRetries: 0 }).text;
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer account-jwt',
+      'X-Request-Id': expect.any(String),
+      'x-crux-id': cruxId,
+    });
+  });
+  it('never sends something that is not a Crux id', async () => {
+    expect(cruxIdHeader('not-a-uuid')).toEqual({});
+    expect(cruxIdHeader('../../etc')).toEqual({});
+    expect(cruxIdHeader(undefined)).toEqual({});
+    const fetch = vi.fn(async () => sse());
+    vi.stubGlobal('fetch', fetch);
+    await includedFetch('', { body: '{}', headers: { 'x-crux-id': 'nope' } });
+    expect((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].headers).not.toHaveProperty(
+      'x-crux-id',
+    );
   });
 });

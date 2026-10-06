@@ -33,6 +33,11 @@ import GuestbookSection from './GuestbookSection';
 import GardenShelfSection from './GardenShelfSection';
 import WorkspacePackageShare from './WorkspacePackageShare';
 import FunctionsSection from './FunctionsSection';
+import VisitorPreview from './VisitorPreview';
+import { Toggle } from '@/components/ui';
+import { openSettings } from '@/components/layout/app-commands';
+import { conversationShared, sharedConversation } from '@/services/shared-conversation';
+import type { Crux, ChatMessage } from '@/api/types';
 import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
 
 /** What the spinner says while a publish runs — a site build is not instant. */
@@ -45,12 +50,74 @@ const PHASE_LABELS: Record<PublishPhase, string> = {
   tags: 'Finishing...',
 };
 
+/**
+ * "How was this made?" (CR06): the conversation is private unless the creator
+ * includes it. Off for a first share; the choice is saved with the Crux and
+ * every later update respects it.
+ */
+function ConversationShare({ crux, messages }: { crux: Crux; messages: ChatMessage[] }) {
+  const setConversationPublished = useCruxStore((s) => s.setConversationPublished);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const on = conversationShared(crux);
+  const total = messages.filter((m) => m.role === 'user' || m.role === 'assistant').length;
+  const shared = sharedConversation(crux, messages)?.length ?? 0;
+  return (
+    <PaneSection label="Conversation" data-testid="conversation-share">
+      <div className="flex flex-col gap-1.5">
+        <Toggle
+          checked={on}
+          disabled={busy}
+          label="Include the conversation"
+          onChange={(next) => {
+            setBusy(true);
+            setError('');
+            void setConversationPublished(next)
+              .catch(() => setError('Could not save this choice. Try again.'))
+              .finally(() => setBusy(false));
+          }}
+        />
+        <p className="text-xxs text-text-muted">
+          {on
+            ? `Visitors can read ${shared} of ${total} message${total === 1 ? '' : 's'} under “How was this made?”. Review it before you share — leave a message out from its actions in Collaboration.`
+            : 'Your Collaboration stays on this computer. Visitors see “The creator kept the conversation private.”'}
+        </p>
+        {error && (
+          <p role="alert" className="text-xxs text-error">
+            {error}
+          </p>
+        )}
+      </div>
+    </PaneSection>
+  );
+}
+
+/** Soft-limit notes from the last share: plain words and the way to the numbers. */
+function PublishWarnings() {
+  const warnings = useCruxStore((s) => s.publishWarnings);
+  if (!warnings.length) return null;
+  return (
+    <div data-testid="publish-warnings" className="flex flex-col gap-1.5">
+      {warnings.map((warning) => (
+        <PaneNote key={warning.kind} tone="muted" className="text-left whitespace-normal">
+          {warning.message}{' '}
+          <button type="button" className={linkClass()} onClick={() => openSettings()}>
+            See Usage in Settings
+          </button>
+        </PaneNote>
+      ))}
+    </div>
+  );
+}
+
 export default function PublishPane() {
   const aiEnabled = useAiEnabled();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
+  const messages = useCruxStore((s) => s.messages);
+  const [previewing, setPreviewing] = useState(false);
   const publishCrux = useCruxStore((s) => s.publishCrux);
   const unpublishCrux = useCruxStore((s) => s.unpublishCrux);
   const hasUnpublishedChanges = useCruxStore(selectHasUnpublishedChanges);
@@ -380,7 +447,7 @@ export default function PublishPane() {
                   ? `Sharing puts every file in ${plan.declaration.root}${plan.declaration.include?.length ? ` and the explicitly included ${plan.declaration.include.join(', ')}` : ''} on the web. Review the complete included documents before sharing. Other project files and your Collaboration stay here.`
                   : isEmbeddedApp(crux)
                     ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content stays here.'
-                    : 'Private for now. Sharing puts this creation and its conversation on the web. Review your page and conversation before sharing.'}
+                    : 'Private for now. Sharing puts this creation on the web. Your conversation stays here unless you include it below.'}
               </p>
               {!isAuthenticated && (
                 <p className="mt-2 text-xs text-text-muted">
@@ -428,6 +495,18 @@ export default function PublishPane() {
                     : 'Share'}
             </PaneAction>
           ) : null}
+
+          {plan.kind !== 'unavailable' && plan.kind !== 'tool-package' && (
+            <button
+              type="button"
+              className={buttonClass('secondary', 'xs', 'self-start')}
+              onClick={() => setPreviewing(true)}
+            >
+              Preview as a visitor
+            </button>
+          )}
+
+          <PublishWarnings />
 
           {can(Capability.LocalStaging) &&
             (!isEmbeddedApp(crux) || plan.kind === 'static') &&
@@ -578,6 +657,9 @@ export default function PublishPane() {
           {/* Visibility */}
           <GuideLink page="guides/sharing/">What happens when I share?</GuideLink>
           <PublicationVisibility key={crux.id} crux={crux} />
+          {!isEmbeddedApp(crux) && plan.kind !== 'static' && plan.kind !== 'tool-package' && (
+            <ConversationShare crux={crux} messages={messages} />
+          )}
 
           {!isEmbeddedApp(crux) && (
             <details className="rounded-[var(--radius-sm)] border border-border p-3">
@@ -629,6 +711,17 @@ export default function PublishPane() {
             </div>
           )}
         </div>
+      )}
+
+      {previewing && (
+        <VisitorPreview
+          open
+          onClose={() => setPreviewing(false)}
+          crux={crux}
+          artifacts={artifacts}
+          messages={messages}
+          username={author?.username ?? ''}
+        />
       )}
 
       <CreateAuthorModal

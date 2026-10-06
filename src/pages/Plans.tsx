@@ -23,6 +23,8 @@ export default function Plans() {
       .then(setCatalog)
       .catch(() => setError(true));
   }, []);
+  const trial = !!catalog && billingApi.offersTrial(catalog);
+  const tax = billingApi.taxLine(catalog?.taxBehavior);
   usePageMeta({
     title: `Plans — ${APP_NAME}`,
     description:
@@ -37,11 +39,9 @@ export default function Plans() {
       <main className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-8 py-10 rounded-[var(--radius)] bg-panel border border-panel-border shadow-panel mt-6 mb-6 text-panel-text">
         <h1 className="font-display text-3xl text-text">Plans</h1>
         <p className="text-sm text-text-muted mt-2 max-w-2xl">
-          The app, Moods, Growth and basic publishing are free. Use your own AI key on any plan.
-          Gardener adds hosting room and your own domains; included collaboration is available when
-          enabled on your server. Gardener Plus adds more included allowance. Included AI pauses at
-          its usage limits, with no automatic overage charges. Storage above twice your plan limit
-          pauses new uploads and publishes.
+          The app, Moods, Growth and basic publishing are free. Paid plans add hosting room, your
+          own domains and included collaboration — a collaborator you can use without bringing a key
+          of your own.
         </p>
 
         {error && <p className="text-sm text-text-muted mt-8">Plans are unavailable right now.</p>}
@@ -64,7 +64,8 @@ export default function Plans() {
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              {catalog.plans.map(({ plan, prices }) => {
+              {catalog.plans.map((entry) => {
+                const { plan, prices } = entry;
                 return (
                   <div
                     key={plan.id}
@@ -78,7 +79,18 @@ export default function Plans() {
                       </div>
                     </div>
                     {plan.blurb && <p className="text-xs text-text-muted">{plan.blurb}</p>}
+                    {plan.id !== 'free' && trial && (
+                      <p className="text-xs font-mono text-accent">
+                        Free trial · {catalog.trialDays} days
+                      </p>
+                    )}
                     <ul className="text-xs text-text-muted mt-1 flex flex-col gap-0.5">
+                      {billingApi.allowanceLines(entry)?.map((line) => (
+                        <li key={line} className="text-text">
+                          {line}
+                        </li>
+                      ))}
+                      {plan.id === 'free' && <li>Collaborate with your own key</li>}
                       <li>{formatBytes(plan.storageBytes)} published + backed up</li>
                       <li>{formatBytes(plan.bandwidthBytesPerPeriod)} of visits a month</li>
                       <li>
@@ -94,10 +106,53 @@ export default function Plans() {
                 );
               })}
             </div>
+            {tax && <p className="text-xs text-text-muted mt-3">{tax}</p>}
+            <section aria-label="How plans work" className="mt-6 flex flex-col gap-3 max-w-2xl">
+              <div>
+                <h2 className="font-display text-base text-text">Your own key</h2>
+                <p className="text-xs text-text-muted mt-1">
+                  Your own provider key works on every plan, Free included; those requests go
+                  straight to your provider and are billed by them. Paid plans add hosting room,
+                  your own domains and included collaboration on top.
+                </p>
+              </div>
+              <div>
+                <h2 className="font-display text-base text-text">Limits</h2>
+                <ul className="text-xs text-text-muted mt-1 flex flex-col gap-0.5">
+                  <li>
+                    Hosting limits — storage, visits and Crux Store requests — reset on the 1st of
+                    each month (UTC).
+                  </li>
+                  <li>
+                    Included collaboration rolls over two windows: the last 5 hours and the last 30
+                    days. Allowance returns as earlier requests age out.
+                  </li>
+                  <li>
+                    Near a limit, replies may get shorter, then pause until allowance returns. There
+                    are no overage charges.
+                  </li>
+                  <li>Storage above twice your plan's limit pauses new uploads and publishes.</li>
+                </ul>
+              </div>
+              <div>
+                <h2 className="font-display text-base text-text">Renewal and cancelling</h2>
+                <ul className="text-xs text-text-muted mt-1 flex flex-col gap-0.5">
+                  <li>Plans renew each month or year until you cancel.</li>
+                  <li>
+                    Cancel anytime; your plan runs to the end of the period you paid for. There are
+                    no partial refunds.
+                  </li>
+                  <li>
+                    When a plan ends, published work stays online within Free limits. Custom domains
+                    stay connected; connecting a new one needs a plan.
+                  </li>
+                </ul>
+              </div>
+            </section>
             <p className="text-xs text-text-muted mt-6">
               Pick a plan inside the app: Settings → Plan. Checkout is Stripe's, with Apple Pay,
               Google Pay and Link
-              {catalog.trialDays > 0 ? `, and trials need no card` : ''}.{' '}
+              {trial ? `, and trials need no card` : ''}.{' '}
               <a href="/#download" className={linkClass()}>
                 Download the app
               </a>

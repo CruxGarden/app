@@ -38,6 +38,11 @@ export function readLaunchSettings(packaged: boolean, env: NodeJS.ProcessEnv = p
     // development process is killed all day (Ctrl+C, a test's teardown), so it
     // stays quiet there unless a journey asks for it.
     crashNotice: packaged || (testing && test.CRUX_CRASH_NOTICE === '1'),
+    // Only an installed build with the person's real profile claims
+    // crux-garden:// from the OS (ADR 0085). A development process or any
+    // isolated profile (tests, a packaged smoke run from /tmp) must never take
+    // over the installed app's registration.
+    registerProtocol: packaged && !profile,
     renderer,
   };
 }

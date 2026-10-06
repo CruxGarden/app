@@ -529,7 +529,7 @@ it('publishes only the built Notes edition and strips private metadata and thumb
   expect(state.built).toBe(true);
   const sent = state.created[0]!;
   expect(sent.data).toBe('');
-  expect(sent.meta).toEqual({ messages: [] });
+  expect(sent.meta).toEqual({ conversationPublished: false });
   expect(
     state.publishedFiles?.some(
       (f) => f.path === '_crux/cover.jpg' || f.path.startsWith('notebook/'),
@@ -575,7 +575,7 @@ it('publishes only Moqira build output and strips private Collaboration and cove
     { deps },
   );
   expect(state.created[0]?.data).toBe('');
-  expect(state.created[0]?.meta).toEqual({ messages: [] });
+  expect(state.created[0]?.meta).toEqual({ conversationPublished: false });
   expect(state.built).toBe(true);
   expect(
     state.publishedFiles?.some(

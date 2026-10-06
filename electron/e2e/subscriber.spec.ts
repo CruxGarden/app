@@ -89,7 +89,9 @@ test('a subscriber signs in with no keys, creates with included AI and keeps the
     expect(await fileText(page, cruxId, 'index.html')).toBe('<h1>Made with included AI</h1>');
     api.state.failIncludedUsage = true;
     await page.evaluate(() => window.dispatchEvent(new Event('crux:usage-changed')));
-    await expect(page.getByTestId('included-status')).toContainText('Can’t check included AI');
+    await expect(page.getByTestId('included-status')).toContainText(
+      'Can’t check included collaboration',
+    );
     await expect(page.getByTestId('model-selector')).toContainText('Included collaborator');
     api.state.failIncludedUsage = false;
     api.state.includedUsagePercent = 100;

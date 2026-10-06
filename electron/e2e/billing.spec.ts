@@ -80,7 +80,8 @@ test.describe('billing (mocked API)', () => {
       await page.evaluate(() => window.dispatchEvent(new Event('crux:usage-changed')));
       await expect(included).toContainText('Sonnet handles included requests');
       await expect(included).not.toContainText('No allowance estimate is shown');
-      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      // Focus re-checks only while a checkout is pending (or every five minutes); ask directly.
+      await plan.getByRole('button', { name: 'Check again' }).click();
       await expect(plan.getByTestId('plan-status')).toContainText('Gardener Plus');
       await included.screenshot({ path: info.outputPath('plus-allowance.png') });
       await plan.screenshot({ path: info.outputPath('plans.png') });

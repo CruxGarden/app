@@ -1,6 +1,7 @@
 import { hasMoodCruxReference } from '@/services/mood-library';
 import { captureGardenId } from '@/stores/gardenContext';
 import JSZip from 'jszip';
+import { recordMoodSource } from '@/services/update-notices';
 /**
  * Publishing a Mood: the package becomes a crux of kind "mood" in your garden
  * — a real Project Folder holding mood.cruxmood (the package with assets),
@@ -27,6 +28,8 @@ export interface MoodSummary {
   author?: string;
   /** Published file name of the cover image (e.g. "cover.png"), when the Mood has one */
   cover?: string;
+  /** When this edition was shared — installed copies compare it for update notices. */
+  revision?: string;
 }
 
 const SWATCH_KEYS = [
@@ -112,6 +115,11 @@ export interface PublishMoodDeps {
   readBlob: (fp: string) => Promise<Uint8Array>;
   publish: (crux: Crux, artifacts: unknown[]) => Promise<Crux>;
   now?: () => string;
+  /**
+   * Listed in Explore (true) or link-only (false). Omitted: a new share is
+   * Discoverable and an update keeps the publication's current choice.
+   */
+  discoverable?: boolean;
 }
 
 /**
@@ -130,7 +138,8 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
         .async('uint8array')
     : null;
   const { crux: cruxService, artifact: artifactService } = await deps.services();
-  const summary = moodSummary(pkg);
+  const now = deps.now ?? (() => new Date().toISOString());
+  const summary: MoodSummary = { ...moodSummary(pkg), revision: now() };
   const meta = {
     mood: summary,
     tags: [
@@ -147,7 +156,7 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
       title: pkg.name,
       description: `A Crux Garden Mood: ${summary.section}${summary.track ? `, plays “${summary.track}”` : ''}.`,
       kind: 'mood',
-      discoverable: true,
+      discoverable: deps.discoverable ?? crux.discoverable ?? true,
       meta: { ...(crux.meta as Record<string, unknown>), ...meta },
     });
   } else {
@@ -158,7 +167,7 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
       meta,
     });
     crux = await cruxService.update(crux.id, {
-      discoverable: true,
+      discoverable: deps.discoverable ?? true,
       meta: { ...(crux.meta as Record<string, unknown>), ...meta },
     });
   }
@@ -199,14 +208,20 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
   const stamped: MoodPackage = {
     ...pkg,
     publishedCruxId: published.id,
-    publishedAt: (deps.now ?? (() => new Date().toISOString()))(),
+    publishedAt: now(),
   };
   return installMood(stamped, { source, gardenId });
 }
 
 /** Fetch a published Mood's package and install it. Tries the published files, then the public API. */
 export async function installMoodFromPublished(
-  crux: { id: string; slug: string; author_username: string; title?: string },
+  crux: {
+    id: string;
+    slug: string;
+    author_username: string;
+    title?: string;
+    meta?: Record<string, unknown> | null;
+  },
   deps: {
     publishBaseUrl: (id: string) => string;
     fetchBlob: (url: string) => Promise<Blob | null>;
@@ -237,7 +252,16 @@ export async function installMoodFromPublished(
   }
   if (!pkg) return null;
   const installed: MoodPackage = { ...pkg, publishedCruxId: pkg.publishedCruxId ?? crux.id };
-  return installMood(installed, { gardenId });
+  const result = await installMood(installed, { gardenId });
+  // Remember the source so Settings can say when its creator shares an update.
+  const revision = (crux.meta?.mood as MoodSummary | undefined)?.revision;
+  recordMoodSource(result.id, {
+    publishedCruxId: crux.id,
+    author: crux.author_username,
+    slug: crux.slug,
+    ...(typeof revision === 'string' ? { revision } : {}),
+  });
+  return result;
 }
 
 export { packageAssets };

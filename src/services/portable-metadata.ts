@@ -7,6 +7,7 @@ export function portableMeta(raw: unknown): Record<string, unknown> {
     'publishedAt',
     'publishedVersion',
     'publishedFingerprints',
+    'publishedConversationFingerprint',
     'turnJob',
     'turnQueue',
     'agentHost',

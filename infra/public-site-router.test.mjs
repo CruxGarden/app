@@ -38,3 +38,21 @@ test('the sitemap is handed to the API; pages that only resemble it are left alo
     assert.equal(request.uri, uri);
   }
 });
+
+test('link-preview crawlers get the preview path; people and assets do not (ADR 0084)', () => {
+  const run = (uri, ua) =>
+    handler({
+      request: {
+        uri,
+        method: 'GET',
+        querystring: {},
+        headers: ua ? { 'user-agent': { value: ua } } : {},
+      },
+    }).uri;
+  assert.equal(run('/alice/site', 'Slackbot-LinkExpanding 1.0'), '/~preview/alice/site');
+  assert.equal(run('/alice', 'Twitterbot/1.0'), '/~preview/alice');
+  assert.equal(run('/alice/site', 'Mozilla/5.0 (Macintosh)'), '/alice/site');
+  assert.equal(run('/assets/app.js', 'Twitterbot/1.0'), '/assets/app.js');
+  assert.equal(run('/docs/guides', 'Twitterbot/1.0'), '/docs/guides/index.html');
+  assert.equal(run('/', 'Twitterbot/1.0'), '/');
+});

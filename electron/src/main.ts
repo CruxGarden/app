@@ -28,6 +28,9 @@ import { INSTALLATION_COMMANDS, type InstallationCommand, type MenuCommand } fro
 import { WindowStateFile, restoreWindowState, trackWindowState } from './window-state';
 import { SessionMarker, isRendererCrash, type PreviousCrash } from './crash-marker';
 import { buildMenuTemplate, WEBSITE_URL } from './app-menu';
+import { DEEP_LINK_SCHEME, deepLinkArguments } from './deep-link-grammar';
+import { DeepLinkInbox } from './deep-link-inbox';
+import { DiskUsageMeter, clearCaches, measureDiskUsage, type CacheSession } from './disk-usage';
 const { app, BrowserWindow, protocol, dialog, shell } = require('electron');
 const { Readable } = require('node:stream');
 const path = require('path');
@@ -56,7 +59,28 @@ const packageImports = new PackageImports(() => {
   if (mainWindow && !mainWindow.isDestroyed())
     mainWindow.webContents.send('package-imports:changed');
 });
-packageImports.add(process.argv.slice(1));
+// Deep links are never file paths: keep them out of the package queue.
+const packageArguments = (argv: string[]) =>
+  argv.filter((arg) => deepLinkArguments([arg]).length === 0);
+packageImports.add(packageArguments(process.argv.slice(1)));
+// crux-garden:// links (ADR 0085). Parsed and validated here; accepted links
+// wait until the renderer subscribes. Events only fire after this module has
+// finished evaluating, so the log below exists by then.
+const deepLinks = new DeepLinkInbox((message) => debugLog(message));
+function revealForDeepLink() {
+  // Before ready, startup creates the window itself.
+  if (!app.isReady()) return;
+  void startup
+    .then(() => {
+      if (!quitting) showMainWindow();
+    })
+    .catch(() => undefined);
+}
+// macOS delivers links here, including the one that launched the app (before ready).
+app.on('open-url', (event: Electron.Event, url: string) => {
+  event.preventDefault();
+  if (deepLinks.receive(url)) revealForDeepLink();
+});
 // macOS delivers open-file before ready; retain it until a Garden is selected.
 app.on('open-file', (event: Electron.Event, file: string) => {
   event.preventDefault();
@@ -181,7 +205,9 @@ app.setPath('userData', userDataPath);
 const primaryInstance: boolean = app.requestSingleInstanceLock();
 if (!primaryInstance) app.exit(0);
 app.on('second-instance', (_event: Electron.Event, argv: string[], cwd: string) => {
-  packageImports.add(argv.slice(1), cwd);
+  packageImports.add(packageArguments(argv.slice(1)), cwd);
+  // Windows and Linux hand a clicked link to the running app as an argument.
+  for (const raw of deepLinkArguments(argv.slice(1))) deepLinks.receive(raw);
   // Electron emits this after ready, but asynchronous API startup may still be
   // running. Never create a window against an uninitialized storage/IPC host.
   void startup
@@ -215,6 +241,18 @@ function debugLog(msg: string) {
   appLog.info(msg);
 }
 debugLog(`Starting Crux Garden ${app.getVersion()}. isDev=${isDev}, isPackaged=${app.isPackaged}`);
+// Windows and Linux launch with the link as an argument.
+if (primaryInstance)
+  for (const raw of deepLinkArguments(process.argv.slice(1))) deepLinks.receive(raw);
+// Only an installed build on the person's own profile claims the scheme (ADR 0085, ADR 0066).
+if (primaryInstance && launchSettings.registerProtocol) {
+  try {
+    if (!app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME))
+      appLog.warn(`could not register ${DEEP_LINK_SCHEME}:// links`);
+  } catch (error) {
+    appLog.warn(`could not register ${DEEP_LINK_SCHEME}:// links: ${String(error)}`);
+  }
+}
 
 // How the last session ended (EF04, ADR 0008): a marker under userData, written
 // now and removed on a clean quit. Local only; the renderer is told once, and
@@ -262,6 +300,18 @@ function sendMenuCommand(command: MenuCommand, accelerator: boolean) {
   if (!mainWindow.isVisible() || mainWindow.isMinimized()) showMainWindow();
   mainWindow.webContents.send('menu:command', { command, accelerator });
 }
+// One listening document at a time; delivery fails (and the link waits
+// again) once that document is replaced or its window is gone.
+gardenBridge.on('deep-link:listening', (event: Electron.IpcMainEvent) => {
+  const sender = event.sender;
+  deepLinks.listen((link) => {
+    if (sender.isDestroyed() || !mainWindow || mainWindow.isDestroyed()) return false;
+    if (mainWindow.webContents !== sender) return false;
+    sender.send('deep-link', link);
+    return true;
+  });
+});
+gardenBridge.on('deep-link:unlisten', () => deepLinks.detach());
 gardenBridge.on('menu:listening', (event: Electron.IpcMainEvent) => {
   const queued = queuedMenuCommand;
   queuedMenuCommand = null;
@@ -407,7 +457,10 @@ function createWindow() {
   mainWindow.webContents.on(
     'did-start-navigation',
     (details: Electron.Event<Electron.WebContentsDidStartNavigationEventParams>) => {
-      if (details.isMainFrame && !details.isSameDocument) agentHostReady = false;
+      if (details.isMainFrame && !details.isSameDocument) {
+        agentHostReady = false;
+        deepLinks.detach();
+      }
     },
   );
 
@@ -846,6 +899,57 @@ async function setupIpc() {
   fromGarden('desktop:config', () => ({
     gardenRoot: desktopConfig.gardenRoot,
   }));
+
+  // ── Local disk use (ADR 0085) ───────────────────────────────
+  const diskUsage = new DiskUsageMeter(async () => {
+    const toolFolders: string[] = [];
+    const toolBlobs: string[] = [];
+    try {
+      for (const row of await db.all<{ meta: string | null }>(
+        "SELECT meta FROM cruxes WHERE kind = 'tool' AND deleted IS NULL",
+      )) {
+        try {
+          const meta = JSON.parse(row.meta || '{}');
+          if (typeof meta.projectFolder === 'string') toolFolders.push(meta.projectFolder);
+        } catch {
+          /* bad meta row: counted with the Project Folders */
+        }
+      }
+      for (const row of await db.all<{ fingerprint: string | null }>(
+        `SELECT DISTINCT a.fingerprint AS fingerprint FROM artifacts a
+           JOIN cruxes c ON c.id = a.resource_id
+          WHERE c.kind = 'tool' AND c.deleted IS NULL AND a.fingerprint IS NOT NULL`,
+      ))
+        if (row.fingerprint) toolBlobs.push(row.fingerprint);
+    } catch (error) {
+      debugLog(`Disk use: installed tools not separated (${String(error)})`);
+    }
+    return measureDiskUsage({
+      gardenRoot: desktopConfig.gardenRoot,
+      userData: app.getPath('userData'),
+      projectFolders: projects.registeredFolders(),
+      toolFolders,
+      toolBlobs,
+      blobDir: getBlobDir(),
+    });
+  });
+  fromGarden('disk-usage:summary', (_event: unknown, fresh: unknown) =>
+    diskUsage.read(fresh === true),
+  );
+  fromGarden('disk-usage:clear-caches', async () => {
+    const { session, webContents } = require('electron');
+    const sessions = new Set<CacheSession>([session.defaultSession]);
+    for (const contents of webContents.getAllWebContents())
+      if (!contents.isDestroyed()) sessions.add(contents.session);
+    // The browser panel's persistent partition, when it has been used.
+    if (fs.existsSync(path.join(app.getPath('userData'), 'Partitions', 'crux-www')))
+      sessions.add(session.fromPartition('persist:crux-www'));
+    try {
+      return await clearCaches(app.getPath('userData'), [...sessions]);
+    } finally {
+      diskUsage.invalidate();
+    }
+  });
 
   fromGarden('desktop:append-metrics-report', (_event: unknown, relative: string, text: string) =>
     appendMetricsReport(desktopConfig.gardenRoot, relative, text, projects.registeredFolders()),

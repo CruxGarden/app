@@ -583,6 +583,8 @@ describe('parallel tasks', () => {
         ...s.crux!,
         meta: {
           ...s.crux!.meta,
+          // The creator chose to share the conversation (CR06; private by default).
+          conversationPublished: true,
           projectFolder: '/private/local',
           settings: {
             agentSessionId: 'private-session',
@@ -597,6 +599,10 @@ describe('parallel tasks', () => {
     expect(JSON.stringify(projection)).not.toContain('/private/local');
     expect(JSON.stringify(projection)).not.toContain('private-session');
     expect(JSON.stringify(projection)).not.toContain('private-codex-session');
+    // Not shared: neither conversation leaves the computer.
+    const unshared = JSON.stringify(cruxUpsertFields(s.crux!, s.messages));
+    expect(unshared).not.toContain('Included A');
+    expect(unshared).not.toContain('Private B');
     const copy = await getServices().crux.findById(b.id);
     await expect(publishPipeline(copy, [])).rejects.toThrow('Main');
     await expect(unpublishPipeline(copy)).rejects.toThrow('Main');

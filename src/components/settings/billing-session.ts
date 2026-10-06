@@ -33,7 +33,12 @@ interface Dependencies {
   usageChanged: () => void;
   /** Account identity is checked again after every await, before another action. */
   isCurrent: () => boolean;
+  /** Clock for the focus re-check interval (tests pass their own). */
+  now?: () => number;
 }
+
+/** A window focus re-checks at most this often unless a checkout is pending. */
+export const FOCUS_RECHECK_MS = 5 * 60_000;
 
 function planIdentity(me: Billing.BillingMe): string {
   return JSON.stringify([
@@ -45,7 +50,19 @@ function planIdentity(me: Billing.BillingMe): string {
     me.trialEndsAt,
     me.graceEndsAt,
     me.provider,
+    me.attention?.kind ?? null,
   ]);
+}
+
+/** A checkout that the server refused because a payment needs fixing first (409). */
+function conflictMessage(error: unknown): string | null {
+  const response = (error as { response?: { status?: number; data?: { message?: unknown } } })
+    ?.response;
+  if (response?.status !== 409) return null;
+  const message = response.data?.message;
+  return typeof message === 'string' && message
+    ? message
+    : 'A payment on your current subscription needs attention first. Open Manage billing to fix it.';
 }
 
 /** Owns one mounted account's requests and browser-return polling. Disposal
@@ -58,6 +75,7 @@ export class BillingSettingsSession {
   private waitVersion = 0;
   private waitingFrom: string | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private checkedAt = 0;
 
   constructor(
     private readonly dependencies: Dependencies,
@@ -84,8 +102,12 @@ export class BillingSettingsSession {
     this.waitingFrom = null;
     this.update({ waiting: false });
   }
+  private now() {
+    return (this.dependencies.now ?? Date.now)();
+  }
   private absorb(me: Billing.BillingMe) {
     if (!this.active) return;
+    this.checkedAt = this.now();
     const identity = planIdentity(me);
     const changed = this.state.me && identity !== planIdentity(this.state.me);
     this.update({ me, error: null });
@@ -127,6 +149,36 @@ export class BillingSettingsSession {
         });
     }
   }
+  /**
+   * Window focus: re-check only while a checkout is pending (or the browser
+   * return is being awaited), or when the last check is old. Never a notice —
+   * coming back to the window is not a request to be told anything.
+   */
+  async focus() {
+    if (!this.active || this.state.busy) return;
+    const pending = this.state.waiting || !!this.state.me?.pendingCheckout;
+    if (!pending && this.now() - this.checkedAt < FOCUS_RECHECK_MS) return;
+    await this.refresh(true);
+  }
+  /**
+   * The browser handed the person back through a crux-garden:// billing link.
+   * Verify with the server at once; the link itself proves nothing.
+   */
+  async returned(status: 'success' | 'cancel') {
+    if (!this.active) return;
+    const before = this.state.me ? planIdentity(this.state.me) : null;
+    await this.refresh(true);
+    if (!this.active) return;
+    const after = this.state.me ? planIdentity(this.state.me) : null;
+    if (status === 'cancel' && before === after) {
+      this.stopWaiting();
+      this.update({
+        notice: this.state.me?.pendingCheckout
+          ? 'Checkout closed. Resume it or cancel it below.'
+          : 'Checkout closed. Your plan is unchanged.',
+      });
+    }
+  }
   private startWaiting(from: Billing.BillingMe) {
     this.stopWaiting();
     const version = this.waitVersion;
@@ -160,11 +212,21 @@ export class BillingSettingsSession {
       await work();
     } catch (error) {
       if (!this.active) return;
+      const conflict = conflictMessage(error);
       const message = (error as { response?: { data?: { message?: string } } })?.response?.data
         ?.message;
       this.update({
-        error: message || 'Billing could not complete. Check your plan before trying again.',
+        error:
+          conflict ||
+          (typeof message === 'string' && message) ||
+          'Billing could not complete. Check your plan before trying again.',
       });
+      // The refusal means the server knows something this view does not yet
+      // show (an unpaid or unfinished subscription): fetch it, keep the reason.
+      if (conflict) {
+        await this.refresh(true);
+        this.update({ error: conflict });
+      }
     } finally {
       this.update({ busy: null });
     }
@@ -184,7 +246,7 @@ export class BillingSettingsSession {
       if (
         me.provider === 'simulation' &&
         me.canSimulate &&
-        !['none', 'canceled'].includes(me.status)
+        !(['none', 'canceled', 'incomplete_expired'] as string[]).includes(me.status)
       ) {
         this.absorb(await this.dependencies.api.simulate('change_plan', planId, interval));
         return;
