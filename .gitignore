@@ -50,3 +50,7 @@ public/docs/
 public/blog/
 public/_astro/
 public/mark.svg
+
+# Playwright output from the embedded apps' own suites
+test-results/
+*-crux/test-results/

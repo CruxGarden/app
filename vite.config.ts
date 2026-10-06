@@ -73,10 +73,11 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    // Sourcemaps are for debugging a local build. The crux.garden build skips
-    // them: generating them for a bundle this size is what exhausts Node's heap
-    // on a CI runner, and publishing them would serve our source to visitors.
-    sourcemap: !process.env.VITE_PUBLIC_SITE,
+    // Source maps for the embedded apps came to 297 MB, and Electron copies the
+    // whole of `dist` into the packaged app (electron/package.json
+    // `extraResources`), so every user downloaded them. Opt in with
+    // CRUX_SOURCEMAPS=1 when debugging a production build.
+    sourcemap: process.env.CRUX_SOURCEMAPS === '1',
   },
   test: {
     // Archive/template tests load whole editor distributions. Parallel transforms

@@ -1,0 +1,4 @@
+# Renders are cheap to regenerate from index.html; only the 512 is kept as a
+# reference for review.
+exports/crux-plasma-1024.png
+exports/crux-plasma-128.png

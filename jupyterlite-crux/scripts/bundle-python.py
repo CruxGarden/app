@@ -1,5 +1,5 @@
 from pathlib import Path
-import json,urllib.request,hashlib,concurrent.futures
+import json,urllib.request,hashlib,concurrent.futures,time
 root=Path(__file__).resolve().parent.parent
 base='https://cdn.jsdelivr.net/pyodide/v314.0.4/full/'
 out=root/'runtime/pyodide';out.mkdir(parents=True,exist_ok=True)
@@ -18,7 +18,18 @@ def fetch(item):
  filename,sha=item
  sha=manifest['files'].get(filename,sha)
  p=out/filename
- if not p.exists():p.write_bytes(urllib.request.urlopen(base+filename).read())
+ # Every one of these is a transient network call, and the CDN returns 503
+ # "first byte timeout" often enough to fail a CI run on its own. Retry, and
+ # write through a temporary so an interrupted download cannot leave a
+ # truncated file that the p.exists() check would then skip.
+ if not p.exists():
+  for attempt in range(5):
+   try:
+    data=urllib.request.urlopen(base+filename,timeout=120).read();break
+   except Exception as err:
+    if attempt==4:raise
+    print('retry',filename,type(err).__name__,err,flush=True);time.sleep(2**attempt)
+  part=p.parent/(p.name+'.part');part.write_bytes(data);part.replace(p)
  if sha and hashlib.sha256(p.read_bytes()).hexdigest()!=sha:raise ValueError(filename+' checksum mismatch')
  print(filename,p.stat().st_size,flush=True)
  return filename

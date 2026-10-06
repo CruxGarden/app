@@ -13,7 +13,11 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const runtime = import.meta.glob(
-  ['../../timeline-crux/runtime/**/*', '!../../timeline-crux/runtime/css/**/*.css'],
+  [
+    '../../timeline-crux/runtime/**/*',
+    '!../../timeline-crux/runtime/**/*.map',
+    '!../../timeline-crux/runtime/css/**/*.css',
+  ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
 const template: ToolTemplateFiles = {

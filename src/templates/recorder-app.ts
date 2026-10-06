@@ -11,7 +11,11 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const runtime = import.meta.glob(
-  ['../../recorder-crux/runtime/**/*', '../../recorder-crux/public/**/*'],
+  [
+    '../../recorder-crux/runtime/**/*',
+    '!../../recorder-crux/runtime/**/*.map',
+    '../../recorder-crux/public/**/*',
+  ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
 const template: ToolTemplateFiles = {

@@ -13,6 +13,16 @@ function fixture(options = {}) {
     pads = [],
     latest;
   const trace = require("node:crypto").createHash("sha256");
+  // Canvas coordinates are doubles, and a double is not bit-identical across
+  // architectures: arm64 and x86_64 disagreed on the last digit of two values
+  // (1 ULP, 108 of 1,504,977 traced calls), which changed the digest and failed
+  // the golden on CI while passing on an Apple Silicon Mac. Twelve significant
+  // digits is far below anything that could be a real drawing change and well
+  // above the noise.
+  const stable = (v) =>
+    typeof v === "number" && Number.isFinite(v) && !Number.isInteger(v)
+      ? Number(v.toPrecision(12))
+      : v;
   const record = (value) => {
     if (options.trace)
       trace.update(
@@ -21,7 +31,7 @@ function fixture(options = {}) {
             ? undefined
             : key === "id" && /^canvas\d+$/.test(v)
               ? "canvas"
-              : v,
+              : stable(v),
         ) + "\n",
       );
   };
