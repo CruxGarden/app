@@ -5,7 +5,7 @@ on:
   push:
     branches: [main, 'codex/**']
     paths:
-      - '.github/workflows/private-app.yml'
+      - '.github/workflows/**'
       - 'private-requests-crux/**'
       - 'src/**'
       - 'electron/e2e/private-request*.ts'

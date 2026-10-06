@@ -83,6 +83,9 @@ export default defineConfig({
     // Archive/template tests load whole editor distributions. Parallel transforms
     // exhaust memory and cause false timeouts even on large development machines.
     maxWorkers: 1,
+    // Native API journeys include disk I/O, restarts and archive round-trips.
+    // Five seconds causes load-dependent failures unrelated to their assertions.
+    testTimeout: 15_000,
     globals: true,
     environment: 'node',
     setupFiles: ['./src/test/setup.ts'],

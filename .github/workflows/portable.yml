@@ -8,7 +8,7 @@ on:
     paths:
       - '.gitattributes'
       - 'licenses/**'
-      - '.github/workflows/portable.yml'
+      - '.github/workflows/**'
       - '.github/actions/native-media/**'
       - 'electron/**'
       - 'src/**'
