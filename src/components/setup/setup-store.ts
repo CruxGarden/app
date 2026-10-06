@@ -49,7 +49,7 @@ export interface SetupChoices {
   /** Step 3's quiet disclosures. */
   moreOpen: boolean;
   developersOpen: boolean;
-  /** The garden has been planted: the closing moment is playing. */
+  /** Setup has been applied and the destination is being prepared. */
   planted: boolean;
 }
 

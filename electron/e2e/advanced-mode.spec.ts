@@ -97,7 +97,7 @@ test('an app interest keeps setup simple until Advanced Mode is chosen; cancel d
     await openSetupWizard(page);
     const wizard = page.getByTestId('setup-wizard');
     await expect(wizard.getByRole('switch', { name: 'Advanced Mode' })).not.toBeChecked();
-    await page.getByText('An app with a backend', { exact: true }).click();
+    await page.getByText('An app or useful tool', { exact: true }).click();
     await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
     await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.locator('[data-setup-section="collaborator"]')).toBeVisible();

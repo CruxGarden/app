@@ -1,4 +1,4 @@
-import { setupWorkspaceLayout, startingActivity, type StartKind } from './setup-workspace';
+import { firstCruxLayout, startingActivity, type StartKind } from './setup-workspace';
 import { SettingsKey } from '@/lib/constants';
 import { Capability, can } from '@/lib/platform';
 import { getSetting, setSetting } from '@/services/settings';
@@ -221,11 +221,11 @@ export async function createFirstCrux(
 ): Promise<string> {
   const activity = startingActivity(entry.id, options?.need ?? null);
   const layout = options
-    ? setupWorkspaceLayout({
+    ? firstCruxLayout(entry.id, {
         ...options,
-        need: entry.id === 'blank' ? options.need : activity,
         aiEnabled: getSetting(SettingsKey.AiEnabled) === 'true',
         width: window.innerWidth,
+        height: window.innerHeight,
       })
     : undefined;
   const gardenId = captureGardenId();

@@ -3,17 +3,43 @@ import type { PaneType } from '@/stores/uiStore';
 import { NEEDS, type SetupNeed } from './setup-plan';
 
 export type StartKind = 'guided' | 'template' | 'empty';
+export const NEED_BENEFITS: Record<SetupNeed, string> = {
+  website:
+    'Make a home page, portfolio or blog. Edit the content, preview your changes, and publish when you are ready.',
+  app: 'Build something people can use: forms, saved requests and private data. Start with a working example and make it your own.',
+  writing:
+    'Write and organize notes in folders, keep earlier versions, and export or share the parts you choose.',
+  music:
+    'Play with sounds and patterns, save your experiments, and return to them in your own music workspace.',
+  art: 'Draw, arrange shapes and develop visual ideas. Keep your work together and export or share a finished piece.',
+  game: 'Start with a playable game, explore how it works, and make changes you can try in the same workspace.',
+  exploring:
+    'Try a small first project. You can add more Cruxes for writing, websites, music, art and games whenever you like.',
+};
 /** A different starting point gets its own activity, not the earlier interest's instructions. */
 export function startingActivity(templateId: string, interest: SetupNeed | null): SetupNeed {
   if (NEEDS.find((choice) => choice.id === interest)?.templates.includes(templateId))
     return interest!;
   return NEEDS.find((choice) => choice.templates.includes(templateId))?.id ?? 'exploring';
 }
+export function firstCruxLayout(templateId: string, options: SetupWorkspace): MosaicNode<PaneType> {
+  return setupWorkspaceLayout({
+    ...options,
+    need: templateId === 'blank' ? options.need : startingActivity(templateId, options.need),
+  });
+}
+/** Saved tutorial metadata may come from an imported Crux. */
+export function walkthroughStep(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 2
+    ? value
+    : 0;
+}
 export interface SetupWorkspace {
   need: SetupNeed | null;
   advancedMode: boolean;
   aiEnabled: boolean;
   width: number;
+  height?: number;
 }
 /** Fit the first activity to the actual workspace, without changing existing Crux layouts. */
 export function setupWorkspaceLayout(options: SetupWorkspace): MosaicNode<PaneType> {
@@ -34,13 +60,16 @@ export function setupWorkspaceLayout(options: SetupWorkspace): MosaicNode<PaneTy
           second: stack(panes.slice(1)),
           splitPercentage: panes[0] === 'collaboration' ? 60 : 50,
         };
-  if (width < 900)
+  if (width < 900) {
+    // Short windows cannot fit two usable panel bodies beneath their controls.
+    if ((options.height ?? 900) < 850) return 'workshop';
     return {
       direction: 'column',
       first: 'workshop',
-      second: stack(side),
-      splitPercentage: 68,
+      second: side[0]!,
+      splitPercentage: 55,
     };
+  }
   return {
     direction: 'row',
     first: stack(side),

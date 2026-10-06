@@ -40,7 +40,7 @@ export const NEEDS: NeedChoice[] = [
   },
   {
     id: 'app',
-    label: 'An app with a backend',
+    label: 'An app or useful tool',
     description: 'Forms, saved data and sign-in for the people who use it',
     templates: ['private-requests', 'order-desk'],
     firstSection: 'agents',

@@ -30,6 +30,7 @@ export default function StepGarden({
   const folderLabel = useId();
   const okId = useId();
   const [photoError, setPhotoError] = useState('');
+  const [aboutOpen, setAboutOpen] = useState(!!username || !!photo);
   const fileRef = useRef<HTMLInputElement>(null);
   const author = useAppStore((s) => s.author);
   const current = useAvatarUrl(author);
@@ -107,7 +108,12 @@ export default function StepGarden({
         />
       </label>
 
-      <div className="flex flex-col gap-3">
+      <Disclosure
+        label="About you (optional)"
+        hint="username, photo"
+        open={aboutOpen || !!usernameError}
+        onToggle={setAboutOpen}
+      >
         <p className="text-xs text-text-muted">
           About you, if you like. You can also pick a name the first time you share something.
         </p>
@@ -171,7 +177,7 @@ export default function StepGarden({
             {photoError}
           </p>
         )}
-      </div>
+      </Disclosure>
 
       <Disclosure label="More options" hint="folder, account" testId="setup-garden-more">
         {can(Capability.ProjectFolder) && (

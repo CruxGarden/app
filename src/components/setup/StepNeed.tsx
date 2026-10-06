@@ -1,7 +1,8 @@
 import { cn } from '@/lib/cn';
 import { NEEDS } from './setup-plan';
 import NeedPreview from './NeedPreview';
-import { ReadyMark, Recommended } from './setup-ui';
+import { ReadyMark } from './setup-ui';
+import { NEED_BENEFITS } from './setup-workspace';
 import { useSetupWizard } from './setup-store';
 import AdvancedModeToggle from '@/components/settings/AdvancedModeToggle';
 
@@ -45,7 +46,6 @@ export default function StepNeed() {
                       <span className={cn('text-sm font-medium', selected && 'text-accent')}>
                         {choice.label}
                       </span>
-                      {choice.recommended && <Recommended />}
                     </span>
                     <span className="text-xs text-text-muted">{choice.description}</span>
                   </span>
@@ -56,6 +56,11 @@ export default function StepNeed() {
           })}
         </div>
       </fieldset>
+      {need && (
+        <p className="text-sm text-text" aria-live="polite" data-testid="setup-benefits">
+          {NEED_BENEFITS[need]}
+        </p>
+      )}
       <AdvancedModeToggle
         checked={advancedMode}
         onChange={(on) => set({ advancedMode: on, aiSeeded: false, openSection: null })}

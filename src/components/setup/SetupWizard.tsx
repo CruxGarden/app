@@ -24,7 +24,6 @@ import {
 } from './setup-plan';
 import { growthStage, nextStep, previousStep, useSetupWizard } from './setup-store';
 import GardenGrowth from './GardenGrowth';
-import { useStillMotion } from './useStillMotion';
 import StepNeed from './StepNeed';
 import StepGarden from './StepGarden';
 import StepAi from './StepAi';
@@ -35,27 +34,27 @@ const STEPS: Record<SetupStepId, { short: string; title: string; lead: string }>
   need: {
     short: 'Make',
     title: 'What would you like to make?',
-    lead: 'Pick the closest. We’ll suggest places to start, and you can make anything later.',
+    lead: 'Choose something you want to do. We’ll put the right tools within reach and help you try them in your first Crux — one project with its own workspace.',
   },
   garden: {
     short: 'Garden',
     title: 'Your garden',
-    lead: 'Everything you make grows here, on this computer.',
+    lead: 'Give your collection of projects a name. Your work saves on this computer; an account is optional until you want online services.',
   },
   ai: {
     short: 'Collaborators',
     title: 'Would you like a collaborator?',
-    lead: 'A helper who can talk ideas through and make changes with you. Entirely optional.',
+    lead: 'Get help writing, building and exploring ideas, or work directly with the editors and creative tools. You can change this later.',
   },
   mood: {
     short: 'Mood',
     title: 'Choose a Mood',
-    lead: 'Colours, background and sound. Pick one and watch the garden change.',
+    lead: 'Make this a place you enjoy working. Preview the colours, background and sound before you choose.',
   },
   crux: {
     short: 'Ready',
-    title: 'Ready to plant',
-    lead: 'Check your choices, then plant your garden.',
+    title: 'Make yourself at home',
+    lead: 'Choose your first Crux and see how your workspace will open. You can explore its tools and follow its tips once you’re inside.',
   },
 };
 
@@ -90,12 +89,13 @@ export default function SetupWizard({
 }) {
   const navigate = useNavigate();
   const state = useSetupWizard();
-  const still = useStillMotion();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [confirmSkip, setConfirmSkip] = useState(false);
+  const [openingCrux, setOpeningCrux] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  const content = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     useSetupWizard.getState().begin(setupStartFor(mode));
@@ -109,6 +109,7 @@ export default function SetupWizard({
       return;
     }
     heading.current?.focus();
+    if (content.current) content.current.scrollTop = 0;
   }, [state.step]);
 
   // First run: Esc asks whether to skip setup (in the dialog, Esc closes it).
@@ -157,6 +158,7 @@ export default function SetupWizard({
   const finish = async (after: After, skipping = false) => {
     if (busy) return;
     setBusy(true);
+    setOpeningCrux(after.kind === 'crux');
     setError('');
     setConfirmSkip(false);
     try {
@@ -179,11 +181,7 @@ export default function SetupWizard({
       const celebrate = mode === 'first' || after.kind === 'crux';
       if (celebrate) {
         useSetupWizard.getState().set({ planted: true });
-        void playPlantedCue();
       }
-      const pause = celebrate
-        ? new Promise((resolve) => setTimeout(resolve, still ? 900 : 1600))
-        : Promise.resolve();
       let to: string | null = null;
       if (after.kind === 'crux')
         to = await createFirstCrux(after.entry, choices.cruxTitle, {
@@ -196,7 +194,7 @@ export default function SetupWizard({
         const garden = useGardenContext.getState().garden;
         to = mode === 'first' || !garden ? '/home' : gardenPath(garden.id);
       }
-      await pause;
+      if (celebrate) void playPlantedCue();
       useSetupWizard.getState().reset();
       onDone?.();
       if (after.kind === 'stay') toast('Saved. Your garden is up to date.');
@@ -206,7 +204,7 @@ export default function SetupWizard({
       setError(
         err instanceof Error && err.message
           ? err.message
-          : 'Your garden could not be planted. Try again.',
+          : 'Your workspace could not be opened. Your choices are still here; try again.',
       );
       setBusy(false);
     }
@@ -333,9 +331,13 @@ export default function SetupWizard({
           className="motion-enter-card flex flex-col items-center gap-1 py-8 text-center"
           data-testid="setup-planted"
         >
-          <p className="font-display text-lg text-accent">Your garden is planted</p>
+          <p className="font-display text-lg text-accent">
+            {openingCrux ? 'Creating your Crux' : 'Preparing your workspace'}
+          </p>
           <p className="text-sm text-text-muted">
-            {name} is ready. {busy ? 'Opening it now…' : ''}
+            {openingCrux
+              ? `Opening ${state.cruxTitle.trim() || 'your new Crux'} with your chosen tools…`
+              : `Opening ${name}…`}
           </p>
         </div>
       ) : (
@@ -351,7 +353,13 @@ export default function SetupWizard({
             <p className="text-xs text-text-muted mt-1">{step.lead}</p>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto -mx-1 px-1 pb-1">
+          <div
+            ref={content}
+            className={cn(
+              'min-h-0 flex-1',
+              state.step === 'crux' ? 'flex flex-col' : 'overflow-y-auto -mx-1 px-1 pb-1',
+            )}
+          >
             {state.step === 'need' && <StepNeed />}
             {state.step === 'garden' && (
               <StepGarden usernameError={usernameError} onUsernameError={setUsernameError} />
@@ -364,6 +372,7 @@ export default function SetupWizard({
                 onCreate={(entry) => void finish({ kind: 'crux', entry })}
                 onNotNow={() => void finish(mode === 'first' ? { kind: 'home' } : { kind: 'stay' })}
                 onSave={() => void finish({ kind: 'stay' })}
+                onBack={back}
               />
             )}
           </div>
@@ -376,7 +385,7 @@ export default function SetupWizard({
         </p>
       )}
 
-      {!state.planted && (
+      {!state.planted && state.step !== 'crux' && (
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
           {(mode === 'first' || index > 0) && (
             <Button variant="ghost" size="sm" disabled={busy} onClick={back}>
@@ -384,29 +393,25 @@ export default function SetupWizard({
             </Button>
           )}
           <span className="flex-1" />
-          {state.step !== 'crux' && (
-            <>
-              <Button variant="ghost" size="sm" disabled={busy} onClick={later}>
-                {state.step === 'mood'
-                  ? mode === 'first'
-                    ? 'Keep the default'
-                    : 'Keep my Mood'
-                  : 'Later'}
-              </Button>
-              <Button
-                size="sm"
-                loading={busy}
-                disabled={state.step === 'garden' && !!usernameError}
-                onClick={() => void forward()}
-              >
-                {state.returnToSummary
-                  ? 'Back to summary'
-                  : nextStep(state) === 'crux'
-                    ? 'Almost there'
-                    : 'Continue'}
-              </Button>
-            </>
-          )}
+          <Button variant="ghost" size="sm" disabled={busy} onClick={later}>
+            {state.step === 'mood'
+              ? mode === 'first'
+                ? 'Keep the default'
+                : 'Keep my Mood'
+              : 'Later'}
+          </Button>
+          <Button
+            size="sm"
+            loading={busy}
+            disabled={state.step === 'garden' && !!usernameError}
+            onClick={() => void forward()}
+          >
+            {state.returnToSummary
+              ? 'Back to summary'
+              : nextStep(state) === 'crux'
+                ? 'Almost there'
+                : 'Continue'}
+          </Button>
         </div>
       )}
 

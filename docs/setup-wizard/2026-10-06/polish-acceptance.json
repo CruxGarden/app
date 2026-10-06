@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-06",
+  "status": "implemented and locally accepted",
+  "branch": "wip/setup-wizard-and-triage",
+  "baseCommit": "3593a01da",
+  "scope": [
+    "Lead with useful outcomes and tool features for each interest; keep personal identity optional.",
+    "Preview the actual first workspace before creation; keep Create reachable while choices scroll.",
+    "Fit initial panels to the window: Workshop alone in short narrow windows, one supporting panel in tall narrow windows, relevant panels alongside on wide windows.",
+    "Open the new Crux directly with compact, resumable guidance; retain explicit skip, back, cancel and reconfigure paths.",
+    "Preserve independent Advanced Mode/AI preferences and single-pane Tigrana navigation."
+  ],
+  "verification": {
+    "app": {
+      "command": "npm run verify",
+      "passed": 2090,
+      "skipped": 18,
+      "files": 324,
+      "build": "passed",
+      "log": "/tmp/crux-setup-polish-verify.log"
+    },
+    "electron": {
+      "command": "npm run verify",
+      "passed": 204,
+      "skipped": 1,
+      "log": "/tmp/crux-setup-polish-electron.log"
+    },
+    "finalLayoutTypesAndLint": "passed; /tmp/crux-setup-polish-final-types.log",
+    "sourceDesktop": {
+      "passed": 2,
+      "failed": 0,
+      "log": "/tmp/crux-setup-polish-short-window.log"
+    },
+    "packaged": {
+      "passed": 27,
+      "failed": 0,
+      "duration": "3.8m",
+      "log": "/tmp/crux-setup-polish-packaged.log",
+      "coverage": [
+        "seven wizard journeys",
+        "three Advanced Mode journeys",
+        "twelve starter/layout cases",
+        "hardware model picker without download",
+        "workspace preview and short-window controls",
+        "tutorial progress and tool space after reload",
+        "compact Notes editing and restart",
+        "startup, SQLite and bundled CLI"
+      ]
+    },
+    "format": "Prettier and git diff --check passed",
+    "visualReview": "All four saved screenshots inspected."
+  },
+  "observations": [
+    "An initial desktop assertion expected the vertical panels in reverse order; corrected before final acceptance.",
+    "Visual review found supporting panels too short at820x720; final layout prioritizes Workshop there and was rechecked in the actual packaged app."
+  ],
+  "manualCandidate": "electron/release/manual-testing-wizard-polish-oct6/mac-arm64/Crux Garden.app",
+  "signature": "ad-hoc; codesign --verify --deep --strict passed",
+  "screenshots": [
+    "polish/introduction-writing.png",
+    "polish/notebook-tutorial.png",
+    "polish/workspace-open-narrow.png",
+    "polish/workspace-ready-narrow.png"
+  ],
+  "limits": [
+    "Local macOS acceptance; not a full desktop-suite or Windows/Linux certification.",
+    "No live AI provider, model download or inference used.",
+    "No push, merge, deployment or real/manual Garden opened.",
+    "Inherited pale wide Notes sidebar headers remain a separate visual follow-up."
+  ]
+}

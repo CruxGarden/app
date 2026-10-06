@@ -106,6 +106,7 @@ test.describe('Setup wizard', () => {
       await expect(wizard(page)).toHaveAttribute('data-step', 'crux');
       await expect(growth(page)).toHaveAttribute('data-stage', '4');
       const summary = page.getByTestId('setup-summary');
+      await summary.locator('summary').click();
       await expect(summary.locator('[data-summary="need"]')).toHaveText('A home page or website');
       await expect(summary.locator('[data-summary="garden"]')).toContainText('Moss Hollow');
       await expect(summary.locator('[data-summary="ai"]')).toHaveText('By hand');
@@ -117,9 +118,7 @@ test.describe('Setup wizard', () => {
       );
       await wizard(page).getByRole('button', { name: 'Create & open', exact: true }).click();
 
-      // The garden blooms, then the first home page opens with its own walkthrough
-      await expect(page.getByTestId('setup-planted')).toBeVisible();
-      await expect(growth(page)).toHaveAttribute('data-stage', '5');
+      // Creation opens the Crux directly; its own walkthrough takes over.
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60_000 });
       await expect(page.getByText('Your first home page', { exact: true })).toBeVisible();
       await expect(page.getByRole('navigation', { name: 'Home page walkthrough' })).toBeVisible();
@@ -148,6 +147,7 @@ test.describe('Setup wizard', () => {
       await openSetupWizard(page);
       await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
       await page.getByLabel('Name your garden', { exact: true }).fill('Kept Name');
+      await page.getByRole('button', { name: /About you \(optional\)/ }).click();
       await page.getByLabel('Username', { exact: true }).fill('river-moss');
       await expect(page.getByText('Lovely — that name works.')).toBeVisible();
       await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
@@ -168,6 +168,7 @@ test.describe('Setup wizard', () => {
           .getByRole('button', { name: /^(Continue|Almost there)$/ })
           .click();
       await expect(wizard(page)).toHaveAttribute('data-step', 'crux');
+      await page.getByTestId('setup-summary').locator('summary').click();
       await page.getByRole('button', { name: 'Edit garden' }).click();
       await expect(wizard(page)).toHaveAttribute('data-step', 'garden');
       await wizard(page).getByRole('button', { name: 'Back to summary', exact: true }).click();
@@ -182,8 +183,8 @@ test.describe('Setup wizard', () => {
     try {
       await openSetupWizard(page);
       await page.getByRole('switch', { name: 'Advanced Mode', exact: true }).click();
-      await page.getByText('An app with a backend', { exact: true }).click();
-      await page.getByRole('radio', { name: /An app with a backend/ }).press('Enter');
+      await page.getByText('An app or useful tool', { exact: true }).click();
+      await page.getByRole('radio', { name: /An app or useful tool/ }).press('Enter');
       await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
       await expect(wizard(page)).toHaveAttribute('data-step', 'ai');
       await expect(page.getByTestId('setup-ai-developers')).toHaveAttribute('data-open', 'true');

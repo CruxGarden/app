@@ -167,7 +167,9 @@ function AdvancedEditor() {
 export default function EditorPane() {
   const advancedMode = useAdvancedMode();
   const crux = useCruxStore((s) => s.crux);
-  const setupGuide = crux?.meta?.setupGuide as { need: SetupNeed; dismissed?: boolean } | undefined;
+  const setupGuide = crux?.meta?.setupGuide as
+    | { need: SetupNeed; dismissed?: boolean; step?: unknown }
+    | undefined;
   const viewingHistory = useCruxStore((s) => !!s.viewingSnapshotId);
   const historicalNotebook = useCruxStore((s) => isEmbeddedApp(s.crux) && !!s.viewingSnapshotId);
   const exitSnapshot = useCruxStore((s) => s.exitSnapshotView);
@@ -209,6 +211,7 @@ export default function EditorPane() {
             key={crux!.id}
             need={setupGuide.need}
             dismissed={setupGuide.dismissed}
+            savedStep={setupGuide.step}
           />
         )}
       {!viewingHistory && (crux?.meta?.contentModel as ContentModel | undefined)?.guide && (
