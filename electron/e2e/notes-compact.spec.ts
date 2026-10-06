@@ -2,14 +2,14 @@ import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
-import { finishSetupAtHome, enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux } from './multi-crux-helpers';
 
 test('a narrow Notes panel keeps navigation and outline usable while editing and after restart', async () => {
   test.setTimeout(120_000);
   let instance = await launchApp();
   try {
     let page = instance.page;
-    await page.setViewportSize({ width: 1400, height: 1000 });
+    await page.setViewportSize({ width: 1000, height: 1000 });
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByRole('button', { name: /^Notes/ }).click();
@@ -25,6 +25,10 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
     await frame.getByRole('button', { name: 'Show left sidebar', exact: true }).click();
     const navigation = frame.locator('#left-navigation-panes');
     await expect(navigation).toBeVisible();
+    await expect(navigation).toHaveClass(/is-single-col/);
+    expect(
+      await navigation.evaluate((element) => element.getBoundingClientRect().width),
+    ).toBeLessThanOrEqual(320);
     await expect(navigation.getByRole('button', { name: 'Welcome', exact: true })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('compact-navigation.png') });
     expect(
@@ -36,7 +40,7 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
     await expect(frame.locator('#right-note-sidebar')).toBeVisible();
     await frame.getByRole('button', { name: 'Show left sidebar', exact: true }).click();
     await expect(frame.locator('#right-note-sidebar')).toBeHidden();
-    await finishSetupAtHome(navigation);
+    await navigation.getByRole('button', { name: 'Welcome', exact: true }).click();
     await expect(navigation).toBeHidden();
 
     await frame.locator('.tiptap').first().click();
@@ -64,7 +68,7 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
     await frame.getByRole('button', { name: 'Show right sidebar', exact: true }).click();
     await expect(navigation).toBeVisible();
     await expect(frame.locator('#right-note-sidebar')).toBeVisible();
-    await page.setViewportSize({ width: 1400, height: 1000 });
+    await page.setViewportSize({ width: 1000, height: 1000 });
     await expect(navigation).toBeHidden();
     await expect(frame.locator('#right-note-sidebar')).toBeHidden();
     await expect(
@@ -75,7 +79,7 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
     await instance.app.close();
     instance = await launchApp({ dir });
     page = instance.page;
-    await page.setViewportSize({ width: 1400, height: 1000 });
+    await page.setViewportSize({ width: 1000, height: 1000 });
     await page.getByRole('button', { name: /enter/i }).click();
     await page.getByRole('button', { name: 'Open Compact notebook', exact: true }).click();
     const restored = page.frameLocator('iframe[data-crux-id]');
@@ -83,6 +87,7 @@ test('a narrow Notes panel keeps navigation and outline usable while editing and
       'Written in a narrow notebook panel.',
     );
     await restored.getByRole('button', { name: 'Show left sidebar', exact: true }).click();
+    await expect(restored.locator('#left-navigation-panes')).toHaveClass(/is-single-col/);
     await expect(
       restored
         .locator('#left-navigation-panes')

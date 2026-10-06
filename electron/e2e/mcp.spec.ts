@@ -1,5 +1,5 @@
 import { finishSetupAtHome } from './multi-crux-helpers';
-import { togglePanel, hidePane } from './panel-helpers';
+import { enableAdvancedMode, togglePanel, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
@@ -59,6 +59,7 @@ async function plantGarden(page: Page, template: RegExp) {
 
 /** Settings → Agents: switch the (only) crux on, read back the config the app wrote. */
 async function enableAgentHost(page: Page, gardenRoot: string): Promise<McpConfig> {
+  await enableAdvancedMode(page);
   await page.keyboard.press('ControlOrMeta+,');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   const agents = page.getByTestId('agents-settings');

@@ -1,6 +1,9 @@
 import { captureGardenId, cruxPath, inGarden, useGardenContext } from '@/stores/gardenContext';
 import { inferStartingPoint, nameFromIdea } from '@/lib/infer-starting-point';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
+import { useSetting } from '@/hooks/useSetting';
+import { needChoice, type SetupNeed } from '@/components/setup/setup-plan';
 import { plainError } from '@/lib/error-text';
 import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
@@ -499,6 +502,9 @@ export default function NewCruxModal({
   requestedImport,
 }: NewCruxModalProps) {
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
+  const interest = needChoice(useSetting(SettingsKey.SetupNeed) as SetupNeed | null);
+  const suggestions = new Set(interest?.templates ?? []);
   const TEMPLATES = templates().map((t) =>
     !aiEnabled && t.descriptionWithoutAi ? { ...t, description: t.descriptionWithoutAi } : t,
   );
@@ -551,7 +557,11 @@ export default function NewCruxModal({
   const comingSoon = (id: string) =>
     !isToolAvailable(id) && toolAvailability(catalog, id) === 'coming-soon';
   const groupOf = (item: Template) =>
-    comingSoon(item.id) ? 'Coming soon' : startingPointGroup(item);
+    isToolAvailable(item.id) && suggestions.has(item.id)
+      ? 'Suggested for you'
+      : comingSoon(item.id)
+        ? 'Coming soon'
+        : startingPointGroup(item);
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
   const supported = TEMPLATES.filter(
     (item) => (!item.desktopOnly || can(Capability.Build)) && (!item.v2 || can(Capability.V2)),
@@ -559,12 +569,19 @@ export default function NewCruxModal({
   const choices = supported
     .filter(
       (item) =>
+        (advancedMode || item.id !== 'tool-starter' || item.id === selectedTemplate) &&
         (includeUninstalled || isToolAvailable(item.id)) &&
         (category === 'All' || startingPointKind(item) === category) &&
         `${item.label} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase()),
     )
     .sort((a, b) => {
-      const groups = ['Start here', 'More starting points', 'Tools to install', 'Coming soon'];
+      const groups = [
+        'Suggested for you',
+        'Start here',
+        'More starting points',
+        'Tools to install',
+        'Coming soon',
+      ];
       return groups.indexOf(groupOf(a)) - groups.indexOf(groupOf(b)) || a.order - b.order;
     });
   const selectionVisible = choices.some((item) => item.id === selectedTemplate);

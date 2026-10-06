@@ -35,12 +35,18 @@ let activeNote: string | null = null;
 let findImage: ((src: string) => string | null) | null = null;
 let sweepImages: (() => void) | null = null;
 
-type EditorHandle = { path: string; read: () => string; edit: (command: Record<string, unknown>) => void };
+type EditorHandle = {
+  path: string;
+  read: () => string;
+  edit: (command: Record<string, unknown>) => void;
+};
 let openEditor: EditorHandle | null = null;
 let commandTail: Promise<unknown> = Promise.resolve();
 export function registerNoteEditor(handle: EditorHandle) {
   openEditor = handle;
-  return () => { if (openEditor === handle) openEditor = null; };
+  return () => {
+    if (openEditor === handle) openEditor = null;
+  };
 }
 
 const send = (value: Record<string, unknown>) =>
@@ -375,15 +381,23 @@ async function saveBook() {
 async function runCommand(command: Record<string, unknown>) {
   if (['read-note', 'replace-text', 'append-text'].includes(String(command.op))) {
     const editor = openEditor;
-    if (!editor || editor.path !== activeNote) throw new Error('Open a note first and wait for it to load.');
-    if (command.note !== editor.path) throw new Error('The open note changed. Inspect the notebook and use its activeNote path.');
+    if (!editor || editor.path !== activeNote)
+      throw new Error('Open a note first and wait for it to load.');
+    if (command.note !== editor.path)
+      throw new Error('The open note changed. Inspect the notebook and use its activeNote path.');
     await flush();
     if (openEditor !== editor) throw new Error('The open note changed. Read it again.');
     if (command.op === 'read-note') {
       const text = editor.read();
       const offset = Number(command.offset ?? 0);
-      if (!Number.isInteger(offset) || offset < 0 || offset > text.length) throw new Error('Use an offset within this note.');
-      return { note: editor.path, content: text.slice(offset, offset + 4000), length: text.length, nextOffset: offset + 4000 < text.length ? offset + 4000 : null };
+      if (!Number.isInteger(offset) || offset < 0 || offset > text.length)
+        throw new Error('Use an offset within this note.');
+      return {
+        note: editor.path,
+        content: text.slice(offset, offset + 4000),
+        length: text.length,
+        nextOffset: offset + 4000 < text.length ? offset + 4000 : null,
+      };
     }
     editor.edit(command);
     await flush();
@@ -420,6 +434,8 @@ function mountBar() {
   bar.id = 'garden-project';
   const style = document.createElement('style');
   style.textContent =
+    // One tree uses one pane's width, including when the embedded toolbar opens it as a drawer.
+    '@media(max-width:980px){.left-panes.is-single-col{width:min(var(--notes-pane-width,268px),calc(100% - 24px))}}' +
     '#garden-project{position:fixed;bottom:0;left:0;right:0;height:34px;z-index:100000;display:flex;gap:10px;align-items:center;padding:0 10px;background:#1f2a24;color:#e6e4dc;font:12px system-ui;border-top:1px solid #3a403c}' +
     '#garden-project [role=status]{flex:1}#garden-project [role=alert]{flex:1;color:#ffb4a8}#garden-project button,#garden-project select{padding:3px 8px;color:#e6e4dc;background:#2f3a34;border:1px solid #556059;border-radius:3px;font:inherit}' +
     '#garden-project [hidden]{display:none}#garden-publication{position:fixed;right:10px;bottom:40px;z-index:100000;display:none;flex-direction:column;gap:6px;min-width:280px;max-height:50vh;overflow:auto;padding:12px;background:#1f2a24;color:#e6e4dc;border:1px solid #3a403c;border-radius:6px;font:12px system-ui}' +
@@ -517,7 +533,9 @@ function listen() {
         (error) => send({ op: 'flushed', flushId: message.id, error: (error as Error).message }),
       );
     } else if (message.type === 'crux:notebook:command') {
-      const operation = commandTail.then(() => runCommand(message.command as Record<string, unknown>));
+      const operation = commandTail.then(() =>
+        runCommand(message.command as Record<string, unknown>),
+      );
       commandTail = operation.catch(() => {});
       operation.then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),

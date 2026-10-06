@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
 import { addArtifact, createCrux, enterGarden, storedCrux } from './multi-crux-helpers';
-import { togglePanel } from './panel-helpers';
+import { enableAdvancedMode, togglePanel } from './panel-helpers';
 
 // Real editor, actual local API, disk projection, shared outside-agent controls and restart.
 test('edit recovery preserves files and conversation without growing the deliberate version graph', async () => {
@@ -15,6 +15,7 @@ test('edit recovery preserves files and conversation without growing the deliber
   try {
     const { page, dir } = launch;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     const id = await createCrux(page, 'Rough mix');
     const meta = await storedCrux(page, id);
     await addArtifact(page, 'note.txt');
@@ -142,6 +143,7 @@ test('planned built-in agent edits advance steps and retain recovery without aut
   const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     const id = await createCrux(page, 'Three steps');
     const input = page.getByPlaceholder('Send a message...');
     await input.fill('Please build it in three steps');

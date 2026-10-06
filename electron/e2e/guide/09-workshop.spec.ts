@@ -9,7 +9,7 @@ import {
   switchCrux,
   setAutoCheck,
 } from '../multi-crux-helpers';
-import { openPanel } from '../panel-helpers';
+import { enableAdvancedMode, openPanel } from '../panel-helpers';
 import { openBuilder } from '../builder-helpers';
 import {
   createFromPicker,
@@ -127,6 +127,7 @@ test.describe('guide 09 · Workshop', () => {
       // The colour's text twin shows the value a person can read.
       await expect(workshop.getByText('#3366ff', { exact: true })).toBeVisible();
 
+      await enableAdvancedMode(page);
       // Source ↔ Form agree.
       await page.getByRole('button', { name: 'Source', exact: true }).click();
       await expect(page.locator('.monaco-editor').first()).toContainText('#3366ff');

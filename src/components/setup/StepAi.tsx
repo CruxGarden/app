@@ -23,6 +23,7 @@ import { useSavedKeys } from './useSavedKeys';
  */
 export default function StepAi() {
   const noAi = useSetupWizard((s) => s.noAi);
+  const advancedMode = useSetupWizard((s) => s.advancedMode);
   const openSection = useSetupWizard((s) => s.openSection);
   const moreOpen = useSetupWizard((s) => s.moreOpen);
   const developersOpen = useSetupWizard((s) => s.developersOpen);
@@ -30,10 +31,11 @@ export default function StepAi() {
   const offered = useMemo(
     () =>
       offeredSections({
+        advancedMode,
         localInference: can(Capability.LocalInference),
         agentHost: can(Capability.AgentHost),
       }),
-    [],
+    [advancedMode],
   );
   const sections = visibleSections(noAi, offered);
   const saved = useSavedKeys();

@@ -33,6 +33,7 @@ import GuestbookSection from './GuestbookSection';
 import GardenShelfSection from './GardenShelfSection';
 import WorkspacePackageShare from './WorkspacePackageShare';
 import FunctionsSection from './FunctionsSection';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import VisitorPreview from './VisitorPreview';
 import { Toggle } from '@/components/ui';
 import { openSettings } from '@/components/layout/app-commands';
@@ -115,6 +116,7 @@ function PublishWarnings() {
 }
 
 export default function PublishPane() {
+  const advancedMode = useAdvancedMode();
   const aiEnabled = useAiEnabled();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
@@ -671,18 +673,21 @@ export default function PublishPane() {
                 Optional enhancements
               </summary>
               <p className="mt-2 text-xs text-text-muted">
-                Add a guestbook or API functions when your creation needs them. Your first page does
-                not need either.
+                {advancedMode
+                  ? 'Add a guestbook or API functions when your creation needs them.'
+                  : 'Let visitors leave you a message with a guestbook.'}
               </p>
               <div className="mt-3 space-y-4">
                 <GuestbookSection cruxId={crux.id} artifacts={artifacts} />
-                <FunctionsSection
-                  cruxId={crux.id}
-                  artifacts={artifacts}
-                  published={isPublished}
-                  authenticated={isAuthenticated}
-                  changesToShare={hasUnpublishedChanges}
-                />
+                {advancedMode && (
+                  <FunctionsSection
+                    cruxId={crux.id}
+                    artifacts={artifacts}
+                    published={isPublished}
+                    authenticated={isAuthenticated}
+                    changesToShare={hasUnpublishedChanges}
+                  />
+                )}
               </div>
             </details>
           )}

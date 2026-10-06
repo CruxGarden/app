@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { cn } from '@/lib/cn';
 import { getApiKey, setApiKey, removeApiKey } from '@/ai/keys';
 import { isLocalModel } from '@/ai/local';
@@ -32,24 +33,37 @@ export default function ApiKeySetup({
   autoFocus,
   providers,
 }: ApiKeySetupProps) {
+  const advancedMode = useAdvancedMode();
+  const providerKey = (providers ?? Object.keys(PROVIDERS)).join(',');
   // Claude Code (ADR 0019) is a provider without a key; desktop only.
-  const providerIds = (providers ?? Object.keys(PROVIDERS)).filter(
-    (id) =>
-      !!PROVIDERS[id] && id !== 'included' && (!isAgentModel(id) || can(Capability.AgentHost)),
+  const providerIds = useMemo(
+    () =>
+      providerKey
+        .split(',')
+        .filter(
+          (id) =>
+            !!PROVIDERS[id] &&
+            id !== 'included' &&
+            (!isAgentModel(id) || can(Capability.AgentHost)) &&
+            (advancedMode || (!isAgentModel(id) && !isLocalModel(PROVIDERS[id]!.defaultModel))),
+        ),
+    [providerKey, advancedMode],
   );
   const [agents, setAgents] = useState<Record<string, AgentStatus>>({});
   useEffect(() => {
+    let cancelled = false;
     if (can(Capability.AgentHost))
       for (const provider of Object.values(PROVIDERS).filter(
-        (provider) => provider.agent && (!providers || providers.includes(provider.id)),
+        (provider) => provider.agent && providerIds.includes(provider.id),
       )) {
-        void agentStatus(true, provider.id).then((status) =>
-          setAgents((current) => ({ ...current, [provider.id]: status })),
-        );
+        void agentStatus(true, provider.id).then((status) => {
+          if (!cancelled) setAgents((current) => ({ ...current, [provider.id]: status }));
+        });
       }
-    // The list is fixed for the component's life; asking once is the point.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [providerIds]);
   const [hints, setHints] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
 
@@ -111,8 +125,7 @@ export default function ApiKeySetup({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [providerIds]);
 
   const changeKey = async (providerId: string, value: string | null) => {
     if (loading || pending.current.has(providerId)) return;

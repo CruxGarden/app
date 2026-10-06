@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,6 +14,7 @@ test('saved layouts are shared by UI and outside agents, reusable across Cruxes 
   let client: Client | undefined;
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await createCrux(page, 'Writing');
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();

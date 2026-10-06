@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
-import { showPane, hidePane, chooseSettingsSection } from './panel-helpers';
+import { enableAdvancedMode, showPane, hidePane, chooseSettingsSection } from './panel-helpers';
 
 /**
  * Agent metrics (2026-09-18) through the UI it ships with: turn the meter on
@@ -18,6 +18,7 @@ test('agent metrics: a turn is counted and the report lands in the Garden Root',
   const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
 
     const openMetrics = async () => {
       const settings = await showPane(page, 'Settings');

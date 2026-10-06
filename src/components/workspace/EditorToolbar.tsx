@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { buttonClass, segmentClass } from '@/components/ui/button-class';
 import { isPreviewable } from '@/lib/monacoLanguages';
 import type { EditorTab, EditorViewMode } from '@/stores/uiStore';
@@ -29,6 +30,7 @@ export default function EditorToolbar({
   isCapturing,
   previewAvailable = true,
 }: EditorToolbarProps) {
+  const advancedMode = useAdvancedMode();
   const canPreview = previewAvailable && isPreviewable(tab.path) && hasContent;
   const inPreview = tab.viewMode === 'preview' && canPreview;
 
@@ -84,11 +86,13 @@ export default function EditorToolbar({
         {/* View mode toggle */}
         {(canPreview || canForm) && (
           <div className="flex bg-bg rounded-[var(--radius-sm)] p-0.5">
-            <ModeButton
-              label="Source"
-              active={tab.viewMode === 'source'}
-              onClick={() => onViewModeChange('source')}
-            />
+            {(advancedMode || tab.viewMode === 'source') && (
+              <ModeButton
+                label="Source"
+                active={tab.viewMode === 'source'}
+                onClick={() => onViewModeChange('source')}
+              />
+            )}
             {canForm && (
               <ModeButton
                 label="Form"

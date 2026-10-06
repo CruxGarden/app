@@ -1,4 +1,5 @@
 import GuideLink from '@/components/explore/GuideLink';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useWorkspaceUIStore } from '@/stores/uiStore';
@@ -39,6 +40,8 @@ export default function FirstProjectGuide({
   onEdit: () => void;
   onPreview: () => void;
 }) {
+  const advancedMode = useAdvancedMode();
+  const [expanded, setExpanded] = useState(!advancedMode);
   const crux = useCruxStore((state) => state.crux)!;
   const ui = useWorkspaceUIStore((state) => state);
   const key = `cruxgarden:first-project:${crux.id}`;
@@ -56,7 +59,11 @@ export default function FirstProjectGuide({
     }
   };
   return (
-    <details className="shrink-0 border-b border-border bg-surface px-4 py-3" open>
+    <details
+      className="shrink-0 border-b border-border bg-surface px-4 py-3"
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
       <summary className="cursor-pointer text-sm font-medium text-accent">
         {model.guide!.title}
       </summary>

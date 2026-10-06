@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -25,6 +26,7 @@ test('an outside MCP client operates across the garden; built-in collaborators s
   const configPath = join(dir, 'userData', 'garden-agent-host', '.crux', 'mcp.json');
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.keyboard.press('ControlOrMeta+,');
     const toggle = page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true });
     await expect(toggle).toHaveAttribute('aria-checked', 'false');

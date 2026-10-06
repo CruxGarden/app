@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
-import { showPane } from './panel-helpers';
+import { enableAdvancedMode, showPane } from './panel-helpers';
 import { enterGarden, createCrux } from './multi-crux-helpers';
 
 test('Garden Home, recursive Navigator, Crux moves and outside agents use the same graph', async () => {
@@ -14,6 +14,7 @@ test('Garden Home, recursive Navigator, Crux moves and outside agents use the sa
   let client: Client | undefined;
   try {
     await enterGarden(instance.page);
+    await enableAdvancedMode(instance.page);
     const { page } = instance;
     await expect(page.getByRole('button', { name: 'Garden location', exact: true })).toHaveText(
       'My Garden',

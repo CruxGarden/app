@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import JSZip from 'jszip';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, storedCrux, addArtifact } from './multi-crux-helpers';
-import { togglePanel, newTaskButton } from './panel-helpers';
+import { enableAdvancedMode, togglePanel, newTaskButton } from './panel-helpers';
 import { exportNativeCrux } from './native-archive-helpers';
 
 test('the visible Crux exporter and importer preserve Main, Tasks, starting state and binary files across profiles and restart', async () => {
@@ -17,6 +17,7 @@ test('the visible Crux exporter and importer preserve Main, Tasks, starting stat
   let originalId: string;
   try {
     await enterGarden(source.page);
+    await enableAdvancedMode(source.page);
     originalId = await createCrux(source.page, 'Portable work');
     await addArtifact(source.page, 'note.txt');
     const editor = source.page.locator('.monaco-editor').first();
@@ -70,6 +71,7 @@ test('the visible Crux exporter and importer preserve Main, Tasks, starting stat
   const dir = destination.dir;
   try {
     await enterGarden(destination.page);
+    await enableAdvancedMode(destination.page);
     // A damaged private backup must not leave a partial graph or a visible Crux.
     const broken = await JSZip.loadAsync(readFileSync(filename));
     const graph = JSON.parse(await broken.file('graph.json')!.async('text'));
@@ -168,6 +170,7 @@ test('an authenticated outside agent exports the same private graph archive thro
   const client = new Client({ name: 'archive-check', version: '1' });
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
     const path = join(dir, 'userData', 'garden-agent-host', '.crux', 'mcp.json');

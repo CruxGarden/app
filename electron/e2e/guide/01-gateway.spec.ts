@@ -40,7 +40,9 @@ test.describe('guide 01 · Gateway and first garden', () => {
     const again = await launchApp({ dir });
     try {
       // Enter again lands on Home: no second plant, the Crux still there, one Garden.
-      await again.page.getByRole('button', { name: 'Enter', exact: true }).click({ timeout: 30_000 });
+      await again.page
+        .getByRole('button', { name: 'Enter', exact: true })
+        .click({ timeout: 30_000 });
       await expect(again.page.getByTestId('pane-body-home')).toBeVisible({ timeout: 30_000 });
       await expect(again.page.getByText('Plant a new garden')).toHaveCount(0);
       await expect(again.page.getByRole('button', { name: 'Open Planted' })).toBeVisible();
@@ -96,7 +98,7 @@ test.describe('guide 01 · Gateway and first garden', () => {
       await expect(page.getByRole('button', { name: 'Enter' })).toBeVisible({ timeout: 30_000 });
       await page.setViewportSize({ width: 820, height: 620 });
       await page.waitForTimeout(2500); // the entrance settles before focus moves
-      // Tab reaches Enter; Enter opens the choices; Tab + Enter plants; Welcome continues.
+      // Tab reaches Enter, then Plant; the wizard's Skip setup is keyboard-operable.
       for (let i = 0; i < 8; i++) {
         if (
           await page
@@ -116,7 +118,7 @@ test.describe('guide 01 · Gateway and first garden', () => {
       }
       await expect(plant).toBeFocused();
       await page.keyboard.press('Enter');
-      const welcome = page.getByRole('button', { name: 'Welcome' });
+      const welcome = page.getByRole('button', { name: 'Skip setup', exact: true });
       await expect(welcome).toBeVisible();
       const box = (await welcome.boundingBox())!;
       expect(box.x + box.width).toBeLessThanOrEqual(820);

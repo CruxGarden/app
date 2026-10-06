@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
-import { showPane } from './panel-helpers';
+import { enableAdvancedMode, showPane } from './panel-helpers';
 import { enterGarden } from './multi-crux-helpers';
 
 test('imported Garden graphs open Home and preserve nested members and private conversations through restart', async () => {
@@ -97,6 +97,7 @@ test('imported Garden graphs open Home and preserve nested members and private c
     });
     let { page } = instance;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await expect.poll(() => new URL(page.url()).searchParams.get('garden')).not.toBeNull();
     const home = new URL(page.url()).searchParams.get('garden')!;
     const appearance = await page.evaluate(() =>

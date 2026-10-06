@@ -137,6 +137,8 @@ export function firstSectionFor(
 }
 
 export interface SectionRules {
+  /** Technical setup is offered only when the person chose Advanced Mode. */
+  advancedMode: boolean;
   /** Capability.LocalInference */
   localInference: boolean;
   /** Capability.AgentHost */
@@ -148,6 +150,7 @@ export function offeredSections(rules: SectionRules): AiSection[] {
   const all: AiSection[] = ['collaborator', 'images', 'local', 'agents', 'outside'];
   return all.filter(
     (s) =>
+      (rules.advancedMode || s === 'collaborator' || s === 'images') &&
       (s !== 'local' || rules.localInference) &&
       ((s !== 'agents' && s !== 'outside') || rules.agentHost),
   );

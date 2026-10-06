@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from '../panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -61,6 +62,7 @@ test('worked examples publish real finish-line pages through the outside MCP cli
   const browser = await chromium.launch();
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await useLocalApi(page);
     await signInLocally(page);
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();

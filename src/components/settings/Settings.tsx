@@ -3,6 +3,7 @@ import StartSettings from './StartSettings';
 import LibrarySettings from './LibrarySettings';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { Button, Select, SectionLabel } from '@/components/ui';
 import { rowClass } from '@/components/ui/button-class';
 import WorkspaceLayoutsSettings from '@/components/settings/WorkspaceLayoutsSettings';
@@ -27,6 +28,7 @@ import {
 export default function Settings() {
   // With AI tools off, what only the collaborator uses is not shown at all.
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
   const sectionId = useId();
   const sections = useRef<Record<string, HTMLElement | null>>({});
   const scroller = useRef<HTMLDivElement>(null);
@@ -52,7 +54,12 @@ export default function Settings() {
         <>
           <AiSettings />
           {aiEnabled && <MemorySettings />}
-          {aiEnabled && <AgentsSettings />}
+          {aiEnabled && advancedMode && <AgentsSettings />}
+          {aiEnabled && !advancedMode && (
+            <p className="text-xs text-text-muted">
+              For coding agents and outside connections, turn on Advanced Mode in Getting started.
+            </p>
+          )}
         </>
       ),
     },

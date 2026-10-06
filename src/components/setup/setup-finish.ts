@@ -25,6 +25,7 @@ export interface SetupDeps {
   defaultMoodId: string;
   /** Remember what the person wants to make, so running setup again starts from it. */
   rememberNeed: (need: string) => void;
+  setAdvancedMode: (on: boolean) => void;
 }
 
 export interface SetupOutcome {
@@ -95,5 +96,8 @@ export async function applySetup(choices: SetupChoices, deps: SetupDeps): Promis
   }
 
   if (choices.need) deps.rememberNeed(choices.need);
+  if (choices.advancedMode !== choices.advancedModeAtStart) {
+    deps.setAdvancedMode(choices.advancedMode);
+  }
   return outcome;
 }

@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,6 +15,7 @@ test('Garden Collaboration owns history, drafts and background work across navig
   try {
     let { page } = instance;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await expect.poll(() => new URL(page.url()).searchParams.get('garden')).not.toBeNull();
     const rootId = new URL(page.url()).searchParams.get('garden')!;
     await page.keyboard.press('ControlOrMeta+,');

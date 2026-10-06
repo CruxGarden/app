@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
-import { finishSetupAtHome, enterGarden, reenterWorkspace } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace } from './multi-crux-helpers';
 import { showPane, hidePane } from './panel-helpers';
 
 /** The actual Tigrana (ADR 0040) follows live Garden Moods without reloading the draft; the App appearance choice persists. */
@@ -23,7 +23,7 @@ test('Notes follows live Garden Moods without reloading drafts; app appearance p
         .catch(() => false)
     )
       return;
-    await finishSetupAtHome(frame());
+    await frame().getByRole('button', { name: 'Welcome', exact: true }).click();
     await expect(editor()).toBeVisible();
   };
   try {

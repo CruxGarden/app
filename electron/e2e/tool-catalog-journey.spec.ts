@@ -2,7 +2,13 @@ import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, goHome, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { startMockApi } from './api-mock';
-import { showPane, hidePane, openPanel, chooseSettingsSection } from './panel-helpers';
+import {
+  enableAdvancedMode,
+  showPane,
+  hidePane,
+  openPanel,
+  chooseSettingsSection,
+} from './panel-helpers';
 
 /**
  * The catalog journey end to end against the mock API (coverage audit,
@@ -49,9 +55,11 @@ test('a tool made and shared by one account is found, reviewed, installed and ke
   try {
     const { page } = publisher;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByLabel('Find a starting point').fill('Make a tool');
     await page.locator('[data-template-id="tool-starter"]').click();
+    await page.getByLabel('Name', { exact: true }).fill('Pocket Notes');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     const frame = page.frameLocator('iframe[data-crux-id]');
     await expect(frame.getByLabel('Your note')).toBeVisible({ timeout: 60_000 });
@@ -96,6 +104,7 @@ test('a tool made and shared by one account is found, reviewed, installed and ke
   try {
     const { page } = recipient;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await signIn(page, 'other@example.com');
     expect(api.state.loginEmail).toBe('other@example.com');
 

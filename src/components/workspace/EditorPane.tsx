@@ -12,6 +12,7 @@ import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import EditorTabBar from './EditorTabBar';
 import EditorToolbar from './EditorToolbar';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import EditorContent from './EditorContent';
 import BuilderView from './BuilderView';
 import { onCaptureSettled } from '@/lib/thumbnail-capture';
@@ -162,6 +163,7 @@ function AdvancedEditor() {
 
 /** Clean preview owns no editor tabs: changing views preserves their buffers and selection. */
 export default function EditorPane() {
+  const advancedMode = useAdvancedMode();
   const crux = useCruxStore((s) => s.crux);
   const viewingHistory = useCruxStore((s) => !!s.viewingSnapshotId);
   const historicalNotebook = useCruxStore((s) => isEmbeddedApp(s.crux) && !!s.viewingSnapshotId);
@@ -210,23 +212,25 @@ export default function EditorPane() {
       )}
       <div className="flex items-center gap-1 px-1.5 py-1.5 border-b border-border shrink-0 flex-wrap">
         <div role="group" aria-label="Workshop view" className={segmentGroupClass()}>
-          {(['clean', 'advanced'] as const).map((mode) => (
-            <button
-              key={mode}
-              aria-pressed={view === mode}
-              className={segmentClass(view === mode)}
-              onClick={() => {
-                if (mode === 'advanced' && !hasTabs && entry.artifact && !hasBuilder) {
-                  openFile(entry.artifact.id, pathOf(entry.artifact));
-                } else {
-                  setEditingHome(null);
-                  setView(mode);
-                }
-              }}
-            >
-              {mode === 'clean' ? (isEmbeddedApp(crux) ? 'Use app' : 'Clean') : 'Advanced'}
-            </button>
-          ))}
+          {(['clean', 'advanced'] as const)
+            .filter((mode) => mode === 'clean' || advancedMode || view === 'advanced')
+            .map((mode) => (
+              <button
+                key={mode}
+                aria-pressed={view === mode}
+                className={segmentClass(view === mode)}
+                onClick={() => {
+                  if (mode === 'advanced' && !hasTabs && entry.artifact && !hasBuilder) {
+                    openFile(entry.artifact.id, pathOf(entry.artifact));
+                  } else {
+                    setEditingHome(null);
+                    setView(mode);
+                  }
+                }}
+              >
+                {mode === 'clean' ? (isEmbeddedApp(crux) ? 'Use app' : 'Clean') : 'Advanced'}
+              </button>
+            ))}
         </div>
         <EmbeddedAppActions />
         <div className="flex-1" />
@@ -336,7 +340,7 @@ export default function EditorPane() {
               ? `${entry.missing} is missing or cannot be previewed. Select another Artifact in Details, or restore it from Growth.`
               : aiEnabled
                 ? 'Describe what you want to make in Collaboration. As your files arrive, the preview opens here.'
-                : 'Add files or make one in Advanced. As your files arrive, the preview opens here.'}
+                : 'Add files or make one in Artifacts. As your files arrive, the preview opens here.'}
           </p>
           <div className="flex gap-2 flex-wrap justify-center">
             {aiEnabled && !collaborationOpen && (

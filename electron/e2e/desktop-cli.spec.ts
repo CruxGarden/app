@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { execFile } from 'node:child_process';
 import { join, resolve } from 'node:path';
@@ -32,6 +33,7 @@ test('desktop CLI discovers tools, operates on real Cruxes and retains app appro
     expect((await cli(['call', 'read_file', '[]'])).code).toBe(2);
     expect((await cli(['status'])).output.error.code).toBe('HOST_OFF');
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
     const connectBounds = await page.getByTestId('agents-connect').boundingBox();

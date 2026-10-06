@@ -117,6 +117,7 @@ export default function StepGarden({
             value={username}
             placeholder="wanderer"
             autoComplete="username"
+            aria-label="Username"
             onChange={(e) => changeUsername(e.target.value)}
             error={usernameError || undefined}
             aria-describedby={handleOk ? okId : undefined}

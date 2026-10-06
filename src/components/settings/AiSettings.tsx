@@ -7,10 +7,12 @@ import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { useUIStore } from '@/stores/uiStore';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import AgentMetricsSection from './AgentMetricsSection';
 
 export default function AiSettings() {
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
   const included = useIncludedAccess((s) => s.usage?.eligible);
 
   const handleAiToggle = (enabled: boolean) => {
@@ -36,7 +38,7 @@ export default function AiSettings() {
           ) : (
             <ApiKeySetup />
           ))}
-        {aiEnabled && (
+        {aiEnabled && advancedMode && (
           <div className="border-t border-border pt-4">
             <h3 className="mb-3 font-display text-xs font-medium text-text">Metrics</h3>
             <AgentMetricsSection />

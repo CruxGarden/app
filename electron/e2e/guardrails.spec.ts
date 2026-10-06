@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { enableAdvancedMode, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { storedCrux, enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
@@ -44,6 +44,7 @@ async function ensurePane(page: Page, type: string, toggle: string) {
 }
 async function plantWithFile(page: Page) {
   await enterGarden(page);
+  await enableAdvancedMode(page);
   await createCrux(page, 'My Crux');
   await addArtifact(page, 'index.html');
   const monaco = page.locator('.monaco-editor').first();

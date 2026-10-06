@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
-import { hidePane, showPane } from './panel-helpers';
+import { enableAdvancedMode, hidePane, showPane } from './panel-helpers';
 import { enterGarden, createCrux } from './multi-crux-helpers';
 import type { SynthPatch } from '../../src/audio/synth-patch';
 
@@ -22,6 +22,7 @@ test('Crux Synth makes real audio, shares controls with outside agents, and rest
   let expected: SynthPatch;
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await createCrux(page, 'Sound garden');
     expect((await audio(page)).playing).toBe(false);
     await page.keyboard.press('ControlOrMeta+,');

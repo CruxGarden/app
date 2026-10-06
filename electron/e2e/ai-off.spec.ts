@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, createCrux } from './multi-crux-helpers';
-import { hidePane, runCommand, showPane } from './panel-helpers';
+import { enableAdvancedMode, hidePane, runCommand, showPane } from './panel-helpers';
 import { writeFirstFile } from './journeys/journey-helpers';
 
 /**
@@ -62,6 +62,8 @@ test('AI off: a whole Crux by hand, and nothing on screen is AI', async () => {
     await expect(growth).toBeVisible({ timeout: 30_000 });
     await expectNoAi(growth, 'Growth');
 
+    // Technical controls remain independent of AI; choose them explicitly.
+    await enableAdvancedMode(page);
     // Details, Share and Export read without AI.
     for (const [command, type] of [
       ['Show Details', 'details'],

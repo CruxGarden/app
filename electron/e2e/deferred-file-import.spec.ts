@@ -5,7 +5,7 @@ import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { togglePanel } from './panel-helpers';
+import { enableAdvancedMode, togglePanel } from './panel-helpers';
 
 test('a queued document import survives closing Workshop, changing Gardens and restarting', async () => {
   test.setTimeout(180_000);
@@ -14,6 +14,7 @@ test('a queued document import survives closing Workshop, changing Gardens and r
   try {
     const { page } = instance;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     const root = new URL(page.url()).searchParams.get('garden')!;
     // Hold the real readiness grace period long enough to close the actual panel.
     await page.evaluate(() => {

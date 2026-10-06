@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { enableAdvancedMode, togglePanel } from './panel-helpers';
 import cases from '../../src/services/function-compiler-cases.json';
 import { test, expect, request } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
@@ -23,6 +23,7 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
   try {
     await page.setViewportSize({ width: 1600, height: 1000 });
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await useLocalApi(page);
     await signInLocally(page);
     await page.keyboard.press('Escape');

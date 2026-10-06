@@ -668,10 +668,17 @@
       "status": "implemented"
     },
     {
+      "key": "cruxgarden:advancedMode",
+      "group": "device-presentation",
+      "target": "installation/settings",
+      "preservation": "Installation-wide UI disclosure and guidance preference, off by default; independent of AI Tools and runtime permissions. Never closes editors, deletes content or disconnects agents.",
+      "status": "implemented"
+    },
+    {
       "key": "cruxgarden:setupNeed",
       "group": "device-presentation",
       "target": "installation/settings",
-      "preservation": "What the person said they want to make in the Setup wizard; only preselects step 1 when setup is run again. Never selects content or creates anything.",
+      "preservation": "Interest selected in Setup or Settings; preselects setup and ranks available Add Crux suggestions. Never creates anything or limits other interests.",
       "status": "implemented"
     },
     {

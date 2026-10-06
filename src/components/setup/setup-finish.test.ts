@@ -22,6 +22,7 @@ function fakeDeps(
     }),
     defaultMoodId: 'plasma',
     rememberNeed: vi.fn((need: string) => calls.push(`need:${need}`)),
+    setAdvancedMode: vi.fn((on: boolean) => calls.push(`advanced:${on}`)),
   };
   return { deps, calls };
 }
@@ -32,6 +33,18 @@ const first = (patch: Partial<SetupChoices> = {}): SetupChoices => ({
 });
 
 describe('applying setup', () => {
+  it('saves Advanced Mode independently of AI and preserves it when setup did not change it', async () => {
+    const { deps } = fakeDeps({ ai: 'false' });
+    await applySetup(first({ advancedMode: true, noAi: true }), deps);
+    expect(deps.setAdvancedMode).toHaveBeenCalledWith(true);
+    expect(deps.setAiEnabled).not.toHaveBeenCalled();
+    vi.mocked(deps.setAdvancedMode).mockClear();
+    await applySetup(first({ advancedMode: true, advancedModeAtStart: true, noAi: true }), deps);
+    expect(deps.setAdvancedMode).not.toHaveBeenCalled();
+    await applySetup(first({ advancedModeAtStart: true, advancedMode: false, noAi: true }), deps);
+    expect(deps.setAdvancedMode).toHaveBeenCalledWith(false);
+    expect(deps.setAiEnabled).not.toHaveBeenCalled();
+  });
   it('Skip setup from step 1 plants the garden with the defaults and nothing else', async () => {
     const { deps, calls } = fakeDeps();
     const outcome = await applySetup(first(), deps);

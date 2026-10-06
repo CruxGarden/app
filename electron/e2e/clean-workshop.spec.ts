@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { enableAdvancedMode, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,6 +15,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     let page = instance.page;
     await page.setViewportSize({ width: 1440, height: 1000 });
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page
       .getByLabel('What do you want to make?')

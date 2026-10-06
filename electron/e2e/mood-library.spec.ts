@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { hidePane, showPane } from './panel-helpers';
+import { enableAdvancedMode, hidePane, showPane } from './panel-helpers';
 import { enterGarden } from './multi-crux-helpers';
 
 test('saving a Mood uses actual content and Garden membership, refuses partial creation, and survives Copy and restart', async () => {
@@ -15,6 +15,7 @@ test('saving a Mood uses actual content and Garden membership, refuses partial c
   try {
     let page = instance.page;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await showPane(page, 'Navigator');
     await page.getByRole('button', { name: 'New Garden', exact: true }).click();
     await page.getByRole('textbox', { name: 'Garden name' }).fill('Sound studio');
@@ -177,6 +178,7 @@ test('current saved packages move once with retry, and an outside agent lists an
   try {
     let page = instance.page;
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await showPane(page, 'Mood');
     await page.getByRole('button', { name: 'Save current as Mood' }).click();
     await page.getByRole('textbox', { name: 'Mood name' }).fill('Seed sound');

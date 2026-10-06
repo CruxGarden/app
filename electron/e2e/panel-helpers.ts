@@ -150,6 +150,17 @@ export async function chooseSettingsSection(page: Page, label: keyof typeof SETT
   }
 }
 
+/** Technical journeys explicitly choose the same installation mode a person would. */
+export async function enableAdvancedMode(page: Page) {
+  const wasOpen = (await page.getByTestId('pane-body-settings').count()) > 0;
+  await showPane(page, 'Settings');
+  await chooseSettingsSection(page, 'Getting started');
+  const toggle = page.getByRole('switch', { name: 'Advanced Mode', exact: true });
+  if (!(await toggle.isChecked())) await toggle.click();
+  await expect(toggle).toBeChecked();
+  if (!wasOpen) await hidePane(page, 'Settings');
+}
+
 /** Settings → AI: turn the collaborator on with a (fake) Anthropic key, then close Settings. */
 export async function enableAi(page: Page) {
   const settings = await showPane(page, 'Settings');

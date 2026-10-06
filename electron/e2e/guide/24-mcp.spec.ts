@@ -6,7 +6,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, storedCrux } from '../multi-crux-helpers';
-import { openPanel, showPane, hidePane } from '../panel-helpers';
+import { enableAdvancedMode, openPanel, showPane, hidePane } from '../panel-helpers';
 import { writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -23,6 +23,7 @@ test.describe('guide 24 · Agents', () => {
     const { app, page, dir } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Agent study');
       await writeFirstFile(page, 'index.html', '<h1>Study</h1>');
       const settings = await showPane(page, 'Settings');
@@ -66,6 +67,7 @@ test.describe('guide 24 · Agents', () => {
     let client: Client | undefined;
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const otherId = await createCrux(page, 'Other study');
       await writeFirstFile(page, 'secret.txt', 'Not for the scoped agent');
       const otherFolder = (await storedCrux(page, otherId)).projectFolder as string;
@@ -168,6 +170,7 @@ test.describe('guide 24 · Agents', () => {
     let client: Client | undefined;
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Listed');
       const settings = await showPane(page, 'Settings');
       await settings

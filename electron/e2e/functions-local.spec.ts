@@ -1,4 +1,4 @@
-import { togglePanel } from './panel-helpers';
+import { enableAdvancedMode, togglePanel } from './panel-helpers';
 import { createHash } from 'node:crypto';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
@@ -51,6 +51,7 @@ test('a page calls its functions, hears events and is refused by a Store hook, a
   const { app, page, dir } = await launchApp();
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     const cruxId = await createCrux(page, 'Scores');
     const folder = cruxFolder(dir);
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { paneOffered } from '@/components/workspace/paneConfig';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import SettingsSection from './SettingsSection';
 import { Input, SectionLabel } from '@/components/ui';
 import {
@@ -27,12 +28,17 @@ const tokenFor = (type: PaneType) => `paneLabel${type[0]!.toUpperCase()}${type.s
 
 export default function NamesSettings() {
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
   const [tick, setTick] = useState(0);
   useEffect(() => onThemeOverridesChange(() => setTick((t) => t + 1)), []);
   void tick;
   const current = getThemeOverrides('Dark');
   const garden = useGardenContext((s) => s.garden);
   const [error, setError] = useState('');
+  // External renames (including Run setup again) update the field unless the
+  // person has a draft. A late save must never clear newer typing.
+  const [titleDraft, setTitleDraft] = useState<{ gardenId: string; value: string } | null>(null);
+  const draft = titleDraft?.gardenId === garden?.id ? titleDraft : null;
 
   const write = (key: string, value: string) => {
     const v = value.trim();
@@ -57,14 +63,21 @@ export default function NamesSettings() {
           key={garden?.id}
           aria-label="Garden title"
           placeholder="The Bachelor Pad, Floyd County Police Department…"
-          defaultValue={garden?.title ?? ''}
+          value={draft?.value ?? garden?.title ?? ''}
+          onChange={(event) => {
+            if (garden) setTitleDraft({ gardenId: garden.id, value: event.target.value });
+          }}
           disabled={!garden}
           onBlur={(e) => {
-            if (!garden || e.target.value.trim() === (garden.title ?? '')) return;
+            if (!garden || !draft) return;
+            if (e.target.value.trim() === (garden.title ?? '')) {
+              setTitleDraft(null);
+              return;
+            }
             setError('');
-            void renameGarden(garden.id, e.target.value).catch((err: unknown) =>
-              setError(err instanceof Error ? err.message : String(err)),
-            );
+            void renameGarden(garden.id, e.target.value)
+              .then(() => setTitleDraft((current) => (current === draft ? null : current)))
+              .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
           }}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
@@ -83,7 +96,7 @@ export default function NamesSettings() {
           name.
         </p>
         <div className="grid grid-cols-1 @min-[600px]/settings:grid-cols-2 gap-x-6 gap-y-2">
-          {PANES.filter((type) => paneOffered(type, aiEnabled)).map((type) => (
+          {PANES.filter((type) => paneOffered(type, aiEnabled, advancedMode)).map((type) => (
             <label key={type} className="flex items-center gap-2">
               <span className="w-28 shrink-0 text-xs font-mono text-text-muted">
                 {DEFAULT_PANE_LABELS[type]}

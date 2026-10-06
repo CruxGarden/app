@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, createCrux } from '../multi-crux-helpers';
-import { openPanel } from '../panel-helpers';
+import { enableAdvancedMode, openPanel } from '../panel-helpers';
 import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -33,6 +33,7 @@ test.describe('guide 13 · Crux Store', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Typed store');
       const store = await openPanel(page, 'store', 'Toggle store');
       await addKey(store, 'name', 'Moss');
@@ -74,6 +75,7 @@ test.describe('guide 13 · Crux Store', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Careful store');
       const store = await openPanel(page, 'store', 'Toggle store');
       // Malformed JSON is stored as the text typed, not lost and not an error.
@@ -102,6 +104,7 @@ test.describe('guide 13 · Crux Store', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Answer sheet');
       await writeFirstFile(page, 'index.html', '<h1>Sheet</h1>');
       const store = await openPanel(page, 'store', 'Toggle store');
@@ -156,6 +159,7 @@ test.describe('guide 13 · Crux Store', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Daily game');
       await writeFirstFile(page, 'index.html', '<h1>Game</h1>');
       const store = await openPanel(page, 'store', 'Toggle store');
@@ -206,6 +210,7 @@ test.describe('guide 13 · Crux Store', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Live store');
       await writeFirstFile(page, 'index.html', '<h1>Store</h1>');
       const store = await openPanel(page, 'store', 'Toggle store');

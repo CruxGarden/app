@@ -69,6 +69,8 @@ export interface PaneSpec {
   minWidth: number;
   /** An AI surface: offered only while AI tools are on (Settings → AI). */
   ai?: boolean;
+  /** Technical controls hidden from discovery while Advanced Mode is off. */
+  advanced?: boolean;
   /** Other words people look for it by (the picker and ⌘K find it by them too). */
   keywords?: string;
 }
@@ -187,6 +189,7 @@ export const PANES: Record<PaneType, PaneSpec> = {
     keywords: 'publish live website link',
   },
   store: {
+    advanced: true,
     label: 'Store',
     icon: StoreIcon,
     color: 'var(--pane-store)',
@@ -260,7 +263,8 @@ export const PANE_TYPES = Object.keys(PANES) as PaneType[];
 /** The panes that are AI (the Crux's and the Garden's Collaboration): gone while AI tools are off. */
 export const AI_PANES: ReadonlySet<PaneType> = new Set(PANE_TYPES.filter((p) => PANES[p].ai));
 /** Whether a pane can be offered at all right now. */
-export const paneOffered = (pane: PaneType, aiEnabled: boolean) => aiEnabled || !AI_PANES.has(pane);
+export const paneOffered = (pane: PaneType, aiEnabled: boolean, advancedMode = true) =>
+  (aiEnabled || !AI_PANES.has(pane)) && (advancedMode || !PANES[pane].advanced);
 
 function column<K extends keyof PaneSpec>(key: K): Record<PaneType, PaneSpec[K]> {
   const out = {} as Record<PaneType, PaneSpec[K]>;

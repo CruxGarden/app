@@ -4,7 +4,13 @@ import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { startMockApi, type MockApi } from '../api-mock';
 import { enterGarden, createCrux, storedCrux } from '../multi-crux-helpers';
-import { openPanel, showPane, panelPressed, togglePanel } from '../panel-helpers';
+import {
+  enableAdvancedMode,
+  openPanel,
+  showPane,
+  panelPressed,
+  togglePanel,
+} from '../panel-helpers';
 import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /** Share a fresh Crux without a backup; returns the Share pane and the API's id for it. */
@@ -50,6 +56,7 @@ test.describe('guide 17 · Share', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Two editions');
       const monaco = await writeFirstFile(page, 'index.html', '<h1>First edition</h1>');
       const { share, cruxId } = await shareFirst(page, api);
@@ -82,6 +89,7 @@ test.describe('guide 17 · Share', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Guest diary');
       // A whole page on disk: the guestbook block goes before </body>.
       const folder = (await storedCrux(page, id)).projectFolder as string;
@@ -94,6 +102,7 @@ test.describe('guide 17 · Share', () => {
         timeout: 30_000,
       });
       const share = await openPanel(page, 'publish', 'Toggle share');
+      await share.getByText('Optional enhancements', { exact: true }).click();
       await share.getByRole('button', { name: 'Add a guestbook', exact: true }).click();
       await expect(share.getByText('On index.html', { exact: true })).toBeVisible({
         timeout: 30_000,
@@ -162,6 +171,7 @@ test.describe('guide 17 · Share', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Flaky line');
       const monaco = await writeFirstFile(page, 'index.html', '<h1>Before</h1>');
       const { share, cruxId } = await shareFirst(page, api);
@@ -197,6 +207,7 @@ test.describe('guide 17 · Share', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Quiet page');
       await writeFirstFile(page, 'index.html', '<h1>Quiet</h1>');
       const share = await openPanel(page, 'publish', 'Toggle share');
@@ -251,6 +262,7 @@ test.describe('guide 17 · Share', () => {
     const { app, page } = await launchApp({ env: { CRUX_API_URL: api.url } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await createCrux(page, 'Second thoughts');
       await writeFirstFile(page, 'index.html', '<h1>Maybe</h1>');
       const share = await openPanel(page, 'publish', 'Toggle share');

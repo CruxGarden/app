@@ -1,4 +1,4 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { enableAdvancedMode, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -18,6 +18,7 @@ test('Moqira subtitles remain directly editable after saving and reopening the a
   const { app, page } = await launchApp();
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByRole('button', { name: /^Mockups/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -116,6 +117,7 @@ test('Moqira tools create editable screens, preserve manual work, use native his
   try {
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
     await enterGarden(instance.page);
+    await enableAdvancedMode(instance.page);
     await instance.page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await instance.page.getByRole('button', { name: /^Mockups/ }).click();
     await instance.page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -236,6 +238,7 @@ test('Moqira tools create editable screens, preserve manual work, use native his
     instance = await launchApp();
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
     await enterGarden(instance.page);
+    await enableAdvancedMode(instance.page);
     await importNativeCrux(instance.page, archive);
     await ready();
     id = (await instance.page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;

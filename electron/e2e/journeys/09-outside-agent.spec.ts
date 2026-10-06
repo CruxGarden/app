@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from '../launch';
 import { enterGarden } from '../multi-crux-helpers';
-import { showPane, hidePane } from '../panel-helpers';
+import { enableAdvancedMode, showPane, hidePane } from '../panel-helpers';
 
 /** An outside agent (over MCP) and the app see the same Garden. */
 test('an outside agent plants a Crux the app shows', async () => {
@@ -14,6 +14,7 @@ test('an outside agent plants a Crux the app shows', async () => {
   let client: Client | undefined;
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     const settings = await showPane(page, 'Settings');
     await settings
       .getByRole('switch', { name: 'Agent access for Whole garden', exact: true })

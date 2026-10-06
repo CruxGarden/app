@@ -62,7 +62,7 @@ describe('step 1 → starting point', () => {
 });
 
 describe('step 1 → which section opens first', () => {
-  const all = offeredSections({ localInference: true, agentHost: true });
+  const all = offeredSections({ advancedMode: true, localInference: true, agentHost: true });
   it('opens the section that fits what the person wants to make', () => {
     expect(firstSectionFor('art', all)).toBe('images');
     expect(firstSectionFor('app', all)).toBe('agents');
@@ -70,15 +70,21 @@ describe('step 1 → which section opens first', () => {
     expect(firstSectionFor(null, all)).toBe('collaborator');
   });
   it('falls back when the platform does not offer that section', () => {
-    const web = offeredSections({ localInference: false, agentHost: false });
+    const web = offeredSections({ advancedMode: true, localInference: false, agentHost: false });
     expect(web).toEqual(['collaborator', 'images']);
     expect(firstSectionFor('app', web)).toBe('collaborator');
   });
 });
 
 describe('No AI', () => {
+  it('an app interest never implies technical experience or enables Advanced Mode', () => {
+    const offered = offeredSections({ advancedMode: false, localInference: true, agentHost: true });
+    expect(offered).toEqual(['collaborator', 'images']);
+    expect(firstSectionFor('app', offered)).toBe('collaborator');
+    expect(disclosuresFor('app', offered)).toEqual({ more: false, developers: false });
+  });
   it('hides every collaborator section', () => {
-    const all = offeredSections({ localInference: true, agentHost: true });
+    const all = offeredSections({ advancedMode: true, localInference: true, agentHost: true });
     expect(visibleSections(true, all)).toEqual([]);
     expect(visibleSections(false, all)).toEqual(all);
   });
@@ -89,11 +95,11 @@ describe('steps and disclosure', () => {
     expect(SETUP_STEPS).toEqual(['need', 'garden', 'ai', 'mood', 'crux']);
   });
   it('an app with a backend opens the developer options; a website keeps them folded', () => {
-    const all = offeredSections({ localInference: true, agentHost: true });
+    const all = offeredSections({ advancedMode: true, localInference: true, agentHost: true });
     expect(disclosuresFor('app', all)).toEqual({ more: false, developers: true });
     expect(disclosuresFor('website', all)).toEqual({ more: false, developers: false });
     expect(disclosuresFor('art', all)).toEqual({ more: false, developers: false });
-    const web = offeredSections({ localInference: false, agentHost: false });
+    const web = offeredSections({ advancedMode: true, localInference: false, agentHost: false });
     expect(disclosuresFor('app', web)).toEqual({ more: false, developers: false });
   });
 });

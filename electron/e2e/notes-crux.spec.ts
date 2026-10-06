@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import {
   readFileSync,
@@ -70,6 +71,7 @@ test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, 
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1050 });
     await enterGarden(page);
+    await enableAdvancedMode(page);
 
     await test.step('create; Tigrana opens the notebook and writes its own welcome note and metadata', async () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
@@ -253,6 +255,7 @@ test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, 
     await page.setViewportSize({ width: 1600, height: 1050 });
     await test.step('clean Garden: the complete Crux imports and the notes open in Tigrana', async () => {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       await importNativeCrux(page, archive);
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;

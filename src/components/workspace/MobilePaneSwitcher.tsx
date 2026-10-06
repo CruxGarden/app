@@ -1,6 +1,7 @@
 import { cn } from '@/lib/cn';
 import { paneOffered } from './paneConfig';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import {
   useWorkspaceUIStore as useUIStore,
   PANE_COLORS,
@@ -14,6 +15,7 @@ import { usePaneLabels } from '@/hooks/usePaneLabels';
 
 export default function MobilePaneSwitcher() {
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
   const labels = usePaneLabels();
   const { mobileActivePane, setMobileActivePane, scope } = useUIStore(
     useShallow((s) => ({
@@ -26,7 +28,11 @@ export default function MobilePaneSwitcher() {
   return (
     <div className="flex items-center h-12 min-w-0 overflow-x-auto border-t border-border bg-surface-solid shrink-0">
       {(scope === 'garden' ? GARDEN_PANE_ORDER : DEFAULT_PANE_ORDER)
-        .filter((pane) => paneOffered(pane, aiEnabled))
+        .filter(
+          (pane) =>
+            paneOffered(pane, aiEnabled, advancedMode) ||
+            (pane === mobileActivePane && paneOffered(pane, aiEnabled)),
+        )
         .map((pane) => {
           const spec = PANES[pane];
           const label = labels[pane] === spec.label ? (spec.short ?? spec.label) : labels[pane];

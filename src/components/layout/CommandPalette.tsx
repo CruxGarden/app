@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useCommandPalette } from '@/stores/commandPalette';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { usePaneLabels } from '@/hooks/usePaneLabels';
 import { gardenPath, inGarden, useGardenContext } from '@/stores/gardenContext';
 import { useWorkspaceUIStore, useWorkspaceUIStoreApi, type PaneType } from '@/stores/uiStore';
@@ -88,6 +89,7 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
   const id = useId();
   const navigate = useMoodNavigate();
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
   const labels = usePaneLabels();
   const ui = useWorkspaceUIStoreApi();
   const { scope, activeCruxId, visibility } = useWorkspaceUIStore(
@@ -189,6 +191,14 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
 
     // ── Actions ──
     out.push({
+      id: 'advanced-mode-settings',
+      section: 'Actions',
+      label: 'Advanced Mode settings',
+      keywords: 'advanced simple code data controls technical guidance preferences',
+      icon: <HomeIcon size={14} />,
+      run: () => openSettings({ section: 'start' }),
+    });
+    out.push({
       id: 'field-guide',
       section: 'Actions',
       label: 'Help and field guide',
@@ -285,7 +295,7 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
       });
 
     // ── Panels: the same list as the Panels picker, open or closed ──
-    for (const pane of offeredPanes(scope, activeCruxId, aiEnabled)) {
+    for (const pane of offeredPanes(scope, activeCruxId, aiEnabled, advancedMode)) {
       const { icon: Icon, label, prefix, keywords } = PANES[pane];
       const isOpen = !!visibility[pane];
       out.push({
@@ -378,6 +388,7 @@ function Palette({ initialQuery, onClose }: { initialQuery: string; onClose: () 
     ui,
     visibility,
     aiEnabled,
+    advancedMode,
     labels,
     themeMode,
   ]);

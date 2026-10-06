@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from './panel-helpers';
 import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -50,6 +51,7 @@ test.describe('form-mode editor (site settings)', () => {
       await expect.poll(() => configOnDisk()).toContain('"name": "Playwright Person"'); // write-through
       await page.screenshot({ path: 'e2e/.results/form-1-settings.png' });
 
+      await enableAdvancedMode(page);
       // Source ↔ Form round-trip keeps the value
       await page.getByRole('button', { name: 'Source' }).click();
       await expect(page.locator('.monaco-editor').first()).toContainText('Playwright Person');

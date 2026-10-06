@@ -6,7 +6,13 @@ import JSZip from 'jszip';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { startMockApi } from './api-mock';
-import { showPane, openPanel, chooseSettingsSection, newTaskButton } from './panel-helpers';
+import {
+  enableAdvancedMode,
+  showPane,
+  openPanel,
+  chooseSettingsSection,
+  newTaskButton,
+} from './panel-helpers';
 
 /** An unfamiliar author's package: its public edition runs without the parent bridge. */
 async function postcardPackage(filename: string) {
@@ -150,6 +156,7 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
   const toolFile = testInfo.outputPath('pocket-notes.cruxtool');
   try {
     await enterGarden(publisher.page);
+    await enableAdvancedMode(publisher.page);
     await add(publisher.page, 'tool-starter');
     const frame = publisher.page.frameLocator('iframe[data-crux-id]');
     await frame.getByLabel('Your note').fill('Author-only test note');
@@ -266,7 +273,7 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
     const card = online.page.getByTestId('explore-tool-pocket-notes');
     await expect(card).toBeVisible();
     api.state.publishedDownloadDelayMs = 30_000;
-    await card.getByRole('button', { name: 'Install', exact: true }).click();
+    await card.getByRole('button', { name: /^Install(?: ·|$)/ }).click();
     await expect(card.getByRole('progressbar')).toBeVisible();
     await expect
       .poll(async () => Number(await card.getByRole('progressbar').getAttribute('value')))
@@ -275,7 +282,7 @@ test('a creator exports an unknown .cruxtool and a clean recipient installs, edi
     await expect(card).toContainText('Cancelled. You can retry');
     await expect(card.getByTestId('tool-installed')).toHaveCount(0);
     api.state.publishedDownloadDelayMs = undefined;
-    await card.getByRole('button', { name: 'Install', exact: true }).click();
+    await card.getByRole('button', { name: /^Install(?: ·|$)/ }).click();
     await expect(card.getByTestId('tool-installed')).toBeVisible();
     const homeUrl = online.page.url();
     const settings = await showPane(online.page, 'Settings');

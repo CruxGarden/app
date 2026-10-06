@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, storedCrux } from '../multi-crux-helpers';
-import { openPanel } from '../panel-helpers';
+import { enableAdvancedMode, openPanel } from '../panel-helpers';
 import { indexedFiles } from '../content-helpers';
 import { createHash } from 'node:crypto';
 
@@ -52,6 +52,7 @@ test.describe('guide 18 · Functions', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Rules');
       const folder = (await storedCrux(page, id)).projectFolder as string;
       writeFileSync(join(folder, 'index.html'), '<!doctype html><h1>Rules</h1>');
@@ -119,6 +120,7 @@ test.describe('guide 18 · Functions', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Clockwork');
       const folder = (await storedCrux(page, id)).projectFolder as string;
       writeFileSync(join(folder, 'index.html'), '<!doctype html><h1>Clockwork</h1>');
@@ -168,6 +170,7 @@ test.describe('guide 18 · Functions', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Answers');
       const folder = (await storedCrux(page, id)).projectFolder as string;
       writeFileSync(join(folder, 'index.html'), '<!doctype html><h1>Answers</h1>');
@@ -210,6 +213,7 @@ test.describe('guide 18 · Functions', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Keys');
       const folder = (await storedCrux(page, id)).projectFolder as string;
       writeFileSync(
@@ -275,6 +279,7 @@ test.describe('guide 18 · Functions', () => {
     const { app, page } = await launchApp();
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       const id = await createCrux(page, 'Outbound');
       const folder = (await storedCrux(page, id)).projectFolder as string;
       writeFileSync(join(folder, 'index.html'), '<!doctype html><h1>Outbound</h1>');

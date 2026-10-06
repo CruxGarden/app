@@ -1,3 +1,4 @@
+import { setupWithFirstHomePage } from './setup-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -23,12 +24,7 @@ test('a new Garden teaches a home page with name, photo, Growth and Share, entir
     const photo = readFileSync(resolve(__dirname, 'fixtures/glow-garden/seed.png'));
     try {
       const { page } = first;
-      await page.getByRole('button', { name: 'Enter', exact: true }).click();
-      await page.getByText('Plant a new garden').click();
-      await expect(
-        page.getByRole('checkbox', { name: /Include a first home page walkthrough/ }),
-      ).toBeChecked();
-      await page.getByRole('button', { name: 'Make my home page', exact: true }).click();
+      await setupWithFirstHomePage(page);
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
       id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;

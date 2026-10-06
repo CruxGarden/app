@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { createPortal } from 'react-dom';
 import { useWorkspaceUIStore, useWorkspaceUIStoreApi, type PaneType } from '@/stores/uiStore';
 import { offeredPanes } from './panel-order';
@@ -38,6 +39,7 @@ function PinIcon({ filled }: { filled: boolean }) {
 /** Discovery for closed panels. Opening uses the same workspace operation as agents. */
 export default function PanelPicker() {
   const aiEnabled = useAiEnabled();
+  const advancedMode = useAdvancedMode();
   const ui = useWorkspaceUIStoreApi();
   const activeCruxId = useWorkspaceUIStore((s) => s.activeCruxId);
   const scope = useWorkspaceUIStore((s) => s.workspaceScope);
@@ -97,7 +99,7 @@ export default function PanelPicker() {
     trigger.current?.focus();
   };
   // This workspace's own panes first, then the Garden-wide ones.
-  const available = offeredPanes(scope, activeCruxId, aiEnabled)
+  const available = offeredPanes(scope, activeCruxId, aiEnabled, advancedMode)
     .filter((pane) => !OWN_BUTTON.has(pane) || !visibility[pane])
     .filter((pane) => {
       return `${labels[pane]} ${PANES[pane].label} ${PANES[pane].keywords ?? ''}`
@@ -224,6 +226,16 @@ export default function PanelPicker() {
               </p>
             )}
             <div className="border-t border-dropdown-border mt-1 pt-1">
+              <button
+                type="button"
+                className={menuItemClass()}
+                onClick={() => {
+                  finish();
+                  openSettings({ section: 'start' });
+                }}
+              >
+                Advanced Mode…
+              </button>
               <button
                 type="button"
                 disabled={busy}

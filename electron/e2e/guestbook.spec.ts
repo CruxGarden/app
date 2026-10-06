@@ -1,4 +1,4 @@
-import { togglePanel, panelPressed } from './panel-helpers';
+import { enableAdvancedMode, togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -44,6 +44,7 @@ test('Guestbook: added from the Share pane, signed in the preview, added by the 
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
     await enterGarden(page);
+    await enableAdvancedMode(page);
     const id = await createCrux(page, 'Garden diary');
     const folder = (await storedCrux(page, id)).projectFolder as string;
     writeFileSync(join(folder, 'index.html'), PAGE);

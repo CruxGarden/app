@@ -1,3 +1,4 @@
+import { enableAdvancedMode } from '../panel-helpers';
 import { test, expect } from '@playwright/test';
 import type { DownloadItem, Event } from 'electron';
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
@@ -31,6 +32,7 @@ test('author portable undertaking starters and actual worked-example Growth thro
   const client = new Client({ name: 'crux-garden-example-author', version: '1' });
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('switch', { name: 'Agent access for Whole garden', exact: true }).click();
     const configPath = join(dir, 'userData', 'garden-agent-host', '.crux', 'mcp.json');

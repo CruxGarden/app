@@ -13,7 +13,8 @@ vi.mock('@/services/garden-mood', () => ({
   captureLook: () => mock.snapshot,
   restoreLook: mock.restore,
 }));
-import { abandonSetup, previewMood } from './setup-actions';
+import { abandonSetup, previewMood, setupStartFor } from './setup-actions';
+import { useGardenContext } from '@/stores/gardenContext';
 import { useSetupWizard } from './setup-store';
 
 beforeEach(() => {
@@ -44,4 +45,18 @@ it('cancelling without a preview changes nothing', async () => {
   await abandonSetup();
   expect(mock.restore).not.toHaveBeenCalled();
   expect(mock.apply).not.toHaveBeenCalled();
+});
+
+it('rerunning setup starts with the selected Garden name, not the root name', () => {
+  const previous = useGardenContext.getState();
+  try {
+    useGardenContext.setState({
+      root: { id: 'root', slug: 'home', title: 'My Garden' },
+      garden: { id: 'studio', slug: 'studio', title: 'Music studio' },
+    });
+    expect(setupStartFor('again').gardenName).toBe('Music studio');
+    expect(setupStartFor('first').gardenName).toBe('My Garden');
+  } finally {
+    useGardenContext.setState(previous);
+  }
 });

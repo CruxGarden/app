@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from '../launch';
 import { enterGarden, createCrux, switchCrux } from '../multi-crux-helpers';
-import { togglePanel } from '../panel-helpers';
+import { enableAdvancedMode, togglePanel } from '../panel-helpers';
 import type { SynthPatch } from '../../../src/audio/synth-patch';
 
 test.skip(process.env.CRUX_SYNTH_SOAK !== '1', 'set CRUX_SYNTH_SOAK=1 for the five-minute soak');
@@ -31,9 +31,10 @@ test('live sound, hidden panels and drafts survive repeated multi-Crux work', as
   const samples: unknown[] = [];
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.evaluate(() => {
       const original = CSSStyleDeclaration.prototype.setProperty;
-      CSSStyleDeclaration.prototype.setProperty = function(name, value, priority) {
+      CSSStyleDeclaration.prototype.setProperty = function (name, value, priority) {
         if (this === document.documentElement.style && name === '--signal-audio') return;
         return original.call(this, name, value, priority);
       };

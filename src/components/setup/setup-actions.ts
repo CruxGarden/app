@@ -31,10 +31,12 @@ const DEFAULT_MOOD_ID = 'plasma';
 /** What the wizard starts from: today's choices, so running it again edits rather than replaces. */
 export function setupStartFor(mode: SetupMode): SetupStart {
   const author = useAppStore.getState().author;
-  const garden = useGardenContext.getState().root ?? useGardenContext.getState().garden;
+  const { root, garden: selected } = useGardenContext.getState();
+  const garden = mode === 'first' ? (root ?? selected) : (selected ?? root);
   const need = getSetting(SettingsKey.SetupNeed) as SetupNeed | null;
   return {
     mode,
+    advancedMode: getSetting(SettingsKey.AdvancedMode) === 'true',
     need: mode === 'again' ? need : null,
     gardenName: garden?.title ?? '',
     username:
@@ -86,6 +88,7 @@ export function setupDeps(mode: SetupMode): SetupDeps {
     },
     defaultMoodId: DEFAULT_MOOD_ID,
     rememberNeed: (need) => setSetting(SettingsKey.SetupNeed, need),
+    setAdvancedMode: (on) => setSetting(SettingsKey.AdvancedMode, String(on)),
   };
 }
 

@@ -1,4 +1,4 @@
-import { showPane, hidePane } from './panel-helpers';
+import { enableAdvancedMode, showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -33,6 +33,7 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1050 });
     await enterGarden(page);
+    await enableAdvancedMode(page);
 
     await test.step('create; the app starts as upstream does and its first save records the project', async () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();

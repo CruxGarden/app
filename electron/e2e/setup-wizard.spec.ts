@@ -36,6 +36,16 @@ test.describe('Setup wizard', () => {
       await openSetupWizard(page);
       await expect(wizard(page)).toHaveAttribute('data-step', 'need');
       await expect(growth(page)).toHaveAttribute('data-stage', '0');
+      // Capture the settled entrance, not the dialog's scale/fade transition.
+      await page.evaluate(async () => {
+        await Promise.all(
+          document
+            .getAnimations()
+            .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+            .map((animation) => animation.finished.catch(() => {})),
+        );
+      });
+      await page.screenshot({ path: '/tmp/crux-setup-default-oct6.png', animations: 'disabled' });
 
       // 1 · What would you like to make?
       await expect(page.getByRole('radio', { name: /A home page or website/ })).toBeVisible();
@@ -59,7 +69,7 @@ test.describe('Setup wizard', () => {
       // 3 · Collaborators: the plain choice first; developer options folded for a website
       await expect(wizard(page)).toHaveAttribute('data-step', 'ai');
       await expect(growth(page)).toHaveAttribute('data-stage', '2');
-      await expect(page.getByTestId('setup-ai-developers')).toHaveAttribute('data-open', 'false');
+      await expect(page.getByTestId('setup-ai-developers')).toHaveCount(0);
       await expect(page.locator('[data-setup-section="collaborator"]')).toBeVisible();
       await expect(page.getByTestId('setup-status-collaborator')).not.toHaveText('Looking…', {
         timeout: 15_000,
@@ -171,6 +181,7 @@ test.describe('Setup wizard', () => {
     const { app, page } = await launchApp();
     try {
       await openSetupWizard(page);
+      await page.getByRole('switch', { name: 'Advanced Mode', exact: true }).click();
       await page.getByText('An app with a backend', { exact: true }).click();
       await page.getByRole('radio', { name: /An app with a backend/ }).press('Enter');
       await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
@@ -237,6 +248,7 @@ test.describe('Setup wizard', () => {
 
       await showPane(page, 'Settings');
       await chooseSettingsSection(page, 'Garden and backups');
+      await page.getByRole('button', { name: 'Garden', exact: true }).click();
       await page.getByRole('button', { name: 'Run setup again', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: 'Run setup again' });
       await expect(dialog).toBeVisible();

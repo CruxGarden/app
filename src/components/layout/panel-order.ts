@@ -22,6 +22,7 @@ export function offeredPanes(
   scope: 'garden' | 'crux',
   activeCruxId: string | null,
   aiEnabled: boolean,
+  advancedMode = true,
 ): PaneType[] {
   const order =
     scope === 'garden'
@@ -32,5 +33,5 @@ export function offeredPanes(
             ...DEFAULT_PANE_ORDER.filter((p) => GARDEN_WIDE.has(p)),
           ]
         : [];
-  return order.filter((pane) => paneOffered(pane, aiEnabled));
+  return order.filter((pane) => paneOffered(pane, aiEnabled, advancedMode));
 }

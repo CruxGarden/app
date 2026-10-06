@@ -38,6 +38,7 @@ type Route = 'key' | 'local';
 
 /** A collaborator in your Crux: included with a plan (recommended), your own key, or this computer. */
 export function CollaboratorSection({ open, onOpen, onLater, saved }: SectionProps) {
+  const advancedMode = useSetupWizard((s) => s.advancedMode);
   const set = useSetupWizard((s) => s.set);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const included = useIncludedReady();
@@ -52,7 +53,7 @@ export function CollaboratorSection({ open, onOpen, onLater, saved }: SectionPro
       setOtherOpen(true);
     } else void openWeb(`${WEBSITE_URL}/plans`);
   };
-  const local = can(Capability.LocalInference);
+  const local = advancedMode && can(Capability.LocalInference);
 
   // Signing in to a plan that includes collaboration is setting it up.
   const wasReady = useRef(included.ready);

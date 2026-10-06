@@ -1,4 +1,4 @@
-import { panelPressed, togglePanel } from './panel-helpers';
+import { enableAdvancedMode, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -32,6 +32,7 @@ test('WWW browses unframeable sites with isolated privileges, UI/MCP controls, m
   let client: Client | undefined;
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     const id = await createCrux(page, 'Web research');
     for (const label of ['tasks', 'collaboration', 'workshop']) {
       if ((await panelPressed(page, `Toggle ${label}`)) === 'true')

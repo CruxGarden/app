@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { launchApp } from '../launch';
 import { startMockApi } from '../api-mock';
 import { enterGarden, createCrux } from '../multi-crux-helpers';
-import { showPane, hidePane, togglePanel } from '../panel-helpers';
+import { enableAdvancedMode, showPane, hidePane, togglePanel } from '../panel-helpers';
 import { connectAccount, writeFirstFile } from '../journeys/journey-helpers';
 
 /**
@@ -156,6 +156,7 @@ test.describe('guide 23 · AI and Memory', () => {
     const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     try {
       await enterGarden(page);
+      await enableAdvancedMode(page);
       let settings = await showPane(page, 'Settings');
       await settings.locator('h2', { hasText: /^AI$/ }).click();
       const metrics = settings.getByTestId('agent-metrics');

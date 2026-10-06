@@ -36,7 +36,7 @@ const STEPS: Record<SetupStepId, { short: string; title: string; lead: string }>
   need: {
     short: 'Make',
     title: 'What would you like to make?',
-    lead: 'Pick the closest. It only chooses a good place to start; you can make anything later.',
+    lead: 'Pick the closest. We’ll suggest places to start, and you can make anything later.',
   },
   garden: {
     short: 'Garden',

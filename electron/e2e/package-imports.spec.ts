@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
 import { exportNativeCrux } from './native-archive-helpers';
-import { openPanel, showPane, togglePanel } from './panel-helpers';
+import { enableAdvancedMode, openPanel, showPane, togglePanel } from './panel-helpers';
 
 test('OS opens queue all three packages through reviewed import, deduplicate and report malformed files', async () => {
   test.setTimeout(180_000);
@@ -14,6 +14,7 @@ test('OS opens queue all three packages through reviewed import, deduplicate and
   const mood = join(source.dir, 'quiet.cruxmood');
   try {
     await enterGarden(source.page);
+    await enableAdvancedMode(source.page);
     await createCrux(source.page, 'Opened from disk');
     await exportNativeCrux(source.page, project, source.app, () =>
       togglePanel(source.page, 'Toggle export'),

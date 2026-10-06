@@ -64,6 +64,7 @@ export default function StepFirstCrux({
       label: 'Making',
       value: needChoice(choices.need)?.label ?? 'Not decided yet · anything goes',
     },
+    { step: 'need', label: 'Advanced Mode', value: choices.advancedMode ? 'On' : 'Off' },
     {
       step: 'garden',
       label: 'Garden',
@@ -96,9 +97,12 @@ export default function StepFirstCrux({
         </div>
         <dl className="grid grid-cols-[auto_1fr_auto] gap-x-3 gap-y-1.5 text-sm">
           {rows.map((row) => (
-            <div key={row.step} className="contents">
+            <div key={row.label} className="contents">
               <dt className="text-xs text-text-muted self-center">{row.label}</dt>
-              <dd className="text-text min-w-0 truncate" data-summary={row.step}>
+              <dd
+                className="text-text min-w-0 truncate"
+                data-summary={row.label === 'Advanced Mode' ? 'advanced-mode' : row.step}
+              >
                 {row.value}
               </dd>
               <dd className="self-center">

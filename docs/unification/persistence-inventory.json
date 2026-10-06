@@ -17,6 +17,13 @@
       "ledger": "cruxgarden:activeMoodId"
     },
     {
+      "key": "cruxgarden:advancedMode",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:advancedMode"
+    },
+    {
       "key": "cruxgarden:agentMetrics",
       "sources": [
         "src/lib/constants.ts"

@@ -17,6 +17,9 @@ export interface SetupChoices {
   mode: SetupMode;
   step: SetupStepId;
   need: SetupNeed | null;
+  advancedMode: boolean;
+  /** The saved installation preference when the wizard opened. */
+  advancedModeAtStart: boolean;
   gardenName: string;
   username: string;
   /** A photo waiting to be stored with the author when setup finishes. */
@@ -50,6 +53,7 @@ export interface SetupChoices {
 
 export interface SetupStart {
   mode: SetupMode;
+  advancedMode?: boolean;
   need?: SetupNeed | null;
   gardenName?: string;
   username?: string;
@@ -75,6 +79,8 @@ export function initialChoices(start: SetupStart): SetupChoices {
     mode: start.mode,
     step: 'need',
     need: start.need ?? null,
+    advancedMode: start.advancedMode ?? false,
+    advancedModeAtStart: start.advancedMode ?? false,
     gardenName: start.gardenName ?? '',
     username: start.username ?? '',
     photo: null,
