@@ -114,25 +114,34 @@ test('categories are summed without overlap and total adds up', async () => {
   }
 });
 
-test('symlinks are never followed and unreadable folders are skipped', async () => {
+test('symlinks inside Project Folders are never followed', async () => {
   const f = fixture();
   try {
     const outside = join(f.base, 'outside');
     write(join(outside, 'huge.bin'), 50_000);
-    symlinkSync(outside, join(f.garden, 'blog', 'linked-dir'));
-    symlinkSync(join(outside, 'huge.bin'), join(f.garden, 'blog', 'linked-file'));
-    const locked = join(f.garden, 'notes', 'locked');
+    symlinkSync(outside, join(f.garden, 'blog', 'linked-dir'), 'dir');
+    symlinkSync(join(outside, 'huge.bin'), join(f.garden, 'blog', 'linked-file'), 'file');
+    const usage = await measureDiskUsage(layout(f));
+    expect(usage.projectFoldersBytes).toBe(1000 + 200 + 50);
+    expect(await treeSize(join(f.garden, 'blog', 'linked-file'), walkBudget())).toBe(0);
+  } finally {
+    rmSync(f.base, { recursive: true, force: true });
+  }
+});
+
+test('unreadable folders are skipped without losing readable files', async () => {
+  // Windows chmod does not control directory traversal; root bypasses Unix modes.
+  test.skip(process.platform === 'win32' || process.getuid?.() === 0, 'Requires Unix access modes');
+  const f = fixture();
+  const locked = join(f.garden, 'notes', 'locked');
+  try {
     write(join(locked, 'secret.md'), 7000);
     chmodSync(locked, 0o000);
-    try {
-      const usage = await measureDiskUsage(layout(f));
-      expect(usage.projectFoldersBytes).toBe(1000 + 200 + 50);
-      // A symlinked root is resolved to its target; a link inside a root is not.
-      expect(await treeSize(join(f.garden, 'blog', 'linked-file'), walkBudget())).toBe(0);
-    } finally {
-      chmodSync(locked, 0o755);
-    }
+    expect(() => readdirSync(locked)).toThrow();
+    const usage = await measureDiskUsage(layout(f));
+    expect(usage.projectFoldersBytes).toBe(1000 + 200 + 50);
   } finally {
+    chmodSync(locked, 0o755);
     rmSync(f.base, { recursive: true, force: true });
   }
 });

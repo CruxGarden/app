@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, codex/api-app-unification]
   workflow_dispatch:
   schedule:
     # The full Crux Tool catalog, weekly (ADR 0050): PR gates build only the
@@ -49,6 +49,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: electron
       - run: npm run test:browser
+        working-directory: electron
+      - name: Verify the production public site and landing-page contract
+        run: npx playwright test -c playwright.web.config.ts
         working-directory: electron
 
   e2e:

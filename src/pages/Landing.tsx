@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { TeaserMaterial, TeaserPanel, TeaserBrand } from '@/components/landing/TeaserMaterial';
 import TeaserTrack from '@/components/landing/TeaserTrack';
 import '@/components/landing/teaser.css';
-import { LEGAL_PAGES } from '@/lib/site';
 
 /** Mailchimp posts the form directly; no embed script, so nothing third-party runs here. */
 const MAILCHIMP_ACTION =
@@ -95,9 +94,6 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
               inline style that would beat the stylesheet. */}
           <TeaserPanel draggable>
             <TeaserBrand />
-            <a href="/#download" className="text-sm text-accent underline" data-plasma-nodrag>
-              Get the desktop app
-            </a>
 
             {answered ? (
               <p className="teaser-sent" role="status">
@@ -139,16 +135,6 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
 
           {/* Under the panel, clear of its blend distance. Draggable from here. */}
           <TeaserTrack />
-
-          {/* Out of the flow, so the panel and the player keep their distance. */}
-          <nav className="teaser-legal" aria-label="Plans and legal">
-            <a href="/plans">Plans</a>
-            {LEGAL_PAGES.map((page) => (
-              <a key={page.path} href={page.path}>
-                {page.label}
-              </a>
-            ))}
-          </nav>
         </main>
       </TeaserMaterial>
     </div>

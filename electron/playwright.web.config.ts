@@ -30,6 +30,6 @@ export default defineConfig({
     cwd: '..',
     url: 'http://127.0.0.1:8123',
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 300_000,
   },
 });

@@ -1,22 +1,49 @@
 name: Deploy Web to S3
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: production-web
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
+    # PR/fork CI cannot enter the production job. Manual retries still check CI below.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     environment: production
     permissions:
       contents: read
+      actions: read
       id-token: write
 
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
     steps:
+      - name: Require successful CI on the current main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          test "$RELEASE_SHA" = "$main_sha" || { echo "::error::Refusing a stale deployment"; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$RELEASE_SHA&event=push&per_page=100" \
+            --jq '.workflow_runs | sort_by(.run_number) | last | select(.head_branch == "main" and .status == "completed" and .conclusion == "success") | .id' \
+            | grep -Eq '^[0-9]+$' || { echo "::error::This main commit has no successful CI run"; exit 1; }
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
 
       - uses: actions/setup-python@v5
         with:
@@ -41,8 +68,14 @@ jobs:
           # more RAM than Node claims by default.
           NODE_OPTIONS: --max-old-space-size=8192
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://api.crux.garden' }}
+          CRUX_BUNDLE_TOOLS: none
           VITE_PUBLIC_SITE: '1'
           VITE_PUBLISH_ORIGIN_TEMPLATE: ${{ vars.VITE_PUBLISH_ORIGIN_TEMPLATE || 'https://{cruxId}.publish.crux.garden' }}
+
+      - name: Recheck main before publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$RELEASE_SHA" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

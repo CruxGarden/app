@@ -48,6 +48,8 @@ test.describe('public site', () => {
   test('launch signup validates email and remembers the return without sending mail', async ({
     page,
   }) => {
+    // This journey reloads the animated production page several times.
+    test.setTimeout(120_000);
     const submissions: URLSearchParams[] = [];
     await page.route('https://tech.us13.list-manage.com/**', async (route) => {
       submissions.push(new URLSearchParams(route.request().postData() ?? ''));
@@ -58,6 +60,14 @@ test.describe('public site', () => {
     });
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Crux Garden', exact: true })).toBeVisible();
+    await expect(page.getByText('grow anything', { exact: true })).toBeVisible();
+    // Preserve the deployed coming-soon page; other site routes stay directly available.
+    await expect(page.getByRole('link')).toHaveCount(0);
+    await expect(page.locator('form')).toHaveAttribute(
+      'action',
+      'https://tech.us13.list-manage.com/subscribe/post?u=4c2e196117cdb095809f3bb3b&id=f31692b207&f_id=008b35e5f0',
+    );
+    await page.screenshot({ path: test.info().outputPath('landing-desktop.png') });
     const email = page.getByRole('textbox', { name: 'Email address' });
     await email.fill('invalid');
     await page.getByRole('button', { name: 'Notify', exact: true }).click();
@@ -68,9 +78,14 @@ test.describe('public site', () => {
     await expect(page.getByRole('status')).toHaveText('Thank you, we will notify you at launch');
     expect(submissions).toHaveLength(1);
     expect(submissions[0].get('EMAIL')).toBe('reader@example.invalid');
+    expect(submissions[0].get('tags')).toBe('7209613,7209430');
+    expect(submissions[0].get('b_4c2e196117cdb095809f3bb3b_f31692b207')).toBe('');
     await page.goto('/');
     await expect(page.getByRole('status')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Notify', exact: true })).toHaveCount(0);
+    await page.goto('/?reset');
+    await expect(email).toBeVisible();
+    await expect(page.getByRole('status')).toHaveCount(0);
   });
 
   test('direct subscription return is remembered on a fresh visit', async ({ page }) => {
@@ -206,6 +221,8 @@ test('public Gardens load another page on demand and preserve results on refusal
 test('the deployed teaser player loads on demand, pauses, rewinds and remembers volume', async ({
   page,
 }) => {
+  // Include cold WebGL startup and the persistence reload in the journey budget.
+  test.setTimeout(120_000);
   // A short valid WAV exercises browser playback without streaming the remote song.
   const audio = Buffer.alloc(44 + 16000);
   audio.write('RIFF');
@@ -305,14 +322,15 @@ test('public creations explain their purpose and published process, and creator 
 test('a creator Garden presents tools and Moods with their own actions and category filters', async ({
   page,
 }) => {
-  const ids = ['creator-tool-test', 'creator-mood-test'];
+  const ids = ['5c0ffee5-0000-4000-8000-000000000001', '5c0ffee5-0000-4000-8000-000000000002'];
+  const slugs = ['creator-tool-test', 'creator-mood-test'];
   for (const [i, kind] of ['tool', 'mood'].entries())
     api.state.cruxes[ids[i]!] = {
       ...api.state.cruxes[ID],
       id: ids[i],
       kind,
       title: kind === 'tool' ? 'Pocket Notes Tool' : 'Meadow Mood',
-      slug: ids[i],
+      slug: slugs[i],
       meta: { publishedAt: '2026-10-01', template: 'unknown-community-tool' },
     };
   try {
@@ -335,13 +353,13 @@ test('a creator Garden presents tools and Moods with their own actions and categ
     await expect(page.getByRole('status')).toContainText('missing its installable file');
     await page.goto('/tester');
     await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
-    await expect(page.getByTestId('explore-mood-creator-mood-test')).toBeVisible();
+    await expect(page.getByTestId(`explore-mood-${ids[1]}`)).toBeVisible();
     await expect(page.getByText('Open Crux Garden to install')).toBeVisible();
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await expect(page.getByTestId('explore-tool-unknown-community-tool')).toBeVisible();
-    await expect(page.getByTestId('explore-mood-creator-mood-test')).toHaveCount(0);
+    await expect(page.getByTestId(`explore-mood-${ids[1]}`)).toHaveCount(0);
     await page.getByRole('button', { name: 'Moods', exact: true }).click();
-    await expect(page.getByTestId('explore-mood-creator-mood-test')).toBeVisible();
+    await expect(page.getByTestId(`explore-mood-${ids[1]}`)).toBeVisible();
     await expect(page.getByTestId('explore-tool-unknown-community-tool')).toHaveCount(0);
     await page.getByRole('button', { name: 'Creations', exact: true }).click();
     await expect(page.getByText('Garden Notes', { exact: true }).first()).toBeVisible();
@@ -382,8 +400,7 @@ test('download leads to actual release installers and explains the shortest firs
       },
     }),
   );
-  await page.goto('/');
-  await page.getByRole('link', { name: 'Get the desktop app' }).click();
+  await page.goto('/#download');
   await expect(page).toHaveURL(/\/#download$/);
   await expect(page.getByRole('heading', { name: 'Your first website starts here' })).toBeVisible();
   await expect(
@@ -466,7 +483,7 @@ test('legal pages render, are linked from the public footer and from the teaser'
   // A word that is also a page is never read as somebody's garden.
   await expect(page.getByText('No garden here')).toHaveCount(0);
 
-  await page.goto('/');
+  await page.goto('/plans');
   await page
     .getByRole('navigation', { name: 'Legal' })
     .getByRole('link', { name: 'Privacy' })
