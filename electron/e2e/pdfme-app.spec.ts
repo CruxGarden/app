@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -67,8 +68,8 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
     });
 
     await test.step('the scripted collaborator names the poster, adds two text blocks and saves PDF and PNG outputs', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Make the open day poster [layout:poster]');
       await box.press('Enter');
@@ -92,7 +93,7 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
       expect(readFileSync(join(folder, pdf.path)).subarray(0, 4).toString()).toBe('%PDF');
       expect(readFileSync(join(folder, png.path)).subarray(1, 4).toString()).toBe('PNG');
       expect(readFileSync(join(folder, png.path)).length).toBeGreaterThan(5000);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.waitForTimeout(800); // the Designer remounts to the wider pane
       await page.screenshot({ path: join(evidence, 'pdfme-agent.png') });
     });
@@ -122,7 +123,7 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the poster comes back with its blocks and outputs', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#layout-name')).toHaveValue('Open day poster');

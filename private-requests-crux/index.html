@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Private Requests</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="crux.js"></script>
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">A little room for your next idea</p>
+      <h1>Private Requests</h1>
+      <p>Send a request only you and the creator can read.</p>
+    </header>
+    <main>
+      <section class="card" aria-label="Your request">
+        <p id="identity" class="muted">Connecting…</p>
+        <div id="auth" hidden>
+          <form id="email-form">
+            <label
+              >Email address<input
+                id="email"
+                type="email"
+                autocomplete="email"
+                required
+                maxlength="254" /></label
+            ><button>Send sign-in code</button>
+          </form>
+          <form id="code-form" hidden>
+            <label>Sign-in code<input id="code" autocomplete="one-time-code" required /></label
+            ><button>Sign in</button>
+          </form>
+          <p id="hosted" hidden>
+            Sign in through the Garden that opened this page, then return here.
+          </p>
+        </div>
+        <form id="request-form" hidden>
+          <h2>Your open request</h2>
+          <p class="muted">
+            One request at a time. Saving again updates it. Use sample details while testing.
+          </p>
+          <label>Subject<input name="subject" maxlength="100" required /></label>
+          <label
+            >Details<textarea name="details" maxlength="2000" rows="6" required></textarea>
+          </label>
+          <button type="submit">Save request</button>
+        </form>
+        <div class="actions">
+          <button id="refresh" class="secondary" type="button">Refresh requests</button
+          ><button id="logout" class="secondary" type="button" hidden>Sign out</button>
+        </div>
+        <p id="status" role="status" aria-live="polite"></p>
+        <button id="diagnostics" class="secondary" type="button" hidden>Show error details</button>
+        <pre id="error-details" hidden></pre>
+      </section>
+      <section class="card" id="owner" hidden>
+        <h2>Owner inbox</h2>
+        <p class="muted">
+          Read requests here. Delete a handled request when you no longer need its details. Deletion
+          is permanent.
+        </p>
+        <div id="inbox"></div>
+        <p id="empty" class="muted">No open requests.</p>
+      </section>
+    </main>
+    <footer>
+      Functions validate each request. Protected Store records keep customers separate. The static
+      Local test Garden cannot run this backend.
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

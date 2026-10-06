@@ -1,22 +1,14 @@
+import { exportCreation, creationExportLabel } from '@/services/export-creation';
+import PrivateBackupDescription from './PrivateBackupDescription';
+import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
 import { Spinner, Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
-import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
+import { exportArtifactsZip } from '@/services/crux-io';
 import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/api/types';
-
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 interface ExportModalProps {
   open: boolean;
@@ -45,13 +37,13 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
     setExporting('crux');
     setProgress('Fetching data...');
     try {
-      const result = await exportCrux({
+      const result = await exportCreation({
         cruxId: crux.id,
         messages: (crux.meta?.messages as unknown[]) || [],
         summary: crux.meta?.summary || null,
         onProgress: setProgress,
       });
-      triggerDownload(result.blob, result.filename);
+      downloadBlob(result.blob, result.filename);
       setProgress(
         result.failed.length > 0
           ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`
@@ -74,7 +66,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         artifacts,
         onProgress: setProgress,
       });
-      triggerDownload(result.blob, result.filename);
+      downloadBlob(result.blob, result.filename);
       setProgress(
         result.failed.length > 0
           ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`
@@ -103,6 +95,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          {crux.kind !== 'tool' && crux.kind !== 'mood' && <PrivateBackupDescription />}
           <div className="flex flex-col gap-1.5">
             <Button
               onClick={handleExportCrux}
@@ -110,10 +103,12 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
               disabled={busy}
               fullWidth
             >
-              Export Crux
+              {creationExportLabel(crux.kind)}
             </Button>
             <p className="text-xxs text-text-muted text-center">
-              Full archive — artifacts, collaboration, and snapshot history
+              {crux.kind === 'tool' || crux.kind === 'mood'
+                ? 'Installable package — editor or Mood assets; no private conversation or history'
+                : 'Full archive — artifacts, collaboration, and snapshot history'}
             </p>
           </div>
 

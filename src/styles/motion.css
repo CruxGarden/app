@@ -29,15 +29,48 @@
    the exit class and resolve on animationend (immediately when the choice is
    none or the duration is 0).
 
-   Reactive signals (lib/moods/signals.ts) write --signal-audio, --signal-typing
-   and --signal-agent (0..1) on <html>; the react* binding tokens scale how far
-   they reach — see the last section. Generated blocks: scratchpad gen-motion.mjs. */
+   Reactive signals (lib/moods/signals.ts) write --signal-audio, --signal-typing,
+   --signal-agent and --signal-activity (0..1) on <html>; the react* binding
+   tokens scale how far they reach — see the last section. Generated blocks: scratchpad gen-motion.mjs. */
 
 /* ── Signals default to silence; derived durations ── */
 :root {
   --signal-audio: 0;
   --signal-typing: 0;
   --signal-agent: 0;
+  --signal-activity: 0;
+  --life: 1;
+  --life-dim: 1;
+}
+
+/* Flow is opt-in per Mood. Before the signal starts, and with Flow off,
+   the Mood keeps its normal appearance rather than being left dim. */
+html[data-flow='on'] {
+  /* How alive the garden looks right now: 1 is the Mood exactly as designed,
+     lower is drained of colour. reactBackgroundActivity says how far it drains
+     when nothing has been happening; 0 (the default) never drains. */
+  --life: calc(1 - var(--react-background-activity) * (1 - var(--signal-activity, 0)));
+  /* Draining colour alone is nearly invisible on a dark Mood, which is most of
+     them — "dull" is less colour *and* a little less light. A quarter as much,
+     so the garden dims rather than going grey. */
+  --life-dim: calc(1 - var(--react-background-activity) * 0.25 * (1 - var(--signal-activity, 0)));
+}
+
+/* Motion off means the interface holds still, not that it stays dull for ever:
+   hold the background at the Mood's full colour rather than at the drained end. */
+html[data-motion-intensity='off'],
+html[data-flow='off'] {
+  --life: 1;
+  --life-dim: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion-intensity]) {
+    --life: 1;
+    --life-dim: 1;
+  }
+}
+
+:root {
   /* the person's Motion setting (ADR 0041; lib/moods/motion-intensity.ts) beside the Mood's scale */
   --motion-intensity-scale: 1;
   --motion-ms-fast: calc(
@@ -677,6 +710,7 @@ html[data-motion-intensity='subtle'] .motion-ambient {
      --signal-audio   Resonance level        × reactAccentAudio      → accent glow
      --signal-typing  decays after keystrokes × reactBackgroundTyping → bloom intensity (bloom.css)
      --signal-agent   collaborator turn       × reactPaneAgent       → Collaboration pane glow
+     --signal-activity how much is going on      × reactBackgroundActivity → --life, the background's colour
      Bindings default to 0, so a Mood that says nothing does not react. */
   .react-accent {
     box-shadow: 0 0 calc(16px * var(--signal-audio) * var(--react-accent-audio))
@@ -687,10 +721,12 @@ html[data-motion-intensity='subtle'] .motion-ambient {
   }
 }
 
-/* Outside the layer: must beat globals.css's `.mosaic-window { box-shadow: none }`. */
+/* Keep the Mood’s frame shadow while Collaboration signals activity. */
 .mosaic.crux-mosaic-theme .mosaic-window.pane-collaboration {
-  box-shadow: 0 0 calc(28px * var(--signal-agent) * var(--react-pane-agent))
-    color-mix(in srgb, var(--pane-collaboration) 55%, transparent);
+  box-shadow:
+    var(--elevation-pane),
+    0 0 calc(28px * var(--signal-agent) * var(--react-pane-agent))
+      color-mix(in srgb, var(--pane-collaboration) 55%, transparent);
 }
 
 /* The modal scrim (globals.css) fades on the fast duration; div. outranks the plain class there. */

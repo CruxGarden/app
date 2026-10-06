@@ -25,6 +25,7 @@ import type {
   CreateDimensionDto,
 } from './types';
 import type { CheckoutBody } from './billing';
+import type { UpdateDimensionDto } from './dimensions';
 import type { AddDomainBody } from './domains';
 
 type Wire<K extends keyof components['schemas']> = components['schemas'][K];
@@ -72,4 +73,9 @@ export type _UpdateAuthorNoStrays = Assert<NoExtraKeys<UpdateAuthorDto, Wire<'Up
 export type _CreateDimension = Assert<Extends<CreateDimensionDto, Wire<'CreateDimensionDto'>>>;
 export type _CreateDimensionNoStrays = Assert<
   NoExtraKeys<CreateDimensionDto, Wire<'CreateDimensionDto'>>
+>;
+
+export type _UpdateDimension = Assert<Extends<UpdateDimensionDto, Wire<'UpdateDimensionDto'>>>;
+export type _UpdateDimensionNoStrays = Assert<
+  NoExtraKeys<UpdateDimensionDto, Wire<'UpdateDimensionDto'>>
 >;

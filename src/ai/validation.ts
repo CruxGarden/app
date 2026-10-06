@@ -1,12 +1,13 @@
+import { progressInput } from '@/services/task-progress';
+import { validateGardenAccess } from './garden-access';
+import { validateWorkspaceTool } from './workspace-tools';
 import { hasSkill, skillNames } from './skills';
 import { MEMORY_NOTE_MAX, MEMORY_SECTIONS, normalizeSection } from '@/services/memory';
 import { validateDelegateInput } from './delegate-tool';
 import { validateCruxspaceTool } from './cruxspace-tools';
 
-export interface ValidationResult {
-  valid: boolean;
-  error?: string;
-}
+import type { ValidationResult } from './validation-result';
+export type { ValidationResult } from './validation-result';
 
 /**
  * Validate tool inputs before execution.
@@ -18,6 +19,17 @@ export function validateToolInput(
   input: Record<string, unknown>,
 ): ValidationResult {
   switch (toolName) {
+    case 'report_progress':
+      return progressInput(input)
+        ? { valid: true }
+        : {
+            valid: false,
+            error:
+              'percent must be null or a finite number from 0 to 100; message must be 1–160 characters.',
+          };
+    case 'list_garden_tools':
+    case 'call_garden_tool':
+      return validateGardenAccess(toolName, input);
     case 'list_cruxspace_assets':
     case 'use_cruxspace_asset':
       return validateCruxspaceTool(toolName, input);
@@ -31,6 +43,12 @@ export function validateToolInput(
     case 'list_files':
     case 'check_site':
     case 'add_guestbook':
+    case 'browser':
+    case 'workspace_layouts':
+    case 'get_synth':
+    case 'set_synth':
+    case 'list_cue_presets':
+    case 'set_cue':
     case 'set_theme':
     case 'get_theme':
     case 'set_background':
@@ -41,6 +59,8 @@ export function validateToolInput(
       return validateSearchFiles(input);
     case 'rename_file':
       return validateRenameFile(input);
+    case 'edit_history':
+      return validateEditHistory(input);
     case 'snapshot':
       return validateOptionalLabel(input);
     case 'list_snapshots':
@@ -55,10 +75,77 @@ export function validateToolInput(
       return validateRemember(input);
     case 'load_skill':
       return validateLoadSkill(input);
-    case 'delegate': {
-      const parsed = validateDelegateInput(input);
-      return parsed.valid ? { valid: true } : { valid: false, error: parsed.error };
+    case 'delegate':
+      // Parsed again by the executor, which needs the normalized tasks.
+      return validateDelegateInput(input);
+    case 'run_ffmpeg':
+    case 'run_magick':
+    case 'run_pandoc':
+      return validateRunFfmpeg(input);
+    case 'probe_media':
+    case 'make_pdf':
+      return validatePathOnly(input);
+    case 'media_tools':
+      return { valid: true };
+    case 'link_status':
+    case 'link_stop':
+      return { valid: true };
+    case 'link_logs':
+      return input.lines === undefined || (typeof input.lines === 'number' && input.lines > 0)
+        ? { valid: true }
+        : { valid: false, error: 'lines must be a positive number' };
+    case 'link_start': {
+      if (input.script !== undefined && typeof input.script !== 'string')
+        return { valid: false, error: 'script must be a name' };
+      if (
+        input.port !== undefined &&
+        (typeof input.port !== 'number' || input.port < 1024 || input.port > 65535)
+      )
+        return { valid: false, error: 'port must be between 1024 and 65535' };
+      return { valid: true };
     }
+    case 'compose_ps':
+      return { valid: true };
+    case 'workspace_status':
+      return { valid: true };
+    case 'workspace_start':
+    case 'workspace_stop':
+      return input.names === undefined ||
+        (Array.isArray(input.names) && input.names.every((n) => typeof n === 'string'))
+        ? { valid: true }
+        : { valid: false, error: 'names must be a list of service names' };
+    case 'compose_exec': {
+      if (typeof input.service !== 'string' || !/^[\w.-]{1,64}$/.test(input.service))
+        return { valid: false, error: 'service must be a service name' };
+      if (
+        !Array.isArray(input.command) ||
+        !input.command.length ||
+        !input.command.every((part) => typeof part === 'string' && part.length)
+      )
+        return { valid: false, error: 'command must be a non-empty list of strings' };
+      return { valid: true };
+    }
+    case 'compose_up':
+    case 'compose_down':
+    case 'compose_logs': {
+      // Only a service name and a line count; the shell checks them again.
+      if (input.service !== undefined && !/^[\w.-]{1,64}$/.test(String(input.service)))
+        return { valid: false, error: 'service must be a service name' };
+      if (input.tail !== undefined && (typeof input.tail !== 'number' || input.tail < 1))
+        return { valid: false, error: 'tail must be a positive number' };
+      return { valid: true };
+    }
+    case 'install_media_tool':
+      // Only ImageMagick has an install route; anything else is a mistake.
+      return input.tool === undefined || input.tool === 'magick'
+        ? { valid: true }
+        : { valid: false, error: 'only magick can be installed' };
+    case 'capture_preview':
+    case 'render_video':
+      return validateCapture(input);
+    case 'show':
+    case 'test_function':
+      return validateWorkspaceTool(toolName, input);
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }
@@ -167,6 +254,12 @@ function validatePathOnly(input: Record<string, unknown>): ValidationResult {
 }
 
 function validateGenerateImage(input: Record<string, unknown>): ValidationResult {
+  if (input.source_path !== undefined) {
+    if (typeof input.source_path !== 'string')
+      return { valid: false, error: 'source_path must be an image path.' };
+    const issue = validatePath(input.source_path);
+    if (issue) return issue;
+  }
   if (!input.prompt || typeof input.prompt !== 'string') {
     return { valid: false, error: 'prompt is required and must be a string.' };
   }
@@ -307,5 +400,67 @@ function validateLoadSkill(input: Record<string, unknown>): ValidationResult {
       error: `Unknown skill "${input.name}". Available: ${skillNames().join(', ')}.`,
     };
   }
+  return { valid: true };
+}
+
+/** run_ffmpeg (MAKING-THE-AD-PARITY gap 13, step 1): a list of plain argument strings. The shell confines the paths. */
+function validateRunFfmpeg(input: Record<string, unknown>): ValidationResult {
+  const args = input.args;
+  if (!Array.isArray(args) || args.length === 0)
+    return { valid: false, error: 'args must be a non-empty array of strings' };
+  if (args.length > 200) return { valid: false, error: 'too many arguments (max 200)' };
+  for (const a of args) {
+    if (typeof a !== 'string') return { valid: false, error: 'every argument must be a string' };
+    if (a.length > 4000 || a.includes('\0'))
+      return { valid: false, error: 'an argument is too long or contains a NUL byte' };
+  }
+  if (input.description !== undefined && typeof input.description !== 'string')
+    return { valid: false, error: 'description must be a string' };
+  return { valid: true };
+}
+
+/** capture_preview / render_video (step 5): a page path inside the preview, a name, numbers within range. */
+function validateCapture(input: Record<string, unknown>): ValidationResult {
+  if (input.path !== undefined) {
+    if (typeof input.path !== 'string') return { valid: false, error: 'path must be a string' };
+    if (/^[a-z]+:|^\/\/|\.\./i.test(input.path))
+      return { valid: false, error: 'path must be a page inside the preview' };
+  }
+  if (input.name !== undefined && typeof input.name !== 'string')
+    return { valid: false, error: 'name must be a string' };
+  for (const [k, lo, hi] of [
+    ['fps', 1, 60],
+    ['max_seconds', 1, 180],
+    ['width', 320, 3840],
+    ['height', 240, 2160],
+  ] as const) {
+    const v = input[k];
+    if (v !== undefined && (typeof v !== 'number' || v < lo || v > hi))
+      return { valid: false, error: `${k} must be a number from ${lo} to ${hi}` };
+  }
+  return { valid: true };
+}
+
+function validateEditHistory(input: Record<string, unknown>): ValidationResult {
+  if (
+    input.includeConversation !== undefined &&
+    (input.action !== 'restore' || typeof input.includeConversation !== 'boolean')
+  )
+    return { valid: false, error: 'Only restore accepts includeConversation, as a boolean.' };
+  if (
+    input.reason !== undefined &&
+    (input.action !== 'capture' || !['autosave', 'safety'].includes(String(input.reason)))
+  )
+    return { valid: false, error: 'Only capture accepts a reason: autosave or safety.' };
+  if (!['list', 'inspect', 'capture', 'restore'].includes(String(input.action)))
+    return { valid: false, error: 'Choose list, inspect, capture or restore.' };
+  if (
+    ['inspect', 'restore'].includes(String(input.action)) &&
+    (typeof input.checkpointId !== 'string' || !input.checkpointId.trim())
+  )
+    return {
+      valid: false,
+      error: 'checkpointId is required. List retained edit history first.',
+    };
   return { valid: true };
 }

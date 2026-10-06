@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel, giveToolRoom } from './panel-helpers';
 import { test, expect, chromium, type Page, type FrameLocator } from '@playwright/test';
 import { unzipSync, zipSync } from 'fflate';
 import { createServer } from 'node:http';
@@ -5,7 +6,7 @@ import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 test('GDevelop native game editing, local preview, agent changes and portable reopening', async () => {
@@ -84,8 +85,9 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const original = JSON.stringify(game());
     const previous = (await storedCrux(page, id)).messages.length;
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const chat = page.getByPlaceholder('Send a message...');
     await chat.fill('Inspect my game and discover its native event parameters [gdevelop:inspect]');
     await chat.press('Enter');
@@ -510,6 +512,13 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     editableFiles['game.json'] = Buffer.from(JSON.stringify(editableGame));
     const reimportPath = join(first.dir, 'roundtrip.zip');
     writeFileSync(reimportPath, zipSync(editableFiles));
+    // The export may have refreshed the tool's preview (a new file in the
+    // Crux reloads it): open the project only once the editor is back, with
+    // the Workshop's full width for GDevelop's open dialog.
+    await giveToolRoom(page);
+    await ready(page);
+    await expect(f.locator('#garden-project')).toBeVisible({ timeout: 60_000 });
+    await page.waitForTimeout(1500);
     await f.locator('#garden-project').click();
     await page.keyboard.press('ControlOrMeta+o');
     const [projectChooser] = await Promise.all([
@@ -559,7 +568,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
     await localOnly(second.page);
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const f = await ready(second.page);
     expect(game().properties.name).toBe('External game');
     expect(game().layouts[0].instances).toHaveLength(1);

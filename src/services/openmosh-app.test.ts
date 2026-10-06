@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -5,7 +6,8 @@ import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { publishPipeline } from './publish';
 
-beforeEach(() => initServices('local'));
+localApiFixture();
+beforeEach(() => initServices());
 it('preserves native OpenMosh sessions and original media through Growth and a complete Crux round trip', async () => {
   const services = getServices();
   const crux = await services.crux.create({
@@ -66,6 +68,8 @@ it('preserves native OpenMosh sessions and original media through Growth and a c
   const saved = (await call({ op: 'write', path: 'project.json', content, expected: null })) as {
     fingerprint: string;
   };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   const snapshot = store.getState().growths[0]!.targetId;
   expect(((await call({ op: 'read', path: 'project.json' })) as { content: string }).content).toBe(
     content,
@@ -86,16 +90,14 @@ it('preserves native OpenMosh sessions and original media through Growth and a c
   const files = await services.artifact.findByResource('crux', imported.cruxId);
   expect(
     JSON.parse(
-      await services.artifact.readContent(
-        files.find((f) => f.meta?.path === 'data/project.json')!.id,
-      ),
+      await services.artifact.readContent(files.find((f) => f.meta?.path === 'data/project.json')!),
     ),
   ).toEqual(document);
   expect(
     new Uint8Array(
       await (
         await services.artifact.downloadBlob(
-          files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,
+          files.find((f) => f.meta?.path === 'data/' + asset.path)!,
         )
       ).arrayBuffer(),
     ),

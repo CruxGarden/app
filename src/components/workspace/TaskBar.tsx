@@ -1,3 +1,9 @@
+import PaneOptions from './PaneOptions';
+import GuideLink from '@/components/explore/GuideLink';
+import TaskProgress from '@/components/chat/TaskProgress';
+import { onUiRequest, takeUiRequest } from '@/lib/ui-requests';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import TaskDetails from './TaskDetails';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMoodNavigate, MOOD_LINK } from '@/hooks/useMoodNavigate';
@@ -6,7 +12,8 @@ import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { useWorkspaceRegistry, closeCruxWorkspaces } from '@/stores/workspaceRegistry';
 import { choiceDialog } from '@/stores/dialogStore';
 import { Capability, can } from '@/lib/platform';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, fieldClass, rowClass } from '@/components/ui';
+import { cn } from '@/lib/cn';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
 import { getSetting, setSetting } from '@/services/settings';
 import {
@@ -60,7 +67,7 @@ function FileText({ file }: { file?: TaskFile }) {
     </pre>
   );
 }
-function ReviewDiff({ review }: { review: TaskReview }) {
+function ReviewDiff({ review, targetName }: { review: TaskReview; targetName: string }) {
   const paths = [...new Set([...Object.keys(review.main), ...Object.keys(review.manifest)])]
     .filter((path) => !sameTaskFile(review.main[path], review.manifest[path]))
     .sort();
@@ -84,7 +91,7 @@ function ReviewDiff({ review }: { review: TaskReview }) {
       </label>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="text-xs text-text-muted">Main before merge</p>
+          <p className="text-xs text-text-muted">{targetName} before merge</p>
           <FileText file={review.main[path]} />
         </div>
         <div>
@@ -118,6 +125,14 @@ export default function TaskBar() {
   const mainId = identity?.cruxId ?? crux?.id;
   const [tasks, setTasks] = useState<WorkingCopy[]>([]);
   const [creating, setCreating] = useState(false);
+  // "New task…" from the command palette.
+  useEffect(() => {
+    const answer = () => {
+      if (takeUiRequest('new-task')) setCreating(true);
+    };
+    answer();
+    return onUiRequest('new-task', answer);
+  }, []);
   const [title, setTitle] = useState('');
   const [prompt, setPrompt] = useState('');
   const [limit, setLimit] = useState(
@@ -128,6 +143,7 @@ export default function TaskBar() {
   const [review, setReview] = useState<TaskReview | null>(null);
   const [pending, setPending] = useState<TaskReview | null>(null);
   const [inspected, setInspected] = useState(false);
+  const aiEnabled = useAiEnabled();
   useEffect(() => {
     if (!mainId) return;
     let live = true;
@@ -170,21 +186,41 @@ export default function TaskBar() {
     }
   }
   const current = tasks.find((t) => t.id === crux.id);
+  const nameForTarget = (id?: string) =>
+    !id || id === mainId ? 'Main' : (tasks.find((task) => task.id === id)?.title ?? 'source task');
+  const targetName = nameForTarget(review?.targetId);
+  const returnUrl = (result: TaskReview) =>
+    url(result.targetId && result.targetId !== mainId ? result.targetId : undefined);
+
   const url = (id?: string) => (id ? `/c/${mainId}?task=${id}` : `/c/${mainId}`);
   return (
     <>
       <div
-        className="shrink-0 px-3 py-2 border-b border-border bg-panel space-y-2"
+        className="task-pane h-full min-h-0 overflow-auto flex flex-col gap-3"
         data-testid="task-bar"
       >
-        <div className="flex items-center gap-2 flex-wrap" aria-label="Crux tasks">
+        {/* A pane like any other: Main and the tasks as a list, the actions below. */}
+        <nav className="task-pane-list flex flex-col gap-0.5" aria-label="Crux tasks">
           <Link
+            aria-label="Main"
             aria-current={!identity ? 'page' : undefined}
-            className={`px-3 py-1 rounded text-sm ${!identity ? 'bg-accent-muted text-accent' : 'text-text-muted'}`}
+            className={rowClass(
+              !identity,
+              cn(
+                'justify-between py-1.5 text-sm',
+                !identity ? 'text-accent' : 'text-text-muted hover:text-text',
+              ),
+            )}
             to={url()}
             {...MOOD_LINK}
           >
-            Main
+            <div className="min-w-0 flex-1">
+              <span className="truncate">Main</span>
+              <TaskProgress
+                progress={entries.find((e) => e.id === mainId)?.tending?.progress}
+                label="Main progress"
+              />
+            </div>
           </Link>
           {tasks.map((t) => (
             <Link
@@ -192,16 +228,31 @@ export default function TaskBar() {
               to={url(t.id)}
               {...MOOD_LINK}
               aria-current={crux.id === t.id ? 'page' : undefined}
-              className={`px-3 py-1 rounded text-sm ${crux.id === t.id ? 'bg-accent-muted text-accent' : 'text-text-muted'}`}
+              className={rowClass(
+                crux.id === t.id,
+                cn(
+                  'justify-between py-1.5 text-sm',
+                  crux.id === t.id ? 'text-accent' : 'text-text-muted hover:text-text',
+                ),
+              )}
             >
-              {t.title}
-              <span className="ml-2 text-xxs">
+              <div className="min-w-0 flex-1">
+                <span className="truncate">{t.title}</span>
+                <TaskProgress
+                  progress={entries.find((e) => e.id === t.id)?.tending?.progress}
+                  label={`${t.title} progress`}
+                />
+              </div>
+              <span className="text-xxs shrink-0">
                 {t.phase === 'ready'
                   ? (entries.find((e) => e.id === t.id)?.status ?? 'Ready')
                   : t.phase}
               </span>
             </Link>
           ))}
+        </nav>
+        <TaskDetails />
+        <div className="task-pane-actions flex items-center gap-2 flex-wrap">
           <Button
             size="sm"
             variant="secondary"
@@ -210,6 +261,7 @@ export default function TaskBar() {
           >
             New task
           </Button>
+          <GuideLink page="guides/tasks/">Learn Tasks · try the game</GuideLink>
           {current?.phase === 'ready' && (
             <>
               <Button
@@ -246,7 +298,8 @@ export default function TaskBar() {
           )}
           {current?.phase === 'merged' && (
             <span className="text-xs text-text-muted">
-              Merged into Main. Start a new task for further changes.
+              Merged into {nameForTarget(current.baseState?.sourceId)}. Start a new task for further
+              changes.
             </span>
           )}
           {(current?.phase === 'failed' || current?.phase === 'preparing') && (
@@ -272,8 +325,9 @@ export default function TaskBar() {
                 void run('Closing Crux…', async () => {
                   const answer = await choiceDialog({
                     title: 'Close Crux',
-                    message:
-                      'Close Main and all of its task workspaces. Running turns will stop; files and history stay in your garden.',
+                    message: aiEnabled
+                      ? 'Close Main and all of its task workspaces. Running turns will stop; files and history stay in your garden.'
+                      : 'Close Main and all of its task workspaces. Files and history stay in your garden.',
                     choices: [
                       { id: 'cancel', label: 'Cancel', variant: 'ghost' },
                       {
@@ -302,14 +356,15 @@ export default function TaskBar() {
         )}
         {pending && (
           <div role="alert" className="text-sm flex items-center gap-3">
-            A merge was interrupted. Main is protected until it is recovered.
+            A merge was interrupted. {nameForTarget(pending.targetId)} is protected until it is
+            recovered.
             <Button
               size="sm"
               disabled={!!busy}
               onClick={() =>
                 void run('Recovering merge…', async () => {
-                  await resumeTaskMerge(pending.id);
-                  navigate(url());
+                  const result = await resumeTaskMerge(pending.id);
+                  navigate(returnUrl(result));
                 })
               }
             >
@@ -332,8 +387,6 @@ export default function TaskBar() {
         subtitle="Work independently, then review and merge into Main."
       >
         <form
-          role="dialog"
-          aria-label="New task"
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
@@ -355,40 +408,43 @@ export default function TaskBar() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="block mt-1 w-full bg-surface border border-border rounded p-2"
+              className={fieldClass(undefined, 'block mt-1')}
               placeholder="Improve checkout"
             />
           </label>
           <label className="block text-sm">
-            What should change?
+            {aiEnabled ? 'What should change?' : 'Notes (optional)'}
             <textarea
               aria-label="Task description"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="block mt-1 w-full bg-surface border border-border rounded p-2"
+              className={fieldClass(undefined, 'block mt-1 h-auto py-2 resize-y')}
               rows={3}
             />
           </label>
-          <label className="block text-sm">
-            Maximum simultaneous turns per Crux
-            <select
-              aria-label="Maximum simultaneous turns"
-              className="ml-2 border border-border bg-surface rounded p-1"
-              value={limit}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                setLimit(n);
-                setSetting('cruxgarden:parallel-task-limit', String(n));
-              }}
-            >
-              {[1, 2, 3, 4].map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
-          </label>
+          {aiEnabled && (
+            <label className="block text-sm">
+              Maximum simultaneous turns per Crux
+              <select
+                aria-label="Maximum simultaneous turns"
+                className="ml-2 border border-border bg-surface rounded p-1"
+                value={limit}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setLimit(n);
+                  setSetting('cruxgarden:parallel-task-limit', String(n));
+                }}
+              >
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <p className="text-xs text-text-muted">
-            Starts from Main’s saved Artifacts. Each task has its own Collaboration, preview and
-            local Store. Agents start when you send a message.
+            {aiEnabled
+              ? 'Starts from Main’s saved Artifacts. Each task has its own Collaboration, preview and local Store. Agents start when you send a message.'
+              : 'Starts from Main’s saved Artifacts. Each task has its own preview and local Store; review and merge it into Main when it is ready.'}
           </p>
           {error && (
             <p role="alert" className="text-error text-sm">
@@ -410,12 +466,12 @@ export default function TaskBar() {
             });
         }}
         size="xl"
-        title="Review changes for Main"
+        title={`Review changes for ${targetName}`}
         className="max-h-[90vh] overflow-auto"
       >
         {review && (
-          <div role="dialog" aria-label="Review changes for Main" className="space-y-4 text-sm">
-            <p>Compare the combined result with Main. Other tasks remain separate.</p>
+          <div className="space-y-4 text-sm">
+            <p>Compare the combined result with {targetName}. Other tasks remain separate.</p>
             {review.conflicts.map((c) => (
               <div key={c.path} className="border border-border rounded p-3 space-y-2">
                 <p>
@@ -423,7 +479,7 @@ export default function TaskBar() {
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    Main
+                    {targetName}
                     <FileText file={c.main} />
                   </div>
                   <div>
@@ -450,20 +506,19 @@ export default function TaskBar() {
                         })
                       }
                     >
-                      Use {choice === 'main' ? 'Main' : 'task'}
+                      Use {choice === 'main' ? targetName : 'task'}
                     </Button>
                   ))}
                 </div>
               </div>
             ))}
-            {!review.conflicts.length && <ReviewDiff review={review} />}
+            {!review.conflicts.length && <ReviewDiff review={review} targetName={targetName} />}
             {review.verificationLog && (
-              <details>
-                <summary>Verification result</summary>
+              <PaneOptions pane="tasks" label="Verification result">
                 <pre className="text-xs max-h-40 overflow-auto whitespace-pre-wrap">
                   {review.verificationLog}
                 </pre>
-              </details>
+              </PaneOptions>
             )}
             <CombinedPreview review={review} />
             <label className="flex items-center gap-2">
@@ -473,7 +528,8 @@ export default function TaskBar() {
                 onChange={(e) => setInspected(e.target.checked)}
                 disabled={!review.verifiedKey}
               />
-              I reviewed the combined changes and preview, and paused external writers to Main.
+              I reviewed the combined changes and preview, and paused external writers to{' '}
+              {targetName}.
             </label>
             {error && (
               <p role="alert" className="text-error">
@@ -498,14 +554,14 @@ export default function TaskBar() {
                 size="sm"
                 disabled={!!busy || !inspected || !review.verifiedKey || !!review.conflicts.length}
                 onClick={() =>
-                  void run('Merging into Main…', async () => {
-                    await applyTaskReview(review.id);
+                  void run(`Merging into ${targetName}…`, async () => {
+                    const result = await applyTaskReview(review.id);
                     setReview(null);
-                    navigate(url());
+                    navigate(returnUrl(result));
                   })
                 }
               >
-                Merge into Main
+                Merge into {targetName}
               </Button>
             </div>
           </div>

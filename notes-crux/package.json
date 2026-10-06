@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/edition.mjs",
-    "build:garden": "OUT_DIR=runtime vite build",
+    "build:garden": "vite build --outDir runtime",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:garden": "node --test scripts/edition.test.mjs",
@@ -21,18 +21,18 @@
     "@floating-ui/dom": "^1.8.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
-    "@tiptap/core": "^3.29.2",
-    "@tiptap/extension-code-block-lowlight": "^3.29.2",
-    "@tiptap/extension-emoji": "^3.29.2",
-    "@tiptap/extension-highlight": "^3.29.2",
-    "@tiptap/extension-image": "^3.29.2",
-    "@tiptap/extension-list": "^3.29.2",
-    "@tiptap/extension-table": "^3.29.2",
-    "@tiptap/extensions": "^3.29.2",
-    "@tiptap/pm": "^3.29.2",
-    "@tiptap/react": "^3.29.2",
-    "@tiptap/starter-kit": "^3.29.2",
-    "@tiptap/suggestion": "^3.29.2",
+    "@tiptap/core": "^3.31.3",
+    "@tiptap/extension-code-block-lowlight": "^3.31.3",
+    "@tiptap/extension-emoji": "^3.31.3",
+    "@tiptap/extension-highlight": "^3.31.3",
+    "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extension-list": "^3.31.3",
+    "@tiptap/extension-table": "^3.31.3",
+    "@tiptap/extensions": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "@tiptap/suggestion": "^3.31.3",
     "docx": "^9.7.1",
     "fuse.js": "^7.0.0",
     "lowlight": "^3.3.0",
@@ -43,8 +43,7 @@
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.0",
     "remark-parse": "^11.0.0",
-    "remark-stringify": "^11.0.0",
-    "uuid": "^10.0.0"
+    "remark-stringify": "^11.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
@@ -60,7 +59,7 @@
     "remark-html": "^16.0.1",
     "typescript": "^5.5.3",
     "unified": "^11.0.5",
-    "vite": "^5.3.3",
-    "vitest": "^1.6.1"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11"
   }
 }

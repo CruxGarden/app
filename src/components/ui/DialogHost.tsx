@@ -28,7 +28,7 @@ export default function DialogHost() {
     const choices = req.choices ?? [];
     return (
       <Modal open onClose={cancel} size="sm" layer="top" title={req.title ?? 'Which way?'}>
-        <div role="dialog" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <p className="text-sm text-text whitespace-pre-line">{req.message}</p>
           {req.checkbox && (
             <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer select-none">
@@ -66,12 +66,13 @@ export default function DialogHost() {
       size="sm"
       layer="top"
       title={req.title ?? (req.kind === 'alert' ? 'Notice' : 'Are you sure?')}
+      role={req.kind === 'alert' ? 'alertdialog' : 'dialog'}
     >
-      <div role={req.kind === 'alert' ? 'alertdialog' : 'dialog'} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <p className="text-sm text-text whitespace-pre-line">{req.message}</p>
         <div className="flex justify-end gap-2">
           {req.kind === 'confirm' && (
-            <Button variant="ghost" size="sm" onClick={cancel} autoFocus={!req.danger}>
+            <Button variant="ghost" size="sm" onClick={cancel} autoFocus>
               {req.cancelLabel ?? 'Cancel'}
             </Button>
           )}
@@ -79,7 +80,7 @@ export default function DialogHost() {
             size="sm"
             variant={req.danger ? 'danger' : 'primary'}
             onClick={ok}
-            autoFocus={req.kind === 'alert' || !!req.danger}
+            autoFocus={req.kind === 'alert'}
           >
             {req.confirmLabel ?? (req.kind === 'alert' ? 'OK' : 'Confirm')}
           </Button>

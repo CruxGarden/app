@@ -1,3 +1,6 @@
+import { progressInput } from '@/services/task-progress';
+import { searchFileLines, SEARCH_TOTAL_CHAR_LIMIT } from './search-lines';
+import { GARDEN_ACCESS_TOOLS, isGardenAccessTool, runGardenAccess } from './garden-access';
 import { addGuestbook, describeAddGuestbook } from '@/services/guestbook';
 import {
   appToolDefinitions,
@@ -9,7 +12,7 @@ import {
 import { assertCopyWritable } from '@/services/working-copies';
 import { getServices } from '@/services';
 import type { ToolResultContent } from '@/services/types';
-import { validateToolInput } from './validation';
+import { validateToolInput, type ValidationResult } from './validation';
 import { formatToolError } from './errors';
 import { guessMimeType, isBinaryMime, isImageMime } from '@/lib/mime';
 import { checkSiteBuild, SiteBuildError } from '@/services/site';
@@ -31,6 +34,9 @@ import {
 } from './delegate-tool';
 import { scopeViolation, type WriteScope } from '@/lib/write-scope';
 import { CRUXSPACE_TOOLS, runCruxspaceTool } from './cruxspace-tools';
+import { runFfmpeg, describeRun, renderVideo } from '@/services/native-tools';
+import { captureLocalPreview } from '@/services/preview-capture';
+import { activePreviewUrl } from '@/lib/preview-registry';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -49,6 +55,30 @@ export interface ToolDefinition {
 }
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'report_progress',
+    description:
+      'Update the progress bar for your current turn or worker. Report your best honest estimate at meaningful milestones and when the scope changes; estimates may go backward. Use null when you cannot estimate. This does not finish the turn, pass verification, or merge a Task.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        percent: {
+          type: ['number', 'null'],
+          minimum: 0,
+          maximum: 100,
+          description: 'Estimated percentage of the requested work complete, or null if unknown.',
+        },
+        message: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 160,
+          description: 'Short current activity or explanation of the revised estimate.',
+        },
+      },
+      required: ['percent', 'message'],
+      additionalProperties: false,
+    },
+  },
   {
     name: 'write_file',
     description:
@@ -191,6 +221,11 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           description:
             'File path to save the generated image. Should end in .png. Example: "images/hero.png", "logo.png".',
         },
+        source_path: {
+          type: 'string',
+          description:
+            'For editing, the exact path of the existing PNG image in this Crux. Use this for changes to a previous image instead of regenerating from scratch.',
+        },
         size: {
           type: 'string',
           enum: ['1024x1024', '1536x1024', '1024x1536'],
@@ -276,8 +311,389 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
+/**
+ * Native tools (MAKING-THE-AD-PARITY gap 13, step 1): the bundled ffmpeg run
+ * inside this crux's folder. The seam confines every path argument to the
+ * folder and allows only the file protocol; outputs land as Artifacts through
+ * the watcher like any other write to the folder.
+ */
+export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'run_ffmpeg',
+    description:
+      'Run the bundled ffmpeg inside this crux folder with the given arguments (no "ffmpeg" word, no shell). ' +
+      'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
+      'USE WHEN: converting media (webm → mp4, wav → m4a), making a video from a folder of frames ' +
+      '(e.g. ["-framerate","30","-i","frames/f%04d.png","-c:v","libx264","-pix_fmt","yuv420p","exports/ad.mp4"]), ' +
+      'trimming, extracting frames or a contact sheet, muxing audio onto video. Supported filters are numeric scale/fps, the built-in GIF/contact-sheet/thumbnail/grayscale recipes, and loudnorm; scripts, playlists, devices and arbitrary filters are refused. Always pass "-y" to overwrite an output you mean to replace.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        args: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'ffmpeg arguments, one per item, exactly as on a command line.',
+        },
+        description: {
+          type: 'string',
+          description: 'What this run does, in a few words (shown to the person).',
+        },
+      },
+      required: ['args'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'run_magick',
+    description:
+      'Run ImageMagick inside this crux folder with the given arguments (no "magick" word, no shell). ' +
+      'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
+      'USE WHEN: converting or resizing a picture (["images/a.png","-resize","1200x","exports/a.jpg"]), ' +
+      'cropping with gravity/extent, rotating, making a favicon, or identifying a raster image ' +
+      '(["identify","-verbose","images/a.png"]). Conversion uses the first frame. ' +
+      'Only raster conversion options are supported: resize, extent, quality, background, alpha, gravity, rotate, colorspace and the favicon define. ' +
+      'SVG/PDF, text, delegates, file lists, arbitrary subcommands and configuration options are refused.',
+
+    input_schema: {
+      type: 'object',
+      properties: {
+        args: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'ImageMagick arguments, one per item, exactly as on a command line.',
+        },
+        description: {
+          type: 'string',
+          description: 'What this run does, in a few words (shown to the person).',
+        },
+      },
+      required: ['args'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'run_pandoc',
+    description:
+      'Run Pandoc inside this crux folder with the given arguments (no "pandoc" word, no shell). ' +
+      'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
+      'USE WHEN: a document must become another format — Markdown to DOCX, DOCX to Markdown, Markdown to a standalone HTML page or EPUB, anything to plain text: ["notes/brief.md","-o","notes/brief.docx"]. ' +
+      'Add "--standalone" for a page or a book. Use make_pdf for PDF output. Only built-in formats and conversion options are accepted; filters, defaults, custom readers/writers and external resources are refused.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        args: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Pandoc arguments, one per item, exactly as on a command line.',
+        },
+        description: {
+          type: 'string',
+          description: 'What this run does, in a few words (shown to the person).',
+        },
+      },
+      required: ['args'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'probe_media',
+    description:
+      "What a media file in this crux is: ffprobe's streams and format for audio and video, ImageMagick's dimensions and format for a picture. Read this before converting so the arguments fit the source.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The file, relative to the crux folder.' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'make_pdf',
+    description:
+      'Turn a document in this Crux into a PDF: Markdown, Word, HTML, EPUB or plain text. ' +
+      'Pandoc writes a page and the app prints it with its own browser, so this needs no LaTeX. ' +
+      'USE WHEN: the person asks for a PDF of something written. The result lands in exports/ unless you say otherwise.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The document, relative to the crux folder.' },
+        out: { type: 'string', description: 'Where to put it. Default exports/<name>.pdf.' },
+        pageSize: { type: 'string', description: 'A4 (the default), Letter, Legal…' },
+        landscape: { type: 'boolean', description: 'Sideways, for a wide table or a slide.' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'media_tools',
+    description:
+      'Which media binaries this machine has (ffmpeg, ffprobe, ImageMagick, Pandoc), where each came from and its version, and whether a missing one can be installed. Call it when a run fails with "not available", or before promising a conversion.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'install_media_tool',
+    description:
+      "Install a media tool this machine does not have, at the person's request. Only ImageMagick can be installed: Linux and Windows have an official download, and on macOS this runs Homebrew when it is there. " +
+      'ASK FIRST — it downloads and can take minutes. If it cannot be done, the answer says what the person can run themselves. Pictures convert through ffmpeg either way, so never make this sound required.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tool: { type: 'string', enum: ['magick'], description: 'The tool to install.' },
+      },
+      required: ['tool'],
+      additionalProperties: false,
+    },
+  },
+];
+
+/**
+ * A Crux's own stack, through Docker Compose. The compose file is an ordinary
+ * Artifact — read and edit it with read_file and write_file — and these run it.
+ */
+const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'compose_ps',
+    description:
+      "What this Crux's stack is running right now: each service, its state and its published ports. " +
+      'USE WHEN: asked what is running, before starting something that may already be up, or to check a start worked.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'compose_up',
+    description:
+      "Start this Crux's stack (or one service of it) in the background. The first run downloads images and can take minutes. " +
+      'Pass wait: true to come back only once everything it started is healthy — what to do before running a test suite against it. ' +
+      'The file is checked first: a stack that asks for privileged mode, the host network, the Docker socket or a mount outside the Crux is refused, and the reason is returned — fix compose.yaml rather than working around it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service: { type: 'string', description: 'One service by name. Omit to start them all.' },
+        wait: {
+          type: 'boolean',
+          description: 'Come back only once what was started is healthy.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'compose_down',
+    description:
+      "Stop this Crux's stack. By default the containers are stopped and removed; pass keep: true to stop them where they are. " +
+      'Only ever touches the containers this Crux started. ASK FIRST when someone may be using it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        keep: {
+          type: 'boolean',
+          description: 'Stop but do not remove the containers.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'compose_exec',
+    description:
+      "Run a command in one of this Crux's services: migrations, a seed, a psql shell, a test suite. " +
+      'Give the command as a list of arguments — there is no shell, so pipes and redirects do not work. ' +
+      'By default it uses the container already running; pass fresh: true for a new one that is removed after, which is what a one-shot job wants when the service is not up. ' +
+      'The answer is the exit code and the output, so a suite that fails says so.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service: { type: 'string', description: 'The service to run it in.' },
+        command: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'The command and its arguments, e.g. ["npm", "run", "migrate"].',
+        },
+        fresh: {
+          type: 'boolean',
+          description:
+            'A new container rather than the running one. Use when the service is not up.',
+        },
+      },
+      required: ['service', 'command'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'compose_logs',
+    description:
+      'The last lines a service wrote. USE WHEN: something did not start, or the person asks why a service is unhealthy — read the logs before guessing.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service: { type: 'string', description: 'One service by name. Omit for all of them.' },
+        tail: { type: 'number', description: 'How many lines, up to 2000. Default 200.' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
+/**
+ * A Runner Crux: the board for a Cruxspace used as a development workspace.
+ * It conducts the Stack and Project Cruxes beside it (ADR 0053).
+ */
+const RUNNER_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'workspace_status',
+    description:
+      'Everything this workspace can run and what is running now: each service, whether it comes from the Stack or from source, its state and its port. ' +
+      'USE WHEN: asked what is up, before starting something, or to check a start worked.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'workspace_start',
+    description:
+      'Start services in this workspace, together with everything they need — the closure is computed, so asking for one service brings up its database and migrations first. ' +
+      'Omit names to start everything. Nothing unrelated is stopped. The first run downloads images and can take minutes.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        names: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Service names. Omit for the whole workspace.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'workspace_stop',
+    description:
+      'Stop these services. Only these — what they depend on is left running, because something else may be using it. ASK FIRST when someone may be working.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        names: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Service names. Omit for the whole workspace.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
+/**
+ * A Link Crux: a project hooked into Crux Garden. The folder and the script are
+ * in `link.json`; the person chooses the folder, and only they can.
+ */
+const LINK_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'link_status',
+    description:
+      "Whether this Crux's linked project is running, which script and port, and how it ended if it stopped. " +
+      'USE WHEN: asked what is running, or before starting something that may already be up.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'link_start',
+    description:
+      "Run this Crux's linked project — the script named in link.json, or one you name. " +
+      'Starting again replaces the run that was there. The folder must already have been chosen by the person: ' +
+      'if it has not, say so and ask them to choose it rather than trying another path.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        script: {
+          type: 'string',
+          description: 'A script from its package.json. Omit for the one in project.json.',
+        },
+        port: { type: 'number', description: 'Offered as PORT. Omit to let the project decide.' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'link_stop',
+    description:
+      "Stop this Crux's linked project and the processes it started. ASK FIRST when someone may be using it.",
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'link_logs',
+    description:
+      'What the project has printed, newest last. USE WHEN: it crashed or will not start — read what it said before guessing.',
+    input_schema: {
+      type: 'object',
+      properties: { lines: { type: 'number', description: 'How many lines. Default 80.' } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
+/** The preview as an image or a video, from the shell's own capture window (step 5). */
+const CAPTURE_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'capture_preview',
+    description:
+      "Screenshot the crux's running preview (optionally a page path inside it) to exports/<name>.jpg, 1280×900, and return the path — then read_file it to look. " +
+      'USE WHEN: checking what a page looks like before saying it is done, or when the person asks for a picture of it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description:
+            'A page path inside the preview, e.g. "about.html". Default: the entry page.',
+        },
+        name: { type: 'string', description: 'Output name without extension. Default "preview".' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'render_video',
+    description:
+      'Record the crux\'s running preview as a video: frames at fps until the page sets document.body.dataset.done = "1" (or max_seconds), then the bundled ffmpeg writes exports/<name>.mp4 (the frames stay under .crux/render/, outside Artifacts and exports). The page is opened with ?auto=1 so a timeline page starts at once. ' +
+      'USE WHEN: a page is an animation, a spot or a demo and the person wants it as a video file.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'A page path inside the preview. Default: the entry page.',
+        },
+        name: { type: 'string', description: 'Output name without extension. Default "render".' },
+        fps: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 60,
+          description: 'Frames per second. Default 30.',
+        },
+        max_seconds: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 180,
+          description: 'Stop after this long if the page never says done. Default 60.',
+        },
+        width: { type: 'integer', minimum: 320, maximum: 3840 },
+        height: { type: 'integer', minimum: 240, maximum: 2160 },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
 /** The guestbook block (V1-GAPS-PLAN §2.8) for any site Crux. */
-export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
+const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
   name: 'add_guestbook',
   description:
     "Add a guestbook to this site: visitors of the shared site leave a note (name and message) after signing in by email; the notes live in this Crux's own Crux Store. " +
@@ -291,16 +707,37 @@ export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
   },
 };
 
+import { WORKSPACE_TOOL_DEFINITIONS, runWorkspaceTool } from './workspace-tools';
+import { isStackCrux } from '@/services/containers';
+import { isLinkCrux } from '@/services/project-runner';
+import { isRunnerCrux } from '@/services/runner';
+
 /** The tool set to offer a workspace conversation on this platform. */
-export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
+export function defaultToolDefinitions(cruxId?: string, gardenAccess = true): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
+  const native = can(Capability.NativeTools)
+    ? [...NATIVE_TOOL_DEFINITIONS, ...CAPTURE_TOOL_DEFINITIONS]
+    : [];
+  // The compose tools only appear for a Crux that actually carries a stack.
+  const containers =
+    can(Capability.Containers) && isStackCrux(cruxId) ? CONTAINER_TOOL_DEFINITIONS : [];
+  // The link tools belong to a Link Crux and nowhere else.
+  const link = can(Capability.ProjectRunner) && isLinkCrux(cruxId) ? LINK_TOOL_DEFINITIONS : [];
+  // The workspace tools belong to a Runner Crux and nowhere else.
+  const runner = can(Capability.Containers) && isRunnerCrux(cruxId) ? RUNNER_TOOL_DEFINITIONS : [];
   return [
     ...TOOL_DEFINITIONS,
+    ...(gardenAccess ? GARDEN_ACCESS_TOOLS : []),
     ...appToolDefinitions(cruxId),
     ...site,
+    ...native,
+    ...containers,
+    ...link,
+    ...runner,
     GUESTBOOK_TOOL_DEFINITION,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
+    ...WORKSPACE_TOOL_DEFINITIONS,
     ...MEMORY_TOOL_DEFINITIONS,
     ...CRUXSPACE_TOOLS,
     ...SKILL_TOOL_DEFINITIONS,
@@ -315,7 +752,8 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
  * IS its history), no theme or soundscape (the Mood is not the task), and no
  * delegate (no fan-out from a fan-out).
  */
-export const SUBAGENT_TOOL_NAMES = [
+const SUBAGENT_TOOL_NAMES = [
+  'report_progress',
   'write_file',
   'edit_file',
   'read_file',
@@ -332,6 +770,8 @@ export function subagentToolDefinitions(): ToolDefinition[] {
 
 /** Options for a tool executor beyond the crux it is bound to. */
 export interface ToolExecutorOptions {
+  /** A narrow outside connection and scoped subagents cannot operate the garden. */
+  gardenAccess?: boolean;
   /** Stop queued hosted calls before they enter the executor. */
   signal?: AbortSignal;
   /**
@@ -403,14 +843,20 @@ export function createToolExecutor(
   ): Promise<string | ToolResultContent> {
     if (options.signal?.aborted)
       return formatToolError(toolName, 'The originating agent turn has stopped.');
+    if (isGardenAccessTool(toolName)) {
+      if (options.gardenAccess === false || options.scope || requestedBy.startsWith('subagent:'))
+        return formatToolError(
+          toolName,
+          'This connection is limited to its Crux. Use a garden connection for garden-wide actions.',
+        );
+      return runGardenAccess(toolName, input, requestedBy, cruxId);
+    }
     // Validate inputs before execution
     const appTool = appToolFor(cruxId, toolName);
-    const validation = isAppToolName(toolName)
-      ? { valid: true, error: undefined }
+    const validation: ValidationResult = isAppToolName(toolName)
+      ? { valid: true }
       : validateToolInput(toolName, input);
-    if (!validation.valid) {
-      return formatToolError(toolName, validation.error!);
-    }
+    if (!validation.valid) return formatToolError(toolName, validation.error);
 
     // Scope (B5): a worker may read anything, but only change what it was given.
     const outside = appTool
@@ -472,11 +918,21 @@ export function createToolExecutor(
           case 'delete_file':
             result = await toolDeleteFile(input, cruxId, artifactService, onDeleteRequest);
             break;
+          case 'report_progress':
+            result = JSON.stringify(progressInput(input));
+            break;
           case 'list_files':
             result = await toolListFiles(cruxId, artifactService);
             break;
           case 'generate_image':
-            result = await toolGenerateImage(input, cruxId, artifactService, chatModel);
+            result = await toolGenerateImage(
+              input,
+              cruxId,
+              artifactService,
+              chatModel,
+              options.signal,
+              options.scope,
+            );
             break;
           case 'search_files':
             result = await toolSearchFiles(input, cruxId, artifactService);
@@ -490,6 +946,261 @@ export function createToolExecutor(
           case 'add_guestbook':
             result = describeAddGuestbook(await addGuestbook(cruxId));
             break;
+          case 'capture_preview': {
+            const base = activePreviewUrl(cruxId);
+            if (!base)
+              return formatToolError(toolName, 'The preview is not running for this crux.');
+            const url = new URL(String(input.path ?? ''), base.endsWith('/') ? base : base + '/')
+              .href;
+            const blob = await captureLocalPreview(url);
+            const name = String(input.name ?? 'preview').replace(/[^A-Za-z0-9._-]+/g, '-');
+            const outPath = `exports/${name}.jpg`;
+            await getServices().artifact.upload({
+              resourceId: cruxId,
+              resourceType: 'crux',
+              blob,
+              mimeType: 'image/jpeg',
+              meta: { path: outPath },
+            });
+            result = `Captured ${url} → ${outPath} (1280×900). read_file it to look.`;
+            break;
+          }
+          case 'render_video': {
+            const base = activePreviewUrl(cruxId);
+            if (!base)
+              return formatToolError(toolName, 'The preview is not running for this crux.');
+            const page = new URL(String(input.path ?? ''), base);
+            page.searchParams.set('auto', '1');
+            const r = await renderVideo(cruxId, page.href, {
+              name: input.name as string | undefined,
+              fps: input.fps as number | undefined,
+              maxSeconds: input.max_seconds as number | undefined,
+              width: input.width as number | undefined,
+              height: input.height as number | undefined,
+            });
+            result = `Rendered ${r.path}: ${r.seconds.toFixed(1)}s, ${r.frames} frames, encoded in ${(r.encode.ms / 1000).toFixed(1)}s.`;
+            break;
+          }
+          case 'run_ffmpeg': {
+            const args = (input.args as string[]).map(String);
+            const run = await runFfmpeg(cruxId, args);
+            result = describeRun(args, run);
+            break;
+          }
+          case 'run_pandoc': {
+            const args = (input.args as string[]).map(String);
+            const { runPandoc } = await import('@/services/native-tools');
+            const run = await runPandoc(cruxId, args);
+            result = describeRun(args, run);
+            if (run.code === 0 && run.stdout?.trim())
+              result += `\n${run.stdout.trim().slice(0, 4000)}`;
+            break;
+          }
+          case 'run_magick': {
+            const args = (input.args as string[]).map(String);
+            const { runMagick } = await import('@/services/native-tools');
+            const run = await runMagick(cruxId, args);
+            result = describeRun(args, run);
+            if (run.code === 0 && run.stdout?.trim())
+              result += `\n${run.stdout.trim().slice(0, 4000)}`;
+            break;
+          }
+          case 'probe_media': {
+            const { probeMedia } = await import('@/services/native-tools');
+            const path = String(input.path ?? '');
+            const info = await probeMedia(cruxId, path);
+            result = info
+              ? `${path}:\n${JSON.stringify(info, null, 1).slice(0, 6000)}`
+              : `Could not read ${path} — is it a media file, and does it exist?`;
+            break;
+          }
+          case 'install_media_tool': {
+            const { installMediaTool } = await import('@/services/native-tools');
+            const answer = await installMediaTool((input as { tool?: 'magick' }).tool ?? 'magick');
+            result = answer.command
+              ? `${answer.message}\nThe command: ${answer.command}`
+              : answer.message;
+            break;
+          }
+          case 'workspace_status': {
+            const { workspaceStatus } = await import('@/services/runner');
+            const { discoverWorkspace } = await import('@/services/workspace-stack');
+            const [status, workspace] = await Promise.all([
+              workspaceStatus(cruxId),
+              discoverWorkspace(cruxId),
+            ]);
+            const running = new Map(status.services.map((row) => [row.name, row]));
+            result = workspace.services.length
+              ? workspace.services
+                  .map((service) => {
+                    const live = running.get(service.name);
+                    return `- ${service.name} (${service.from === 'source' ? 'from source' : 'from stack'}): ${
+                      live ? `${live.state}${live.port ? ` on ${live.port}` : ''}` : 'not running'
+                    }${service.fellBack ? ` — ${service.fellBack}` : ''}`;
+                  })
+                  .join('\n')
+              : 'Nothing in this Cruxspace can run yet.';
+            if (workspace.notes.length) result += `\n\n${workspace.notes.join('\n')}`;
+            break;
+          }
+          case 'workspace_start':
+          case 'workspace_stop': {
+            const { startWorkspace, stopWorkspace } = await import('@/services/runner');
+            const { discoverWorkspace } = await import('@/services/workspace-stack');
+            const asked = (input as { names?: string[] }).names;
+            const names =
+              asked && asked.length
+                ? asked
+                : (await discoverWorkspace(cruxId)).services
+                    .filter((service) => !service.task)
+                    .map((service) => service.name);
+            const answer =
+              toolName === 'workspace_start'
+                ? await startWorkspace(cruxId, names)
+                : await stopWorkspace(cruxId, names);
+            result = answer.lines.join('\n') || 'Nothing to do.';
+            break;
+          }
+          case 'link_status':
+          case 'link_logs': {
+            const { projectState } = await import('@/services/project-runner');
+            const run = await projectState(cruxId);
+            if (toolName === 'link_logs') {
+              const lines = (input as { lines?: number }).lines ?? 80;
+              result = run.log
+                ? run.log
+                    .split('\n')
+                    .slice(-Math.min(Math.max(lines, 1), 500))
+                    .join('\n')
+                : 'It has not printed anything.';
+              break;
+            }
+            result =
+              run.status === 'idle'
+                ? 'Nothing is running for this Crux.'
+                : `${run.status}${run.script ? ` — ${run.script}` : ''}${run.port ? ` on port ${run.port}` : ''}${
+                    run.exit !== undefined && run.status === 'crashed' ? ` (exit ${run.exit})` : ''
+                  }`;
+            break;
+          }
+          case 'link_start':
+          case 'link_stop': {
+            const runner = await import('@/services/project-runner');
+            if (toolName === 'link_stop') {
+              await runner.stopProject(cruxId);
+              result = 'Stopped.';
+              break;
+            }
+            // The folder and the usual script live in the Crux's own document.
+            const artifacts = await artifactService.findByResource('crux', cruxId);
+            const doc = artifacts.find((a) => a.type === 'artifact' && pathOf(a) === 'link.json');
+            const record = doc
+              ? (JSON.parse(await (await artifactService.downloadBlob(doc)).text()) as {
+                  folder?: string;
+                  script?: string;
+                  port?: number;
+                  args?: string[];
+                })
+              : {};
+            if (!record.folder)
+              throw new Error(
+                'No folder has been chosen for this Crux yet — ask the person to choose one in the Link bench.',
+              );
+            const args = input as { script?: string; port?: number };
+            const run = await runner.startProject(
+              cruxId,
+              record.folder,
+              args.script ?? record.script ?? 'dev',
+              { args: record.args ?? [], port: args.port ?? record.port ?? undefined },
+            );
+            result = `${run.status}${run.script ? ` — ${run.script}` : ''}${run.port ? ` on port ${run.port}` : ''}`;
+            break;
+          }
+          case 'compose_ps': {
+            const { runningServices } = await import('@/services/containers');
+            const running = await runningServices(cruxId);
+            result = running.length
+              ? running
+                  .map(
+                    (r) =>
+                      `- ${r.service}: ${r.state}${r.health ? ` (${r.health})` : ''}${r.ports ? ` — ${r.ports}` : ''}`,
+                  )
+                  .join('\n')
+              : 'Nothing from this stack is running.';
+            break;
+          }
+          case 'compose_exec': {
+            const { compose } = await import('@/services/containers');
+            const args = input as { service: string; command: string[]; fresh?: boolean };
+            const run = await compose(cruxId, args.fresh ? 'run' : 'exec', {
+              service: args.service,
+              command: args.command,
+            });
+            const tail = run.output.trim().split('\n').slice(-60).join('\n');
+            result = `exit ${run.code}${tail ? `\n${tail}` : ' (no output)'}`;
+            break;
+          }
+          case 'compose_up':
+          case 'compose_down':
+          case 'compose_logs': {
+            const { compose } = await import('@/services/containers');
+            const args = input as {
+              service?: string;
+              tail?: number;
+              keep?: boolean;
+              wait?: boolean;
+            };
+            const verb =
+              toolName === 'compose_up'
+                ? 'up'
+                : toolName === 'compose_logs'
+                  ? 'logs'
+                  : args.keep
+                    ? 'stop'
+                    : 'down';
+            const run = await compose(cruxId, verb, {
+              service: args.service,
+              tail: args.tail,
+              wait: args.wait,
+            });
+            const tail = run.output.trim().split('\n').slice(-40).join('\n');
+            result =
+              toolName === 'compose_logs'
+                ? tail || 'Nothing in the logs yet.'
+                : `${verb} finished with code ${run.code}.${tail ? `\n${tail}` : ''}`;
+            break;
+          }
+          case 'make_pdf': {
+            const { makePdf } = await import('@/services/native-tools');
+            const args = input as {
+              path: string;
+              out?: string;
+              pageSize?: string;
+              landscape?: boolean;
+            };
+            const made = await makePdf(cruxId, args.path, {
+              out: args.out,
+              pageSize: args.pageSize,
+              landscape: args.landscape,
+            });
+            result = `Wrote ${made.path} (${Math.round(made.bytes / 1024)} KB).`;
+            break;
+          }
+          case 'media_tools': {
+            const { mediaTools } = await import('@/services/native-tools');
+            const tools = await mediaTools();
+            result = tools.length
+              ? tools
+                  .map((t) =>
+                    t.path
+                      ? `- ${t.tool}: ${t.source}${t.version ? ` — ${t.version}` : ''}`
+                      : `- ${t.tool}: not on this machine${t.installable ? ' (install_media_tool can fetch it)' : ''}`,
+                  )
+                  .join('\n')
+              : 'Native tools are not available here (desktop only).';
+            break;
+          }
+          case 'edit_history':
           case 'snapshot':
           case 'list_snapshots':
           case 'restore':
@@ -497,10 +1208,20 @@ export function createToolExecutor(
           case 'diff':
             result = await runGrowthTool(toolName, input, { cruxId, requestedBy });
             break;
+          case 'browser':
+          case 'workspace_layouts':
+          case 'get_synth':
+          case 'set_synth':
+          case 'list_cue_presets':
+          case 'set_cue':
           case 'set_theme':
           case 'get_theme':
           case 'set_background':
             result = await runThemeTool(toolName, input, { cruxId, chatModel });
+            break;
+          case 'show':
+          case 'test_function':
+            result = await runWorkspaceTool(toolName, input, { cruxId });
             break;
           case 'remember':
             // Garden Memory (B6): the one write path besides the person's own
@@ -588,6 +1309,14 @@ export function didMutate(toolName: string, result: string | ToolResultContent):
   if (typeof result !== 'string') return false;
   if (result.startsWith('Error')) return false;
   if (result.startsWith(DELETE_DECLINED)) return false;
+  if (toolName === 'edit_history') {
+    try {
+      const recovery = JSON.parse(result);
+      return !!recovery && ('head' in recovery || recovery.recovered === true);
+    } catch {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -646,7 +1375,7 @@ async function toolEditFile(
   if (isBinaryMime(match.mimeType || ''))
     return formatToolError('edit_file', `Cannot edit binary file: ${path}`);
 
-  const rawContent = await artifactService.readContent(match.id);
+  const rawContent = await artifactService.readContent(match);
 
   // Normalize line endings to \n for reliable matching (matches API behavior)
   const content = rawContent.replace(/\r\n/g, '\n');
@@ -768,7 +1497,7 @@ async function toolReadFile(
   if (!match) return formatToolError('read_file', `File not found: ${path}`);
 
   if (match.encoding === 'binary' || isBinaryMime(match.mimeType || '')) {
-    const blob = await artifactService.downloadBlob(match.id);
+    const blob = await artifactService.downloadBlob(match);
     const mime = match.mimeType || '';
 
     // Extract text from PDFs
@@ -819,7 +1548,7 @@ async function toolReadFile(
   }
 
   // Return full content — no truncation (matches API behavior)
-  const content = await artifactService.readContent(match.id);
+  const content = await artifactService.readContent(match);
   return content;
 }
 
@@ -849,13 +1578,13 @@ async function toolDeleteFile(
     return `Deleted file: ${realPath} (approved by user)`;
   }
 
-  await artifactService.delete(match.id);
+  await artifactService.delete(match);
   return `Deleted file: ${realPath}`;
 }
 
 const MAX_SEARCH_MATCHES = 100;
 
-async function toolSearchFiles(
+export async function toolSearchFiles(
   input: Record<string, unknown>,
   cruxId: string,
   artifactService: ArtifactService,
@@ -864,13 +1593,8 @@ async function toolSearchFiles(
   const useRegex = (input.regex as boolean) ?? false;
   const caseSensitive = (input.case_sensitive as boolean) ?? false;
 
-  let pattern: RegExp;
-  try {
-    const source = useRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    pattern = new RegExp(source, caseSensitive ? '' : 'i');
-  } catch (err: unknown) {
-    return formatToolError('search_files', `Invalid regular expression: ${(err as Error).message}`);
-  }
+  if (typeof query !== 'string' || query.length > 2048)
+    return formatToolError('search_files', 'Use a search query of at most 2048 characters.');
 
   const artifacts = await artifactService.findByResource('crux', cruxId);
   const files = artifacts.filter(
@@ -878,25 +1602,42 @@ async function toolSearchFiles(
       a.type === 'artifact' && a.encoding !== 'binary' && !isBinaryMime(a.mimeType || ''),
   );
 
+  if (files.length > 1000)
+    return formatToolError('search_files', 'Search supports at most 1000 text files per Crux.');
   const matches: string[] = [];
+  let characters = 0;
   let truncated = false;
   for (const file of files) {
     const path = file.meta?.path || file.filename;
     let content: string;
     try {
-      content = await artifactService.readContent(file.id);
+      content = await artifactService.readContent(file);
     } catch {
       continue; // unreadable file — skip, don't fail the whole search
     }
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (pattern.test(lines[i]!)) {
-        if (matches.length >= MAX_SEARCH_MATCHES) {
+    characters += content.length;
+    if (characters > SEARCH_TOTAL_CHAR_LIMIT)
+      return formatToolError(
+        'search_files',
+        'Search exceeds 16 Mi characters; narrow the files before searching.',
+      );
+    try {
+      const found = await searchFileLines({
+        content,
+        query,
+        regex: useRegex,
+        caseSensitive,
+        limit: MAX_SEARCH_MATCHES + 1 - matches.length,
+      });
+      for (const match of found) {
+        if (matches.length === MAX_SEARCH_MATCHES) {
           truncated = true;
           break;
         }
-        matches.push(`${path}:${i + 1}: ${lines[i]!.trim().slice(0, 200)}`);
+        matches.push(`${path}:${match.line}: ${match.text}`);
       }
+    } catch (error) {
+      return formatToolError('search_files', (error as Error).message);
     }
     if (truncated) break;
   }
@@ -930,7 +1671,7 @@ async function toolRenameFile(
 
   // The artifact service owns the rest: meta.path + path column + filename
   // sync, and the Project Folder rename on desktop.
-  await artifactService.update(match.id, { meta: { path: newPath } });
+  await artifactService.update(match, { meta: { path: newPath } });
   return `Renamed ${oldPath} → ${newPath}. References to the old path in other files are NOT updated automatically.`;
 }
 
@@ -972,6 +1713,8 @@ async function toolGenerateImage(
   cruxId: string,
   artifactService: ArtifactService,
   chatModel?: string,
+  signal?: AbortSignal,
+  scope?: WriteScope,
 ): Promise<string> {
   const prompt = input.prompt as string;
   const path = input.path as string;
@@ -980,16 +1723,51 @@ async function toolGenerateImage(
   if (!prompt) return formatToolError('generate_image', 'prompt is required');
   if (!path) return formatToolError('generate_image', 'path is required');
 
-  const generated = await generateImageBlob(prompt, size, chatModel);
-  if ('error' in generated) return formatToolError('generate_image', generated.error);
+  let reference: Blob | undefined;
+  if (input.source_path) {
+    const artifacts = await artifactService.findByResource('crux', cruxId);
+    const source = findArtifactByPath(artifacts, input.source_path as string);
+    if (!source)
+      return formatToolError('generate_image', 'The image to edit was not found in this Crux.');
+    reference = await artifactService.downloadBlob(source);
+  }
+  const generated = await generateImageBlob(prompt, size, chatModel, reference, signal, cruxId);
+  if ('error' in generated)
+    return `Error in generate_image: ${generated.error} Do not repeat generation automatically; explain the problem and wait for the user.`;
 
-  await artifactService.upload({
-    resourceId: cruxId,
-    resourceType: 'crux',
-    blob: generated.blob,
-    meta: { path },
-  });
-
+  if (signal?.aborted)
+    return 'Error in generate_image: Image generation stopped. Check your allowance before trying again. Do not repeat generation automatically.';
+  // Keep a generated original before replacing the requested file. If that final
+  // save refuses, the paid result remains a normal local Artifact for recovery.
+  const retained = `images/generated/${crypto.randomUUID()}.png`;
+  const retain =
+    generated.provider === 'included' && !scopeViolation('write_file', { path: retained }, scope);
+  if (retain) {
+    try {
+      await artifactService.upload({
+        resourceId: cruxId,
+        resourceType: 'crux',
+        blob: generated.blob,
+        meta: { path: retained },
+      });
+    } catch (error) {
+      return `Error in generate_image: The image was generated but could not be saved locally. Allowance may have been used. Do not generate another image automatically; resolve the storage problem first. ${String(error)}`;
+    }
+  }
+  try {
+    await artifactService.upload({
+      resourceId: cruxId,
+      resourceType: 'crux',
+      blob: generated.blob,
+      meta: { path },
+    });
+  } catch (error) {
+    if (retain)
+      return `The generated image is saved at ${retained}. Saving to ${path} failed. Use the saved image; do not generate it again. ${String(error)}`;
+    if (generated.provider === 'included')
+      return `Error in generate_image: The image could not be saved within this task’s file scope. Allowance may have been used. Do not generate another image automatically. ${String(error)}`;
+    throw error;
+  }
   return `Generated and saved image: ${path}`;
 }
 
@@ -1002,11 +1780,31 @@ export async function generateImageBlob(
   prompt: string,
   size = '1024x1024',
   chatModel?: string,
+  reference?: Blob,
+  signal?: AbortSignal,
+  /** Attributes an included image to its Crux. */
+  cruxId?: string,
 ): Promise<{ blob: Blob; provider: string } | { error: string }> {
   const { getApiKey } = await import('./keys');
   const { getProviderForModel } = await import('./providers');
   const { PROVIDERS } = await import('./providers');
 
+  chatModel ??= await (await import('./keys')).getDefaultModel();
+  if (chatModel === 'garden-included') {
+    try {
+      const result = await (
+        await import('@/api/inference')
+      ).includedImage(prompt, size, reference, signal, cruxId);
+      return { blob: result.blob, provider: 'included' };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Included images are unavailable.' };
+    }
+  }
+  if (reference)
+    return {
+      error:
+        'Reference-image editing is available with the included collaborator. Your original image is unchanged.',
+    };
   const chatProvider = chatModel ? getProviderForModel(chatModel) : null;
   const chatProviderInfo = chatProvider ? PROVIDERS[chatProvider] : null;
   const chatSupportsImages = chatProviderInfo?.capabilities.includes('Images');
@@ -1075,7 +1873,8 @@ async function generateImageOpenAI(apiKey: string, prompt: string, size: string)
   const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
 
   const response = await client.images.generate({
-    model: 'gpt-image-2',
+    // Current everyday image tier; preserves the existing single-image API flow.
+    model: 'gpt-image-2.5-flare',
     prompt,
     n: 1,
     size: size as '1024x1024' | '1536x1024' | '1024x1536',

@@ -1,6 +1,10 @@
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { registerAppTools, executeAppTool } from '@/services/embedded-app-tool-registry';
-import { getSetting, removeSetting } from '@/services/settings';
+import {
+  deliverDeferredImport,
+  readDeferredImport,
+  subscribeDeferredImports,
+} from '@/services/deferred-import';
 import { embeddedAppToolAdapter } from '@/services/embedded-app-tool-adapters';
 import { useBlocker } from 'react-router-dom';
 import {
@@ -8,23 +12,42 @@ import {
   notebookIsOpen,
   flushNotebook,
 } from '@/services/notebook-lifecycle';
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useCruxStoreApi } from '@/stores/cruxStore';
-import { trackWorkspacePromise } from '@/stores/workspaceSelection';
+import { trackWorkspacePromise, workspaceSelection } from '@/stores/workspaceSelection';
 import { notebookSession } from '@/services/notebook';
 import { isPreviewOrigin } from './useStoreProxy';
 
 export function useNotebookProxy(cruxId: string | null) {
   const workspace = useCruxStoreApi();
-  const blocker = useBlocker(() => notebookIsOpen(cruxId));
+  // Only the workspace the person is looking at holds the door on the way
+  // out. Every open crux keeps its app mounted, and a hidden frame's flush
+  // reply crawls (throttled), so with three embedded apps open "go home" took
+  // over thirty seconds (2026-09-20, the office-garden journey). Hidden
+  // workspaces save on their own dirty timer; a silent frame gets four
+  // seconds, then the person leaves and the app keeps its draft.
+  const active = useSyncExternalStore(
+    workspaceSelection.subscribe,
+    () => workspaceSelection.getState().active?.data === workspace,
+  );
+  const blocker = useBlocker(() => active && notebookIsOpen(cruxId));
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
-    void flushNotebook(cruxId)
-      .then(() => blocker.proceed())
-      .catch(() => blocker.reset());
+    const bounded = Promise.race([
+      flushNotebook(cruxId),
+      new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+    ]);
+    void bounded.then(() => blocker.proceed()).catch(() => blocker.reset());
   }, [blocker, cruxId]);
+  // Whether the Crux is an embedded app is live: a Crux marked a Tool
+  // template (its kind) stops being one, and the editor registered for its
+  // frame must go with the frame — a stale registration held every pane
+  // toggle and the workspace's close behind a flush that could never answer.
+  const embedded = useSyncExternalStore(workspace.subscribe, () =>
+    isEmbeddedApp(workspace.getState().crux),
+  );
   useEffect(() => {
-    if (!cruxId || !isEmbeddedApp(workspace.getState().crux)) return;
+    if (!cruxId || !embedded) return;
     const protocol = workspace.getState().crux?.kind === 'notes' ? 'crux:notebook' : 'crux:app';
     const execute = notebookSession(workspace);
     let dirty = false;
@@ -84,18 +107,21 @@ export function useNotebookProxy(cruxId: string | null) {
     const unregister = registerNotebookEditor(cruxId, {
       dirty: () => dirty,
       flush: () => {
-        if (
-          peer &&
-          ![...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].some(
-            (frame) => frame.dataset.cruxId === cruxId && frame.contentWindow === peer!.source,
-          )
-        )
-          peer = null;
+        const frame = [
+          ...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]'),
+        ].find((frame) => frame.dataset.cruxId === cruxId && frame.contentWindow === peer?.source);
+        if (peer && !frame) peer = null;
         if (!peer)
           return dirty
             ? Promise.reject(new Error('The app editor is unavailable.'))
             : Promise.resolve();
-        return new Promise<void>((resolve, reject) => {
+        // Off-screen (Advanced view keeps the app frame parked for capture),
+        // Chromium throttles the frame and its reply may never come. The
+        // person cannot be editing it there: give it a moment, then go on and
+        // let the app keep its draft — the same bound the leave-page door uses.
+        const rect = frame!.getBoundingClientRect();
+        const parked = rect.right <= 0 || rect.bottom <= 0 || rect.width === 0 || rect.height === 0;
+        const answer = new Promise<void>((resolve, reject) => {
           const id = crypto.randomUUID();
           const timer = setTimeout(() => {
             flushes.delete(id);
@@ -116,8 +142,38 @@ export function useNotebookProxy(cruxId: string | null) {
             { targetOrigin: peer!.origin },
           );
         });
+        if (!parked) return answer;
+        answer.catch(() => {});
+        return Promise.race([answer, new Promise<void>((resolve) => setTimeout(resolve, 4000))]);
       },
     });
+    let importTimer: ReturnType<typeof setTimeout> | undefined;
+    const importReady = () =>
+      !!peer &&
+      !workspace.getState().viewingSnapshotId &&
+      [...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].some(
+        (frame) => frame.dataset.cruxId === cruxId && frame.contentWindow === peer!.source,
+      );
+    function scheduleImport() {
+      const request = readDeferredImport(cruxId!);
+      if (
+        importTimer ||
+        !importReady() ||
+        request?.state !== 'queued' ||
+        !toolAdapter?.tools.some((tool) => tool.name === request.tool)
+      )
+        return;
+      importTimer = setTimeout(() => {
+        importTimer = undefined;
+        void trackWorkspacePromise(
+          workspace,
+          deliverDeferredImport(cruxId!, importReady, (tool, input) =>
+            executeAppTool(cruxId!, tool, input),
+          ),
+        ).catch((error) => console.warn('[file-drop] import state could not be saved:', error));
+      }, 1500);
+    }
+    const unsubscribeImports = subscribeDeferredImports(scheduleImport);
     function receive(event: MessageEvent) {
       if (
         event.data?.type !== protocol ||
@@ -131,26 +187,7 @@ export function useNotebookProxy(cruxId: string | null) {
       if (!frame || new URL(frame.src, location.href).origin !== event.origin) return;
       peer = { source: event.source!, origin: event.origin };
       if (!isEmbeddedApp(workspace.getState().crux)) return;
-      // A file the Crux was started from (file-drop routing): once the app speaks, ask it to open the file.
-      const pendingKey = `cruxgarden:pending-open:${cruxId}`;
-      const pending = toolAdapter && cruxId ? getSetting(pendingKey) : null;
-      if (pending && cruxId) {
-        removeSetting(pendingKey);
-        try {
-          const { tool, input } = JSON.parse(pending) as {
-            tool: string;
-            input: Record<string, unknown>;
-          };
-          if (toolAdapter!.tools.some((t) => t.name === tool))
-            setTimeout(() => {
-              void executeAppTool(cruxId!, tool, input).catch((error) =>
-                console.warn('[file-drop] the app could not open the file:', error),
-              );
-            }, 1500);
-        } catch {
-          /* a malformed note: nothing to open */
-        }
-      }
+      scheduleImport();
       if (event.data.op === 'tool-result') {
         const command = commands.get(event.data.commandId);
         commands.delete(event.data.commandId);
@@ -182,6 +219,8 @@ export function useNotebookProxy(cruxId: string | null) {
     }
     window.addEventListener('message', receive);
     return () => {
+      if (importTimer) clearTimeout(importTimer);
+      unsubscribeImports();
       unregister();
       unregisterAppTools();
       window.removeEventListener('message', receive);
@@ -192,5 +231,5 @@ export function useNotebookProxy(cruxId: string | null) {
           new Error('App closed before the command was confirmed. Inspect before retrying.'),
         );
     };
-  }, [cruxId, workspace]);
+  }, [cruxId, workspace, embedded]);
 }

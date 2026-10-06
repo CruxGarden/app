@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-01",
+  "stage": "AR06 Task import/replacement test migration",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "focusedNativeTests": 5,
+  "verification": {
+    "app": {
+      "passed": 1708,
+      "skipped": 18,
+      "files": 270,
+      "build": true
+    },
+    "log": "/tmp/native-task-import-replacement-verify.log"
+  },
+  "invariants": [
+    "Main and Task content, Store and unrelated open Crux survive replacement and restart.",
+    "Actual trusted import-host preparation refusal rolls back the replacement; restart and retry succeed.",
+    "Missing archive3 content refuses before closing/replacing the local graph.",
+    "A foreign Task identity refuses without changing either project.",
+    "Owner-only actual SQLite deletion trigger proves transaction rollback; restart and retry preserve and then restore exact files/Store."
+  ],
+  "fixtureChanges": [
+    "Fresh isolated folder allocation for every import, including replacement.",
+    "One-shot preparation refusal belongs to the trusted test host, separate from renderer commands."
+  ],
+  "limits": [
+    "Test fixture folder allocation is not physical import-file projection; prior retained-history desktop eight and final affected three cover unchanged shipping UI/runtime.",
+    "This test-only slice leaves shipping implementation/runtime unchanged, so unaffected Electron/desktop gates were not rerun.",
+    "Other archive consumers and optional command/fallback/worker retirement remain.",
+    "Native CI for the new app heads must be accepted separately."
+  ],
+  "logs": [
+    "/tmp/native-task-import-replacement-focused.log",
+    "/tmp/native-task-import-replacement-verify.log"
+  ],
+  "nativeCI": {
+    "commit": "21b94aef1",
+    "run": 36960895095,
+    "windows": "failure in packaged/companion CLI checks after successful verification, build and packaging",
+    "linux": "success",
+    "limits": "Exact failing Windows assertion is unavailable anonymously; later acec833e4 passes both platforms. No cause claimed."
+  }
+}

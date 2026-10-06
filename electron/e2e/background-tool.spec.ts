@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
@@ -14,7 +16,7 @@ test.describe('background tool (mock AI)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -22,17 +24,28 @@ test.describe('background tool (mock AI)', () => {
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
 
       // An image in the workspace (the hidden multi-file input behind Upload)
+      // The Artifacts pane's upload input, not the composer's attachment input.
       await page
+        .getByTestId('pane-body-artifacts')
         .locator('input[type="file"][multiple]')
         .setInputFiles(join(__dirname, 'fixtures', 'backdrop.png'));
       await expect(page.getByRole('tree').getByText('backdrop.png', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
-      // A new garden already wears The Keeper's vista; the tool must replace it
+      // A fresh Garden may use a procedural background. Record whichever
+      // layer it has; the tool must select and display the workspace image.
       const bgBefore = await page
         .getByTestId('mood-background-image')
-        .evaluate((el) => getComputedStyle(el).backgroundImage);
-      expect(bgBefore).toMatch(/blob:/);
+        .evaluateAll((elements) =>
+          elements[0] ? getComputedStyle(elements[0]).backgroundImage : 'none',
+        );
+
+      // Plasma deliberately replaces Mood image layers with its own field.
+      // Select the user-facing Glass surface to exercise image presentation.
+      const mood = await showPane(page, 'Mood');
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
+      await mood.getByRole('combobox', { name: 'Surface theme' }).selectOption('glass');
+      await hidePane(page, 'Mood');
 
       const input = page.getByPlaceholder('Send a message...');
       await input.fill('give me a new backdrop');
@@ -52,8 +65,7 @@ test.describe('background tool (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/background-1-set.png' });
 
       // The Background tab agrees and can clear it
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Background', exact: true }).first().click();
       await page.screenshot({ path: 'e2e/.results/background-2-mood-tab.png' });
     } finally {

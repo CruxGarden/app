@@ -1,9 +1,10 @@
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { collaborator, outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -51,6 +52,11 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^PPTist/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+      await togglePanel(page, 'Toggle tasks');
     const workspace = page.locator('[data-workspace-id]');
     await expect(workspace).toBeVisible();
     folder = (await storedCrux(page, (await workspace.getAttribute('data-workspace-id'))!))
@@ -63,12 +69,8 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
     );
     await save();
     expect(doc().project.slides).toHaveLength(2);
-    if (
-      (await page
-        .getByRole('button', { name: 'Toggle collaboration' })
-        .getAttribute('aria-pressed')) === 'true'
-    )
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const firstSlide = frame().locator('.thumbnail-item').first();
     await expect(async () => {
       await firstSlide.locator('.label').click();
@@ -84,6 +86,11 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
       selection.selectAllChildren(element);
       selection.collapseToEnd();
     });
+    // ProseMirror adopts a DOM selection on the next selectionchange: let it,
+    // then make the end certain with the keyboard, as a person would.
+    await page.waitForTimeout(150);
+    await page.keyboard.press('ControlOrMeta+ArrowDown');
+    await page.keyboard.press('End');
     await body.press('Enter');
     await page.keyboard.type('Bring envelopes.');
     await save();
@@ -102,12 +109,8 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
       originalHeadline.replace('Friday', 'Saturday'),
     );
     await check();
-    if (
-      (await page
-        .getByRole('button', { name: 'Toggle collaboration' })
-        .getAttribute('aria-pressed')) === 'true'
-    )
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
     // Use the actual editor history buttons, not a Garden-only undo command.
     await frame().locator('.canvas-tool .handler-item').nth(0).click();
     await expect.poll(() => JSON.stringify(doc().project.slides)).toContain('Friday');
@@ -120,7 +123,7 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
 
     instance = await launchApp({ dir });
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     await check();
     await exportNativeCrux(page, archive, instance.app);
@@ -139,12 +142,8 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
     ).projectFolder;
     await ready();
     await check();
-    if (
-      (await page
-        .getByRole('button', { name: 'Toggle collaboration' })
-        .getAttribute('aria-pressed')) === 'true'
-    )
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+    if ((await panelPressed(page, 'Toggle collaboration')) === 'true')
+      await togglePanel(page, 'Toggle collaboration');
     await frame().locator('.thumbnail-item').first().locator('.label').click();
     await expect(frame().locator('.thumbnail-item').first()).toHaveClass(/active/);
     const importedBody = frame()
@@ -157,15 +156,29 @@ test('PPTist depth: create a deck, person revises, targeted agent edit, native U
       selection.selectAllChildren(element);
       selection.collapseToEnd();
     });
+    // ProseMirror adopts a DOM selection on the next selectionchange: let it,
+    // then make the end certain with the keyboard, as a person would.
+    await page.waitForTimeout(150);
+    await page.keyboard.press('ControlOrMeta+ArrowDown');
+    await page.keyboard.press('End');
     await page.keyboard.type(' Keep a few for next year.');
     await save();
     expect(JSON.stringify(doc().project.slides)).toContain('Keep a few for next year.');
+    // PPTist records a text edit as one history step when the editor lets go:
+    // step out to the slide list, then come back for the second edit.
+    await frame().locator('.thumbnail-item').first().locator('.label').click();
+    await page.waitForTimeout(500);
     await importedBody.click();
     await importedBody.evaluate((element) => {
       const selection = window.getSelection()!;
       selection.selectAllChildren(element);
       selection.collapseToEnd();
     });
+    // ProseMirror adopts a DOM selection on the next selectionchange: let it,
+    // then make the end certain with the keyboard, as a person would.
+    await page.waitForTimeout(150);
+    await page.keyboard.press('ControlOrMeta+ArrowDown');
+    await page.keyboard.press('End');
     await page.keyboard.type(' Extra draft.');
     await frame().locator('.canvas-tool .handler-item').nth(0).click();
     await expect(importedBody).not.toContainText('Extra draft.');

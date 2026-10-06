@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { siteRouteFor } from './useSitePreview';
+import { siteRouteFor } from '@/lib/site-routes';
 
 describe('siteRouteFor', () => {
   it('follows the Astro pages convention', () => {

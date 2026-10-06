@@ -2797,7 +2797,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-## dompurify 3.4.15
+## dompurify 3.4.16
 License: (MPL-2.0 OR Apache-2.0)
 Source: git://github.com/cure53/DOMPurify.git
 

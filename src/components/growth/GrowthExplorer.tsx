@@ -1,21 +1,19 @@
-import { createPortal } from 'react-dom';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal } from '@/components/ui';
+import { buttonClass, segmentClass, segmentGroupClass } from '@/components/ui/button-class';
+import { useGrowthGraphView } from './useGrowthGraphView';
+import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
+import { Modal, SectionLabel } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import {
-  compactGrowthGraph,
-  growthAncestry,
-  loadGrowthGraph,
-  type GrowthGraph,
-} from '@/services/growth-graph';
+import { growthNodeKindLabel, loadGrowthGraph, type GrowthGraph } from '@/services/growth-graph';
 import { TASKS_CHANGED } from '@/services/working-copies';
 import GrowthInspector from './GrowthInspector';
 import { laneColor } from './graph-style';
+import { useGraphAppearance } from './useGraphAppearance';
 
 const Canvas2D = lazy(() => import('./GrowthGraphCanvas'));
 const Canvas3D = lazy(() => import('./GrowthGraph3D'));
-const action =
-  'rounded px-3 py-1.5 text-xs border border-border hover:border-accent cursor-pointer disabled:opacity-50';
+const action = buttonClass('secondary', 'xs');
 
 export default function GrowthExplorer({
   cruxId,
@@ -24,9 +22,11 @@ export default function GrowthExplorer({
 }: {
   cruxId: string;
   onClose: () => void;
-  /** A checkpoint to open on, for example from the Cruxspace history. */
+  /** A checkpoint to open on, for example from the Garden history. */
   initialSelectedId?: string | null;
 }) {
+  const aiEnabled = useAiEnabled();
+  const appearance = useGraphAppearance();
   const [graph, setGraph] = useState<GrowthGraph | null>(null);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'2d' | '3d'>('2d');
@@ -36,21 +36,13 @@ export default function GrowthExplorer({
   const [query, setQuery] = useState('');
   const [laneFilter, setLaneFilter] = useState('');
   const [listLimit, setListLimit] = useState(60);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const [reducedMotion, setReducedMotion] = useState(
-    () => matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
+  const reducedMotion = useReducedMotion();
   const [refresh, setRefresh] = useState(0);
   const dialogRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const size = useElementSize(canvasRef);
   const select = useCallback((id: string) => setSelectedId(id || null), []);
 
-  useEffect(() => {
-    const media = matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setReducedMotion(media.matches);
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
   useEffect(() => {
     let live = true;
     let loading = false;
@@ -89,19 +81,6 @@ export default function GrowthExplorer({
     };
   }, [cruxId, refresh]);
   useEffect(() => {
-    const element = canvasRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry)
-        setSize({
-          width: Math.floor(entry.contentRect.width),
-          height: Math.floor(entry.contentRect.height),
-        });
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();
     return () => {
@@ -109,22 +88,7 @@ export default function GrowthExplorer({
     };
   }, []);
 
-  const display = useMemo(
-    () =>
-      graph
-        ? compactGrowthGraph(
-            graph,
-            new Set(expanded ? graph.lanes.map((l) => l.id) : []),
-            selectedId,
-          )
-        : null,
-    [graph, expanded, selectedId],
-  );
-  const ancestry = useMemo(
-    () => (graph && selectedId ? growthAncestry(graph, selectedId) : new Set<string>()),
-    [graph, selectedId],
-  );
-  const selected = graph?.nodes.find((n) => n.id === selectedId);
+  const { display, ancestry, selected } = useGrowthGraphView(graph, expanded, selectedId);
   const listed = useMemo(() => {
     if (!graph) return [];
     const titles = new Map(graph.lanes.map((l) => [l.id, l.title]));
@@ -145,15 +109,14 @@ export default function GrowthExplorer({
     onSelect: select,
     fit,
     reducedMotion,
+    appearance,
   };
 
-  return createPortal(
-    <Modal open onClose={onClose} size="full" flush>
+  // Modal renders at <body> itself.
+  return (
+    <Modal open onClose={onClose} size="full" flush aria-label="Whole Crux Growth">
       <section
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Whole Crux Growth"
         tabIndex={-1}
         className="flex flex-col h-full min-h-0 outline-none"
         data-testid="growth-explorer"
@@ -180,38 +143,44 @@ export default function GrowthExplorer({
       >
         <header className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
           <div>
-            <p className="text-xs uppercase tracking-widest font-mono text-accent">
+            <SectionLabel as="p" tone="accent">
               Growth · Whole Crux
-            </p>
+            </SectionLabel>
             <h2 className="font-display text-xl">{graph?.title ?? 'Your creation’s history'}</h2>
             <p className="text-xs text-text-muted mt-1">
               {graph
-                ? `${graph.nodes.filter((n) => n.kind !== 'copy').length} checkpoints · ${graph.lanes.length - 1} Tasks · branches and merges preserved`
+                ? `${graph.nodes.filter((n) => n.kind !== 'copy' && !n.retained).length} checkpoints${graph.nodes.some((n) => n.retained) ? ` · ${graph.nodes.filter((n) => n.retained).length} retained Task states` : ''} · ${graph.lanes.length - 1} Tasks · branches and merges preserved`
                 : 'Loading saved history…'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              className={`${action} ${mode === '2d' ? 'bg-accent-muted text-accent border-accent' : ''}`}
-              aria-pressed={mode === '2d'}
-              onClick={() => setMode('2d')}
-            >
-              2D lanes
-            </button>
-            <button
-              className={`${action} ${mode === '3d' ? 'bg-accent-muted text-accent border-accent' : ''}`}
-              aria-pressed={mode === '3d'}
-              onClick={() => setMode('3d')}
-            >
-              Explore in 3D
-            </button>
+            <div role="group" aria-label="Growth view" className={segmentGroupClass()}>
+              <button
+                className={segmentClass(mode === '2d')}
+                aria-pressed={mode === '2d'}
+                onClick={() => setMode('2d')}
+              >
+                2D lanes
+              </button>
+              <button
+                className={segmentClass(mode === '3d')}
+                aria-pressed={mode === '3d'}
+                onClick={() => setMode('3d')}
+              >
+                Explore in 3D
+              </button>
+            </div>
             <button className={action} onClick={() => setFit((n) => n + 1)}>
               Fit graph
             </button>
             <button className={action} onClick={() => setRefresh((n) => n + 1)}>
               Refresh
             </button>
-            <button className={action} onClick={onClose} aria-label="Close Growth graph">
+            <button
+              className={buttonClass('ghost', 'xs')}
+              onClick={onClose}
+              aria-label="Close Growth graph"
+            >
               Close
             </button>
           </div>
@@ -233,13 +202,13 @@ export default function GrowthExplorer({
               {graph?.lanes.map((lane, index) => (
                 <button
                   key={lane.id}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover transition-colors cursor-pointer"
                   onClick={() => select(`copy:${lane.id}`)}
                 >
                   <span
                     aria-hidden="true"
                     className="w-2 h-2 rounded-full"
-                    style={{ background: laneColor(index) }}
+                    style={{ background: laneColor(appearance, index) }}
                   />
                   {lane.title}
                   {lane.phase !== 'main'
@@ -250,14 +219,15 @@ export default function GrowthExplorer({
             </div>
             <div
               ref={canvasRef}
-              className="flex-1 min-h-0 relative overflow-hidden bg-[#101c19]"
+              className="growth-graph flex-1 min-h-0 relative overflow-hidden"
+              style={{ backgroundColor: appearance.background, color: appearance.text }}
               data-testid={`growth-canvas-${mode}`}
             >
               {canvasProps &&
                 size.width > 0 &&
                 size.height > 0 &&
                 (canvasProps.graph.nodes.length > 1500 ? (
-                  <p className="p-6 text-[#e1eee5]">
+                  <p className="p-6">
                     This view has over 1,500 visible checkpoints. Compact the graph or use the
                     checkpoint browser to explore its saved history.
                   </p>
@@ -265,7 +235,7 @@ export default function GrowthExplorer({
                   <ErrorBoundary
                     key={mode}
                     fallback={
-                      <div className="p-6 text-[#e1eee5] space-y-3">
+                      <div className="p-6 space-y-3">
                         <p>
                           The graph renderer is unavailable. All saved history is still accessible
                           in the checkpoint browser.
@@ -278,7 +248,7 @@ export default function GrowthExplorer({
                   >
                     <Suspense
                       fallback={
-                        <p role="status" className="p-6 text-[#e1eee5]">
+                        <p role="status" className="p-6">
                           Opening {mode === '3d' ? '3D' : '2D'} Growth…
                         </p>
                       }
@@ -350,11 +320,7 @@ export default function GrowthExplorer({
                     <span className="block truncate">{node.title}</span>
                     <span className="text-text-muted">
                       {graph?.lanes.find((l) => l.id === node.ownerId)?.title} ·{' '}
-                      {node.kind === 'copy'
-                        ? 'Working Copy'
-                        : node.kind === 'merge'
-                          ? 'Merge checkpoint'
-                          : 'Checkpoint'}
+                      {growthNodeKindLabel(node)}
                     </span>
                   </button>
                 ))}
@@ -379,12 +345,13 @@ export default function GrowthExplorer({
             ) : (
               <div className="p-4 text-sm text-text-muted space-y-3">
                 <p>
-                  Select a checkpoint to explore its Artifacts and the Collaboration that produced
-                  it.
+                  {aiEnabled
+                    ? 'Select a checkpoint to explore its Artifacts and the Collaboration that produced it.'
+                    : 'Select a checkpoint to explore its Artifacts.'}
                 </p>
                 <p>
-                  Circles are checkpoints, diamonds in 2D mark merges, and outlined endpoints mark
-                  Working Copies. Gold connections bring a Task into Main.
+                  Circles show checkpoints and retained Task states, diamonds in 2D mark merges, and
+                  outlined endpoints mark Working Copies. Gold connections bring a Task into Main.
                 </p>
                 <p>
                   Completed Tasks remain part of the story. Browsing here does not change your work.
@@ -394,7 +361,6 @@ export default function GrowthExplorer({
           </aside>
         </div>
       </section>
-    </Modal>,
-    document.body,
+    </Modal>
   );
 }

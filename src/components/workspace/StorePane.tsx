@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
+import { downloadBlob } from '@/lib/download';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices, isServicesReady } from '@/services';
 import { formatBytes } from '@/lib/format';
@@ -121,12 +123,7 @@ export default function StorePane() {
             })),
           );
       const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = storeExportFilename(crux.title, live);
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadBlob(blob, storeExportFilename(crux.title, live));
       return true;
     } catch (err) {
       await alertDialog((err as Error)?.message || 'Export failed', 'Could not export the store');
@@ -330,7 +327,7 @@ export default function StorePane() {
               disabled={src === 'live' && !canLive}
               onClick={() => setSource(src)}
               className={cn(
-                'px-1.5 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer disabled:cursor-default disabled:opacity-40',
+                'px-1.5 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer disabled:cursor-default ',
                 source === src ? 'text-text bg-surface-solid' : 'text-text-muted hover:text-text',
               )}
               title={
@@ -340,7 +337,7 @@ export default function StorePane() {
                     ? 'What visitors of the published crux wrote'
                     : isPublished
                       ? 'Connect your account to read the live store'
-                      : 'Publish the crux to have a live store'
+                      : 'Share the crux to have a live store'
               }
               data-testid={`store-source-${src}`}
             >
@@ -352,7 +349,7 @@ export default function StorePane() {
           {!live && (
             <button
               onClick={() => setAdding(true)}
-              className="text-xs px-2 py-0.5 rounded-[var(--radius-sm)] border border-border bg-surface hover:border-accent hover:text-accent text-text transition-colors cursor-pointer"
+              className={buttonClass('secondary', 'xs', 'min-h-6 py-0.5 px-2')}
             >
               + Add key
             </button>
@@ -360,7 +357,11 @@ export default function StorePane() {
           {live && liveEntries.length > 0 && (
             <button
               onClick={handleClearLive}
-              className="text-xs text-text-muted hover:text-error transition-colors"
+              className={buttonClass(
+                'ghost',
+                'xs',
+                'min-h-6 py-0.5 px-2 text-text-muted hover:text-error',
+              )}
               title="Delete everything visitors wrote"
             >
               Clear
@@ -369,7 +370,7 @@ export default function StorePane() {
           <button
             onClick={handleExport}
             disabled={live ? liveEntries.length === 0 : entries.length === 0}
-            className="text-xs text-text-muted hover:text-text transition-colors disabled:opacity-40 disabled:cursor-default"
+            className={buttonClass('ghost', 'xs', 'min-h-6 py-0.5 px-2 text-text-muted')}
             title={
               live
                 ? 'Save everything visitors wrote as a JSON file'
@@ -381,7 +382,7 @@ export default function StorePane() {
           </button>
           <button
             onClick={() => fileInput.current?.click()}
-            className="text-xs text-text-muted hover:text-text transition-colors"
+            className={buttonClass('ghost', 'xs', 'min-h-6 py-0.5 px-2 text-text-muted')}
             title="Load a Crux Store export (JSON) into this store"
             data-testid="store-import"
           >
@@ -400,7 +401,7 @@ export default function StorePane() {
           />
           <button
             onClick={live ? loadLive : loadEntries}
-            className="text-xs text-text-muted hover:text-text"
+            className={buttonClass('ghost', 'xs', 'min-h-6 py-0.5 px-2 text-text-muted')}
             title="Refresh"
           >
             <svg
@@ -435,7 +436,7 @@ export default function StorePane() {
             placeholder="key name"
             className="flex-1 bg-transparent text-sm font-mono outline-none text-text placeholder:text-text-muted"
           />
-          <button onClick={handleAdd} className="text-xs text-accent">
+          <button onClick={handleAdd} className={buttonClass('primary', 'xs')}>
             Add
           </button>
           <button
@@ -443,7 +444,7 @@ export default function StorePane() {
               setAdding(false);
               setNewKey('');
             }}
-            className="text-xs text-text-muted"
+            className={buttonClass('ghost', 'xs', 'text-text-muted')}
           >
             Cancel
           </button>
@@ -502,7 +503,7 @@ export default function StorePane() {
                       </td>
                       <td className="px-3 py-1.5">
                         <span
-                          className={`text-xs px-1.5 py-0.5 rounded font-mono ${
+                          className={`text-xs px-1.5 py-0.5 rounded font-mono cursor-pointer hover-bright active-dim ${
                             entry.mode === 'public'
                               ? 'bg-warning-bg text-warning-text border border-warning-border'
                               : 'bg-surface text-text-muted'
@@ -522,7 +523,7 @@ export default function StorePane() {
                       <td className="px-3 py-1.5">
                         <button
                           onClick={() => handleDeleteLive(entry.key)}
-                          className="text-text-muted hover:text-error transition-colors"
+                          className="w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-text-muted hover:text-error hover:bg-error-muted active-dim cursor-pointer"
                           title="Delete this key from the live store"
                         >
                           ×
@@ -550,7 +551,7 @@ export default function StorePane() {
               {!adding && (
                 <button
                   onClick={() => setAdding(true)}
-                  className="text-xs text-accent hover:text-text transition-colors cursor-pointer"
+                  className={buttonClass('ghost', 'xs', 'min-h-6 py-0.5 px-2 text-accent')}
                 >
                   Add your first key
                 </button>
@@ -571,7 +572,7 @@ export default function StorePane() {
                   <tr key={entry.key} className="border-b border-border hover:bg-surface">
                     <td className="px-3 py-1.5 font-mono text-accent">{entry.key}</td>
                     <td
-                      className="px-3 py-1.5 font-mono cursor-pointer max-w-[200px] truncate"
+                      className="px-3 py-1.5 font-mono cursor-pointer max-w-[200px] truncate hover:bg-action-button-hover transition-colors"
                       onClick={() => startEdit(entry.key, 'value')}
                       title="Click to edit"
                     >
@@ -598,7 +599,7 @@ export default function StorePane() {
                     <td className="px-3 py-1.5">
                       <button
                         onClick={() => handleToggleMode(entry.key)}
-                        className={`text-xs px-1.5 py-0.5 rounded font-mono ${
+                        className={`text-xs px-1.5 py-0.5 rounded font-mono cursor-pointer hover-bright active-dim ${
                           entry.mode === 'public'
                             ? 'bg-warning-bg text-warning-text border border-warning-border'
                             : 'bg-surface text-text-muted'
@@ -615,7 +616,7 @@ export default function StorePane() {
                     <td className="px-3 py-1.5">
                       <button
                         onClick={() => handleDelete(entry.key)}
-                        className="text-text-muted hover:text-error transition-colors"
+                        className="w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-text-muted hover:text-error hover:bg-error-muted active-dim cursor-pointer"
                         title="Delete key"
                       >
                         <svg
@@ -653,7 +654,14 @@ export default function StorePane() {
           </span>
         )}
         {!live && entries.length > 0 && (
-          <button onClick={handleClearAll} className="hover:text-error transition-colors">
+          <button
+            onClick={handleClearAll}
+            className={buttonClass(
+              'ghost',
+              'xs',
+              'min-h-6 py-0.5 px-2 text-text-muted hover:text-error',
+            )}
+          >
             Clear all
           </button>
         )}

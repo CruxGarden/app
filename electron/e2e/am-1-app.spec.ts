@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -90,8 +91,8 @@ test('AM-1: real tempo and patch edits, kept export, agent tools, restart and cl
     });
 
     await test.step('the scripted collaborator sets the tempo and the key', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Slow it down and move it to D dorian [am1:edit]');
       await box.press('Enter');
@@ -104,7 +105,7 @@ test('AM-1: real tempo and patch edits, kept export, agent tools, restart and cl
       expect(doc().project.active.p).toMatchObject({ tempo: 96, key: 2, scale: 'dorian' });
       await expect(frameOf(page).locator('#tempoOut')).toHaveText('96');
       await expect(frameOf(page).locator('#key')).toHaveValue('2');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'am-1-agent.png') });
     });
     expect(errors).toEqual([]);
@@ -118,7 +119,7 @@ test('AM-1: real tempo and patch edits, kept export, agent tools, restart and cl
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1500, height: 1100 });
     await test.step('restart: the session and the saved patch come back', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       await expect(frameOf(page).locator('#tempoOut')).toHaveText('96');
       await expect(frameOf(page).locator('#patchList option[value="s:Garden bees"]')).toHaveCount(

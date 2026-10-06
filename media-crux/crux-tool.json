@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "releaseVersion": "1.0.0",
+  "id": "media-app",
+  "name": "Media Tools",
+  "description": "Creative · convert, resize, trim and inspect media and documents with ffmpeg, ImageMagick, Pandoc and Typst — a bench with the real tools, and every output an Artifact",
+  "kind": "webapp",
+  "defaultTitle": "My media bench",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 43,
+  "bundled": true,
+  "app": "media",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "media",
+      "recipes": []
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "FFmpeg + ImageMagick",
+    "upstream": "https://ffmpeg.org",
+    "relationship": "A bench over separate FFmpeg/ffprobe programs (the pinned bundled build is GPL-3.0-or-later), ImageMagick (ImageMagick License), Pandoc (GPL-2.0-or-later) and Typst (Apache-2.0). The page, recipes and Garden integration are Crux Garden's. Exact FFmpeg and codec sources, build instructions and license notices accompany the desktop binaries. See UPSTREAM.md.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "greeting": "A media bench with the real tools. Put video, audio, pictures or documents in this Crux — drag them onto the Artifacts pane, or keep them under video/, audio/, images/ and documents/ — and the page lists them with what they are. Pick a file and a recipe (to MP4 for streaming, to GIF, poster frame, extract frames, even out the loudness, resize, square thumbnail, favicon, to Word, to a standalone page, to EPUB, to PDF…) and it runs ffmpeg, ImageMagick or Pandoc right here; outputs land in exports/ as Artifacts, and every run is written into the log so the history says how each file was made. Ask me to run something the recipes do not cover — I have run_ffmpeg, run_magick, run_pandoc, make_pdf and probe_media — or to add a recipe of your own.",
+  "context": "A media bench over the actual FFmpeg and ImageMagick, run as programs inside this Crux's Project Folder through the app's audited native seam (reviewed conversion options, admitted local files, no shell or network protocols). Sources live anywhere in the folder; video/, audio/, images/ and documents/ are the habit. Outputs go to exports/ and become Artifacts. data/project.json keeps the person's own recipes: { id, name, tool: 'ffmpeg' | 'magick', accepts: extensions, args: strings where {in} is the source and {out} the output, out: an output name pattern }. The page reads the folder, shows what each file is, runs a recipe and appends to log.md. Documents live in documents/ and convert with Pandoc (run_pandoc). A PDF is different: Pandoc has no PDF engine of its own and its default is a LaTeX install of gigabytes, so use make_pdf — it typesets with Typst when the machine has it and otherwise prints a page Pandoc wrote with the browser the app ships. Never tell someone they need LaTeX. Tools: probe_media before converting so the arguments fit the source; run_ffmpeg, run_magick and run_pandoc for anything the recipes do not cover (arguments only, no program name, paths relative to the folder, always -y for ffmpeg when replacing); media_tools says which binaries this machine has. FFmpeg and ffprobe ship as a matched source build. Pandoc and Typst are detected when available. ImageMagick is the machine's own and may be absent: the picture recipes fall back to ffmpeg, only the favicon truly needs it, and install_media_tool can fetch it if the person asks. Check with media_tools and say what is actually there rather than promising a conversion. See README.md for the recipe format and UPSTREAM.md for licensing. Custom recipes use the same reviewed options as built-ins. Arbitrary filters, playlists, devices, delegates, indirect file lists and command subprograms are refused. Picture conversion and structured probing use the first frame."
+}

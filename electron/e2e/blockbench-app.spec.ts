@@ -3,7 +3,8 @@ import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { giveToolRoom, talk } from './panel-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 test('Blockbench models, textures, animation, agent edits and complete portable editing', async () => {
   test.setTimeout(300000);
@@ -59,6 +60,8 @@ test('Blockbench models, textures, animation, agent edits and complete portable 
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Blockbench/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await giveToolRoom(page);
     const f = await ready(page);
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(page, id)).projectFolder;
@@ -117,10 +120,11 @@ test('Blockbench models, textures, animation, agent edits and complete portable 
       model().elements[0].to.map((v: number, i: number) => v - model().elements[0].from[i]),
     ).toEqual([6, 10, 6]);
     textureRef = doc().project[textureKey];
-    const chat = page.getByPlaceholder('Send a message...');
+    const chat = await talk(page);
     await chat.fill('Name this lantern [blockbench:rename]');
     await chat.press('Enter');
     await expect.poll(() => model()?.name, { timeout: 45000 }).toBe('Garden lantern');
+    await giveToolRoom(page);
     expect(model().elements[0].name).toBe('Lantern body');
     expect(doc().project[textureKey]).toEqual(textureRef);
     await f.locator('#mode_selector li').filter({ hasText: 'Edit' }).click();
@@ -250,7 +254,8 @@ test('Blockbench models, textures, animation, agent edits and complete portable 
   const second = await launchApp({ dir: first.dir });
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
+    await giveToolRoom(second.page);
     const f = await ready(second.page);
     expect(model().name).toBe('External lantern');
     expect(model().elements).toHaveLength(1);

@@ -1,3 +1,4 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -55,7 +56,7 @@ test('Notes sharing layout: Settings → selection → static routes → reader'
     writeFileSync(join(folder, 'notebook/Welcome.md'), 'PRIVATE_NOTE_BODY');
     writeFileSync(join(folder, 'notebook/.assets/dot.png'), png);
 
-    await page.getByRole('button', { name: 'Toggle metadata', exact: true }).click();
+    await togglePanel(page, 'Toggle details');
     const layout = page.getByLabel('Public notebook layout', { exact: true });
     await expect(layout).toHaveValue('single-page');
     await layout.selectOption('separate-pages');

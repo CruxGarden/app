@@ -1,3 +1,4 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useEffect, useRef, useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useWorkspaceUIStore } from '@/stores/uiStore';
@@ -15,6 +16,7 @@ import CruxspaceAssetsButton from './CruxspaceAssetsButton';
 type Project = Awaited<ReturnType<typeof readFigmaProject>>;
 /** Companion to the real app. This does not pretend a saved URL is an MCP connection. */
 export default function FigmaPane() {
+  const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux)!;
   const artifacts = useCruxStore((s) => s.artifacts);
   const historical = useCruxStore((s) => !!s.viewingSnapshotId || !!s.crux?.meta?.workingCopy);
@@ -98,9 +100,13 @@ export default function FigmaPane() {
       <div className="max-w-xl mx-auto space-y-5">
         <header className="space-y-2">
           <p className="text-xs text-text-muted">External app · Proof of concept</p>
-          <h2 className="text-xl font-medium">Design together in Figma</h2>
+          <h2 className="text-xl font-medium">
+            {aiEnabled ? 'Design together in Figma' : 'Design in Figma'}
+          </h2>
           <p className="text-sm text-text-muted">
-            Keep working on the canvas. Your brief, Collaboration and imported assets stay here.
+            {aiEnabled
+              ? 'Keep working on the canvas. Your brief, Collaboration and imported assets stay here.'
+              : 'Keep working on the canvas. Your brief and imported assets stay here.'}
           </p>
         </header>
         {historical && (
@@ -234,24 +240,28 @@ export default function FigmaPane() {
             </p>
           </section>
         )}
-        <section className="space-y-2" aria-label="Figma tool connection">
-          <h3 className="text-sm font-medium">Use Figma tools</h3>
-          <p className="text-sm text-text-muted">
-            Choose Claude Code in Collaboration with its official Figma plugin installed and
-            connected. Ask it to inspect the linked design, make an editable revision, or upload an
-            Artifact. Review tool requests in Collaboration.
-          </p>
-          <p className="text-xs text-text-muted">
-            Claude Code uses its own Figma authorization. A saved link does not grant access, and
-            other Collaboration providers are not connected by this companion.
-          </p>
-        </section>
+        {aiEnabled && (
+          <section className="space-y-2" aria-label="Figma tool connection">
+            <h3 className="text-sm font-medium">Use Figma tools</h3>
+            <p className="text-sm text-text-muted">
+              Choose Claude Code in Collaboration with its official Figma plugin installed and
+              connected. Ask it to inspect the linked design, make an editable revision, or upload
+              an Artifact. Review tool requests in Collaboration.
+            </p>
+            <p className="text-xs text-text-muted">
+              Claude Code uses its own Figma authorization. A saved link does not grant access, and
+              other Collaboration providers are not connected by this companion.
+            </p>
+          </section>
+        )}
         <section className="space-y-3" aria-label="Import Figma export">
           <h3 className="text-sm font-medium">Bring an asset back</h3>
           <p className="text-sm text-text-muted">
-            Ask your collaborator to download a Figma export into this Project Folder, or export it
-            yourself. Import the file below to share it with another member of your Cruxspace. Link
-            the exported frame first so its source is recorded correctly.
+            {aiEnabled
+              ? 'Ask your collaborator to download a Figma export into this Project Folder, or export it yourself.'
+              : 'Export it from Figma into this Project Folder.'}{' '}
+            Import the file below to share it with another Crux in your Garden. Link the exported
+            frame first so its source is recorded correctly.
           </p>
           <label className="block text-sm" htmlFor="figma-output-label">
             Asset name
@@ -283,7 +293,7 @@ export default function FigmaPane() {
                   project.reference!.url,
                 );
                 await refresh();
-                setNotice(`Imported ${output.label}. It is available in Cruxspace assets.`);
+                setNotice(`Imported ${output.label}. It is available in Garden outputs.`);
               });
             }}
           />

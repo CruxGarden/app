@@ -1,3 +1,4 @@
+import { useGardenContext } from '@/stores/gardenContext';
 import { useEffect } from 'react';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useGardenStore } from '@/stores/gardenStore';
@@ -5,6 +6,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { useShallow } from 'zustand/react/shallow';
 
 export function useGarden() {
+  const gardenId = useGardenContext((s) => s.garden?.id);
   const { cruxList, loading, search, sortBy, load, setSearch, setSortBy } = useGardenStore(
     useShallow((s) => ({
       cruxList: s.cruxList,
@@ -23,7 +25,7 @@ export function useGarden() {
   // Load on mount
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, gardenId]);
 
   const handleNewCrux = async () => {
     const crux = await createCrux();

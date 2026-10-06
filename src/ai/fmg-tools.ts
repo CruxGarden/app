@@ -1,3 +1,4 @@
+import { NO_INPUT, onlyKeys } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 /** Fantasy Map Generator App Tools: read the world, name it, make a new one, save a render as an output. */
 export const FMG_TOOLS: AppToolDefinition[] = [
@@ -5,7 +6,7 @@ export const FMG_TOOLS: AppToolDefinition[] = [
     name: 'inspect_map',
     description:
       'Read the open fantasy map: its name, seed, size in pixels, how many cells, burgs (settlements), states and cultures it has, and how many maps this session has generated.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -23,7 +24,7 @@ export const FMG_TOOLS: AppToolDefinition[] = [
     name: 'new_map',
     description:
       'Generate a whole new world with the app’s current generation options (its own New map control) and save it. This replaces the open map; ask before using it on a map a person has edited.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: ['data/project.json'],
     timeoutMs: 3 * 60_000,
   },
@@ -46,11 +47,10 @@ export const FMG_TOOLS: AppToolDefinition[] = [
 ];
 export function fmgCommand(name: string, input: Record<string, unknown>) {
   const keys = Object.keys(input);
-  const only = (allowed: string[]) => keys.every((k) => allowed.includes(k));
   if (name === 'inspect_map' && !keys.length) return { op: 'inspect' };
   if (name === 'set_map_name') {
     if (
-      !only(['name']) ||
+      !onlyKeys(input, ['name']) ||
       typeof input.name !== 'string' ||
       !input.name.trim() ||
       input.name.length > 200
@@ -64,7 +64,7 @@ export function fmgCommand(name: string, input: Record<string, unknown>) {
   }
   if (name === 'save_map_image') {
     if (
-      !only(['format', 'name']) ||
+      !onlyKeys(input, ['format', 'name']) ||
       (input.format !== undefined && !['png', 'svg'].includes(input.format as string)) ||
       (input.name !== undefined &&
         (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 120))

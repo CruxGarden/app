@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { getServices, initServices } from './index';
 import {
@@ -25,7 +26,8 @@ const png = () =>
     { type: 'image/png' },
   );
 
-beforeEach(() => initServices('local'));
+const local = localApiFixture();
+beforeEach(() => initServices());
 
 it('restores imported image and origin together through Growth', async () => {
   const { crux, artifact } = getServices();
@@ -52,7 +54,9 @@ it('restores imported image and origin together through Growth', async () => {
     targetCruxId: target.id,
     path: 'assets/cover.png',
   });
-  const after = (await growth.list()).at(-1)!;
+  expect(await (await growthHostFor(source.id)).list()).toHaveLength(0);
+  expect(await growth.list()).toHaveLength(1);
+  const after = await growth.snapshot({ label: 'Artwork placed', requestedBy: 'person' });
   await growth.restore(before.id, { requestedBy: 'person' });
   expect(
     (await artifact.findByResource('crux', target.id)).some(
@@ -66,7 +70,7 @@ it('restores imported image and origin together through Growth', async () => {
   );
   expect(
     JSON.parse(
-      await artifact.readContent(files.find((f) => f.meta?.path === used.provenancePath)!.id),
+      await artifact.readContent(files.find((f) => f.meta?.path === used.provenancePath)!),
     ),
   ).toEqual(used.origin);
 });
@@ -80,10 +84,11 @@ it('gives agents member-only briefs and assets, and applies the same scoped tran
     brief: 'Warm autumn colors',
     cruxIds: [source.id, target.id],
   });
+  const unrelated = await crux.create({ title: 'Private artwork' });
   const hidden = await createCruxspace({
     name: 'Private plans',
     brief: 'Unrelated',
-    cruxIds: [source.id],
+    cruxIds: [unrelated.id],
   });
   const output = await saveCruxOutput(source.id, png(), 'Cover');
   const execute = createToolExecutor(target.id);
@@ -108,7 +113,7 @@ it('gives agents member-only briefs and assets, and applies the same scoped tran
   expect(JSON.parse(used as string).path).toBe('assets/cover.png');
 });
 
-it('keeps named collections independently of open workspaces without duplicating or deleting Cruxes', async () => {
+it('moves a Crux between Gardens and returns it to the parent when a Garden is retired', async () => {
   const crux = await getServices().crux.create({ title: 'Album website', type: 'workspace' });
   const first = await createCruxspace({
     name: 'Album release',
@@ -116,8 +121,9 @@ it('keeps named collections independently of open workspaces without duplicating
     cruxIds: [crux.id, crux.id],
   });
   const second = await createCruxspace({ name: 'Studio', brief: '', cruxIds: [crux.id] });
-  expect((await getCruxspace(first.id)).cruxIds).toEqual([crux.id]);
-  expect(await listCruxspaces()).toHaveLength(2);
+  expect((await getCruxspace(first.id)).cruxIds).toEqual([]);
+  expect((await getCruxspace(second.id)).cruxIds).toEqual([crux.id]);
+  expect((await listCruxspaces()).map((s) => s.id)).toContain(second.id);
   await updateCruxspace(first.id, {
     name: 'Autumn release',
     brief: 'Ready for launch.',
@@ -129,8 +135,14 @@ it('keeps named collections independently of open workspaces without duplicating
     cruxIds: [],
   });
   await deleteCruxspace(first.id);
-  expect((await listCruxspaces()).map((s) => s.id)).toEqual([second.id]);
-  expect((await getServices().crux.listAll()).map((c) => c.id)).toEqual([crux.id]);
+  await deleteCruxspace(second.id);
+  const remaining = (await listCruxspaces()).map((s) => s.id);
+  expect(remaining).not.toContain(first.id);
+  expect(remaining).not.toContain(second.id);
+  expect(await getServices().crux.findById(crux.id)).toMatchObject({ deleted: null });
+  expect(await local().client.gardenMembership!.parents(crux.id)).toEqual([
+    expect.objectContaining({ id: (await local().client.enterLocalGarden!()).id }),
+  ]);
 });
 
 it('refuses unrelated receivers, stale output versions, traversal and overwrites', async () => {
@@ -167,7 +179,7 @@ it('refuses unrelated receivers, stale output versions, traversal and overwrites
     meta: { path: input.path },
   });
   await expect(copyCruxspaceAsset(input)).rejects.toThrow('already exists');
-  expect((await artifact.findById(original.id)).fingerprint).toBe(original.fingerprint);
+  expect((await artifact.findById(original)).fingerprint).toBe(original.fingerprint);
   await crux.trash(source.id);
   expect(await listCruxspaceAssets(space.id)).toEqual([]);
 });
@@ -194,9 +206,9 @@ it('discovers explicit member outputs and copies pinned bytes with portable prov
     targetCruxId: target.id,
     path: 'assets/cover.png',
   });
-  expect(
-    new Uint8Array(await (await artifact.downloadBlob(used.artifact.id)).arrayBuffer()),
-  ).toEqual(new Uint8Array(await png().arrayBuffer()));
+  expect(new Uint8Array(await (await artifact.downloadBlob(used.artifact)).arrayBuffer())).toEqual(
+    new Uint8Array(await png().arrayBuffer()),
+  );
   expect(used.origin).toMatchObject({
     sourceCruxId: source.id,
     fingerprint: output.fingerprint,
@@ -207,9 +219,9 @@ it('discovers explicit member outputs and copies pinned bytes with portable prov
     blob: new Blob(['changed'], { type: 'image/png' }),
     meta: { path: output.path },
   });
-  expect(
-    new Uint8Array(await (await artifact.downloadBlob(used.artifact.id)).arrayBuffer()),
-  ).toEqual(new Uint8Array(await png().arrayBuffer()));
+  expect(new Uint8Array(await (await artifact.downloadBlob(used.artifact)).arrayBuffer())).toEqual(
+    new Uint8Array(await png().arrayBuffer()),
+  );
   await updateCruxspace(space.id, { name: space.name, brief: '', cruxIds: [target.id] });
   expect(await listCruxspaceAssets(space.id)).toEqual([]);
   const clone = await importCrux({
@@ -221,7 +233,7 @@ it('discovers explicit member outputs and copies pinned bytes with portable prov
     files.some((f) => f.meta?.path === 'assets/cover.png' && f.fingerprint === output.fingerprint),
   ).toBe(true);
   const provenance = files.find((f) => f.meta?.path === used.provenancePath)!;
-  expect(JSON.parse(await artifact.readContent(provenance.id))).toEqual(used.origin);
+  expect(JSON.parse(await artifact.readContent(provenance))).toEqual(used.origin);
 });
 
 it('advertises sounds and ZIP bundles, matches destination extensions, and unpacks a bundle with one provenance record', async () => {
@@ -282,7 +294,7 @@ it('advertises sounds and ZIP bundles, matches destination extensions, and unpac
   expect(used.origin.unpacked).toEqual(['index.html', 'runtime/game.js']);
   const files = await artifact.findByResource('crux', site.id);
   expect(
-    await artifact.readContent(files.find((f) => f.meta?.path === 'public/game/index.html')!.id),
+    await artifact.readContent(files.find((f) => f.meta?.path === 'public/game/index.html')!),
   ).toBe('<canvas></canvas>');
   expect(files.find((f) => f.meta?.path === used.provenancePath)).toBeTruthy();
   await expect(
@@ -337,7 +349,7 @@ it('keeps an editable PPTX output intact when another Cruxspace member uses it',
     path: 'assets/deck.pptx',
   });
   expect(
-    new Uint8Array(await (await artifact.downloadBlob(copied.artifact.id)).arrayBuffer()),
+    new Uint8Array(await (await artifact.downloadBlob(copied.artifact)).arrayBuffer()),
   ).toEqual(bytes);
 });
 
@@ -370,7 +382,7 @@ it('keeps editable Moqira output bytes through Cruxspace transfer and complete e
   const copy = (await artifact.findByResource('crux', target.id)).find(
     (file) => file.meta?.path === copied.origin.path,
   )!;
-  expect(await (await artifact.downloadBlob(copy.id)).text()).toBe(content);
+  expect(await (await artifact.downloadBlob(copy)).text()).toBe(content);
   const imported = await importCrux({
     data: (await exportCrux({ cruxId: source.id })).blob,
     mode: 'clone',
@@ -378,5 +390,5 @@ it('keeps editable Moqira output bytes through Cruxspace transfer and complete e
   const portable = (await artifact.findByResource('crux', imported.cruxId)).find(
     (file) => file.meta?.path === output.path,
   )!;
-  expect(await (await artifact.downloadBlob(portable.id)).text()).toBe(content);
+  expect(await (await artifact.downloadBlob(portable)).text()).toBe(content);
 });

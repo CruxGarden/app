@@ -1,22 +1,49 @@
 name: Deploy Web to S3
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: production-web
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
+    # PR/fork CI cannot enter the production job. Manual retries still check CI below.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     environment: production
     permissions:
       contents: read
+      actions: read
       id-token: write
 
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
     steps:
+      - name: Require successful CI on the current main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          test "$RELEASE_SHA" = "$main_sha" || { echo "::error::Refusing a stale deployment"; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$RELEASE_SHA&event=push&per_page=100" \
+            --jq '.workflow_runs | sort_by(.run_number) | last | select(.head_branch == "main" and .status == "completed" and .conclusion == "success") | .id' \
+            | grep -Eq '^[0-9]+$' || { echo "::error::This main commit has no successful CI run"; exit 1; }
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
 
       - uses: actions/setup-python@v5
         with:
@@ -31,12 +58,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # crux.garden is built on its own from site/, which shares components with
-      # the desktop app through src/ but never reaches src/templates/ or a
-      # vendored *-crux package — scripts/check-site-graph.mjs enforces that.
-      # Seconds rather than minutes, and no template's toolchain can break it.
-      - name: Build the website
-        run: npm run build:site
+      # build:public skips the `prebuild` hook, which builds 24 embedded crux
+      # apps the public site never serves. Those builds are what failed here
+      # (gdevelop) and what made the bundle large enough to exhaust the heap.
+      - name: Build Vite app
+        run: npm run build:public
+        env:
+          # Rollup holds the whole module graph in memory; the runner has far
+          # more RAM than Node claims by default.
+          NODE_OPTIONS: --max-old-space-size=8192
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://api.crux.garden' }}
+          CRUX_BUNDLE_TOOLS: none
+          VITE_PUBLIC_SITE: '1'
+          VITE_PUBLISH_ORIGIN_TEMPLATE: ${{ vars.VITE_PUBLISH_ORIGIN_TEMPLATE || 'https://{cruxId}.publish.crux.garden' }}
+
+      - name: Recheck main before publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$RELEASE_SHA" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -64,3 +103,18 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
+
+      - name: Verify the public homepage serves this build
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error --compressed --max-time 20 \
+              https://crux.garden/ -o /tmp/crux-deployed-index.html && \
+              cmp -s dist/index.html /tmp/crux-deployed-index.html; then
+              echo "crux.garden serves the verified build at $RELEASE_SHA"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::crux.garden did not serve the uploaded build; inspect S3 and CloudFront"
+          exit 1

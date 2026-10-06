@@ -4,11 +4,14 @@
 <dict>
   <!-- Applied to the Electron helper processes (renderer, GPU, plugin) by electron-builder's
        `entitlementsInherit`. `inherit` takes the parent's hardened-runtime settings; jit +
-       unsigned-executable-memory are repeated because the renderer runs V8 too. Nothing else:
+       unsigned-executable-memory are repeated because the renderer runs V8 too. Camera/audio
+       access supports Chromium's capture helpers after consent. Otherwise:
        the helpers load no third-party libraries and read no DYLD_* variables (see
        entitlements.mac.plist for why those two keys are absent). -->
   <key>com.apple.security.inherit</key><true/>
   <key>com.apple.security.cs.allow-jit</key><true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.device.camera</key><true/>
+  <key>com.apple.security.device.audio-input</key><true/>
 </dict>
 </plist>

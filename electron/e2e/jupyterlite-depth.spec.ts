@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { collaborator, outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -58,6 +59,12 @@ test('notebook depth: agent analysis, native error recovery, manual notes, Undo,
     });
   }
   async function rerun(message: string) {
+    // After a reopen or import JupyterLab restores the notebook tab a beat
+    // after the Garden bar reports saved; inspect answers "no notebook open"
+    // until then, and the rerun has no cell to name.
+    await expect(frame().locator('.jp-Notebook .jp-CodeCell').first()).toBeVisible({
+      timeout: 120000,
+    });
     const prior = (await calls()).filter((c: any) => c.name === 'run_jupyterlite_cell').length;
     await collaborator(instance.page, message, 'Re-executed the saved analysis in a fresh kernel.');
     // Imported Collaboration includes the old closing sentence. Wait for this execution's result.
@@ -71,14 +78,19 @@ test('notebook depth: agent analysis, native error recovery, manual notes, Undo,
       )
       .toBe(true);
     const runs = (await calls()).filter((c: any) => c.name === 'run_jupyterlite_cell');
-    expect(JSON.parse(runs.at(-1).result).executionSucceeded).toBe(true);
+    const last = runs.at(-1);
+    const inspected = (await calls()).filter((c: any) => c.name === 'inspect_jupyterlite').at(-1);
+    console.log('rerun inspect →', String(inspected?.result ?? '').slice(0, 1200));
+    // A refused or failed run answers in words, not JSON: say which before parsing.
+    expect(last.result, `${message}: ${last.result}`).not.toMatch(/^Error/);
+    expect(JSON.parse(last.result).executionSucceeded).toBe(true);
     await expect(
       instance.page.getByRole('button', { name: 'Stop', exact: true }),
     ).not.toBeVisible();
   }
   async function manualNote(text: string) {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
     const markdown = frame().locator('.jp-MarkdownCell').first();
     await markdown.dblclick();
     const editor = markdown.locator('.cm-content');
@@ -206,7 +218,7 @@ test('notebook depth: agent analysis, native error recovery, manual notes, Undo,
     instance = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
     await offline();
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     check();
     await rerun('Verify the reopened analysis [jupyterlite:depth-rerun]');

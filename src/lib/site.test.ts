@@ -1,180 +1,118 @@
-import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter, matchRoutes } from 'react-router-dom';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  pickDownload,
-  detectMacArch,
-  archFromRenderer,
-  detectPlatform,
-  classifyAsset,
+  CONTACT,
+  LEGAL_DOCUMENTS,
+  LEGAL_LAST_UPDATED,
+  PRIVACY,
+  TERMS,
+  formatLegalDate,
+} from './legal';
+import {
+  ISSUES_URL,
+  LEGAL_PAGES,
+  RESERVED_USERNAMES,
+  contactTarget,
+  isReservedUsername,
 } from './site';
+import Legal from '@/pages/Legal';
 
-const assets = [
-  { name: 'Crux Garden-1.0.0-arm64.dmg', browser_download_url: 'https://x/arm64.dmg', size: 10 },
-  { name: 'Crux Garden-1.0.0-x64.dmg', browser_download_url: 'https://x/x64.dmg', size: 11 },
-  { name: 'Crux Garden-1.0.0-arm64-mac.zip', browser_download_url: 'https://x/arm64.zip' },
-  { name: 'latest-mac.yml', browser_download_url: 'https://x/latest-mac.yml' },
-  { name: 'Crux Garden-1.0.0-win-x64.exe', browser_download_url: 'https://x/win.exe', size: 20 },
-  { name: 'Crux Garden-1.0.0-win-x64.exe.blockmap', browser_download_url: 'https://x/win.map' },
-  {
-    name: 'Crux Garden-1.0.0-linux-x86_64.AppImage',
-    browser_download_url: 'https://x/app.AppImage',
-    size: 30,
-  },
-  {
-    name: 'Crux Garden-1.0.0-linux-amd64.deb',
-    browser_download_url: 'https://x/app.deb',
-    size: 31,
-  },
-  { name: 'latest-linux.yml', browser_download_url: 'https://x/latest-linux.yml' },
-];
-const LINUX_FF = 'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0';
-const ANDROID =
-  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36';
-const IPHONE =
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+afterEach(() => vi.unstubAllEnvs());
 
-// Real UA strings. Note every Mac browser says "Intel Mac OS X" and carries "AppleWebKit".
-const CHROME_MAC =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
-const SAFARI_MAC =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15';
-const FIREFOX_MAC =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:128.0) Gecko/20100101 Firefox/128.0';
-const CHROME_WIN =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+describe('legal routes are reserved', () => {
+  const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
-const hints = (architecture: string) => ({
-  getHighEntropyValues: async () => ({ architecture }),
-});
-const M2 = 'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)';
-const IRIS = 'ANGLE (Intel, Intel(R) Iris(TM) Plus Graphics 640, OpenGL 4.1)';
-
-describe('site: download picking', () => {
-  it('picks the DMG for the arch and lists the others', () => {
-    const d = pickDownload('v1.0.0', assets, 'x64')!;
-    expect(d).toMatchObject({
-      version: '1.0.0',
-      arch: 'x64',
-      url: 'https://x/x64.dmg',
-      size: 11,
-      detected: true,
-    });
-    expect(d.all.map((a) => a.arch)).toEqual(['arm64', 'x64']);
-    expect(pickDownload('v1.0.0', assets, 'arm64')!.url).toBe('https://x/arm64.dmg');
+  it('/terms, /privacy and /contact outrank a garden address', () => {
+    // The same shape as App.tsx: static pages beside `/:username`, garden first
+    // in the list to show that order is not what decides it.
+    const routes = [
+      { id: 'garden', path: '/:username' },
+      { id: 'creation', path: '/:username/:slug/*' },
+      ...LEGAL_PAGES.map((page) => ({ id: page.path, path: page.path })),
+    ];
+    for (const { path } of LEGAL_PAGES) {
+      expect(matchRoutes(routes, path)?.at(-1)?.route.id).toBe(path);
+      expect(matchRoutes(routes, `${path}/`)?.at(-1)?.route.id).toBe(path);
+    }
+    expect(matchRoutes(routes, '/alice')?.at(-1)?.route.id).toBe('garden');
   });
 
-  it('marks the pick as undetected when the arch is unknown or missing from the release', () => {
-    const unknown = pickDownload('v1.0.0', assets, 'unknown')!;
-    expect(unknown).toMatchObject({ arch: 'arm64', detected: false });
-    expect(unknown.all).toHaveLength(2);
-    expect(pickDownload('v1.0.0', [assets[0]!], 'x64')!).toMatchObject({
-      arch: 'arm64',
-      detected: false,
-    });
+  it('the app router registers every legal page and still has the garden route', () => {
+    expect(app).toContain('...LEGAL_PAGES.map(({ path }) => ({');
+    expect(app).toContain('<Legal page={path} />');
+    expect(app).toContain("path: '/:username'");
   });
 
-  it('falls back to null when there is no DMG', () => {
-    expect(pickDownload('v1.0.0', [assets[3]!], 'arm64')).toBeNull();
+  it('no one can hold a username the website uses for its own pages', () => {
+    for (const name of ['terms', 'privacy', 'contact', 'explore', 'plans', 'docs', 'billing'])
+      expect(isReservedUsername(name)).toBe(true);
+    expect(isReservedUsername('@Terms ')).toBe(true);
+    expect(isReservedUsername('alice')).toBe(false);
+    // Every static first segment in the router is on the list.
+    const segments = [...app.matchAll(/path: '\/([a-z.]+)[/']/g)].map((match) => match[1]);
+    expect(segments.length).toBeGreaterThan(4);
+    for (const segment of segments) expect(RESERVED_USERNAMES).toContain(segment);
   });
 });
 
-describe('site: every platform gets its own primary download', () => {
-  it('detects the desktop OS from the UA and refuses to guess on phones', () => {
-    expect(detectPlatform({ userAgent: CHROME_MAC })).toBe('mac');
-    expect(detectPlatform({ userAgent: SAFARI_MAC })).toBe('mac');
-    expect(detectPlatform({ userAgent: CHROME_WIN })).toBe('windows');
-    expect(detectPlatform({ userAgent: LINUX_FF })).toBe('linux');
-    expect(detectPlatform({ userAgent: ANDROID })).toBe('unknown');
-    expect(detectPlatform({ userAgent: IPHONE })).toBe('unknown');
-    expect(detectPlatform(undefined)).toBe('unknown');
-  });
-
-  it('classifies installers by name and ignores manifests, zips and blockmaps', () => {
-    const kinds = assets.map((a) => classifyAsset(a)?.kind ?? null);
-    expect(kinds).toEqual(['dmg', 'dmg', null, null, 'exe', null, 'AppImage', 'deb', null]);
-    expect(classifyAsset(assets[6]!)).toMatchObject({ platform: 'linux', label: 'Linux AppImage' });
-  });
-
-  it('Windows gets the installer, Linux the AppImage, both marked detected', () => {
-    const win = pickDownload('v1.0.0', assets, 'unknown', 'windows')!;
-    expect(win).toMatchObject({
-      platform: 'windows',
-      kind: 'exe',
-      url: 'https://x/win.exe',
-      detected: true,
-    });
-    const linux = pickDownload('v1.0.0', assets, 'unknown', 'linux')!;
-    expect(linux).toMatchObject({
-      platform: 'linux',
-      kind: 'AppImage',
-      url: 'https://x/app.AppImage',
-      detected: true,
-    });
-    // the .deb is still on offer
-    expect(linux.options.filter((o) => o.platform === 'linux').map((o) => o.kind)).toEqual([
-      'AppImage',
-      'deb',
-    ]);
-  });
-
-  it('an unknown platform, or one the release lacks, falls back to the Apple silicon DMG undetected', () => {
-    expect(pickDownload('v1.0.0', assets, 'unknown', 'unknown')!).toMatchObject({
-      platform: 'mac',
-      arch: 'arm64',
-      detected: false,
-    });
-    const macOnly = assets.slice(0, 4);
-    expect(pickDownload('v1.0.0', macOnly, 'unknown', 'windows')!).toMatchObject({
-      platform: 'mac',
-      detected: false,
-    });
-    // every installer is listed so the page can offer them all
-    expect(pickDownload('v1.0.0', assets, 'unknown', 'unknown')!.options).toHaveLength(5);
-  });
-});
-
-describe('site: Mac architecture detection', () => {
-  const noWebgl = () => null;
-
-  it('trusts the high-entropy Client Hint on Chromium', async () => {
-    expect(
-      await detectMacArch({ userAgent: CHROME_MAC, userAgentData: hints('arm') }, noWebgl),
-    ).toBe('arm64');
-    expect(
-      await detectMacArch({ userAgent: CHROME_MAC, userAgentData: hints('x86') }, noWebgl),
-    ).toBe('x64');
-  });
-
-  it('falls back to the WebGL renderer when hints are absent or refused', async () => {
-    expect(await detectMacArch({ userAgent: FIREFOX_MAC }, () => IRIS)).toBe('x64');
-    expect(await detectMacArch({ userAgent: FIREFOX_MAC }, () => M2)).toBe('arm64');
-    const refused = {
-      getHighEntropyValues: async () => {
-        throw new Error('NotAllowedError');
-      },
-    };
-    expect(await detectMacArch({ userAgent: CHROME_MAC, userAgentData: refused }, () => M2)).toBe(
-      'arm64',
+describe('legal pages', () => {
+  const page = (path: (typeof LEGAL_PAGES)[number]['path']) =>
+    renderToStaticMarkup(
+      createElement(MemoryRouter, { initialEntries: [path] }, createElement(Legal, { page: path })),
     );
+
+  it('each page renders its title, summary, every section and the date', () => {
+    for (const { path } of LEGAL_PAGES) {
+      const html = page(path);
+      const doc = LEGAL_DOCUMENTS[path];
+      expect(html).toContain(`<h1`);
+      expect(html).toContain(`>${doc.title}</h1>`);
+      for (const section of doc.sections) expect(html).toContain(`>${section.heading}</h2>`);
+      expect(html).toContain(`dateTime="${LEGAL_LAST_UPDATED}"`);
+      expect(html).toContain(formatLegalDate(LEGAL_LAST_UPDATED));
+      for (const other of LEGAL_PAGES) expect(html).toContain(`href="${other.path}"`);
+    }
   });
 
-  it('is unknown on Safari (renderer is "Apple GPU" on every Mac) and on non-Macs', async () => {
-    expect(await detectMacArch({ userAgent: SAFARI_MAC }, () => 'Apple GPU')).toBe('unknown');
-    expect(await detectMacArch({ userAgent: SAFARI_MAC }, noWebgl)).toBe('unknown');
-    expect(
-      await detectMacArch({ userAgent: CHROME_WIN, userAgentData: hints('x86') }, () => IRIS),
-    ).toBe('unknown');
-    expect(await detectMacArch(undefined, noWebgl)).toBe('unknown');
+  it('the date is a real day, written the same for everyone', () => {
+    expect(LEGAL_LAST_UPDATED).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(formatLegalDate('2026-10-04')).toBe('4 October 2026');
   });
 
-  it('never infers Intel from the UA string alone', async () => {
-    // "Intel Mac OS X" is what Apple silicon Macs send too
-    expect(await detectMacArch({ userAgent: CHROME_MAC }, noWebgl)).toBe('unknown');
+  it('states no address of its own: contact comes from the build', () => {
+    const text = JSON.stringify([TERMS, PRIVACY, CONTACT]);
+    expect(text).not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
+    expect(text).not.toMatch(/\b(Inc\.|LLC|Ltd|GmbH)\b/);
+
+    expect(contactTarget()).toEqual({ kind: 'issues', href: ISSUES_URL, label: 'GitHub issues' });
+    expect(page('/contact')).toContain(`href="${ISSUES_URL}"`);
+
+    vi.stubEnv('VITE_CONTACT_EMAIL', 'hello@example.invalid');
+    expect(contactTarget()).toEqual({
+      kind: 'email',
+      href: 'mailto:hello@example.invalid',
+      label: 'hello@example.invalid',
+    });
+    expect(page('/privacy')).toContain('href="mailto:hello@example.invalid"');
+
+    vi.stubEnv('VITE_CONTACT_EMAIL', 'not an address');
+    expect(contactTarget().kind).toBe('issues');
   });
 
-  it('reads renderer strings', () => {
-    expect(archFromRenderer('AMD Radeon Pro 5500M OpenGL Engine')).toBe('x64');
-    expect(archFromRenderer('Apple M1 Pro')).toBe('arm64');
-    expect(archFromRenderer('Apple GPU')).toBe('unknown');
-    expect(archFromRenderer(null)).toBe('unknown');
+  it('privacy says what the product does', () => {
+    const text = JSON.stringify(PRIVACY);
+    for (const fact of [
+      /no usage analytics/i,
+      /directly from your device to the provider/i,
+      /ledger does not contain your conversation/i,
+      /Stripe/,
+      /same visitor, same day/,
+      /Settings → Account/,
+    ])
+      expect(text).toMatch(fact);
+    expect(JSON.stringify(TERMS)).toMatch(/MIT License/);
   });
 });

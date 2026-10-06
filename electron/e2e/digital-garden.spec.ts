@@ -1,9 +1,10 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium, type Page } from '@playwright/test';
-import { existsSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { openBuilder } from './builder-helpers';
 
@@ -160,8 +161,8 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
     });
 
     await test.step('the scripted collaborator plants a seedling with write_file', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Add a note about moss [garden:note]');
       await box.press('Enter');
@@ -189,11 +190,11 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       } finally {
         await close();
       }
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
     });
 
     await test.step('Share builds the garden and publishes it with the graph data and search', async () => {
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
@@ -227,7 +228,7 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       ).toString('utf8');
       expect(home).not.toMatch(/fonts\.googleapis|cdn\.jsdelivr/);
       await page.screenshot({ path: join(evidence, 'garden-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
   } finally {
     await first.app.close();
@@ -238,15 +239,21 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the garden and its notes are still there', async () => {
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       await openBuilder(page);
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('Compost').first()).toBeVisible();
       await page.screenshot({ path: join(evidence, 'garden-reopened.png') });
+      // Local dependencies must not travel in the private backup. Preview may
+      // reinstall them immediately on import, so assert a local-only sentinel
+      // and the authoritative manifest instead of racing directory creation.
+      const dependencySentinel = join(folder, 'node_modules/crux-local-only.txt');
+      mkdirSync(join(folder, 'node_modules'), { recursive: true });
+      writeFileSync(dependencySentinel, 'This local dependency must not travel.');
       await exportNativeCrux(page, archive, second.app, async () => {
-        await page.getByRole('button', { name: 'Toggle export' }).click();
+        await togglePanel(page, 'Toggle export');
         await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
       });
     });
@@ -270,7 +277,13 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       await expect.poll(() => existsSync(note('moss')), { timeout: 60000 }).toBe(true);
       expect(existsSync(note('compost'))).toBe(true);
       expect(existsSync(join(folder, 'src/lib/wiki/links.mjs'))).toBe(true);
-      expect(existsSync(join(folder, 'node_modules'))).toBe(false);
+      expect(existsSync(join(folder, 'node_modules/crux-local-only.txt'))).toBe(false);
+      const importedPaths = await page.evaluate(async (cruxId) => {
+        const content = window.electronAPI!.sqlite.fileContent!;
+        const head = await content.head(cruxId);
+        return (await content.list({ cruxId, expected: head! })).entries.map((file) => file.path);
+      }, importedId);
+      expect(importedPaths.some((path) => path.split('/').includes('node_modules'))).toBe(false);
       await openBuilder(page);
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await page.screenshot({ path: join(evidence, 'garden-imported.png') });

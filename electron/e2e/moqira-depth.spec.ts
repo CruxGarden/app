@@ -1,8 +1,15 @@
+import { enableAdvancedMode, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import {
+  enterGarden,
+  storedCrux,
+  setAutoCheck,
+  reenterWorkspace,
+  storedFingerprint,
+} from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -11,6 +18,7 @@ test('Moqira subtitles remain directly editable after saving and reopening the a
   const { app, page } = await launchApp();
   try {
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByRole('button', { name: /^Mockups/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -75,7 +83,8 @@ test('Moqira tools create editable screens, preserve manual work, use native his
   const run = async (action: string) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const done = 'Moqira depth ' + action + ' complete.';
     const count = async () =>
       (await storedCrux(page, id)).messages.filter(
@@ -108,13 +117,14 @@ test('Moqira tools create editable screens, preserve manual work, use native his
   try {
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
     await enterGarden(instance.page);
+    await enableAdvancedMode(instance.page);
     await instance.page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await instance.page.getByRole('button', { name: /^Mockups/ }).click();
     await instance.page.getByRole('button', { name: 'Create', exact: true }).click();
     await ready();
     id = (await instance.page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(instance.page, id)).projectFolder;
-    await instance.page.getByRole('switch', { name: 'Check automatically ✓', exact: true }).click();
+    await setAutoCheck(instance.page, false);
     // The Artifact is a real PNG generated in Chromium, then ingested normally.
     const image = await instance.page.evaluate(() => {
       const canvas = document.createElement('canvas');
@@ -131,11 +141,11 @@ test('Moqira tools create editable screens, preserve manual work, use native his
     writeFileSync(join(folder, 'brand.png'), Buffer.from(image, 'base64'));
     await expect
       .poll(
-        () =>
-          instance.page.evaluate(async () =>
-            window.electronAPI!.sqlite.get(
-              "SELECT id FROM artifacts WHERE path = 'brand.png' LIMIT 1",
-            ),
+        async () =>
+          storedFingerprint(
+            instance.page,
+            (await instance.page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!,
+            'brand.png',
           ),
         { timeout: 60000 },
       )
@@ -216,7 +226,7 @@ test('Moqira tools create editable screens, preserve manual work, use native his
     await instance.app.close();
     instance = await launchApp({ dir });
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
-    await instance.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(instance.page);
     await ready();
     await expect(
       frame().locator('.canvas-node').getByText('Handmade stationery', { exact: true }),
@@ -228,6 +238,7 @@ test('Moqira tools create editable screens, preserve manual work, use native his
     instance = await launchApp();
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
     await enterGarden(instance.page);
+    await enableAdvancedMode(instance.page);
     await importNativeCrux(instance.page, archive);
     await ready();
     id = (await instance.page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;

@@ -14,7 +14,7 @@ import type { SubagentTask } from '@/services/subagents';
  * message. Beyond this the renderer stalls or the IPC channel gives up, so we
  * refuse with a clear message instead. Streaming is a later change.
  */
-export const MAX_TRANSCODE_BYTES = 500 * 1024 * 1024;
+export { MAX_TRANSCODE_BYTES } from '@/lib/platform';
 
 /** "IMG_0001.jpg" → "IMG 0001"; "wet-leaves.png" → "wet leaves". */
 export function titleFromFileName(name: string): string {

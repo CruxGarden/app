@@ -30,6 +30,16 @@ describe('hashContent (the Fingerprint)', () => {
     expect(fromString).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it('hashes a byte view rather than unrelated bytes in its backing allocation', async () => {
+    const expected = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+    const bytes = new Uint8Array([0, 97, 98, 99, 0]);
+    expect(await hashContent(bytes.subarray(1, 4))).toBe(expected);
+    expect(await hashContent(Buffer.from('xabcx').subarray(1, 4))).toBe(expected);
+    expect(await hashContent(bytes.subarray(1, 2))).not.toBe(
+      await hashContent(bytes.subarray(2, 3)),
+    );
+  });
+
   it('different content never shares a fingerprint (sanity)', async () => {
     expect(await hashContent('a')).not.toBe(await hashContent('b'));
     // Byte-level difference invisible to trim/normalize must still differ

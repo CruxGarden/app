@@ -26,8 +26,15 @@ export function isHtmlPath(path: string): boolean {
   return ext === 'html' || ext === 'htm';
 }
 
-export function isConfigJsonPath(path: string): boolean {
+export function isConfigJsonPath(path: string, settingsPath?: string | null): boolean {
+  if (settingsPath && path.replace(/^\/+/, '') === settingsPath.replace(/^\/+/, '')) return true;
   return /^config\.json$/i.test(basename(path));
+}
+
+/** The settings file a template declares for its form (`contentModel.settings.path`), if any. */
+export function settingsPathOf(meta: Record<string, unknown> | null | undefined): string | null {
+  const model = meta?.contentModel as { settings?: { path?: unknown } } | undefined;
+  return typeof model?.settings?.path === 'string' ? model.settings.path : null;
 }
 
 /** The crux thumbnail file — excluded from auto-capture to avoid feedback loops. */
@@ -47,12 +54,16 @@ export interface SitePreviewInput {
 }
 
 export interface PreviewInput {
+  /** History has saved bytes, never a lease on the live workspace runtime. */
+  historical?: boolean;
   /** Canonical artifact path (pathOf). */
   path: string;
   viewMode: 'source' | 'preview' | 'form';
   mimeType: string;
   /** Crux meta carries a formSchema (template cruxes). */
   hasFormSchema: boolean;
+  /** The template's declared settings file, when it is not config.json. */
+  settingsPath?: string | null;
   /** Text content is loaded (content !== null). */
   hasContent: boolean;
   /** Binary blob URL is available (blobUrl !== null). */
@@ -103,8 +114,16 @@ export function previewFor(input: PreviewInput): PreviewTarget {
   const { path, viewMode, mimeType, site } = input;
   const ext = getExtension(path);
 
+  if (input.historical && input.hasContent && requiresLivePreview(path, site.isSite))
+    return { kind: 'source' };
+
   // Form mode: schema-driven editor for config.json
-  if (viewMode === 'form' && isConfigJsonPath(path) && input.hasFormSchema && input.hasContent) {
+  if (
+    viewMode === 'form' &&
+    isConfigJsonPath(path, input.settingsPath) &&
+    input.hasFormSchema &&
+    input.hasContent
+  ) {
     return { kind: 'form' };
   }
 
@@ -142,10 +161,16 @@ export function previewFor(input: PreviewInput): PreviewTarget {
  * mode for auto-capture) and for Site Cruxes once the dev server is up.
  */
 export function mountedIframeSrc(
-  input: Pick<PreviewInput, 'path' | 'site' | 'previewUrl'>,
+  input: Pick<PreviewInput, 'path' | 'site' | 'previewUrl' | 'historical'>,
 ): string | null {
+  if (input.historical) return null;
   const { site } = input;
   const effective = site.isSite ? site.url : input.previewUrl;
   const mounted = (isHtmlPath(input.path) && !site.isSite) || (site.isSite && !!site.url);
   return mounted && effective ? effective : null;
+}
+
+/** These previews execute a workspace runtime rather than render saved file bytes. */
+export function requiresLivePreview(path: string, isSite: boolean): boolean {
+  return isHtmlPath(path) || isSite;
 }

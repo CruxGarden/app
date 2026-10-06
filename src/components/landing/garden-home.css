@@ -7,11 +7,9 @@
   --border: #2c3735;
   --surface: #1a2524;
   --accent: #ceff5f;
-  --gateway-title: #eff3e9;
-  --gateway-subtitle: #a3ada8;
   background: var(--bg);
   color: var(--text);
-  font-family: Outfit, system-ui, sans-serif;
+  font-family: Inter, system-ui, sans-serif;
   min-height: 100vh;
   overflow: clip;
 }
@@ -96,7 +94,7 @@
 }
 .grow-hero-copy h1 {
   font:
-    800 clamp(80px, 8.8vw, 152px)/0.84 Outfit,
+    800 clamp(80px, 8.8vw, 152px)/0.84 Inter,
     system-ui,
     sans-serif;
   letter-spacing: -0.065em;

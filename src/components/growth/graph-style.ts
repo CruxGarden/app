@@ -1,7 +1,38 @@
-import type { GrowthNode } from '@/services/growth-graph';
+import type { GrowthLink, GrowthNode } from '@/services/growth-graph';
 
-export const laneColors = ['#8ecb94', '#73bfc9', '#dfb56f', '#b4a0df', '#df94ab', '#a9c76d'];
-export const laneColor = (lane: number) => laneColors[lane % laneColors.length]!;
+export interface GraphAppearance {
+  background: string;
+  text: string;
+  textMuted: string;
+  selected: string;
+  selectionWidth: number;
+  lanes: readonly string[];
+  link: string;
+  mergeLink: string;
+  transferLink: string;
+  inactive: string;
+  fontFamily: string;
+  fontWeight: string;
+  letterSpacing: string;
+  labelSize: number;
+  motion: { base: number; slow: number };
+}
+export const laneColor = (appearance: GraphAppearance, lane: number) =>
+  appearance.lanes[lane % appearance.lanes.length]!;
+export function graphLinkColor(
+  appearance: GraphAppearance,
+  link: GrowthLink,
+  selectedId: string | null,
+  ancestry: ReadonlySet<string>,
+) {
+  return selectedId && !ancestry.has(endpointId(link.target))
+    ? appearance.inactive
+    : link.kind === 'merge'
+      ? appearance.mergeLink
+      : link.kind === 'transfer'
+        ? appearance.transferLink
+        : appearance.link;
+}
 export function safeGraphLabel(text: string) {
   // The library interprets tooltip strings as HTML. Task names are ordinary untrusted text.
   return text.replace(
@@ -37,4 +68,5 @@ export interface GraphCanvasProps {
   onSelect: (id: string) => void;
   fit: number;
   reducedMotion: boolean;
+  appearance: GraphAppearance;
 }

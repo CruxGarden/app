@@ -88,6 +88,20 @@ context, and the published sites on `*.publish.crux.garden`.
   processes. Filesystem IPC resolves paths against the Garden Root and the crux's Project Folder
   (`electron/src/paths.ts`, `isInside`); a renderer reaching outside them is a vulnerability.
 
+### Workspace permissions
+
+`electron/src/workspace-permissions.ts` owns the workspace session's permission policy.
+Sensitive requests must belong to the live app document or an active workspace preview in the
+same window. Camera, microphone and clipboard reads require consent for each request;
+approval is checked again after the dialog and is never remembered by preview port. Unknown
+permissions are refused. The WWW browser has its own session and policy.
+
+Screen capture requires explicit consent. Standard screen sharing then asks for a screen or
+window and, if requested, a separate system-audio choice. Electron also exposes older capture
+APIs that choose their own source and cannot be distinguished at its permission callback. The
+broad capture prompt explicitly covers that possibility; these requests are never silently
+approved. Cancelling a source choice returns no stream. Operating-system permissions still apply.
+
 ### Published cruxes
 
 - Published files are served from a per-crux origin (`{cruxId}.publish.crux.garden`), so one

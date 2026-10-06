@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,8 +18,9 @@ async function showHtml(page: Page, id: string, name: string) {
     </script>`,
   );
   const tree = page.getByRole('tree');
-  const toggle = page.getByRole('button', { name: 'Toggle artifacts' });
-  if ((await toggle.getAttribute('aria-pressed')) === 'false') await toggle.click();
+
+  if ((await panelPressed(page, 'Toggle artifacts')) === 'false')
+    await togglePanel(page, 'Toggle artifacts');
   await tree.getByText('index.html', { exact: true }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   await expect(page.frameLocator('iframe[data-crux-id]').getByRole('heading')).toHaveText(name);
@@ -126,7 +128,8 @@ test('static previews retain distinct ports and storage; shortcuts work from a p
           modifiers: ['control', 'alt'],
         });
     });
-    await expect(page.getByRole('textbox', { name: 'Find an open Crux' })).toBeFocused();
+    // The switcher's search is scoped to the Garden in view ("Find a Crux in My Garden").
+    await expect(page.getByRole('textbox', { name: /^Find a Crux in / })).toBeFocused();
     await page.keyboard.press('Escape');
     await switchCrux(page, 'Beta');
     await page.getByRole('button', { name: 'Switch Crux workspace' }).click();

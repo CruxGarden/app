@@ -1,0 +1,1 @@
+plasma-rim=0.35 react-rim-activity=0.95 lit=1.2999999999999998

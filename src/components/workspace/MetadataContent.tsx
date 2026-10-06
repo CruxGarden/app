@@ -1,4 +1,7 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useMemo, useState, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { SectionLabel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import type { Crux, CruxSummary, CruxKind, CruxVisibility, ChatMessage } from '@/api/types';
@@ -8,17 +11,26 @@ import { getModelShortName } from '@/ai/providers';
 
 const VISIBILITY_ORDER: CruxVisibility[] = ['public', 'unlisted', 'private'];
 const VISIBILITY_COLORS: Record<CruxVisibility, string> = {
-  public: 'bg-accent/20 text-accent',
+  public: 'bg-accent/(--tint-subtle) text-accent',
   unlisted: 'bg-accent-muted text-text-muted',
   private: 'bg-error-muted text-error',
 };
 
-const KIND_OPTIONS: (CruxKind | undefined)[] = [undefined, 'webapp', 'page', 'document', 'image'];
+// 'tool' marks a Crux Tool's Template Crux (ADR 0050): published whole, installed by cloning.
+const KIND_OPTIONS: (CruxKind | undefined)[] = [
+  undefined,
+  'webapp',
+  'page',
+  'document',
+  'image',
+  'tool',
+];
 const KIND_LABELS: Record<string, string> = {
   webapp: 'Web App',
   page: 'Page',
   document: 'Document',
   image: 'Image',
+  tool: 'Tool template',
 };
 
 // ── Field Components ─────────────────────────────────
@@ -26,7 +38,7 @@ const KIND_LABELS: Record<string, string> = {
 export function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">{label}</span>
+      <SectionLabel tone="muted">{label}</SectionLabel>
       <div className="text-xs font-mono text-text">{children}</div>
     </div>
   );
@@ -105,7 +117,7 @@ function EditableField({
           setDraft(value);
           setEditing(true);
         }}
-        className="text-left hover:text-accent transition-colors cursor-pointer w-full flex items-start gap-1.5 group"
+        className="group text-left cursor-pointer flex items-start gap-1.5 -mx-1.5 px-1.5 py-0.5 w-[calc(100%+0.75rem)] rounded-[var(--radius-sm)] hover:bg-action-button-hover hover:text-accent transition-colors"
         title="Click to edit"
       >
         <span className="truncate flex-1">
@@ -120,7 +132,7 @@ function EditableField({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-text-muted shrink-0 mt-0.5"
+          className="text-text-muted group-hover:text-accent transition-colors shrink-0 mt-0.5"
         >
           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
           <path d="m15 5 4 4" />
@@ -157,10 +169,13 @@ function TagInput({
   tags,
   onChange,
   readOnly,
+  tagLink,
 }: {
   tags: string[];
   onChange: (tags: string[]) => void;
   readOnly?: boolean;
+  /** Where a tag leads when the field is read-only (the public page → Explore). */
+  tagLink?: (tag: string) => string;
 }) {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -199,10 +214,16 @@ function TagInput({
             key={tag}
             className={cn(
               'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs font-mono',
-              'bg-accent/15 text-accent',
+              'bg-accent/(--tint-light) text-accent',
             )}
           >
-            {tag}
+            {readOnly && tagLink ? (
+              <Link to={tagLink(tag)} className="hover:underline" title={`Explore #${tag}`}>
+                {tag}
+              </Link>
+            ) : (
+              tag
+            )}
             {!readOnly && (
               <button
                 onClick={() => removeTag(tag)}
@@ -226,7 +247,7 @@ function TagInput({
               }
             }}
             placeholder={tags.length === 0 ? 'add tags...' : ''}
-            className="bg-transparent text-xs font-mono text-text outline-none min-w-[60px] flex-1 py-0.5 placeholder:text-text-muted/50"
+            className="bg-transparent text-xs font-mono text-text outline-none min-w-[60px] flex-1 py-0.5 placeholder:text-placeholder"
           />
         )}
       </div>
@@ -242,6 +263,8 @@ interface MetadataContentProps {
   authorName?: string;
   messages?: ChatMessage[];
   readOnly?: boolean;
+  /** Read-only tags become links (the public page sends them to Explore). */
+  tagLink?: (tag: string) => string;
   onUpdate?: (fields: Record<string, unknown>) => void;
 }
 
@@ -273,7 +296,11 @@ function MetaField({
     <EditableField
       label={label}
       value={value}
-      onSave={(v) => onUpdate({ [label.toLowerCase()]: v })}
+      onSave={(v) => {
+        // A Crux always has a slug: blank means "leave it".
+        if (label === 'Slug' && !v.trim()) return;
+        onUpdate({ [label.toLowerCase()]: v });
+      }}
       multiline={multiline}
     />
   );
@@ -285,8 +312,13 @@ export default function MetadataContent({
   authorName,
   messages,
   readOnly,
+  tagLink,
   onUpdate,
 }: MetadataContentProps) {
+  // With AI tools off the collaborator's traces stay out of view; a public page
+  // (readOnly) shows what its owner published, whatever the viewer's setting.
+  const aiEnabled = useAiEnabled();
+  const showAi = aiEnabled || !!readOnly;
   const collaborators = useMemo(() => {
     if (!messages?.length) return [];
     const models = new Set<string>();
@@ -331,11 +363,12 @@ export default function MetadataContent({
           tags={(crux.meta?.tags as string[]) || []}
           onChange={(tags) => onUpdate?.({ meta: { tags } })}
           readOnly={readOnly}
+          tagLink={tagLink}
         />
       </div>
 
       {/* ── Contributors ── */}
-      {(authorName || collaborators.length > 0) && (
+      {(authorName || (showAi && collaborators.length > 0)) && (
         <>
           <div className="divider" />
           <div className="flex flex-col gap-2">
@@ -344,7 +377,7 @@ export default function MetadataContent({
                 <span>{authorName}</span>
               </FieldRow>
             )}
-            {collaborators.length > 0 && (
+            {showAi && collaborators.length > 0 && (
               <FieldRow label="Collaborators">
                 {collaborators.map((model) => (
                   <span key={model}>{formatModel(model)}</span>
@@ -365,11 +398,23 @@ export default function MetadataContent({
             <span className="px-2 py-0.5 rounded-full text-2xs font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
               {crux.visibility}
             </span>
+          ) : crux.meta?.publishedAt ? (
+            // A shared page is public by being shared; the local value would only
+            // mislead here. Whether it is listed is the Discoverable switch in Share.
+            <span
+              className={cn(
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase inline-block',
+                VISIBILITY_COLORS.public,
+              )}
+              title="Shared pages are public. Listing in Explore is the Discoverable switch in Share."
+            >
+              public
+            </span>
           ) : (
             <button
               onClick={cycleVisibility}
               className={cn(
-                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-colors',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/(--tint-muted)',
                 VISIBILITY_COLORS[crux.visibility],
               )}
               title="Click to change"
@@ -394,9 +439,9 @@ export default function MetadataContent({
             <button
               onClick={cycleKind}
               className={cn(
-                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-colors',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-[filter,box-shadow] hover-bright active-dim hover:ring-1 hover:ring-current/(--tint-muted)',
                 crux.kind
-                  ? 'bg-accent/20 text-accent'
+                  ? 'bg-accent/(--tint-subtle) text-accent'
                   : 'bg-badge text-badge-text border border-badge-border',
               )}
               title="Click to change"
@@ -415,14 +460,12 @@ export default function MetadataContent({
         </FieldRow>
       </div>
 
-      {/* ── AI Summary ── */}
-      {summary && (
+      {/* ── The collaborator's summary ── */}
+      {showAi && summary && (
         <>
           <div className="divider" />
           <div className="flex flex-col gap-2">
-            <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
-              AI Summary
-            </span>
+            <SectionLabel tone="muted">Summary</SectionLabel>
             {summary.purpose && (
               <FieldRow label="Purpose">
                 <span className="whitespace-pre-wrap">{summary.purpose}</span>

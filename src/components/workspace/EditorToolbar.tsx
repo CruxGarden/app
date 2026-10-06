@@ -1,31 +1,41 @@
 import { cn } from '@/lib/cn';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
+import { buttonClass, segmentClass } from '@/components/ui/button-class';
 import { isPreviewable } from '@/lib/monacoLanguages';
 import type { EditorTab, EditorViewMode } from '@/stores/uiStore';
+
+import { isConfigJsonPath } from '@/lib/preview-decision';
 
 interface EditorToolbarProps {
   tab: EditorTab;
   hasContent: boolean;
   hasFormSchema: boolean;
+  /** The template's declared settings file, when it is not config.json. */
+  settingsPath?: string | null;
   onViewModeChange: (mode: EditorViewMode) => void;
   onSave?: () => void;
   onCapture?: () => void;
   isCapturing?: boolean;
+  previewAvailable?: boolean;
 }
 
 export default function EditorToolbar({
   tab,
   hasContent,
   hasFormSchema,
+  settingsPath,
   onViewModeChange,
   onSave,
   onCapture,
   isCapturing,
+  previewAvailable = true,
 }: EditorToolbarProps) {
-  const canPreview = isPreviewable(tab.path) && hasContent;
+  const advancedMode = useAdvancedMode();
+  const canPreview = previewAvailable && isPreviewable(tab.path) && hasContent;
   const inPreview = tab.viewMode === 'preview' && canPreview;
 
-  // Show form button for config.json when a form schema exists
-  const isConfigFile = /^config\.json$/i.test(tab.path.split('/').pop() || '');
+  // Show form button for the settings file (config.json, or the template's own) when a form schema exists
+  const isConfigFile = isConfigJsonPath(tab.path, settingsPath);
   const canForm = isConfigFile && hasFormSchema && hasContent;
 
   return (
@@ -67,7 +77,7 @@ export default function EditorToolbar({
         {tab.dirty && onSave && (
           <button
             onClick={onSave}
-            className="px-2 py-0.5 text-2xs font-mono rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer"
+            className={buttonClass('primary', 'xs', 'min-h-6 py-0.5 px-2 text-2xs')}
           >
             Save
           </button>
@@ -76,11 +86,13 @@ export default function EditorToolbar({
         {/* View mode toggle */}
         {(canPreview || canForm) && (
           <div className="flex bg-bg rounded-[var(--radius-sm)] p-0.5">
-            <ModeButton
-              label="Source"
-              active={tab.viewMode === 'source'}
-              onClick={() => onViewModeChange('source')}
-            />
+            {(advancedMode || tab.viewMode === 'source') && (
+              <ModeButton
+                label="Source"
+                active={tab.viewMode === 'source'}
+                onClick={() => onViewModeChange('source')}
+              />
+            )}
             {canForm && (
               <ModeButton
                 label="Form"
@@ -114,10 +126,8 @@ function ModeButton({
   return (
     <button
       onClick={onClick}
-      className={cn(
-        'px-2 py-0.5 text-2xs font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-        active ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text',
-      )}
+      aria-pressed={active}
+      className={segmentClass(active, 'xs', 'font-mono')}
     >
       {label}
     </button>

@@ -1,9 +1,10 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -88,8 +89,8 @@ test('Shader: rings of light compile, a person edits and saves a frame, the coll
     });
 
     await test.step('the scripted collaborator names the shader, replaces its source and saves a frame', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Make it warmer [shader:tweak]');
       await box.press('Enter');
@@ -108,7 +109,7 @@ test('Shader: rings of light compile, a person edits and saves a frame, the coll
           .map((o) => o.label)
           .sort(),
       ).toEqual(['Pink rings', 'Warm rings']);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'glsl-agent.png') });
     });
 
@@ -143,7 +144,7 @@ test('Shader: rings of light compile, a person edits and saves a frame, the coll
         ]),
       );
       await page.screenshot({ path: join(evidence, 'glsl-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {
@@ -155,7 +156,7 @@ test('Shader: rings of light compile, a person edits and saves a frame, the coll
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the shader comes back with its name, source and outputs', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#shader-name')).toHaveValue('Warm rings');

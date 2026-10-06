@@ -19,9 +19,10 @@
  * file wins (an outside edit), so there is one truth and it is the file.
  */
 
-import { getSetting, setSetting, removeSetting } from './settings';
+import { getSetting, setSettingDurably, removeSetting, flushSettings } from './settings';
+import { createKeyedQueue } from '@/lib/keyed-queue';
 import { SettingsKey } from '@/lib/constants';
-import { Capability, can, type ProjectBridge } from '@/lib/platform';
+import { Capability, can } from '@/lib/platform';
 import type { ToolDefinition } from '@/ai/tools';
 
 export const MEMORY_SECTIONS = ['Preferences', 'Voice', 'Decisions', 'Notes'] as const;
@@ -103,13 +104,25 @@ export function getMemory(): string {
 }
 
 /** Replace the memory (Settings → Memory textarea). Normalized; mirrored to disk. */
-export async function setMemory(text: string): Promise<string> {
-  const normalized = normalizeMemory(text);
-  if (isMemoryEmpty(normalized)) removeSetting(SettingsKey.GardenMemory);
-  else setSetting(SettingsKey.GardenMemory, normalized);
-  for (const fn of listeners) fn(normalized);
-  await writeMirror(normalized);
-  return normalized;
+const memoryWrites = createKeyedQueue();
+export async function setMemory(text: string, expected = getMemory()): Promise<string> {
+  return memoryWrites('memory', async () => {
+    if (getMemory() !== expected) throw new Error('Memory changed. Reload it before saving.');
+    const normalized = normalizeMemory(text);
+    const bridge = memoryBridge();
+    if (bridge) {
+      const disk = await bridge.readMemory();
+      if (disk !== null && normalizeMemory(disk) !== expected)
+        throw new Error('Memory changed in another app. Reload it before saving.');
+      await bridge.writeMemory(normalized, disk);
+    }
+    if (isMemoryEmpty(normalized)) {
+      removeSetting(SettingsKey.GardenMemory);
+      await flushSettings();
+    } else await setSettingDurably(SettingsKey.GardenMemory, normalized);
+    for (const fn of listeners) fn(normalized);
+    return normalized;
+  });
 }
 
 /** Add one line under a section — the `remember` tool and nothing else calls this. Returns the saved line. */
@@ -145,66 +158,46 @@ function toLine(note: string): string {
 
 // ── Desktop mirror ──────────────────────────────────────────────────────────
 
-let gardenRootCache: string | null | undefined;
-
-async function mirror(): Promise<{ api: ProjectBridge; root: string } | null> {
+function memoryBridge() {
   if (!can(Capability.ProjectFolder)) return null;
-  const api = window.electronAPI?.project;
-  if (!api) return null;
-  if (gardenRootCache === undefined) {
-    const { getGardenRoot } = await import('./desktop');
-    gardenRootCache = await getGardenRoot();
-  }
-  return gardenRootCache ? { api, root: gardenRootCache } : null;
-}
-
-/** Forget the cached root (the person chose a new Garden Root). */
-export function resetMemoryMirror(): void {
-  gardenRootCache = undefined;
-}
-
-async function writeMirror(text: string): Promise<void> {
-  try {
-    const m = await mirror();
-    if (!m) return;
-    await m.api.ensureFolder(m.root);
-    await m.api.writeFile(m.root, MEMORY_FILE, new TextEncoder().encode(text));
-  } catch (err) {
-    console.warn('[memory] could not mirror memory.md:', err);
-  }
+  const api = window.electronAPI?.desktop;
+  if (!api?.readMemory || !api.writeMemory)
+    throw new Error('Desktop memory storage is unavailable. Restart the app and retry.');
+  return api;
 }
 
 /**
  * Adopt an outside edit of `<Garden Root>/memory.md` (desktop). Called before
  * each prompt build and when Settings → Memory opens. Writes the mirror when
- * it is missing and there is something to write. Never throws.
+ * it is missing and there is something to write. Settings requests strict errors;
+ * prompt construction keeps the last readable cache if the disk is unavailable.
  */
-export async function syncMemoryFromDisk(): Promise<string> {
-  const current = getMemory();
-  try {
-    const m = await mirror();
-    if (!m) return current;
-    let onDisk: string | null = null;
+export async function syncMemoryFromDisk(options: { strict?: boolean } = {}): Promise<string> {
+  return memoryWrites('memory', async () => {
+    const current = getMemory();
     try {
-      onDisk = new TextDecoder().decode(await m.api.readFile(m.root, MEMORY_FILE));
-    } catch {
-      onDisk = null;
-    }
-    if (onDisk === null) {
-      if (!isMemoryEmpty(current)) await writeMirror(current);
+      const bridge = memoryBridge();
+      if (!bridge) return current;
+      const onDisk = await bridge.readMemory();
+      if (onDisk === null) {
+        if (!isMemoryEmpty(current)) await bridge.writeMemory(current, null);
+        return current;
+      }
+      const normalized = normalizeMemory(onDisk);
+      if (normalized === current) return current;
+      // The file changed outside the app — it is the truth.
+      if (isMemoryEmpty(normalized)) {
+        removeSetting(SettingsKey.GardenMemory);
+        await flushSettings();
+      } else await setSettingDurably(SettingsKey.GardenMemory, normalized);
+      for (const fn of listeners) fn(normalized);
+      return normalized;
+    } catch (err) {
+      if (options.strict) throw err;
+      console.warn('[memory] could not read memory.md:', err);
       return current;
     }
-    const normalized = normalizeMemory(onDisk);
-    if (normalized === current) return current;
-    // The file changed outside the app — it is the truth.
-    if (isMemoryEmpty(normalized)) removeSetting(SettingsKey.GardenMemory);
-    else setSetting(SettingsKey.GardenMemory, normalized);
-    for (const fn of listeners) fn(normalized);
-    return normalized;
-  } catch (err) {
-    console.warn('[memory] could not read memory.md:', err);
-    return current;
-  }
+  });
 }
 
 // ── Prompt rendering ────────────────────────────────────────────────────────

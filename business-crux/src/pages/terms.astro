@@ -1,0 +1,40 @@
+---
+// Components
+// - Layout
+import Layout from '../layouts/Layout.astro'
+// - UI
+import SidebarContent from '../components/blocks/basic/StickySidebar.astro'
+import Hero from '../components/blocks/hero/PageHeader.astro'
+// The page renders src/data/markdown-files/terms.md, so the words live in one
+// place and can be edited as Markdown rather than inside a component.
+import { Content as Terms } from '../data/markdown-files/terms.md'
+import { configData } from '../config/config'
+
+// Content
+// - SEO
+const SEO = {
+	title: 'Terms of Service',
+	description: `The terms that govern working with ${configData.siteTitle}.`
+}
+// - Page Header
+const header = {
+	title: 'Terms and <strong>conditions</strong>.',
+	text: 'The rules that apply to working with us.'
+}
+---
+
+<Layout title={SEO.title} description={SEO.description}>
+	<Hero title={header.title} text={header.text} />
+	<SidebarContent>
+		<div slot="sidebar">
+			<h3>Before you publish</h3>
+			<p>
+				These are headings, not legal advice. Replace every section with your own wording — or your
+				solicitor's — before you share the site.
+			</p>
+		</div>
+		<div class="basic-text">
+			<Terms />
+		</div>
+	</SidebarContent>
+</Layout>

@@ -3,7 +3,8 @@ import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 test('SVG-Edit native drawing, images, agent styling, exports and portable editing', async () => {
@@ -67,6 +68,11 @@ test('SVG-Edit native drawing, images, agent styling, exports and portable editi
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^SVG-Edit/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+      await togglePanel(page, 'Toggle tasks');
     const frame = await ready(page);
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(page, id)).projectFolder;
@@ -164,7 +170,7 @@ test('SVG-Edit native drawing, images, agent styling, exports and portable editi
   const second = await launchApp({ dir: first.dir });
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = await ready(second.page);
     await expect(frame.locator('#svgcontent rect')).toHaveAttribute('fill', '#3b82f6');
     await expect(frame.locator('#svgcontent image')).toHaveCount(1);

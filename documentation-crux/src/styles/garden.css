@@ -1,0 +1,143 @@
+@font-face {
+  font-family: Garden Inter;
+  src: url('../../public/fonts/Inter-Latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: Garden Wordmark;
+  src: url('../../public/fonts/CormorantGaramond-Latin.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+}
+:root {
+  --sl-font: 'Garden Inter', system-ui, sans-serif;
+  --sl-color-accent-low: #162d27;
+  --sl-color-accent: #69bfa2;
+  --sl-color-accent-high: #b8ebd7;
+  --sl-color-white: #eff4f1;
+  --sl-color-gray-1: #d9e1dc;
+  --sl-color-gray-2: #b7c4bc;
+  --sl-color-gray-3: #8b9c92;
+  --sl-color-gray-4: #43554b;
+  --sl-color-gray-5: #25372e;
+  --sl-color-gray-6: #17251e;
+  --sl-color-black: #101a15;
+  --sl-color-bg-nav: #101a15;
+  --sl-color-bg-sidebar: #101a15;
+  --sl-content-width: 48rem;
+  --sl-text-h1: clamp(2.2rem, 5vw, 3.5rem);
+  --sl-line-height: 1.8;
+  --sl-sidebar-width: 18rem;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e0eee5;
+  --sl-color-accent: #34775f;
+  --sl-color-accent-high: #17533e;
+  --sl-color-white: #17271f;
+  --sl-color-gray-1: #283e31;
+  --sl-color-gray-2: #42594b;
+  --sl-color-gray-3: #617368;
+  --sl-color-gray-4: #96a49a;
+  --sl-color-gray-5: #d5ddd5;
+  --sl-color-gray-6: #eef1e9;
+  --sl-color-gray-7: #f5f6ef;
+  --sl-color-black: #fafbf5;
+  --sl-color-bg-nav: #fafbf5;
+  --sl-color-bg-sidebar: #fafbf5;
+}
+body {
+  -webkit-font-smoothing: antialiased;
+}
+h1,
+h2,
+h3 {
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+h1 {
+  font-weight: 550;
+  line-height: 1.12;
+}
+.sl-markdown-content p {
+  text-wrap: pretty;
+}
+.sl-markdown-content h2 {
+  margin-top: 2.4em;
+}
+.sl-markdown-content a {
+  text-underline-offset: 0.22em;
+}
+.sl-markdown-content table {
+  font-size: 0.9rem;
+}
+.garden-brand {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  color: var(--sl-color-white);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.garden-brand svg {
+  fill: none;
+  stroke: var(--sl-color-accent-high);
+  stroke-width: 1.65;
+  flex-shrink: 0;
+}
+.garden-brand > span:first-of-type {
+  font-family: 'Garden Wordmark', Georgia, serif;
+  font-size: 1.85rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+.brand-divider {
+  color: var(--sl-color-gray-4);
+  margin-inline: 0.25rem;
+  font-weight: 300;
+}
+.brand-section {
+  font-size: 0.85rem;
+  color: var(--sl-color-gray-2);
+}
+.garden-footer {
+  border-top: 1px solid var(--sl-color-hairline);
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--sl-color-gray-2);
+}
+.garden-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.garden-footer a {
+  color: var(--sl-color-accent-high);
+  text-decoration: none;
+}
+a:focus-visible,
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+@media (max-width: 420px) {
+  .brand-divider,
+  .brand-section {
+    display: none;
+  }
+  .garden-brand > span:first-of-type {
+    font-size: 1.6rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

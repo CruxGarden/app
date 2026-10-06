@@ -54,7 +54,10 @@ function useDesktopPreviewUrl(
       .then((serverUrl) => {
         if (cancelled || !serverUrl) return;
         setBase(serverUrl);
-        setActivePreview(cruxId, `${serverUrl}/${entryFile && entryFile !== 'index.html' ? entryFile : ''}`);
+        setActivePreview(
+          cruxId,
+          `${serverUrl}/${entryFile && entryFile !== 'index.html' ? entryFile : ''}`,
+        );
       })
       .catch((err) => console.error('[preview] failed to start server:', err));
 
@@ -107,9 +110,15 @@ export function usePreviewUrl(
 ): string | null {
   // Desktop: local static server over the Project Folder (ADR 0003).
   // Both hooks run unconditionally (rules of hooks); exactly one is enabled.
+  const historical = useCruxStore((s) => s.viewingSnapshotId !== null);
   const desktop = can(Capability.PreviewServer);
-  const desktopUrl = useDesktopPreviewUrl(html, cruxId, filePath, enabled && desktop);
-  const webEnabled = enabled && !desktop;
+  const desktopUrl = useDesktopPreviewUrl(
+    html,
+    cruxId,
+    filePath,
+    enabled && desktop && !historical,
+  );
+  const webEnabled = enabled && !desktop && !historical;
 
   const artifacts = useCruxStore((s) => s.artifacts);
   const cruxKind = useCruxStore((s) => s.crux?.kind);
@@ -175,7 +184,7 @@ export function usePreviewUrl(
     const { artifact } = getServices();
     Promise.allSettled(
       others.map(async (a) => {
-        const blob = await artifact.downloadBlob(a.id);
+        const blob = await artifact.downloadBlob(a);
         const path = a.meta?.path || a.filename || a.id;
         return { path, blob, mimeType: a.mimeType } as PreviewFile;
       }),

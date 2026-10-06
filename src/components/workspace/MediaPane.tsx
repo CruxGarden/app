@@ -1,8 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
+import { fieldClass } from '@/components/ui/field-class';
+import { segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { useCruxStore } from '@/stores/cruxStore';
-import { searchMedia, addMedia, defaultFolder, type MediaItem, type MediaKind } from '@/services/media-finder';
+import {
+  searchMedia,
+  addMedia,
+  previewMedia,
+  defaultFolder,
+  type MediaItem,
+  type MediaKind,
+} from '@/services/media-finder';
 import { PaneEmpty, PaneNote, PaneToolbar } from './pane-ui';
-import { cn } from '@/lib/cn';
 
 /**
  * Find media: openly licensed images, sounds and video from Openverse and
@@ -24,6 +33,36 @@ export default function MediaPane() {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  // One preview at a time; its object URL is revoked when it stops.
+  const [preview, setPreview] = useState<{ id: string; url: string } | null>(null);
+  const [previewBusy, setPreviewBusy] = useState<string | null>(null);
+  const previewRef = useRef<{ id: string; url: string } | null>(null);
+  const stopPreview = () => {
+    const current = previewRef.current;
+    if (current) URL.revokeObjectURL(current.url);
+    previewRef.current = null;
+    setPreview(null);
+  };
+  const togglePreview = async (item: MediaItem) => {
+    if (previewRef.current?.id === item.id) {
+      stopPreview();
+      return;
+    }
+    stopPreview();
+    setError('');
+    setPreviewBusy(item.id);
+    try {
+      const url = await previewMedia(item);
+      previewRef.current = { id: item.id, url };
+      setPreview(previewRef.current);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'That file could not be previewed.');
+    } finally {
+      setPreviewBusy(null);
+    }
+  };
+  // Nothing keeps playing after the category changes or the pane closes.
+  useEffect(() => stopPreview, [kind]);
 
   const search = async () => {
     setError('');
@@ -55,17 +94,18 @@ export default function MediaPane() {
     }
   };
 
-  if (!crux) return <PaneEmpty title="No Crux open" description="Open a Crux to bring media into it." />;
+  if (!crux)
+    return <PaneEmpty title="No Crux open" description="Open a Crux to bring media into it." />;
   return (
     <div className="flex flex-col h-full min-h-0">
       <PaneToolbar>
-        <div role="tablist" aria-label="Media kind" className="flex gap-1">
+        <div role="tablist" aria-label="Media kind" className={segmentGroupClass()}>
           {KINDS.map((k) => (
             <button
               key={k.kind}
               role="tab"
               aria-selected={kind === k.kind}
-              className={cn('px-2 py-1 text-xs rounded-[var(--radius-sm)] border', kind === k.kind ? 'bg-accent/20 border-accent text-text' : 'border-border text-text-muted')}
+              className={segmentClass(kind === k.kind)}
               onClick={() => {
                 setKind(k.kind);
                 setItems(null);
@@ -85,12 +125,22 @@ export default function MediaPane() {
       >
         <input
           aria-label="Search media"
-          placeholder={kind === 'image' ? 'Search images…' : kind === 'audio' ? 'Search sounds…' : 'Search video…'}
+          placeholder={
+            kind === 'image'
+              ? 'Search images…'
+              : kind === 'audio'
+                ? 'Search sounds…'
+                : 'Search video…'
+          }
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 px-2 h-8 text-sm rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text"
+          className={fieldClass(undefined, 'flex-1', 'sm')}
         />
-        <button type="submit" disabled={busy === 'search' || !query.trim()} className="px-3 h-8 text-sm rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20">
+        <button
+          type="submit"
+          disabled={busy === 'search' || !query.trim()}
+          className={buttonClass('secondary', 'sm')}
+        >
           {busy === 'search' ? 'Searching…' : 'Search'}
         </button>
       </form>
@@ -117,18 +167,32 @@ export default function MediaPane() {
       <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
         {items === null && !busy && (
           <PaneNote tone="muted">
-            Openly licensed work from Openverse (images and sounds) and Wikimedia Commons (video). Each file arrives with its license, author and source kept beside it; check the license before you publish.
+            Openly licensed work from Openverse (images and sounds) and Wikimedia Commons (video).
+            Each file arrives with its license, author and source kept beside it; check the license
+            before you publish.
           </PaneNote>
         )}
-        {items && !items.length && <PaneNote tone="muted">Nothing found. Try other words.</PaneNote>}
+        {items && !items.length && (
+          <PaneNote tone="muted">Nothing found. Try other words.</PaneNote>
+        )}
         {items && items.length > 0 && (
           <ul aria-label="Media results" className="flex flex-col gap-2">
             {items.map((item) => (
-              <li key={`${item.provider}:${item.id}`} className="flex gap-3 p-2 rounded-[var(--radius-sm)] border border-border bg-surface">
+              <li
+                key={`${item.provider}:${item.id}`}
+                className="flex gap-3 p-2 rounded-[var(--radius-sm)] border border-border bg-surface"
+              >
                 {item.thumbnail ? (
-                  <img src={item.thumbnail} alt="" className="w-16 h-16 object-cover rounded-[var(--radius-sm)] shrink-0 bg-surface-solid" />
+                  <img
+                    src={item.thumbnail}
+                    alt=""
+                    className="w-16 h-16 object-cover rounded-[var(--radius-sm)] shrink-0 bg-surface-solid"
+                  />
                 ) : (
-                  <div className="w-16 h-16 rounded-[var(--radius-sm)] shrink-0 bg-surface-solid" aria-hidden="true" />
+                  <div
+                    className="w-16 h-16 rounded-[var(--radius-sm)] shrink-0 bg-surface-solid"
+                    aria-hidden="true"
+                  />
                 )}
                 <div className="flex-1 min-w-0 text-xs">
                   <p className="font-medium text-text truncate">{item.title}</p>
@@ -140,16 +204,64 @@ export default function MediaPane() {
                   </p>
                   <div className="flex gap-2 mt-1">
                     <button
-                      className="px-2 py-0.5 rounded-[var(--radius-sm)] border border-border text-text hover:bg-accent/20"
+                      className={buttonClass('primary', 'xs')}
                       disabled={busy !== null}
                       onClick={() => void use(item)}
                     >
                       {busy === item.id ? 'Adding…' : `Use ${item.title}`}
                     </button>
-                    <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="px-2 py-0.5 text-text-muted hover:text-text">
+                    <button
+                      className={buttonClass(
+                        'secondary',
+                        'xs',
+                        'aria-pressed:bg-accent-muted aria-pressed:text-accent',
+                      )}
+                      disabled={previewBusy !== null}
+                      aria-pressed={preview?.id === item.id}
+                      onClick={() => void togglePreview(item)}
+                    >
+                      {previewBusy === item.id
+                        ? 'Loading…'
+                        : preview?.id === item.id
+                          ? 'Stop preview'
+                          : `Preview ${item.title}`}
+                    </button>
+                    <a
+                      href={item.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-0.5 text-text-muted hover:text-text"
+                    >
                       Source ↗
                     </a>
                   </div>
+                  {preview?.id === item.id && (
+                    <div className="mt-2" data-testid="media-preview">
+                      {item.kind === 'audio' ? (
+                        <audio
+                          controls
+                          autoPlay
+                          src={preview.url}
+                          className="w-full"
+                          aria-label={`Preview of ${item.title}`}
+                        />
+                      ) : item.kind === 'video' ? (
+                        <video
+                          controls
+                          autoPlay
+                          src={preview.url}
+                          className="w-full max-h-48 rounded-[var(--radius-sm)] bg-black"
+                          aria-label={`Preview of ${item.title}`}
+                        />
+                      ) : (
+                        <img
+                          src={preview.url}
+                          alt={`Preview of ${item.title}`}
+                          className="max-h-48 rounded-[var(--radius-sm)]"
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </li>
             ))}

@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -5,8 +6,10 @@ import { notebookPath, notebookSession } from './notebook';
 import { createTask, prepareTaskReview, verifyTaskReview, applyTaskReview } from './tasks';
 import { exportCrux, importCrux } from './crux-io';
 
+const native = localApiFixture({ project: true });
+
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 async function fixture(id?: string) {
   const store = createCruxStore();
@@ -60,7 +63,7 @@ describe('notebook Artifact bridge', () => {
   ])('rejects %s', (path) => {
     expect(() => notebookPath(path)).toThrow();
   });
-  it('acknowledges durable saves, records Growth and rejects stale writers', async () => {
+  it('acknowledges durable saves without automatic Growth and rejects stale writers', async () => {
     const { call, store, crux } = await fixture();
     const first = (await call({
       op: 'write',
@@ -72,7 +75,7 @@ describe('notebook Artifact bridge', () => {
       content: '# First',
       fingerprint: first.fingerprint,
     });
-    expect(store.getState().growths).toHaveLength(1);
+    expect(store.getState().growths).toHaveLength(0);
     await call({
       op: 'write',
       path: 'Ideas/First.md',
@@ -168,40 +171,27 @@ it('merges editor-only customization while preserving newer notes on Main', asyn
   const layout = (await artifact.findByResource('crux', main.crux.id)).find(
     (a) => a.meta?.path === 'src/layout.css',
   )!;
-  expect(await artifact.readContent(layout.id)).toBe('new layout');
+  expect(await artifact.readContent(layout)).toBe('new layout');
 });
 
 it('rejects an external disk edit before the watcher has delivered it, then reloads it', async () => {
-  const files = new Map<string, Uint8Array>();
-  vi.stubGlobal('window', {
-    electronAPI: {
-      project: {
-        createFolder: async () => '/garden/notebook',
-        ensureFolder: async () => '/garden/notebook',
-        writeFile: async (_folder: string, path: string, data: Uint8Array) => {
-          files.set(path, data);
-        },
-        readFile: async (_folder: string, path: string) => {
-          const bytes = files.get(path);
-          if (!bytes) throw new Error('ENOENT');
-          return bytes;
-        },
-      },
-    },
-  });
+  const { call, crux } = await fixture();
+  const folder = crux.meta!.projectFolder as string;
+  const project = native().project;
   try {
-    const { call } = await fixture();
     const saved = (await call({
       op: 'write',
       path: 'First.md',
       content: 'Original',
       expected: null,
     })) as { fingerprint: string };
-    files.set('notebook/First.md', new TextEncoder().encode('External'));
+    await project.writeFile(folder, 'notebook/First.md', new TextEncoder().encode('External'));
     await expect(
       call({ op: 'write', path: 'First.md', content: 'Stale draft', expected: saved.fingerprint }),
     ).rejects.toThrow('changed elsewhere');
-    expect(new TextDecoder().decode(files.get('notebook/First.md'))).toBe('External');
+    expect(new TextDecoder().decode(await project.readFile(folder, 'notebook/First.md'))).toBe(
+      'External',
+    );
     const reloaded = (await call({ op: 'read', path: 'First.md' })) as {
       content: string;
       fingerprint: string;
@@ -213,12 +203,21 @@ it('rejects an external disk edit before the watcher has delivered it, then relo
       content: 'Resolved',
       expected: reloaded.fingerprint,
     });
-    expect(new TextDecoder().decode(files.get('notebook/First.md'))).toBe('Resolved');
-    files.set('notebook/Unindexed.md', new TextEncoder().encode('Not ingested yet'));
+    expect(new TextDecoder().decode(await project.readFile(folder, 'notebook/First.md'))).toBe(
+      'Resolved',
+    );
+    await project.writeFile(
+      folder,
+      'notebook/Unindexed.md',
+      new TextEncoder().encode('Not ingested yet'),
+    );
     await expect(
       call({ op: 'write', path: 'Unindexed.md', content: '', expected: null }),
     ).rejects.toThrow('changed elsewhere');
   } finally {
-    vi.unstubAllGlobals();
+    // Snapshot cues lazy-load audio while the desktop window stub is present.
+    // Drain those imports before Vitest tears down the module graph; otherwise
+    // a late cue can observe an unloaded audioStore after this test finishes.
+    await vi.dynamicImportSettled();
   }
 });

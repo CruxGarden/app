@@ -1,5 +1,5 @@
-import { includedFetch, INCLUDED_MODEL } from '@/api/inference';
-import { API_BASE_URL } from '@/api/client';
+import { cruxIdHeader, includedFetch, INCLUDED_MODEL } from '@/api/inference';
+import { apiBaseUrl } from '@/api/client';
 /**
  * The Collaboration engine — the AI conversation loop behind one seam.
  *
@@ -34,11 +34,11 @@ import type { LanguageModel } from 'ai';
 import type { ToolResultOutput } from '@ai-sdk/provider-utils';
 import type { NormalizedMessage, ToolResultContent } from '@/services/types';
 import { defaultToolDefinitions, didMutate, type ToolDefinition } from './tools';
-import { buildPromptParts, buildWorkspaceContext, CONTEXT_BLOCK_OPEN } from './system-prompt';
+import { buildPromptParts, buildWorkspaceContext } from './system-prompt';
 import { estimateTokens, fitToContextWindow, evictedTranscript, compactionNote } from './context';
 import { getModelInfo, getProviderForModel, resolveModel } from './providers';
 import { isAiMock } from '@/lib/platform';
-import { getMockLanguageModel } from './mock-model';
+import { describeProviderError } from './provider-errors';
 
 /** Events yielded by the conversation engine */
 export type ConversationEvent =
@@ -49,7 +49,7 @@ export type ConversationEvent =
       id: string;
       input: Record<string, unknown>;
     }
-  | { type: 'tool_result'; name: string; id: string; result: string }
+  | { type: 'tool_result'; name: string; id: string; result: string; error?: boolean }
   /**
    * One model round finished (its text streamed, its tool calls executed and
    * their results returned). The step boundary a Background Turn snapshots
@@ -57,7 +57,8 @@ export type ConversationEvent =
    */
   | { type: 'step_end'; index: number }
   | { type: 'done'; textContent: string; hadMutation: boolean }
-  | { type: 'error'; message: string }
+  /** `detail` is the provider's own wording, when the message is our plain reading of it. */
+  | { type: 'error'; message: string; detail?: string }
   | { type: 'info'; message: string }
   | { type: 'usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number };
 
@@ -87,15 +88,28 @@ export interface ConversationOptions {
  * Build an AI SDK language model for a (model, BYOK apiKey) pair.
  * Retired model IDs resolve to their successors.
  */
-export function languageModelFor(model: string, apiKey: string): LanguageModel {
-  // e2e: a scripted model stands in for every provider (see ai/mock-model.ts).
-  if (isAiMock()) return getMockLanguageModel();
+let mockModel: LanguageModel | undefined;
+/**
+ * e2e: load the scripted model (ai/mock-model.ts) once at startup, so the
+ * production bundle carries none of it and `languageModelFor` stays synchronous.
+ */
+export async function primeMockModel(): Promise<void> {
+  if (isAiMock() && !mockModel) mockModel = (await import('./mock-model')).getMockLanguageModel();
+}
+
+/** `cruxId` attributes included requests to their Crux (Settings → Usage, "Where it went"). */
+export function languageModelFor(model: string, apiKey: string, cruxId?: string): LanguageModel {
+  if (isAiMock()) {
+    if (!mockModel) throw new Error('The scripted model was not primed at startup.');
+    return mockModel;
+  }
   const id = resolveModel(model);
   const provider = getProviderForModel(id);
   if (id === INCLUDED_MODEL)
     return createAnthropic({
       apiKey: 'included-session',
-      baseURL: `${API_BASE_URL}/inference/v1`,
+      baseURL: `${apiBaseUrl()}/inference/v1`,
+      headers: cruxIdHeader(cruxId),
       fetch: includedFetch,
     })(id);
   // Local inference (Ollama / LM Studio): OpenAI-compatible localhost API,
@@ -342,7 +356,7 @@ export async function* runConversation(
   let stepIndex = 0;
   try {
     const result = streamText({
-      model: options?.languageModel ?? languageModelFor(model, apiKey),
+      model: options?.languageModel ?? languageModelFor(model, apiKey, cruxId),
       instructions: {
         role: 'system',
         content: systemPrompt,
@@ -354,10 +368,9 @@ export async function* runConversation(
       abortSignal: signal,
       maxOutputTokens: info?.maxOutput ?? 16384,
       ...(model === INCLUDED_MODEL ? { maxRetries: 0 } : {}),
-      // Refresh the workspace context block after mutations so the model sees
-      // the updated file listing — the stable system prompt is untouched, so
-      // the provider cache survives (workspace prompts only; custom prompts
-      // have no context block to refresh).
+      // New Claude thinking signatures cover their preceding conversation.
+      // Append fresh state after tool results; rewriting the initial context
+      // invalidates those signatures (and discards the cached prefix).
       prepareStep: !refreshContext
         ? undefined
         : async ({ messages: stepMessages }) => {
@@ -365,13 +378,7 @@ export async function* runConversation(
             mutatedSinceStep = false;
             const fresh = await refreshContext();
             return {
-              messages: stepMessages.map((m) =>
-                m.role === 'user' &&
-                typeof m.content === 'string' &&
-                m.content.startsWith(CONTEXT_BLOCK_OPEN)
-                  ? { ...m, content: fresh }
-                  : m,
-              ),
+              messages: [...stepMessages, { role: 'user', content: fresh }],
             };
           },
     });
@@ -408,6 +415,7 @@ export async function* runConversation(
             name: part.toolName,
             id: part.toolCallId,
             result: `Error: ${String((part as { error?: unknown }).error ?? 'tool failed')}`,
+            error: true,
           };
           break;
 
@@ -431,7 +439,7 @@ export async function* runConversation(
           return;
 
         case 'error': {
-          yield { type: 'error', message: friendlyError(part.error) };
+          yield { type: 'error', ...friendlyError(part.error, model) };
           return;
         }
       }
@@ -439,7 +447,7 @@ export async function* runConversation(
   } catch (err: unknown) {
     const e = err as Error;
     if (e.name === 'AbortError' || signal?.aborted) return;
-    yield { type: 'error', message: friendlyError(err) };
+    yield { type: 'error', ...friendlyError(err, model) };
     return;
   }
 
@@ -527,13 +535,8 @@ async function summarizeEvicted(
   }
 }
 
-/** Map SDK/provider errors to user-facing messages. */
-function friendlyError(error: unknown): string {
-  const e = error as { statusCode?: number; status?: number; message?: string };
-  const status = e?.statusCode ?? e?.status;
-  if (e?.message?.includes('Included collaboration:')) return e.message;
-  if (status === 429 || status === 529 || status === 503) {
-    return 'The AI service is temporarily overloaded. Please try again in a moment.';
-  }
-  return e?.message || String(error);
+/** Map SDK/provider errors to user-facing messages (see provider-errors.ts for the table). */
+function friendlyError(error: unknown, model: string): { message: string; detail?: string } {
+  const { message, detail } = describeProviderError(error, model);
+  return { message, ...(detail ? { detail } : {}) };
 }

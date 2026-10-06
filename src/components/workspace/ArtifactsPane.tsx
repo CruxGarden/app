@@ -1,8 +1,21 @@
+import PaneOptions from './PaneOptions';
+import type { Artifact } from '@/api/types';
+import type { ArtifactUploadEntry } from '@/services/types';
+import CopyArtifactsDialog, { type ArtifactCopySelection } from './CopyArtifactsDialog';
+import { captureGardenId } from '@/stores/gardenContext';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { walkEntry } from '@/lib/file-drop';
-import { isUnder, pathOf, basename, parentPath as parentPathOf } from '@/lib/artifact-path';
+import {
+  isUnder,
+  pathOf,
+  basename,
+  parentPath as parentPathOf,
+  isAgentFile,
+} from '@/lib/artifact-path';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, {
@@ -13,9 +26,16 @@ import { FieldRow } from './MetadataContent';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { Capability, can } from '@/lib/platform';
 import { revealProjectFolder } from '@/services/project-folder';
-import { confirmDialog } from '@/stores/dialogStore';
+import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
+import { reportFileUpdateError } from '@/components/artifacts/fileUpdateError';
 import { expandTreeSelection, FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
+import ConvertActions from '@/components/artifacts/ConvertActions';
+import FindInFiles from '@/components/artifacts/FindInFiles';
+import type { FindFileResult, FindMatch } from '@/services/find-in-files';
+import { requestEditorReveal } from './editor-reveal';
+import IconButton from '@/components/ui/IconButton';
+import { buttonClass, menuItemClass } from '@/components/ui/button-class';
 
 function RevealIcon() {
   return (
@@ -116,16 +136,29 @@ function UploadIcon() {
 export default function ArtifactsPane() {
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
-  const artifacts = useCruxStore((s) => s.artifacts);
+  const allArtifacts = useCruxStore((s) => s.artifacts);
+  // The agent guides (AGENTS.md, CLAUDE.md) are the collaborator's plumbing:
+  // folded away unless asked for, and never shown with AI off.
+  const aiEnabled = useAiEnabled();
+  const [showAgentFiles, setShowAgentFiles] = useState(false);
+  const artifacts = useMemo(
+    () =>
+      aiEnabled && showAgentFiles
+        ? allArtifacts
+        : allArtifacts.filter((a) => !isAgentFile(pathOf(a))),
+    [allArtifacts, aiEnabled, showAgentFiles],
+  );
+  const agentFileCount = useMemo(
+    () => allArtifacts.filter((a) => isAgentFile(pathOf(a))).length,
+    [allArtifacts],
+  );
   const cruxId = useCruxStore((s) => s.crux?.id);
   const folderMissing = useCruxStore((s) => s.folderMissing);
   const restoreProjectFolder = useCruxStore((s) => s.restoreProjectFolder);
   const hasProjectFolder = can(Capability.ProjectFolder);
   const createFile = useCruxStore((s) => s.createFile);
   const uploadFiles = useCruxStore((s) => s.uploadFiles);
-  const uploadFile = useCruxStore((s) => s.uploadFile);
   const uploadProgress = useCruxStore((s) => s.uploadProgress);
-  const moveArtifact = useCruxStore((s) => s.moveArtifact);
   const renameArtifact = useCruxStore((s) => s.renameArtifact);
   const isViewingSnapshot = useCruxStore((s) => s.viewingSnapshotId !== null);
   const openFile = useUIStore((s) => s.openFile);
@@ -143,8 +176,10 @@ export default function ArtifactsPane() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const uploadDropdownRef = useRef<HTMLDivElement>(null);
   const emptyDragCountRef = useRef(0);
+  const [copySelection, setCopySelection] = useState<ArtifactCopySelection | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
+  const uploadMenuRef = useRef<HTMLDivElement>(null);
   const [fileInfoOpen, setFileInfoOpen] = useState(false);
   const [isDraggingOverEmpty, setIsDraggingOverEmpty] = useState(false);
 
@@ -174,6 +209,17 @@ export default function ArtifactsPane() {
       if (!uiStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
     },
     [cruxStore, openFile, setPaneVisible, uiStore],
+  );
+
+  // A find-in-files result: the file's source, at that line, the match selected.
+  const handleOpenMatch = useCallback(
+    (file: FindFileResult, match: FindMatch) => {
+      requestEditorReveal(file.id, match);
+      openFile(file.id, file.path);
+      uiStore.getState().setTabViewMode(file.id, 'source');
+      if (!uiStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
+    },
+    [openFile, setPaneVisible, uiStore],
   );
 
   const handleSelectionChange = useCallback((ids: string[]) => {
@@ -226,116 +272,121 @@ export default function ArtifactsPane() {
     [uiStore, cancelFileOperation, cruxStore, createFile],
   );
 
-  const handleMove = useCallback(
-    async (id: string, newParentPath: string | null) => {
-      const { artifacts } = cruxStore.getState();
-      const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
-
-      // If it's a folder (id starts with "folder:"), move all children
-      if (id.startsWith('folder:')) {
-        const folderPath = id.replace('folder:', '');
-        const children = artifacts.filter((a) => pathOf(a).startsWith(folderPath + '/'));
-        const folderName = basename(folderPath) || '';
-        const destFolderPath = newParentPath ? `${newParentPath}/${folderName}` : folderName;
-        const newPaths = children.map((child) => {
-          const oldPath = pathOf(child);
-          const relativePath = oldPath.slice(folderPath.length);
-          return newParentPath
-            ? `${newParentPath}/${folderName}${relativePath}`
-            : `${folderName}${relativePath}`;
+  const renameSelection = useCallback(
+    async (
+      moves: { source: Artifact; path: string }[],
+      artifacts: Artifact[],
+      mergeMessage?: string,
+    ) => {
+      const captured = moves
+        .filter(({ source, path }) => pathOf(source) !== path)
+        .map(({ source, path }) => ({
+          source: structuredClone(source),
+          path,
+          target: structuredClone(
+            artifacts.find((file) => pathOf(file) === path && file.id !== source.id) ?? null,
+          ),
+        }));
+      if (!captured.length) return;
+      const conflicts = captured.filter((move) => move.target);
+      if (
+        (conflicts.length || mergeMessage) &&
+        !(await confirmDialog({
+          message:
+            mergeMessage ??
+            (conflicts.length === 1
+              ? `"${conflicts[0]!.path}" already exists. Replace it?`
+              : `${conflicts.length} files already exist. Replace them?`),
+          confirmLabel: 'Replace',
+          danger: true,
+        }))
+      )
+        return;
+      let completed = 0;
+      try {
+        for (const move of captured) {
+          if (cruxStore.getState().crux?.id !== move.source.resourceId)
+            throw new Error('The active Crux changed. Return to the original Crux to continue.');
+          await renameArtifact(move.source.id, move.path, {
+            source: move.source,
+            target: move.target,
+          });
+          completed++;
+        }
+      } catch (error) {
+        const remaining = captured.length - completed - 1;
+        await reportFileUpdateError(cruxStore, error, {
+          title: 'Rename failed',
+          fallback: 'Could not rename these files.',
+          message: `${completed ? `${completed} files were renamed. ` : ''}${error instanceof Error ? error.message : String(error)}${remaining ? ` ${remaining} remaining files were not renamed. Select them again to retry.` : ''}`,
         });
-        const destFolderExists =
-          destFolderPath !== folderPath &&
-          artifacts.some((a) => pathOf(a).startsWith(destFolderPath + '/'));
-        const fileConflicts = newPaths.filter(
-          (p) => existingPaths.has(p) && !children.some((c) => pathOf(c) === p),
-        );
-        if (destFolderExists || fileConflicts.length > 0) {
-          const msg = destFolderExists
-            ? `A folder named "${folderName}" already exists at the destination. Merge contents?`
-            : fileConflicts.length === 1
-              ? `"${fileConflicts[0]}" already exists. Replace it?`
-              : `${fileConflicts.length} files already exist. Replace them?`;
-          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace' }))) return;
-        }
-        for (let i = 0; i < children.length; i++) {
-          await renameArtifact(children[i]!.id, newPaths[i]!);
-        }
-      } else {
-        const art = artifacts.find((a) => a.id === id);
-        if (art) {
-          const oldPath = pathOf(art);
-          const filename = basename(oldPath) || art.filename;
-          const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
-          if (newPath !== oldPath && existingPaths.has(newPath)) {
-            if (
-              !(await confirmDialog({
-                message: `"${newPath}" already exists. Replace it?`,
-                confirmLabel: 'Replace',
-              }))
-            )
-              return;
-          }
-        }
-        await moveArtifact(id, newParentPath);
       }
     },
-    [cruxStore, moveArtifact, renameArtifact],
+    [cruxStore, renameArtifact],
+  );
+
+  const handleMove = useCallback(
+    async (id: string, newParentPath: string | null) => {
+      const artifacts = cruxStore.getState().artifacts;
+      if (id.startsWith(FOLDER_ID_PREFIX)) {
+        const folder = id.slice(FOLDER_ID_PREFIX.length);
+        const destination = newParentPath
+          ? `${newParentPath}/${basename(folder)}`
+          : basename(folder);
+        await renameSelection(
+          artifacts
+            .filter((file) => isUnder(folder, pathOf(file)))
+            .map((source) => ({ source, path: destination + pathOf(source).slice(folder.length) })),
+          artifacts,
+          destination !== folder &&
+            artifacts.some((file) => pathOf(file).startsWith(destination + '/'))
+            ? `A folder named "${basename(folder)}" already exists at the destination. Merge contents?`
+            : undefined,
+        );
+      } else {
+        const source = artifacts.find((file) => file.id === id);
+        if (source)
+          await renameSelection(
+            [
+              {
+                source,
+                path: newParentPath
+                  ? `${newParentPath}/${basename(pathOf(source))}`
+                  : pathOf(source).split('/').pop()!,
+              },
+            ],
+            artifacts,
+          );
+      }
+    },
+    [cruxStore, renameSelection],
   );
 
   const handleRename = useCallback(
     async (id: string, newName: string) => {
       const artifacts = cruxStore.getState().artifacts;
-      const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
-
       if (id.startsWith(FOLDER_ID_PREFIX)) {
-        // Folder: batch-rename every artifact under it
-        const oldFolderPath = id.slice(FOLDER_ID_PREFIX.length);
-        const parts = oldFolderPath.split('/');
+        const folder = id.slice(FOLDER_ID_PREFIX.length);
+        const parts = folder.split('/');
         parts[parts.length - 1] = newName;
-        const newFolderPath = parts.join('/');
-        if (newFolderPath === oldFolderPath) return;
-
-        const children = artifacts.filter((a) => isUnder(oldFolderPath, pathOf(a)));
-        const moves = children.map((child) => ({
-          id: child.id,
-          newPath: newFolderPath + pathOf(child).slice(oldFolderPath.length),
-        }));
-        // Renaming onto an existing sibling used to merge into it silently and
-        // overwrite whatever collided. Ask, like folder MOVE already did.
-        const collisions = moves.filter((m) => existingPaths.has(m.newPath));
-        if (collisions.length > 0) {
-          const msg =
-            collisions.length === 1
-              ? `"${collisions[0]!.newPath}" already exists. Replace it?`
-              : `"${newFolderPath}" already exists — ${collisions.length} files would be replaced. Continue?`;
-          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace', danger: true })))
-            return;
-        }
-        for (const m of moves) await renameArtifact(m.id, m.newPath);
+        await renameSelection(
+          artifacts
+            .filter((file) => isUnder(folder, pathOf(file)))
+            .map((source) => ({
+              source,
+              path: parts.join('/') + pathOf(source).slice(folder.length),
+            })),
+          artifacts,
+        );
       } else {
-        // File: swap the last path segment
-        const artifact = artifacts.find((a) => a.id === id);
-        if (!artifact) return;
-        const oldPath = pathOf(artifact);
-        const pathParts = oldPath.split('/');
-        pathParts[pathParts.length - 1] = newName;
-        const newPath = pathParts.join('/');
-        if (newPath === oldPath) return;
-        if (existingPaths.has(newPath)) {
-          if (
-            !(await confirmDialog({
-              message: `"${newPath}" already exists. Replace it?`,
-              confirmLabel: 'Replace',
-              danger: true,
-            }))
-          )
-            return;
-        }
-        await renameArtifact(id, newPath);
+        const source = artifacts.find((file) => file.id === id);
+        if (!source) return;
+        const parts = pathOf(source).split('/');
+        parts[parts.length - 1] = newName;
+        await renameSelection([{ source, path: parts.join('/') }], artifacts);
       }
     },
-    [cruxStore, renameArtifact],
+    [cruxStore, renameSelection],
   );
 
   // Close any newly-created folders after an import (folders not yet in saved state
@@ -356,18 +407,38 @@ export default function ArtifactsPane() {
     [setFolderOpen, uiStore],
   );
 
-  const confirmOverwrite = useCallback(
-    async (entries: { path: string }[]): Promise<boolean> => {
-      const existingPaths = new Set(cruxStore.getState().artifacts.map((a) => pathOf(a)));
-      const conflicts = entries.filter((e) => existingPaths.has(e.path));
-      if (conflicts.length === 0) return true;
-      const msg =
-        conflicts.length === 1
-          ? `"${conflicts[0]!.path}" already exists. Replace it?`
-          : `${conflicts.length} files already exist. Replace them?`;
-      return confirmDialog({ message: msg, confirmLabel: 'Replace' });
+  const confirmOverwrite = useCallback(async (entries: ArtifactUploadEntry[]): Promise<boolean> => {
+    const conflicts = entries.filter((entry) => entry.expected !== null);
+    if (conflicts.length === 0) return true;
+    const msg =
+      conflicts.length === 1
+        ? `"${conflicts[0]!.path}" already exists. Replace it?`
+        : `${conflicts.length} files already exist. Replace them?`;
+    return confirmDialog({ message: msg, confirmLabel: 'Replace' });
+  }, []);
+
+  const uploadEntries = useCallback(
+    async (entries: UploadFileEntry[], ownerId = cruxStore.getState().crux?.id): Promise<void> => {
+      try {
+        const current = new Map(cruxStore.getState().artifacts.map((file) => [pathOf(file), file]));
+        const selection = entries.map(({ file, path }) => ({
+          file,
+          path,
+          expected: structuredClone(current.get(path) ?? null),
+        }));
+        if (!(await confirmOverwrite(selection))) return;
+        if (cruxStore.getState().crux?.id !== ownerId)
+          throw new Error('The active Crux changed. Choose the files again in their destination.');
+        await uploadFiles(selection);
+        closeFoldersFromPaths(selection.map((entry) => entry.path));
+      } catch (error) {
+        await reportFileUpdateError(cruxStore, error, {
+          title: 'Upload failed',
+          fallback: 'Could not add these files. Choose them again to retry.',
+        });
+      }
     },
-    [cruxStore],
+    [cruxStore, confirmOverwrite, uploadFiles, closeFoldersFromPaths],
   );
 
   const handleUploadFiles = useCallback(
@@ -376,11 +447,9 @@ export default function ArtifactsPane() {
         file: f.file,
         path: parentPath ? `${parentPath}/${f.path}` : f.path,
       }));
-      if (!(await confirmOverwrite(entries))) return;
-      await uploadFiles(entries);
-      closeFoldersFromPaths(entries.map((e) => e.path));
+      await uploadEntries(entries);
     },
-    [uploadFiles, closeFoldersFromPaths, confirmOverwrite],
+    [uploadEntries],
   );
 
   const handleDelete = useCallback(
@@ -404,31 +473,23 @@ export default function ArtifactsPane() {
 
   const handleFileInputChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
+      const files = Array.from(e.currentTarget.files || []);
+      e.currentTarget.value = '';
       if (files.length === 0) return;
       const parentPath = getParentPath();
       const entries = files.map((f) => ({
         file: f,
         path: parentPath ? `${parentPath}/${f.name}` : f.name,
       }));
-      if (!(await confirmOverwrite(entries))) {
-        e.target.value = '';
-        return;
-      }
-      if (entries.length === 1) {
-        await uploadFile(entries[0]!.file, parentPath);
-      } else {
-        await uploadFiles(entries);
-      }
-      closeFoldersFromPaths(entries.map((en) => en.path));
-      e.target.value = '';
+      await uploadEntries(entries);
     },
-    [uploadFile, uploadFiles, getParentPath, closeFoldersFromPaths, confirmOverwrite],
+    [uploadEntries, getParentPath],
   );
 
   const handleFolderInputChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
+      const files = Array.from(e.currentTarget.files || []);
+      e.currentTarget.value = '';
       if (files.length === 0) return;
       const parentPath = getParentPath();
       const entries = files.map((f) => ({
@@ -437,15 +498,9 @@ export default function ArtifactsPane() {
           ? `${parentPath}/${f.webkitRelativePath || f.name}`
           : f.webkitRelativePath || f.name,
       }));
-      if (!(await confirmOverwrite(entries))) {
-        e.target.value = '';
-        return;
-      }
-      await uploadFiles(entries);
-      closeFoldersFromPaths(entries.map((en) => en.path));
-      e.target.value = '';
+      await uploadEntries(entries);
     },
-    [uploadFiles, getParentPath, closeFoldersFromPaths, confirmOverwrite],
+    [uploadEntries, getParentPath],
   );
 
   useEffect(() => {
@@ -486,116 +541,106 @@ export default function ArtifactsPane() {
       e.preventDefault();
       emptyDragCountRef.current = 0;
       setIsDraggingOverEmpty(false);
-
-      const items = Array.from(e.dataTransfer.items);
-      const entries = items
-        .map((item) => item.webkitGetAsEntry?.())
-        .filter((entry): entry is FileSystemEntry => entry != null);
-
-      if (entries.length > 0) {
-        const fileEntries: { file: File; path: string }[] = [];
-        for (const entry of entries) {
-          fileEntries.push(...(await walkEntry(entry, '')));
-        }
-        if (fileEntries.length > 0) {
-          if (!(await confirmOverwrite(fileEntries))) return;
-          await uploadFiles(fileEntries);
-          closeFoldersFromPaths(fileEntries.map((e) => e.path));
-          return;
-        }
-      }
-
+      const ownerId = cruxStore.getState().crux?.id;
       const files = Array.from(e.dataTransfer.files);
-      if (files.length > 0) {
-        const fileEntries = files.map((f) => ({ file: f, path: f.name }));
-        if (!(await confirmOverwrite(fileEntries))) return;
-        await uploadFiles(fileEntries);
-        closeFoldersFromPaths(fileEntries.map((e) => e.path));
+      try {
+        const entries = Array.from(e.dataTransfer.items)
+          .map((item) => item.webkitGetAsEntry?.())
+          .filter((entry): entry is FileSystemEntry => entry != null);
+
+        if (entries.length > 0) {
+          const fileEntries: UploadFileEntry[] = [];
+          for (const entry of entries) fileEntries.push(...(await walkEntry(entry, '')));
+          if (fileEntries.length > 0) {
+            await uploadEntries(fileEntries, ownerId);
+            return;
+          }
+        }
+        if (files.length > 0)
+          await uploadEntries(
+            files.map((file) => ({ file, path: file.name })),
+            ownerId,
+          );
+      } catch (error) {
+        await alertDialog(
+          error instanceof Error ? error.message : 'Could not read the dropped files.',
+          'Upload failed',
+        );
       }
     },
-    [uploadFiles, closeFoldersFromPaths, confirmOverwrite],
+    [cruxStore, uploadEntries],
   );
 
   const actionButtons = (
     <>
       {hasProjectFolder && cruxId && (
         <>
-          <div className="relative group/btn">
-            <button
-              aria-label="Reveal in Finder"
-              onClick={() => revealProjectFolder(cruxId)}
-              className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-            >
-              <RevealIcon />
-            </button>
-            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-              <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-                <span className="text-xs font-medium text-text">Reveal in Finder</span>
-              </div>
-            </div>
-          </div>
+          <IconButton
+            label="Reveal in Finder"
+            size="sm"
+            tooltip={{ label: 'Reveal in Finder' }}
+            onClick={() => revealProjectFolder(cruxId)}
+          >
+            <RevealIcon />
+          </IconButton>
           <div className="w-px h-3 bg-border mx-0.5" />
         </>
       )}
-      <div className="relative group/btn">
-        <button
-          aria-label="Collapse folders"
-          onClick={() => treeRef.current?.closeAll()}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <CollapseAllIcon />
-        </button>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-            <span className="text-xs font-medium text-text">Collapse folders</span>
-          </div>
-        </div>
-      </div>
+      <IconButton
+        label="Collapse folders"
+        size="sm"
+        tooltip={{ label: 'Collapse folders' }}
+        onClick={() => treeRef.current?.closeAll()}
+      >
+        <CollapseAllIcon />
+      </IconButton>
       <div className="w-px h-3 bg-border mx-0.5" />
-      <div className="relative group/btn">
-        <button
-          aria-label="New file"
-          onClick={() => {
-            startFileOperation({ type: 'create-file', parentPath: getParentPath() });
-          }}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <FilePlusIcon />
-        </button>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-            <span className="text-xs font-medium text-text">New file</span>
-          </div>
-        </div>
-      </div>
-      <div className="relative group/btn">
-        <button
-          aria-label="New folder"
-          onClick={() => {
-            startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
-          }}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <FolderPlusIcon />
-        </button>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
-            <span className="text-xs font-medium text-text">New folder</span>
-          </div>
-        </div>
-      </div>
+      <IconButton
+        label="New file"
+        size="sm"
+        tooltip={{ label: 'New file' }}
+        onClick={() => {
+          startFileOperation({ type: 'create-file', parentPath: getParentPath() });
+        }}
+      >
+        <FilePlusIcon />
+      </IconButton>
+      <IconButton
+        label="New folder"
+        size="sm"
+        tooltip={{ label: 'New folder' }}
+        onClick={() => {
+          startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
+        }}
+      >
+        <FolderPlusIcon />
+      </IconButton>
       <div className="relative" ref={uploadDropdownRef}>
-        <button
-          aria-label="Upload"
+        <IconButton
+          label="Upload"
+          size="sm"
+          className={
+            uploadMenuOpen ? 'bg-icon-button-hover text-icon-button-icon-hover' : undefined
+          }
+          aria-expanded={uploadMenuOpen}
+          aria-haspopup="menu"
           onClick={() => setUploadMenuOpen((v) => !v)}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <UploadIcon />
-        </button>
+        </IconButton>
         {uploadMenuOpen && (
-          <div className="absolute top-full right-0 mt-1 z-50 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown overflow-hidden">
+          <div
+            ref={uploadMenuRef}
+            className="absolute top-full right-0 mt-1 z-50 min-w-32 p-1 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown motion-enter-dropdown"
+            data-plasma-host
+          >
+            <PlasmaOverlay
+              surfaces={[{ ref: uploadMenuRef, radius: 12, elevation: 0.6 }]}
+              zIndex={-1}
+              canvasStyle={{ position: 'fixed' }}
+            />
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
+              className={menuItemClass('default', 'text-xs whitespace-nowrap')}
               onClick={() => {
                 setUploadMenuOpen(false);
                 fileInputRef.current?.click();
@@ -604,7 +649,7 @@ export default function ArtifactsPane() {
               Files…
             </button>
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
+              className={menuItemClass('default', 'text-xs whitespace-nowrap')}
               onClick={() => {
                 setUploadMenuOpen(false);
                 const el = folderInputRef.current;
@@ -636,16 +681,29 @@ export default function ArtifactsPane() {
 
   return (
     <div className="flex flex-col h-full">
+      {copySelection && (
+        <CopyArtifactsDialog selection={copySelection} onClose={() => setCopySelection(null)} />
+      )}
+      {!isViewingSnapshot && selectedIds.length > 0 && cruxId && (
+        <button
+          className="text-xs text-accent text-left px-3 py-2 hover:underline"
+          onClick={() => {
+            const ids = new Set(expandTreeSelection(selectedIds, artifacts));
+            const paths = artifacts.filter((file) => ids.has(file.id)).map(pathOf);
+            if (paths.length)
+              setCopySelection({ sourceId: cruxId, gardenId: captureGardenId(), paths });
+          }}
+        >
+          Copy selected to another Crux…
+        </button>
+      )}
       {/* Desktop: registered Project Folder is missing on disk */}
       {folderMissing && (
-        <div className="shrink-0 px-3 py-2 border-b border-border bg-error/10 flex items-center justify-between gap-2">
+        <div className="shrink-0 px-3 py-2 border-b border-border bg-error/(--tint-faint) flex items-center justify-between gap-2">
           <span className="text-xs text-text">
             Project folder is missing on disk. Your files are safe in history.
           </span>
-          <button
-            onClick={() => restoreProjectFolder()}
-            className="shrink-0 px-2 py-1 text-xs font-medium rounded-[var(--radius-sm)] bg-accent text-bg hover:opacity-90 transition-opacity cursor-pointer"
-          >
+          <button onClick={() => restoreProjectFolder()} className={buttonClass('primary', 'xs')}>
             Restore folder
           </button>
         </div>
@@ -672,75 +730,77 @@ export default function ArtifactsPane() {
         onChange={handleFolderInputChange}
       />
 
-      <div
-        className="flex-1 overflow-hidden min-h-0 flex flex-col"
-        onContextMenu={(e) => {
-          e.preventDefault();
-          showContextMenu({
-            x: e.clientX,
-            y: e.clientY,
-            targetId: null,
-            targetPath: '',
-            isFolder: true,
-            selectedIds,
-          });
-        }}
-      >
-        {showTree ? (
-          <ArboristFileTree
-            ref={treeRef}
-            artifacts={artifacts}
-            selectedId={activeTabId}
-            onSelect={handleSelect}
-            onSelectionChange={handleSelectionChange}
-            onContextMenu={handleContextMenu}
-            onMove={handleMove}
-            onRename={handleRename}
-            onUploadFiles={handleUploadFiles}
-            onDelete={handleDelete}
-            activeFileOperation={activeFileOperation}
-            onCreateFile={handleCreateFile}
-            onCreateFolder={handleCreateFolder}
-            onCancelOperation={cancelFileOperation}
-            initialOpenState={folderOpenState}
-            onFolderToggle={setFolderOpen}
-          />
-        ) : (
-          <div
-            className="relative flex-1 flex items-center justify-center"
-            onDragEnter={handleEmptyDragEnter}
-            onDragLeave={handleEmptyDragLeave}
-            onDragOver={handleEmptyDragOver}
-            onDrop={handleEmptyDrop}
-          >
-            {isDraggingOverEmpty ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/5 border-2 border-dashed border-accent/40 rounded-[var(--radius)] pointer-events-none">
-                <div className="flex flex-col items-center gap-1 text-accent">
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                  <span className="text-xs font-mono">Drop files or folders here</span>
+      <FindInFiles artifacts={artifacts} onOpen={handleOpenMatch}>
+        <div
+          className="flex-1 overflow-hidden min-h-0 flex flex-col"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            showContextMenu({
+              x: e.clientX,
+              y: e.clientY,
+              targetId: null,
+              targetPath: '',
+              isFolder: true,
+              selectedIds,
+            });
+          }}
+        >
+          {showTree ? (
+            <ArboristFileTree
+              ref={treeRef}
+              artifacts={artifacts}
+              selectedId={activeTabId}
+              onSelect={handleSelect}
+              onSelectionChange={handleSelectionChange}
+              onContextMenu={handleContextMenu}
+              onMove={handleMove}
+              onRename={handleRename}
+              onUploadFiles={handleUploadFiles}
+              onDelete={handleDelete}
+              activeFileOperation={activeFileOperation}
+              onCreateFile={handleCreateFile}
+              onCreateFolder={handleCreateFolder}
+              onCancelOperation={cancelFileOperation}
+              initialOpenState={folderOpenState}
+              onFolderToggle={setFolderOpen}
+            />
+          ) : (
+            <div
+              className="relative flex-1 flex items-center justify-center"
+              onDragEnter={handleEmptyDragEnter}
+              onDragLeave={handleEmptyDragLeave}
+              onDragOver={handleEmptyDragOver}
+              onDrop={handleEmptyDrop}
+            >
+              {isDraggingOverEmpty ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/(--tint-trace) border-2 border-dashed border-accent/(--tint-muted) rounded-[var(--radius)] pointer-events-none">
+                  <div className="flex flex-col items-center gap-1 text-accent">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span className="text-xs font-mono">Drop files or folders here</span>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="text-xs text-center text-text-muted">
-                Create or import an artifact to get started
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+              ) : (
+                <p className="text-xs text-center text-text-muted">
+                  Create or import an artifact to get started
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </FindInFiles>
 
       {/* ── Selected file info ── */}
       {selectedArtifact && (
@@ -778,6 +838,7 @@ export default function ArtifactsPane() {
               <FieldRow label="Updated">
                 <span>{formatDateTime(selectedArtifact.updated)}</span>
               </FieldRow>
+              <ConvertActions artifact={selectedArtifact} />
             </div>
           )}
         </div>
@@ -801,12 +862,25 @@ export default function ArtifactsPane() {
             />
           </div>
         </div>
-      ) : artifacts.length > 0 ? (
-        <div className="shrink-0 px-3 py-1.5 border-t border-border text-2xs font-mono text-text-muted flex justify-between">
+      ) : artifacts.length > 0 || (aiEnabled && agentFileCount > 0) ? (
+        <div className="shrink-0 px-3 py-1.5 border-t border-border text-2xs font-mono text-text-muted flex items-center justify-between gap-2">
           <span>
             {artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}
           </span>
-          <span>{totalSize}</span>
+          {aiEnabled && agentFileCount > 0 && (
+            <PaneOptions pane="artifacts" label="Agent instructions">
+              <button
+                type="button"
+                aria-pressed={showAgentFiles}
+                onClick={() => setShowAgentFiles((v) => !v)}
+                title="AGENTS.md and CLAUDE.md: what Crux Garden tells agents working in this folder"
+                className="-my-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer"
+              >
+                {showAgentFiles ? 'Hide agent files' : `Agent files (${agentFileCount})`}
+              </button>
+            </PaneOptions>
+          )}
+          <span className="ml-auto">{totalSize}</span>
         </div>
       ) : null}
     </div>

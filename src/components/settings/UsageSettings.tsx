@@ -1,19 +1,23 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import IncludedUsagePanel from './IncludedUsagePanel';
+import { SectionLabel } from '@/components/ui';
+import SettingsSection from './SettingsSection';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { Panel } from '@/components/ui';
 import { formatBytes } from '@/lib/format';
 import * as usageApi from '@/api/usage';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Meter } from '@/components/workspace/UsageSection';
 import { periodDay as day } from '@/lib/period-day';
 import { onUsageChanged } from '@/lib/usage-events';
+import { cruxStoreRequests } from './usage-math';
 
 /** Account-wide storage and bandwidth for the billing period, against the plan. */
 export default function UsageSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const accountId = useAuthStore((s) => s.account?.id);
   const cruxes = useGardenStore((s) => s.allCruxes);
+  const aiEnabled = useAiEnabled();
   const [usage, setUsage] = useState<usageApi.AccountUsage | null>(null);
   const [past, setPast] = useState<usageApi.PeriodView[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -60,20 +64,22 @@ export default function UsageSettings() {
     c.title || cruxes.find((x) => x.id === c.cruxId)?.title || c.cruxId.slice(0, 8);
 
   return (
-    <Panel data-testid="usage-settings">
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="font-display text-base font-medium text-heading">Usage</h2>
-        {usage && (
+    <SettingsSection
+      title="Usage"
+      testId="usage-settings"
+      aside={
+        usage && (
           <span className="text-xxs font-mono text-text-muted">
             {day(usage.period.start)} → {day(usage.period.end)} · {usage.plan.name} plan
           </span>
-        )}
-      </div>
-      <IncludedUsagePanel />
+        )
+      }
+    >
+      {aiEnabled && <IncludedUsagePanel />}
       {error && <p className="text-xs text-text-muted">{error}</p>}
       {usage && (
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 @min-[560px]/settings:grid-cols-2">
             <Meter
               label="Storage"
               value={formatBytes(usage.storageBytes)}
@@ -97,7 +103,7 @@ export default function UsageSettings() {
             <Meter
               label="Crux Store requests"
               value={usage.store.requests.toLocaleString()}
-              hint={`of ${usage.plan.storeRequestsPerPeriod.toLocaleString()} this period · ${usage.store.reads.toLocaleString()} reads · ${usage.store.writes.toLocaleString()} writes · ${usage.store.keys.toLocaleString()} keys`}
+              hint={`of ${usage.plan.storeRequestsPerPeriod.toLocaleString()} this period · ${usage.store.reads.toLocaleString()} reads · ${usage.store.writes.toLocaleString()} writes · ${(usage.store.fnCalls ?? 0).toLocaleString()} function runs · ${usage.store.keys.toLocaleString()} keys`}
               pct={
                 usage.plan.storeRequestsPerPeriod
                   ? Math.min(100, (usage.store.requests / usage.plan.storeRequestsPerPeriod) * 100)
@@ -106,7 +112,7 @@ export default function UsageSettings() {
             />
           </div>
           <div data-testid="sync-usage" className="flex flex-col gap-1 text-xxs">
-            <div className="text-caption font-mono uppercase tracking-wider text-2xs">Sync</div>
+            <SectionLabel as="div">Sync</SectionLabel>
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-text">Garden backup</span>
               <span className="font-mono text-text-muted">
@@ -141,7 +147,7 @@ export default function UsageSettings() {
               </thead>
               <tbody>
                 {usage.cruxes.map((c) => (
-                  <tr key={c.cruxId} className="border-t border-border/60">
+                  <tr key={c.cruxId} className="border-t border-border/(--tint-medium)">
                     <td className="py-1.5 text-text truncate max-w-[16rem]">{title(c)}</td>
                     <td className="py-1.5 text-right font-mono text-text-muted">
                       {formatBytes(c.storageBytes)}
@@ -154,9 +160,9 @@ export default function UsageSettings() {
                     </td>
                     <td
                       className="py-1.5 text-right font-mono text-text-muted"
-                      title={`${formatBytes(c.storeBytes)} in ${c.storeKeys} keys`}
+                      title={`${c.storeReads.toLocaleString()} reads · ${c.storeWrites.toLocaleString()} writes · ${(c.fnCalls ?? 0).toLocaleString()} function runs · ${formatBytes(c.storeBytes)} in ${c.storeKeys} keys`}
                     >
-                      {(c.storeReads + c.storeWrites).toLocaleString()} req
+                      {cruxStoreRequests(c).toLocaleString()} req
                     </td>
                   </tr>
                 ))}
@@ -175,7 +181,7 @@ export default function UsageSettings() {
               </thead>
               <tbody>
                 {past.map((p) => (
-                  <tr key={p.period.start} className="border-t border-border/60">
+                  <tr key={p.period.start} className="border-t border-border/(--tint-medium)">
                     <td className="py-1.5 text-text">
                       {day(p.period.start)} → {day(p.period.end)}
                     </td>
@@ -211,10 +217,10 @@ export default function UsageSettings() {
                   : ''
               : ''}
             . Storage is enforced above twice the plan limit; bandwidth and Crux Store request
-            limits are advisory.
+            limits are advisory. Hosting limits reset on the 1st of each month (UTC).
           </p>
         </div>
       )}
-    </Panel>
+    </SettingsSection>
   );
 }

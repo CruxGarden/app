@@ -1,8 +1,16 @@
 /**
  * Provider registry — maps provider IDs to display names, default models,
- * and model metadata. Model IDs verified against provider docs 2026-07-31
- * (see AI-COLLABORATION-PLAN.md Phase A0); retired IDs stored in old cruxes
- * are upgraded via resolveModel().
+ * and model metadata. Model IDs, context windows and output limits verified
+ * against provider docs 2026-09-30; retired IDs stored in old cruxes are
+ * upgraded via resolveModel().
+ *
+ * **Defaults follow each provider's own "for most tasks" recommendation, not
+ * its flagship.** Anthropic says to start with Opus 5.5 for most workloads;
+ * OpenAI says to choose GPT-6.1 Sol to balance intelligence and cost (Astra
+ * is the complex-reasoning flagship); Google names no universal default, so
+ * the current Flash — the everyday tier — is ours. Someone paying for their
+ * own key can pick anything in the list; the default is what they get without
+ * choosing, so it should be the balanced pick rather than the top of the line.
  */
 
 import { isLocalModel, localModelName, localProviderOf } from './local';
@@ -24,10 +32,15 @@ export interface ProviderInfo {
   models: ModelInfo[];
   capabilities: ProviderCapability[];
   keyUrl: string;
+  /**
+   * The cheapest call that proves a pasted key (ai/key-check.ts): a read-only
+   * model listing, the key in a header — never in the URL, where it could be logged.
+   */
+  keyCheck?: { url: string; headers: (apiKey: string) => Record<string, string> };
 }
 
 /** The app-wide default chat model (used when a crux has no model setting). */
-export const DEFAULT_MODEL = 'claude-sonnet-5';
+export const DEFAULT_MODEL = 'claude-opus-5-5';
 
 /**
  * The Agent Provider (ADR 0019): Claude Code itself, run by the app in the
@@ -62,15 +75,19 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     name: 'Anthropic',
     defaultModel: DEFAULT_MODEL,
     models: [
+      { id: 'claude-opus-5-5', name: 'Claude Opus 5.5', contextWindow: 1000000, maxOutput: 128000 },
+      {
+        id: 'claude-sonnet-5-5',
+        name: 'Claude Sonnet 5.5',
+        contextWindow: 1000000,
+        maxOutput: 128000,
+      },
       {
         id: 'claude-fable-5-1',
         name: 'Claude Fable 5.1',
         contextWindow: 1000000,
         maxOutput: 128000,
       },
-      { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', contextWindow: 1000000, maxOutput: 128000 },
-      { id: 'claude-fable-5', name: 'Claude Fable 5', contextWindow: 1000000, maxOutput: 128000 },
-      { id: 'claude-opus-5', name: 'Claude Opus 5', contextWindow: 1000000, maxOutput: 128000 },
       {
         id: 'claude-haiku-4-5-20251001',
         name: 'Claude Haiku 4.5',
@@ -80,6 +97,14 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files'],
     keyUrl: 'https://console.anthropic.com/settings/keys',
+    keyCheck: {
+      url: 'https://api.anthropic.com/v1/models?limit=1',
+      headers: (apiKey) => ({
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      }),
+    },
   },
   [CLAUDE_CODE_PROVIDER]: {
     agent: true,
@@ -104,8 +129,10 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
   openai: {
     id: 'openai',
     name: 'OpenAI',
-    defaultModel: 'gpt-5.6-terra',
+    defaultModel: 'gpt-6.1-sol',
     models: [
+      { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', contextWindow: 1050000, maxOutput: 128000 },
+      { id: 'gpt-6-luna', name: 'GPT-6 Luna', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-6-astra', name: 'GPT-6 Astra', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', contextWindow: 1050000, maxOutput: 128000 },
@@ -113,11 +140,15 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files', 'Images'],
     keyUrl: 'https://platform.openai.com/api-keys',
+    keyCheck: {
+      url: 'https://api.openai.com/v1/models',
+      headers: (apiKey) => ({ Authorization: `Bearer ${apiKey}` }),
+    },
   },
   google: {
     id: 'google',
     name: 'Google Gemini',
-    defaultModel: 'gemini-3.6-flash',
+    defaultModel: 'gemini-3.8-flash',
     models: [
       {
         id: 'gemini-3.8-flash',
@@ -150,6 +181,12 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
         maxOutput: 65536,
       },
       {
+        id: 'gemini-3.1-flash-lite',
+        name: 'Gemini 3.1 Flash Lite',
+        contextWindow: 1048576,
+        maxOutput: 65536,
+      },
+      {
         id: 'gemini-3.1-pro-preview',
         name: 'Gemini 3.1 Pro (preview)',
         contextWindow: 1000000,
@@ -158,6 +195,10 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files', 'Images'],
     keyUrl: 'https://aistudio.google.com/apikey',
+    keyCheck: {
+      url: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1',
+      headers: (apiKey) => ({ 'x-goog-api-key': apiKey }),
+    },
   },
   // Local inference (Phase A4) — models are discovered at runtime via the
   // localai bridge (see src/ai/local.ts), so the static lists stay empty.
@@ -185,20 +226,25 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
  * pass through untouched.
  */
 const RETIRED_MODELS: Record<string, string> = {
+  // Successors stay in the same tier at the same or lower per-token price.
+  'claude-opus-5': 'claude-opus-5-5',
+  'claude-sonnet-5': 'claude-sonnet-5-5',
+  'claude-fable-5': 'claude-fable-5-1',
   // Anthropic (pre-Claude-5)
-  'claude-sonnet-4-20250514': 'claude-sonnet-5',
-  'claude-opus-4-20250514': 'claude-opus-5',
+  'claude-sonnet-4-20250514': 'claude-sonnet-5-5',
+  'claude-opus-4-20250514': 'claude-opus-5-5',
   'claude-haiku-4-20250414': 'claude-haiku-4-5-20251001',
   'claude-haiku-3-5-20241022': 'claude-haiku-4-5-20251001',
-  'claude-3-5-sonnet-20241022': 'claude-sonnet-5',
+  'claude-3-5-sonnet-20241022': 'claude-sonnet-5-5',
   // OpenAI (pre-GPT-5.6)
-  'gpt-4o': 'gpt-5.6-terra',
-  'gpt-4o-mini': 'gpt-5.6-luna',
-  'o3-mini': 'gpt-5.6-sol',
-  // Google (pre-Gemini-3.x)
+  'gpt-4o': 'gpt-6.1-sol',
+  'gpt-4o-mini': 'gpt-6-luna',
+  'o3-mini': 'gpt-6.1-sol',
+  // Google. 2.5 is still served; these are deliberate upgrades to the
+  // current tier rather than forced replacements. 2.0 really is shut down.
   'gemini-2.5-pro': 'gemini-3.1-pro-preview',
-  'gemini-2.5-flash': 'gemini-3.6-flash',
-  'gemini-2.0-flash': 'gemini-3.6-flash',
+  'gemini-2.5-flash': 'gemini-3.8-flash',
+  'gemini-2.0-flash': 'gemini-3.8-flash',
 };
 
 export function resolveModel(model: string | undefined | null): string {

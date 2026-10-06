@@ -52,17 +52,24 @@ function toolCallStream(toolName: string, input: Record<string, unknown>) {
   ]);
 }
 
+function userRequestText(message: LanguageModelV4Prompt[number]): string | undefined {
+  if (message.role !== 'user') return undefined;
+  const text = message.content.map((c) => (c.type === 'text' ? c.text : '')).join(' ');
+  // Workspace updates follow tool results; scripts still follow the person's request.
+  return text.startsWith('<workspace_context>') ? undefined : text;
+}
+
 function lastUserText(prompt: LanguageModelV4Prompt): string {
   for (let i = prompt.length - 1; i >= 0; i--) {
-    const m = prompt[i]!;
-    if (m.role === 'user') {
-      return m.content.map((c) => (c.type === 'text' ? c.text : '')).join(' ');
-    }
+    const text = userRequestText(prompt[i]!);
+    if (text !== undefined) return text;
   }
   return '';
 }
 
 let instance: MockLanguageModelV4 | null = null;
+/** One refusal per launch for the "[mock:refused-once]" script. */
+let refusedOnce = false;
 
 export function getMockLanguageModel(): LanguageModel {
   if (!instance) {
@@ -98,6 +105,49 @@ export function getMockLanguageModel(): LanguageModel {
           });
         };
 
+        // "[mock:refused-once]": the provider refuses the first attempt the way
+        // a revoked key does (401), then answers — a failed turn and its "Try again".
+        if (lastUserText(prompt).includes('[mock:refused-once]') && !refusedOnce) {
+          refusedOnce = true;
+          throw Object.assign(new Error('Mock provider: invalid x-api-key'), { statusCode: 401 });
+        }
+
+        // The tutorial journey exercises the real turn/tool pipeline with a
+        // deterministic provider. Pause so it can verify background feedback.
+        if (lastUserText(prompt).includes('[zen:seed]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('report_progress', {
+              percent: 25,
+              message: 'Preparing your seed',
+            });
+          if (rounds.length === 1) {
+            await waitForMockHandoff(abortSignal);
+            return toolCallStream('write_file', {
+              path: 'garden/seed.json',
+              content: JSON.stringify({ name: 'Mosslight', color: '#dbb37e' }),
+            });
+          }
+          return textStream('Seed turn returned: ' + toolResultText(prompt, 'write_file'));
+        }
+        if (lastUserText(prompt).includes('[garden:owned-turn]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) {
+            await waitForMockHandoff(abortSignal);
+            return toolCallStream('plant_crux', { title: 'Studio companion', template: 'blank' });
+          }
+          return textStream('Done — created in the original Garden.');
+        }
+        if (lastUserText(prompt).includes('[garden:companion]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (rounds.length === 0) return toolCallStream('list_garden_tools', {});
+          if (rounds.length === 1)
+            return toolCallStream('call_garden_tool', {
+              name: 'plant_crux',
+              input: { title: 'Built-in companion', template: 'blank' },
+            });
+          return textStream('Done — planted a companion Crux from this Collaboration.');
+        }
         if (lastUserText(prompt).includes('[cruxspace:cover]')) {
           const last = prompt.at(-1);
           const used = (name: string) =>
@@ -1281,6 +1331,170 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('save_font', { format: 'otf', name: 'Moss Sans' });
           return textStream('Named the font Moss Sans, drew an A from SVG and saved the OTF.');
         }
+        if (lastUserText(prompt).includes('[crux:operate]')) {
+          // The crux collaborator shows its work and tests a function (collaborator-operates.spec).
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = [
+            ['show', { what: 'pane', pane: 'history' }],
+            ['show', { what: 'file', path: 'index.html' }],
+            ['test_function', { name: 'hello', body: { n: 7 } }],
+          ];
+          const step = steps[rounds.length];
+          if (step) return toolCallStream(step[0], step[1]);
+          return textStream('Opened Growth, showed the page, and hello answered with the echo.');
+        }
+        if (lastUserText(prompt).includes('[garden:search-limits]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('search_garden', { query: '(a+)+$', regex: true });
+          if (rounds.length === 1)
+            return toolCallStream('search_garden', { query: 'search-recovered' });
+          return textStream(rounds.join('\n'));
+        }
+        if (lastUserText(prompt).includes('[garden:operate]')) {
+          // The Keeper reads the screen and the garden, chooses a collaborator, exports (keeper-operates.spec).
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = [
+            ['look', {}],
+            ['list_templates', {}],
+            ['search_garden', { query: 'Tour stop' }],
+            ['read_garden_file', { title: 'Tour stop', path: 'index.html' }],
+            ['choose_collaborator', { title: 'Tour stop', model: 'claude-sonnet-5-5' }],
+            ['export_crux', { title: 'Tour stop' }],
+          ];
+          const step = steps[rounds.length];
+          if (step) return toolCallStream(step[0], step[1]);
+          return textStream(
+            'I looked, searched the garden, read the page, chose Claude Sonnet 5.5 for Tour stop and exported it with its history.',
+          );
+        }
+        if (lastUserText(prompt).includes('[garden:tour')) {
+          // The Keeper gives the tour by operating the workspace (keeper-tour.spec).
+          // "slowly": hold each step back so a test can stop the Keeper mid-tour.
+          if (/\bslowly\b/i.test(lastUserText(prompt)))
+            await new Promise((r) => setTimeout(r, 1500));
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = lastUserText(prompt).includes(
+            '[garden:tour:pane-first]',
+          )
+            ? [
+                ['show', { what: 'crux', title: 'Tour stop' }],
+                ['show', { what: 'pane', pane: 'artifacts' }],
+                ['show', { what: 'pane', pane: 'history' }],
+                ['show', { what: 'file', title: 'Tour stop', path: 'index.html' }],
+                ['snapshot_crux', { title: 'Tour stop', label: "The tour's first moment" }],
+                ['set_names', { title: 'The Tour Garden', panes: { collaboration: 'The porch' } }],
+              ]
+            : lastUserText(prompt).includes('[garden:tour:pane-only]')
+              ? [['show', { what: 'pane', pane: 'history' }]]
+              : [
+                  ['show', { what: 'crux', title: 'Tour stop' }],
+                  ['show', { what: 'pane', pane: 'artifacts' }],
+                  ['show', { what: 'file', title: 'Tour stop', path: 'index.html' }],
+                  ['snapshot_crux', { title: 'Tour stop', label: "The tour's first moment" }],
+                  ['show', { what: 'pane', pane: 'history' }],
+                  [
+                    'set_names',
+                    { title: 'The Tour Garden', panes: { collaboration: 'The porch' } },
+                  ],
+                ];
+          const step = steps[rounds.length];
+          if (step) return toolCallStream(step[0], step[1]);
+          return textStream(
+            'That was the tour: the crux, its files, a moment kept in Growth, and the garden named. Tell the collaborator what to make next.',
+          );
+        }
+        if (lastUserText(prompt).includes('[garden:plant]')) {
+          // The Keeper plants a crux with a brief (garden-tools, step 6).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('plant_crux', {
+              title: 'Field notes',
+              template: 'blank',
+              brief: 'Notes from the field study, one page per day.',
+            });
+          return textStream('Planted Field notes with its brief. Open it from your garden.');
+        }
+        if (lastUserText(prompt).includes('[garden:grow]')) {
+          // The Keeper grows a named Garden with a brief, then plants a member into it (guide KEEP-02).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('create_cruxspace', {
+              name: 'Field study',
+              brief: 'A season of field notes: one Crux per site, one page per day.',
+            });
+          if (rounds.length === 1) {
+            const grown = toolResultText(prompt, 'create_cruxspace') || '';
+            if (grown.startsWith('Error'))
+              return textStream(`The Garden could not be grown: ${grown.slice(0, 200)}`);
+            return toolCallStream('plant_crux', {
+              title: 'Site A notes',
+              template: 'blank',
+              brief: 'Notes from site A, one page per day.',
+              cruxspaceId: grown.match(/^id: (\S+)/m)?.[1],
+            });
+          }
+          return textStream('Grew Field study and planted Site A notes in it with its brief.');
+        }
+        const undertakingMode = lastUserText(prompt).match(
+          /\[garden:undertaking:(beside|start)\]/,
+        )?.[1];
+        if (undertakingMode) {
+          // The Keeper starts an undertaking from its template, the worked example
+          // beside the starter or used as the start (guide KEEP-03).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('create_cruxspace', {
+              name: 'Pocket game',
+              templateId: 'small-game',
+              exampleMode: undertakingMode,
+            });
+          const grown = toolResultText(prompt, 'create_cruxspace') || '';
+          if (grown.startsWith('Error'))
+            return textStream(`The undertaking could not start: ${grown.slice(0, 200)}`);
+          return textStream(
+            undertakingMode === 'beside'
+              ? 'Started Pocket game with its worked example beside the starter.'
+              : 'Started Pocket game from the worked example as the start.',
+          );
+        }
+        if (lastUserText(prompt).includes('[garden:delegate]')) {
+          // The Keeper hands a turn to Alpha's own collaborator and waits for it (guide KEEP-04).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('list_cruxes', {});
+          if (rounds.length === 1) {
+            const listed = toolResultText(prompt, 'list_cruxes') || '';
+            const id = listed.match(/"id":\s*"([^"]+)",\s*"title":\s*"Alpha"/)?.[1];
+            if (!id) return textStream('There is no Crux titled Alpha in this garden.');
+            return toolCallStream('run_turn', {
+              cruxId: id,
+              message: 'Please write a short note for the study.',
+            });
+          }
+          const reply = toolResultText(prompt, 'run_turn') || '';
+          return textStream(
+            reply.startsWith('Error')
+              ? `Alpha's collaborator could not take the turn: ${reply.slice(0, 200)}`
+              : "Alpha's collaborator took the turn and wrote the note; your own work was untouched.",
+          );
+        }
+        if (lastUserText(prompt).includes('[garden:mood]')) {
+          // The Keeper changes the Garden's Mood from the list it is offered (guide KEEP-05).
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('list_moods', {});
+          if (rounds.length === 1) {
+            const listed = toolResultText(prompt, 'list_moods') || '';
+            if (!/^- raster-bars — /m.test(listed))
+              return textStream('Raster Bars is not among the Moods this Garden can wear.');
+            return toolCallStream('wear_mood', { id: 'raster-bars' });
+          }
+          const worn = toolResultText(prompt, 'wear_mood') || '';
+          return textStream(
+            worn.startsWith('Now wearing')
+              ? 'The garden now wears Raster Bars.'
+              : `The Mood could not be worn: ${worn.slice(0, 200)}`,
+          );
+        }
         if (lastUserText(prompt).includes('[shader:tweak]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_shader', {});
@@ -1388,6 +1602,23 @@ export function getMockLanguageModel(): LanguageModel {
               key: 'notes',
             });
           return textStream('Named the form Open day RSVP and added the coming and notes fields.');
+        }
+        if (lastUserText(prompt).includes('[undertaking:next-step]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const failure = rounds
+            .map((name) => toolResultText(prompt, name))
+            .find((value) => value?.startsWith('Error'));
+          if (failure) return textStream(failure);
+          if (!rounds.length) return toolCallStream('inspect_notebook', {});
+          const inspected = JSON.parse(toolResultText(prompt, 'inspect_notebook') || '{}');
+          const note = inspected.activeNote;
+          if (rounds.length === 1) return toolCallStream('read_open_note', { note });
+          if (rounds.length === 2)
+            return toolCallStream('append_note_text', {
+              note,
+              text: 'Next session: inspect the first change, then choose what to improve.',
+            });
+          return textStream('Added the next step to your undertaking notebook.');
         }
         if (lastUserText(prompt).includes('[productivity:note')) {
           const rounds = toolResultsThisTurn(prompt);
@@ -2589,15 +2820,18 @@ export function getMockLanguageModel(): LanguageModel {
         if (last?.role === 'tool') {
           const used = (name: string) =>
             last.content.some((c) => c.type === 'tool-result' && c.toolName === name);
-          return textStream(
-            used('set_theme')
-              ? 'Done — I painted it.'
-              : used('set_background')
-                ? 'Done — new backdrop.'
-                : 'Done — I wrote that file for you.',
-          );
+          // A stack turn has more than one step, so it answers for itself below.
+          if (!used('compose_ps') && !used('compose_up') && !used('compose_down'))
+            return textStream(
+              used('set_theme')
+                ? 'Done — I painted it.'
+                : used('set_background')
+                  ? 'Done — new backdrop.'
+                  : 'Done — I wrote that file for you.',
+            );
         }
         const text = lastUserText(prompt);
+        if (text === 'Stream a reading review') return readingReviewStream(abortSignal);
         // "slowly": hold the tool call back so a test can act mid-turn
         if (/\bslowly\b/i.test(text)) await new Promise((r) => setTimeout(r, 1500));
         // "backdrop": the model sets a workspace image as the Mood background
@@ -2615,6 +2849,24 @@ export function getMockLanguageModel(): LanguageModel {
             },
             mode: 'preview',
           });
+        }
+        // "stack": the collaborator drives a Stack Crux — ask what is running,
+        // start it, then say what happened. Proves compose_* runs through the
+        // whole Collaboration loop, not just from the bench.
+        if (/\bstack\b/i.test(text)) {
+          const answered = (name: string) =>
+            prompt.some(
+              (m) =>
+                m.role === 'tool' &&
+                m.content.some((c) => c.type === 'tool-result' && c.toolName === name),
+            );
+          if (!answered('compose_ps')) return toolCallStream('compose_ps', {});
+          if (/\bstart\b/i.test(text) && !answered('compose_up'))
+            return toolCallStream('compose_up', {});
+          if (/\bstop\b/i.test(text) && !answered('compose_down'))
+            return toolCallStream('compose_down', {});
+          const seen = toolResultText(prompt, 'compose_up') || toolResultText(prompt, 'compose_ps');
+          return textStream(`The stack answered: ${String(seen).slice(0, 200)}`);
         }
         if (/\bwrite\b/i.test(text)) {
           return toolCallStream('write_file', {
@@ -2678,8 +2930,8 @@ function growthScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> 
 // overwrite a file it has not read) and closes with text. It "thinks" between rounds — long before step 2 — so a test can
 // type, stop, or relaunch mid-step while the job card shows the steps advance.
 
-export const PLAN_STEPS = ['Lay the foundation', 'Raise the walls', 'Put on the roof'];
-export const planStepFile = (n: number) => `step-${n}.txt`;
+const PLAN_STEPS = ['Lay the foundation', 'Raise the walls', 'Put on the roof'];
+const planStepFile = (n: number) => `step-${n}.txt`;
 /** Think time before each round's write (ms): step 2 is the slow one, step 3 long enough to watch. */
 const PLAN_THINK_MS = [0, 5000, 2500];
 
@@ -2769,7 +3021,7 @@ function planScript(
 // every system prompt this mock has received, in order, so a test can assert
 // that a NEW crux's first turn carries the remembered line.
 
-export const REMEMBER_NOTE = 'prefers British spelling';
+const REMEMBER_NOTE = 'prefers British spelling';
 
 function memoryScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
   if (!/\bremember\b/i.test(lastUserText(prompt))) return null;
@@ -2806,7 +3058,7 @@ if (typeof window !== 'undefined') {
 // inspection text itself (which reply it quotes), not from call counting, so
 // a later manual "Check it" on the fixed page passes too.
 
-export const LANDING_PATH = 'index.html';
+const LANDING_PATH = 'index.html';
 export const LANDING_MISSING = 'Heading missing';
 export const LANDING_DONE_REPLY = 'Done — the landing page is ready.';
 export const LANDING_FIXED_REPLY = 'Fixed — added the heading.';
@@ -2827,12 +3079,12 @@ const LANDING_FIXED = LANDING_BROKEN.replace(
   '<h1>Welcome</h1>\n<p>Welcome to the garden.</p>',
 );
 
-/** Tool results after the most recent user message — this turn's rounds so far. */
+/** Tool results after the person's latest request, including workspace refreshes. */
 function toolResultsThisTurn(prompt: LanguageModelV4Prompt): string[] {
   const names: string[] = [];
   for (let i = prompt.length - 1; i >= 0; i--) {
     const m = prompt[i]!;
-    if (m.role === 'user') break;
+    if (userRequestText(m) !== undefined) break;
     if (m.role === 'tool') {
       for (const c of m.content) if (c.type === 'tool-result') names.unshift(c.toolName);
     }
@@ -2895,10 +3147,10 @@ function generateText(prompt: LanguageModelV4Prompt): string {
 // makes every worker think ~4s before its first write, so a test can Stop
 // mid-run. After the delegate result the model closes with text.
 
-export const SUB_TITLES = ['Alpha', 'Beta', 'Gamma'];
-export const subFile = (title: string) => `${title.toLowerCase()}.md`;
-export const SHARED_FILE = 'notes.md';
-export const subNotes = (title: string) => `notes from ${title}\n`;
+const SUB_TITLES = ['Alpha', 'Beta', 'Gamma'];
+const subFile = (title: string) => `${title.toLowerCase()}.md`;
+const SHARED_FILE = 'notes.md';
+const subNotes = (title: string) => `notes from ${title}\n`;
 const SUB_THINK_MS = 4000;
 
 function delegateScript(
@@ -2919,6 +3171,7 @@ function delegateScript(
         });
       }
       if (rounds.length === 1) {
+        if (/\bwithout overlap\b/i.test(text)) return textStream(`Wrote ${subFile(title)}.`);
         return toolCallStream('write_file', { path: SHARED_FILE, content: subNotes(title) });
       }
       return textStream(`Wrote ${subFile(title)} and ${SHARED_FILE}.`);
@@ -2926,14 +3179,18 @@ function delegateScript(
   }
   if (!/\bin parallel\b/i.test(text)) return null;
   const last = prompt[prompt.length - 1];
-  if (last?.role === 'tool') return textStream('Done — merged the parallel work.');
+  if (last?.role === 'tool') return textStream('Done — parallel workers finished.');
   const slowly = /\bslowly\b/i.test(text);
+  const separate = /\bwithout overlap\b/i.test(text);
   return toolCallStream('delegate', {
     tasks: SUB_TITLES.map((title) => ({
       title,
       instructions:
-        `Write ${subFile(title)} with a line of your own, then add your notes to ${SHARED_FILE}.` +
-        (slowly ? ' Take it slowly.' : ''),
+        (separate
+          ? `Write ${subFile(title)} with a line of your own.`
+          : `Write ${subFile(title)} with a line of your own, then add your notes to ${SHARED_FILE}.`) +
+        (slowly ? ' Take it slowly.' : '') +
+        (separate ? ' Without overlap: only write your own file.' : ''),
       paths: [subFile(title), SHARED_FILE],
     })),
   });
@@ -2955,7 +3212,7 @@ export const FIVE_WS_OPENING =
   'You took your time. Sit, if you must — the chair has held worse than you.';
 
 /** In-voice lines with nothing identifying in them. Kept free of common name words. */
-export const FIVE_WS_LINES: readonly string[] = [
+const FIVE_WS_LINES: readonly string[] = [
   'You ask that as though the answer were owed to you. It is not.',
   'I have been asked better questions by worse people, and answered none of them.',
   'Spelling was never the part of me anyone remembered.',
@@ -3670,4 +3927,40 @@ function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | 
     default:
       return textStream(`Unknown Glow Garden step: ${marker}.`);
   }
+}
+
+/** Provider-boundary fixture for actual-app reading-position tests. */
+function readingReviewStream(signal?: AbortSignal) {
+  let cancelled = false;
+  return {
+    stream: new ReadableStream<LanguageModelV4StreamPart>({
+      async start(controller) {
+        try {
+          controller.enqueue({ type: 'stream-start', warnings: [] });
+          controller.enqueue({ type: 'text-start', id: 'reading' });
+          for (let n = 1; n <= 120; n++) {
+            await think(150, signal);
+            if (cancelled) return;
+            controller.enqueue({
+              type: 'text-delta',
+              id: 'reading',
+              delta: `Reading note ${n}: Here is a paragraph to review at your own pace.\n\n`,
+            });
+          }
+          controller.enqueue({ type: 'text-end', id: 'reading' });
+          controller.enqueue({
+            type: 'finish',
+            finishReason: { unified: 'stop', raw: undefined },
+            usage: USAGE,
+          });
+          controller.close();
+        } catch (error) {
+          if (!cancelled) controller.error(error);
+        }
+      },
+      cancel() {
+        cancelled = true;
+      },
+    }),
+  };
 }

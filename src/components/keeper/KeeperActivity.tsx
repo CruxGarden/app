@@ -1,0 +1,53 @@
+import { useKeeperStore } from '@/stores/keeperStore';
+import { buttonClass } from '@/components/ui/button-class';
+import { useGardenContext } from '@/stores/gardenContext';
+import { useUIStore, useWorkspaceUIStore } from '@/stores/uiStore';
+import { ConsoleAvatar } from './Console';
+import { cn } from '@/lib/cn';
+
+/**
+ * The hands, visible while the console is closed (GARDENS-ALL-THE-WAY-OUT:
+ * "the person must see the hands move … it's the conversation menu"): when
+ * the Keeper is working — showing, planting, running a turn — a chip in the
+ * top bar says what it is doing, with Stop. Clicking it opens the console.
+ */
+export default function KeeperActivity() {
+  // The chip belongs to the Garden in front; before one is chosen there is nothing to show.
+  const gardenId = useGardenContext((s) => s.garden?.id);
+  return gardenId ? <Activity /> : null;
+}
+
+function Activity() {
+  const streaming = useKeeperStore((s) => s.streaming);
+  const working = useKeeperStore((s) => s.working);
+  const stop = useKeeperStore((s) => s.stop);
+  const consoleOpen = useWorkspaceUIStore((s) => s.paneVisibility.console);
+  if (!streaming || consoleOpen) return null;
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 h-7 pl-1 pr-1.5 rounded-full',
+        'bg-mood-bar border border-mood-bar-border text-xxs text-text',
+      )}
+      data-testid="keeper-activity"
+      role="status"
+    >
+      <button
+        type="button"
+        onClick={() => useUIStore.getState().setConsoleOpen(true)}
+        className="flex items-center gap-1.5 -ml-0.5 pl-0.5 pr-1.5 rounded-full hover:bg-action-button-hover transition-colors cursor-pointer"
+        aria-label="Open the console"
+      >
+        <ConsoleAvatar className="w-5 h-5 rounded-full overflow-hidden" />
+        <span className="font-mono truncate max-w-[16rem]">{working ?? 'Working…'}</span>
+      </button>
+      <button
+        type="button"
+        onClick={stop}
+        className={buttonClass('secondary', 'xs', 'min-h-5 py-0.5 px-2 rounded-full text-xxs')}
+      >
+        Stop
+      </button>
+    </div>
+  );
+}

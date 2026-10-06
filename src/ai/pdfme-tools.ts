@@ -1,3 +1,4 @@
+import { NO_INPUT } from './app-tool-schema';
 import { validateLayoutEdit } from '../../pdfme-crux/garden/commands.js';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 const PAGES = [
@@ -103,7 +104,7 @@ PDFME_TOOLS.push(
     name: 'add_layout_page',
     description:
       'Append a blank page to the layout; returns its zero-based pageIndex. Existing pages stay intact. Undo reverses the addition.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: ['data/project.json'],
   },
   {

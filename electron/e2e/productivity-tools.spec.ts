@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -26,6 +27,11 @@ for (const [type, label] of [
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: new RegExp('^' + label) }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // Leave room for the tool if Tasks is already open; closed panels have no bar button.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+        await togglePanel(page, 'Toggle tasks');
       const frame = page.frameLocator('iframe[data-crux-id]');
       await expect(frame.locator('#editor')).toHaveAttribute('data-ready', 'true', {
         timeout: 90000,
@@ -142,7 +148,7 @@ for (const [type, label] of [
     }
     const second = await launchApp({ dir: first.dir });
     try {
-      await second.page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(second.page);
       const frame = second.page.frameLocator('iframe[data-crux-id]');
       await expect(frame.locator('#editor')).toHaveAttribute('data-ready', 'true', {
         timeout: 60000,

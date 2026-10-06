@@ -1,0 +1,224 @@
+{
+  "desktopTests": 8,
+  "scans": [
+    {
+      "screen": "Toggle growth",
+      "rulesPassed": 22,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 22
+        }
+      ]
+    },
+    {
+      "screen": "Toggle share",
+      "rulesPassed": 22,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 22
+        }
+      ]
+    },
+    {
+      "screen": "Toggle tasks",
+      "rulesPassed": 26,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 34
+        }
+      ]
+    },
+    {
+      "screen": "creation",
+      "rulesPassed": 24,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 25
+        }
+      ]
+    },
+    {
+      "screen": "delete-confirmation",
+      "rulesPassed": 19,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 4
+        }
+      ]
+    },
+    {
+      "screen": "entry",
+      "rulesPassed": 18,
+      "violations": [],
+      "review": []
+    },
+    {
+      "screen": "explore",
+      "rulesPassed": 22,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 21
+        }
+      ]
+    },
+    {
+      "screen": "garden",
+      "rulesPassed": 22,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 20
+        }
+      ]
+    },
+    {
+      "screen": "garden-choice",
+      "rulesPassed": 18,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 7
+        }
+      ]
+    },
+    {
+      "screen": "garden-setup",
+      "rulesPassed": 21,
+      "violations": [],
+      "review": []
+    },
+    {
+      "screen": "models",
+      "rulesPassed": 24,
+      "violations": [],
+      "review": [
+        {
+          "rule": "aria-valid-attr-value",
+          "nodes": 1
+        },
+        {
+          "rule": "color-contrast",
+          "nodes": 40
+        }
+      ]
+    },
+    {
+      "screen": "moods",
+      "rulesPassed": 21,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 22
+        }
+      ]
+    },
+    {
+      "screen": "settings-AI and agents",
+      "rulesPassed": 30,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 49
+        }
+      ]
+    },
+    {
+      "screen": "settings-Account",
+      "rulesPassed": 26,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 38
+        }
+      ]
+    },
+    {
+      "screen": "settings-Appearance and panels",
+      "rulesPassed": 30,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 65
+        }
+      ]
+    },
+    {
+      "screen": "settings-Garden and backups",
+      "rulesPassed": 30,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 38
+        }
+      ]
+    },
+    {
+      "screen": "workspace",
+      "rulesPassed": 21,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 9
+        }
+      ]
+    },
+    {
+      "screen": "zoomed-command-palette",
+      "rulesPassed": 24,
+      "violations": [],
+      "review": [
+        {
+          "rule": "color-contrast",
+          "nodes": 17
+        }
+      ]
+    }
+  ],
+  "source": "Source, tests and evidence committed together; base c96c9ec15.",
+  "limits": "Host interface only; incomplete contrast results require visual/assistive-technology review.",
+  "regression": {
+    "fullDesktop": {
+      "passed": 72,
+      "failed": 1,
+      "failure": "Screen-sharing rejection timeout; unchanged spec passed twice in isolation; root timing cause unproven."
+    },
+    "additionalAcceptance": {
+      "passed": 5,
+      "log": "/tmp/v1-a11y-regression-focus-final.log"
+    },
+    "modelPlacement": "Passed in /tmp/v1-a11y-regression-focus.log",
+    "publicBrowser": {
+      "passed": 16,
+      "sqliteWorkerPassed": 1,
+      "log": "/tmp/v1-a11y-web.log"
+    }
+  },
+  "packaged": {
+    "platform": "darwin-arm64",
+    "passed": 3,
+    "seconds": 22.1,
+    "log": "/tmp/v1-a11y-package-smoke.log",
+    "candidate": "electron/release/manual-testing-accessibility-oct1",
+    "signing": "ad-hoc"
+  }
+}

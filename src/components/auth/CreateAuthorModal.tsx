@@ -65,7 +65,7 @@ export default function CreateAuthorModal({ open, onClose, onCreated }: CreateAu
   );
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={onClose} aria-label="Choose a username">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <h2 className="text-lg font-display font-medium text-text">Choose a username</h2>
@@ -75,6 +75,7 @@ export default function CreateAuthorModal({ open, onClose, onCreated }: CreateAu
         </div>
 
         <Input
+          aria-label="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
           placeholder="username"
@@ -83,6 +84,7 @@ export default function CreateAuthorModal({ open, onClose, onCreated }: CreateAu
         />
 
         <Input
+          aria-label="Display name (optional)"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           placeholder="Display name (optional)"

@@ -1,3 +1,5 @@
+import { finishSetupAtHome, goHome } from './multi-crux-helpers';
+import { togglePanel, expectPanelBarReady, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -16,7 +18,7 @@ test.describe('recover (mocked API)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -32,7 +34,7 @@ test.describe('recover (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Share, backing up first
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -87,16 +89,13 @@ test.describe('recover (mocked API)', () => {
       await expect(page.getByTestId('recover-section')).toHaveCount(0, { timeout: 30_000 });
       await page.getByRole('button', { name: 'Open My Crux' }).click();
       const tree = page.getByRole('tree');
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
-        timeout: 30_000,
-      });
-      if (!(await tree.isVisible().catch(() => false)))
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await expectPanelBarReady(page);
+      await openPanel(page, 'artifacts', 'Toggle artifacts');
       await expect(tree.getByText('index.html')).toBeVisible({ timeout: 30_000 });
       // the archive was taken after the publish: the Share pane knows it is live
       const sharePane = page.getByTestId('pane-body-publish');
       if (!(await sharePane.isVisible().catch(() => false)))
-        await page.getByRole('button', { name: 'Toggle share' }).click();
+        await togglePanel(page, 'Toggle share');
       await expect(sharePane.getByText('Shared', { exact: true })).toBeVisible({ timeout: 15_000 });
       expect(api.log.some((l) => l.startsWith('GET /sync/crux/'))).toBe(true);
     } finally {
@@ -165,7 +164,7 @@ test.describe('recover (mocked API)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       // connect the account from Settings → Account (no crux to share yet)
       await page.getByRole('button', { name: 'Account menu' }).click();
       await page.getByRole('button', { name: /^Settings/ }).click();
@@ -187,7 +186,7 @@ test.describe('recover (mocked API)', () => {
       // the recovered crux: same id, both files, the public conversation
       await page.getByRole('button', { name: 'Open From elsewhere' }).click();
       await expect(page.getByText('Here is your page.')).toBeVisible({ timeout: 30_000 });
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await togglePanel(page, 'Toggle artifacts');
       const tree = page.getByRole('tree');
       await expect(tree.getByText('index.html')).toBeVisible({ timeout: 30_000 });
       await expect(tree.getByText('style.css')).toBeVisible();
@@ -195,7 +194,7 @@ test.describe('recover (mocked API)', () => {
       await expect(page).toHaveURL(new RegExp(`/c/${id}`));
 
       // back home: Unshare the orphan
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       const orphan = page.getByTestId('recover-orphan-site');
       await expect(orphan).toBeVisible({ timeout: 15_000 });
       await orphan.getByRole('button', { name: 'Unshare' }).click();

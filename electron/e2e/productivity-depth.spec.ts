@@ -3,7 +3,8 @@ import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { collaborator, outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -78,6 +79,11 @@ for (const kind of ['Notes', 'Spreadsheet'] as const) {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: new RegExp('^' + kind) }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // Closed panels are absent from the bar; make room only if Tasks is open.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+        await togglePanel(page, 'Toggle tasks');
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -156,14 +162,13 @@ for (const kind of ['Notes', 'Spreadsheet'] as const) {
       }
       await ready();
       await verifySaved();
-      await expect(page.getByTestId('mood-intro')).toHaveCount(0);
       await page.screenshot({ path: join(evidence, `${kind.toLowerCase()}-edited.png`) });
       await instance.app.close();
       instance = await launchApp({ dir });
       page = instance.page;
       page.setDefaultTimeout(60000);
       await page.setViewportSize({ width: 1800, height: 1100 });
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready();
       await verifySaved();
       await page.screenshot({ path: join(evidence, `${kind.toLowerCase()}-reopened.png`) });

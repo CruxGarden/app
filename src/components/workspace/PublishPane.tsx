@@ -1,5 +1,13 @@
+import PaneOptions from './PaneOptions';
+import { executeAppTool } from '@/services/embedded-app-tool-registry';
+import { downloadShareCard } from '@/services/share-card';
+import LocalTestPublication from './LocalTestPublication';
+import GuideLink from '@/components/explore/GuideLink';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { isEmbeddedApp, isLocalCreationTool } from '@/services/embedded-app';
+import { publicationPlan } from '@/services/publication-plan';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -11,7 +19,8 @@ import { type PublishPhase } from '@/services/publish';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import ConnectAccount from '@/components/auth/ConnectAccount';
-import { Toggle } from '@/components/ui';
+import PublicationVisibility from './PublicationVisibility';
+import { captureAuth, assertAuthCurrent } from '@/api/session';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 import UsageSection from './UsageSection';
 import { confirmDialog, choiceDialog } from '@/stores/dialogStore';
@@ -23,6 +32,15 @@ import * as cruxesApi from '@/api/cruxes';
 import * as liveStore from '@/api/store';
 import CustomDomainSection from './CustomDomainSection';
 import GuestbookSection from './GuestbookSection';
+import GardenShelfSection from './GardenShelfSection';
+import WorkspacePackageShare from './WorkspacePackageShare';
+import FunctionsSection from './FunctionsSection';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
+import VisitorPreview from './VisitorPreview';
+import { Toggle } from '@/components/ui';
+import { openSettings } from '@/components/layout/app-commands';
+import { conversationShared, sharedConversation } from '@/services/shared-conversation';
+import type { Crux, ChatMessage } from '@/api/types';
 import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
 
 /** What the spinner says while a publish runs — a site build is not instant. */
@@ -35,11 +53,79 @@ const PHASE_LABELS: Record<PublishPhase, string> = {
   tags: 'Finishing...',
 };
 
+/**
+ * "How was this made?" (CR06): the conversation is private unless the creator
+ * includes it. Off for a first share; the choice is saved with the Crux and
+ * every later update respects it.
+ */
+function ConversationShare({ crux, messages }: { crux: Crux; messages: ChatMessage[] }) {
+  const setConversationPublished = useCruxStore((s) => s.setConversationPublished);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const on = conversationShared(crux);
+  const total = messages.filter((m) => m.role === 'user' || m.role === 'assistant').length;
+  const shared = sharedConversation(crux, messages)?.length ?? 0;
+  return (
+    <PaneSection label="Conversation" data-testid="conversation-share">
+      <div className="flex flex-col gap-1.5">
+        <Toggle
+          checked={on}
+          disabled={busy}
+          label="Include the conversation"
+          onChange={(next) => {
+            setBusy(true);
+            setError('');
+            void setConversationPublished(next)
+              .catch(() => setError('Could not save this choice. Try again.'))
+              .finally(() => setBusy(false));
+          }}
+        />
+        <p className="text-xxs text-text-muted">
+          {on
+            ? `Visitors can read ${shared} of ${total} message${total === 1 ? '' : 's'} under “How was this made?”. Review it before you share — leave a message out from its actions in Collaboration.`
+            : 'Your Collaboration stays on this computer. Visitors see “The creator kept the conversation private.”'}
+        </p>
+        {error && (
+          <p role="alert" className="text-xxs text-error">
+            {error}
+          </p>
+        )}
+      </div>
+    </PaneSection>
+  );
+}
+
+/** Soft-limit notes from the last share: plain words and the way to the numbers. */
+function PublishWarnings() {
+  const warnings = useCruxStore((s) => s.publishWarnings);
+  if (!warnings.length) return null;
+  return (
+    <div data-testid="publish-warnings" className="flex flex-col gap-1.5">
+      {warnings.map((warning) => (
+        <PaneNote key={warning.kind} tone="muted" className="text-left whitespace-normal">
+          {warning.message}{' '}
+          <button
+            type="button"
+            className={linkClass()}
+            onClick={() => openSettings({ section: 'usage' })}
+          >
+            See Usage in Settings
+          </button>
+        </PaneNote>
+      ))}
+    </div>
+  );
+}
+
 export default function PublishPane() {
+  const advancedMode = useAdvancedMode();
+  const aiEnabled = useAiEnabled();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
+  const messages = useCruxStore((s) => s.messages);
+  const [previewing, setPreviewing] = useState(false);
   const publishCrux = useCruxStore((s) => s.publishCrux);
   const unpublishCrux = useCruxStore((s) => s.unpublishCrux);
   const hasUnpublishedChanges = useCruxStore(selectHasUnpublishedChanges);
@@ -48,12 +134,13 @@ export default function PublishPane() {
   const [showConnect, setShowConnect] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareError, setShareError] = useState('');
+  const [cardBusy, setCardBusy] = useState(false);
   const phase = useCruxStore((s) => s.publishPhase);
   const failure = useCruxStore((s) => s.publishFailure);
 
   const { ref, isTooNarrow } = usePaneWidth(270);
 
-  const updateCrux = useCruxStore((s) => s.updateCrux);
   const isPublished = crux?.meta?.publishedAt != null;
 
   const lastEditedAt = useMemo(() => {
@@ -185,51 +272,71 @@ export default function PublishPane() {
     doPublish();
   }, [doPublish]);
 
+  const [unsharing, setUnsharing] = useState<'reviewing' | 'unsharing' | null>(null);
   const [unshareError, setUnshareError] = useState<string | null>(null);
   const handleUnpublish = useCallback(async () => {
-    // Say what goes with it before it goes: custom domains stop serving and the
-    // live Crux Store is deleted. Both are looked up now so the message is exact.
-    const [domains, rows] = await Promise.all([
-      crux?.id ? domainsApi.list(crux.id).catch(() => []) : [],
-      crux?.id ? liveStore.listLive(crux.id).catch(() => []) : [],
-    ]);
-    const parts = ['Takes the site offline. Your files and history stay here.'];
-    if (domains.length)
-      parts.push(
-        `${domains.map((d) => d.hostname).join(', ')} will stop serving; reconnect later and the same records verify.`,
-      );
-    if (rows.length) {
-      const keys = new Set(rows.map((r) => r.key)).size;
-      parts.push(
-        `Everything visitors wrote to the Crux Store is deleted — ${keys} key${keys === 1 ? '' : 's'}, ${rows.length} row${rows.length === 1 ? '' : 's'}. Export it from the Store pane first if you want to keep it.`,
-      );
-    }
-    if (
-      !(await confirmDialog({
-        title: 'Unshare this crux',
-        message: parts.join(' '),
-        confirmLabel: 'Unshare',
-        danger: true,
-      }))
-    )
-      return;
-    setPublishing(true);
+    if (!crux?.id || publishing || unsharing) return;
+    const ownerId = crux.id;
+    const context = captureAuth();
+    setUnsharing('reviewing');
     setUnshareError(null);
     try {
+      // An unavailable impact review is not an empty list of consequences.
+      let domains: Awaited<ReturnType<typeof domainsApi.list>>;
+      let rows: Awaited<ReturnType<typeof liveStore.listLive>>;
+      try {
+        [domains, rows] = await Promise.all([
+          domainsApi.list(ownerId, context),
+          liveStore.listLive(ownerId, context),
+        ]);
+      } catch {
+        throw new Error(
+          'Could not review the domains and visitor data affected. Nothing was unshared. Try again.',
+        );
+      }
+      assertAuthCurrent(context);
+      const parts = ['Takes the site offline. Your files and history stay here.'];
+      if (domains.length)
+        parts.push(
+          `${domains.map((d) => d.hostname).join(', ')} will stop serving; reconnect later and the same records verify.`,
+        );
+      if (rows.length) {
+        const keys = new Set(rows.map((r) => r.key)).size;
+        parts.push(
+          `Everything visitors wrote to the Crux Store is deleted — ${keys} key${keys === 1 ? '' : 's'}, ${rows.length} row${rows.length === 1 ? '' : 's'}. Export it from the Store pane first if you want to keep it.`,
+        );
+      }
+      if (
+        !(await confirmDialog({
+          title: 'Unshare this crux',
+          message: parts.join(' '),
+          confirmLabel: 'Unshare',
+          danger: true,
+        }))
+      )
+        return;
+      assertAuthCurrent(context);
+      if (store.getState().crux?.id !== ownerId)
+        throw new Error('The open Crux changed. Review Unshare again.');
+      setUnsharing('unsharing');
       await unpublishCrux();
     } catch (err) {
-      // A swallowed failure here reads as "the button does nothing".
       setUnshareError(err instanceof Error ? err.message : 'Unshare failed');
     } finally {
-      setPublishing(false);
+      setUnsharing(null);
     }
-  }, [unpublishCrux, crux?.id]);
+  }, [unpublishCrux, crux?.id, publishing, unsharing, store]);
 
-  const handleCopyUrl = useCallback(() => {
+  const handleCopyUrl = useCallback(async () => {
     if (!publicUrl) return;
-    navigator.clipboard.writeText(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setShareError('');
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setShareError('Could not copy the link. Select the public address above to copy it.');
+    }
   }, [publicUrl]);
 
   if (!crux) {
@@ -240,12 +347,20 @@ export default function PublishPane() {
     );
   }
 
-  if (isLocalCreationTool(crux))
+  const plan = publicationPlan(crux, artifacts);
+  if (plan.kind === 'garden-package')
+    return (
+      <div ref={ref} className="flex flex-col h-full">
+        <WorkspacePackageShare crux={crux} />
+      </div>
+    );
+
+  if (plan.kind === 'unavailable' && !isPublished)
     return (
       <div ref={ref} className="flex flex-col h-full">
         <PaneEmpty
-          title="A local creation tool"
-          description="Use and save this tool in Garden. Website sharing isn't available for this Crux yet."
+          title={isLocalCreationTool(crux) ? 'A local creation tool' : 'Public edition unavailable'}
+          description={plan.explanation}
         />
       </div>
     );
@@ -259,7 +374,11 @@ export default function PublishPane() {
         <PaneEmpty
           icon={<ShareIcon size={14} />}
           title="Nothing to share yet"
-          description="Add a file or ask the AI to make something. Sharing puts it live on crux.garden."
+          description={
+            aiEnabled
+              ? 'Add a file or ask the collaborator to make something. Sharing puts it live on crux.garden.'
+              : 'Add a file or make one in Artifacts. Sharing puts it live on crux.garden.'
+          }
         />
       </div>
     );
@@ -280,6 +399,60 @@ export default function PublishPane() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
+          <div>
+            <h2 className="text-sm font-medium text-text">Publish to crux.garden</h2>
+            <p className="mt-1 text-xs text-text-muted">
+              Put your reviewed website online. Anyone with its link can visit. Your editable Crux
+              stays in your Garden.
+            </p>
+          </div>
+          {!advancedMode && (
+            <ol
+              className="text-xs text-text-muted list-decimal pl-5 space-y-1"
+              aria-label="Publishing steps"
+            >
+              <li>
+                Review what visitors will see. Nothing is online yet unless you have already
+                published.
+              </li>
+              <li>
+                Choose Share and sign in if asked. Your account’s plan and storage limits apply.
+              </li>
+              <li>
+                When sharing finishes, copy your link below. Future edits need an Update to go
+                online.
+              </li>
+            </ol>
+          )}
+          {crux.kind === 'notes' && (
+            <div className="space-y-2">
+              <p className="text-xs text-text-muted">
+                Only the notes you select become public. Choose at least one, then preview it before
+                sharing.
+              </p>
+              <button
+                className={buttonClass('secondary', 'sm')}
+                onClick={() => {
+                  setShareError('');
+                  void executeAppTool(crux.id, 'guide_notebook', { action: 'choose-pages' }).catch(
+                    (error) =>
+                      setShareError(
+                        error instanceof Error
+                          ? error.message
+                          : 'Open your notebook in Workshop and try again.',
+                      ),
+                  );
+                }}
+              >
+                Choose notes to share
+              </button>
+              {shareError && (
+                <p role="alert" className="text-xs text-error">
+                  {shareError}
+                </p>
+              )}
+            </div>
+          )}
           {/* Status */}
           {isPublished && publishedAt ? (
             <PaneSection label="Status" aside={`v${publishedVersion}`}>
@@ -294,7 +467,7 @@ export default function PublishPane() {
                 <span
                   className={cn(
                     'ml-auto text-2xs font-mono',
-                    hasUnpublishedChanges ? 'text-warning-text' : 'text-accent/80',
+                    hasUnpublishedChanges ? 'text-warning-text' : 'text-accent/(--tint-dense)',
                   )}
                 >
                   {hasUnpublishedChanges ? 'Changes to share' : 'Up to date'}
@@ -325,21 +498,37 @@ export default function PublishPane() {
             </PaneSection>
           ) : (
             <PaneSection label="Status" tone="dashed">
-              <p className="text-xxs text-text-muted">
-                {isEmbeddedApp(crux)
-                  ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content and Collaboration stay here.'
-                  : 'Not shared yet. Sharing publishes this crux at its own address, with its conversation open to visitors.'}
+              <p className="text-sm text-text-muted leading-relaxed">
+                {plan.kind === 'static'
+                  ? `Sharing puts every file in ${plan.declaration.root}${plan.declaration.include?.length ? ` and the explicitly included ${plan.declaration.include.join(', ')}` : ''} on the web. Review the complete included documents before sharing. Other project files and your Collaboration stay here.`
+                  : isEmbeddedApp(crux)
+                    ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content stays here.'
+                    : 'Private for now. Sharing puts this creation on the web. Your conversation stays here unless you include it below.'}
               </p>
+              {!isAuthenticated && (
+                <p className="mt-2 text-xs text-text-muted">
+                  You’ll connect a crux.garden account to publish. Your account’s plan and storage
+                  limits apply. Editing and previewing here do not require an account.
+                </p>
+              )}
             </PaneSection>
           )}
 
           {/* Action — only when there is something to do; never a disabled green */}
-          {backingUp ? (
+          {plan.kind === 'unavailable' ? (
+            <PaneNote tone="error">{plan.explanation}</PaneNote>
+          ) : backingUp ? (
             <PaneAction busy="Backing up...">Share</PaneAction>
+          ) : unsharing ? (
+            <PaneHint>
+              {unsharing === 'reviewing'
+                ? 'Reviewing what Unshare affects…'
+                : 'Taking this site offline…'}
+            </PaneHint>
           ) : publishing ? (
             <PaneAction busy={PHASE_LABELS[phase ?? 'sync']}>Share</PaneAction>
           ) : showConnect ? (
-            <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3">
+            <div className="rounded-[var(--radius-sm)] border border-border bg-surface/(--tint-balanced) p-3">
               <ConnectAccount
                 compact
                 description="Connect your account to share this crux."
@@ -362,6 +551,27 @@ export default function PublishPane() {
                     : 'Share'}
             </PaneAction>
           ) : null}
+
+          {plan.kind !== 'unavailable' && plan.kind !== 'tool-package' && (
+            <button
+              type="button"
+              className={buttonClass('secondary', 'xs', 'self-start')}
+              onClick={() => setPreviewing(true)}
+            >
+              Preview as a visitor
+            </button>
+          )}
+
+          <PublishWarnings />
+
+          {can(Capability.LocalStaging) &&
+            (!isEmbeddedApp(crux) || plan.kind === 'static') &&
+            plan.kind !== 'unavailable' &&
+            plan.kind !== 'tool-package' && (
+              <PaneOptions pane="publish" label="Local test website (optional)">
+                <LocalTestPublication />
+              </PaneOptions>
+            )}
 
           {/* Failure — a silent no-op is indistinguishable from success here */}
           {backupError && <PaneNote tone="error">{backupError}</PaneNote>}
@@ -405,14 +615,16 @@ export default function PublishPane() {
             })()}
 
           {failure && !publishing && (
-            <div className="rounded-[var(--radius-sm)] border border-error/40 bg-error/5 p-3">
+            <div className="rounded-[var(--radius-sm)] border border-error/(--tint-muted) bg-error/(--tint-trace) p-3">
               <p role="alert" className="text-xs font-body text-error">
                 {failure.message}
               </p>
               {failure.log && (
-                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xxs leading-relaxed text-text-muted">
-                  {failure.log.slice(-2000)}
-                </pre>
+                <PaneOptions pane="publish" label="Technical details">
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xxs leading-relaxed text-text-muted">
+                    {failure.log.slice(-2000)}
+                  </pre>
+                </PaneOptions>
               )}
             </div>
           )}
@@ -420,6 +632,29 @@ export default function PublishPane() {
           {/* Public address */}
           {isPublished && publicUrl && (
             <PaneSection label="Public address">
+              <p className="text-xs text-text-muted mb-2">
+                Make a share card with this Crux’s current title, your name and public link.
+              </p>
+              <button
+                type="button"
+                className={buttonClass('secondary', 'xs', 'mb-3')}
+                disabled={cardBusy}
+                onClick={() => {
+                  if (!author) return;
+                  setCardBusy(true);
+                  setShareError('');
+                  void downloadShareCard(crux.title || 'My Crux', author.username, publicUrl)
+                    .catch((e) => setShareError(String(e)))
+                    .finally(() => setCardBusy(false));
+                }}
+              >
+                {cardBusy ? 'Creating share card…' : 'Save share card'}
+              </button>
+              {shareError && (
+                <p role="alert" className="text-xs text-error mb-2">
+                  {shareError}
+                </p>
+              )}
               <a
                 href={publicUrl}
                 target="_blank"
@@ -432,7 +667,7 @@ export default function PublishPane() {
                     void openGardenPage(publicUrl);
                   }
                 }}
-                className="block text-xxs font-mono text-accent truncate leading-relaxed hover:underline"
+                className={linkClass('block text-xxs font-mono truncate leading-relaxed')}
               >
                 {publicUrl}
               </a>
@@ -440,11 +675,7 @@ export default function PublishPane() {
                 <button
                   type="button"
                   onClick={handleCopyUrl}
-                  className={cn(
-                    'flex-1 inline-flex items-center justify-center gap-1.5 h-7 rounded-[var(--radius-sm)]',
-                    'text-xxs font-body border border-border bg-surface text-text',
-                    'hover:border-accent hover:text-accent transition-colors cursor-pointer',
-                  )}
+                  className={buttonClass('secondary', 'xs', 'flex-1')}
                 >
                   {copied ? <CheckIcon /> : <CopyIcon size={12} />}
                   {copied ? 'Copied' : 'Copy link'}
@@ -468,7 +699,7 @@ export default function PublishPane() {
                   )}
                 >
                   <ExternalLinkIcon />
-                  Open
+                  View published Crux
                 </a>
               </div>
             </PaneSection>
@@ -482,48 +713,80 @@ export default function PublishPane() {
             </>
           )}
 
-          {!isEmbeddedApp(crux) && <GuestbookSection cruxId={crux.id} artifacts={artifacts} />}
-
+          {isPublished && isAuthenticated && publicUrl && can(Capability.V2) && (
+            <GardenShelfSection cruxId={crux.id} title={crux.title ?? 'A crux'} url={publicUrl} />
+          )}
           {/* Visibility */}
-          <PaneSection label="Visibility">
-            <div className="flex flex-col gap-0.5">
-              <Toggle
-                checked={!!crux.discoverable}
-                onChange={(on) => updateCrux({ discoverable: on })}
-                label="Discoverable"
-              />
-              <span className="text-xxs text-text-muted">
-                {crux.discoverable
-                  ? 'Listed in search on crux.garden'
-                  : 'Only people with the link can find it'}
-              </span>
-            </div>
-          </PaneSection>
+          <GuideLink page="guides/sharing/">What happens when I share?</GuideLink>
+          <PublicationVisibility key={crux.id} crux={crux} />
+          {!isEmbeddedApp(crux) && plan.kind !== 'static' && plan.kind !== 'tool-package' && (
+            <ConversationShare crux={crux} messages={messages} />
+          )}
+
+          {!isEmbeddedApp(crux) && (
+            <details className="rounded-[var(--radius-sm)] border border-border p-3">
+              <summary className="cursor-pointer text-sm font-medium">
+                Optional enhancements
+              </summary>
+              <p className="mt-2 text-xs text-text-muted">
+                {advancedMode
+                  ? 'Add a guestbook or API functions when your creation needs them.'
+                  : 'Let visitors leave you a message with a guestbook.'}
+              </p>
+              <div className="mt-3 space-y-4">
+                <GuestbookSection cruxId={crux.id} artifacts={artifacts} />
+                {advancedMode && (
+                  <FunctionsSection
+                    cruxId={crux.id}
+                    artifacts={artifacts}
+                    published={isPublished}
+                    authenticated={isAuthenticated}
+                    changesToShare={hasUnpublishedChanges}
+                  />
+                )}
+              </div>
+            </details>
+          )}
 
           <div className="flex-1" />
 
           {/* Unshare — clearly a button, but not competing with Share */}
           {isPublished && (
-            <div className="border-t border-border/60 pt-3 flex flex-col gap-1.5">
+            <div className="border-t border-border/(--tint-medium) pt-3 flex flex-col gap-1.5">
               <button
                 type="button"
                 onClick={handleUnpublish}
-                disabled={publishing}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 h-8 rounded-[var(--radius-sm)]',
-                  'text-xs font-body border border-border bg-surface text-text-muted',
-                  'hover:border-error hover:text-error transition-colors cursor-pointer',
-                  'disabled:cursor-not-allowed',
+                disabled={publishing || !!unsharing}
+                aria-label="Unshare"
+                className={buttonClass(
+                  'secondary',
+                  'sm',
+                  'w-full text-text-muted hover:text-error hover:border-error/(--tint-medium) hover:bg-error-muted',
                 )}
               >
                 <PowerIcon size={13} />
-                Unshare
+                {unsharing === 'reviewing' ? 'Reviewing…' : unsharing ? 'Unsharing…' : 'Unshare'}
               </button>
               <PaneHint>Takes this crux offline. Your files and history stay here.</PaneHint>
-              {unshareError && <PaneNote tone="error">{unshareError}</PaneNote>}
+              {unshareError && (
+                <div role="alert">
+                  <PaneNote tone="error">{unshareError}</PaneNote>
+                </div>
+              )}
             </div>
           )}
         </div>
+      )}
+
+      {previewing && (
+        <VisitorPreview
+          open
+          onClose={() => setPreviewing(false)}
+          crux={crux}
+          artifacts={artifacts}
+          messages={messages}
+          username={author?.username ?? ''}
+        />
       )}
 
       <CreateAuthorModal

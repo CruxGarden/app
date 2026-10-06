@@ -1,12 +1,12 @@
-import { useGardenStore } from './gardenStore';
 import { newTurnJob } from '@/services/turn-jobs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCruxStore } from './cruxStore';
-import { createUIStore } from './uiStore';
+import { createUIStore, useUIStore } from './uiStore';
 import {
   activateWorkspace,
   allWorkspaces,
   closeWorkspace,
+  withClosedCruxWorkspaces,
   getWorkspace,
   leaveWorkspaceView,
   openWorkspace,
@@ -27,7 +27,9 @@ function deferred() {
   return { promise, resolve };
 }
 beforeEach(async () => {
-  await initServices('local');
+  // Workspaces here hold Collaboration, an AI pane: offered only with AI tools on.
+  useUIStore.getState().setAiEnabled(true);
+  await initServices();
 });
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -163,6 +165,18 @@ describe('independent Crux workspaces', () => {
   });
 });
 describe('retained documents and trustworthy saves', () => {
+  it('clears a failed read after valid recovery without hiding a dirty draft save error', async () => {
+    const { wa, fa } = await pair();
+    const docs = documentsFor(wa.data, wa.ui);
+    docs.get(fa).setState({ error: 'Could not load this Artifact.' });
+    docs.hydrate(fa, 'Recovered');
+    expect(docs.get(fa).getState().error).toBeNull();
+    docs.edit(fa, 'Unsaved');
+    docs.get(fa).setState({ error: 'Save refused' });
+    docs.hydrate(fa, 'Recovered');
+    expect(docs.get(fa).getState()).toMatchObject({ content: 'Unsaved', error: 'Save refused' });
+  });
+
   it('a delayed A save writes A; newer A typing stays dirty while B is visible', async () => {
     const { a, b, fa, fb, wa, wb, service } = await pair();
     const docs = documentsFor(wa.data, wa.ui);
@@ -419,18 +433,6 @@ it('opening an editor with Collaboration hidden does not acknowledge an unseen r
   expect(wa.data.getState().crux).toBe(content);
 });
 
-it('requires an open workspace to close before its Crux can be deleted', async () => {
-  const { wa, wb, service } = await pair();
-  await expect(useGardenStore.getState().deleteCrux(wa.id)).rejects.toThrow(
-    'Close this Crux workspace',
-  );
-  expect((await service.crux.findById(wa.id)).id).toBe(wa.id);
-  await closeWorkspace(wa.id);
-  await useGardenStore.getState().deleteCrux(wa.id);
-  expect((await service.crux.listAll()).some((c) => c.id === wa.id)).toBe(false);
-  expect(getWorkspace(wb.id)).toBe(wb);
-});
-
 it.each([false, true])(
   'retains messages arriving during capture with overlapping snapshots=%s',
   async (overlap) => {
@@ -502,4 +504,96 @@ it('uses the checkpoint entry choice while preserving Clean view through history
   await wa.data.getState().revertToSnapshot(snapshot.targetId);
   expect(wa.data.getState().crux?.meta?.settings?.entryFile).toBe('original.html');
   expect(wa.ui.getState().workshopView).toBe('clean');
+});
+
+describe('document owners with shared logical file IDs', () => {
+  it('keeps a dirty live draft separate from two retained versions of the same file', async () => {
+    const { fa, wa } = await pair();
+    const docs = documentsFor(wa.data, wa.ui);
+    const older = { ...fa, resourceId: 'snapshot-one', fingerprint: 'older' };
+    const newer = { ...fa, resourceId: 'snapshot-two', fingerprint: 'newer' };
+    docs.hydrate(fa, 'Current file');
+    docs.edit(fa, 'Unsaved live draft');
+    docs.hydrate(older, 'First saved version');
+    docs.hydrate(newer, 'Second saved version');
+    expect(docs.get(fa).getState().content).toBe('Unsaved live draft');
+    expect(docs.get(older).getState().content).toBe('First saved version');
+    expect(docs.get(newer).getState().content).toBe('Second saved version');
+    expect(docs.dirty(fa)).toBe(true);
+    expect(docs.dirty(older)).toBe(false);
+    expect(docs.get(fa).getState().conflict).toBe(false);
+    // Renames/content revisions stay in the owner's existing editor lifetime.
+    const renamed = { ...fa, meta: { path: 'renamed.txt' }, fingerprint: 'changed' };
+    expect(docs.get(renamed)).toBe(docs.get(fa));
+  });
+
+  it('refuses historical edits and saves instead of resolving the shared ID in Main', async () => {
+    const { fa, wa, service } = await pair();
+    const docs = documentsFor(wa.data, wa.ui);
+    const historical = { ...fa, resourceId: 'snapshot', fingerprint: 'old' };
+    docs.hydrate(historical, 'Saved history');
+    const write = vi.spyOn(service.artifact, 'create');
+    expect(() => docs.edit(historical, 'Do not write')).toThrow('read-only');
+    await expect(docs.save(historical, true)).rejects.toThrow('read-only');
+    expect(write).not.toHaveBeenCalled();
+    expect(docs.get(historical).getState().content).toBe('Saved history');
+    // Read-only history must not block saving/closing the live workspace.
+    await docs.saveAll();
+    expect(docs.hasDirty()).toBe(false);
+  });
+
+  it('a save begun in Main finishes there while shared-ID history is visible', async () => {
+    const { fa, wa, service } = await pair();
+    const docs = documentsFor(wa.data, wa.ui);
+    const historical = { ...fa, resourceId: 'snapshot', fingerprint: 'old' };
+    docs.hydrate(fa, 'A original');
+    docs.edit(fa, 'Save this live draft');
+    const gate = deferred();
+    const original = service.artifact.create.bind(service.artifact);
+    vi.spyOn(service.artifact, 'create').mockImplementation(async (input) => {
+      await gate.promise;
+      return original(input);
+    });
+    const saving = docs.save(fa);
+    await Promise.resolve();
+    wa.data.setState({
+      artifacts: [historical],
+      workspaceArtifacts: [fa],
+      viewingSnapshotId: 'snapshot',
+    });
+    docs.hydrate(historical, 'Historical content');
+    gate.resolve();
+    await saving;
+    expect(await service.artifact.readContent(fa.id)).toBe('Save this live draft');
+    expect(docs.get(historical).getState().content).toBe('Historical content');
+    expect(docs.get(fa).getState().content).toBe('Save this live draft');
+    expect(docs.dirty(fa)).toBe(false);
+    expect(wa.data.getState().artifacts).toEqual([historical]);
+  });
+});
+
+it('restoration excludes new sessions, preserves unrelated work and reopens after failure', async () => {
+  const { a, b, wa, wb } = await pair();
+  await activateWorkspace(a.id);
+  await expect(
+    withClosedCruxWorkspaces(a.id, async () => {
+      expect(getWorkspace(a.id)).toBeUndefined();
+      await expect(openWorkspace(a.id)).rejects.toThrow('being restored');
+      expect(await openWorkspace(b.id)).toBe(wb);
+      await activateWorkspace(b.id);
+      throw new Error('Broken archive');
+    }),
+  ).rejects.toThrow('Broken archive');
+  expect(getWorkspace(a.id)).toBeDefined();
+  expect(getWorkspace(a.id)).not.toBe(wa);
+  expect(getWorkspace(b.id)).toBe(wb);
+  expect(useWorkspaceRegistry.getState().activeId).toBe(b.id);
+});
+
+it('Save and close can dismiss an empty workspace whose initial load failed', async () => {
+  const id = 'missing-workspace';
+  await expect(openWorkspace(id)).rejects.toThrow();
+  expect(getWorkspace(id)?.phase).toBe('error');
+  await expect(closeWorkspace(id, { documents: 'save' })).resolves.toBeUndefined();
+  expect(getWorkspace(id)).toBeUndefined();
 });

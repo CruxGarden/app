@@ -35,7 +35,37 @@ describe('Workshop entry', () => {
     expect(workshopEntry(crux(), artifacts).artifact?.meta?.path).toBe('src/pages/index.astro');
     expect(entryCandidates(artifacts)).toHaveLength(1);
   });
+  it('opens a declared content home and offers its pages without treating arbitrary Markdown as routes', () => {
+    const artifacts = files(
+      'astro.config.mjs',
+      'src/pages/blog/index.astro',
+      'src/content/docs/index.md',
+      'src/content/docs/guides/start.md',
+      'README.md',
+    );
+    const collections = [
+      {
+        name: 'Pages',
+        singular: 'Page',
+        fields: [],
+        glob: 'src/content/docs/**/*.md',
+        routeBase: '/',
+      },
+    ];
+    const guide = { ...crux(), meta: { contentModel: { collections } } };
+    expect(workshopEntry(guide, artifacts).artifact).toBe(artifacts[2]);
+    expect(entryCandidates(artifacts, collections)).toHaveLength(3);
+    expect(workshopEntry(guide, artifacts, 'src/content/docs/guides/start.md').artifact).toBe(
+      artifacts[3],
+    );
+    expect(workshopEntry(guide, artifacts, 'README.md').artifact).toBeNull();
+  });
   it('never chooses the generated agent guide or thumbnail as the creation', () => {
     expect(entryCandidates(files('AGENTS.md', 'preview.jpg', 'package.json'))).toEqual([]);
+  });
+  it('never opens CLAUDE.md as the creation, even when it is the only page-like file', () => {
+    const artifacts = files('AGENTS.md', 'CLAUDE.md', 'hello.txt');
+    expect(entryCandidates(artifacts)).toEqual([]);
+    expect(workshopEntry(crux(), artifacts).artifact).toBeNull();
   });
 });

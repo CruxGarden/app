@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
+import { SearchTestWorker } from '@/test/search-worker';
 import {
   createToolExecutor,
   TOOL_DEFINITIONS,
@@ -14,8 +15,8 @@ import { initServices } from '@/services';
 import { GROWTH_TOOL_DEFINITIONS } from './growth-tools';
 
 describe('TOOL_DEFINITIONS', () => {
-  it('defines 8 universal tools', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(8);
+  it('defines 9 universal tools', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(9);
   });
 
   it('includes all expected tool names', () => {
@@ -45,6 +46,7 @@ describe('TOOL_DEFINITIONS', () => {
     const names = defaultToolDefinitions().map((t) => t.name);
     for (const name of GROWTH_TOOL_DEFINITIONS.map((t) => t.name)) expect(names).toContain(name);
     expect(GROWTH_TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
+      'edit_history',
       'snapshot',
       'list_snapshots',
       'restore',
@@ -85,9 +87,46 @@ describe('MUTATING_TOOLS', () => {
       // Growth tools that replace files (B0); snapshot/list/diff do not mutate
       'restore',
       'branch',
+      'edit_history',
       // Subagents (B5): the merge lands files on the main line
       'delegate',
     ]);
+  });
+});
+
+describe('edit recovery controls', () => {
+  it('validates recovery commands and treats reads/captures as non-file mutations', async () => {
+    const { validateToolInput } = await import('./validation');
+    expect(validateToolInput('edit_history', { action: 'list' }).valid).toBe(true);
+    expect(validateToolInput('edit_history', { action: 'restore' }).valid).toBe(false);
+    expect(validateToolInput('edit_history', { action: 'forget' }).valid).toBe(false);
+    expect(
+      validateToolInput('edit_history', {
+        action: 'restore',
+        checkpointId: 'chosen',
+        includeConversation: true,
+      }).valid,
+    ).toBe(true);
+    expect(
+      validateToolInput('edit_history', { action: 'capture', includeConversation: true }).valid,
+    ).toBe(false);
+    expect(
+      validateToolInput('edit_history', {
+        action: 'restore',
+        checkpointId: 'chosen',
+        includeConversation: 'true',
+      }).valid,
+    ).toBe(false);
+    expect(didMutate('edit_history', JSON.stringify({ checkpoints: [] }))).toBe(false);
+    expect(didMutate('edit_history', JSON.stringify({ id: 'capture', root: 'hash' }))).toBe(false);
+    expect(didMutate('edit_history', JSON.stringify({ head: { root: 'hash' }, safety: {} }))).toBe(
+      true,
+    );
+    const { scopeViolation } = await import('@/lib/write-scope');
+    expect(
+      scopeViolation('edit_history', { action: 'restore' }, { paths: ['note.txt'] }),
+    ).toContain('scope');
+    expect(scopeViolation('edit_history', { action: 'list' }, { paths: ['note.txt'] })).toBeNull();
   });
 });
 
@@ -95,7 +134,7 @@ describe('write scope (B5)', () => {
   const cruxId = 'test-crux';
 
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     const services = (await import('@/services')).getServices();
     await services.crux.create({ title: 'Test' });
   });
@@ -166,6 +205,7 @@ describe('write scope (B5)', () => {
   it('delegate is offered to the workspace but refused without a runner, and validated first', async () => {
     expect(defaultToolDefinitions().map((t) => t.name)).toContain('delegate');
     expect(subagentToolDefinitions().map((t) => t.name)).toEqual([
+      'report_progress',
       'write_file',
       'edit_file',
       'read_file',
@@ -203,11 +243,19 @@ describe('createToolExecutor', () => {
   const cruxId = 'test-crux';
 
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     // Create the crux so the executor has something to work with
     const services = (await import('@/services')).getServices();
     await services.crux.create({ title: 'Test' });
     execute = createToolExecutor(cruxId);
+  });
+
+  it('admits bounded progress reports without mutating files and refuses invalid estimates', async () => {
+    expect(await execute('report_progress', { percent: 35, message: 'Checking the result' })).toBe(
+      JSON.stringify({ percent: 35, message: 'Checking the result' }),
+    );
+    expect(didMutate('report_progress', 'Recorded')).toBe(false);
+    expect(await execute('report_progress', { percent: 101, message: 'Done' })).toMatch(/^Error/);
   });
 
   describe('write_file', () => {
@@ -411,6 +459,20 @@ describe('createToolExecutor', () => {
   });
 
   describe('search_files', () => {
+    beforeAll(() => vi.stubGlobal('Worker', SearchTestWorker));
+    afterAll(() => vi.unstubAllGlobals());
+    it('times out pathological regex without blocking and recovers', async () => {
+      await execute('write_file', { path: 'bad.txt', content: 'a'.repeat(100) + '!' });
+      let responsive = false;
+      const tick = setTimeout(() => {
+        responsive = true;
+      }, 25);
+      const refused = await execute('search_files', { query: '(a+)+$', regex: true });
+      clearTimeout(tick);
+      expect(responsive).toBe(true);
+      expect(refused).toContain('Search timed out');
+      expect(await execute('search_files', { query: '!' })).toContain('bad.txt:1:');
+    });
     it('finds matching lines across files as path:line: text', async () => {
       await execute('write_file', {
         path: 'src/a.js',
@@ -670,7 +732,7 @@ describe('growth tools', () => {
   let cruxId: string;
 
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     const services = (await import('@/services')).getServices();
     const crux = await services.crux.create({
       title: 'Growth',
@@ -761,6 +823,32 @@ describe('growth tools', () => {
     expect(list.split('\n')).toHaveLength(2);
   });
 
+  it.each(['restore', 'branch'])(
+    'the %s tool describes pending recovery without claiming the requested version',
+    async (tool) => {
+      const { registerGrowthHost, recoveredRestore, RESTORE_RECOVERED_MESSAGE } =
+        await import('@/services/growth');
+      const off = registerGrowthHost(cruxId, {
+        restore: async () => recoveredRestore(),
+        branch: async () => recoveredRestore(),
+        snapshot: async () => {
+          throw new Error('Unexpected version creation');
+        },
+        list: async () => [],
+        diff: async () => {
+          throw new Error('Unexpected diff');
+        },
+      });
+      try {
+        const result = await execute(tool, { snapshotId: '#2', label: 'New branch' });
+        expect(result).toBe(RESTORE_RECOVERED_MESSAGE);
+        expect(result).not.toContain('snapshot #2');
+      } finally {
+        off();
+      }
+    },
+  );
+
   it('restore accepts "#N" and "latest" references', async () => {
     await execute('snapshot', { label: 'a' });
     await execute('read_file', { path: 'index.html' });
@@ -847,7 +935,7 @@ describe('growth tools', () => {
 
 describe('remember and load_skill (B6)', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     const { clearMemory } = await import('@/services/memory');
     await clearMemory();
   });

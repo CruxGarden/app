@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 test('JupyterLite native notebook runs Python, plots, agent cells, export and restart', async () => {
   test.setTimeout(240000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
@@ -151,7 +151,7 @@ test('JupyterLite native notebook runs Python, plots, agent cells, export and re
       );
     });
     await second.page.setViewportSize({ width: 2000, height: 1200 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = second.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 90000,

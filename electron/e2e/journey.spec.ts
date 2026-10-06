@@ -1,26 +1,27 @@
-import { test, expect, chromium } from '@playwright/test';
+import { skipSetupToHome } from './setup-helpers';
+import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
 /**
- * The v1 acceptance journey, local half (V1-CHECKLIST §8) — everything up to
- * the network steps (publish, sync), which need an account and stay manual:
+ * Two regression guards on the Home Page template's Builder that no other
+ * spec holds:
+ *  - the workspace once rendered desktop AND mobile layouts (one CSS-hidden),
+ *    so every pane — and the Keeper's greeting — was mounted twice;
+ *  - every Cmd+S refetched the file and remounted Monaco (flicker, cursor
+ *    reset, keystrokes typed during the save lost).
  *
- *   fresh install → plant a garden → New Crux from the Home Page template
- *   → Builder → New post → editor + live astro dev preview → snapshot.
- *
- * First run pays for `pnpm install` (network); later runs hit the pnpm store.
+ * The acceptance journey itself (create → version → publish) is
+ * journeys/01-create-version-publish.spec.ts; the astro dev preview of a post
+ * is homepage-collaboration.spec.ts and form.spec.ts.
  */
-test.describe('acceptance journey (local half)', () => {
-  test.setTimeout(6 * 60_000);
+test.describe('home page template regressions', () => {
+  test.setTimeout(3 * 60_000);
 
-  test('plant → template → post → preview → snapshot', async () => {
+  test('Keeper greeting is mounted once; Monaco is not remounted on save', async () => {
     const { app, page } = await launchApp();
     try {
       // ── Gateway → fresh garden ─────────────────────────────────────────
-      await page.getByRole('button', { name: /enter/i }).click();
-      await page.getByText('Plant a new garden').click();
-      await expect(page.getByText('Set up your garden')).toBeVisible();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await skipSetupToHome(page);
 
       // ── Home → New Crux from the Astro Home Page template ──────────────
       await page.getByRole('button', { name: 'Add Crux' }).click();
@@ -31,8 +32,7 @@ test.describe('acceptance journey (local half)', () => {
       // Builder is the Workshop's home view for content-model cruxes
       const newPost = page.getByRole('button', { name: /new post/i });
       await expect(newPost).toBeVisible({ timeout: 30_000 });
-      // Regression: the workspace rendered desktop AND mobile layouts (one
-      // CSS-hidden), so every pane — and the Keeper's greeting — was mounted twice.
+      // Regression: the greeting was mounted twice (desktop + hidden mobile layout).
       await expect(page.getByText(/set up your home page/)).toHaveCount(1);
       await page.screenshot({ path: 'e2e/.results/journey-1-builder.png' });
 
@@ -42,8 +42,6 @@ test.describe('acceptance journey (local half)', () => {
       await page.getByRole('button', { name: 'Create', exact: true }).click();
 
       // ── Editing + saving must not remount Monaco ─────────────────────────
-      // Regression: every Cmd+S refetched the file and remounted the editor
-      // (flicker, cursor reset, keystrokes typed during the save lost).
       const monaco = page.locator('.monaco-editor').first();
       await expect(monaco).toBeVisible({ timeout: 30_000 });
       await monaco.evaluate((el) => el.setAttribute('data-e2e-instance', 'original'));
@@ -56,42 +54,6 @@ test.describe('acceptance journey (local half)', () => {
       await page.waitForTimeout(800); // save round-trip
       await expect(page.locator('.monaco-editor[data-e2e-instance="original"]')).toBeVisible(); // same instance
       await expect(monaco).toContainText('Typed by Playwright.'); // text survived the save
-
-      // Opening the .md in the editor starts astro dev; first run installs deps.
-      const preview = page.locator('iframe[src^="http://127.0.0.1"]');
-      await expect(preview).toBeVisible({ timeout: 4 * 60_000 });
-      await expect(preview).toHaveAttribute('src', /\/blog\/hello-from-playwright$/);
-      await page.screenshot({ path: 'e2e/.results/journey-2-preview.png' });
-
-      // The dev server is a real local web server — leave the app's chrome and
-      // assert on the site itself: the post renders at its route, with the
-      // frontmatter the Builder wrote.
-      const siteUrl = (await preview.getAttribute('src'))!;
-      const browser = await chromium.launch();
-      try {
-        const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-        await site.goto(siteUrl);
-        await expect(site.getByRole('heading', { name: 'Hello from Playwright' })).toBeVisible();
-        await site.screenshot({ path: 'e2e/.results/journey-2b-site-post.png', fullPage: true });
-        // …and the home page lists it
-        await site.goto(new URL('/', siteUrl).toString());
-        await expect(site.getByRole('link', { name: 'Hello from Playwright' })).toBeVisible();
-        await site.screenshot({ path: 'e2e/.results/journey-2c-site-home.png', fullPage: true });
-      } finally {
-        await browser.close();
-      }
-
-      // ── Snapshot with a label ─────────────────────────────────────────
-      await page.getByRole('button', { name: 'Toggle history' }).click();
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
-      const label = page.getByPlaceholder(/label/i);
-      await label.fill('First post');
-      await label.press('Enter');
-      await expect(page.getByText('First post', { exact: true })).toBeVisible({ timeout: 30_000 });
-      await page.screenshot({ path: 'e2e/.results/journey-3-snapshot.png' });
     } finally {
       await app.close();
     }

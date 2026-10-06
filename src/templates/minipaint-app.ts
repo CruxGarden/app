@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 const sources = import.meta.glob(
   '../../minipaint-crux/{src/**/*,garden/**/*,package.json,package-lock.json,webpack.config.js,index.html,.babelrc,MIT-LICENSE.txt,README.md,UPSTREAM.md}',
   { query: '?raw', import: 'default', eager: true },
@@ -18,7 +17,7 @@ const styles = import.meta.glob('../../minipaint-crux/{images,runtime}/**/*.css'
   import: 'default',
   eager: true,
 }) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries({ ...sources, ...styles }).map(([path, content]) => ({
       path: path.replace('../../minipaint-crux/', ''),
@@ -29,16 +28,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'minipaint', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'index.html' } },
-  greeting:
-    'This is miniPaint: open an image, paint, add text, arrange layers and use the native image or layered JSON export. Your editable project saves with this Crux.',
-  context:
-    "Actual miniPaint 4.14.3 source and interface. data/project.json contains its native layered project in a Garden envelope; image pixels are immutable data/assets Artifacts. Keep the native format. Use the native miniPaint App Tools while the editor is open: inspect layers, draw editable brush strokes, duplicate an original image, revise live filters, select image regions, erase or fill raster pixels, rasterize editable layers, set blend modes, merge adjacent normal layers or the complete visible picture, crop, edit text and use shared native Undo/Redo. Inspect before revising; pass the returned stateToken as expectedState on every edit. Review again after manual changes or a stale-state refusal; preserve the person's layers. Save a PNG with save_minipaint_image and read that output with read_file to review the result when image input is supported. Use a Task to customize source and npm ci / npm run build to rebuild runtime/bundle.js. Local editing and native exports are supported; whole-editor website publication is unavailable. See UPSTREAM.md for limitations.",
 };
 export default template;

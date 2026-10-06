@@ -1,14 +1,48 @@
+import type { SqliteBridge } from '@/lib/platform';
+import type { UpdateCruxInput } from '../types';
 import type { WorkerResponse } from './worker';
 import { ElectronSqliteClient } from './electron-client';
 
 export interface ISqliteClient {
+  enterLocalGarden?: SqliteBridge['enterLocalGarden'];
+  settings?: SqliteBridge['settings'];
+  installation?: SqliteBridge['installation'];
+  gardenMembership?: SqliteBridge['gardenMembership'];
+  gardenMood?: SqliteBridge['gardenMood'];
+  fileContent?: SqliteBridge['fileContent'];
+  privateArchive?: SqliteBridge['privateArchive'];
+  createCrux?: SqliteBridge['createCrux'];
+  onChange?: SqliteBridge['onChange'];
   /** Initialize the worker + OPFS VFS. Resolves when the database is ready. */
   init(): Promise<void>;
   run(sql: string, params?: unknown[]): Promise<{ changes: number }>;
   get<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T | undefined>;
   all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
+  /** Available when the owning backend can commit the complete metadata merge. */
+  mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
+  /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  prepareWorkingCopyFolder?: SqliteBridge['prepareWorkingCopyFolder'];
+  finishWorkingCopySetup?: SqliteBridge['finishWorkingCopySetup'];
+  createWorkingCopy?: SqliteBridge['createWorkingCopy'];
+  workingCopyBase?: SqliteBridge['workingCopyBase'];
+  inspectTaskHistory?: SqliteBridge['inspectTaskHistory'];
+  readTaskHistoryFile?: SqliteBridge['readTaskHistoryFile'];
+  saveTaskReview?: SqliteBridge['saveTaskReview'];
+  beginTaskMerge?: SqliteBridge['beginTaskMerge'];
+  releaseTaskReview?: SqliteBridge['releaseTaskReview'];
+  completeTaskMerge?: SqliteBridge['completeTaskMerge'];
+  setWorkingCopyArchived?: SqliteBridge['setWorkingCopyArchived'];
+  setCruxTrashed?(id: string, trashed: boolean): Promise<void>;
+  deleteCrux?(id: string): Promise<void>;
+  /** Atomically merge descriptive Task state without changing its identity or folder. */
+  updateWorkingCopyMeta?(id: string, patch: Record<string, unknown>, title?: string): Promise<void>;
+  /** Available when the owning backend can commit a complete Crux detail edit. */
+  updateCrux?(id: string, patch: UpdateCruxInput): Promise<void>;
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
+  /** Read required fingerprints without replacing the database. Manifest-capable
+   * backends restrict traversal to the supplied archive inventory when present. */
+  inspectImport(data: ArrayBuffer, availableFingerprints?: string[]): Promise<string[]>;
   close(): Promise<void>;
 
   // ── OPFS blob storage ──────────────────────────────
@@ -131,6 +165,10 @@ export class SqliteClient implements ISqliteClient {
 
   async export(): Promise<ArrayBuffer> {
     return (await this.sendWithRetry({ method: 'export' })) as ArrayBuffer;
+  }
+
+  async inspectImport(data: ArrayBuffer): Promise<string[]> {
+    return (await this.send({ method: 'inspect-import', data })) as string[];
   }
 
   async import(data: ArrayBuffer): Promise<void> {

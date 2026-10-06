@@ -1,0 +1,71 @@
+---
+// Feature Cards grid Section
+// ------------
+// Description: A grid of cards with feature information in a 4 column layout.
+
+// Components
+// - Layout
+import Section from '../../ui/Section.astro'
+import Row from '../../ui/Row.astro'
+import Col from '../../ui/Col.astro'
+// - UI
+import Card from '../../ui/cards/FeatureCard.astro'
+
+// Content
+// - Cards
+import feature01 from '../../../assets/cards/feature-01.svg'
+import feature02 from '../../../assets/cards/feature-02.svg'
+import feature03 from '../../../assets/cards/feature-03.svg'
+import feature04 from '../../../assets/cards/feature-04.svg'
+import feature05 from '../../../assets/cards/feature-05.svg'
+---
+
+<Section id="features">
+	<Row>
+		<Col span="12" align="center" classes="mb-12 max-w-4xl mx-auto">
+			<h2 class="text-pretty">The work we <strong>take on</strong></h2>
+			<p class="pb-0 text-lg">
+				Say what you do and what you do not. Being specific wins the right enquiries and
+				saves everyone a call.
+			</p>
+		</Col>
+	</Row>
+	<Row>
+		<Col span="4">
+			<Card
+				title="The thing you are best at"
+				subtitle="One kind of work you do, described the way a client would describe it rather than the way you would."
+				image={feature01}
+				link="/features"
+			/>
+		</Col>
+		<Col span="4" classes="flex flex-col gap-6">
+			<Card
+				title="A second kind of work"
+				subtitle="What it involves and who it suits. Two sentences is plenty. "
+				image={feature02}
+				link="/features"
+			/>
+			<Card
+				title="A third, if you have one"
+				subtitle="Resist listing everything you are willing to do — a short list reads as expertise, a long one as availability."
+				image={feature03}
+				link="/features"
+			/>
+		</Col>
+		<Col span="4" classes="flex flex-col gap-6">
+			<Card
+				title="Who you work with"
+				subtitle="The kind of client or customer you serve best. Name them and they will recognise themselves. "
+				image={feature04}
+				link="/features"
+			/>
+			<Card
+				title="What it costs"
+				subtitle="A range, a day rate or a starting figure. Being open about money finds the people you can actually help."
+				image={feature05}
+				link="/features"
+			/>
+		</Col>
+	</Row>
+</Section>

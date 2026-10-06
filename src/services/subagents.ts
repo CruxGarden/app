@@ -1,32 +1,17 @@
+import { progressFromCall, type ReportedProgress } from './task-progress';
 import type { Artifact, ToolCall } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
 import { didMutate } from '@/ai/tools';
 import type { WriteScope } from '@/lib/write-scope';
 import { describeScope } from '@/lib/write-scope';
-import { pathOf } from '@/lib/artifact-path';
+import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { isGeneratedGuidePath } from './agents-md';
-import { diffArtifactSets, type FileChange, type SnapshotDiff } from './growth';
+import { isTaskArtifact } from './task-manifest';
 
-/**
- * Subagents on Growth branches (AI-COLLABORATION-V3 B5, ADR 0013) — the pure
- * half: the run model that lives in the job, the merge algorithm, and the
- * bounded parallel runner over engine event streams. It knows nothing about
- * the store, the engine's construction or the Project Folder;
- * `services/delegate.ts` wires it to those.
- *
- * Shape of the work, honestly stated:
- * - each task gets a BRANCH: a snapshot crux cloned from the job's current tip
- *   that only the worker writes to (no Project Folder, so the disk is untouched
- *   until the merge) — it is in the Growth timeline as "Sub: <title>" from the
- *   start and stays there afterwards, restorable, as the audit trail;
- * - workers run in parallel up to a limit, each with a step and a time budget,
- *   and Stop on the parent job aborts all of them;
- * - the MERGE compares every finished branch with the base tip: a file only one
- *   branch touched applies to the main line; a file two or more touched
- *   differently is a conflict the person decides in the job card (take one
- *   branch, or leave the file as it is). Only branches that finished on their
- *   own merge — an interrupted or failed worker's partial files stay on its
- *   branch. One "Merged N subagents" snapshot closes the merge.
+/** The persisted run model, change partitioning and bounded parallel runner.
+ * Native workers own independent Tasks; their combined result goes through
+ * the shared checked review. The parked Web consumer keeps its old snapshot
+ * path. Only completed, retained workers contribute; Stop cancels the pool.
  */
 
 export const DEFAULT_CONCURRENCY = 4;
@@ -49,10 +34,11 @@ export type SubagentStatus = 'pending' | 'running' | 'done' | 'failed' | 'interr
 export interface SubagentRun {
   title: string;
   status: SubagentStatus;
+  progress?: ReportedProgress;
   scope: WriteScope;
-  /** The branch: a snapshot crux cloned from the base tip that this worker writes on. */
+  /** The worker workspace: a native Working Copy, or a parked Web snapshot. */
   branchId?: string;
-  /** The Growth timeline entry for the branch. */
+  /** Parked Web Growth entry; native workers never generate one. */
   growthId?: string;
   startedAt?: string;
   endedAt?: string;
@@ -104,11 +90,15 @@ export interface MergeConflict {
 }
 
 export interface MergeState {
-  /** The snapshot crux every branch started from. */
+  /** Native operational result Task and its checked merge journal. */
+  resultCopyId?: string;
+  reviewId?: string;
+  error?: string;
+  /** The native result Task retaining the base, or the parked Web base snapshot. */
   baseId: string;
-  /** 'pending' while conflicts await a decision; 'merged' once the snapshot is taken. */
+  /** 'pending' while review needs attention; 'merged' after applying the checked result. */
   status: 'pending' | 'merged';
-  /** Files applied automatically (one branch each), then the chosen conflicts after Merge. */
+  /** Selected changes while pending; actual applied changes after completion. */
   applied: MergeApplied[];
   conflicts: MergeConflict[];
   /** The "Merged N subagents" snapshot, once taken. */
@@ -125,19 +115,17 @@ interface Touch {
   branch: number;
   kind: ChangeKind;
   fingerprint: string | null;
-}
-
-function changesOf(diff: SnapshotDiff): { kind: ChangeKind; change: FileChange }[] {
-  return [
-    ...diff.added.map((change) => ({ kind: 'added' as const, change })),
-    ...diff.modified.map((change) => ({ kind: 'modified' as const, change })),
-    ...diff.removed.map((change) => ({ kind: 'removed' as const, change })),
-  ];
+  mode: number;
 }
 
 /** App-managed files never merge: the generated guide, thumbnails, dir markers. */
 export function isMergeInternal(path: string): boolean {
-  return isGeneratedGuidePath(path) || path === '.keep' || path.endsWith('/.keep');
+  return (
+    isGeneratedGuidePath(path) ||
+    isWorkspaceThumbnail(path.toLowerCase()) ||
+    path === '.keep' ||
+    path.endsWith('/.keep')
+  );
 }
 
 /**
@@ -150,19 +138,36 @@ export function partitionChanges(
   base: Artifact[],
   branches: { branch: number; artifacts: Artifact[] }[],
 ): MergePartition {
+  const index = (artifacts: Artifact[]) =>
+    new Map(
+      artifacts
+        .filter(
+          (file) =>
+            file.type === 'artifact' &&
+            pathOf(file) &&
+            isTaskArtifact(pathOf(file)) &&
+            !isMergeInternal(pathOf(file)),
+        )
+        .map((file) => [pathOf(file), file]),
+    );
+  const mode = (file?: Artifact) => Number(file?.meta?.mode ?? 0o644);
+  const before = index(base);
   const touches = new Map<string, Touch[]>();
   for (const { branch, artifacts } of branches) {
-    const byPath = new Map<string, Artifact>();
-    for (const a of artifacts) if (a.type === 'artifact') byPath.set(pathOf(a), a);
-    for (const { kind, change } of changesOf(diffArtifactSets(base, artifacts))) {
-      if (isMergeInternal(change.path)) continue;
-      const list = touches.get(change.path) ?? [];
+    const after = index(artifacts);
+    for (const path of new Set([...before.keys(), ...after.keys()])) {
+      const a = before.get(path),
+        b = after.get(path);
+      if (a && b && a.fingerprint === b.fingerprint && mode(a) === mode(b)) continue;
+      const kind = !b ? 'removed' : !a ? 'added' : 'modified';
+      const list = touches.get(path) ?? [];
       list.push({
         branch,
         kind,
-        fingerprint: kind === 'removed' ? null : (byPath.get(change.path)?.fingerprint ?? null),
+        fingerprint: b?.fingerprint ?? null,
+        mode: mode(b),
       });
-      touches.set(change.path, list);
+      touches.set(path, list);
     }
   }
 
@@ -171,7 +176,11 @@ export function partitionChanges(
   for (const [path, list] of touches) {
     const first = list[0]!;
     const identical = list.every(
-      (t) => t.kind === first.kind && t.fingerprint === first.fingerprint && t.fingerprint !== null,
+      (t) =>
+        t.kind === first.kind &&
+        t.fingerprint === first.fingerprint &&
+        t.mode === first.mode &&
+        (t.kind === 'removed' || t.fingerprint !== null),
     );
     if (list.length === 1 || identical) {
       unique.push({ path, branch: first.branch, kind: first.kind });
@@ -249,7 +258,7 @@ export function describeMerge(runs: SubagentRun[], merge: MergeState | null): st
   }
   if (merge.applied.length > 0) {
     lines.push(
-      `Merged ${plural(merge.applied.length, 'file')} onto the main line: ${merge.applied
+      `${merge.resultCopyId && merge.status === 'pending' ? 'Prepared' : 'Merged'} ${plural(merge.applied.length, 'file')} ${merge.resultCopyId ? (merge.status === 'pending' ? 'in the result Task' : 'into the source workspace') : 'onto the main line'}: ${merge.applied
         .map((a) => `${a.path} (${a.kind}, from ${runs[a.branch]?.title ?? `#${a.branch + 1}`})`)
         .join(', ')}.`,
     );
@@ -279,12 +288,20 @@ export function describeMerge(runs: SubagentRun[], merge: MergeState | null): st
       );
     }
   }
-  if (merge.status === 'merged') {
+  if (merge.status === 'merged' && !merge.resultCopyId) {
     lines.push(
       `Snapshot "${mergeLabel(runs.filter((r) => r.status === 'done').length)}" recorded.`,
     );
   }
-  lines.push('Each worker\'s branch stays in Growth as "Sub: <title>".');
+  if (merge.error)
+    lines.push(
+      `The result is retained for review: ${merge.error} Use the result Task review; do not overwrite source files to work around this refusal.`,
+    );
+  lines.push(
+    merge.resultCopyId
+      ? 'Each worker’s files and conversation remain in its Task. No Growth was marked.'
+      : 'Each worker\'s branch stays in Growth as "Sub: <title>".',
+  );
   return lines.join('\n');
 }
 
@@ -317,7 +334,7 @@ export function taskPrompt(task: SubagentTask): string {
 export function subagentPromptAddendum(task: SubagentTask, count: number): string {
   return (
     '## Working in parallel\n' +
-    `You are one of ${count} workers, each on its own Growth branch, all started from the same files. Your task is "${task.title}". ` +
+    `You are one of ${count} workers, each in its own independent workspace, all started from the same files. Your task is "${task.title}". ` +
     `You may only change ${describeScope(task.scope)} — the tools refuse anything else; other workers own the other files, so do not try. ` +
     'Nobody answers questions here: if something is impossible, say so in your reply and stop. ' +
     'Skip plans and checks — do the work, then say in one or two sentences what you changed.'
@@ -376,6 +393,7 @@ export async function runSubagents(
   };
 
   async function runOne(index: number): Promise<void> {
+    if (runs[index]!.status !== 'pending') return;
     const task = tasks[index]!;
     if (deps.signal?.aborted) {
       await publish(index, { status: 'interrupted', endedAt: now().toISOString() });
@@ -413,7 +431,12 @@ export async function runSubagents(
             break;
           case 'tool_result': {
             const tc = toolCalls.find((t) => t.id === event.id);
-            if (tc) tc.result = event.result;
+            if (tc) {
+              tc.result = event.result;
+              tc.error = event.error;
+            }
+            const progress = progressFromCall(tc);
+            if (progress) await publish(index, { progress });
             if (didMutate(event.name, event.result)) {
               const p =
                 event.name === 'rename_file' ? undefined : (tc?.input.path as string | undefined);
@@ -477,7 +500,10 @@ export async function runSubagents(
       try {
         finished = (await deps.finish(index, runs[index]!, { content, toolCalls })) ?? {};
       } catch (err) {
-        console.warn(`[subagents] finishing "${task.title}" failed:`, err);
+        finished = {
+          status: parentStopped ? 'interrupted' : 'failed',
+          error: `Could not retain the worker result: ${(err as Error).message}`,
+        };
       }
     }
     await publish(index, finished);

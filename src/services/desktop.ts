@@ -4,6 +4,8 @@
  */
 
 import type { DesktopBridge, DesktopInfo, UpdateState } from '@/lib/platform';
+import { getSetting, setSetting } from './settings';
+import { SettingsKey } from '@/lib/constants';
 
 function desktopBridge(): DesktopBridge | null {
   if (typeof window === 'undefined') return null;
@@ -92,6 +94,15 @@ export async function openLogs(): Promise<void> {
   await desktopBridge()?.openLogs?.();
 }
 
+/** Append an explicit metrics report through its dedicated native command. */
+export async function appendMetricsReport(relative: string, text: string): Promise<string | null> {
+  const api = desktopBridge();
+  if (!api) return null;
+  if (!api.appendMetricsReport)
+    throw new Error('Desktop reports are unavailable. Restart and retry.');
+  return api.appendMetricsReport(relative, text);
+}
+
 // ── Updates (ADR 0007) ──────────────────────────────────────────────────────
 
 function updatesBridge() {
@@ -117,3 +128,19 @@ export const updates = {
     return updatesBridge()?.onChange(cb) ?? (() => {});
   },
 };
+
+/**
+ * Docked mode: closing the window hides it and the app keeps running from
+ * the menu bar, so Schedules keep ticking and Alerts keep collecting. The
+ * choice is a Garden setting; the main process is told at boot and on change.
+ */
+export function isDockedMode(): boolean {
+  return getSetting(SettingsKey.DockedMode) === 'true';
+}
+export async function setDockedMode(on: boolean): Promise<void> {
+  setSetting(SettingsKey.DockedMode, String(on));
+  await desktopBridge()?.setDocked?.(on);
+}
+export async function initDockedMode(): Promise<void> {
+  if (isDockedMode()) await desktopBridge()?.setDocked?.(true);
+}

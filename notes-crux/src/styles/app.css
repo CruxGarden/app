@@ -5692,17 +5692,42 @@ html[data-theme="dark"] .ProseMirror pre {
 
 @media (max-width: 980px) {
   body {
-    min-width: 760px;
+    min-width: 0;
   }
 
   .app-frame {
-    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+    display: flex;
   }
 
-  .left-panes,
-  .right-sidebar,
+  .main-pane {
+    flex: 1;
+  }
+
   .pane-resizer {
     display: none;
+  }
+
+  /* Visibility belongs to the toolbar state, never to a CSS-only hiding rule.
+     Keep both toggles above the drawers so they can always be closed. */
+  .left-panes,
+  .right-sidebar {
+    position: absolute;
+    top: var(--pane-header-height);
+    bottom: 0;
+    z-index: 20;
+    box-shadow: var(--shadow-popover);
+  }
+
+  .left-panes {
+    left: 0;
+    width: min(560px, calc(100% - 24px));
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  .right-sidebar {
+    right: 0;
+    width: min(300px, calc(100% - 24px));
   }
 
   .editor-shell,

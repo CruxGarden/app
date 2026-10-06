@@ -1,4 +1,6 @@
 import { claimPreviewPort, releasePreviewPort } from './preview-ports';
+import { resolveInsideOrThrow, toPosixRel } from './paths';
+import { isLoopbackHost } from './loopback';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -49,6 +51,21 @@ function mimeFor(filePath: string): string {
   return MIME_MAP[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
 }
 
+/** Capture exclusions are not an access policy: bundled runtime/ assets are ignored by history. */
+function privatePreviewPath(relative: string): boolean {
+  return relative.split('/').some(
+    (part, index, parts) =>
+      // Notes stores document images in .assets directories. Their contents
+      // are public; nested secrets and symlink destinations still get checked.
+      (part.startsWith('.') && !(part === '.assets' && index < parts.length - 1)) ||
+      part === 'node_modules' ||
+      /\.(pem|key|swp|swx)$/i.test(part) ||
+      part.endsWith('~') ||
+      part.includes('.crux-write-') ||
+      part === 'Thumbs.db',
+  );
+}
+
 interface RunningServer {
   server: any;
   url: string;
@@ -61,7 +78,16 @@ export class PreviewServer {
   private starting = new Map<string, Promise<string>>();
   private running = new Map<string, RunningServer>(); // resolved folder -> server
 
-  constructor(private resolveKnownFolder: (folder: string) => string) {}
+  constructor(
+    private resolveKnownFolder: (folder: string) => string,
+    private responseHeaders: Record<string, string> = {},
+    private serveFolder?: (folder: string) => string,
+  ) {}
+
+  /** An active server identity, renewed on restart so a reused port inherits no consent. */
+  ownerForOrigin(origin: string): object | undefined {
+    return [...this.running.values()].find((server) => server.url === origin)?.owner;
+  }
 
   /** Start (or reuse) a static server for a Project Folder. Returns its URL. */
   start(folder: string): Promise<string> {
@@ -113,46 +139,91 @@ export class PreviewServer {
   }
 
   private handle(base: string, req: any, res: any): void {
+    const refuse = (status: number, text: string) => {
+      res.writeHead(status, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+      res.end(text);
+    };
+    // Binding to loopback alone does not prevent a foreign hostname from resolving here.
+    if (!isLoopbackHost(req.headers.host)) {
+      refuse(403, 'Forbidden');
+      return;
+    }
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      refuse(405, 'Method not allowed');
+      return;
+    }
     try {
-      const pathname = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-
-      // Traversal guard — same discipline as ProjectFolders
-      let target = path.resolve(base, '.' + (pathname === '/' ? '/index.html' : pathname));
-      if (target !== base && !target.startsWith(base + path.sep)) {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
+      base = this.serveFolder?.(base) ?? base;
+    } catch {
+      refuse(404, 'Not found');
+      return;
+    }
+    let relative: string;
+    try {
+      relative = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\//, '');
+    } catch {
+      refuse(400, 'Invalid path');
+      return;
+    }
+    // Check both the requested name and its resolved destination. A harmless-looking
+    // symlink must not expose .crux/mcp.json or an external file.
+    const resolvePublic = (name: string) => {
+      if (privatePreviewPath(name)) throw new Error('Private path');
+      const target = resolveInsideOrThrow(base, name);
+      if (fs.existsSync(target)) {
+        const real = fs.realpathSync.native(target);
+        if (privatePreviewPath(toPosixRel(fs.realpathSync.native(base), real)))
+          throw new Error('Private destination');
+        return real as string;
       }
-
+      return target;
+    };
+    let target: string;
+    try {
+      // A running server must not follow a Project Folder replaced by a link.
+      this.resolveKnownFolder(base);
+      target = resolvePublic(relative || 'index.html');
       let stat = fs.existsSync(target) ? fs.statSync(target) : null;
       if (stat?.isDirectory()) {
-        target = path.join(target, 'index.html');
+        target = resolvePublic(path.posix.join(relative, 'index.html'));
         stat = fs.existsSync(target) ? fs.statSync(target) : null;
       }
       if (!stat?.isFile()) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not found');
+        refuse(404, 'Not found');
         return;
       }
 
+      // Open before yielding so an atomic test-edition update cannot remove the
+      // selected file between stat and the stream's asynchronous open.
+      const fd = req.method === 'HEAD' ? undefined : fs.openSync(target, 'r');
       res.writeHead(200, {
         'Content-Type': mimeFor(target),
         'Content-Length': stat.size,
         // Always fresh — this is a live workspace, not a CDN
         'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        ...this.responseHeaders,
       });
-      const file = fs.createReadStream(target);
+      if (req.method === 'HEAD') {
+        res.end();
+        return;
+      }
+      const file = fs.createReadStream(target, { fd, autoClose: true });
       res.once('close', () => file.destroy());
       file.once('error', () => res.destroy());
       file.pipe(res);
     } catch {
-      res.writeHead(500);
-      res.end('Error');
+      refuse(403, 'Forbidden');
     }
   }
 
   stop(folder: string): Promise<void> {
-    const base = this.resolveKnownFolder(folder);
+    // Stopping an owned server stays possible after its folder becomes unsafe.
+    const requested = path.resolve(folder);
+    const base =
+      this.running.has(requested) || this.starting.has(requested)
+        ? requested
+        : this.resolveKnownFolder(folder);
     const existing = this.stopping.get(base);
     if (existing) return existing;
     const pendingStart = this.starting.get(base);

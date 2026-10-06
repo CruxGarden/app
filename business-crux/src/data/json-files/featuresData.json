@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Work we take on",
+    "icon": "squares-plus",
+    "description": "Say plainly what you do and what you do not. A page that is specific about the work wins the right enquiries and saves everyone a call.",
+    "category": "What we do"
+  },
+  {
+    "title": "How we work",
+    "icon": "cliboard-document-check",
+    "description": "The shape of a project from first conversation to handover, so someone can picture working with you before they write.",
+    "category": "What we do"
+  },
+  {
+    "title": "What it costs",
+    "icon": "chart-pie",
+    "description": "A range, a day rate or a starting figure. Being open about money is the fastest way to find the people you can actually help.",
+    "category": "What we do"
+  },
+  {
+    "title": "Who it is for",
+    "icon": "user-group",
+    "description": "The kind of client or customer you serve best. Name them and they will recognise themselves.",
+    "category": "Who we serve"
+  },
+  {
+    "title": "Proof",
+    "icon": "shield-check",
+    "description": "Past work, the results it had, and a word from someone you did it for. One real example beats a page of claims.",
+    "category": "Who we serve"
+  },
+  {
+    "title": "How to reach us",
+    "icon": "chat-bubble-left-right",
+    "description": "One obvious way to get in touch, and how long a reply takes. Everything above exists to get someone here.",
+    "category": "Who we serve"
+  }
+]

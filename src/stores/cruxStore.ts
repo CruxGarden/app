@@ -1,15 +1,28 @@
+import { getDefaultModel, cruxModel } from '@/ai/keys';
+import { pendingFileProjection, recoverPendingFileUpdates } from '@/services/file-content';
+import {
+  prepareWorkspacePublication,
+  assertPublicationWorkspace,
+} from '@/services/workspace-documents';
+import { notifyUsageChanged } from '@/lib/usage-events';
+import { claimFirstPublication } from '@/services/first-publication';
+import { captureGardenId } from './gardenContext';
+import { uniqueSlug } from '@/lib/slug';
 import { flushNotebook } from '@/services/notebook-lifecycle';
-import { assertCopyWritable } from '@/services/working-copies';
+import { assertCopyWritable, copyIdentity } from '@/services/working-copies';
 import { create, useStore, type StoreApi } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, workspaceSelection, trackWorkspacePromise } from './workspaceSelection';
-import type { Crux, ChatMessage, Artifact, CruxSummary, Dimension } from '@/api/types';
-import type { UpdateCruxInput } from '@/services/types';
+import type { Crux, ChatMessage, Artifact, CruxSummary, Dimension, ToolCall } from '@/api/types';
+import { captureAuth, assertAuthCurrent } from '@/api/session';
+import type { ArtifactUploadEntry, UpdateCruxInput } from '@/services/types';
 import { getServices } from '@/services';
 import { guessMimeType } from '@/lib/mime';
-import { hasContentChanged } from '@/services/publish';
+import { hasContentChanged, publishedConversationFingerprint } from '@/services/publish';
 import {
   walkSnapshotChain,
+  growthTip,
+  type RestoreReport,
   collectChainMessages,
   chainLookupFromService,
   createSnapshotCore,
@@ -22,24 +35,37 @@ import {
   type SnapshotChainNode,
   type CreateSnapshotOptions,
   restoreFilesCore,
+  restoreManifestWorkspace,
+  recoveredRestore,
+  requireSafetySnapshot,
   defaultGrowthHostDeps,
+  listGrowths,
+  SAFETY_LABEL_RESTORE,
+  SAFETY_LABEL_BRANCH,
 } from '@/services/growth';
+import { exclusionPatch, shareChoiceTargets } from '@/services/shared-conversation';
 import {
   publishPipeline,
   unpublishPipeline,
   describePublishFailure,
   type PublishPhase,
+  type PublishWarning,
   type PublishFailure,
 } from '@/services/publish';
 import { projectFolderExists, projectAllArtifacts } from '@/services/project-folder';
-import { flushIngestion } from '@/services/ingestion';
+import { settleIngestion } from '@/services/ingestion';
 import { disposeChatSession } from '@/services/chat-session';
 import { reconcilePersistedJob, type TurnJob } from '@/services/turn-jobs';
 import { captureWorkspacePreview } from '@/services/preview-capture';
-import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
-import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
+import {
+  getPersona,
+  getPersonaFingerprint,
+  personaSnapshotOf,
+  type PersonaSettings,
+} from '@/services/persona';
 import { useUIStore, type UIState } from '@/stores/uiStore';
 import { playCue } from '@/services/cues';
+import { toast } from './toastStore';
 
 function liveArtifactPatch(state: CruxState, artifacts: Artifact[]): Partial<CruxState> {
   return state.workspaceArtifacts ? { workspaceArtifacts: artifacts } : { artifacts };
@@ -60,6 +86,8 @@ export interface CruxState {
   /** Turn orchestration is still finishing checks, capture or queue handoff. */
   turnSettling: boolean;
   streamingContent: string;
+  /** The turn's tool calls as they happen, folded under the streaming reply. */
+  streamingToolCalls: ToolCall[];
 
   // Background Turn (B3): the latest job for this crux and messages queued behind it.
   // Mirrored into crux.meta.turnJob / turnQueue by persistTurnState.
@@ -92,7 +120,7 @@ export interface CruxState {
   // Actions
   loadCrux: (id: string) => Promise<void>;
   restoreProjectFolder: () => Promise<void>;
-  createCrux: (title?: string) => Promise<Crux>;
+  createCrux: (title?: string, gardenId?: string, persona?: PersonaSettings) => Promise<Crux>;
   addMessage: (message: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
   /** Shallow-merge a patch into crux.meta in memory (persist with saveMeta). */
@@ -104,8 +132,13 @@ export interface CruxState {
   persistTurnState: () => Promise<void>;
   appendStreamContent: (content: string) => void;
   clearStreamContent: () => void;
+  setStreamToolCalls: (calls: ToolCall[]) => void;
   /** Re-read the workspace's artifacts from the store (snapshot-view aware). */
   refreshArtifacts: () => Promise<void>;
+  /** Finish already-admitted filesystem work without repeating its original mutation. */
+  recoverFileUpdates: (ownerId?: string, onlyIfPending?: boolean) => Promise<void>;
+  /** Refresh descriptive details only; preserve live conversation, files and history. */
+  refreshDetails: (fields: readonly string[], metaKeys: readonly string[]) => Promise<void>;
   setArtifacts: (artifacts: Artifact[]) => void;
   addArtifact: (artifact: Artifact) => void;
   /** Merge an artifact into state by id (insert or replace). */
@@ -123,7 +156,13 @@ export interface CruxState {
   publishPhase: PublishPhase | null;
   /** Why the last publish failed (null after a success or a fresh attempt). */
   publishFailure: PublishFailure | null;
+  /** Soft-limit warnings from the last successful publish (CR usage). */
+  publishWarnings: PublishWarning[];
   unpublishCrux: () => Promise<void>;
+  /** Share "How was this made?" with this Crux (CR06); persisted in crux meta. */
+  setConversationPublished: (on: boolean) => Promise<void>;
+  /** Leave one Collaboration message out of (or back in) the shared conversation. */
+  setMessageExcludedFromPublish: (message: ChatMessage, excluded: boolean) => Promise<void>;
 
   // Upload progress
   uploadProgress: { total: number; completed: number; currentFile: string } | null;
@@ -135,11 +174,17 @@ export interface CruxState {
   // File CRUD actions
   createFile: (path: string, content?: string) => Promise<Artifact>;
   uploadFile: (file: File, parentPath?: string) => Promise<Artifact>;
-  uploadFiles: (files: { file: File; path: string }[]) => Promise<void>;
+  /** Save a paste in this workspace; retain the text in its draft if storage refuses. */
+  pasteAsArtifact: (text: string) => Promise<void>;
+  uploadFiles: (files: ArtifactUploadEntry[]) => Promise<void>;
   moveArtifact: (id: string, newParentPath: string | null) => Promise<void>;
-  renameArtifact: (id: string, newPath: string) => Promise<void>;
+  renameArtifact: (
+    id: string,
+    newPath: string,
+    selection?: { source: Artifact; target: Artifact | null },
+  ) => Promise<void>;
   deleteArtifact: (id: string) => Promise<void>;
-  deleteArtifacts: (ids: string[]) => Promise<void>;
+  deleteArtifacts: (ids: string[], selection?: readonly Artifact[]) => Promise<void>;
   /** Persist editor content; resolves with the updated artifact (undefined if unknown id). */
   saveArtifactContent: (id: string, content: string) => Promise<Artifact | undefined>;
 
@@ -161,10 +206,10 @@ export interface CruxState {
   // Snapshot viewing actions
   viewSnapshot: (snapshotId: string, index: number) => Promise<void>;
   exitSnapshotView: () => Promise<void>;
-  revertToSnapshot: (snapshotId: string) => Promise<void>;
+  revertToSnapshot: (snapshotId: string) => Promise<RestoreReport | void>;
 
   // Branching actions
-  branchFromSnapshot: (snapshotId: string, label: string) => Promise<void>;
+  branchFromSnapshot: (snapshotId: string, label: string) => Promise<RestoreReport | void>;
 
   // Delete confirmation actions — the AI's delete_file tool blocks on
   // requestDeleteApproval; ChatPane's banner resolves it via confirm/dismiss.
@@ -184,7 +229,14 @@ export const selectHasUnpublishedChanges = (s: CruxState): boolean =>
   hasContentChanged(
     s.artifacts,
     s.crux?.meta?.publishedFingerprints as Record<string, string> | undefined,
-  );
+    s.crux ?? undefined,
+  ) ||
+  // The shared conversation changed (switched on/off, a message left out or
+  // added) — that must reach the live page too, or a secret left out stays up.
+  (!!s.crux &&
+    s.crux.meta?.publishedAt != null &&
+    s.crux.meta?.publishedConversationFingerprint !==
+      publishedConversationFingerprint(s.crux, s.messages));
 
 /**
  * After the workspace's artifacts were replaced (revert, branch), every open
@@ -204,6 +256,17 @@ function rebindEditorTabs(ui: StoreApi<UIState>, artifacts: Artifact[]): void {
   if (activeMatch) ui.getState().setActiveTab(activeMatch.id);
 }
 
+/** Leaving a snapshot view: the fields that say "showing the present". */
+const CLOSED_SNAPSHOT_VIEW = {
+  viewingSnapshotId: null,
+  viewingSnapshotIndex: null,
+  workspaceArtifacts: null,
+  workspaceMessages: null,
+  workspaceSegmentStart: null,
+  snapshotMessageCount: null,
+  snapshotEntryFile: null,
+} as const;
+
 export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
   // Waiters on in-flight delete approvals (AI tool blocked on the user).
   // Module-level: promises don't belong in serialized store state. Keyed by
@@ -220,6 +283,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
   let metadataTail: Promise<unknown> = Promise.resolve();
   let snapshotTail: Promise<unknown> = Promise.resolve();
+  let uploadGeneration = 0;
   const store = create<CruxState>((set, get) => ({
     closing: false,
     cancelPendingDeletes: () => {
@@ -237,23 +301,19 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     isStreaming: false,
     turnSettling: false,
     streamingContent: '',
+    streamingToolCalls: [],
     turnJob: null,
     turnQueue: [],
     growths: [],
     growthCount: 0,
     artifactsVersion: 0,
     isCreatingGrowth: false,
-    viewingSnapshotId: null,
-    viewingSnapshotIndex: null,
-    workspaceArtifacts: null,
-    workspaceMessages: null,
-    workspaceSegmentStart: null,
-    snapshotMessageCount: null,
-    snapshotEntryFile: null,
+    ...CLOSED_SNAPSHOT_VIEW,
     pendingDeletes: [],
     folderMissing: false,
     publishPhase: null,
     publishFailure: null,
+    publishWarnings: [],
     uploadProgress: null,
     tokenUsage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 },
 
@@ -277,6 +337,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const gen = ++loadGeneration;
       const stillCurrent = () => gen === loadGeneration;
       const { crux: cruxService, artifact } = getServices();
+      await recoverPendingFileUpdates(id);
       const crux = await cruxService.findById(id);
       const artifacts = await artifact.findByResource('crux', id);
       if (!stillCurrent()) return;
@@ -294,9 +355,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       // but themes are currently global — don't override the user's active theme on load.
 
       // Load growth dimensions first so we can reconstruct the full conversation
-      const { dimension } = getServices();
-      const growthDimensions = await dimension.findBySourceAndType(id, 'growth');
-      const sortedGrowths = growthDimensions.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+      const sortedGrowths = await listGrowths(id);
 
       // Reconstruct full conversation from snapshot chain + workspace segment.
       // Branch-aware: walk parentCruxId from the tip backwards to build the
@@ -321,14 +380,11 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           }
         }
 
-        // Active tip: the workspace's activeBranch setting, or the latest snapshot
-        const activeBranchTip = (crux.meta?.settings?.activeBranch as string) || null;
-        const tipId =
-          activeBranchTip && snapshotNodes.has(activeBranchTip)
-            ? activeBranchTip
-            : sortedGrowths[sortedGrowths.length - 1]!.targetId;
+        const tipId = growthTip(crux, sortedGrowths);
 
-        const chain = await walkSnapshotChain(tipId, async (id) => snapshotNodes.get(id) ?? null);
+        const chain = tipId
+          ? await walkSnapshotChain(tipId, async (id) => snapshotNodes.get(id) ?? null)
+          : [];
         priorMessages = chain.flatMap((n) => n.messages);
       }
 
@@ -407,21 +463,14 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       set({ folderMissing: false });
     },
 
-    createCrux: async (title?: string) => {
+    createCrux: async (title?: string, gardenId = captureGardenId(), persona = getPersona()) => {
       const { crux: cruxService } = getServices();
 
-      const slug =
-        (title || 'untitled')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '') +
-        '-' +
-        Date.now().toString(36);
+      const slug = uniqueSlug(title || 'untitled');
 
       // The greeting is spoken by the current persona: stamp it and record the
       // persona snapshot so the bubble is labelled correctly (and stays so if
       // the Mood changes later).
-      const persona = getPersona();
       const pf = getPersonaFingerprint(persona);
       const greeting: ChatMessage = {
         role: 'assistant',
@@ -434,6 +483,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const personaSnapshots = { [pf]: personaSnapshotOf(persona) };
 
       const crux = await cruxService.create({
+        ...(gardenId ? { gardenId } : {}),
         slug,
         title: title || 'New Crux',
         type: 'workspace',
@@ -443,7 +493,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           personaSnapshots,
           summary: null,
           settings: {
-            model: DEFAULT_MODEL,
+            model: await getDefaultModel(),
+            modelAutomatic: true,
           },
         },
       });
@@ -501,7 +552,29 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     clearStreamContent: () => {
-      set({ streamingContent: '' });
+      set({ streamingContent: '', streamingToolCalls: [] });
+    },
+
+    setStreamToolCalls: (calls: ToolCall[]) => {
+      set({ streamingToolCalls: calls });
+    },
+
+    recoverFileUpdates: async (ownerId = get().crux?.id, onlyIfPending = false) => {
+      if (!ownerId) throw new Error('Select the Crux whose file update needs recovery.');
+      const before = get();
+      const liveIds =
+        before.crux?.id === ownerId
+          ? (before.workspaceArtifacts ?? before.artifacts).map((file) => file.id)
+          : [];
+      const pending = await recoverPendingFileUpdates(ownerId, !onlyIfPending);
+      if ((!pending && onlyIfPending) || get().crux?.id !== ownerId) return;
+      await get().refreshArtifacts();
+      const after = get();
+      // Growth owns its selected tabs. A late recovery must also leave a newly
+      // selected owner alone; only absent files from this live view are closed.
+      if (after.crux?.id !== ownerId || after.viewingSnapshotId) return;
+      const retained = new Set(after.artifacts.map((file) => file.id));
+      for (const id of liveIds) if (!retained.has(id)) ui.getState().closeTab(id);
     },
 
     refreshArtifacts: async () => {
@@ -556,15 +629,22 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     setModel: (model: string) => {
       const { crux, saveMeta } = get();
       if (!crux) return;
-      const meta = { ...crux.meta, settings: { ...crux.meta?.settings, model } };
+      const meta = {
+        ...crux.meta,
+        settings: { ...crux.meta?.settings, model, modelAutomatic: false },
+      };
       set({ crux: { ...crux, meta } });
       saveMeta();
     },
 
     saveMeta: () => {
+      const ownerId = get().crux?.id;
+      const generation = loadGeneration;
       const write = metadataTail.then(async () => {
         const { crux, messages, messageSegmentStart, summary, growthCount } = get();
-        if (!crux) return;
+        if (!ownerId) return;
+        if (crux?.id !== ownerId || generation !== loadGeneration)
+          throw new Error('This workspace changed before its metadata could be saved.');
         const meta = {
           ...crux.meta,
           messages: messages.slice(messageSegmentStart),
@@ -576,6 +656,53 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       });
       metadataTail = write.catch(() => {});
       return write;
+    },
+
+    refreshDetails: (fields, metaKeys) => {
+      const generation = loadGeneration;
+      const id = get().crux?.id;
+      // Share the metadata queue so an echo cannot overtake our own save.
+      const refresh = metadataTail.then(async () => {
+        const before = get().crux;
+        if (!before || before.id !== id || generation !== loadGeneration) return;
+        const persisted = await getServices().crux.findById(before.id);
+        set((state) => {
+          const current = state.crux;
+          if (!current || current.id !== id || generation !== loadGeneration) return {};
+          const next = { ...current };
+          // Runtime settings, conversation and content have their own lifecycle.
+          // Detail invalidation must never reload or restart those systems.
+          const detailFields = [
+            'title',
+            'description',
+            'slug',
+            'type',
+            'kind',
+            'status',
+            'visibility',
+            'discoverable',
+          ] as const;
+          for (const key of detailFields) {
+            if (fields.includes(key) && current[key] === before[key])
+              Object.assign(next, { [key]: persisted[key] });
+          }
+          if (metaKeys.includes('notes') && current.meta?.notes === before.meta?.notes)
+            next.meta = { ...current.meta, notes: persisted.meta?.notes };
+          const currentCopy = copyIdentity(current),
+            savedCopy = copyIdentity(persisted);
+          if (fields.includes('title') && currentCopy && savedCopy)
+            next.meta = { ...next.meta, workingCopy: { ...currentCopy, title: savedCopy.title } };
+          if (fields.includes('phase') && currentCopy && savedCopy)
+            next.meta = {
+              ...next.meta,
+              workingCopy: { ...copyIdentity(next)!, phase: savedCopy.phase },
+            };
+          next.updated = persisted.updated;
+          return { crux: next };
+        });
+      });
+      metadataTail = refresh.catch(() => {});
+      return refresh;
     },
 
     updateCrux: (dto) => {
@@ -631,14 +758,9 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         growths: [],
         growthCount: 0,
         isCreatingGrowth: false,
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
-        snapshotEntryFile: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         pendingDeletes: [],
+        publishWarnings: [],
       });
     },
 
@@ -649,18 +771,57 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     // The phase and the failure live here so the Share pane can show them
     // whichever button started the publish.
     publishCrux: async () => {
-      const { crux, saveMeta } = get();
-      if (!crux) return false;
-      set({ publishFailure: null, publishPhase: 'sync' });
+      const { crux, publishPhase } = get();
+      if (!crux || publishPhase) return false;
+      const authContext = captureAuth();
+      set({ publishFailure: null, publishWarnings: [], publishPhase: 'sync' });
       try {
-        await flushNotebook(crux.id);
-        await saveMeta();
-        const mergedCrux = await publishPipeline(get().crux!, get().artifacts || [], {
-          messages: get().messages,
+        const prepared = await prepareWorkspacePublication(store, ui, crux.id);
+        assertAuthCurrent(authContext);
+        const { functionFiles, listPublishedFunctions, putRemoteSecret } =
+          await import('@/services/crux-functions');
+        const { localSecrets } = await import('@/services/function-secrets');
+        const hasFunctions = functionFiles(prepared.artifacts || []).length > 0;
+        // Unlock before publishing so a local credential failure cannot leave
+        // a newly live handler without the credentials it needs.
+        const secrets = hasFunctions ? await localSecrets(crux.id) : {};
+        assertPublicationWorkspace(store, ui, crux.id);
+        assertAuthCurrent(authContext);
+        const mergedCrux = await publishPipeline(prepared.crux, prepared.artifacts || [], {
+          authContext,
+          messages: prepared.messages,
           onProgress: (phase) => set({ publishPhase: phase }),
+          onWarnings: (warnings) => set({ publishWarnings: warnings }),
         });
+        assertAuthCurrent(authContext);
+        if (get().crux?.id !== crux.id)
+          throw new Error(
+            'The Crux was shared, but this workspace changed. Reopen it to refresh its status.',
+          );
         set({ crux: mergedCrux });
-        void playCue('published');
+        notifyUsageChanged();
+        if (hasFunctions) {
+          try {
+            for (const [name, value] of Object.entries(secrets))
+              await putRemoteSecret(mergedCrux.id, name, value, authContext);
+            await listPublishedFunctions(mergedCrux.id, authContext);
+          } catch {
+            // Do not forward an Axios error that may include a secret request body.
+            throw new Error(
+              'The Crux is published, but Function configuration could not be synchronized. Reconnect and publish again.',
+            );
+          }
+        }
+        void playCue('published', mergedCrux.id);
+        if (!crux.meta?.publishedAt)
+          void claimFirstPublication(mergedCrux.id)
+            .then((first) => {
+              if (first)
+                toast('Your first Crux is live! Copy its link or save a share card from Share.');
+            })
+            .catch(() => {
+              /* A missed acknowledgement must not turn a successful publish into a failure. */
+            });
         return true;
       } catch (err) {
         console.error('[publish] failed:', err);
@@ -677,7 +838,33 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (!crux) return;
       const updated = await unpublishPipeline(crux);
       // A failure from an earlier publish attempt no longer describes anything.
-      set({ crux: updated, publishFailure: null });
+      set({ crux: updated, publishFailure: null, publishWarnings: [] });
+      notifyUsageChanged();
+    },
+
+    // The shared conversation (CR06): crux meta through the ordinary metadata
+    // save, so it rides the same queue as the conversation itself.
+    setConversationPublished: async (on) => {
+      const { crux, patchCruxMeta, saveMeta } = get();
+      if (!crux) return;
+      patchCruxMeta({ conversationPublished: on });
+      await saveMeta();
+    },
+
+    setMessageExcludedFromPublish: async (message, excluded) => {
+      const { crux, messages, patchCruxMeta, saveMeta } = get();
+      if (!crux) return;
+      // A person's message carries its replies with it (they quote it).
+      const targets = new Set(shareChoiceTargets(messages, message));
+      // The crux-level record reaches every Growth segment; the flag on the
+      // message travels with the current segment (and its exports).
+      patchCruxMeta(exclusionPatch(crux, [...targets], excluded));
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          targets.has(m) ? { ...m, excludedFromPublish: excluded } : m,
+        ),
+      }));
+      await saveMeta();
     },
 
     // File CRUD actions
@@ -695,8 +882,52 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         mimeType: mime,
         meta: { path },
       });
-      set((state) => ({ artifacts: [...state.artifacts, newArtifact] }));
+      set((state) => ({
+        artifacts: [...state.artifacts.filter((file) => file.id !== newArtifact.id), newArtifact],
+      }));
       return newArtifact;
+    },
+
+    pasteAsArtifact: async (text) => {
+      const { crux } = get();
+      const appendToDraft = (addition: string) => {
+        // Read after the await: typing, Send and other pastes may have changed this draft.
+        const { composerDraft, setComposerDraft } = ui.getState();
+        setComposerDraft(composerDraft ? `${composerDraft}\n${addition}` : addition);
+      };
+      let created: Artifact;
+      let path: string;
+      try {
+        if (!crux) throw new Error('No active crux');
+        const firstLine = text.split('\n').find((line) => line.trim()) ?? '';
+        const slug =
+          firstLine
+            .replace(/^#+\s*/, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 40) || 'pasted';
+        // Repeated pastes must never overwrite another brief with the same first line.
+        path = `notes/${slug}-${crypto.randomUUID()}.md`;
+        created = await getServices().artifact.create({
+          resourceId: crux.id,
+          resourceType: 'crux',
+          content: text,
+          mimeType: 'text/markdown',
+          meta: { path },
+        });
+      } catch {
+        appendToDraft(text);
+        toast(
+          `Could not save the pasted file${crux ? ` in “${crux.title}”` : ''}. The text is kept in your draft.`,
+          { tone: 'error' },
+        );
+        return;
+      }
+      appendToDraft(`Read ${path} first (pasted, ${text.length.toLocaleString()} characters).`);
+      // The saved Artifact is already authoritative; a second read must not turn a
+      // successful write into a reported failure. Keep snapshot views unchanged.
+      if (crux && get().crux?.id === crux.id) get().upsertArtifact(created);
     },
 
     uploadFile: async (file: File, parentPath?: string) => {
@@ -707,6 +938,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const newArtifact = await artifact.upload({
         resourceId: crux.id,
         blob: file,
+        retention: 'safety',
         mimeType: file.type || undefined,
         meta: { path },
       });
@@ -726,7 +958,10 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const oldPath = art.meta?.path || art.filename || '';
       const filename = oldPath.split('/').pop() || art.filename;
       const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
-      await artifact.update(id, { meta: { path: newPath } });
+      await artifact.update(get().artifacts.find((file) => file.id === id)!, {
+        meta: { path: newPath },
+      });
+      await get().refreshArtifacts();
       set((state) => ({
         artifacts: state.artifacts.map((a) =>
           a.id === id
@@ -740,79 +975,151 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       }));
     },
 
-    renameArtifact: async (id: string, newPath: string) => {
-      const { artifact } = getServices();
-      await artifact.update(id, { meta: { path: newPath } });
-      set((state) => ({
-        artifacts: state.artifacts.map((a) =>
-          a.id === id
-            ? {
-                ...a,
-                meta: { ...a.meta, path: newPath },
-                filename: newPath.split('/').pop() || a.filename,
-              }
-            : a,
-        ),
-      }));
-    },
-
-    deleteArtifact: async (id: string) => {
-      const { artifact } = getServices();
-      await artifact.delete(id);
-      set((state) => ({
-        artifacts: state.artifacts.filter((a) => a.id !== id),
-      }));
-      // Also close any editor tab for this file
-      ui.getState().closeTab(id);
-    },
-
-    deleteArtifacts: async (ids: string[]) => {
-      const { artifact } = getServices();
-      // Delete all in parallel
-      await Promise.allSettled(ids.map((id) => artifact.delete(id)));
-      const idSet = new Set(ids);
-      set((state) => ({
-        artifacts: state.artifacts.filter((a) => !idSet.has(a.id)),
-      }));
-      // Close editor tabs for all deleted files
-      const uiStore = ui.getState();
-      for (const id of ids) {
-        uiStore.closeTab(id);
+    renameArtifact: async (id, newPath, selection) => {
+      const state = get();
+      if (state.viewingSnapshotId || state.closing)
+        throw new Error('Return to the current workspace before renaming files.');
+      const source = structuredClone(
+        selection?.source ?? state.artifacts.find((file) => file.id === id),
+      );
+      const target = selection?.target ? structuredClone(selection.target) : undefined;
+      if (!source) throw new Error('Select the file before renaming it.');
+      try {
+        await getServices().artifact.update(source, { meta: { path: newPath }, replace: target });
+      } finally {
+        if (get().crux?.id === source.resourceId) await get().refreshArtifacts();
       }
     },
 
-    uploadFiles: async (files: { file: File; path: string }[]) => {
-      const { crux } = get();
+    deleteArtifact: async (id: string) => {
+      await get().deleteArtifacts([id]);
+    },
+
+    deleteArtifacts: async (ids: string[], selection?: readonly Artifact[]) => {
+      if (!ids.length) return;
+      const current = get();
+      if (current.viewingSnapshotId) throw new Error('Growth files are read-only.');
+      const ownerId = current.crux?.id;
+      const approved = structuredClone(selection ?? current.artifacts);
+      const files = [...new Set(ids)].map((id) => {
+        const file = approved.find((item) => item.id === id);
+        if (!file || file.resourceId !== ownerId)
+          throw new Error('The selected file is no longer in this Crux. Refresh and try again.');
+        return file;
+      });
+      const { artifact } = getServices();
+      const results = await Promise.allSettled(files.map((file) => artifact.delete(file)));
+      const deleted = new Set(
+        files.filter((_, index) => results[index]!.status === 'fulfilled').map((file) => file.id),
+      );
+      // A rejected delete must keep its file and unsaved editor available. A
+      // navigation while deletion runs must not mutate another owner's view.
+      if (get().crux?.id === ownerId) {
+        set((state) =>
+          liveArtifactPatch(
+            state,
+            (state.workspaceArtifacts ?? state.artifacts).filter((file) => !deleted.has(file.id)),
+          ),
+        );
+        if (!get().viewingSnapshotId) for (const id of deleted) ui.getState().closeTab(id);
+      }
+      const failures = results.flatMap((result, index) =>
+        result.status === 'rejected'
+          ? [{ file: files[index]!, reason: result.reason as unknown }]
+          : [],
+      );
+      if (failures.length) {
+        const pending = failures.filter(({ reason }) => pendingFileProjection(reason));
+        const refused = failures.filter(({ reason }) => !pendingFileProjection(reason));
+        throw new AggregateError(
+          failures.map((failure) => failure.reason),
+          [
+            pending.length
+              ? `Deletion is saved in Garden, but the Project Folder update is pending for ${pending.map(({ file }) => file.meta?.path ?? file.filename).join(', ')}. Retry file update to finish it.`
+              : '',
+            refused.length
+              ? `Could not delete ${refused.map(({ file }) => file.meta?.path ?? file.filename).join(', ')}. Review the remaining files and try again.`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
+        );
+      }
+    },
+
+    uploadFiles: async (files: ArtifactUploadEntry[]) => {
+      const { crux, artifacts, viewingSnapshotId, closing } = get();
       if (!crux) throw new Error('No active crux');
+      if (viewingSnapshotId || closing)
+        throw new Error('Return to the current files in this Crux before adding files.');
+      const ownerId = crux.id;
+      const entries = files.map(({ file, path, expected }) => ({
+        file,
+        path,
+        expected: structuredClone(
+          expected === undefined
+            ? (artifacts.find((artifact) => artifact.meta?.path === path) ?? null)
+            : expected,
+        ),
+      }));
+      if (!entries.length) return;
+      const generation = ++uploadGeneration;
       const { artifact } = getServices();
       set({
-        uploadProgress: { total: files.length, completed: 0, currentFile: files[0]?.path || '' },
+        uploadProgress: { total: entries.length, completed: 0, currentFile: entries[0]!.path },
       });
       const newArtifacts: Artifact[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const { file, path } = files[i]!;
-        set({ uploadProgress: { total: files.length, completed: i, currentFile: path } });
+      const failures: { path: string; reason: unknown }[] = [];
+      for (let i = 0; i < entries.length; i++) {
+        const { file, path, expected } = entries[i]!;
+        if (get().crux?.id === ownerId && generation === uploadGeneration)
+          set({ uploadProgress: { total: entries.length, completed: i, currentFile: path } });
         try {
           const newArtifact = await artifact.upload({
-            resourceId: crux.id,
+            resourceId: ownerId,
             blob: file,
+            expected,
+            retention: 'safety',
             mimeType: file.type || undefined,
             meta: { path },
           });
           newArtifacts.push(newArtifact);
-        } catch (err) {
-          console.warn(`Failed to upload: ${path}`, err);
+        } catch (reason) {
+          failures.push({ path, reason });
         }
       }
       set((state) => {
-        const merged = [...state.artifacts];
+        if (state.crux?.id !== ownerId)
+          return generation === uploadGeneration ? { uploadProgress: null } : state;
+        const merged = [...(state.workspaceArtifacts ?? state.artifacts)];
         for (const a of newArtifacts) {
           const idx = merged.findIndex((e) => e.id === a.id);
           if (idx >= 0) merged[idx] = a;
           else merged.push(a);
         }
-        return { artifacts: merged, uploadProgress: null };
+        return {
+          ...liveArtifactPatch(state, merged),
+          ...(generation === uploadGeneration ? { uploadProgress: null } : {}),
+        };
       });
+      if (failures.length) {
+        const pending = failures.filter(({ reason }) => pendingFileProjection(reason));
+        const refused = failures.filter(({ reason }) => !pendingFileProjection(reason));
+        throw new AggregateError(
+          failures.map(({ reason }) => reason),
+          [
+            `${newArtifacts.length} of ${entries.length} files added.`,
+            pending.length
+              ? `${pending.length} saved in Garden with a Project Folder update pending: ${pending.map(({ path }) => path).join(', ')}. Retry file update to finish it.`
+              : '',
+            refused.length
+              ? `Could not add ${refused.map(({ path }) => path).join(', ')}. Files already added were kept. Choose the failed files to retry.`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
+        );
+      }
     },
 
     saveArtifactContent: async (id: string, content: string) => {
@@ -826,6 +1133,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       // — after which `readContent` refused the file the editor had just saved.
       const updated = await artifact.create({
         resourceId: art.resourceId,
+        expected: art,
         content,
         mimeType: mime,
         meta: { path: art.meta?.path },
@@ -846,10 +1154,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     loadGrowths: async () => {
       const { crux } = get();
       if (!crux) return;
-      const { dimension } = getServices();
-      const dimensions = await dimension.findBySourceAndType(crux.id, 'growth');
-      const sorted = dimensions.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
-      set({ growths: sorted });
+      set({ growths: await listGrowths(crux.id) });
     },
 
     addGrowth: (growth: Dimension) => {
@@ -901,7 +1206,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (result.activeBranch !== undefined) {
         const settings = { ...(get().crux?.meta?.settings ?? {}) } as Record<string, unknown>;
         if (result.activeBranch) settings.activeBranch = result.activeBranch;
-        else delete settings.activeBranch;
+        else settings.activeBranch = null;
         get().patchCruxMeta({ settings });
       }
       await get().saveMeta();
@@ -909,9 +1214,12 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
     createSnapshot: (options = {}) => {
       const operation = snapshotTail.then(async () => {
-        // Desktop (ADR 0001): external edits may still be mid-ingest — a snapshot
-        // must never capture a half-observed state. Resolves immediately on web.
-        await flushIngestion();
+        // Desktop (ADR 0001): external edits may still be mid-ingest — a
+        // snapshot must never capture a half-observed state. Settling rather
+        // than draining, because the watcher holds a fresh save briefly before
+        // reporting it, and a snapshot that misses it records a past that
+        // never existed. Resolves immediately on web.
+        await settleIngestion();
 
         const { crux, messages, messageSegmentStart, growths, growthCount } = get();
         if (!crux) return;
@@ -952,24 +1260,15 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         // Advance segment start so saveMeta only persists new messages going forward
         set({ messageSegmentStart: result.newSegmentStart });
 
-        // Advance the branch tip. `branchFromSnapshot` sets activeBranch and it was
-        // never moved on, so every later snapshot re-parented onto the branch point
-        // (a star, not a chain) and loadCrux — which walks back from activeBranch —
-        // dropped every post-branch conversation segment on reload.
-        if (get().crux?.meta?.settings?.activeBranch) {
-          get().patchCruxMeta({
-            settings: {
-              ...(get().crux!.meta!.settings as Record<string, unknown>),
-              activeBranch: result.snapshotCruxId,
-            },
-          });
-        }
+        get().patchCruxMeta({
+          settings: { ...(get().crux?.meta?.settings ?? {}), activeBranch: result.snapshotCruxId },
+        });
         await get().saveMeta();
-        void playCue('snapshot');
+        void playCue('snapshot', get().crux?.id);
 
         // Fire-and-forget AI summary — scoped to the segment this snapshot captured
         if (!options.silent) {
-          const model = resolveModel(crux.meta?.settings?.model);
+          const model = cruxModel(crux);
           void trackWorkspacePromise(
             store,
             generateSnapshotSummary({
@@ -1062,14 +1361,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         : null;
 
       set({
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         artifacts: workspaceArtifacts ?? [],
-
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
         snapshotEntryFile: null,
       });
       rebindEditorTabs(ui, workspaceArtifacts ?? []);
@@ -1090,15 +1383,41 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (get().crux) await assertCopyWritable(get().crux!.id);
       const { crux } = get();
       if (!crux) return;
+      const manifestDeps = await defaultGrowthHostDeps();
+      if (manifestDeps.content) {
+        let report: RestoreReport = recoveredRestore();
+        // Retry a committed restore before persisting any stale pre-restore UI state.
+        if (!(await manifestDeps.content.finishProjection(crux.id))) {
+          await get().saveMeta();
+          const state = get();
+          report = await restoreManifestWorkspace(
+            {
+              crux: state.crux!,
+              messages: state.messages,
+              messageSegmentStart: state.messageSegmentStart,
+              growths: state.growths,
+              growthCount: state.growthCount,
+              artifactCount: state.artifacts.length,
+            },
+            snapshotId,
+            undefined,
+            manifestDeps,
+          );
+        }
+        set({
+          ...CLOSED_SNAPSHOT_VIEW,
+        });
+        await get().loadCrux(crux.id);
+        rebindEditorTabs(ui, get().artifacts);
+        return report;
+      }
       const { artifact, crux: cruxService } = getServices();
 
       const restoredSnapshot = await cruxService.findById(snapshotId);
-      // Auto-snapshot current state as a safety net before reverting
-      try {
-        await get().createSnapshot({ label: 'Before revert', silent: true });
-      } catch (err) {
-        console.warn('Failed to auto-snapshot before revert:', err);
-      }
+      // A safety snapshot of the current state before reverting
+      await requireSafetySnapshot(() =>
+        get().createSnapshot({ label: SAFETY_LABEL_RESTORE, silent: true }),
+      );
 
       // Only the files that differ move (Growth module, single impl).
       await restoreFilesCore(crux.id, snapshotId, await defaultGrowthHostDeps());
@@ -1116,14 +1435,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const newWorkspaceArtifacts = await artifact.findByResource('crux', crux.id);
 
       set({
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         artifacts: newWorkspaceArtifacts,
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
-        snapshotEntryFile: null,
         messages: priorMessages,
         messageSegmentStart: priorMessages.length,
       });
@@ -1151,14 +1464,40 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (get().crux) await assertCopyWritable(get().crux!.id);
       const { crux } = get();
       if (!crux) return;
+      const manifestDeps = await defaultGrowthHostDeps();
+      if (manifestDeps.content) {
+        let report: RestoreReport = recoveredRestore();
+        // Retry a committed restore before persisting any stale pre-restore UI state.
+        if (!(await manifestDeps.content.finishProjection(crux.id))) {
+          await get().saveMeta();
+          const state = get();
+          report = await restoreManifestWorkspace(
+            {
+              crux: state.crux!,
+              messages: state.messages,
+              messageSegmentStart: state.messageSegmentStart,
+              growths: state.growths,
+              growthCount: state.growthCount,
+              artifactCount: state.artifacts.length,
+            },
+            snapshotId,
+            label,
+            manifestDeps,
+          );
+        }
+        set({
+          ...CLOSED_SNAPSHOT_VIEW,
+        });
+        await get().loadCrux(crux.id);
+        rebindEditorTabs(ui, get().artifacts);
+        return report;
+      }
       const { artifact, crux: cruxService } = getServices();
 
-      // Auto-snapshot current state first
-      try {
-        await get().createSnapshot({ label: 'Before branch', silent: true });
-      } catch (err) {
-        console.warn('Failed to auto-snapshot before branch:', err);
-      }
+      // A safety snapshot of the current state first
+      await requireSafetySnapshot(() =>
+        get().createSnapshot({ label: SAFETY_LABEL_BRANCH, silent: true }),
+      );
 
       // Only the files that differ move (Growth module, single impl).
       await restoreFilesCore(crux.id, snapshotId, await defaultGrowthHostDeps());
@@ -1197,14 +1536,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       };
 
       set({
-        viewingSnapshotId: null,
-        viewingSnapshotIndex: null,
+        ...CLOSED_SNAPSHOT_VIEW,
         artifacts: newWorkspaceArtifacts,
-        workspaceArtifacts: null,
-        workspaceMessages: null,
-        workspaceSegmentStart: null,
-        snapshotMessageCount: null,
-        snapshotEntryFile: null,
         messages: [...snapshotMessages, branchMessage],
         messageSegmentStart: snapshotMessages.length,
         crux: { ...crux, meta },

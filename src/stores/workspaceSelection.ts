@@ -12,6 +12,10 @@ export const WorkspaceContext = createContext<WorkspaceStores | null>(null);
 export const workspaceSelection = createStore<{ active: WorkspaceStores | null }>(() => ({
   active: null,
 }));
+/** The Garden Home workspace on screen, when no Crux workspace is. */
+export const gardenWorkspace = createStore<{ ui: StoreApi<UIState> | null }>(() => ({
+  ui: null,
+}));
 
 /** Async services share the same close boundary as store actions. */
 export const workspaceOperations = new WeakMap<StoreApi<CruxState>, Set<Promise<unknown>>>();

@@ -1,0 +1,89 @@
+# Native platform acceptance, including distribution packages; never publishes.
+name: Portable desktop
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - '.gitattributes'
+      - 'licenses/**'
+      - '.github/workflows/**'
+      - '.github/actions/native-media/**'
+      - 'electron/**'
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite*.ts'
+      - 'scripts/**'
+      - 'package*.json'
+permissions:
+  contents: read
+concurrency:
+  group: portable-${{ github.ref }}
+  # Preserve expensive native builds so their verified bundles reach the cache.
+  cancel-in-progress: false
+jobs:
+  portable:
+    name: Packaged runtime (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: electron/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+        working-directory: electron
+      - run: npm ci
+      - run: npm run verify
+        working-directory: electron
+      - uses: ./.github/actions/native-media
+      - run: npm run build:all
+        working-directory: electron
+      - run: npx playwright install --with-deps chromium
+        working-directory: electron
+      - name: Package without publishing
+        run: npx electron-builder --publish never
+        working-directory: electron
+      - name: Diagnose Windows rendering cost
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        working-directory: electron
+        env:
+          CRUX_PERF_OUT: performance/.results/rendering-probe
+        run: npx playwright test -c playwright.performance.config.ts performance/rendering-probe.spec.ts
+      - name: Run packaged and companion CLI checks
+        working-directory: electron
+        env:
+          CRUX_PACKAGED: '1'
+          CRUX_E2E_DIAGNOSTICS: '1'
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts e2e/package-imports.spec.ts e2e/recovery-storage.spec.ts e2e/watcher-literal-path.spec.ts e2e/subscriber.spec.ts e2e/local-staging.spec.ts e2e/order-desk.spec.ts e2e/private-requests.spec.ts e2e/functions-local.spec.ts e2e/composer-files.spec.ts e2e/composer-keyboard.spec.ts e2e/conversation-reading.spec.ts e2e/share-feedback.spec.ts e2e/memory-file.spec.ts e2e/agent-metrics.spec.ts e2e/message-actions.spec.ts e2e/home-and-workspace-finds.spec.ts e2e/desktop-shell.spec.ts e2e/customer-sharing.spec.ts e2e/customer-billing-usage.spec.ts
+          else
+            npx playwright test e2e/packaged.spec.ts e2e/desktop-cli.spec.ts e2e/journeys/01-create-version-publish.spec.ts e2e/journeys/10-keyboard.spec.ts e2e/folder-authorization.spec.ts e2e/ipc-security.spec.ts e2e/package-imports.spec.ts e2e/recovery-storage.spec.ts e2e/watcher-literal-path.spec.ts e2e/subscriber.spec.ts e2e/local-staging.spec.ts e2e/order-desk.spec.ts e2e/private-requests.spec.ts e2e/functions-local.spec.ts e2e/composer-files.spec.ts e2e/composer-keyboard.spec.ts e2e/conversation-reading.spec.ts e2e/share-feedback.spec.ts e2e/memory-file.spec.ts e2e/agent-metrics.spec.ts e2e/message-actions.spec.ts e2e/home-and-workspace-finds.spec.ts e2e/desktop-shell.spec.ts e2e/customer-sharing.spec.ts e2e/customer-billing-usage.spec.ts
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-${{ matrix.os }}
+          path: |
+            electron/e2e/.results
+            electron/performance/.results/rendering-probe/rendering-probe.json
+          if-no-files-found: ignore
+          include-hidden-files: true

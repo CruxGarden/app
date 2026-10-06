@@ -1,15 +1,15 @@
+import { openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { writeFileSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import JSZip from 'jszip';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
-import { importNativeCrux } from './native-archive-helpers';
+import { createCrux, enterGarden, storedCrux, storedFingerprint } from './multi-crux-helpers';
+import { closeWorkspace } from './journeys/journey-helpers';
 
 test('large workspace opens while the soundtrack and its level meter keep playing', async () => {
-  test.setTimeout(180000);
-  const { app, page, dir } = await launchApp({ sound: true });
+  test.setTimeout(420_000);
+  const { app, page } = await launchApp({ sound: true });
   const debug = await page.context().newCDPSession(page);
   try {
     page.on('console', (m) => {
@@ -17,65 +17,49 @@ test('large workspace opens while the soundtrack and its level meter keep playin
     });
     await page.setViewportSize({ width: 1600, height: 1000 });
     await enterGarden(page);
+    await page.getByRole('button', { name: 'Play soundscape', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pause soundscape', exact: true })).toBeVisible();
 
-    // Many paths, just two tiny blobs: exercise the real archive/import/render
-    // path without installing a particular native editor or fetching any media.
-    const zip = new JSZip();
-    const id = randomUUID();
-    const crux = {
-      id,
-      title: 'Large sounding workspace',
-      type: 'workspace',
-      kind: 'webapp',
-      meta: { settings: { entryFile: 'index.html' } },
-    };
-    const files: Record<string, { fingerprint: string; mimeType: string; size: number }> = {};
-    const record = (content: string, mimeType: string) => {
-      const fingerprint = createHash('sha256').update(content).digest('hex');
-      zip.file(`artifacts/${fingerprint}`, content);
-      return { fingerprint, mimeType, size: Buffer.byteLength(content) };
-    };
-    const note = record('A portable note.\n', 'text/plain');
-    for (let i = 0; i < 20000; i++)
-      files[`notes/section-${Math.floor(i / 100)}/note-${i}.txt`] = note;
-    files['index.html'] = record('<!doctype html><h1>Workspace is ready</h1>', 'text/html');
-    zip.file(
-      'manifest.json',
-      JSON.stringify({ version: '1.0', artifactCount: 2, snapshotCount: 0 }),
-    );
-    zip.file('crux.json', JSON.stringify(crux));
-    zip.file('dimensions.json', '[]');
-    zip.file(
-      'versions/current.json',
-      JSON.stringify({ index: 'current', parentIndex: null, crux, artifacts: files, messages: [] }),
-    );
-    const archive = join(dir, 'large.crux');
-    writeFileSync(archive, await zip.generateAsync({ type: 'nodebuffer' }));
-    await importNativeCrux(page, archive);
-    // Make initial rendering span multiple meter frames, even on a fast machine.
+    // Many paths, one tiny content: a real Project Folder with 2,000 files in
+    // 20 sections, indexed by ingestion, then closed and reopened under CPU
+    // throttling. (The old 20k-entry archive pointed every path at two blobs;
+    // on disk each file is read, and a 20k burst outruns ingestion today.)
+    const title = 'Large sounding workspace';
+    const id = await createCrux(page, title);
+    const folder = (await storedCrux(page, id)).projectFolder as string;
+    const noteBytes = 'A portable note.\n';
+    for (let section = 0; section < 20; section++) {
+      mkdirSync(join(folder, 'notes', `section-${section}`), { recursive: true });
+      for (let i = 0; i < 100; i++)
+        writeFileSync(
+          join(folder, 'notes', `section-${section}`, `note-${section * 100 + i}.txt`),
+          noteBytes,
+        );
+    }
+    writeFileSync(join(folder, 'index.html'), '<!doctype html><h1>Workspace is ready</h1>');
+    // The head moves while ingestion commits; a read that lands between head and list retries.
+    const stored = (path: string) => storedFingerprint(page, id, path).catch(() => undefined);
+    await expect
+      .poll(() => stored('notes/section-19/note-1999.txt'), { timeout: 180_000 })
+      .toBe(createHash('sha256').update(noteBytes).digest('hex'));
+    await expect.poll(() => stored('index.html'), { timeout: 60_000 }).toEqual(expect.any(String));
+    await closeWorkspace(page, title);
+    await expect(page.getByTestId('pane-body-home')).toBeVisible({ timeout: 30_000 });
+    // Make the reopen span multiple meter frames, even on a fast machine.
     await debug.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-    await page.getByRole('button', { name: 'Toggle workshop', exact: true }).click();
-    await expect(page.getByTestId('workshop-view')).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
+    await openPanel(page, 'workshop', 'Toggle workshop');
+    await expect(page.getByTestId('workshop-view')).toBeVisible({ timeout: 30_000 });
     await expect(
       page
         .frameLocator('iframe[data-crux-id]')
         .getByRole('heading', { name: 'Workspace is ready' }),
-    ).toBeVisible({ timeout: 15000 });
+    ).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: 'Pause soundscape', exact: true })).toBeVisible();
     await debug.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-    const owner = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
-    const folder = (await storedCrux(page, owner)).projectFolder;
     console.log('Large workspace preview ready', folder);
-    const exists = (path: string) =>
-      page.evaluate(
-        async ({ owner, path }) =>
-          !!(await window.electronAPI!.sqlite.get(
-            'SELECT id FROM artifacts WHERE resource_id = ? AND path = ?',
-            [owner, path],
-          )),
-        { owner, path },
-      );
+    const exists = async (path: string) => typeof (await stored(path)) === 'string';
     writeFileSync(join(folder, '.cruxignore'), 'ignored/\n');
     await expect.poll(() => exists('.cruxignore'), { timeout: 60000 }).toBe(true);
     mkdirSync(join(folder, 'ignored'));

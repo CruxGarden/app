@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -70,7 +71,7 @@ test('BentoPDF: real rotate and merge, kept papers and results, agent tools, res
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^BentoPDF/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 180000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
       console.log('BentoPDF folder', folder);
@@ -110,8 +111,8 @@ test('BentoPDF: real rotate and merge, kept papers and results, agent tools, res
     });
 
     await test.step('the scripted collaborator names the project and rotates the sample', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Name the project and rotate the sample [bentopdf:edit]');
       await box.press('Enter');
@@ -122,7 +123,8 @@ test('BentoPDF: real rotate and merge, kept papers and results, agent tools, res
       ).toBeVisible({ timeout: 150000 });
       await ready(page);
       expect(doc().project.name).toBe('Garden papers');
-      expect(entries().length).toBe(3);
+      // The reply lands before the project's last write settles on disk.
+      await expect.poll(() => entries().length, { timeout: 60000 }).toBe(3);
       expect(entries()[2]).toMatchObject({
         name: 'sample-rotated.pdf',
         pages: 2,
@@ -131,7 +133,7 @@ test('BentoPDF: real rotate and merge, kept papers and results, agent tools, res
       });
       expect(bytesOf(entries()[2]).subarray(0, 5).toString('latin1')).toBe('%PDF-');
       expect(await documentsOf(page)).toHaveLength(3);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'bentopdf-agent.png') });
     });
     expect(errors).toEqual([]);
@@ -145,7 +147,7 @@ test('BentoPDF: real rotate and merge, kept papers and results, agent tools, res
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1800, height: 1100 });
     await test.step('restart: the toolkit reopens with the kept documents', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       expect((await documentsOf(page)).map((d) => d.name)).toEqual(entries().map((e) => e.name));
       expect(

@@ -1,4 +1,5 @@
 import { useCruxspaceMoment } from '@/hooks/useCruxspaceMoment';
+import { buttonClass } from '@/components/ui/button-class';
 import { setCruxspaceMoment } from '@/services/cruxspace-moment';
 
 /** Shown in a member while a person walks through its Cruxspace's history. */
@@ -17,7 +18,7 @@ export default function CruxspaceMomentBanner() {
         {existed ? '' : ' · this Crux did not exist yet at this moment'}
       </span>
       <button
-        className="px-2 py-0.5 rounded-[var(--radius-sm)] border border-border hover:border-accent cursor-pointer"
+        className={buttonClass('secondary', 'xs', 'min-h-6 py-0.5 px-2')}
         onClick={() => setCruxspaceMoment(null)}
       >
         Back to now

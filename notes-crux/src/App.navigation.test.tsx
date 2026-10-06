@@ -856,49 +856,80 @@ describe("Note navigation persistence", () => {
     await act(async () => root.unmount());
   });
 
-  it.fails("does not navigate away when title validation prevents unsaved body content from being saved", async () => {
-    demoPersistence.set("tigrana-demo-v5", JSON.stringify({
-      folders: [],
-      notes: {
-        "Welcome.md": "# Welcome\n\nOriginal body.",
-        "Other.md": "# Other\n\nNavigation target.",
-      },
-    }));
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    containers.push(container);
-    const root = createRoot(container);
+  it.each(['QA:Invalid title', ''])(
+    'keeps unsaved body edits when title %j blocks navigation, then saves on retry',
+    async (invalidTitle) => {
+      demoPersistence.set(
+        'tigrana-demo-v5',
+        JSON.stringify({
+          folders: [],
+          notes: {
+            'Welcome.md': '# Welcome\n\nOriginal body.',
+            'Other.md': '# Other\n\nNavigation target.',
+          },
+        }),
+      );
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      containers.push(container);
+      const root = createRoot(container);
 
-    await act(async () => {
-      root.render(<App />);
-    });
-    await settle();
-    await act(async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 50));
-    });
+      await act(async () => {
+        root.render(<App />);
+      });
+      await settle();
+      await act(async () => {
+        await new Promise((resolve) => window.setTimeout(resolve, 50));
+      });
 
-    const title = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Note title"]');
-    const body = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Test note body"]');
-    expect(title?.value).toBe("Welcome");
-    expect(body).not.toBeNull();
+      const title = container.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="Note title"]',
+      );
+      const body = container.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="Test note body"]',
+      );
+      expect(title?.value).toBe('Welcome');
+      expect(body).not.toBeNull();
 
-    await act(async () => {
-      if (title) setReactTextareaValue(title, "QA:Invalid title");
-      if (body) setReactTextareaValue(body, "UNSAVED-BODY-SENTINEL");
-    });
+      await act(async () => {
+        if (title) setReactTextareaValue(title, invalidTitle);
+        if (body) setReactTextareaValue(body, 'UNSAVED-BODY-SENTINEL');
+      });
 
-    const other = container.querySelector<HTMLButtonElement>('button[data-note-path="Other.md"]');
-    expect(other).not.toBeNull();
-    await act(async () => {
-      other?.click();
-    });
-    await settle();
+      const other = container.querySelector<HTMLButtonElement>('button[data-note-path="Other.md"]');
+      expect(other).not.toBeNull();
+      await act(async () => {
+        other?.click();
+      });
+      await settle();
 
-    expect(title?.value).toBe("QA:Invalid title");
-    expect(body?.value).toBe("UNSAVED-BODY-SENTINEL");
+      expect(title?.value).toBe(invalidTitle);
+      expect(body?.value).toBe('UNSAVED-BODY-SENTINEL');
 
-    await act(async () => root.unmount());
-  });
+      expect(container.querySelector('.save-state')?.getAttribute('data-tooltip')).toBe('Unsaved');
+      const readSavedNote = () =>
+        JSON.parse(demoPersistence.get('tigrana-demo-v5') ?? '{}').notes['Welcome.md'];
+      expect(readSavedNote()).toContain('Original body.');
+
+      // Correcting the title and retrying navigation must save the same draft.
+      await act(async () => {
+        if (title) setReactTextareaValue(title, 'Welcome');
+      });
+      await act(async () => {
+        other?.click();
+      });
+      await settle();
+      expect(title?.value).toBe('Other');
+      expect(readSavedNote()).toContain('UNSAVED-BODY-SENTINEL');
+      await act(async () => {
+        container.querySelector<HTMLButtonElement>('button[data-note-path="Welcome.md"]')?.click();
+      });
+      await settle();
+      expect(body?.value).toContain('UNSAVED-BODY-SENTINEL');
+
+      await act(async () => root.unmount());
+    },
+  );
 
   it("persists a blank new note as an Untitled placeholder", async () => {
     const container = document.createElement("div");

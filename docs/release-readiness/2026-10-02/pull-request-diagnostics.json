@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-02",
+  "test": "Sync: account changes during pull review preserve newer local work; a fresh confirmed pull succeeds",
+  "expectedBehavior": "No download after account changes during review; exactly one download after fresh confirmation.",
+  "tracingEnabled": {
+    "log": "/tmp/crux-pull-request-diagnostic-2.log",
+    "serverGets": 2,
+    "rendererScriptGets": 1,
+    "additionalRequest": {
+      "delayMs": 27,
+      "originHeader": false,
+      "fetchMode": "no-cors"
+    }
+  },
+  "tracingDisabled": {
+    "log": "/tmp/crux-pull-without-diagnostics.log",
+    "passed": 1,
+    "assertedServerGets": 1,
+    "testSeconds": 14.1
+  },
+  "cause": {
+    "package": "playwright-core@1.62.1",
+    "source": "electron/node_modules/playwright-core/lib/coreBundle.js",
+    "path": [
+      "Trace snapshots enable the HAR tracer (line 25117).",
+      "HAR reads response.internalBody() (line 24493).",
+      "Chromium Network.getResponseBody returning empty with a nonzero Content-Length triggers Network.loadNetworkResource (lines 36230-36235)."
+    ],
+    "fixture": "Binary responses supply Content-Length; the app invokes one authenticated pull GET."
+  },
+  "resolution": {
+    "file": "electron/e2e/launch.ts",
+    "change": "Diagnostic traces keep actions and screenshots with snapshots:false so HAR cannot re-fetch binary responses.",
+    "assertions": "Original exact request counts and native/disk restore checks are preserved.",
+    "verification": "Diagnostic-enabled exact-one acceptance passed in /tmp/crux-release-accounts-settings-desktop.log (14.5 seconds), preserving both refusal and fresh pull native/disk assertions."
+  }
+}

@@ -60,7 +60,9 @@ export default function GrowthDetail({ growth, index, onClose }: GrowthDetailPro
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <span className="text-xxs font-mono text-accent/70 uppercase">#{index + 1}</span>
+          <span className="text-xxs font-mono text-accent/(--tint-strong) uppercase">
+            #{index + 1}
+          </span>
           <h3 className="text-sm font-display font-medium text-text mt-0.5">{title}</h3>
           <span className="text-2xs text-text-muted">{formatDateTime(growth.created)}</span>
         </div>

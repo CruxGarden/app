@@ -1,0 +1,57 @@
+name: Build reviewed media tools
+description: Build FFmpeg and ffprobe with their corresponding source from the committed lock
+runs:
+  using: composite
+  steps:
+    - id: target
+      shell: bash
+      run: |
+        case "$RUNNER_OS" in
+          macOS) platform=darwin ;;
+          Linux) platform=linux ;;
+          Windows) platform=win32 ;;
+          *) exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          ARM64) arch=arm64 ;;
+          X64) arch=x64 ;;
+          *) exit 1 ;;
+        esac
+        echo "id=$platform-$arch" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache/restore@v4
+      id: cache
+      with:
+        path: electron/.native-tools/${{ steps.target.outputs.id }}
+        key: native-media-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('electron/scripts/build-ffmpeg.py', 'electron/scripts/ffmpeg-sources.json') }}
+    - if: steps.cache.outputs.cache-hit != 'true' && runner.os == 'macOS'
+      shell: bash
+      run: brew install cmake pkg-config nasm
+    - if: steps.cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y build-essential cmake pkg-config nasm
+    - if: steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: >-
+          python git make diffutils nasm
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-pkgconf
+    - if: steps.cache.outputs.cache-hit != 'true' && runner.os != 'Windows'
+      shell: bash
+      run: python3 electron/scripts/build-ffmpeg.py
+    - if: steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows'
+      shell: msys2 {0}
+      run: /usr/bin/python3 electron/scripts/build-ffmpeg.py
+    - name: Verify cached or freshly built bundle
+      shell: bash
+      run: |
+        node --input-type=module -e 'import { verifyFfmpegBundle } from "./electron/scripts/ffmpeg-bundle.mjs"; verifyFfmpegBundle(`electron/.native-tools/${process.platform}-${process.arch}`, process.platform, process.arch);'
+    # Persist a verified bundle even if a later app build or runtime check fails.
+    - uses: actions/cache/save@v4
+      if: steps.cache.outputs.cache-hit != 'true'
+      with:
+        path: electron/.native-tools/${{ steps.target.outputs.id }}
+        key: ${{ steps.cache.outputs.cache-primary-key }}

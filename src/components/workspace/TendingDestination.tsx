@@ -1,3 +1,4 @@
+import { aiEnabledNow } from '@/hooks/useAiEnabled';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { validateTendingTarget } from '@/services/tending-actions';
@@ -16,12 +17,18 @@ export default function TendingDestination() {
         ...target,
         attentionId: target.attentionId?.startsWith('permission:') ? target.attentionId : undefined,
       });
-      w.ui.getState().setPaneVisible('collaboration', true);
-      w.ui.getState().setMobileActivePane('collaboration');
+      // The decision lives in Collaboration; with AI tools off, in the Tasks pane.
+      const pane = aiEnabledNow() ? 'collaboration' : 'tasks';
+      w.ui.getState().setPaneVisible(pane, true);
+      w.ui.getState().setMobileActivePane(pane);
       const request = target.attentionId?.startsWith('permission:')
         ? target.attentionId.split(':').at(-1)
         : undefined;
-      const frame = requestAnimationFrame(() => {
+      // The pane's contents mount once its surface has formed (Plasma), so the
+      // target may be a few frames away: look every frame for up to two seconds.
+      let frame = 0;
+      const until = performance.now() + 2000;
+      const look = () => {
         const root = document.querySelector(`[data-workspace-id="${CSS.escape(target.copyId)}"]`);
         const el = root?.querySelector<HTMLElement>(
           request ? `[data-tending-request="${CSS.escape(request)}"]` : '[data-testid="turn-job"]',
@@ -30,8 +37,11 @@ export default function TendingDestination() {
           el.tabIndex = -1;
           el.focus();
           el.scrollIntoView({ block: 'nearest' });
+          return;
         }
-      });
+        if (performance.now() < until) frame = requestAnimationFrame(look);
+      };
+      frame = requestAnimationFrame(look);
       return () => cancelAnimationFrame(frame);
     } catch (e) {
       setError((e as Error).message);

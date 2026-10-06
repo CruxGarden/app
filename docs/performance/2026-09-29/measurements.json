@@ -1,0 +1,79 @@
+{
+  "platform": "macOS arm64",
+  "scope": "Development desktop; 1 KB nested Markdown files; content fingerprints and sample disk bytes checked after fresh-profile import. Timings include UI waits.",
+  "before": {
+    "appearance5s": {
+      "updates": 26,
+      "fontBytes": 3656536
+    },
+    "project1000": [
+      {
+        "name": "write-and-ingest",
+        "ms": 42271
+      },
+      {
+        "name": "browse-and-open",
+        "ms": 2608
+      },
+      {
+        "name": "snapshot",
+        "ms": 1790
+      },
+      {
+        "name": "export",
+        "ms": 3302
+      }
+    ],
+    "project10000": "ingestion exceeded 180 seconds; incomplete"
+  },
+  "after": {
+    "appearance5s": {
+      "updates": 0,
+      "fontBytes": 0
+    },
+    "project1000": [
+      {
+        "name": "write-and-ingest",
+        "ms": 7593
+      },
+      {
+        "name": "browse-and-open",
+        "ms": 2648
+      },
+      {
+        "name": "snapshot",
+        "ms": 1806
+      },
+      {
+        "name": "export",
+        "ms": 3324
+      },
+      {
+        "name": "fresh-import",
+        "ms": 10518
+      }
+    ],
+    "project10000": [
+      {
+        "name": "write-and-ingest",
+        "ms": 69488
+      },
+      {
+        "name": "browse-and-open",
+        "ms": 2171
+      },
+      {
+        "name": "snapshot",
+        "ms": 1964
+      },
+      {
+        "name": "export",
+        "ms": 7336
+      },
+      {
+        "name": "fresh-import",
+        "ms": 80570
+      }
+    ]
+  }
+}

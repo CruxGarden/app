@@ -1,0 +1,31 @@
+{
+  "platform": "darwin",
+  "arch": "arm64",
+  "cpu": "Apple M3 Pro",
+  "reports": [
+    {
+      "count": 1000,
+      "fileBytes": 1024,
+      "unchangedMs": 209,
+      "changedMs": 187,
+      "events": 30,
+      "peakRssBytes": 61227008
+    },
+    {
+      "count": 10000,
+      "fileBytes": 1024,
+      "unchangedMs": 1610,
+      "changedMs": 1792,
+      "events": 300,
+      "peakRssBytes": 100401152
+    },
+    {
+      "count": 20000,
+      "fileBytes": 1024,
+      "unchangedMs": 3644,
+      "changedMs": 3474,
+      "events": 600,
+      "peakRssBytes": 120438784
+    }
+  ]
+}

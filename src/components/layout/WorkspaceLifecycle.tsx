@@ -1,3 +1,6 @@
+import { useModalFocus } from '@/hooks/useModalFocus';
+import { keeperNeedsCloseDecision } from '@/stores/keeperStore';
+import { buttonClass } from '@/components/ui/button-class';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -13,24 +16,28 @@ export default function WorkspaceLifecycle() {
   const [error, setError] = useState('');
   const entries = useWorkspaceRegistry((s) => s.entries);
   const cancelButton = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  useModalFocus(dialog, requested, 110);
   useEffect(() => {
     if (requested) cancelButton.current?.focus();
   }, [requested]);
   useEffect(() => {
     const bridge = window.electronAPI?.desktop;
     const off = bridge?.onCloseRequest?.(() => {
-      const needsDecision = allWorkspaces().some((w) => {
-        const s = w.data.getState();
-        return (
-          documentsFor(w.data, w.ui).hasDirty() ||
-          s.isStreaming ||
-          s.publishPhase ||
-          s.uploadProgress ||
-          ['running', 'planning', 'checking'].includes(s.turnJob?.status ?? '') ||
-          s.pendingDeletes.length ||
-          w.ui.getState().pendingAgentApprovals.length
-        );
-      });
+      const needsDecision =
+        keeperNeedsCloseDecision() ||
+        allWorkspaces().some((w) => {
+          const s = w.data.getState();
+          return (
+            documentsFor(w.data, w.ui).hasDirty() ||
+            s.isStreaming ||
+            s.publishPhase ||
+            s.uploadProgress ||
+            ['running', 'planning', 'checking'].includes(s.turnJob?.status ?? '') ||
+            s.pendingDeletes.length ||
+            w.ui.getState().pendingAgentApprovals.length
+          );
+        });
       if (needsDecision) setRequested(true);
       else
         void shutdownWorkspaces('save')
@@ -43,9 +50,10 @@ export default function WorkspaceLifecycle() {
     const unload = (e: BeforeUnloadEvent) => {
       if (
         !bridge?.onCloseRequest &&
-        allWorkspaces().some(
-          (w) => documentsFor(w.data, w.ui).hasDirty() || w.data.getState().isStreaming,
-        )
+        (keeperNeedsCloseDecision() ||
+          allWorkspaces().some(
+            (w) => documentsFor(w.data, w.ui).hasDirty() || w.data.getState().isStreaming,
+          ))
       )
         e.preventDefault();
     };
@@ -76,32 +84,29 @@ export default function WorkspaceLifecycle() {
   if (!requested) return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center"
+      className="fixed inset-0 z-[110] modal-scrim flex items-center justify-center"
       onKeyDown={(e) => {
         e.stopPropagation();
         if (e.key === 'Escape') {
           e.preventDefault();
           cancel();
         }
-        if (e.key === 'Tab') {
-          const buttons = [
-            ...e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
-          ];
-          const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
-          if ((e.shiftKey && i <= 0) || (!e.shiftKey && i === buttons.length - 1)) {
-            e.preventDefault();
-            buttons[e.shiftKey ? buttons.length - 1 : 0]?.focus();
-          }
-        }
       }}
     >
       <div
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Close Crux Garden"
-        className="bg-surface-solid border border-border p-5 rounded text-text max-w-lg"
+        className="overlay-plate border border-dropdown-border p-5 rounded-[var(--radius)] shadow-modal text-text max-w-lg motion-enter-dropdown"
       >
-        <h2>Close Crux Garden?</h2>
+        <h2
+          className="font-medium text-accent"
+          style={{ fontFamily: 'var(--dialog-title-font)', fontSize: 'var(--dialog-title-size)' }}
+        >
+          Close Crux Garden?
+        </h2>
         <p className="text-sm my-2">
           These workspaces have unsaved edits or ongoing work. Running turns will stop; queued
           prompts will wait when you reopen.
@@ -114,14 +119,27 @@ export default function WorkspaceLifecycle() {
             </li>
           ))}
         </ul>
-        <div className="flex gap-4 mt-4">
-          <button ref={cancelButton} disabled={busy} onClick={cancel}>
+        <div className="flex flex-wrap justify-end gap-2 mt-4">
+          <button
+            ref={cancelButton}
+            disabled={busy}
+            onClick={cancel}
+            className={buttonClass('ghost', 'sm')}
+          >
             Cancel
           </button>
-          <button disabled={busy} onClick={() => void finish('discard')}>
+          <button
+            disabled={busy}
+            onClick={() => void finish('discard')}
+            className={buttonClass('secondary', 'sm')}
+          >
             Discard edits and exit
           </button>
-          <button disabled={busy} onClick={() => void finish('save')}>
+          <button
+            disabled={busy}
+            onClick={() => void finish('save')}
+            className={buttonClass('primary', 'sm')}
+          >
             Save and exit
           </button>
         </div>

@@ -1,0 +1,9 @@
+---
+import PublicLinks from './PublicLinks.astro';
+import Default from '@astrojs/starlight/components/Footer.astro';
+import settings from '../config.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const blog = process.env.CRUX_DOCS_BLOG_BASE || `${base}/blog`;
+---
+<Default><slot /></Default>
+<footer class="garden-footer"><PublicLinks /><p>{settings.footer}</p><nav aria-label="More from the Garden"><a href={`${blog}/`}>Garden journal</a><a href="https://starlight.astro.build/" target="_blank" rel="noopener noreferrer">Built with Starlight ↗</a></nav></footer>

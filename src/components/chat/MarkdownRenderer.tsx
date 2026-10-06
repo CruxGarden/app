@@ -91,7 +91,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         },
         th({ children }) {
           return (
-            <th className="border border-markdown-table-border px-3 py-1.5 text-left font-display font-medium bg-markdown-table-header-bg">
+            <th className="border border-markdown-table-border px-3 py-1.5 text-left font-body font-medium bg-markdown-table-header-bg">
               {children}
             </th>
           );

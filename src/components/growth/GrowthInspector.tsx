@@ -1,29 +1,31 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { isAgentFile } from '@/lib/artifact-path';
 import { useEffect, useState } from 'react';
+import { linkClass } from '@/components/ui/button-class';
 import { Link } from 'react-router-dom';
-import { getServices } from '@/services';
-import type { Artifact, ChatMessage, Crux } from '@/api/types';
-import type { GrowthGraph, GrowthNode } from '@/services/growth-graph';
-import { pathOf } from '@/lib/artifact-path';
+import { loadGrowthDetail } from '@/services/growth-detail';
+import { growthNodeKindLabel, type GrowthGraph, type GrowthNode } from '@/services/growth-graph';
+import { readCheckpointFile, type CheckpointFile } from '@/services/checkpoint-files';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 
-function ArtifactContent({ artifact }: { artifact: Artifact }) {
+function ArtifactContent({ artifact }: { artifact: CheckpointFile }) {
   const [content, setContent] = useState<{ text?: string; url?: string; error?: string }>({});
   useEffect(() => {
     let live = true;
     let url: string | undefined;
+    setContent({});
     const read = async () => {
       if (artifact.size > 2 * 1024 * 1024)
         return { text: 'This Artifact is over 2 MB. Open its Working Copy to inspect it.' };
-      const service = getServices().artifact;
       if (artifact.mimeType.startsWith('image/') && artifact.mimeType !== 'image/svg+xml') {
-        const blob = await service.downloadBlob(artifact.id);
+        const blob = await readCheckpointFile(artifact);
         if (!live) return {};
         url = URL.createObjectURL(blob);
         return { url };
       }
       if (artifact.encoding !== 'utf-8')
         return { text: `Binary Artifact · ${artifact.size} bytes` };
-      const text = await service.readContent(artifact.id);
+      const text = await (await readCheckpointFile(artifact)).text();
       return { text: text.length > 30000 ? `${text.slice(0, 30000)}\n[Preview truncated]` : text };
     };
     void read()
@@ -40,7 +42,7 @@ function ArtifactContent({ artifact }: { artifact: Artifact }) {
   }, [artifact]);
   if (content.error) return <p role="alert">{content.error}</p>;
   if (content.url)
-    return <img src={content.url} alt={pathOf(artifact)} className="max-h-64 object-contain" />;
+    return <img src={content.url} alt={artifact.path} className="max-h-64 object-contain" />;
   return (
     <pre className="text-xs whitespace-pre-wrap break-words max-h-64 overflow-auto p-2 bg-surface rounded">
       {content.text ?? 'Loading Artifact…'}
@@ -59,32 +61,24 @@ export default function GrowthInspector({
   onSelect: (id: string) => void;
   onClose: () => void;
 }) {
-  const [detail, setDetail] = useState<{
-    snapshot: Crux;
-    artifacts: Artifact[];
-    summary?: string;
-  } | null>(null);
+  const aiEnabled = useAiEnabled();
+  const [detail, setDetail] = useState<Awaited<ReturnType<typeof loadGrowthDetail>> | null>(null);
   const [error, setError] = useState('');
   const [fileId, setFileId] = useState('');
   const [messageLimit, setMessageLimit] = useState(20);
   const lane = graph.lanes.find((l) => l.id === node.ownerId)!;
   useEffect(() => {
+    setDetail(null);
+    setError('');
+    setFileId('');
+    setMessageLimit(20);
     if (node.kind === 'copy') return;
     let live = true;
-    const { crux, artifact, dimension } = getServices();
-    void Promise.all([
-      crux.findById(node.id),
-      artifact.findByResource('crux', node.id),
-      node.dimensionId ? dimension.findById(node.dimensionId) : Promise.resolve(null),
-    ])
-      .then(([snapshot, artifacts, growth]) => {
+    void loadGrowthDetail(node)
+      .then((value) => {
         if (live) {
-          setDetail({
-            snapshot,
-            artifacts,
-            summary: typeof growth?.meta?.summary === 'string' ? growth.meta.summary : undefined,
-          });
-          setFileId(artifacts.find((a) => pathOf(a) === 'preview.jpg')?.id ?? '');
+          setDetail(value);
+          setFileId(value.artifacts.find((a) => a.path === 'preview.jpg')?.id ?? '');
         }
       })
       .catch((e: Error) => {
@@ -93,8 +87,8 @@ export default function GrowthInspector({
     return () => {
       live = false;
     };
-  }, [node.id, node.kind, node.dimensionId]);
-  const messages = (detail?.snapshot.meta?.messages ?? []) as ChatMessage[];
+  }, [node]);
+  const messages = detail?.messages ?? [];
   const parents = graph.links.filter((l) => l.target === node.id);
   const file = detail?.artifacts.find((a) => a.id === fileId);
   return (
@@ -102,13 +96,7 @@ export default function GrowthInspector({
       <div>
         <p className="text-xs text-accent font-mono">
           {lane.title} ·{' '}
-          {node.kind === 'copy'
-            ? lane.phase === 'main'
-              ? 'Working Copy'
-              : lane.phase
-            : node.kind === 'merge'
-              ? 'Merge checkpoint'
-              : 'Checkpoint'}
+          {node.kind === 'copy' && lane.phase !== 'main' ? lane.phase : growthNodeKindLabel(node)}
         </p>
         <h3 className="font-display text-lg mt-1 break-words">{node.title}</h3>
         {node.created && (
@@ -118,7 +106,7 @@ export default function GrowthInspector({
       <Link
         onClick={onClose}
         to={`/c/${graph.cruxId}${lane.id === graph.cruxId ? '' : `?task=${lane.id}`}`}
-        className="text-accent underline"
+        className={linkClass('self-start')}
       >
         Open {lane.title}
       </Link>
@@ -140,7 +128,7 @@ export default function GrowthInspector({
                 <button
                   key={link.source}
                   onClick={() => onSelect(parent.id)}
-                  className="block text-left text-accent underline text-xs"
+                  className={linkClass('block text-left text-xs')}
                 >
                   {graph.lanes.find((l) => l.id === parent.ownerId)?.title} · {parent.title}
                   {link.kind === 'merge' ? ' · merged Task' : ''}
@@ -158,9 +146,9 @@ export default function GrowthInspector({
       {node.kind !== 'copy' && !detail && !error && <p role="status">Loading checkpoint…</p>}
       {detail && (
         <>
-          {(detail.summary || detail.snapshot.data) && (
+          {((aiEnabled && detail.summary) || detail.data) && (
             <div className="text-xs text-text-muted whitespace-pre-wrap">
-              {detail.summary || detail.snapshot.data}
+              {(aiEnabled && detail.summary) || detail.data}
             </div>
           )}
           <section className="space-y-2">
@@ -172,50 +160,51 @@ export default function GrowthInspector({
               className="w-full bg-surface border border-border rounded p-2 text-xs"
             >
               <option value="">Choose an Artifact</option>
-              {detail.artifacts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {pathOf(a)}
-                </option>
-              ))}
+              {detail.artifacts
+                .filter((a) => aiEnabled || !isAgentFile(a.path))
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.path}
+                  </option>
+                ))}
             </select>
-            {file && <ArtifactContent key={file.id} artifact={file} />}
+            {file && <ArtifactContent key={`${node.id}:${file.id}`} artifact={file} />}
           </section>
-          <section className="space-y-3">
-            <h4 className="font-medium">Collaboration at this checkpoint</h4>
-            {!messages.length && (
-              <p className="text-xs text-text-muted">
-                No new messages recorded at this checkpoint.
-              </p>
-            )}
-            {messages.slice(0, messageLimit).map((message, i) => (
-              <div key={i} className="border-l-2 border-border pl-3 text-xs break-words">
-                <p className="font-mono text-accent mb-1">
-                  {message.role === 'user'
-                    ? 'You'
-                    : message.agent || message.model || 'Collaborator'}
+          {aiEnabled && (
+            <section className="space-y-3">
+              <h4 className="font-medium">Collaboration at this checkpoint</h4>
+              {!messages.length && (
+                <p className="text-xs text-text-muted">
+                  No new messages recorded at this checkpoint.
                 </p>
-                <MarkdownRenderer content={message.content.slice(0, 30000)} />
-                {message.content.length > 30000 && (
-                  <p className="text-text-muted">
-                    Message preview truncated; the full message remains in Collaboration.
+              )}
+              {messages.slice(0, messageLimit).map((message, i) => (
+                <div key={i} className="border-l-2 border-border pl-3 text-xs break-words">
+                  <p className="font-mono text-accent mb-1">
+                    {message.role === 'user'
+                      ? 'You'
+                      : message.agent || message.model || 'Collaborator'}
                   </p>
-                )}
-                {!!message.toolCalls?.length && (
-                  <p className="text-text-muted">
-                    Tools: {message.toolCalls.map((t) => t.name).join(', ')}
-                  </p>
-                )}
-              </div>
-            ))}
-            {messages.length > messageLimit && (
-              <button
-                className="text-accent underline"
-                onClick={() => setMessageLimit((n) => n + 20)}
-              >
-                Show more messages
-              </button>
-            )}
-          </section>
+                  <MarkdownRenderer content={message.content.slice(0, 30000)} />
+                  {message.content.length > 30000 && (
+                    <p className="text-text-muted">
+                      Message preview truncated; the full message remains in Collaboration.
+                    </p>
+                  )}
+                  {!!message.toolCalls?.length && (
+                    <p className="text-text-muted">
+                      Tools: {message.toolCalls.map((t) => t.name).join(', ')}
+                    </p>
+                  )}
+                </div>
+              ))}
+              {messages.length > messageLimit && (
+                <button className={linkClass()} onClick={() => setMessageLimit((n) => n + 20)}>
+                  Show more messages
+                </button>
+              )}
+            </section>
+          )}
         </>
       )}
     </div>

@@ -1,0 +1,64 @@
+{
+  "description": "Frozen format-1 Crux Tool package invented on 2026-09-23; do not regenerate with the current writer when changing formats.",
+  "manifest": {
+    "version": 1,
+    "releaseVersion": "1.0.0",
+    "id": "preservation-tool",
+    "name": "Preservation Tool",
+    "description": "Invented offline fixture for migration tests.",
+    "kind": "webapp",
+    "defaultTitle": "Fixture work",
+    "icon": "layout",
+    "desktopOnly": true,
+    "order": 1000,
+    "bundled": false,
+    "app": "preservation",
+    "entryFile": "runtime/index.html",
+    "contentRoot": "data/",
+    "layout": "workshop",
+    "share": false,
+    "toolInfo": {
+      "name": "Preservation Tool",
+      "upstream": "https://example.invalid/preservation",
+      "relationship": "Synthetic fixture, no third-party content",
+      "detailsPath": "TOOL.md"
+    },
+    "routes": [],
+    "greeting": "Keep the work.",
+    "context": "Synthetic test fixture.",
+    "host": "host/tools.js"
+  },
+  "files": [
+    {
+      "path": "TOOL.md",
+      "mimeType": "text/markdown",
+      "base64": "IyBTeW50aGV0aWMgVG9vbApObyBkb3dubG9hZGVkIGNvbnRlbnQuCg=="
+    },
+    {
+      "path": "assets/raw.bin",
+      "mimeType": "application/octet-stream",
+      "base64": "AP+ADQoAKg=="
+    },
+    {
+      "path": "crux-tool.json",
+      "mimeType": "application/json",
+      "base64": "eyJ2ZXJzaW9uIjoxLCJyZWxlYXNlVmVyc2lvbiI6IjEuMC4wIiwiaWQiOiJwcmVzZXJ2YXRpb24tdG9vbCIsIm5hbWUiOiJQcmVzZXJ2YXRpb24gVG9vbCIsImRlc2NyaXB0aW9uIjoiSW52ZW50ZWQgb2ZmbGluZSBmaXh0dXJlIGZvciBtaWdyYXRpb24gdGVzdHMuIiwia2luZCI6IndlYmFwcCIsImRlZmF1bHRUaXRsZSI6IkZpeHR1cmUgd29yayIsImljb24iOiJsYXlvdXQiLCJkZXNrdG9wT25seSI6dHJ1ZSwib3JkZXIiOjEwMDAsImJ1bmRsZWQiOmZhbHNlLCJhcHAiOiJwcmVzZXJ2YXRpb24iLCJlbnRyeUZpbGUiOiJydW50aW1lL2luZGV4Lmh0bWwiLCJjb250ZW50Um9vdCI6ImRhdGEvIiwibGF5b3V0Ijoid29ya3Nob3AiLCJzaGFyZSI6ZmFsc2UsInRvb2xJbmZvIjp7Im5hbWUiOiJQcmVzZXJ2YXRpb24gVG9vbCIsInVwc3RyZWFtIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvcHJlc2VydmF0aW9uIiwicmVsYXRpb25zaGlwIjoiU3ludGhldGljIGZpeHR1cmUsIG5vIHRoaXJkLXBhcnR5IGNvbnRlbnQiLCJkZXRhaWxzUGF0aCI6IlRPT0wubWQifSwicm91dGVzIjpbXSwiZ3JlZXRpbmciOiJLZWVwIHRoZSB3b3JrLiIsImNvbnRleHQiOiJTeW50aGV0aWMgdGVzdCBmaXh0dXJlLiIsImhvc3QiOiJob3N0L3Rvb2xzLmpzIn0="
+    },
+    {
+      "path": "host/tools.js",
+      "mimeType": "text/javascript",
+      "base64": "Ly8gSW52ZW50ZWQgaG9zdCBhZGFwdGVyIGZpeHR1cmUuCm1vZHVsZS5leHBvcnRzID0geyBuYW1lOiAiZml4dHVyZS1pbnNwZWN0IiB9Owo="
+    },
+    {
+      "path": "runtime/bridge.js",
+      "mimeType": "text/javascript",
+      "base64": "Ly8gSW52ZW50ZWQgR2FyZGVuIGJyaWRnZSBmaXh0dXJlLgp3aW5kb3cuZml4dHVyZUJyaWRnZSA9IHsgdmVyc2lvbjogMSB9Owo="
+    },
+    {
+      "path": "runtime/index.html",
+      "mimeType": "text/html",
+      "base64": "PCFkb2N0eXBlIGh0bWw+PG1ldGEgY2hhcnNldD0idXRmLTgiPjxoMT5GaXh0dXJlIFRvb2w8L2gxPjxzY3JpcHQgc3JjPSJicmlkZ2UuanMiPjwvc2NyaXB0Pgo="
+    }
+  ],
+  "archiveBase64": "UEsDBBQAAAAIAAAAIQBTfLVp+gEAAD8EAAARAAAAdG9vbC1wYWNrYWdlLmpzb26NU81u2zAMfhVDZ8d2h2Dd/AAFig1IsQW7DD0oFh2rkSWBopN4Rd59lH+CuB2KnWST4vcn6VXUDltJohQVducVOWdEKo6AQTsryrtUDKXydVFDMCAD/JpL4i4rsoIHteIfjxAAj5K4NyNa2QK3nm5ayXZsKQgVak8j0qM9giVQiatroy0ktT5Th7w6TFq9x3GWIFDIePqgbeQ8wU56P6DVsjO01WQi4cM0fXJ4iPqqgcTI3nU0ch/I+Y01vSgJO0iFQwXILouiSMWus8oAE9TSBG5GjqVBBmG92D/ogQ87S7qFnFXBOWuojQ6ZlHjTD+di0EqSzLk6iWDtrC00LqoPjUS4ssXsHm3tYvwfBNj5QAiy5XZD5EOZ53CWrTeQaXuURqv8jWI+v+EzNDr6+dlbaoB0NYedJtYl1GhUKy+R+mRyMCRGUpvwJKnhye1m8z1rlbgwJpuBIMrfz6nYIzCc3fOObwCeocYTyOYwzrSgjac5c8c9jQtxQ1zyGELIXkLkqDnkSPEq/JI/FS2nvu19zCjC563Eg3Kn6DboP1xeF5f0OidDAAo5ylO203Y5zmdsdDXkk7uKgFZTvDPS/Q3Q9dWwQvcB0NQdAT6v1zcQS5fvnbzIoxxfyBXgy62X+crtUKs9/DfG/fofGItr+xZkKo/jXz9dni9/AVBLAwQUAAAACAAAACEAPEWFnCoAAAAoAAAADQAAAGZpbGVzL1RPT0wubWRTVgiuzCvJSC3JTFYIyc/P4fLLV0jJL8/LyU9MSU1RSM7PK0nNK9HjAgBQSwMEFAAAAAgAAAAhAP1QCOwJAAAABwAAABQAAABmaWxlcy9hc3NldHMvcmF3LmJpbmP438DLxaAFAFBLAwQUAAAACAAAACEAm/cjfGoBAACEAgAAFAAAAGZpbGVzL2NydXgtdG9vbC5qc29ufVHNbsIwDH6VKufSlmsfAGnaJKYN7TLtEIhLMtIksl2gQrz7nBambYed0uazv79c1BGQXAyqXZYKwYMmeLtfqWXVVI0qlTPykxAI8KhZsAXH6AUIugeBnn9AxWaGDNAOXeKZ6SEcITCYInaddwGKzp15QDkjFr3b47zLQEyVbB9cyJon2OqUJrZOD543jn0WXN22TxEP2d9uEvF6jAPP2geOaR38qFrGAUoV0QBKyqZpSrUdgvEgAp32JGDW+B1QSMQvjis36eEQ2PVQiys4V5b7nFBEWYZeYmQZMZp1Lbc3E+JdvJGN2T1ZjfCtlrt7CF1U7eW/AodEjKB7gS1zorau4az75KFy4ai9M/Ufx/J+0ydZl/O8joEtsNvdyy6LEAu2Ds0iaeSxuCWYGmPtPD1rtrK5Wa+fqt6oq3BKGCDVvn+Uao8gdGEvE48ASajmF6juZZz5l2x+zbt2nrGR8kA+6lwCVZ+krl9QSwMEFAAAAAgAAAAhAEBO4dlNAAAAUAAAABMAAABmaWxlcy9ob3N0L3Rvb2xzLmpz09dX8MwrS80rSU1RyMgvLlFITEksKEktUkjLrCgpLUrV48rNTynNSdVLrSjILyopVrBVqFbIS8xNtVJQgirRzcwrLkhNLlFSqLXmAgBQSwMEFAAAAAgAAAAhADaeaodCAAAASgAAABcAAABmaWxlcy9ydW50aW1lL2JyaWRnZS5qc9PXV/DMK0vNK0lNUXBPLEpJzVNIKspMSU9VSMusKCktStXjKs/MS8kv14PynSCytgrVCmWpRcWZ+XlWCoYKtdZcAFBLAwQUAAAACAAAACEAr5ISnFcAAABcAAAAGAAAAGZpbGVzL3J1bnRpbWUvaW5kZXguaHRtbLNRTMlPLqksSFXIKMnNsbPJTS1JVEjOSCwqTi2xVSotSdO1ULKzyTC0c8usKCktSlUIyc/PsdEHCtgUJxdlFpQoFBcl2yolFWWmpKfqZRUDFetDJOy4AFBLAQIUAxQAAAAIAAAAIQBTfLVp+gEAAD8EAAARAAAAAAAAAAAAAACAAQAAAAB0b29sLXBhY2thZ2UuanNvblBLAQIUAxQAAAAIAAAAIQA8RYWcKgAAACgAAAANAAAAAAAAAAAAAACAASkCAABmaWxlcy9UT09MLm1kUEsBAhQDFAAAAAgAAAAhAP1QCOwJAAAABwAAABQAAAAAAAAAAAAAAIABfgIAAGZpbGVzL2Fzc2V0cy9yYXcuYmluUEsBAhQDFAAAAAgAAAAhAJv3I3xqAQAAhAIAABQAAAAAAAAAAAAAAIABuQIAAGZpbGVzL2NydXgtdG9vbC5qc29uUEsBAhQDFAAAAAgAAAAhAEBO4dlNAAAAUAAAABMAAAAAAAAAAAAAAIABVQQAAGZpbGVzL2hvc3QvdG9vbHMuanNQSwECFAMUAAAACAAAACEANp5qh0IAAABKAAAAFwAAAAAAAAAAAAAAgAHTBAAAZmlsZXMvcnVudGltZS9icmlkZ2UuanNQSwECFAMUAAAACAAAACEAr5ISnFcAAABcAAAAGAAAAAAAAAAAAAAAgAFKBQAAZmlsZXMvcnVudGltZS9pbmRleC5odG1sUEsFBgAAAAAHAAcAygEAANcFAAAAAA=="
+}

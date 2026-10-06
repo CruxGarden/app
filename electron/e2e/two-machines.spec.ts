@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { showPane, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -16,7 +18,7 @@ test.describe('two machines, two accounts (mocked API)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -32,7 +34,7 @@ test.describe('two machines, two accounts (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Share and back up (the archive is this machine's push)
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -53,7 +55,7 @@ test.describe('two machines, two accounts (mocked API)', () => {
       await monaco.click();
       await page.keyboard.type('<p>two</p>');
       await page.keyboard.press('ControlOrMeta+s');
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
+      await togglePanel(page, 'Toggle sync');
       await page.getByRole('button', { name: 'Pull from cloud' }).click();
       const pullAsk = page
         .getByRole('dialog')
@@ -65,58 +67,67 @@ test.describe('two machines, two accounts (mocked API)', () => {
 
       // Scenario 8: the plan's storage standing, when it matters
       api.state.storageUsedBytes = Math.round(1073741824 * 0.9);
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
+      // Close and reopen Sync so it asks again; let the square leave before pressing it again.
+      const syncBody = page.getByTestId('pane-body-sync');
+      await togglePanel(page, 'Toggle sync');
+      await expect(syncBody).toHaveCount(0);
+      await togglePanel(page, 'Toggle sync');
+      await expect(syncBody).toBeVisible({ timeout: 15_000 });
       await expect(page.getByTestId('sync-budget')).toContainText('90%', { timeout: 15_000 });
       api.state.storageUsedBytes = 0;
       // five panes leave the Workshop too narrow to edit in: close Share and Sync
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle sync');
+      await expect(syncBody).toHaveCount(0);
+      await togglePanel(page, 'Toggle share');
+      await expect(page.getByTestId('pane-body-share')).toHaveCount(0);
       await expect(monaco).toBeVisible({ timeout: 15_000 });
 
-      // Scenario 6 (garden): push the garden, change a crux, Pull garden → named refusal
-      await page.getByRole('button', { name: 'Account menu' }).click();
-      await page.getByRole('button', { name: /^Settings/ }).click();
-      await page.locator('h2', { hasText: /^Sync$/ }).click();
-      await page.getByRole('button', { name: 'Push garden' }).click();
-      await expect(page.getByText(/Garden pushed successfully/)).toBeVisible({ timeout: 60_000 });
-      await page.keyboard.press('Escape');
+      // Scenario 6 (garden): push the garden, change a crux, Pull garden → named refusal.
+      // Settings is a workspace pane: open it once, and open its Sync section once.
+      const settings = await showPane(page, 'Settings');
+      const syncSection = async () => {
+        if (!(await settings.getByRole('button', { name: 'Push garden' }).isVisible()))
+          await settings.locator('h2', { hasText: /^Sync$/ }).click();
+      };
+      await syncSection();
+      await settings.getByRole('button', { name: 'Push garden' }).click();
+      await expect(settings.getByText(/Garden pushed successfully/)).toBeVisible({
+        timeout: 60_000,
+      });
       await page.waitForTimeout(6_000); // the refusal ignores changes within five seconds of the push
       await monaco.click();
       await page.keyboard.type('<p>three</p>');
       await page.keyboard.press('ControlOrMeta+s');
-      await page.getByRole('button', { name: 'Account menu' }).click();
-      await page.getByRole('button', { name: /^Settings/ }).click();
-      await page.locator('h2', { hasText: /^Sync$/ }).click();
-      await page.getByRole('button', { name: 'Pull garden' }).click();
+      await syncSection();
+      await settings.getByRole('button', { name: 'Pull garden' }).click();
       const gardenAsk = page
         .getByRole('dialog')
         .filter({ hasText: 'changed here after the cloud backup' });
       await expect(gardenAsk).toBeVisible({ timeout: 15_000 });
       await expect(gardenAsk).toContainText('My Crux');
       await gardenAsk.getByRole('button', { name: 'Cancel' }).click();
-      await page.keyboard.press('Escape');
 
       // Scenario 7: log out, sign in as another account → the question; Stay leaves it disconnected
       await page.getByRole('button', { name: 'Account menu' }).click();
       await page.getByRole('button', { name: 'Log out' }).click();
-      await page.getByRole('button', { name: 'Account menu' }).click();
-      await page.getByRole('button', { name: /^Settings/ }).click();
-      await page.getByPlaceholder('email@example.com').fill('other@example.com');
-      await page.getByRole('button', { name: 'Send Code' }).click();
-      await page.getByPlaceholder('Enter code').fill('123456');
-      await page.getByRole('button', { name: 'Connect', exact: true }).click();
+      // Logging out lands on Home (the workspace panes go with it): open Settings there.
+      await expect(page.getByTestId('pane-body-home')).toBeVisible({ timeout: 30_000 });
+      const again = await showPane(page, 'Settings');
+      await again.getByPlaceholder('email@example.com').fill('other@example.com');
+      await again.getByRole('button', { name: 'Send Code' }).click();
+      await again.getByPlaceholder('Enter code').fill('123456');
+      await again.getByRole('button', { name: 'Connect', exact: true }).click();
       const acctAsk = page
         .getByRole('dialog')
         .filter({ hasText: 'You signed in as other@example.com' });
       await expect(acctAsk).toBeVisible({ timeout: 30_000 });
       await acctAsk.getByRole('button', { name: 'Stay disconnected' }).click();
-      await expect(page.getByText(/belongs to a different account/)).toBeVisible();
+      await expect(again.getByText(/belongs to a different account/)).toBeVisible();
       // …and Switch connects it (the form kept the email and code)
-      await page.getByRole('button', { name: 'Connect', exact: true }).click();
+      await again.getByRole('button', { name: 'Connect', exact: true }).click();
       await expect(acctAsk).toBeVisible({ timeout: 30_000 });
       await acctAsk.getByRole('button', { name: 'Switch this garden' }).click();
-      await expect(page.getByText(/Connected/).first()).toBeVisible({ timeout: 30_000 });
+      await expect(again.getByText(/Connected/).first()).toBeVisible({ timeout: 30_000 });
     } finally {
       await app.close();
     }

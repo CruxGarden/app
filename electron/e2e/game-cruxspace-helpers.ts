@@ -1,3 +1,4 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { expect, type Page, type FrameLocator, type ElectronApplication } from '@playwright/test';
 import type { DownloadItem, Event } from 'electron';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -7,8 +8,31 @@ import { storedCrux } from './multi-crux-helpers';
 /** Shared steps of the Glow Garden journey (GAME-CRUXSPACE-PLAN.md §7). */
 
 export async function home(page: Page) {
-  if (/\/c\//.test(page.url())) await page.locator('header').getByRole('button').first().click();
-  await expect(page.getByRole('button', { name: 'Create Cruxspace', exact: true })).toBeVisible();
+  // Garden Home: the Garden's own members and its Add Crux control.
+  const create = page.getByRole('button', { name: 'Add Crux', exact: true });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (/\/c\//.test(page.url())) {
+      // From a Crux, its Garden is the last step of the Garden location's ancestry.
+      await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+      await page
+        .getByRole('navigation', { name: 'Garden ancestry' })
+        .getByRole('button')
+        .last()
+        .click();
+    }
+    if (await create.isVisible({ timeout: 10_000 }).catch(() => false)) return;
+    // Diagnostics for a navigation that did not happen (2026-09-20: seen once with seven open cruxes).
+    const buttons = await page
+      .locator('header')
+      .getByRole('button')
+      .evaluateAll((els) =>
+        els.slice(0, 4).map((e) => e.textContent?.trim() || e.getAttribute('aria-label')),
+      );
+    console.log(
+      `home(): still at ${page.url()} after attempt ${attempt + 1}; header buttons: ${JSON.stringify(buttons)}`,
+    );
+  }
+  await expect(create).toBeVisible();
 }
 
 export const frame = (page: Page): FrameLocator => page.frameLocator('iframe[data-crux-id]');
@@ -36,11 +60,11 @@ export async function member(page: Page, menu: RegExp, title: string, creationTi
   return { id, folder, title };
 }
 
-/** Open a member from the Cruxspace hub on the Home Garden. */
+/** Open a member from its Garden's Home. */
 export async function open(page: Page, title: string) {
   await home(page);
   await page
-    .getByRole('region', { name: 'Cruxspaces', exact: true })
+    .getByRole('main')
     .getByRole('button', { name: `Open ${title}`, exact: true })
     .click();
   await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
@@ -48,14 +72,14 @@ export async function open(page: Page, title: string) {
 
 /** A Task workspace opens with Collaboration only; the embedded app needs the Workshop. */
 export async function openWorkshop(page: Page) {
-  const toggle = page.getByRole('button', { name: 'Toggle workshop' });
-  if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+  if ((await panelPressed(page, 'Toggle workshop')) !== 'true')
+    await togglePanel(page, 'Toggle workshop');
   await expect(page.locator('iframe[data-crux-id]')).toBeVisible({ timeout: 60000 });
 }
 
 async function collaboration(page: Page, on: boolean) {
-  const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-  if (((await toggle.getAttribute('aria-pressed')) === 'true') !== on) await toggle.click();
+  if (((await panelPressed(page, 'Toggle collaboration')) === 'true') !== on)
+    await togglePanel(page, 'Toggle collaboration');
 }
 
 /** Send one scripted collaborator turn and wait for its closing sentence. */
@@ -73,19 +97,19 @@ export async function snapshot(page: Page, label: string) {
   const pane = page.getByTestId('pane-body-history');
   // A workspace that just switched (after a merge) can re-render its layout under the first click.
   for (let attempt = 0; attempt < 3 && !(await pane.isVisible()); attempt++) {
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle growth');
     await pane.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   }
   await expect(pane).toBeVisible();
-  await expect(pane.getByRole('button', { name: 'Take snapshot', exact: true })).toBeEnabled({
+  await expect(pane.getByRole('button', { name: 'Mark version', exact: true })).toBeEnabled({
     timeout: 120000,
   });
-  await pane.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+  await pane.getByRole('button', { name: 'Mark version', exact: true }).click();
   await pane.getByPlaceholder('Label (optional)').fill(label);
   await pane.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(pane.getByText(label, { exact: true })).toBeVisible();
-  await expect(pane.getByRole('button', { name: 'Take snapshot', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Toggle history' }).click();
+  await expect(pane.getByRole('button', { name: 'Mark version', exact: true })).toBeEnabled();
+  await togglePanel(page, 'Toggle growth');
 }
 
 /** Output descriptors a member advertises (exports/*.asset.json). */

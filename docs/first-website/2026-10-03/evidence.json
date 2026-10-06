@@ -1,0 +1,72 @@
+{
+  "status": "accepted locally, including fresh Mac package; final follow-through Windows/Linux CI pending",
+  "scope": [
+    "release-asset download at /#download",
+    "direct editable first home page",
+    "optional Growth and staging",
+    "saved local website editions with stable in-session URLs",
+    "separate local/live publication state",
+    "Home test-copy management and installation wipe"
+  ],
+  "verified": {
+    "app": "1826 tests / 291 files + 18 skips; build passed",
+    "electron": "90 passed, 1 platform skip; stable URLs and preview isolation",
+    "desktop": "7 passed in 1.8m on the final product source, including stable staging URLs and wipe",
+    "public": "13 passed in 3m",
+    "game": {
+      "stories": 128,
+      "criteria": 1260,
+      "baselineMapped": 346,
+      "creationChoices": 71,
+      "unmapped": 0
+    },
+    "broadDesktop": "115 passed / 1 test-observer race in 22.4m; exact-hash read observation corrected, then four affected cases passed in 1.2m",
+    "refusal": "Actual host ENOSPC injection reproduced raw-error UX; final UI preserves saved visitor bytes, gives disk-space guidance and explicitly retries successfully",
+    "help": "First-home form, preview and Share captures refreshed through actual app and documentation rebuilt"
+  },
+  "limits": [
+    "No production deployment or public release was performed.",
+    "Public installers and hosted publication still require actual release operations.",
+    "Local staging serves static website editions only; hosted visitor accounts, Functions and submissions are not certified.",
+    "No real model calls, paid spend or actual user/manual-profile changes."
+  ],
+  "logs": {
+    "app": "/tmp/crux-first-website-refusal-app-verify.log",
+    "electron": "/tmp/crux-first-website-electron-stable-urls.log",
+    "desktop": "/tmp/crux-first-website-desktop-release.log",
+    "public": "/tmp/crux-first-website-public-accepted.log",
+    "game": "/tmp/crux-first-website-game.log",
+    "broadDesktop": "/tmp/crux-first-website-full-desktop.log",
+    "refusalRed": "/tmp/crux-first-website-refusal-red.log",
+    "finalReplay": "/tmp/crux-first-website-final-replay.log",
+    "packageWebBuild": "/tmp/crux-first-website-package-web-build.log",
+    "packaged": "/tmp/crux-first-website-packaged-smoke.log"
+  },
+  "sourceCommit": "c731342f7ceebcbe703e76f07742423739c78f3d",
+  "implementationCommit": "312cd59e1e0675ba420c10847675aa728072dbfe",
+  "nativeCI": {
+    "implementation": {
+      "run": 37140407687,
+      "status": "success",
+      "platforms": ["Windows", "Linux"]
+    },
+    "followThrough": {
+      "run": 37141816024,
+      "status": "in_progress"
+    }
+  },
+  "package": {
+    "directory": "app/electron/release/manual-testing-first-website-oct3/mac-arm64/Crux Garden.app",
+    "sourceCommit": "c731342f7ceebcbe703e76f07742423739c78f3d",
+    "signature": "ad-hoc; not notarized",
+    "tests": 5,
+    "profileOpenedByAgent": false,
+    "preservedProfile": "$HOME/CruxGarden-ManualTesting",
+    "buildLog": "/tmp/crux-first-website-package.log",
+    "smokeLog": "/tmp/crux-first-website-packaged-smoke.log",
+    "asarSHA256": "8ce5900dd92e9ad8cbb20e93f405dca6b46c14a54f3b58086af20a58849c221d",
+    "passed": true,
+    "launcher": "app/electron/release/manual-testing-current/Launch Manual Testing.command",
+    "launcherUpdated": true
+  }
+}

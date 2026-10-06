@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { useAuthStore, _avatarUrlCache } from './authStore';
+import { useAuthStore } from './authStore';
 import * as authorsApi from '@/api/authors';
 import type { Author } from '@/api/types';
-import { Capability, can } from '@/lib/platform';
+import { Capability, can, isAiMock } from '@/lib/platform';
 
 // Lazy import to avoid pulling SQLite worker into public pages
 async function lazyGetServices() {
@@ -127,7 +127,16 @@ export const useAppStore = create<AppState>((set, get) => ({
             import('./uiStore'),
           ]);
         applySavedMoodSettings();
+        // A fresh garden follows the launch knob (e2e); a saved choice always wins.
+        const { aiStartKnob } = await import('@/lib/platform');
+        if (getSetting(SettingsKey.AiEnabled) === null && aiStartKnob() === 'on') {
+          const { setSetting } = await import('@/services/settings');
+          setSetting(SettingsKey.AiEnabled, 'true');
+        }
         useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
+        (await import('@/services/included-access')).startIncludedAccess();
+        // e2e: the scripted model (CRUX_AI_MOCK) loads here and nowhere else.
+        if (isAiMock()) await (await import('@/ai/engine')).primeMockModel();
         // Desktop Mode: answer the per-crux MCP servers' forwarded tool calls (ADR 0013).
         if (can(Capability.AgentHost)) {
           void import('@/services/agent-host').then(({ startAgentHostListener }) =>
@@ -138,7 +147,6 @@ export const useAppStore = create<AppState>((set, get) => ({
             startAgentPermissionListener(),
           );
         }
-        void import('./moodStore').then(({ useMoodStore }) => useMoodStore.getState().loadMoods());
         // Automatic backup (RESILIENCE-PLAN §2a): quiet cruxes and the garden once a day
         void import('@/services/auto-backup').then(({ startAutoBackup }) => startAutoBackup());
         set({ ready: true });
@@ -180,20 +188,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Write avatar to the Blob Store (content-addressed)
     const { putBlob } = await import('@/services/blobs');
     const fingerprint = await putBlob(file);
-    const db = await lazyGetDb();
-
-    // Delete old blob if fingerprint changed
-    const oldFingerprint = author.meta?.avatarFingerprint;
-    if (typeof oldFingerprint === 'string' && oldFingerprint !== fingerprint) {
-      db.blobDelete(oldFingerprint).catch(() => {});
-    }
-
-    // Revoke old object URL if cached
-    const oldUrl = _avatarUrlCache.get(oldFingerprint as string);
-    if (oldUrl) {
-      URL.revokeObjectURL(oldUrl);
-      _avatarUrlCache.delete(oldFingerprint as string);
-    }
+    // Keep previous bytes and URLs: historical portraits and other views may share
+    // them, including while this author update is in flight or if it fails.
+    // Reclamation requires the API owner's complete retention/lease contract.
 
     const updated = await (
       await lazyGetServices()
@@ -215,18 +212,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
 
-    // Delete OPFS blob
-    const fingerprint = author.meta?.avatarFingerprint;
-    if (typeof fingerprint === 'string') {
-      const db = await lazyGetDb();
-      db.blobDelete(fingerprint).catch(() => {});
-      const oldUrl = _avatarUrlCache.get(fingerprint);
-      if (oldUrl) {
-        URL.revokeObjectURL(oldUrl);
-        _avatarUrlCache.delete(fingerprint);
-      }
-    }
-
+    // Portrait bytes and cached URLs may still be used by history or other views.
+    // Only the author reference changes here; reclamation belongs to the API owner.
     const meta = { ...author.meta, avatarFingerprint: null, avatarMimeType: null, avatarUrl: null };
     const updated = await (await lazyGetServices()).author.update(author.id, { meta });
     set({ author: updated });

@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { hidePane, showPane, chooseSettingsSection } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,7 +17,7 @@ const NOTE = 'prefers British spelling';
 async function plantGarden(page: Page) {
   await page.getByRole('button', { name: /enter/i }).click();
   await page.getByText('Plant a new garden').click();
-  await page.getByRole('button', { name: 'Welcome' }).click();
+  await finishSetupAtHome(page);
   await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
 }
 
@@ -29,14 +31,13 @@ async function newBlankCrux(page: Page) {
 }
 
 async function openSettings(page: Page) {
-  await page.keyboard.press('ControlOrMeta+,');
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await showPane(page, 'Settings');
+  await chooseSettingsSection(page, 'AI and agents');
   await expect(page.getByRole('heading', { name: 'Memory', exact: true })).toBeVisible();
 }
 
 async function closeSettings(page: Page) {
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+  await hidePane(page, 'Settings');
 }
 
 /** What the mock model has been sent as system prompts so far (see ai/mock-model.ts). */
@@ -127,6 +128,11 @@ test.describe('garden memory (mock AI)', () => {
       // ── Clear empties it everywhere ────────────────────────────────────────
       await openSettings(page);
       await page.getByRole('button', { name: 'Clear', exact: true }).click();
+      // Clear asks first (SETAI-08).
+      await page
+        .getByRole('dialog', { name: 'Clear memory' })
+        .getByRole('button', { name: 'Clear', exact: true })
+        .click();
       await expect(page.getByTestId('memory-status')).toHaveText('nothing remembered');
       await expect(page.getByTestId('memory-text')).not.toHaveValue(new RegExp(NOTE));
       await closeSettings(page);

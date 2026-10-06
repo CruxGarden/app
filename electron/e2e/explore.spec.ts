@@ -1,13 +1,15 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
+import { showPane } from './panel-helpers';
 
 /**
- * Explore: search, the author chip on a result narrows to that author, the
- * active-filter chip removes it, "@name" in the box searches authors.
+ * Explore: search, creator links, topic filters and remembered interests;
+ * "@name" in the box searches authors.
  */
 test.describe('explore (mocked API)', () => {
-  test('search → author chip → clear; @name search', async () => {
+  test('search, creator links, topics and @name search', async () => {
     const api = await startMockApi();
     const { app, page } = await launchApp({
       env: { CRUX_API_URL: api.url, CRUX_AI_MOCK: '1' },
@@ -39,8 +41,8 @@ test.describe('explore (mocked API)', () => {
 
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
-      await page.getByRole('button', { name: 'Explore', exact: true }).click();
+      await finishSetupAtHome(page);
+      await showPane(page, 'Explore');
       await expect(page.getByText('Rainy Garden Notes')).toBeVisible();
       await expect(page.getByText('Sunny Recipes')).toBeVisible();
 
@@ -52,13 +54,10 @@ test.describe('explore (mocked API)', () => {
       await box.fill('');
       await expect(page.getByText('Sunny Recipes')).toBeVisible();
 
-      // Author chip on a card → active filter → remove
-      await page.getByRole('button', { name: 'Only cruxes by tester' }).first().click();
-      const filters = page.getByTestId('active-filters');
-      await expect(filters).toContainText('@tester');
-      expect(api.log.some((l) => l.includes('author=tester'))).toBe(true);
-      await filters.getByRole('button', { name: 'Remove author filter tester' }).click();
-      await expect(page.getByTestId('active-filters')).toHaveCount(0);
+      // A creator is a destination, with author search still available below.
+      await expect(
+        page.getByRole('link', { name: "Visit Tester's Garden" }).first(),
+      ).toHaveAttribute('href', '/tester');
 
       // Tag chip on a card filters by tag
       await page.getByRole('button', { name: '#rain' }).first().click();

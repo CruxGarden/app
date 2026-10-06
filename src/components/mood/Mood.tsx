@@ -1,5 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
+import { Button } from '@/components/ui';
+import { setBackgroundFromBlob } from '@/services/background';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useState, useEffect } from 'react';
+import { segmentClass, segmentGroupClass } from '@/components/ui/button-class';
+import { SectionLabel } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK } from '@/lib/moods';
@@ -14,23 +19,19 @@ import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import SoundTab from './SoundTab';
 import MotionIntensityControl from './MotionIntensityControl';
-import LiquidGlassControl from './LiquidGlassControl';
-import PersonaAvatar from '@/components/persona/PersonaAvatar';
+import FlowControl from './FlowControl';
+import AppearanceControls from './AppearanceControls';
+import SurfaceThemeControl from './SurfaceThemeControl';
 import MoodBrowser from './MoodBrowser';
+import GardenMoodLine, { KeepLook } from './GardenMoodLine';
 import AssetsTab from './AssetsTab';
-import { useMoodStore } from '@/stores/moodStore';
-import { getSetting, setSetting } from '@/services/settings';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { getSetting, setSetting, onSettingChange } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { BgType, ThemeMode } from '@/lib/types';
-import {
-  getPersona,
-  savePersona,
-  DEFAULT_PERSONA,
-  getResolvedMode,
-  type PersonaSettings,
-} from './mood-helpers';
-import { useBlobUrl } from '@/hooks/useBlobUrl';
-import { Button } from '@/components/ui';
+import { getResolvedMode } from './mood-helpers';
+import { BackgroundTabContent, Tab } from './BackgroundTab';
+import { PersonaTab } from './PersonaTab';
 
 // ── Preset thumbnail ─────────────────────────────────
 
@@ -42,7 +43,7 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
     <div
       className={cn(
         'w-full rounded-[6px] p-[2px] transition-colors',
-        active ? 'bg-accent' : 'bg-transparent hover:bg-text-muted/30',
+        active ? 'bg-accent' : 'bg-transparent hover:bg-text-muted/(--tint-quiet)',
       )}
     >
       <div className="rounded-[4px] overflow-hidden">
@@ -84,7 +85,7 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
             >
               <div
                 className="mt-0.5 mx-0.5 h-1 rounded-[1px]"
-                style={{ backgroundColor: p('accent'), opacity: 0.5 }}
+                style={{ backgroundColor: p('accent'), opacity: 'var(--decoration-opacity)' }}
               />
               <div
                 className="mt-0.5 mx-0.5 h-1 rounded-[1px]"
@@ -98,381 +99,20 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
   );
 }
 
-// ── Persona Tab ──────────────────────────────────────
-
-function PersonaTab() {
-  const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
-  const fileRef = useRef<HTMLInputElement>(null);
-  const darkThumbUrl = useBlobUrl(persona.thumbnailFingerprint);
-
-  const update = (patch: Partial<PersonaSettings>) => {
-    const next = { ...persona, ...patch };
-    setPersona(next);
-    savePersona(next);
-  };
-
-  // One avatar for the persona, whatever the mode: it sits on a theme gradient
-  // (PersonaAvatar), so it never needs a dark and a light copy.
-  const handleThumbnailUpload =
-    (field: 'thumbnailFingerprint') => async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (file.size > 10 * 1024 * 1024) return;
-
-      // Resize to 128x128 square
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 128;
-            const ctx = canvas.getContext('2d')!;
-            const size = Math.min(img.width, img.height);
-            const sx = (img.width - size) / 2;
-            const sy = (img.height - size) / 2;
-            ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
-            resolve(canvas.toDataURL('image/webp', 0.8));
-          };
-          img.src = reader.result as string;
-        };
-        reader.readAsDataURL(file);
-      });
-
-      // Write to OPFS blob store
-      const res = await fetch(dataUrl);
-      const buffer = new Uint8Array(await res.arrayBuffer());
-      const { putBlob } = await import('@/services/blobs');
-      const fp = await putBlob(buffer);
-
-      // One avatar: the light-mode copy is retired along with the legacy data URLs
-      update({
-        [field]: fp,
-        thumbnailDataUrl: null,
-        thumbnailFingerprintLight: null,
-        thumbnailDataUrlLight: null,
-      });
-      e.target.value = '';
-    };
-
-  const handleReset = () => {
-    const fresh = { ...DEFAULT_PERSONA };
-    setPersona(fresh);
-    savePersona(fresh);
-  };
-
-  const isCustomized =
-    persona.name !== DEFAULT_PERSONA.name ||
-    persona.greeting !== DEFAULT_PERSONA.greeting ||
-    persona.systemPrompt !== DEFAULT_PERSONA.systemPrompt ||
-    !!persona.thumbnailFingerprint;
-
-  const inputClass = cn(
-    'w-full bg-bg border border-border rounded-[var(--radius-sm)] px-2.5 py-1.5',
-    'text-xs text-text placeholder:text-text-muted/50',
-    'focus:outline-none focus:border-input-border-active font-mono',
-  );
-
-  return (
-    <div className="flex flex-col gap-4 h-full">
-      {/* Thumbnails */}
-      <div className="shrink-0">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
-          Avatar
-        </div>
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col items-center gap-1">
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent cursor-pointer"
-              aria-label="Choose an avatar"
-            >
-              <PersonaAvatar src={darkThumbUrl} className="w-full h-full rounded-none" />
-            </button>
-            {persona.thumbnailFingerprint && (
-              <button
-                onClick={() =>
-                  update({
-                    thumbnailFingerprint: null,
-                    thumbnailDataUrl: null,
-                    thumbnailFingerprintLight: null,
-                    thumbnailDataUrlLight: null,
-                  })
-                }
-                className="text-3xs text-error hover:text-text cursor-pointer"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleThumbnailUpload('thumbnailFingerprint')}
-          />
-        </div>
-      </div>
-
-      {/* Name */}
-      <div className="shrink-0">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5">
-          Name
-        </div>
-        <input
-          type="text"
-          value={persona.name}
-          onChange={(e) => update({ name: e.target.value })}
-          placeholder="Persona name"
-          className={inputClass}
-          maxLength={50}
-        />
-      </div>
-
-      {/* Greeting */}
-      <div className="shrink-0">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5">
-          Greeting
-        </div>
-        <input
-          type="text"
-          value={persona.greeting}
-          onChange={(e) => update({ greeting: e.target.value })}
-          placeholder="A greeting shown when the console opens"
-          className={inputClass}
-          maxLength={200}
-        />
-      </div>
-
-      {/* System Prompt */}
-      <div className="flex-1 min-h-0 flex flex-col">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5 shrink-0">
-          System Prompt
-        </div>
-        <textarea
-          value={persona.systemPrompt}
-          onChange={(e) => update({ systemPrompt: e.target.value })}
-          placeholder="Custom instructions for the AI persona..."
-          className={cn(inputClass, 'resize-none flex-1 min-h-[80px]')}
-          maxLength={4000}
-        />
-        <div className="flex items-center justify-between mt-1 shrink-0">
-          <p className="text-3xs text-text-muted/50">
-            {persona.systemPrompt ? `${persona.systemPrompt.length}/4000` : ''}
-          </p>
-          {isCustomized && (
-            <button
-              onClick={handleReset}
-              className="text-2xs font-mono text-text-muted hover:text-error cursor-pointer"
-            >
-              Revert to Default
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Tab: Background ──────────────────────────────────
-
-function BackgroundTabContent({
-  bgType,
-  onChangeBgType,
-  bgImagePreview,
-  onBgImageSelect,
-  onBgImageClear,
-  onBgGenerate,
-  bgGenerating,
-  bgError,
-}: {
-  bgType: BgType;
-  onChangeBgType: (t: BgType) => void;
-  bgImagePreview: string | null;
-  onBgImageSelect: (file: File) => void;
-  onBgImageClear: () => void;
-  /** Make a backdrop from a description (the same path the agent's set_background uses). */
-  onBgGenerate: (prompt: string) => void;
-  bgGenerating: boolean;
-  bgError: string | null;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [bgPrompt, setBgPrompt] = useState('');
-  const isLight = getResolvedMode() === 'Light';
-
-  const animatedOptions: {
-    value: BgType;
-    label: string;
-    description: string;
-    darkOnly?: boolean;
-  }[] = [
-    { value: BgType.Bloom, label: 'Bloom', description: 'Animated gradient blobs' },
-    { value: BgType.Drift, label: 'Drift', description: 'Floating particles', darkOnly: true },
-    { value: BgType.Flow, label: 'Flow', description: 'Organic wave patterns', darkOnly: true },
-    { value: BgType.Blank, label: 'Blank', description: 'Solid background color' },
-  ];
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted">Animated</div>
-        <div className="grid grid-cols-2 gap-2">
-          {animatedOptions.map(({ value, label, description, darkOnly }) => {
-            const disabled = darkOnly && isLight;
-            return (
-              <button
-                key={value}
-                onClick={() => !disabled && onChangeBgType(value)}
-                disabled={disabled}
-                className={cn(
-                  'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors',
-                  disabled
-                    ? 'opacity-30 cursor-not-allowed border-border'
-                    : bgType === value
-                      ? 'bg-surface text-text border-accent/30 cursor-pointer'
-                      : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text cursor-pointer',
-                )}
-              >
-                <span className="text-xs font-mono font-medium">{label}</span>
-                <span className="text-2xs opacity-60">{description}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted">Image</div>
-        <button
-          onClick={() => {
-            onChangeBgType(BgType.Image);
-            if (!bgImagePreview) fileRef.current?.click();
-          }}
-          className={cn(
-            'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors cursor-pointer',
-            bgType === 'image'
-              ? 'bg-surface text-text border-accent/30'
-              : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text',
-          )}
-        >
-          <span className="text-xs font-mono font-medium">Image</span>
-          <span className="text-2xs opacity-60">Upload a background image</span>
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onBgImageSelect(file);
-            if (fileRef.current) fileRef.current.value = '';
-          }}
-        />
-
-        <form
-          className="flex flex-col gap-1.5 mt-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (bgPrompt.trim() && !bgGenerating) onBgGenerate(bgPrompt.trim());
-          }}
-        >
-          <label className="text-2xs font-mono uppercase tracking-wider text-caption">
-            Describe a backdrop
-          </label>
-          <div className="flex gap-2">
-            <input
-              value={bgPrompt}
-              onChange={(e) => setBgPrompt(e.target.value)}
-              placeholder="fog over a pine forest at dawn, soft, muted"
-              aria-label="Backdrop description"
-              className="flex-1 h-8 rounded-input border border-input-border bg-input px-2.5 text-xs text-input-text placeholder:text-placeholder focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline"
-            />
-            <Button
-              type="submit"
-              size="sm"
-              variant="secondary"
-              disabled={!bgPrompt.trim() || bgGenerating}
-              loading={bgGenerating}
-            >
-              Generate
-            </Button>
-          </div>
-          <p className="text-2xs text-text-muted">
-            Uses your image-capable model key (same as the agent). Or pick an image file below.
-          </p>
-          {bgError && (
-            <p role="alert" data-testid="bg-error" className="text-2xs text-error">
-              {bgError}
-            </p>
-          )}
-        </form>
-        {bgType === 'image' && bgImagePreview && (
-          <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/50 rounded-[var(--radius-sm)]">
-            <div className="relative w-full h-28 rounded-[var(--radius-sm)] overflow-hidden">
-              <img
-                src={bgImagePreview}
-                alt="Background preview"
-                className="w-full h-full object-cover"
-              />
-              {bgGenerating && (
-                <div className="absolute inset-0 flex items-center justify-center bg-bg/60">
-                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="text-2xs text-accent hover:text-accent/80 transition-colors cursor-pointer"
-              >
-                Change image
-              </button>
-              <button
-                onClick={onBgImageClear}
-                className="text-2xs text-error hover:text-error/80 transition-colors cursor-pointer"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        )}
-
-        {bgType === 'image' && !bgImagePreview && (
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer mt-1"
-          >
-            Choose an image...
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Main Component ───────────────────────────────────
-
-/**
- * A Mood is four things — Theme, Background, Sound, Persona — plus the
- * library of Moods to wear. Each tab edits the ACTIVE Mood live; "Save current
- * as Mood" under Moods captures it. The modal shows the same five tabs so a
- * quick tweak is always one keystroke away; the Mood Builder page is the same
- * editor with room to breathe.
- */
-type Tab = 'moods' | 'theme' | 'background' | 'sound' | 'persona';
-
-interface MoodEditorProps {
-  initialTab?: Tab;
-  /** The modal: the same sections, plus a way into the full Mood Builder page. */
-  compact?: boolean;
-}
-
-export default function MoodEditor({ initialTab = 'moods', compact = false }: MoodEditorProps) {
-  const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>(initialTab);
+export default function MoodEditor() {
+  const advancedMode = useAdvancedMode();
+  const [builderChoice, setFullBuilder] = useState<boolean | null>(null);
+  const fullBuilder = builderChoice ?? advancedMode;
+  const [chosenTab, setTab] = useState<Tab>(() => useUIStore.getState().moodTab ?? 'moods');
+  const requested = useUIStore((s) => s.moodTab);
+  // The Persona is the collaborator's; without AI tools there is none to dress.
+  const aiEnabled = useAiEnabled();
+  const tab: Tab = chosenTab === 'persona' && !aiEnabled ? 'moods' : chosenTab;
+  useEffect(() => {
+    if (!requested) return;
+    setTab(requested);
+    useUIStore.setState({ moodTab: null });
+  }, [requested]);
   const [userPresets, setUserPresets] = useState<UserPreset[]>(() => getUserPresets());
   useEffect(() => onUserPresetsChange(() => setUserPresets(getUserPresets())), []);
   const [activeDarkId, setActiveDarkId] = useState(
@@ -482,11 +122,6 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
     () => (getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment',
   );
 
-  // Sync preset IDs on mount (component only renders when modal is open)
-  useEffect(() => {
-    setActiveDarkId((getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian');
-    setActiveLightId((getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
-  }, []);
   const [bgType, setBgType] = useState<BgType>(() => {
     const saved = getSetting(SettingsKey.BackgroundType) as string | null;
     if (
@@ -499,48 +134,29 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
       return saved as BgType;
     return BgType.Bloom;
   });
-  const [bgImagePreview, setBgImagePreview] = useState<string | null>(null);
-  // Object URL created for the preview — revoked when replaced or on unmount
-  const bgObjectUrlRef = useRef<string | null>(null);
-  const releaseBgObjectUrl = () => {
-    const url = bgObjectUrlRef.current;
-    if (!url) return;
-    bgObjectUrlRef.current = null;
-    // Don't revoke a URL the app background is still displaying
-    if (useMoodStore.getState().backgroundUrl !== url) URL.revokeObjectURL(url);
-  };
-  // Resolve background image fingerprint to blob URL on mount
-  useEffect(() => {
-    const fp = getSetting(SettingsKey.BackgroundImage) as string | null;
-    if (!fp) return;
-    (async () => {
-      const { blobObjectUrl } = await import('@/services/blobs');
-      const url = await blobObjectUrl(fp).catch(() => null);
-      if (url) {
-        releaseBgObjectUrl();
-        bgObjectUrlRef.current = url;
-        setBgImagePreview(url);
-      }
-    })();
-    // Revoke the created object URL on unmount
-    return () => releaseBgObjectUrl();
-  }, []);
+  const [bgFingerprint, setBgFingerprint] = useState(() => getSetting(SettingsKey.BackgroundImage));
+  const bgImagePreview = useBlobUrl(bgFingerprint);
+  useEffect(
+    () =>
+      onSettingChange((key) => {
+        if (key === SettingsKey.BackgroundImage) setBgFingerprint(getSetting(key));
+        if (key === SettingsKey.BackgroundType) setBgType(getSetting(key) as BgType);
+      }),
+    [],
+  );
   const [bgGenerating, setBgGenerating] = useState(false);
   const [bgError, setBgError] = useState<string | null>(null);
   const handleBgGenerate = async (prompt: string) => {
     setBgGenerating(true);
     setBgError(null);
     try {
-      const { generateImageBlob } = await import('@/ai/tools');
-      const result = await generateImageBlob(prompt, '1536x1024');
-      if ('error' in result) {
-        setBgError(result.error);
-        return;
-      }
-      const { setBackgroundFromBlob, setBackgroundType } = await import('@/services/background');
-      await setBackgroundType(BgType.Image);
-      await setBackgroundFromBlob(result.blob);
-      setBgType(BgType.Image);
+      await setBackgroundFromBlob(
+        import('@/ai/tools').then(async ({ generateImageBlob }) => {
+          const result = await generateImageBlob(prompt, '1536x1024');
+          if ('error' in result) throw new Error(result.error);
+          return result.blob;
+        }),
+      );
     } catch (err) {
       setBgError((err as Error).message || 'Could not generate a backdrop');
     } finally {
@@ -551,30 +167,20 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
   const handleBgChange = (type: BgType) => {
     setBgType(type);
     void import('@/services/background').then(({ setBackgroundType }) => setBackgroundType(type));
-    if (type === 'image' && bgImagePreview) {
-      useMoodStore.setState({ backgroundUrl: bgImagePreview });
-    }
   };
 
   const handleBgImageSelect = async (file: File) => {
     setBgGenerating(true);
     try {
-      const { setBackgroundFromBlob } = await import('@/services/background');
-      const url = await setBackgroundFromBlob(file);
-      releaseBgObjectUrl();
-      bgObjectUrlRef.current = url || null;
-      setBgImagePreview(url || null);
-      setBgType(BgType.Image);
+      await setBackgroundFromBlob(file);
     } finally {
       setBgGenerating(false);
     }
   };
 
   const handleBgImageClear = () => {
-    setBgImagePreview(null);
     void import('@/services/background').then(({ clearBackgroundImage }) => clearBackgroundImage());
     setBgType(BgType.Bloom);
-    releaseBgObjectUrl();
   };
 
   const handleSelect = (preset: MoodPresetDef) => {
@@ -603,139 +209,144 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
   return (
     <div className="select-none flex-1 flex flex-col min-h-0">
       {/* Tabs */}
-      <div className="flex items-center gap-1 pb-3 mb-3 border-b border-border shrink-0">
-        {(
-          [
-            ['moods', 'Moods'],
-            ['theme', 'Theme'],
-            ['background', 'Background'],
-            ['sound', 'Sound'],
-            ['persona', 'Persona'],
-          ] as const
-        ).map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
-              tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 pb-3 mb-3 border-b border-border shrink-0">
+        <div role="group" aria-label="Mood sections" className={segmentGroupClass('flex-wrap')}>
+          {(
+            [
+              ['moods', 'Moods'],
+              ['theme', 'Theme'],
+              ['background', 'Background'],
+              ['sound', 'Sound'],
+              ['persona', 'Persona'],
+            ] as const
+          )
+            .filter(([t]) => aiEnabled || t !== 'persona')
+            .map(([t, label]) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={tab === t}
+                onClick={() => setTab(t)}
+                className={segmentClass(tab === t)}
+              >
+                {label}
+              </button>
+            ))}
+        </div>
         <div className="flex-1" />
-        <LiquidGlassControl />
+        <SurfaceThemeControl />
         <MotionIntensityControl />
-        {compact && (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                useUIStore.getState().setMoodPanelOpen(false);
-                navigate('/mood?tab=theme');
-              }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body rounded-[var(--radius-sm)] border border-border bg-surface text-text hover:border-accent hover:text-accent transition-colors cursor-pointer"
-            >
-              Open Mood Builder
-              <span aria-hidden>→</span>
-            </button>
-          </>
-        )}
       </div>
 
+      <KeepLook />
       {/* Active tab content */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+      <div
+        key={tab}
+        className="flex-1 min-h-0 flex flex-col overflow-y-auto pr-3 motion-enter-dropdown"
+      >
         {tab === 'theme' && (
           <div className="flex flex-col gap-6">
-            {userPresets.length > 0 && (
-              <div className="mb-4">
-                <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
-                  Yours
-                </div>
-                <div className="grid grid-cols-5 gap-2">
-                  {userPresets.map((preset) => {
-                    const active =
-                      (preset.section === 'Dark' ? activeDarkId : activeLightId) === preset.id;
-                    return (
-                      <div key={preset.id} className="relative group">
-                        <button
-                          onClick={() => handleSelect(preset)}
-                          className="w-full flex flex-col items-center gap-1.5 cursor-pointer"
-                        >
-                          <PresetThumb preset={preset} active={active} />
-                          <span
-                            className={cn(
-                              'text-2xs font-mono transition-colors truncate max-w-full',
-                              active ? 'text-text' : 'text-text-muted group-hover:text-text',
-                            )}
-                          >
-                            {preset.name}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => deleteUserPreset(preset.id)}
-                          aria-label={`Delete preset ${preset.name}`}
-                          title="Delete this preset"
-                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error text-xs leading-none opacity-0 group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-display text-heading">
+                  {fullBuilder ? 'Full Theme Builder' : 'Theme Customizer'}
+                </h3>
+                <p className="text-xs text-text-muted">
+                  {fullBuilder
+                    ? 'Fine-tune individual settings. Your Customizer edits are here too.'
+                    : 'A few choices to make this Mood yours. Changes appear immediately.'}
+                </p>
               </div>
-            )}
-            {(['Dark', 'Light'] as const).map((section) => {
-              const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
-              const activeForSection = section === 'Dark' ? activeDarkId : activeLightId;
-              if (sectionPresets.length === 0) return null;
-              return (
-                <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
-                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
-                    {section}
-                  </div>
-                  <div className="grid grid-cols-5 gap-2">
-                    {sectionPresets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        onClick={() => handleSelect(preset)}
-                        className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                      >
-                        <PresetThumb preset={preset} active={activeForSection === preset.id} />
-                        <span
-                          className={cn(
-                            'text-2xs font-mono transition-colors',
-                            activeForSection === preset.id
-                              ? 'text-text'
-                              : 'text-text-muted group-hover:text-text',
-                          )}
-                        >
-                          {preset.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-            {compact ? (
-              <p className="text-xxs text-text-muted">
-                Every token — colours, type, shape, motion — is in the Mood Builder.
-              </p>
-            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setFullBuilder(!fullBuilder)}>
+                {fullBuilder ? 'Back to Customizer' : 'Full Theme Builder'}
+              </Button>
+            </div>
+            {!fullBuilder && <AppearanceControls />}
+            {fullBuilder && (
               <>
                 <div>
-                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+                  <SectionLabel as="div" tone="muted" className="mb-2">
                     Tokens
-                  </div>
+                  </SectionLabel>
                   <ThemeTokensTab />
                 </div>
-                <div>
-                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
-                    Files
+
+                {userPresets.length > 0 && (
+                  <div className="mb-4">
+                    <SectionLabel as="div" tone="muted" className="mb-2">
+                      Yours
+                    </SectionLabel>
+                    <div className="grid grid-cols-5 gap-2">
+                      {userPresets.map((preset) => {
+                        const active =
+                          (preset.section === 'Dark' ? activeDarkId : activeLightId) === preset.id;
+                        return (
+                          <div key={preset.id} className="relative group">
+                            <button
+                              onClick={() => handleSelect(preset)}
+                              className="w-full flex flex-col items-center gap-1.5 cursor-pointer"
+                            >
+                              <PresetThumb preset={preset} active={active} />
+                              <span
+                                className={cn(
+                                  'text-2xs font-mono transition-colors truncate max-w-full',
+                                  active ? 'text-text' : 'text-text-muted group-hover:text-text',
+                                )}
+                              >
+                                {preset.name}
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => deleteUserPreset(preset.id)}
+                              aria-label={`Delete preset ${preset.name}`}
+                              title="Delete this preset"
+                              className="reveal-on-hover absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error hover:border-error/(--tint-balanced) text-xs leading-none cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+                {(['Dark', 'Light'] as const).map((section) => {
+                  const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
+                  const activeForSection = section === 'Dark' ? activeDarkId : activeLightId;
+                  if (sectionPresets.length === 0) return null;
+                  return (
+                    <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
+                      <SectionLabel as="div" tone="muted" className="mb-2">
+                        {section}
+                      </SectionLabel>
+                      <div className="grid grid-cols-5 gap-2">
+                        {sectionPresets.map((preset) => (
+                          <button
+                            key={preset.id}
+                            onClick={() => handleSelect(preset)}
+                            className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                          >
+                            <PresetThumb preset={preset} active={activeForSection === preset.id} />
+                            <span
+                              className={cn(
+                                'text-2xs font-mono transition-colors',
+                                activeForSection === preset.id
+                                  ? 'text-text'
+                                  : 'text-text-muted group-hover:text-text',
+                              )}
+                            >
+                              {preset.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div>
+                  <SectionLabel as="div" tone="muted" className="mb-2">
+                    Files
+                  </SectionLabel>
                   <AssetsTab />
                 </div>
               </>
@@ -754,7 +365,15 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             onBgGenerate={(p) => void handleBgGenerate(p)}
           />
         )}
-        {tab === 'moods' && <MoodBrowser />}
+        {tab === 'moods' && (
+          <>
+            <div className="mb-6">
+              <GardenMoodLine />
+            </div>
+            <FlowControl />
+            <MoodBrowser />
+          </>
+        )}
         {tab === 'sound' && <SoundTab />}
         {tab === 'persona' && <PersonaTab />}
       </div>

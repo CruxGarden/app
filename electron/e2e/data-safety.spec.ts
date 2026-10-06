@@ -1,3 +1,6 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { closeWorkspace } from './journeys/journey-helpers';
+import { togglePanel, showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -30,8 +33,7 @@ async function armBlobCapture(page: Page) {
 /** Open a pane if it is closed; never toggle an open one shut. */
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
@@ -48,6 +50,14 @@ async function lastBlob(page: Page): Promise<Buffer> {
   return Buffer.from(b64, 'base64');
 }
 
+/** Settings → Garden, as a pane: open it and expand the Garden section once. */
+async function openGardenSettings(page: Page) {
+  const settings = await showPane(page, 'Settings');
+  if (!(await settings.getByRole('button', { name: 'Wipe garden' }).isVisible()))
+    await settings.locator('h2', { hasText: /^Garden$/ }).click();
+  return settings;
+}
+
 test.describe('data safety: export, import, wipe, restore', () => {
   test.setTimeout(240_000);
 
@@ -55,9 +65,11 @@ test.describe('data safety: export, import, wipe, restore', () => {
     const dir = mkdtempSync(join(tmpdir(), 'crux-archives-'));
     const { app, page } = await launchApp();
     try {
+      // A restored layout brings every pane back; give them room to show their contents.
+      await page.setViewportSize({ width: 2000, height: 1200 });
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -78,15 +90,12 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await page.getByRole('button', { name: 'Toggle history' }).click();
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
-      const label = page.getByPlaceholder('Label (optional)');
-      await label.fill('v1');
-      await label.press('Enter');
-      await expect(page.getByText('v1', { exact: true })).toBeVisible({ timeout: 30_000 });
+        await togglePanel(page, 'Toggle growth');
+      const history = page.getByTestId('pane-body-history');
+      await history.getByRole('button', { name: 'Mark version', exact: true }).click();
+      await history.getByPlaceholder('Label (optional)').fill('v1');
+      await history.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(history.getByText('v1', { exact: true })).toBeVisible({ timeout: 30_000 });
 
       await armBlobCapture(page);
 
@@ -97,7 +106,7 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await page.getByRole('button', { name: 'Toggle export' }).click();
+        await togglePanel(page, 'Toggle export');
       await page.getByRole('button', { name: 'Export Crux' }).click();
       const blobs = () =>
         page.evaluate(() => (window as unknown as { __blobs: Blob[] }).__blobs.length);
@@ -106,71 +115,64 @@ test.describe('data safety: export, import, wipe, restore', () => {
       writeFileSync(cruxFile, await lastBlob(page));
 
       // ── Export the garden (.garden) ──
-      await page.keyboard.press('ControlOrMeta+,');
-      await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-      await page.locator('h2', { hasText: /^Garden$/ }).click();
-      await page.getByRole('button', { name: 'Export garden' }).click();
-      await expect(page.getByText('Export complete')).toBeVisible({ timeout: 60_000 });
+      const settings = await showPane(page, 'Settings');
+      await settings.locator('h2', { hasText: /^Garden$/ }).click();
+      await settings.getByRole('button', { name: 'Export garden' }).click();
+      await expect(settings.getByText('Export complete')).toBeVisible({ timeout: 60_000 });
       await expect.poll(blobs, { timeout: 30_000 }).toBe(2);
       const gardenFile = join(dir, 'garden.garden');
       writeFileSync(gardenFile, await lastBlob(page));
-      await page.keyboard.press('Escape');
+      await hidePane(page, 'Settings');
 
       // ── Import the .crux as a copy: a second crux with the same file ──
-      await page.getByRole('banner').getByRole('button').first().click();
+      // Close the first workspace from the switcher (its Home card stays);
+      // the switcher lists open workspaces by the Garden's members, so each
+      // one is closed from inside it.
+      await closeWorkspace(page, 'My Crux');
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       await page.getByRole('button', { name: 'Add Crux' }).click();
       const [chooser] = await Promise.all([
         page.waitForEvent('filechooser'),
-        page.getByRole('button', { name: 'Import .crux file' }).click(),
+        page.getByRole('button', { name: 'Import Crux, tool or Mood' }).click(),
       ]);
       await chooser.setFiles(cruxFile);
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
+      await expect(page.getByRole('button', { name: 'Add panel' })).toBeVisible({
         timeout: 60_000,
       });
       await ensurePane(page, 'artifacts', 'Toggle artifacts');
       await expect(page.getByRole('tree').getByText('index.html')).toBeVisible({ timeout: 30_000 });
-      await page.getByRole('banner').getByRole('button').first().click();
-      await expect(page.getByRole('button', { name: /^Open My Crux/ })).toHaveCount(2, {
-        timeout: 15_000,
-      });
 
-      // ── Wipe the garden: refused while workspaces are open (ADR 0018), then typed confirmation ──
-      await page.keyboard.press('ControlOrMeta+,');
-      await page.locator('h2', { hasText: /^Garden$/ }).click();
+      // ── Wipe the garden: refused while a workspace is open (ADR 0018), then typed confirmation ──
+      await openGardenSettings(page);
       await expect(page.getByRole('button', { name: 'Wipe garden' })).toBeDisabled();
       await page.getByPlaceholder('delete me').fill('delete me');
       await page.getByRole('button', { name: 'Wipe garden' }).click();
       await expect(page.getByText(/Close all open Crux workspaces/)).toBeVisible({
         timeout: 15_000,
       });
+      // The successful .garden export is still recent, so no duplicate copy offer is needed.
+      await expect(
+        page.getByRole('button', { name: 'Wipe without a copy', exact: true }),
+      ).toHaveCount(0);
       await page.keyboard.press('Escape');
-      // close both workspaces from the switcher
+      await hidePane(page, 'Settings');
+      // The imported copy is the active workspace; the switcher offers
+      // "Close current workspace" for it (its title is shared with the original).
       await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
-      for (let i = 0; i < 2; i++) {
-        await page
-          .getByRole('button', { name: /^Close .* workspace$/ })
-          .first()
-          .click();
-        const closeDlg = page.getByRole('dialog', { name: 'Close workspace' });
-        if (await closeDlg.isVisible().catch(() => false))
-          await page.getByRole('button', { name: 'Save and close', exact: true }).click();
-        await page.waitForTimeout(500);
-        if (
-          i === 0 &&
-          !(await page
-            .getByRole('button', { name: /^Close .* workspace$/ })
-            .first()
-            .isVisible()
-            .catch(() => false))
-        )
-          await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
-      }
-      await page.keyboard.press('Escape');
-      await page.keyboard.press('ControlOrMeta+,');
-      await page.locator('h2', { hasText: /^Garden$/ }).click();
+      await page.getByRole('button', { name: 'Close current workspace', exact: true }).click();
+      const closing = page.getByRole('dialog', { name: 'Close workspace' });
+      await expect(closing).toBeVisible();
+      await closing.getByRole('button', { name: 'Save and close', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /^Open My Crux/ })).toHaveCount(2, {
+        timeout: 15_000,
+      });
+      await openGardenSettings(page);
       await page.getByPlaceholder('delete me').fill('delete me');
       await page.getByRole('button', { name: 'Wipe garden' }).click();
+      await expect(
+        page.getByRole('button', { name: 'Wipe without a copy', exact: true }),
+      ).toHaveCount(0);
       await expect(page.getByRole('button', { name: /enter/i })).toBeVisible({ timeout: 60_000 });
 
       // ── Restore from the .garden file: the crux is back, with its file ──
@@ -196,8 +198,10 @@ test.describe('data safety: export, import, wipe, restore', () => {
           .isVisible()
           .catch(() => false))
       )
-        await page.getByRole('button', { name: 'Toggle history' }).click();
-      await expect(page.getByText('v1', { exact: true })).toBeVisible({ timeout: 30_000 });
+        await togglePanel(page, 'Toggle growth');
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
+      ).toBeVisible({ timeout: 30_000 });
     } finally {
       await app.close();
     }

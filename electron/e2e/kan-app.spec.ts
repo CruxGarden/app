@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 const PIXEL = Buffer.from(
@@ -170,7 +170,7 @@ test('Kan boards, attachments, agent cards, conflicts, restart, complete import 
   const second = await launchApp({ dir: first.dir });
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = await ready(second.page);
     await expect(frame.getByText('Compose the theme', { exact: true })).toBeVisible();
     await frame.getByText('Draw the hero sprite', { exact: true }).click();

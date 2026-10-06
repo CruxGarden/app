@@ -1,9 +1,15 @@
-import { type ReactNode, useEffect } from 'react';
+import { useModalFocus } from '@/hooks/useModalFocus';
+import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { iconButtonClass } from './button-class';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { AnimatePresence, motion } from 'motion/react';
 import Panel from './Panel';
 import { useMotionRole } from '@/hooks/useMotionRole';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
+import { usePlasmaOn } from '@/components/plasma/usePlasmaOn';
+import { useFlatChrome } from '@/components/plasma/useFlatChrome';
+import { FORMING_ATTR } from '@cruxgarden/plasma-ui';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'screen' | 'full';
 
@@ -29,12 +35,16 @@ interface ModalProps {
   subtitle?: string;
   /**
    * Stacking layer. App-level confirm/alert/choice dialogs (DialogHost) use
-   * 'top' so they sit above whatever modal asked the question — Settings,
+   * 'top' so they sit above whatever modal asked the question — an export,
    * a pull, a delete — and stay clickable.
    */
   layer?: 'base' | 'top';
   /** Remove inner content padding (e.g. for edge-to-edge layouts) */
   flush?: boolean;
+  /** Names the dialog when it has no visible title. */
+  'aria-label'?: string;
+  /** `alertdialog` for something the person must answer before going on. */
+  role?: 'dialog' | 'alertdialog';
 }
 
 /**
@@ -53,19 +63,25 @@ export default function Modal({
   subtitle,
   layer = 'base',
   flush,
+  'aria-label': ariaLabel,
+  role: dialogRole = 'dialog',
 }: ModalProps) {
+  const titleId = useId();
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     if (!open) return;
     const token = Symbol('modal');
     openModals.push(token);
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return;
+      if (dialogRef.current?.closest('[inert]')) return;
       if (openModals[openModals.length - 1] !== token) return;
       // This Escape belongs to the modal: don't let global shortcuts (Shell's
       // Escape → Keeper console) or a modal underneath also fire on the same keypress.
       e.stopPropagation();
       e.preventDefault();
-      onClose();
+      closeRef.current();
     };
     // Capture phase on window: first to see the key, ahead of every other handler.
     window.addEventListener('keydown', handler, true);
@@ -74,14 +90,21 @@ export default function Modal({
       const i = openModals.indexOf(token);
       if (i >= 0) openModals.splice(i, 1);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   // The Mood's dialog motion (ADR 0041): Motion plays the enter on mount and the exit before unmount
   const role = useMotionRole('dialog');
+  // Under the Plasma theme the panel is drawn by a second canvas above the scrim (PlasmaOverlay).
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(dialogRef, open, layer === 'top' ? 70 : 50);
+  // Flat chrome: a plain plate, so the contents need not wait for any material.
+  const flat = useFlatChrome();
+  const plasma = usePlasmaOn() && !flat;
 
   // Rendered at <body>: a dialog inside a glass surface would otherwise be trapped by the
   // panel's backdrop-filter, which makes that panel the containing block of `fixed` children
-  // (the Create Cruxspace dialog was clipped to the Cruxspaces section's height, ADR 0043).
+  // (a Garden's New Garden dialog was clipped to its section's height, ADR 0043).
   if (typeof document === 'undefined') return null;
   return createPortal(
     <AnimatePresence>
@@ -95,7 +118,21 @@ export default function Modal({
           )}
         >
           <div className="absolute inset-0 modal-scrim" onClick={onClose} />
+          <PlasmaOverlay surface={panelRef} />
           <motion.div
+            // The base owns this: a modal is a dialog, it traps the reader
+            // the way the scrim traps the pointer, and it is named by its own
+            // heading. Panels inside a Modal must not declare the role again —
+            // a dialog inside a dialog names neither.
+            ref={dialogRef}
+            tabIndex={-1}
+            role={dialogRole}
+            aria-modal="true"
+            {...(title
+              ? { 'aria-labelledby': titleId }
+              : ariaLabel
+                ? { 'aria-label': ariaLabel }
+                : {})}
             data-motion-role="dialog"
             data-motion-choice={role.choice.enter}
             data-motion-exit={role.choice.exit}
@@ -105,6 +142,11 @@ export default function Modal({
             className={cn('relative z-10 flex', SIZE_CLASSES[size])}
           >
             <Panel
+              ref={panelRef}
+              // Marked as forming from the first paint, so the contents never
+              // show before the material: the overlay's renderer clears the
+              // mark when the surface has formed, or at once if it cannot draw.
+              {...(plasma ? { [FORMING_ATTR]: '' } : {})}
               padding="md"
               className={cn(
                 'flex flex-col w-full h-full',
@@ -114,14 +156,24 @@ export default function Modal({
               )}
             >
               {title && (
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-5">
                   <div>
-                    <h2 className="font-display text-sm font-medium text-accent">{title}</h2>
+                    <h2
+                      id={titleId}
+                      className="font-medium text-accent leading-tight"
+                      style={{
+                        fontFamily: 'var(--dialog-title-font)',
+                        fontSize: 'var(--dialog-title-size)',
+                      }}
+                    >
+                      {title}
+                    </h2>
                     {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
                   </div>
                   <button
+                    type="button"
                     onClick={onClose}
-                    className="text-text-muted hover:text-text cursor-pointer"
+                    className={iconButtonClass('sm', false, '-mr-1.5')}
                     aria-label="Close"
                   >
                     <svg
@@ -142,7 +194,7 @@ export default function Modal({
               )}
               <div
                 className={cn(
-                  'flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)] border border-border',
+                  'flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/(--tint-balanced) rounded-[var(--radius-sm)] border border-border',
                   !flush && 'p-4',
                 )}
               >

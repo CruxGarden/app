@@ -1,0 +1,26 @@
+[
+  {
+    "name": "write-fixture",
+    "ms": 853
+  },
+  {
+    "name": "wait-for-ingestion",
+    "ms": 35227
+  },
+  {
+    "name": "browse-and-open",
+    "ms": 2155
+  },
+  {
+    "name": "snapshot",
+    "ms": 5509
+  },
+  {
+    "name": "export",
+    "ms": 7318
+  },
+  {
+    "name": "fresh-import",
+    "ms": 40342
+  }
+]

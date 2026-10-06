@@ -89,6 +89,15 @@ export default function UsageSection({
             </span>
           </div>
         )}
+        {usage.fnCalls > 0 && (
+          <div className="flex items-baseline justify-between gap-2 text-xxs">
+            <span className="text-text">Functions</span>
+            <span className="font-mono text-text-muted">
+              {usage.fnCalls.toLocaleString()} run{usage.fnCalls === 1 ? '' : 's'} ·{' '}
+              {(usage.fnMs / 1000).toFixed(1)} s
+            </span>
+          </div>
+        )}
         {!account.bandwidthAsOf && (
           <p className="text-xxs text-text-muted">Bandwidth updates as visits are counted.</p>
         )}

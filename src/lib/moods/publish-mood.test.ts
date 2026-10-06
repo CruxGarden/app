@@ -1,3 +1,4 @@
+import { hashContent } from '@/services/sqlite/helpers';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   publishMood,
@@ -7,7 +8,7 @@ import {
 } from './publish-mood';
 import { captureCurrentMood, getInstalledMoods, exportMoodPackage } from './packages';
 import { addAsset } from './assets';
-import type { Crux } from '@/api/types';
+import type { Artifact, Crux } from '@/api/types';
 import { initServices } from '@/services';
 import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -42,7 +43,7 @@ function fakeServices() {
       async findByResource(_t: string, id: string) {
         return artifacts
           .filter((a) => a.resourceId === id)
-          .map((a) => ({ id: a.id, meta: { path: a.path } }));
+          .map((a) => ({ ...a, meta: { path: a.path } }) as unknown as Artifact);
       },
       async create(input: Record<string, unknown>) {
         artifacts.push({
@@ -60,7 +61,8 @@ function fakeServices() {
           blob: input.blob as Blob,
         });
       },
-      async delete(id: string) {
+      async delete(file: Artifact) {
+        const id = file.id;
         const i = artifacts.findIndex((a) => a.id === id);
         if (i >= 0) artifacts.splice(i, 1);
       },
@@ -78,18 +80,21 @@ describe('publishing a Mood', () => {
   });
 
   it('writes the package, manifest, preview and cover; republish rewrites', async () => {
-    addAsset({ fingerprint: 'cov', name: 'cover.jpg', type: 'image/jpeg', size: 3 });
-    setSetting(SettingsKey.MoodCover, 'cov');
+    const cover = await hashContent(new Uint8Array([1, 2, 3]));
+    addAsset({ fingerprint: cover, name: 'cover.jpg', type: 'image/jpeg', size: 3 });
+    setSetting(SettingsKey.MoodCover, cover);
     const pkg = captureCurrentMood({ name: 'Sea Glass', author: 'tester' });
     expect(moodSummary(pkg).cover).toBe('cover.jpg');
     expect(moodPreviewHtml(pkg)).toContain('src="cover.jpg"');
 
     const f = fakeServices();
-    const blobs = new Map([['cov', new Uint8Array([1, 2, 3])]]);
+    const blobs = new Map([[cover, new Uint8Array([1, 2, 3])]]);
     let publishedArtifacts = 0;
+    let reads = 0;
     const deps = {
       services: async () => f.services,
       readBlob: async (fp: string) => {
+        reads++;
         const b = blobs.get(fp);
         if (!b) throw new Error('missing ' + fp);
         return b;
@@ -102,6 +107,7 @@ describe('publishing a Mood', () => {
     };
     const out = await publishMood(pkg, deps);
     expect(out.publishedCruxId).toBe('crux-1');
+    expect(reads).toBe(1); // cover preview uses the same verified archive bytes
     expect(out.publishedAt).toBe('2026-09-03T00:00:00.000Z');
     const paths = f.artifacts.map((a) => a.path).sort();
     expect(paths).toEqual(['cover.jpg', 'index.html', 'mood.cruxmood', 'mood.json']);
@@ -116,6 +122,17 @@ describe('publishing a Mood', () => {
     await publishMood(out, deps);
     expect(f.cruxes.size).toBe(1);
     expect(f.artifacts.filter((a) => a.resourceId === 'crux-1')).toHaveLength(4);
+    const saved = [...f.artifacts];
+    await expect(
+      publishMood(out, {
+        ...deps,
+        readBlob: async () => {
+          throw new Error('Unavailable');
+        },
+      }),
+    ).rejects.toThrow('Mood asset');
+    expect(f.artifacts).toEqual(saved);
+    expect(f.cruxes.size).toBe(1);
   });
 
   it('installs from a published package (published file first, API fallback)', async () => {
@@ -167,5 +184,49 @@ describe('publishing a Mood', () => {
     );
     expect(apiAsked).toBe(1);
     expect(viaApiAfterJunk?.publishedCruxId).toBe('c11');
+  });
+
+  it('shares link-only when asked, keeps that choice on update, and stamps a revision', async () => {
+    const pkg = captureCurrentMood({ name: 'Quiet Room' });
+    const f = fakeServices();
+    let clock = 0;
+    const deps = {
+      services: async () => f.services,
+      readBlob: async () => new Uint8Array(),
+      publish: async (crux: Crux) => crux,
+      now: () => `2026-10-0${++clock}T00:00:00.000Z`,
+    };
+    const out = await publishMood(pkg, { ...deps, discoverable: false });
+    const crux = () => f.cruxes.get(out.publishedCruxId!)!;
+    expect(crux().discoverable).toBe(false);
+    const first = (crux().meta as { mood: { revision?: string } }).mood.revision;
+    expect(first).toBeTruthy();
+    await publishMood(out, deps); // no choice given: keeps link-only
+    expect(crux().discoverable).toBe(false);
+    expect((crux().meta as { mood: { revision?: string } }).mood.revision).not.toBe(first);
+    await publishMood(out, { ...deps, discoverable: true });
+    expect(crux().discoverable).toBe(true);
+  });
+
+  it('remembers where an installed Mood came from, for update notices', async () => {
+    const pkg = captureCurrentMood({ name: 'Sourced Mood' });
+    const zip = await exportMoodPackage(pkg, async () => new Uint8Array());
+    const installed = await installMoodFromPublished(
+      { id: 'c20', slug: 'sourced', author_username: 'bo', meta: { mood: { revision: 'r7' } } },
+      {
+        publishBaseUrl: () => 'https://nowhere',
+        fetchBlob: async () => zip,
+        apiArtifacts: async () => [],
+        apiDownload: async () => zip,
+        putBlob: async () => 'fp',
+      },
+    );
+    const { moodSources } = await import('@/services/update-notices');
+    expect(moodSources()[installed!.id]).toEqual({
+      publishedCruxId: 'c20',
+      author: 'bo',
+      slug: 'sourced',
+      revision: 'r7',
+    });
   });
 });

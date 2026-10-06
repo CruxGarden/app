@@ -28,7 +28,7 @@ import { GARDEN_DARK } from './garden-dark';
  * A bare `'tokenKey'` string literal is NOT consumption (it matched generic
  * words like 'title' or 'link'), and neither is a mention inside a comment.
  *
- * A token nothing reads is a lie in the Mood Builder and in set_theme.
+ * A token nothing reads is a lie in the Mood pane and in set_theme.
  */
 
 const SRC = join(__dirname, '..', '..');
@@ -130,7 +130,7 @@ describe('token coverage', () => {
     /^(bloom\d|bloom(Opacity|Blur|Speed)|star[A-Z]\w*|drift[A-Z]\w*|flow(Speed|Color|Bg))$/;
   // Per-pane tokens are rebound by pattern in globals.css and read in TopBar via template strings.
   const paneRe =
-    /^pane(Collaboration|Artifacts|Workshop|Details|History|Export|Sync|Publish|Store)([A-Z].*)$/;
+    /^pane(Collaboration|Artifacts|Workshop|Details|History|Export|Sync|Publish|Store|Tasks|Mood|Synth|Browser|Settings|Explore)([A-Z].*)$/;
 
   // Font-face slots are read by key: lib/moods/assets.ts maps them to the
   // @font-face family it registers (FONT_FACE_FAMILIES), not to a CSS variable.
@@ -145,6 +145,8 @@ describe('token coverage', () => {
     }
     const v = `--${kebab(k)}`;
     if (corpus.includes(`var(${v})`)) return true;
+    // Tailwind 4 color opacity modifiers consume the CSS variable directly.
+    if (tsCorpus.includes(`/(${v})`)) return true;
     // A choice token read by a style query — `@container style(--motion-press: sink)` (motion.css)
     if (corpus.includes(`style(${v}:`)) return true;
     if (tokenValues.includes(`var(${v})`)) return true;

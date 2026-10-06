@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-02",
+  "stage": "AR06 required native Task commands and duplicate write retirement",
+  "base": "a86edc43589a4c4fc35ed408feb267562cabbd78",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "verification": {
+    "focused": {
+      "passed": 51,
+      "suites": 5,
+      "log": "/tmp/task-command-focused-final.log"
+    },
+    "app": {
+      "passed": 1681,
+      "skipped": 18,
+      "files": 273,
+      "build": true,
+      "log": "/tmp/task-command-app-verify.log"
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1,
+      "hostSourceUnchanged": false,
+      "log": "/tmp/task-command-electron-accepted.log"
+    },
+    "desktop": {
+      "status": "passed",
+      "log": "/tmp/task-command-desktop-final.log",
+      "command": "npm run test:e2e -- e2e/task-create-command.spec.ts e2e/task-setup-command.spec.ts e2e/task-lifecycle-command.spec.ts e2e/task-review-command.spec.ts e2e/task-merge-command.spec.ts e2e/task-source-review.spec.ts e2e/task-base-restored-main.spec.ts e2e/delegated-copies.spec.ts --project=desktop",
+      "baseline": {
+        "passed": 7,
+        "failed": 2,
+        "duration": "5.3m",
+        "log": "/tmp/task-command-desktop.log",
+        "findings": [
+          "Setup recovery navigates obsolete crux-app://app origin and loses its recovery UI after restart.",
+          "Source-Task review trace shows the same obsolete navigation followed by a missing Review changes button and close/worker teardown timeout."
+        ]
+      },
+      "replayLog": "/tmp/task-command-desktop-replay.log",
+      "replay": {
+        "passed": 2,
+        "duration": "30.9s",
+        "log": "/tmp/task-command-desktop-accepted.log",
+        "command": "npm run test:e2e -- e2e/task-setup-command.spec.ts e2e/task-source-review.spec.ts --project=desktop"
+      },
+      "passed": 9,
+      "duration": "2.2m"
+    },
+    "inventory": {
+      "literalSqlMutationsBefore": 47,
+      "literalSqlMutationsAfter": 36,
+      "literalKeys": 95,
+      "log": "/tmp/task-command-inventory-final.log"
+    }
+  },
+  "changes": [
+    "A small Task command boundary requires the complete native lifecycle and file-content port before opening or settling workspaces, changing metadata or stopping a review runtime. Missing authority refuses instead of selecting a second implementation.",
+    "Removed snapshot-based Task creation/review/merge, renderer copy/store provisioning, raw review journals, archive/reopen SQL, folder/setup writes and metadata CAS fallback. Native admission, revision checks, retained states, projection/recovery and participating-turn handling remain.",
+    "Task indexing and projection require native file-content storage. Indexing still serializes with watcher ingestion and preserves stable file identity/attributes. Existing host capture/materialization compatibility remains outside this storage-command slice.",
+    "Three Task metadata tests use actual native commands; mutable queued patches, concurrent updates, commit notification, a real SQLite failure/retry and reserved-field/title/revision persistence across restart are covered.",
+    "Fingerprint registration and watcher/index ordering now use actual native manifests. The watcher timing case moves into a separate suite so cached SQL.js services cannot hide an empty native index. All existing assertion purposes remain.",
+    "Two new native safety cases refuse incomplete setup before any workspace/copy/Growth is created and refuse absent merge authority without changing checked review/candidate/Main content; restoring authority permits successful retry.",
+    "Net production reduction259 lines, including the new24-line command boundary and four-line native host recovery correction. Reviewed literal renderer SQL mutations47 to36;95 literal keys remain classified.",
+    "Two desktop journeys now navigate relative to their actual app origin rather than the obsolete crux-app://app host; no production origin or IPC trust policy changed.",
+    "Reproduced failed-Task folder-registration loss on actual restart: native folderExists returned false for an existing committed folder, so recovery bypassed unexpected-file refusal and allocated another folder. Bootstrap now registers ready/preparing/failed Task folders but watches only ready copies. Native recovery refuses without moving the folder or changing phase; retry preserves both expected and externally preserved files through another restart."
+  ],
+  "limits": [
+    "This completes only the Task command/write cutover; AR06 is unfinished. The client interface remains optional during migration of remaining workflows.",
+    "Working Copy/history read compatibility and SQL.js deletion/detail fixtures remain for the next native reader slice. Garden/settings/ingestion/other service fallbacks and worker/schema/test setup still remain.",
+    "Workspace-operation ownership, sequential selected-Garden admission coordination and runtime disposal remain separate AR07-AR09 work.",
+    "API/runtime, real Garden, manual candidate and unrelated changes are preserved. No merge/deploy/live publication/payment/email occurred; fresh-head Windows/Linux CI requires separate acceptance."
+  ],
+  "priorNativeCI": {
+    "head": "a86edc43589a4c4fc35ed408feb267562cabbd78",
+    "run": 36986820000,
+    "windows": "success",
+    "linux": "success",
+    "jobStatusInspected": true
+  },
+  "fixtureCorrections": [
+    "Initial native registration probe expected the retired backend error wording; updated to the actual Missing content refusal.",
+    "A native indexing case initially shared a module with cached SQL.js services, returning an empty Artifact index; moved its meaningful assertions to an independently initialized native suite."
+  ],
+  "baselines": [
+    {
+      "log": "/tmp/task-command-desktop-replay.log",
+      "passed": 1,
+      "failed": 1,
+      "finding": "After obsolete-origin correction, source-Task review passed; setup recovery still accepted unexpected work instead of refusing."
+    },
+    {
+      "log": "/tmp/task-command-setup-registration-red.log",
+      "finding": "Actual restart probe reports folderExists false for the committed failed-Task folder that remains on disk."
+    }
+  ],
+  "nativeCI": {
+    "head": "05d1bf27dc6e01e84c86fbf455ff985512edefd9",
+    "run": 37019538713,
+    "windows": "success",
+    "linux": "success",
+    "jobStatusInspected": true
+  }
+}

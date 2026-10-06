@@ -1,33 +1,43 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import PublicLoading from '@/components/display/PublicLoading';
+import { PublicApiError } from '@/api/public';
+import DeadEnd from '@/components/layout/DeadEnd';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
-import { GardenGrid, GardenSearch } from '@/components/garden';
-import { Button } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import PublishedCreationCard from '@/components/explore/PublishedCreationCard';
+import { Avatar, Button, Panel, SegmentedControl, fieldClass, buttonClass } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
+import { canonicalUrl, usePageMeta } from '@/hooks/usePageMeta';
+import { metaDescription } from '@/lib/page-meta';
+import { PublicFooter } from '@/components/public/LegalLinks';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
 
-async function loadAuthorData(username: string): Promise<{ author: Author; cruxes: Crux[] }> {
-  const [author, cruxData] = await Promise.all([
-    publicApi.getAuthor(username),
-    publicApi.getAuthorCruxes(username, { page: 1, perPage: 1000 }),
-  ]);
-  return { author, cruxes: cruxData.cruxes };
-}
-
 export default function PublicGarden() {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
 
   const [author, setAuthor] = useState<Author | null>(null);
   const [cruxes, setCruxes] = useState<Crux[]>([]);
   const [state, setState] = useState<LoadState>('loading');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
+  const request = useRef<AbortController | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [search, setSearch] = useState('');
+  const [kind, setKind] = useState('all');
+  const [fullBio, setFullBio] = useState(false);
   const [sortBy, setSortBy] = useState<SortField>('created');
+
+  useEffect(() => {
+    setKind('all');
+  }, [username]);
 
   useEffect(() => {
     if (!username) {
@@ -35,19 +45,32 @@ export default function PublicGarden() {
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
+    request.current = controller;
+    setMoreLoading(false);
+    setMoreFailed(false);
+    setState('loading');
+    setAuthor(null);
+    setCruxes([]);
+    setSearch('');
+    setFullBio(false);
 
     // Load from API only — no local database access on public pages
-    loadAuthorData(username)
-      .then((data) => {
-        if (cancelled) return;
-        setAuthor(data.author);
+    Promise.all([
+      publicApi.getAuthor(username, controller.signal),
+      publicApi.getAuthorCruxes(username, { page: 1, perPage: 24, kind }, controller.signal),
+    ])
+      .then(([author, data]) => {
+        if (controller.signal.aborted) return;
+        setAuthor(author);
         setCruxes(data.cruxes);
+        setCurrentPage(data.currentPage);
+        setTotalPages(data.totalPages);
         setState('ready');
       })
       .catch((err) => {
-        if (cancelled) return;
-        if (err.message?.includes('404') || err.message?.includes('not found')) {
+        if (controller.signal.aborted) return;
+        if (err instanceof PublicApiError && err.status === 404) {
           setState('not-found');
         } else {
           setState('error');
@@ -55,61 +78,91 @@ export default function PublicGarden() {
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [username]);
+  }, [username, attempt, kind]);
 
-  useEffect(() => {
-    if (author?.username) {
-      document.title = `${author.username} - ${APP_NAME}`;
+  const loadMore = async () => {
+    const controller = request.current;
+    if (!username || !controller || controller.signal.aborted || moreLoading) return;
+    setMoreLoading(true);
+    setMoreFailed(false);
+    try {
+      const data = await publicApi.getAuthorCruxes(
+        username,
+        { page: currentPage + 1, perPage: 24, kind },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      if (data.currentPage !== currentPage + 1) throw new Error('Unexpected page');
+      setCruxes((previous) => [
+        ...new Map([...previous, ...data.cruxes].map((c) => [c.id, c])).values(),
+      ]);
+      setCurrentPage(data.currentPage);
+      setTotalPages(data.totalPages);
+    } catch {
+      if (!controller.signal.aborted) setMoreFailed(true);
+    } finally {
+      if (!controller.signal.aborted) setMoreLoading(false);
     }
-    return () => {
-      document.title = APP_NAME;
-    };
-  }, [author?.username]);
+  };
 
-  const linkBuilder = useCallback((crux: Crux) => `/${username}/${crux.slug}`, [username]);
+  const avatarUrl = resolveAvatarUrl(author);
+  usePageMeta(
+    author?.username && state === 'ready'
+      ? {
+          title: `${author.displayName || author.username} (@${author.username}) — ${APP_NAME}`,
+          description:
+            metaDescription(author.bio) ??
+            `Creations published by @${author.username} on ${APP_NAME}.`,
+          canonical: canonicalUrl(`/${author.username}`),
+          image: avatarUrl && /^https?:/.test(avatarUrl) ? avatarUrl : undefined,
+        }
+      : null,
+  );
 
   // Client-side search + sort
   const filteredCruxes = useMemo(() => {
     const needle = search.toLowerCase();
+    const matching = cruxes.filter(
+      (c) =>
+        kind === 'all' ||
+        (kind === 'creations' ? c.kind !== 'tool' && c.kind !== 'mood' : c.kind === kind),
+    );
     const filtered = needle
-      ? cruxes.filter(
+      ? matching.filter(
           (c) =>
             (c.title || '').toLowerCase().includes(needle) ||
             (c.slug || '').toLowerCase().includes(needle) ||
             (c.description || '').toLowerCase().includes(needle),
         )
-      : cruxes;
+      : matching;
     return [...filtered].sort(
       (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
     );
-  }, [cruxes, search, sortBy]);
+  }, [cruxes, search, sortBy, kind]);
 
-  const avatarUrl = resolveAvatarUrl(author);
   if (state === 'loading') {
-    return <div className="min-h-screen bg-bg" />;
+    return <PublicLoading label="Loading creator…" username={username} />;
   }
 
   if (state === 'not-found') {
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="relative z-10 text-center">
-          <h1 className="font-display text-4xl font-bold text-text mb-2">Not found</h1>
-          <p className="text-text-muted">This author doesn't exist</p>
-        </div>
-      </div>
+      <Missing
+        title="Creator not found"
+        body={`There is no @${username?.replace(/^@/, '')} at this address.`}
+      />
     );
   }
 
   if (state === 'error') {
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="relative z-10 text-center">
-          <h1 className="font-display text-4xl font-bold text-text mb-2">Something went wrong</h1>
-          <p className="text-text-muted">We couldn't load this profile</p>
-        </div>
-      </div>
+      <DeadEnd title="Couldn't reach this creator" body="Check your connection and try again.">
+        <Button onClick={() => setAttempt((value) => value + 1)}>Try again</Button>
+        <Link to="/explore" className={buttonClass('ghost', 'sm')}>
+          Explore Home
+        </Link>
+      </DeadEnd>
     );
   }
 
@@ -117,64 +170,150 @@ export default function PublicGarden() {
     <div className="flex flex-col min-h-screen">
       <PublicTopBar username={username || ''} />
 
-      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
+      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-6xl mx-auto w-full">
         {/* Header + Search panel */}
-        <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
+        <Panel padding="sm" className="sm:p-5 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20 bg-surface">
-              {avatarUrl && <img src={avatarUrl} alt="" className="w-full h-full object-cover" />}
-            </div>
+            <Avatar
+              url={avatarUrl}
+              initial={(author?.displayName || author?.username || username || '?')
+                .slice(0, 1)
+                .toUpperCase()}
+              className="!w-14 !h-14 !rounded-full"
+            />
             <div className="min-w-0">
               <h1 className="font-display text-lg font-medium text-text truncate">
-                {author?.username || username}
+                {author?.displayName || author?.username || username}
               </h1>
-              <p className="text-sm text-text-muted">Public Garden</p>
+              <p className="text-sm text-text-muted">
+                @{(author?.username || username || '').replace(/^@/, '')} · Published in Explore
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 mt-6">
+          {author?.bio && (
+            <p
+              className={`mt-3 text-sm leading-relaxed text-text-muted whitespace-pre-wrap break-words ${fullBio ? '' : 'line-clamp-3'}`}
+            >
+              {author.bio}
+            </p>
+          )}
+          {(author?.bio?.length ?? 0) > 160 && (
+            <button
+              className={buttonClass('ghost', 'xs', 'mt-1')}
+              aria-expanded={fullBio}
+              onClick={() => setFullBio((value) => !value)}
+            >
+              {fullBio ? 'Show less' : 'Read full bio'}
+            </button>
+          )}
+          <div className="flex flex-wrap items-center gap-3 mt-4">
             <div className="flex-1">
-              <GardenSearch value={search} onChange={setSearch} />
+              <input
+                aria-label="Find a creation on this page"
+                placeholder="Find a creation on this page…"
+                className={fieldClass()}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
             </div>
-            <div className="flex items-center gap-1 text-xs font-mono text-text-muted shrink-0">
-              <span>Sort by</span>
-              <button
-                onClick={() => setSortBy('created')}
-                className={cn(
-                  'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                  sortBy === 'created' ? 'text-text bg-surface' : 'hover:text-text',
-                )}
-              >
-                Created
-              </button>
-              <button
-                onClick={() => setSortBy('updated')}
-                className={cn(
-                  'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                  sortBy === 'updated' ? 'text-text bg-surface' : 'hover:text-text',
-                )}
-              >
-                Updated
-              </button>
-            </div>
+            <SegmentedControl
+              label="Sort by"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'created', label: 'Created' },
+                { value: 'updated', label: 'Updated' },
+              ]}
+              className="h-9 shrink-0"
+            />
           </div>
-        </div>
+        </Panel>
 
+        <p className="text-sm text-text-muted bg-panel border border-panel-border rounded-[var(--radius-md)] px-3 py-2 mb-4">
+          {filteredCruxes.length} {filteredCruxes.length === 1 ? 'creation' : 'creations'} shown.{' '}
+          {currentPage < totalPages &&
+            'Load more below, or search this creator’s published Cruxes.'}{' '}
+          <Link
+            className={buttonClass('ghost', 'sm')}
+            to={`/explore?author=${encodeURIComponent(username?.replace(/^@/, '') ?? '')}`}
+          >
+            Search all by this creator
+          </Link>
+        </p>
+        <SegmentedControl
+          label="Creation kind"
+          value={kind}
+          onChange={setKind}
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'creations', label: 'Creations' },
+            { value: 'tool', label: 'Tools' },
+            { value: 'mood', label: 'Moods' },
+          ]}
+          className="mb-4"
+        />
         {/* Content */}
         {filteredCruxes.length === 0 ? (
-          <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center py-10">
+          <Panel padding="md" className="flex flex-col items-center py-10">
             <p className="text-text-muted text-sm mb-3">
-              {search ? 'No cruxes match your search' : 'No published cruxes yet'}
+              {search || kind !== 'all'
+                ? 'No matching creations on this page'
+                : 'No published cruxes yet'}
             </p>
             {search && (
-              <Button variant="ghost" onClick={() => setSearch('')}>
+              <Button variant="ghost" size="sm" onClick={() => setSearch('')}>
                 Clear search
               </Button>
             )}
-          </div>
+          </Panel>
         ) : (
-          <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} hideMenu />
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-5">
+            {filteredCruxes.map((crux) => (
+              <PublishedCreationCard
+                key={crux.id}
+                crux={{
+                  ...crux,
+                  kind: crux.kind ?? undefined,
+                  title: crux.title ?? undefined,
+                  description: crux.description ?? undefined,
+                  author_username: (author?.username || username || '').replace(/^@/, ''),
+                  author_display_name: author?.displayName || '',
+                  author_meta: author?.meta,
+                  tags: Array.isArray(crux.meta?.tags)
+                    ? crux.meta.tags.filter((tag): tag is string => typeof tag === 'string')
+                    : [],
+                }}
+                activeTags={[]}
+                onTag={(tag) =>
+                  navigate(
+                    `/explore?author=${encodeURIComponent((username || '').replace(/^@/, ''))}&tag=${encodeURIComponent(tag)}`,
+                  )
+                }
+              />
+            ))}
+          </div>
         )}
+        {currentPage < totalPages && (
+          <div className="flex flex-col items-center gap-2 mt-6">
+            {moreFailed && (
+              <p role="alert">Couldn’t load more Cruxes. Your current results are still here.</p>
+            )}
+            <Button disabled={moreLoading} onClick={() => void loadMore()}>
+              {moreLoading
+                ? 'Loading…'
+                : moreFailed
+                  ? 'Try loading more again'
+                  : 'Load more Cruxes'}
+            </Button>
+          </div>
+        )}
+        <PublicFooter className="mt-6" />
       </div>
     </div>
   );
+}
+
+/** The page when there is nothing to show: a missing author, or no answer. */
+function Missing({ title, body }: { title: string; body: string }) {
+  return <DeadEnd title={title} body={body} />;
 }

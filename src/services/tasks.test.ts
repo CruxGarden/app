@@ -1,4 +1,7 @@
-import * as taskFiles from './task-files';
+import { useGardenContext } from '@/stores/gardenContext';
+import { createLocalApiTestClient } from '@/test/local-api-client';
+import { setSqliteClient } from './sqlite/client';
+import * as editHistory from './edit-history';
 import { exportGarden, importGarden } from './garden-io';
 import { cruxUpsertFields, publishPipeline, unpublishPipeline } from './publish';
 import { exportCrux, importCrux } from './crux-io';
@@ -14,6 +17,7 @@ import {
   resumeTaskMerge,
   archiveTask,
   resolveTaskReview,
+  releaseTaskReview,
 } from './tasks';
 import { findWorkingCopy } from './working-copies';
 import {
@@ -27,13 +31,19 @@ import {
 } from '@/stores/workspaceRegistry';
 import { getSqliteClient } from './sqlite/client';
 
+let native: Awaited<ReturnType<typeof createLocalApiTestClient>>;
 beforeEach(async () => {
-  await initServices('local');
+  native = await createLocalApiTestClient();
+  native.installProjectBridge();
+  setSqliteClient(native.client);
+  useGardenContext.getState().initialize(await native.client.enterLocalGarden!());
+  await initServices();
 });
 afterEach(async () => {
   vi.restoreAllMocks();
   for (const w of allWorkspaces()) await closeWorkspace(w.id, { stop: true, documents: 'discard' });
   useWorkspaceRegistry.setState({ entries: [], mru: [], activeId: null, restored: false });
+  await native.client.close();
 });
 const write = (id: string, content: string) =>
   getServices().artifact.create({ resourceId: id, content, meta: { path: 'index.html' } });
@@ -41,17 +51,60 @@ async function read(id: string) {
   const a = (await getServices().artifact.findByResource('crux', id)).find(
     (a) => a.meta?.path === 'index.html',
   )!;
-  return getServices().artifact.readContent(a.id);
+  return getServices().artifact.readContent(a);
 }
 async function fixture() {
   const main = await getServices().crux.create({ title: 'Parallel project' });
   await write(main.id, '<h1>Base</h1>');
   await getServices().store.set(main.id, 'count', 2);
+  await (await openWorkspace(main.id)).data
+    .getState()
+    .createSnapshot({ label: 'Starting Main', silent: true });
   const a = await createTask(main.id, 'Task A');
   const b = await createTask(main.id, 'Task B');
   return { main, a, b };
 }
 describe('parallel tasks', () => {
+  it('refuses an incomplete native Task owner before creating a workspace, Growth or copy', async () => {
+    const main = await getServices().crux.create({ title: 'Unopened Main' });
+    await write(main.id, 'Keep Main');
+    const before = await native.client.export();
+    const command = native.client.finishWorkingCopySetup;
+    native.client.finishWorkingCopySetup = undefined;
+    try {
+      await expect(createTask(main.id, 'Cannot prepare')).rejects.toThrow(
+        'Task storage is unavailable',
+      );
+      expect(allWorkspaces()).toEqual([]);
+      expect(await native.client.all('SELECT id FROM working_copies')).toEqual([]);
+      expect(await native.client.export()).toEqual(before);
+    } finally {
+      native.client.finishWorkingCopySetup = command;
+    }
+    const task = await createTask(main.id, 'Can prepare');
+    expect(task.phase).toBe('ready');
+    expect(await read(task.id)).toBe('Keep Main');
+  });
+  it('refuses missing merge authority before changing a checked review or releasing its candidate', async () => {
+    const { main, a } = await fixture();
+    await write(a.id, 'Checked result');
+    const review = await prepareTaskReview(a.id);
+    await verifyTaskReview(review.id);
+    const before = await native.client.export();
+    const begin = native.client.beginTaskMerge;
+    native.client.beginTaskMerge = undefined;
+    try {
+      await expect(applyTaskReview(review.id)).rejects.toThrow('Task storage is unavailable');
+      await expect(releaseTaskReview(review.id)).rejects.toThrow('Task storage is unavailable');
+      expect(await native.client.export()).toEqual(before);
+      expect(await read(main.id)).toBe('<h1>Base</h1>');
+      expect(await read(review.candidateId)).toBe('Checked result');
+    } finally {
+      native.client.beginTaskMerge = begin;
+    }
+    await applyTaskReview(review.id);
+    expect(await read(main.id)).toBe('Checked result');
+  });
   it('checks a content-only task on an embedded app without rebuilding its editor', async () => {
     const { artifact, crux } = getServices();
     const main = await crux.create({
@@ -111,7 +164,7 @@ describe('parallel tasks', () => {
       await getSqliteClient().get('SELECT id FROM cruxes WHERE id = ?', [a.id]),
     ).toBeUndefined();
   });
-  it('merges a verified task and records both Growth parents; repeat apply is idempotent', async () => {
+  it('merges retained Task state and keeps both captured input versions; repeat apply is idempotent', async () => {
     const { main, a } = await fixture();
     await write(a.id, 'Task result');
     const review = await prepareTaskReview(a.id);
@@ -119,12 +172,12 @@ describe('parallel tasks', () => {
     const result = await applyTaskReview(review.id);
     expect(await read(main.id)).toBe('Task result');
     expect((await findWorkingCopy(a.id))?.phase).toBe('merged');
-    const snapshot = await getServices().crux.findById(result.resultHead!);
-    expect(snapshot.meta?.merge).toMatchObject({
-      sourceHead: review.sourceHead,
-      targetHead: review.targetHead,
-    });
-    expect((await applyTaskReview(review.id)).resultHead).toBe(result.resultHead);
+    expect(result.sourceState).toEqual(review.sourceState);
+    expect(result.targetState).toEqual(review.targetState);
+    expect(result.resultState?.root).toBe(
+      (await getSqliteClient().fileContent!.head(main.id))!.root,
+    );
+    expect((await applyTaskReview(review.id)).resultState).toEqual(result.resultState);
     await expect(write(a.id, 'late')).rejects.toThrow('closed for editing');
   });
   it('refuses a stale review before touching Main', async () => {
@@ -170,8 +223,8 @@ describe('parallel tasks', () => {
     const backup = await exportCrux({ cruxId: main.id });
     expect(backup.failed).toEqual([]);
     const zip = await JSZip.loadAsync(await backup.blob.arrayBuffer());
-    expect(JSON.parse(await zip.file('manifest.json')!.async('text')).version).toBe('2.0');
-    expect(await zip.file('tasks.json')!.async('text')).not.toContain('do-not-resume');
+    expect(JSON.parse(await zip.file('manifest.json')!.async('text')).archiveVersion).toBe(3);
+    expect(await zip.file('graph.json')!.async('text')).not.toContain('do-not-resume');
     const clone = await importCrux({ data: backup.blob, mode: 'clone' });
     expect(await read(clone.cruxId)).toBe('Merged A');
     const { listWorkingCopies } = await import('./working-copies');
@@ -181,43 +234,150 @@ describe('parallel tasks', () => {
     for (const copy of copies) {
       expect([a.id, b.id]).not.toContain(copy.id);
       expect([a.taskId, b.taskId]).not.toContain(copy.taskId);
-      expect(copy.baseSnapshotId).not.toBe(a.baseSnapshotId);
+      expect(copy.baseState!.workspace.parentId).not.toBe(a.baseState!.workspace.parentId);
       const loaded = await openWorkspace(copy.id);
       expect(loaded.cruxId).toBe(clone.cruxId);
     }
-    const merge = (await getServices().dimension.findBySourceAndType(clone.cruxId, 'growth')).at(
-      -1,
-    )!;
-    const meta = (await getServices().crux.findById(merge.targetId)).meta?.merge as {
-      copyId: string;
-      sourceHead: string;
-    };
-    expect(meta.copyId).toBe(copies.find((c) => c.title === 'Task A')!.id);
-    expect(meta.sourceHead).not.toBe(review.sourceHead);
-    expect((await getServices().crux.findById(meta.sourceHead)).meta?.messages).toEqual(
+    const row = await getSqliteClient().get<{ data: string }>(
+      'SELECT data FROM task_merges WHERE crux_id = ? AND phase = ?',
+      [clone.cruxId, 'merged'],
+    );
+    const remapped = JSON.parse(row!.data);
+    expect(remapped.copyId).toBe(copies.find((c) => c.title === 'Task A')!.id);
+    expect(remapped.id).not.toBe(review.id);
+    expect(remapped.sourceState.workspace.messages).toEqual(
       expect.arrayContaining([expect.objectContaining({ content: 'A conversation' })]),
     );
+    expect(remapped.targetState.workspace.parentId).not.toBe(
+      review.targetState!.workspace.parentId,
+    );
   });
-  it('recovers a failure after Growth without creating a second merge checkpoint', async () => {
+  it('keeps prepared content recoverable when both setup completion and failure recording are refused', async () => {
+    const { main } = await fixture();
+    const db = getSqliteClient();
+    vi.spyOn(db, 'finishWorkingCopySetup').mockImplementation(async () => {
+      throw new Error('Setup result refused');
+    });
+    await expect(createTask(main.id, 'Unfinished task')).rejects.toThrow('Setup result refused');
+    const unfinished = await db.get<{ id: string; phase: string; revision: number }>(
+      "SELECT id, phase, revision FROM working_copies WHERE title = 'Unfinished task'",
+    );
+    expect(unfinished?.phase).toBe('preparing');
+    expect(await read(unfinished!.id)).toBe('<h1>Base</h1>');
+    expect(db.finishWorkingCopySetup).toHaveBeenCalledWith(
+      unfinished!.id,
+      unfinished!.revision,
+      'ready',
+    );
+    expect(db.finishWorkingCopySetup).toHaveBeenCalledWith(
+      unfinished!.id,
+      unfinished!.revision,
+      'failed',
+    );
+    vi.mocked(db.finishWorkingCopySetup!).mockRestore();
+    await recoverTaskSetup(unfinished!.id);
+    expect((await findWorkingCopy(unfinished!.id))?.phase).toBe('ready');
+  });
+  it('keeps the original journal when API verification saving fails and retries the check', async () => {
+    const { a } = await fixture();
+    const review = await prepareTaskReview(a.id);
+    const db = getSqliteClient();
+    vi.spyOn(db, 'saveTaskReview').mockImplementation(async () => {
+      throw new Error('Review save refused');
+    });
+    await expect(verifyTaskReview(review.id)).rejects.toThrow('Review save refused');
+    expect(db.saveTaskReview).toHaveBeenCalledWith(expect.any(String), JSON.stringify(review));
+    const row = await db.get<{ data: string }>('SELECT data FROM task_merges WHERE id = ?', [
+      review.id,
+    ]);
+    expect(JSON.parse(row!.data)).toEqual(review);
+    expect((await findWorkingCopy(review.candidateId))?.phase).toBe('ready');
+    vi.mocked(db.saveTaskReview!).mockRestore();
+    expect((await verifyTaskReview(review.id)).verifiedKey).toBeDefined();
+  });
+  it('does not project files or create merge Growth after API admission refusal', async () => {
+    const { main, a } = await fixture();
+    await write(a.id, 'Checked result');
+    const review = await prepareTaskReview(a.id);
+    const verified = await verifyTaskReview(review.id);
+    const db = getSqliteClient();
+    const history = await getServices().dimension.findBySourceAndType(main.id, 'growth');
+    vi.spyOn(db, 'beginTaskMerge').mockImplementation(async () => {
+      throw new Error('Review admission refused');
+    });
+    await expect(applyTaskReview(review.id)).rejects.toThrow('Review admission refused');
+    expect(db.beginTaskMerge).toHaveBeenCalledWith(review.id, JSON.stringify(verified));
+    expect(await read(main.id)).toBe('<h1>Base</h1>');
+    expect(await db.get('SELECT phase FROM task_merges WHERE id = ?', [review.id])).toEqual({
+      phase: 'review',
+    });
+    expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toEqual(history);
+    vi.mocked(db.beginTaskMerge!).mockRestore();
+    await applyTaskReview(review.id);
+    expect(await read(main.id)).toBe('Checked result');
+  });
+  it('retains a usable review when the owning API refuses cancellation', async () => {
+    const { a } = await fixture();
+    const review = await prepareTaskReview(a.id);
+    const db = getSqliteClient();
+    vi.spyOn(db, 'releaseTaskReview').mockImplementation(async () => {
+      throw new Error('Cancel refused');
+    });
+    await expect(releaseTaskReview(review.id)).rejects.toThrow('Cancel refused');
+    expect((await findWorkingCopy(review.candidateId))?.phase).toBe('ready');
+    expect(await db.get('SELECT phase FROM task_merges WHERE id = ?', [review.id])).toEqual({
+      phase: 'review',
+    });
+    vi.mocked(db.releaseTaskReview!).mockRestore();
+    await releaseTaskReview(review.id);
+    expect((await findWorkingCopy(review.candidateId))?.phase).toBe('archived');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
+  });
+  it('keeps the recovery journal after owned finalization refusal and reuses the captured result', async () => {
+    const { main, a } = await fixture();
+    await write(a.id, 'Owned result');
+    const review = await prepareTaskReview(a.id);
+    await verifyTaskReview(review.id);
+    const db = getSqliteClient();
+    vi.spyOn(db, 'completeTaskMerge').mockImplementation(async () => {
+      throw new Error('Journal commit refused');
+    });
+    await expect(applyTaskReview(review.id)).rejects.toThrow('Journal commit refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
+    expect(await db.get('SELECT phase FROM task_merges WHERE id = ?', [review.id])).toEqual({
+      phase: 'applying',
+    });
+    await expect(write(main.id, 'blocked')).rejects.toThrow('recovering');
+    const before = await getServices().dimension.findBySourceAndType(main.id, 'growth');
+    expect(db.completeTaskMerge).toHaveBeenCalledWith(review.id);
+    vi.mocked(db.completeTaskMerge!).mockRestore();
+    await resumeTaskMerge(review.id);
+    expect(await read(main.id)).toBe('Owned result');
+    expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toHaveLength(
+      before.length,
+    );
+  });
+  it('rolls back refused merge completion and retry preserves one captured result', async () => {
     const { main, a } = await fixture();
     await write(a.id, 'Recovered result');
     const review = await prepareTaskReview(a.id);
     await verifyTaskReview(review.id);
-    const db = getSqliteClient();
-    const run = db.run.bind(db);
-    let fail = true;
-    vi.spyOn(db, 'run').mockImplementation(async (sql, params) => {
-      if (fail && sql.includes("SET phase = 'merged'")) {
-        fail = false;
-        throw new Error('Simulated interruption');
-      }
-      return run(sql, params);
-    });
+    const before = await getServices().dimension.findBySourceAndType(main.id, 'growth');
+    await native.faultSql(
+      "CREATE TRIGGER refuse_merge_completion BEFORE UPDATE ON task_merges WHEN NEW.phase = 'merged' BEGIN SELECT RAISE(ABORT, 'Simulated interruption'); END",
+    );
     await expect(applyTaskReview(review.id)).rejects.toThrow('Simulated interruption');
     await expect(write(main.id, 'blocked')).rejects.toThrow('recovering');
-    const before = await getServices().dimension.findBySourceAndType(main.id, 'growth');
+    expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toHaveLength(
+      before.length,
+    );
+    await native.faultSql('DROP TRIGGER refuse_merge_completion');
     await resumeTaskMerge(review.id);
     expect(await read(main.id)).toBe('Recovered result');
+    expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toHaveLength(
+      before.length,
+    );
+    await applyTaskReview(review.id);
     expect(await getServices().dimension.findBySourceAndType(main.id, 'growth')).toHaveLength(
       before.length,
     );
@@ -225,18 +385,19 @@ describe('parallel tasks', () => {
   it('protects task bases before deleting any snapshot Artifacts', async () => {
     const main = await getServices().crux.create({ title: 'History guard' });
     await write(main.id, 'Base');
+    await (await openWorkspace(main.id)).data
+      .getState()
+      .createSnapshot({ label: 'Protected base', silent: true });
     const a = await createTask(main.id, 'Task');
-    const before = await read(a.baseSnapshotId);
+    const before = await read(a.baseState!.workspace.parentId!);
     await expect(
       (await openWorkspace(main.id)).data.getState().removeLatestSnapshot(),
     ).rejects.toThrow('used by a task');
-    expect(await read(a.baseSnapshotId)).toBe(before);
+    expect(await read(a.baseState!.workspace.parentId!)).toBe(before);
   });
   it('recovers setup from its captured base and keeps restored task membership', async () => {
     const { main, a, b } = await fixture();
-    await getSqliteClient().run("UPDATE working_copies SET phase = 'preparing' WHERE id = ?", [
-      a.id,
-    ]);
+    await native.faultSql("UPDATE working_copies SET phase = 'preparing' WHERE id = ?", [a.id]);
     await recoverTaskSetup(a.id);
     expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
     expect(await read(a.id)).toBe('<h1>Base</h1>');
@@ -251,21 +412,106 @@ describe('parallel tasks', () => {
     expect(useWorkspaceRegistry.getState().entries).toHaveLength(0);
     expect(await read(b.id)).toBe('<h1>Base</h1>');
   });
-  it('retries a failed snapshot without duplicating the task transcript', async () => {
-    const { main, a } = await fixture();
+  for (const closeFirst of [false, true])
+    it(`refuses closing during native Task admission, preserving work and permitting quit after completion (close preparation first: ${closeFirst})`, async () => {
+      const main = await getServices().crux.create({
+        title: 'Delayed Task owner',
+        type: 'workspace',
+      });
+      await write(main.id, 'Preserved Main');
+      const workspace = await openWorkspace(main.id);
+      const head = await native.client.fileContent!.head(main.id);
+      let releaseTask!: () => void;
+      let taskEntered!: () => void;
+      const taskGate = new Promise<void>((resolve) => {
+        releaseTask = resolve;
+      });
+      const taskHit = new Promise<void>((resolve) => {
+        taskEntered = resolve;
+      });
+      const create = native.client.createWorkingCopy!;
+      const admission = vi
+        .spyOn(native.client, 'createWorkingCopy')
+        .mockImplementation(async (input) => {
+          taskEntered();
+          await taskGate;
+          return create(input);
+        });
+      let close: Promise<void> | undefined;
+      let releaseClose = () => {};
+      if (closeFirst) {
+        let recoveryEntered!: () => void;
+        const recoveryHit = new Promise<void>((resolve) => {
+          recoveryEntered = resolve;
+        });
+        const recoveryGate = new Promise<void>((resolve) => {
+          releaseClose = resolve;
+        });
+        const recover = workspace.data.getState().recoverFileUpdates;
+        vi.spyOn(workspace.data.getState(), 'recoverFileUpdates').mockImplementationOnce(
+          async (...args) => {
+            recoveryEntered();
+            await recoveryGate;
+            return recover(...args);
+          },
+        );
+        close = closeWorkspace(main.id, { documents: 'save' });
+        // Attach a handler before releasing either operation to avoid an
+        // intentionally refused close becoming an unhandled rejection.
+        void close.catch(() => {});
+        await recoveryHit;
+      }
+      const task = createTask(main.id, 'Delayed Task');
+      await taskHit;
+      expect(workspace.data.getState().closing).toBe(true);
+      releaseClose();
+      await expect(close ?? shutdownWorkspaces('save')).rejects.toThrow(
+        'Wait for this workspace’s task operation to finish before closing.',
+      );
+      expect(allWorkspaces()).toContain(workspace);
+      expect(workspace.data.getState().crux?.id).toBe(main.id);
+      releaseTask();
+      const created = await task;
+      admission.mockRestore();
+      expect(created.phase).toBe('ready');
+      expect(workspace.data.getState().closing).toBe(false);
+      expect(await read(main.id)).toBe('Preserved Main');
+      expect(await read(created.id)).toBe('Preserved Main');
+      expect(await native.client.fileContent!.head(main.id)).toEqual(head);
+      await expect(shutdownWorkspaces('save')).resolves.toBeUndefined();
+      expect(allWorkspaces()).toHaveLength(0);
+      await native.restart();
+      expect(await read(main.id)).toBe('Preserved Main');
+      expect(await read(created.id)).toBe('Preserved Main');
+    });
+  it('refused Task checkpoint retains bytes and conversation; retry records one Growth', async () => {
+    const { a } = await fixture();
     await write(a.id, 'Result');
-    const review = await prepareTaskReview(a.id);
-    await verifyTaskReview(review.id);
-    const artifact = getServices().artifact;
-    vi.spyOn(artifact, 'cloneArtifactsToSnapshot').mockRejectedValueOnce(
-      new Error('Interrupted snapshot'),
+    const w = await openWorkspace(a.id);
+    w.data
+      .getState()
+      .addMessage({ role: 'user', content: 'Keep this turn', timestamp: new Date().toISOString() });
+    const before = await getServices().dimension.findBySourceAndType(a.id, 'growth');
+    await native.faultSql(
+      "CREATE TRIGGER refuse_task_snapshot BEFORE INSERT ON cruxes WHEN NEW.kind = 'snapshot' BEGIN SELECT RAISE(ABORT, 'Interrupted snapshot'); END",
     );
-    await expect(applyTaskReview(review.id)).rejects.toThrow('Interrupted snapshot');
-    await resumeTaskMerge(review.id);
-    const messages = (await openWorkspace(main.id)).data.getState().messages;
-    expect(messages.filter((m) => m.taskMergeId === review.id)).toHaveLength(1);
+    await expect(
+      w.data.getState().createSnapshot({ label: 'Task result', silent: true }),
+    ).rejects.toThrow('Could not create Crux');
+    expect(await read(a.id)).toBe('Result');
+    expect(w.data.getState().messages.filter((m) => m.content === 'Keep this turn')).toHaveLength(
+      1,
+    );
+    expect(await getServices().dimension.findBySourceAndType(a.id, 'growth')).toHaveLength(
+      before.length,
+    );
+    await native.faultSql('DROP TRIGGER refuse_task_snapshot');
+    await w.data.getState().createSnapshot({ label: 'Task result', silent: true });
+    expect(await getServices().dimension.findBySourceAndType(a.id, 'growth')).toHaveLength(
+      before.length + 1,
+    );
   });
-  it('preserves unexpected edits after a partial merge and resumes only from known files', async () => {
+  it('retains interrupted projection and recovery journal across an API restart', async () => {
     const { main, a } = await fixture();
     await write(a.id, 'Result');
     await getServices().artifact.create({
@@ -275,32 +521,19 @@ describe('parallel tasks', () => {
     });
     const review = await prepareTaskReview(a.id);
     await verifyTaskReview(review.id);
-    const project = vi.spyOn(taskFiles, 'projectTaskManifest');
-    project.mockImplementationOnce(async (id) => {
-      await getServices().artifact.create({
-        resourceId: id,
-        content: 'Result',
-        meta: { path: 'index.html' },
-        writeThrough: false,
-      });
-      throw new Error('Interrupted projection');
-    });
+    const projection = vi
+      .spyOn(getSqliteClient().fileContent!, 'finishProjection')
+      .mockRejectedValueOnce(new Error('Interrupted projection'));
     await expect(applyTaskReview(review.id)).rejects.toThrow('Interrupted projection');
-    await expect(exportCrux({ cruxId: main.id })).rejects.toThrow('pending merge');
-    await getServices().artifact.create({
-      resourceId: main.id,
-      content: 'External edit',
-      meta: { path: 'index.html' },
-      writeThrough: false,
-    });
-    await expect(resumeTaskMerge(review.id)).rejects.toThrow('External changes');
-    expect(await read(main.id)).toBe('External edit');
-    await getServices().artifact.create({
-      resourceId: main.id,
-      content: 'Result',
-      meta: { path: 'index.html' },
-      writeThrough: false,
-    });
+    await expect(exportCrux({ cruxId: main.id })).rejects.toThrow(
+      'Recover the selected Task merge',
+    );
+    await expect(write(main.id, 'External edit')).rejects.toThrow('recovering');
+    projection.mockRestore();
+    await native.restart();
+    expect(
+      await getSqliteClient().get('SELECT phase FROM task_merges WHERE id = ?', [review.id]),
+    ).toEqual({ phase: 'applying' });
     await resumeTaskMerge(review.id);
     expect(await read(main.id)).toBe('Result');
     expect(
@@ -322,12 +555,15 @@ describe('parallel tasks', () => {
     await closeCruxWorkspaces(main.id, 'save');
     const backup = await exportGarden();
     const zip = await JSZip.loadAsync(await backup.blob.arrayBuffer());
-    expect(JSON.parse(await zip.file('manifest.json')!.async('text')).version).toBe('2.0');
+    expect(JSON.parse(await zip.file('manifest.json')!.async('text'))).toMatchObject({
+      version: '4.0',
+      scope: 'installation',
+    });
     await importGarden({ data: backup.blob });
     expect(await read(a.id)).toBe('Archived work');
     expect(await read(b.id)).toBe('Unfinished work');
     expect((await findWorkingCopy(a.id))?.phase).toBe('archived');
-    expect(await read(a.baseSnapshotId)).toBe('<h1>Base</h1>');
+    expect(await read(a.baseState!.workspace.parentId!)).toBe('<h1>Base</h1>');
     for (const id of [main.id, b.id])
       expect(
         (await getServices().crux.findById(id)).meta?.settings?.agentSessionId,
@@ -347,6 +583,8 @@ describe('parallel tasks', () => {
         ...s.crux!,
         meta: {
           ...s.crux!.meta,
+          // The creator chose to share the conversation (CR06; private by default).
+          conversationPublished: true,
           projectFolder: '/private/local',
           settings: {
             agentSessionId: 'private-session',
@@ -361,6 +599,10 @@ describe('parallel tasks', () => {
     expect(JSON.stringify(projection)).not.toContain('/private/local');
     expect(JSON.stringify(projection)).not.toContain('private-session');
     expect(JSON.stringify(projection)).not.toContain('private-codex-session');
+    // Not shared: neither conversation leaves the computer.
+    const unshared = JSON.stringify(cruxUpsertFields(s.crux!, s.messages));
+    expect(unshared).not.toContain('Included A');
+    expect(unshared).not.toContain('Private B');
     const copy = await getServices().crux.findById(b.id);
     await expect(publishPipeline(copy, [])).rejects.toThrow('Main');
     await expect(unpublishPipeline(copy)).rejects.toThrow('Main');
@@ -370,13 +612,13 @@ describe('parallel tasks', () => {
     const backup = await exportCrux({ cruxId: main.id });
     const zip = await JSZip.loadAsync(await backup.blob.arrayBuffer());
     const file = Object.keys(zip.files).find(
-      (p) => p.startsWith('artifacts/') && !zip.files[p]!.dir,
+      (p) => p.startsWith('content/') && !zip.files[p]!.dir,
     )!;
     zip.remove(file);
     await expect(
       importCrux({ data: await zip.generateAsync({ type: 'arraybuffer' }), mode: 'clone' }),
-    ).rejects.toThrow('missing an Artifact');
-    expect(await getServices().crux.listAll()).toHaveLength(1);
+    ).rejects.toThrow('Missing private archive content');
+    expect((await getServices().crux.listAll()).filter((c) => c.kind !== 'garden')).toHaveLength(1);
   });
   it('restores and branches task history without importing Main conversation or dropping earlier task segments', async () => {
     const main = await getServices().crux.create({ title: 'History scopes' });
@@ -411,10 +653,59 @@ describe('parallel tasks', () => {
         .map((m) => m.content),
     ).toEqual(['First task message', 'Second task message']);
   });
+  it('keeps a Task writable after owned archive refusal and never falls back to a phase write', async () => {
+    const { a } = await fixture();
+    const db = getSqliteClient();
+    vi.spyOn(db, 'setWorkingCopyArchived').mockImplementation(async () => {
+      throw new Error('Owned archive refused');
+    });
+    await expect(archiveTask(a.id, true)).rejects.toThrow('Owned archive refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
+    expect(db.setWorkingCopyArchived).toHaveBeenCalledWith(a.id, true, expect.any(Number));
+    await write(a.id, 'Still writable');
+    expect(await read(a.id)).toBe('Still writable');
+  });
+  it('keeps an archived Task closed after owned reopen refusal', async () => {
+    const { a } = await fixture();
+    await archiveTask(a.id, true);
+    const db = getSqliteClient();
+    vi.spyOn(db, 'setWorkingCopyArchived').mockImplementation(async () => {
+      throw new Error('Owned reopen refused');
+    });
+    await expect(archiveTask(a.id, false)).rejects.toThrow('Owned reopen refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('archived');
+    await expect(write(a.id, 'blocked')).rejects.toThrow('closed for editing');
+  });
+  it('refuses Task archive when protected recovery fails, keeping the Task writable', async () => {
+    const { a } = await fixture();
+    await write(a.id, 'Still working');
+    vi.spyOn(editHistory, 'captureEditCheckpoint').mockRejectedValueOnce(
+      new Error('Recovery refused'),
+    );
+    await expect(archiveTask(a.id, true)).rejects.toThrow('Recovery refused');
+    expect((await findWorkingCopy(a.id))?.phase).toBe('ready');
+    expect(await read(a.id)).toBe('Still working');
+    await write(a.id, 'Can continue');
+  });
   it('archives a task without losing its work and permits explicit reopening', async () => {
     const { a } = await fixture();
     await write(a.id, 'Keep me');
+    const workspace = await openWorkspace(a.id);
+    workspace.data.setState({
+      messages: [
+        {
+          role: 'user',
+          content: 'Unmarked task conversation',
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    });
+    await workspace.data.getState().saveMeta();
+    const before = await getServices().dimension.findBySourceAndType(a.id, 'growth');
+    const messages = (await getServices().crux.findById(a.id)).meta?.messages;
     await archiveTask(a.id, true);
+    expect(await getServices().dimension.findBySourceAndType(a.id, 'growth')).toEqual(before);
+    expect((await getServices().crux.findById(a.id)).meta?.messages).toEqual(messages);
     await expect(write(a.id, 'blocked')).rejects.toThrow('closed for editing');
     expect(await read(a.id)).toBe('Keep me');
     await archiveTask(a.id, false);

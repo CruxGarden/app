@@ -16,7 +16,7 @@ const template: TemplateDefinition = {
   layout: LAYOUT_WORKSHOP,
   meta: { settings: { verifyOnDone: false } },
   greeting:
-    'Work together in Figma, with your brief and exported assets here. Link a Figma file in Workshop, open it beside Garden, and bring exports back as outputs for your Cruxspace.',
+    'Work together in Figma, with your brief and exported assets here. Link a Figma file in Workshop, open it beside Garden, and bring exports back as outputs for your Gardace.',
   context:
     'Figma external-app POC. figma/project.json holds the external document reference; brief.md holds the creative brief. The actual editable canvas lives in Figma. Opening or arranging windows does not connect MCP. Use Figma tools only through a supported authenticated connection, inspect the current document before editing and preserve intervening manual edits. A downloaded export can be imported as a Cruxspace output. Growth preserves local files/exports, not remote Figma history. Never claim Figma edits or a complete remote backup from local file changes alone.',
 };

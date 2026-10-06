@@ -6,6 +6,7 @@ import type { IStoreService } from './sqlite/store.service';
 import { getSqliteClient } from './sqlite/client';
 import { initSettings } from './settings';
 import { SettingsKey } from '@/lib/constants';
+import { NotFoundError } from './types';
 
 export interface Services {
   crux: ICruxService;
@@ -15,78 +16,66 @@ export interface Services {
   store: IStoreService;
 }
 
-export type Backend = 'local' | 'api';
-
 let services: Services | null = null;
-let currentBackend: Backend | null = null;
 let initPromise: Promise<Services> | null = null;
 
-export async function getBackendSetting(): Promise<Backend> {
-  try {
-    const row = await getSqliteClient().get<{ value: string }>(
-      `SELECT value FROM settings WHERE key = '${SettingsKey.Backend}'`,
-    );
-    return (row?.value as Backend) || 'local';
-  } catch {
-    return 'local';
-  }
-}
-
-export function initServices(backend?: Backend): Promise<Services> {
-  if (services) return Promise.resolve(services);
+export function initServices(): Promise<Services> {
   if (initPromise) return initPromise;
-  initPromise = doInitServices(backend).finally(() => {
-    initPromise = null;
-  });
+  if (services) return Promise.resolve(services);
+  initPromise = doInitServices()
+    .catch((error) => {
+      services = null;
+      throw error;
+    })
+    .finally(() => {
+      initPromise = null;
+    });
   return initPromise;
 }
 
-async function doInitServices(backend?: Backend): Promise<Services> {
-  const resolvedBackend = backend ?? (await getBackendSetting());
-
-  // Store service is always local SQLite (even in API backend mode — store is local-first)
+async function doInitServices(): Promise<Services> {
   const { SqliteStoreService } = await import('./sqlite/store.service');
-  const storeService = new SqliteStoreService();
+  const { SqliteCruxService } = await import('./sqlite/crux.service');
+  const { SqliteArtifactService } = await import('./sqlite/artifact.service');
+  const { ManifestArtifactService } = await import('./manifest-artifact.service');
+  const { SqliteDimensionService } = await import('./sqlite/dimension.service');
+  const { SqliteAuthorService } = await import('./sqlite/author.service');
+  services = {
+    crux: new SqliteCruxService(),
+    artifact: getSqliteClient().fileContent
+      ? new ManifestArtifactService()
+      : new SqliteArtifactService(),
+    dimension: new SqliteDimensionService(),
+    author: new SqliteAuthorService(),
+    store: new SqliteStoreService(),
+  };
 
-  if (resolvedBackend === 'api') {
-    const { ApiCruxService } = await import('./api/crux.service');
-    const { ApiArtifactService } = await import('./api/artifact.service');
-    const { ApiDimensionService } = await import('./api/dimension.service');
-    const { ApiAuthorService } = await import('./api/author.service');
-    services = {
-      crux: new ApiCruxService(),
-      artifact: new ApiArtifactService(),
-      dimension: new ApiDimensionService(),
-      author: new ApiAuthorService(),
-      store: storeService,
-    };
-  } else {
-    const { SqliteCruxService } = await import('./sqlite/crux.service');
-    const { SqliteArtifactService } = await import('./sqlite/artifact.service');
-    const { SqliteDimensionService } = await import('./sqlite/dimension.service');
-    const { SqliteAuthorService } = await import('./sqlite/author.service');
-    services = {
-      crux: new SqliteCruxService(),
-      artifact: new SqliteArtifactService(),
-      dimension: new SqliteDimensionService(),
-      author: new SqliteAuthorService(),
-      store: storeService,
-    };
+  // Admit the actual local root before UI/tool consumers can initialize identity.
+  const localEntry = getSqliteClient().enterLocalGarden;
+  if (localEntry) {
+    const root = await localEntry();
+    const { useGardenContext } = await import('@/stores/gardenContext');
+    useGardenContext.getState().initialize(root);
   }
-
-  currentBackend = resolvedBackend;
 
   // Populate settings cache from SQLite + migrate localStorage values
   await initSettings();
 
-  // Desktop (ADR 0001): external Project Folder edits must be recorded
-  // whenever the store is live — ingestion rides the services lifecycle.
-  // This used to live only in appStore.init(), which the Gateway's own entry
-  // path never calls (it calls initServices() directly), so entering through
-  // the front door left the watcher firing at a renderer with no listener
-  // and Finder edits never appeared in the Artifacts pane. No-op on web.
-  const { initIngestion } = await import('./ingestion');
+  // Desktop (ADR 0001): external Project Folder edits are recorded whenever
+  // the store is live, so ingestion rides the services lifecycle. No-op on web.
+  const { initIngestion, recoverProjectFolders } = await import('./ingestion');
+  await (await import('./file-content')).finishPendingContentProjections();
   initIngestion();
+  await recoverProjectFolders();
+  if (getSqliteClient().onChange) {
+    const { initGraphChanges } = await import('./graph-changes');
+    initGraphChanges();
+  }
+  if (getSqliteClient().gardenMood) {
+    // The active Garden's Mood paints the app (ADR 0058, Garden Mood association).
+    const { startGardenMoodProjection } = await import('./garden-mood');
+    startGardenMoodProjection();
+  }
 
   return services;
 }
@@ -98,13 +87,6 @@ export function getServices(): Services {
     );
   }
   return services;
-}
-
-export function getBackend(): Backend {
-  if (!currentBackend) {
-    throw new Error('Services not initialized.');
-  }
-  return currentBackend;
 }
 
 export function isServicesReady(): boolean {
@@ -123,21 +105,19 @@ export async function ensureLocalAuthor(): Promise<import('./types').Author> {
   if (existing?.value) {
     try {
       return await services!.author.findById(existing.value);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
       // Author was deleted — fall through to create a new one
     }
   }
 
   const shortId = crypto.randomUUID().slice(0, 8);
-  const author = await services!.author.create({
-    username: `wanderer-${shortId}`,
-    displayName: 'Wanderer',
-  });
-  await db.run(
-    `INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorId}', ?)`,
-    [author.id],
-  );
-  return author;
+  const input = { username: `wanderer-${shortId}`, displayName: 'Wanderer' };
+  // The native command records the author and installation identity atomically.
+  const { SqliteAuthorService } = await import('./sqlite/author.service');
+  const created = await new SqliteAuthorService().create({ ...input, local: true });
+  (await import('./settings')).setSetting(SettingsKey.LocalAuthorId, created.id);
+  return created;
 }
 
 // Re-export interfaces for convenience

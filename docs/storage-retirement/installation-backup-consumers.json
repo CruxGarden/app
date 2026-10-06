@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-02",
+  "stage": "AR06 native whole-installation backup consumers and omitted-runtime retirement",
+  "base": "a2cc328af73b85a68c41d861bd93e818fbc6084f",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "verification": {
+    "focused": {
+      "passed": 91,
+      "suites": 9,
+      "log": "/tmp/installation-native-focused-final2.log"
+    },
+    "app": {
+      "passed": 1679,
+      "skipped": 18,
+      "files": 272,
+      "build": true,
+      "log": "/tmp/installation-native-app-accepted.log"
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1,
+      "log": "/tmp/installation-native-electron-accepted.log",
+      "hostSourceUnchanged": true
+    },
+    "desktop": {
+      "status": "passed",
+      "passed": 3,
+      "duration": "54.8s",
+      "log": "/tmp/installation-native-desktop-final.log",
+      "command": "npm run test:e2e -- e2e/manifest-garden-archive.spec.ts e2e/private-archive-ui.spec.ts --project=desktop",
+      "journeys": [
+        "Settings complete manifest/retained-history backup, cache-masked missing-content refusal, fresh-profile restore, Mood/root/membership and disk reconciliation across restart",
+        "Visible private export/import preserves Main, Tasks, retained starting state and binary files across profiles/restart",
+        "Authenticated outside agent exports the same native private graph through its provided tool"
+      ],
+      "screenshot": "docs/storage-retirement/installation-backup.png",
+      "screenshotInspected": true
+    }
+  },
+  "changes": [
+    "Whole-installation export/intake/wipe require actual installation and manifest ports before asynchronous work or mutation. Removed renderer wipe/session/folder/journal SQL; installation cleanup remains an API transaction.",
+    "Export checks every archived object against its fingerprint. Import copies caller ArrayBuffers before yielding. Both missing-port fallback and corruption/mutable-input safety baselines reproduce.",
+    "Removed 277-line omitted-runtime serializer/catalog hydrator and obsolete 101-line export chooser. All private Crux, Garden and installation backups include retained tool bytes; UI/agent callers and option types no longer advertise a runtime choice.",
+    "PrivateBackupDescription replaces the chooser. Settings distinguishes installation replacement from a Crux archive, records successful self-contained exports for wipe safety, and reports actual export errors.",
+    "31 native installation cases retain all 28 previous backup test purposes plus three safety boundaries. Normal API commands create files, marked Growth, settings and Task reviews. Owner-only SQLite trigger failure restores later local records and files and survives restart.",
+    "Whole-profile preservation uses a second actual API/native SQLite installation, not SQL.js. Restore/restart retains Garden placement, marked Collaboration, Tool package bytes, Function sources, binary content, visitor Store rows, layouts, synth and typed Mood/portrait/audio assets.",
+    "Removed 566 lines of unused obsolete SQL.js profile fixture builders. Frozen currently supported Tool package bytes remain a test input. No multi-membership, artifact-table or per-file-install converter was introduced.",
+    "Net production source reduction is455 lines. Reviewed inventory falls52 to47 literal renderer SQL mutation sites; runtime preference is marked retired in the preservation ledger."
+  ],
+  "baselines": [
+    {
+      "log": "/tmp/installation-native-safety-baseline.log",
+      "findings": [
+        "Absent native installation port fails to refuse before export",
+        "Exporter accepts wrong returned blob bytes",
+        "Importer observes a caller-mutated ArrayBuffer"
+      ],
+      "fixtureIssue": "One binary-file string read was corrected to downloadBlob, separate from the three production findings."
+    },
+    {
+      "log": "/tmp/installation-native-app-final.log",
+      "findings": [
+        "Full gate locates an additional old SQL.js preservation consumer; its current-content purposes were migrated to native storage."
+      ],
+      "result": "1 failed /1678 passed /18 skipped before that migration"
+    }
+  ],
+  "limits": [
+    "AR06 remains open: required Task/lifecycle/storage commands, Garden/settings fallbacks and browser worker/schema retirement remain.",
+    "Selected Garden wrapper admission remains sequential with compensating cleanup; coordinated workspace-operation ownership and atomic selected-Garden admission remain follow-through.",
+    "Refused intake may leave unreachable verified immutable objects; no root garbage collection is enabled.",
+    "Folder rehoming retains its existing per-Crux retry behavior. Whole-installation capture coordination and exclusive operation ownership remain separate AR07 work.",
+    "API/runtime, real Garden, manual candidate and unrelated screenshots/data are unchanged. No merge/deploy/live publication occurred. Native Windows/Linux passed for a86 (run36986820000)."
+  ],
+  "priorNativeCI": {
+    "head": "37e7447e9afb754baee1d60609aa5a31ef71a327",
+    "run": 36974449003,
+    "windows": "success",
+    "linux": "success",
+    "jobStatusInspected": true
+  },
+  "nativeCI": {
+    "head": "a86edc43589a4c4fc35ed408feb267562cabbd78",
+    "run": 36986820000,
+    "windows": "success",
+    "linux": "success",
+    "jobStatusInspected": true
+  }
+}

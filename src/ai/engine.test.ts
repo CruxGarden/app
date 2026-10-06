@@ -72,7 +72,7 @@ describe('engine golden tasks (mock provider)', () => {
   let cruxId: string;
 
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
     const { crux } = getServices();
     const created = await crux.create({ title: 'Golden' });
     cruxId = created.id;

@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, setAutoCheck, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 const PIXEL = Buffer.from(
@@ -44,7 +45,8 @@ test('Kan scoped tools preserve manual content, originals and native history thr
   const run = async (action: string) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const done = 'Kan depth ' + action + ' complete.';
     const count = async () =>
       (await storedCrux(page, id)).messages.filter(
@@ -74,7 +76,7 @@ test('Kan scoped tools preserve manual content, originals and native history thr
     folder = (await storedCrux(instance.page, id)).projectFolder;
     // This journey checks native records and screenshots itself. The generic mock
     // visual checker intentionally reports a missing landing-page heading.
-    await instance.page.getByRole('switch', { name: 'Check automatically ✓', exact: true }).click();
+    await setAutoCheck(instance.page, false);
     await run('board');
     await frame().getByText('Launch', { exact: true }).first().click();
     await expect(frame().getByRole('textbox', { name: 'Board name', exact: true })).toHaveValue(
@@ -134,7 +136,7 @@ test('Kan scoped tools preserve manual content, originals and native history thr
     await instance.app.close();
     instance = await launchApp({ dir: firstDir });
     await instance.page.setViewportSize({ width: 2200, height: 1250 });
-    await instance.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(instance.page);
     await ready();
     await expect(frame().locator('#title')).toHaveValue('Manual launch title');
     await expect(

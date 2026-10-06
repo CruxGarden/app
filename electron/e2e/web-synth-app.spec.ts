@@ -1,8 +1,9 @@
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -51,6 +52,11 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^web-synth/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // The Tasks pane opens with every app Crux now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+        await togglePanel(page, 'Toggle tasks');
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -108,8 +114,8 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
     });
 
     await test.step('the scripted collaborator sets the tempo and adds a MIDI editor', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Set the tempo and add a MIDI editor [synth:edit]');
       await box.press('Enter');
@@ -121,7 +127,7 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
       await expect(tabs(page).filter({ hasText: 'Agent melody' })).toHaveCount(1);
       await ready(page);
       await expect.poll(() => hasModule('midi_editor')).toBe(true);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'web-synth-agent.png') });
     });
     expect(errors).toEqual([]);
@@ -135,7 +141,7 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1800, height: 1100 });
     await test.step('restart: the composition reopens with both modules', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       await expect(tabs(page).filter({ hasText: 'Agent melody' })).toHaveCount(1);
       // The default composition ships one Synth Designer; the person added a second.

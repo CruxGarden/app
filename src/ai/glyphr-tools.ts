@@ -1,3 +1,4 @@
+import { NO_INPUT, onlyKeys } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 /** Glyphr Studio Font App Tools: read the font, name it, draw a glyph from SVG, save a built font as an output. */
 export const GLYPHR_TOOLS: AppToolDefinition[] = [
@@ -5,7 +6,7 @@ export const GLYPHR_TOOLS: AppToolDefinition[] = [
     name: 'inspect_font',
     description:
       'Read the open font: name, family, style, units per em, ascent/descent, how many glyphs exist and how many are drawn (with their characters), ligatures, components, preferred export format.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -54,11 +55,10 @@ export const GLYPHR_TOOLS: AppToolDefinition[] = [
 ];
 export function glyphrCommand(name: string, input: Record<string, unknown>) {
   const keys = Object.keys(input);
-  const only = (allowed: string[]) => keys.every((k) => allowed.includes(k));
   if (name === 'inspect_font' && !keys.length) return { op: 'inspect' };
   if (name === 'set_font_name') {
     if (
-      !only(['name']) ||
+      !onlyKeys(input, ['name']) ||
       typeof input.name !== 'string' ||
       !input.name.trim() ||
       input.name.length > 200
@@ -68,7 +68,7 @@ export function glyphrCommand(name: string, input: Record<string, unknown>) {
   }
   if (name === 'set_glyph_svg') {
     if (
-      !only(['char', 'svg', 'replace']) ||
+      !onlyKeys(input, ['char', 'svg', 'replace']) ||
       typeof input.char !== 'string' ||
       [...input.char].length !== 1 ||
       typeof input.svg !== 'string' ||
@@ -82,7 +82,7 @@ export function glyphrCommand(name: string, input: Record<string, unknown>) {
   }
   if (name === 'save_font') {
     if (
-      !only(['format', 'name']) ||
+      !onlyKeys(input, ['format', 'name']) ||
       (input.format !== undefined &&
         !['otf', 'ttf', 'woff', 'woff2'].includes(input.format as string)) ||
       (input.name !== undefined &&

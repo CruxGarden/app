@@ -1,10 +1,13 @@
+import { revealOptionsFor } from './panel-helpers';
+import { togglePanel, newTaskButton } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { closeWorkspace } from './journeys/journey-helpers';
 import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
 async function newTask(page: Page, title: string) {
-  await page.getByRole('button', { name: 'New task', exact: true }).click();
+  await (await newTaskButton(page)).click();
   await page.getByRole('textbox', { name: 'Task name', exact: true }).fill(title);
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);
@@ -20,10 +23,11 @@ async function newTask(page: Page, title: string) {
   return { id, folder: row.project_folder };
 }
 async function showPreview(page: Page, title: string) {
-  const collaboration = page.getByRole('button', { name: 'Toggle collaboration' });
-  if (await page.getByTestId('pane-body-collaboration').isVisible()) await collaboration.click();
-  const toggle = page.getByRole('button', { name: 'Toggle artifacts' });
-  if (!(await page.getByTestId('pane-body-artifacts').isVisible())) await toggle.click();
+  if (await page.getByTestId('pane-body-collaboration').isVisible())
+    await togglePanel(page, 'Toggle collaboration');
+
+  if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
+    await togglePanel(page, 'Toggle artifacts');
   await page.getByRole('tree').getByText('index.html', { exact: true }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   await expect(page.frameLocator('iframe[data-crux-id]').getByRole('heading')).toHaveText(title);
@@ -31,7 +35,9 @@ async function showPreview(page: Page, title: string) {
 }
 test('two tasks own separate disk files and previews, merge into Main, and survive restart', async () => {
   test.setTimeout(180000);
-  let { app, page, dir } = await launchApp();
+  const first = await launchApp();
+  const dir = first.dir;
+  let { app, page } = first;
   try {
     await enterGarden(page);
     const main = await createCrux(page, 'Parallel web app');
@@ -75,8 +81,20 @@ test('two tasks own separate disk files and previews, merge into Main, and survi
         .getByRole('dialog', { name: 'Switch Crux workspace' })
         .getByRole('button', { name: /^Parallel web app · Experiment/ }),
     ).toBeVisible();
-    await page.keyboard.press('Escape');
-    await page.goto(`crux-app://app/c/${main}?task=${b.id}`);
+    // The Task row survives restart under its original Crux identity. The
+    // switcher must route with that parent, not treat the Task id as a Crux.
+    expect(
+      await page.evaluate(
+        async (id) =>
+          window.electronAPI!.sqlite.get('SELECT crux_id FROM working_copies WHERE id = ?', [id]),
+        b.id,
+      ),
+    ).toEqual({ crux_id: main });
+    await page
+      .getByRole('dialog', { name: 'Switch Crux workspace' })
+      .getByRole('button', { name: /^Parallel web app · Experiment/ })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/c/${main}\\?task=${b.id}`));
     await expect(
       page.getByTestId('task-bar').getByRole('link', { name: /^Experiment/ }),
     ).toHaveAttribute('aria-current', 'page');
@@ -84,6 +102,10 @@ test('two tasks own separate disk files and previews, merge into Main, and survi
     await expect(
       page.getByTestId('task-bar').getByRole('link', { name: /^Redesign/ }),
     ).toContainText('merged');
+    await page.getByTestId('task-bar').getByRole('link', { name: 'Main', exact: true }).click();
+    await closeWorkspace(page, 'Parallel web app');
+    await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', b.id);
+    expect(readFileSync(join(b.folder, 'index.html'), 'utf8')).toBe('<h1>Experiment</h1>');
   } finally {
     await app.close();
   }
@@ -130,17 +152,22 @@ test('parallel built-in turns keep files, history, and hidden approvals scoped t
         .poll(() =>
           page.evaluate(
             async (id) =>
-              (
-                await window.electronAPI!.sqlite.all(
-                  "SELECT id FROM dimensions WHERE source_id = ? AND type = 'growth'",
-                  [id],
-                )
-              ).length,
+              (await window.electronAPI!.sqlite.fileContent!.history(id))?.checkpoints.length ?? 0,
             copy.id,
           ),
         )
         .toBeGreaterThan(0);
     }
+    expect(
+      await page.evaluate(
+        ({ a, b }) =>
+          window.electronAPI!.sqlite.all(
+            "SELECT id FROM dimensions WHERE source_id IN (?, ?) AND type = 'growth'",
+            [a, b],
+          ),
+        { a: a.id, b: b.id },
+      ),
+    ).toEqual([]);
     await choose('Alpha');
     await expect(page.getByText('Completed workspace Beta.', { exact: true })).toHaveCount(0);
     await input.fill('[workspace:Alpha:delete]');
@@ -164,10 +191,10 @@ test('Claude Code task turns use separate sessions and directories and route hid
   try {
     await enterGarden(page);
     await createCrux(page, 'Agent tasks');
-    await page
-      .getByTestId('pane-body-collaboration')
-      .getByRole('button', { name: /Claude Sonnet 5/ })
-      .click();
+    await revealOptionsFor(
+      page.getByTestId('pane-body-collaboration').getByTestId('model-selector'),
+    );
+    await page.getByTestId('pane-body-collaboration').getByTestId('model-selector').click();
     await page
       .getByTestId('model-group-claude-code')
       .getByRole('button', { name: 'Claude Code' })
@@ -187,7 +214,7 @@ test('Claude Code task turns use separate sessions and directories and route hid
     };
     const input = page.getByPlaceholder('Send a message...');
     await choose('Alpha');
-    await input.fill('run Alpha command');
+    await input.fill('[progress] run Alpha command');
     await input.press('Enter');
     await expect(page.getByTestId('agent-approvals')).toBeVisible();
     await choose('Beta');
@@ -197,6 +224,12 @@ test('Claude Code task turns use separate sessions and directories and route hid
       timeout: 30000,
     });
     await expect(page.getByTestId('agent-approvals')).toHaveCount(0);
+    await expect(
+      page
+        .getByTestId('task-bar')
+        .getByRole('link', { name: /^Alpha/ })
+        .getByRole('progressbar', { name: 'Alpha progress' }),
+    ).toHaveAttribute('value', '50');
     await choose('Alpha');
     await page.getByTestId('agent-approvals').getByRole('button', { name: 'Not now' }).click();
     await expect(page.getByText(/Skipped the command, as you asked/)).toBeVisible();
@@ -207,7 +240,10 @@ test('Claude Code task turns use separate sessions and directories and route hid
           window.electronAPI!.sqlite.get('SELECT meta FROM working_copies WHERE id = ?', [id]),
         copy.id,
       )) as { meta: string };
-      sessions.push(JSON.parse(row.meta).settings.agentSessionId);
+      // Sessions are kept per provider since the hosted-agent runtime (ADR 0046);
+      // the single agentSessionId is only read for records from before it.
+      const settings = JSON.parse(row.meta).settings;
+      sessions.push(settings.agentSessions?.['claude-code'] ?? settings.agentSessionId);
     }
     expect(sessions.every(Boolean)).toBe(true);
     expect(new Set(sessions).size).toBe(2);

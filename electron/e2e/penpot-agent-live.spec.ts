@@ -1,3 +1,5 @@
+import { revealOptionsFor } from './panel-helpers';
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -44,9 +46,9 @@ test('Garden agent edits a disposable Penpot design and brings its real SVG back
       await enterGarden(page);
       await createCrux(page, 'Penpot connection proof');
       const chat = page.getByTestId('pane-body-collaboration');
-      if (!(await chat.isVisible()))
-        await page.getByRole('button', { name: 'Toggle collaboration' }).click();
-      await chat.getByRole('button', { name: /Claude Sonnet 5/ }).click();
+      if (!(await chat.isVisible())) await togglePanel(page, 'Toggle collaboration');
+      await revealOptionsFor(chat.getByTestId('model-selector'));
+      await chat.getByTestId('model-selector').click();
       await page
         .getByTestId(`model-group-${provider}`)
         .getByRole('button', { name: provider === 'codex' ? 'Codex' : 'Claude Code' })
@@ -85,7 +87,7 @@ test('Garden agent edits a disposable Penpot design and brings its real SVG back
     const content = native.content as { type: string; text?: string }[];
     const readback = JSON.parse(content.find((part) => part.type === 'text')!.text!).result;
     expect(readback.svg.trim()).toBe(svg.trim());
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle growth');
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
       0,

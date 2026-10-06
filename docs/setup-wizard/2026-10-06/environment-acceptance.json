@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-06",
+  "status": "implemented and locally accepted",
+  "branch": "wip/setup-wizard-and-triage",
+  "baseCommit": "7ff1c650a",
+  "scope": [
+    "Interest and installation-wide Advanced Mode configure the first workspace independently of AI Tools.",
+    "Choose a walkthrough, available template, or empty Crux; open and size relevant panels for the current window.",
+    "Guidance follows a changed starting point; setup-again can create a new project without replacing the previous one.",
+    "Named outside-agent connections have permissions, one-time secrets, rotation, revocation and restart persistence.",
+    "Shipped CLI and stdio bridge support whole-Garden environment tokens and retain per-Crux file credentials.",
+    "Local model choices ranked by conservative RAM/GPU memory estimates; chosen model downloads through existing cancellable Ollama flow.",
+    "Earlier Tigrana single-pane navigation and Advanced Mode affordances retained."
+  ],
+  "verification": {
+    "app": {
+      "command": "npm run verify",
+      "passed": 2088,
+      "skipped": 18,
+      "files": 324,
+      "log": "/tmp/crux-wizard-app-accepted.log",
+      "build": "passed"
+    },
+    "electron": {
+      "command": "npm run verify",
+      "passed": 204,
+      "skipped": 1,
+      "log": "/tmp/crux-wizard-electron-accepted.log"
+    },
+    "desktop": [
+      {
+        "log": "/tmp/crux-wizard-desktop-final.log",
+        "passed": 27,
+        "failed": 2,
+        "explanation": "Writing reload assertions ran before delayed autosave; corrected to await actual file persistence."
+      },
+      {
+        "log": "/tmp/crux-wizard-cli-red-writing.log",
+        "passed": 2,
+        "failed": 1,
+        "explanation": "Both corrected writing cases pass. New CLI token-precedence regression reproduces before its fix."
+      },
+      {
+        "log": "/tmp/crux-wizard-cli-local-accepted.log",
+        "passed": 2,
+        "failed": 0,
+        "explanation": "CLI token precedence and local-model picker after correction."
+      },
+      {
+        "log": "/tmp/crux-wizard-cli-stdio-accepted.log",
+        "passed": 1,
+        "failed": 0,
+        "explanation": "CLI and actual stdio bridges, both Garden and per-Crux credentials; retained deletion approval."
+      }
+    ],
+    "format": "Prettier and git diff --check pass",
+    "packaged": {
+      "status": "passed",
+      "passed": 25,
+      "failed": 0,
+      "log": "/tmp/crux-wizard-packaged-accepted.log",
+      "coverage": [
+        "seven wizard journeys",
+        "three Advanced Mode journeys",
+        "twelve first-workspace scenarios",
+        "hardware model picker",
+        "compact Notes editing/restart",
+        "packaged startup, SQLite and bundled CLI"
+      ]
+    }
+  },
+  "manualCandidate": "electron/release/manual-testing-wizard-complete-oct6/mac-arm64/Crux Garden.app",
+  "signature": "ad-hoc; codesign --verify --deep --strict passed",
+  "limits": [
+    "No live provider request, model download or inference was performed.",
+    "Memory fits are estimates from total memory and model weight sizes, not performance benchmarks; unsupported GPU probes report unknown.",
+    "This is local macOS acceptance, not a full desktop-suite or Windows/Linux certification.",
+    "No push, merge, deployment or public release; real and manual Gardens were not opened by these tests."
+  ],
+  "modelSizeSource": "https://ollama.com/library/qwen3",
+  "evidenceDirectory": "environment/",
+  "screenshots": [
+    "environment/app-guided-ordinary.png",
+    "environment/app-template-advanced.png",
+    "environment/art-guided-ordinary.png",
+    "environment/compact-navigation.png",
+    "environment/connections-small-window.png",
+    "environment/exploring-empty-advanced.png",
+    "environment/game-guided-ordinary.png",
+    "environment/local-models.png",
+    "environment/music-guided-ordinary.png",
+    "environment/writing-guided-ordinary.png"
+  ]
+}

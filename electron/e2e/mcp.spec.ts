@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { enableAdvancedMode, togglePanel, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
@@ -44,14 +46,20 @@ const textOf = (result: unknown): string => {
 async function plantGarden(page: Page, template: RegExp) {
   await page.getByRole('button', { name: /enter/i }).click();
   await page.getByText('Plant a new garden').click();
-  await page.getByRole('button', { name: 'Welcome' }).click();
+  await finishSetupAtHome(page);
   await page.getByRole('button', { name: 'Add Crux' }).click();
   await page.getByRole('button', { name: template }).click();
   await page.getByRole('button', { name: 'Create', exact: true }).click();
+  // A panel opened while the workspace is still mounting lands on the workspace being left.
+  await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByRole('button', { name: 'Add panel', exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 /** Settings → Agents: switch the (only) crux on, read back the config the app wrote. */
 async function enableAgentHost(page: Page, gardenRoot: string): Promise<McpConfig> {
+  await enableAdvancedMode(page);
   await page.keyboard.press('ControlOrMeta+,');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   const agents = page.getByTestId('agents-settings');
@@ -59,7 +67,7 @@ async function enableAgentHost(page: Page, gardenRoot: string): Promise<McpConfi
   await expect(agents.getByTestId('agents-trust')).toContainText(/wait for your approval/);
   await expect(agents).toContainText('no servers running');
 
-  const toggle = agents.getByRole('switch').first();
+  const toggle = agents.getByTestId('agents-crux-list').getByRole('switch').first();
   await expect(toggle).toHaveAttribute('aria-checked', 'false'); // off by default
   await toggle.click();
   await expect(agents.getByTestId('agents-connect')).toBeVisible({ timeout: 30_000 });
@@ -83,8 +91,7 @@ async function enableAgentHost(page: Page, gardenRoot: string): Promise<McpConfi
   await expect(snippet).toContainText('"mcpServers"');
   await page.screenshot({ path: 'e2e/.results/mcp-1-settings.png' });
 
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+  await hidePane(page, 'Settings');
   return config;
 }
 
@@ -200,7 +207,7 @@ test.describe('Agent Host (MCP server per crux)', () => {
       await expect(page.getByText(/hello-from-mcp\.md/).first()).toBeVisible();
 
       // In the Artifacts tree (the writing layout keeps it one toggle away)
-      await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await togglePanel(page, 'Toggle artifacts');
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
       for (const dirName of ['content', 'posts']) {
@@ -308,8 +315,7 @@ test.describe('Agent Host (MCP server per crux)', () => {
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await expect(page.getByText(/Connected/).first()).toBeVisible({ timeout: 30_000 });
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+      await hidePane(page, 'Settings');
 
       const config = await enableAgentHost(page, gardenRoot);
       client = await connect(config, 'e2e-publisher');

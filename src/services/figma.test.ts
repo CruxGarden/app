@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { applyTemplateToCrux } from './crux-create';
@@ -8,6 +9,7 @@ import { exportCrux, importCrux } from './crux-io';
 import { pathOf } from '@/lib/artifact-path';
 import { isLocalCreationTool } from './embedded-app';
 import { parseFigmaReference } from '../../electron/src/figma-reference';
+import { growthHostFor } from './growth';
 import { figmaLayout } from '../../electron/src/figma-layout';
 const link = 'https://www.figma.com/design/Abcdef1234/Test?node-id=1-2&utm_source=discard';
 const canonical = 'https://www.figma.com/design/Abcdef1234?node-id=1-2';
@@ -23,7 +25,8 @@ const png = () =>
     ],
     { type: 'image/png' },
   );
-beforeEach(() => initServices('local'));
+localApiFixture({ project: true });
+beforeEach(() => initServices());
 it.each([
   'javascript:alert(1)',
   'https://figma.com.attacker.test/design/Abcdef',
@@ -84,9 +87,11 @@ it('preserves a changed link and carries imported asset provenance through trans
   const files = await artifact.findByResource('crux', target.id);
   expect(files.find((f) => pathOf(f) === 'public/cover.png')!.fingerprint).toBe(output.fingerprint);
   const sidecar = files.find((f) => pathOf(f).endsWith('.json'))!;
-  expect(JSON.parse(await artifact.readContent(sidecar.id)).externalSource).toEqual(
+  expect(JSON.parse(await artifact.readContent(sidecar)).externalSource).toEqual(
     output.externalSource,
   );
+  expect(await (await growthHostFor(source.id)).list()).toHaveLength(0);
+  expect(await (await growthHostFor(target.id)).list()).toHaveLength(0);
   const archive = await exportCrux({ cruxId: source.id });
   const imported = await importCrux({ data: archive.blob, mode: 'clone' });
   expect((await readFigmaProject(imported.cruxId)).reference?.url).toBe(canonical);

@@ -1,9 +1,12 @@
+import ExploreCreator from './ExploreCreator';
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
 import type { ExploreCrux } from '@/api/public';
 import type { MoodSummary } from '@/lib/moods/publish-mood';
 import { publishBaseUrlFor } from '@/lib/public-url';
+import { deepLinkUrl } from '@/services/deep-links';
+import { buttonClass } from '@/components/ui/button-class';
 
 /** A published Mood in Explore: swatch, facts, Install / Wear it (inside the app). */
 export default function MoodResultCard({
@@ -37,13 +40,13 @@ export default function MoodResultCard({
   };
   return (
     <div
-      className="rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col"
+      className="group rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col transition-[border-color,box-shadow] hover:border-action-button-border-hover hover:shadow-card-hover motion-enter-card"
       data-testid={`explore-mood-${crux.id}`}
     >
       <button
         type="button"
         onClick={onOpen}
-        className="text-left cursor-pointer"
+        className="text-left cursor-pointer [&_img]:transition-transform [&_img]:duration-300 hover:[&_img]:scale-[1.03]"
         aria-label={`Open ${crux.title || crux.slug}`}
       >
         {coverUrl ? (
@@ -90,11 +93,23 @@ export default function MoodResultCard({
             {crux.title || crux.slug}
           </div>
           <div className="text-2xs font-mono text-text-muted truncate">
-            Mood · {s?.section ?? '—'} · {s?.track ? `plays “${s.track}”` : 'quiet'} · by{' '}
-            {crux.author_username}
+            Mood · {s?.section ?? '—'} · {s?.track ? `plays “${s.track}”` : 'quiet'}
           </div>
         </div>
 
+        <ExploreCreator crux={crux} />
+
+        {!canInstall && (
+          <div className="pt-1">
+            <a
+              href={deepLinkUrl({ kind: 'install', type: 'mood', cruxId: crux.id })}
+              className={buttonClass('secondary', 'sm')}
+              data-testid="open-in-crux-garden"
+            >
+              Open in Garden
+            </a>
+          </div>
+        )}
         {canInstall && (
           <div className="flex items-center gap-1.5 pt-1">
             <Button size="sm" onClick={() => void run(true)} disabled={busy !== null}>

@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
+import { panelPressed, togglePanel } from './panel-helpers';
 
 test('Cardinal instrument: native engine, sound, saves, rack and restart', async () => {
   test.setTimeout(180000);
@@ -16,7 +17,7 @@ test('Cardinal instrument: native engine, sound, saves, rack and restart', async
       if (message.type() === 'error') console.log(message.text());
     });
     page.on('pageerror', (error) => console.log(error.message));
-    await page.setViewportSize({ width: 1600, height: 1050 });
+    await page.setViewportSize({ width: 2000, height: 1100 });
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Cardinal Drone/ }).click();
@@ -125,6 +126,9 @@ test('Cardinal instrument: native engine, sound, saves, rack and restart', async
             .name,
       )
       .toBe('Our horizon');
+    // The instrument's layout leads with the rack; open Collaboration for the turn.
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const chat = page.getByPlaceholder('Send a message...');
     await chat.fill('Make the drone darker and more spacious [instrument:controls]');
     await chat.press('Enter');
@@ -175,7 +179,7 @@ test('Cardinal instrument: native engine, sound, saves, rack and restart', async
   }
   const again = await launchApp({ dir: first.dir });
   try {
-    await again.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(again.page);
     const frame = again.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#status')).toHaveText(/Saved in this Crux|Not saved/, {
       timeout: 100000,

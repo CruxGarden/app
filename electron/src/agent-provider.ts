@@ -91,11 +91,12 @@ export function agentPath(): string {
 }
 
 /** Find the person's Claude Code binary. `CRUX_CLAUDE_PATH` wins; then the usual homes. */
-export function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string | null {
+function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string | null {
   const override = env.CRUX_CLAUDE_PATH;
   if (override && fs.existsSync(override)) return override;
   const home = os.homedir();
-  const exe = process.platform === 'win32' ? 'claude.exe' : 'claude';
+  const windows = process.platform === 'win32';
+  const exe = windows ? 'claude.exe' : 'claude';
   const candidates = [
     path.join(home, '.local', 'bin', exe),
     path.join(home, '.claude', 'local', exe),
@@ -108,6 +109,18 @@ export function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string |
   for (const dir of agentPath().split(path.delimiter)) {
     const c = path.join(dir, exe);
     if (dir && fs.existsSync(c)) return c;
+  }
+  // On Windows an npm install leaves `claude.cmd`, a batch shim the SDK cannot
+  // spawn as an executable. What it wants is the package's own entry point, so
+  // follow the shim to the module and hand over `cli.js`.
+  if (windows) {
+    for (const dir of agentPath().split(path.delimiter)) {
+      if (!dir) continue;
+      const shim = path.join(dir, 'claude.cmd');
+      if (!fs.existsSync(shim)) continue;
+      const entry = path.join(dir, 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js');
+      if (fs.existsSync(entry)) return entry;
+    }
   }
   return null;
 }
@@ -140,11 +153,21 @@ export class AgentProvider {
       };
       return this.statusCache;
     }
+    // A `.js` entry point is a module, not an executable — run it through
+    // this app's own Node, the way pnpm is run (see pnpm.ts).
+    const asModule = bin.toLowerCase().endsWith('.js');
     const version = await new Promise<string | null>((resolve) => {
       const child = execFile(
-        bin,
-        ['--version'],
-        { env: { ...process.env, PATH: agentPath() }, timeout: 8000 },
+        asModule ? process.execPath : bin,
+        asModule ? [bin, '--version'] : ['--version'],
+        {
+          env: {
+            ...process.env,
+            PATH: agentPath(),
+            ...(asModule ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+          },
+          timeout: 8000,
+        },
         (err, stdout) => resolve(err ? null : String(stdout).trim() || null),
       );
       child.on('error', () => resolve(null));
@@ -168,6 +191,14 @@ export class AgentProvider {
       for await (const msg of stream) {
         if (controller.signal.aborted) break;
         state.hadMutation ||= run.toolMutation === true;
+        // The MCP servers the agent actually got — the garden's own above all.
+        // Logged because "the crux_garden server is not in this session" was
+        // otherwise invisible from outside (MAKING-IT-POSSIBLE-STEPS, step 2).
+        {
+          const sys = msg as { type?: string; subtype?: string; mcp_servers?: unknown };
+          if (sys?.type === 'system' && sys.subtype === 'init')
+            this.deps.log(`[claude-code] mcp servers: ${JSON.stringify(sys.mcp_servers ?? [])}`);
+        }
         for (const event of mapSdkMessage(msg, state)) {
           if (event.type === 'done') doneSent = true;
           emit(event);
@@ -264,7 +295,11 @@ export class AgentProvider {
     const sdk = await importEsm('@anthropic-ai/claude-agent-sdk');
     const schemas = [
       z.object({ query: z.string(), offset: z.number().int().nonnegative().optional() }),
-      z.object({ name: z.string(), input: z.record(z.string(), z.unknown()) }),
+      // Not z.record: with zod 4 the SDK cannot serialize it, and the server
+      // then connects with an EMPTY tool list — silently. Found 2026-09-20
+      // (MAKING-IT-POSSIBLE-STEPS, step 2): the agent in the pane never had
+      // a single garden tool. A loose object serializes.
+      z.object({ name: z.string(), input: z.looseObject({}) }),
     ];
     const garden = sdk.createSdkMcpServer({
       name: 'crux_garden',
@@ -292,6 +327,13 @@ export class AgentProvider {
         // Edits inside the Project Folder are the point; Growth keeps every
         // version. Bash and anything outside the folder still ask.
         permissionMode: 'acceptEdits',
+        // The garden's own two tools need no click: discovery is harmless and
+        // every tool behind garden_call_tool keeps its own in-app approval
+        // (delete, publish) — the same rule as acceptEdits for the folder.
+        allowedTools: [
+          'mcp__crux_garden__garden_search_tools',
+          'mcp__crux_garden__garden_call_tool',
+        ],
         includePartialMessages: true,
         persistSession: true,
         settingSources: ['user', 'project'],
@@ -320,115 +362,16 @@ export class AgentProvider {
     return query as AsyncIterable<unknown>;
   }
 
-  // ── The scripted runtime (e2e) ───────────────────────────────────────
-
-  /**
-   * Speaks the SDK's message shapes so the mapper is exercised end to end:
-   * a session, streamed text, a Write that really lands in the folder, a
-   * Bash that asks permission when the prompt says "run", a result with a cost.
-   */
-  private async *mockQuery(opts: AgentStartOptions, run: Run): AsyncGenerator<unknown> {
-    const sessionId = opts.sessionId || randomUUID();
-    const resumed = !!opts.sessionId;
-    const say = (text: string) => ({
-      type: 'stream_event',
-      parent_tool_use_id: null,
-      session_id: sessionId,
-      event: { type: 'content_block_delta', delta: { type: 'text_delta', text } },
-    });
-    yield {
-      type: 'system',
-      subtype: 'init',
-      session_id: sessionId,
-      model: 'claude-mock',
-      claude_code_version: 'mock',
-      cwd: opts.cwd,
-      tools: ['Read', 'Write', 'Bash'],
-    };
-    yield { type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_start' } };
-    yield say(resumed ? 'Resuming our session. ' : 'Starting fresh. ');
-    yield say('Planting a note in the folder.');
-    const file = path.join(opts.cwd, 'agent-note.md');
-    const content = `# Agent note\n\n${opts.prompt}\n`;
-    yield {
-      type: 'assistant',
-      parent_tool_use_id: null,
-      message: {
-        role: 'assistant',
-        content: [
-          {
-            type: 'tool_use',
-            id: 'tool-write-1',
-            name: 'Write',
-            input: { file_path: file, content },
-          },
-        ],
-      },
-    };
-    fs.writeFileSync(file, content);
-    yield {
-      type: 'user',
-      parent_tool_use_id: null,
-      message: {
-        role: 'user',
-        content: [
-          {
-            type: 'tool_result',
-            tool_use_id: 'tool-write-1',
-            content: `File created successfully at: ${file}`,
-          },
-        ],
-      },
-    };
-    if (/\brun\b/i.test(opts.prompt)) {
-      const input = { command: 'echo hello from claude code' };
-      yield {
-        type: 'assistant',
-        parent_tool_use_id: null,
-        message: {
-          role: 'assistant',
-          content: [{ type: 'tool_use', id: 'tool-bash-1', name: 'Bash', input }],
-        },
-      };
-      const allow = await this.askPermission(opts, 'Bash', input);
-      if (run.controller.signal.aborted) return;
-      yield {
-        type: 'user',
-        parent_tool_use_id: null,
-        message: {
-          role: 'user',
-          content: [
-            allow
-              ? {
-                  type: 'tool_result',
-                  tool_use_id: 'tool-bash-1',
-                  content: 'hello from claude code',
-                }
-              : {
-                  type: 'tool_result',
-                  tool_use_id: 'tool-bash-1',
-                  is_error: true,
-                  content: 'The person declined this in Crux Garden.',
-                },
-          ],
-        },
-      };
-      yield { type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_start' } };
-      yield say(allow ? ' The command ran.' : ' Skipped the command, as you asked.');
-    }
-    yield { type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_start' } };
-    yield say(' Done — the note is in agent-note.md.');
-    yield {
-      type: 'result',
-      subtype: 'success',
-      is_error: false,
-      duration_ms: 1234,
-      num_turns: 2,
-      total_cost_usd: 0.0042,
-      usage: { input_tokens: 1200, output_tokens: 80, cache_read_input_tokens: 900 },
-      session_id: sessionId,
-      result: 'Done',
-    };
+  /** Development fixture lives outside the packaged production sources. */
+  private mockQuery(opts: AgentStartOptions, run: Run): AsyncGenerator<unknown> {
+    const { scriptedQuery } = require('../e2e/agent-mock.cjs');
+    return scriptedQuery(
+      opts,
+      run.controller.signal,
+      (name: string, input: Record<string, unknown>) => this.askPermission(opts, name, input),
+      (name: string, input: Record<string, unknown>) =>
+        this.deps.callTool(opts, name, input, run.controller.signal),
+    );
   }
 }
 

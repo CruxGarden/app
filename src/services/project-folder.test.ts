@@ -1,4 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { initServices } from './index';
+import { getSqliteClient } from './sqlite/client';
+import { hashContent } from './sqlite/helpers';
 import { SqliteCruxService } from './sqlite/crux.service';
 import { SqliteArtifactService } from './sqlite/artifact.service';
 import {
@@ -6,6 +9,7 @@ import {
   artifactRelPath,
   projectAllArtifacts,
   projectFolderExists,
+  rehomeProjectFolders,
 } from './project-folder';
 
 /**
@@ -82,6 +86,79 @@ describe('Project Folder write-through (ADR 0001)', () => {
     expect(crux.meta?.projectFolder).toBe('/garden/my-blog');
     expect(bridge.folders.has('/garden/my-blog')).toBe(true);
     expect(await folderForCrux(crux.id)).toBe('/garden/my-blog');
+  });
+
+  it('restores into a fresh folder even when the exporting folder still exists', async () => {
+    await initServices();
+    const crux = await cruxService.create({ title: 'Restore me', type: 'workspace' });
+    const old = crux.meta!.projectFolder as string;
+    await artifactService.create({
+      resourceId: crux.id,
+      content: 'restored bytes',
+      meta: { path: 'original.txt' },
+    });
+    // The incoming database and a still-existing pre-restore folder disagree.
+    bridge.files.set(`${old}::original.txt`, new TextEncoder().encode('original bytes'));
+    bridge.files.set(`${old}::untracked.txt`, new TextEncoder().encode('keep this too'));
+    expect(await rehomeProjectFolders()).toBe(1);
+    const current = await folderForCrux(crux.id);
+    expect(current).not.toBe(old);
+    expect(text(bridge.files.get(`${current}::original.txt`))).toBe('restored bytes');
+    expect(text(bridge.files.get(`${old}::original.txt`))).toBe('original bytes');
+    expect(text(bridge.files.get(`${old}::untracked.txt`))).toBe('keep this too');
+  });
+
+  it('restores manifest content and preserves its file mode without inventing Artifact rows', async () => {
+    await initServices();
+    const crux = await cruxService.create({ title: 'Manifest restore', type: 'workspace' });
+    const snapshot = await cruxService.create({
+      title: 'Snapshot',
+      type: 'workspace',
+      kind: 'snapshot',
+    });
+    const db = getSqliteClient();
+    const bytes = new TextEncoder().encode('Retained binary\0');
+    const fingerprint = await hashContent(bytes);
+    await db.blobWrite(fingerprint, bytes);
+    const head = { cruxId: crux.id, root: 'f'.repeat(64), revision: 1, formatVersion: 1 };
+    const list = vi.fn(async () => ({
+      head,
+      entries: [
+        {
+          id: 'file',
+          path: 'document.bin',
+          fingerprint,
+          size: bytes.length,
+          mimeType: 'application/octet-stream',
+          encoding: 'binary',
+          mode: 0o640,
+          attributes: {},
+        },
+      ],
+    }));
+    const content = { head: vi.fn(async () => head), list };
+    Object.defineProperty(db, 'fileContent', { configurable: true, value: content });
+    const setMode = vi.fn(async () => {});
+    Object.assign(bridge.api, { setMode });
+    const old = await folderForCrux(crux.id);
+    bridge.files.set(`${old}::untracked.txt`, new TextEncoder().encode('Keep'));
+    try {
+      expect(await rehomeProjectFolders()).toBe(1);
+      const folder = await folderForCrux(crux.id);
+      expect(folder).not.toBe(old);
+      expect(bridge.files.get(`${folder}::document.bin`)).toEqual(bytes);
+      expect(setMode).toHaveBeenCalledWith(folder, 'document.bin', 0o640);
+      expect(list).toHaveBeenCalledWith({ cruxId: crux.id, expected: head });
+      expect(await db.all('SELECT id FROM artifacts WHERE resource_id = ?', [crux.id])).toEqual([]);
+      expect(await folderForCrux(snapshot.id)).toBeNull();
+      expect(text(bridge.files.get(`${old}::untracked.txt`))).toBe('Keep');
+      list.mockRejectedValueOnce(new Error('Missing manifest node'));
+      expect(await rehomeProjectFolders()).toBe(0);
+      expect(await folderForCrux(crux.id)).toBe(folder);
+      expect(bridge.files.get(`${folder}::document.bin`)).toEqual(bytes);
+    } finally {
+      delete (db as { fileContent?: unknown }).fileContent;
+    }
   });
 
   it('snapshot and mood cruxes get no folder', async () => {

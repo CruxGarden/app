@@ -1,0 +1,415 @@
+:root {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #29463d;
+  background: #f4f3eb;
+  font-synthesis: none;
+  line-height: 1.6;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  padding: 22px 4vw;
+  border-bottom: 1px solid #dce2d5;
+  display: flex;
+  gap: 26px;
+  align-items: center;
+  font-size: 12px;
+}
+header span {
+  flex: 1;
+  color: #6b7e72;
+}
+.brand {
+  color: #365749;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  font-weight: 750;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  background: #fffdf5;
+  border: 1px solid #c9d4c4;
+  color: #29463d;
+  padding: 10px 16px;
+  border-radius: 9px;
+  transition:
+    background 0.18s,
+    transform 0.18s;
+}
+button:hover {
+  background: #e6eddc;
+  transform: translateY(-1px);
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #b96f43;
+  outline-offset: 3px;
+}
+main {
+  max-width: 1500px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  min-height: calc(100vh - 86px);
+}
+.landscape {
+  position: relative;
+  background: radial-gradient(ellipse at 50% 65%, #dce8d7, transparent 65%);
+  padding: 45px 3vw 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.intro {
+  padding: 0 5%;
+}
+.eyebrow {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.2em;
+  color: #648170;
+  margin: 0 0 16px;
+}
+h1,
+h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+h1 {
+  font-size: clamp(40px, 4.4vw, 68px);
+  margin: 12px 0 18px;
+}
+h1 em {
+  color: #62866b;
+  font-weight: 400;
+}
+h2 {
+  font-size: clamp(30px, 3vw, 44px);
+  margin: 16px 0;
+}
+.intro > p:last-child {
+  font-size: 14px;
+  color: #6c7e70;
+  margin-bottom: -18px;
+}
+svg {
+  width: 100%;
+  max-height: 430px;
+  overflow: visible;
+}
+.sleeping {
+  opacity: 0.13;
+  filter: grayscale(1);
+  transition:
+    opacity 1s,
+    filter 1s;
+}
+.awake {
+  opacity: 1;
+  filter: none;
+}
+#world-caption {
+  text-align: center;
+  font-family: Georgia, serif;
+  color: #6b7c6b;
+  font-size: 14px;
+  margin: 4px 0 22px;
+}
+#trail {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+#trail button {
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  font-size: 12px;
+}
+#trail button[aria-current='step'] {
+  background: #355d4c;
+  color: white;
+  border-color: #355d4c;
+}
+#trail button.done {
+  border: 2px solid #7b9b6a;
+}
+.guide {
+  padding: 45px clamp(24px, 4vw, 70px);
+  border-left: 1px solid #dce2d5;
+  background: #fcfbf6;
+  overflow-wrap: anywhere;
+}
+.guide-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+#completion {
+  font-size: 11px;
+  color: #738270;
+}
+#mission-description {
+  color: #71806f;
+  font-size: 15px;
+  margin-bottom: 25px;
+}
+ol.steps {
+  padding-left: 23px;
+  font-size: 14px;
+}
+.steps li {
+  padding-left: 6px;
+  margin: 12px 0;
+}
+.tip {
+  padding: 14px 17px;
+  border-left: 3px solid #b3c398;
+  background: #f0f2e6;
+  font-size: 13px;
+  margin: 20px 0;
+}
+.prompt {
+  border: 1px solid #dce1d1;
+  border-radius: 10px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+.prompt summary {
+  padding: 13px 15px;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 13px;
+}
+.prompt textarea {
+  border: 0;
+  border-top: 1px solid #e0e4d8;
+  width: 100%;
+  resize: vertical;
+  background: #f4f5eb;
+  padding: 14px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #415345;
+  min-height: 155px;
+}
+.prompt button {
+  margin: 8px 12px;
+  font-size: 12px;
+}
+.observation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  margin: 15px 0;
+}
+.observation input {
+  margin-top: 5px;
+  accent-color: #456b51;
+}
+.checks {
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+.checks li {
+  padding: 7px 10px;
+  background: #f1f2e9;
+  border-radius: 5px;
+  margin: 5px 0;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.primary {
+  background: #355d4c;
+  color: white;
+  border-color: #355d4c;
+}
+.primary:hover {
+  background: #254a3a;
+}
+#feedback {
+  font-size: 13px;
+  color: #66583e;
+  margin-top: 14px;
+  white-space: pre-line;
+}
+.honesty {
+  font-size: 11px;
+  color: #7c8373;
+  line-height: 1.5;
+  margin-top: 22px;
+}
+dialog {
+  border: 1px solid #cbd4c4;
+  border-radius: 18px;
+  background: #fcfbf6;
+  color: #29463d;
+  max-width: 580px;
+  width: 92%;
+  max-height: 90vh;
+  padding: 30px;
+}
+dialog::backdrop {
+  background: #233f35a6;
+  backdrop-filter: blur(5px);
+}
+dialog p {
+  font-size: 13px;
+}
+dialog label {
+  display: block;
+  font-size: 12px;
+  margin: 13px 0;
+}
+dialog input,
+dialog textarea,
+dialog select {
+  display: block;
+  width: 100%;
+  padding: 9px;
+  margin-top: 5px;
+  border: 1px solid #ced6c6;
+  border-radius: 6px;
+  background: white;
+  color: #29463d;
+}
+dialog li {
+  font-size: 13px;
+  margin: 10px 0;
+  white-space: pre-wrap;
+}
+.close {
+  float: right;
+  font-size: 22px;
+  padding: 0 10px;
+}
+#journal-status {
+  color: #85582e;
+}
+.restore {
+  border-top: 1px solid #d8ddcf;
+  padding-top: 15px;
+}
+code {
+  font-size: 0.88em;
+  background: #edf0e4;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+@media (max-width: 800px) {
+  header span {
+    display: none;
+  }
+  header {
+    justify-content: space-between;
+  }
+  .landscape {
+    padding: 28px 22px;
+  }
+  main {
+    grid-template-columns: 1fr;
+  }
+  .intro {
+    padding: 0;
+  }
+  .intro > p:last-child {
+    margin-bottom: 0;
+  }
+  svg {
+    max-height: 270px;
+    margin-top: -35px;
+  }
+  h1 {
+    font-size: 43px;
+  }
+  .guide {
+    border-left: 0;
+    border-top: 1px solid #dce2d5;
+    padding: 30px 24px;
+  }
+  .guide-top {
+    gap: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+[hidden] {
+  display: none !important;
+}
+
+#poem {
+  white-space: pre-line;
+  text-align: center;
+  font:
+    italic 17px/1.7 Georgia,
+    serif;
+  color: #526b58;
+  margin: 25px 15px 5px;
+}
+#postcard {
+  max-width: 220px;
+  max-height: 150px;
+  object-fit: contain;
+  align-self: center;
+  border: 8px solid #fffdf5;
+  box-shadow: 0 5px 20px #33554422;
+  transform: rotate(-3deg);
+  margin-top: 25px;
+}
+
+/* Keep the reward visible beside the guide inside a short Workshop panel. */
+@media (min-width: 801px) {
+  .landscape {
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 86px);
+    align-self: start;
+    justify-content: flex-start;
+    padding-top: 24px;
+    padding-bottom: 18px;
+    overflow: auto;
+  }
+  .landscape svg {
+    flex: 1;
+    min-height: 145px;
+    max-height: 34vh;
+  }
+  .intro h1 {
+    font-size: clamp(40px, 4vw, 58px);
+  }
+  .intro > p:last-child {
+    margin-bottom: 0;
+  }
+}

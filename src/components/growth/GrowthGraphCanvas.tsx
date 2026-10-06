@@ -4,6 +4,7 @@ import { moodTimeline, revealAlpha, setPieceAllowed } from '@/lib/set-piece';
 import { layoutGrowthGraph, type GrowthLink } from '@/services/growth-graph';
 import {
   endpointId,
+  graphLinkColor,
   laneColor,
   safeGraphLabel,
   type GraphCanvasProps,
@@ -19,6 +20,7 @@ export default function GrowthGraphCanvas({
   onSelect,
   fit,
   reducedMotion,
+  appearance,
 }: GraphCanvasProps) {
   const ref = useRef<ForceGraphMethods<RenderNode, GrowthLink> | undefined>(undefined);
   const data = useMemo(() => layoutGrowthGraph(graph), [graph]);
@@ -47,7 +49,10 @@ export default function GrowthGraphCanvas({
       timeline.kill();
       reveal.current = 1;
     };
-  }, [layoutKey, reducedMotion]);
+  }, [layoutKey, reducedMotion, appearance.motion.slow]);
+  useEffect(() => {
+    ref.current?.resumeAnimation();
+  }, [appearance]);
   useEffect(() => {
     const timer = requestAnimationFrame(() => ref.current?.zoomToFit(0, 65));
     return () => cancelAnimationFrame(timer);
@@ -68,7 +73,7 @@ export default function GrowthGraphCanvas({
         graphData={data}
         width={width}
         height={height}
-        backgroundColor="#101c19"
+        backgroundColor="transparent"
         cooldownTicks={0}
         autoPauseRedraw
         enableNodeDrag={false}
@@ -81,11 +86,13 @@ export default function GrowthGraphCanvas({
           const selected = n.id === selectedId;
           const arrived = revealAlpha(reveal.current, order.get(n.id) ?? 0, data.nodes.length);
           if (arrived <= 0) return;
-          ctx.globalAlpha = (active ? 1 : 0.28) * arrived;
+          // Only the temporary reveal changes opacity; the Mood owns resting RGBA.
+          ctx.globalAlpha = arrived;
           const radius = selected ? 9 : n.kind === 'copy' ? 8 : 5;
-          ctx.fillStyle = laneColor(n.lane);
-          ctx.strokeStyle = selected ? '#ffffff' : laneColor(n.lane);
-          ctx.lineWidth = selected ? 2 : 1;
+          const color = active ? laneColor(appearance, n.lane) : appearance.inactive;
+          ctx.fillStyle = color;
+          ctx.strokeStyle = selected ? appearance.selected : color;
+          ctx.lineWidth = selected ? appearance.selectionWidth / scale : 1;
           ctx.beginPath();
           if (n.kind === 'merge') {
             ctx.moveTo(n.x, n.y - radius * 1.5);
@@ -96,27 +103,24 @@ export default function GrowthGraphCanvas({
           } else ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
           if (n.kind !== 'copy') ctx.fill();
           ctx.stroke();
-          const fontSize = Math.min(18, 11 / scale);
-          ctx.font = `${fontSize}px "Outfit", sans-serif`;
+          const fontSize = Math.min(appearance.labelSize * (18 / 11), appearance.labelSize / scale);
+          ctx.font = `${appearance.fontWeight} ${fontSize}px ${appearance.fontFamily}`;
+          ctx.letterSpacing = appearance.letterSpacing;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-          ctx.fillStyle = '#e1eee5';
-          const label = n.title.length > 30 ? `${n.title.slice(0, 29)}…` : n.title;
+          ctx.fillStyle = active ? appearance.text : appearance.textMuted;
+          let label = n.title;
+          // Keep labels inside their lane; the inspector and tooltip retain
+          // the complete title at every zoom level.
+          while (label.length > 1 && ctx.measureText(label).width > 160)
+            label = `${label.replace(/…$/, '').slice(0, -1)}…`;
           ctx.fillText(label, n.x, n.y + radius + 5);
           ctx.globalAlpha = 1;
         }}
         linkVisibility={(l) =>
           revealAlpha(reveal.current, order.get(endpointId(l.target)) ?? 0, data.nodes.length) >= 1
         }
-        linkColor={(l) =>
-          selectedId && !ancestry.has(endpointId(l.target))
-            ? '#293831'
-            : l.kind === 'merge'
-              ? '#dfb56f'
-              : l.kind === 'transfer'
-                ? '#df94ab'
-                : '#648374'
-        }
+        linkColor={(l) => graphLinkColor(appearance, l, selectedId, ancestry)}
         linkWidth={(l) => (l.kind === 'merge' || l.kind === 'transfer' ? 2 : 1)}
         linkLineDash={(l) =>
           l.skipped ? [4, 3] : l.kind === 'copy' ? [2, 3] : l.kind === 'transfer' ? [7, 4] : null
@@ -134,7 +138,7 @@ export default function GrowthGraphCanvas({
         linkDirectionalArrowRelPos={0.8}
         onNodeClick={(n) => {
           onSelect(n.id);
-          ref.current?.centerAt(n.x, n.y, reducedMotion ? 0 : 250);
+          ref.current?.centerAt(n.x, n.y, reducedMotion ? 0 : appearance.motion.base);
         }}
         onBackgroundClick={() => onSelect('')}
       />

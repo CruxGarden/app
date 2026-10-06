@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 const examples = [
   ['tables', 'Tables'],
   ['smplr', 'Sample sequencer'],
@@ -28,6 +29,11 @@ for (const [type, label] of examples)
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: new RegExp('^' + label) }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // The Tasks pane opens with every app Crux now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+        await togglePanel(page, 'Toggle tasks');
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
       id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -155,7 +161,7 @@ for (const [type, label] of examples)
     const second = await launchApp({ dir: first.dir });
     try {
       const { page } = second;
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       const frame = page.frameLocator('iframe[data-crux-id]');
       await expect(frame.getByLabel('Project title', { exact: true })).toHaveValue(
         'Saved elsewhere',

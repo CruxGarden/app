@@ -32,7 +32,7 @@ export function maintainNotesManifest(
         let title = crux.title || 'My Vault';
         if (manifest) {
           try {
-            title = JSON.parse(await artifact.readContent(manifest.id)).title || title;
+            title = JSON.parse(await artifact.readContent(manifest)).title || title;
           } catch {
             /* keep the Crux title */
           }

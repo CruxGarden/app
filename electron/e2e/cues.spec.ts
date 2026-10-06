@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -8,11 +9,11 @@ type AudioState = {
   cuesPlayed: number;
 };
 
-/** The Mood's track plays and loops; a mock AI turn plays cues and ducks it. */
+/** The Mood's soundscape (Crux Synth, ADR 0017) plays; a mock AI turn plays cues and ducks it. */
 test.describe('sound: track + cues', () => {
   test.setTimeout(150_000);
 
-  test('the Default Mood has a track; an AI turn cues and ducks', async () => {
+  test('the Default Mood has a soundscape; an AI turn cues and ducks', async () => {
     const { app, page } = await launchApp({ sound: true, env: { CRUX_AI_MOCK: '1' } });
     const state = () =>
       page.evaluate(() =>
@@ -21,14 +22,16 @@ test.describe('sound: track + cues', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       const dock = page.getByRole('region', { name: 'Mood Bar' });
       await expect(dock).toBeVisible({ timeout: 30_000 });
-      // A fresh garden wears The Keeper: its track is already the Mood's
+      // Every Mood plays the Crux Synth (a Mood plays one Track, ADR 0017);
+      // press play once (the opt-in).
       await expect
         .poll(async () => (await state()).trackName, { timeout: 30_000 })
-        .toBe('Echoes From Beyond');
-      // It started on the Gateway (the room is set before you enter) and kept going
+        .toBe('Crux Synth');
+      if (!(await state()).playing)
+        await dock.getByRole('button', { name: 'Play soundscape' }).click();
       await expect.poll(async () => (await state()).playing, { timeout: 15_000 }).toBe(true);
       await page.screenshot({ path: 'e2e/.results/cues-1-playing.png' });
 

@@ -20,6 +20,7 @@ export const GARDEN_DARK = {
   bg: '#0b0d0c',
   text: '#e8ebe9',
   textMuted: '#98a49e',
+  textSubtle: 'var(--text-muted)',
   accent: '#72c3a8',
   border: 'rgba(94, 112, 100, 0.28)',
   panel: '#141816',
@@ -34,11 +35,16 @@ export const GARDEN_DARK = {
 
   // ── From accent ──────────────────────────────────────
   accentMuted: '#1a2723',
-  primaryButton: 'var(--accent)',
-  primaryButtonHover: 'color-mix(in srgb, var(--accent) 85%, black)',
-  primaryButtonText: 'var(--bg)',
-  primaryButtonBorder: 'var(--accent)',
-  primaryButtonBorderHover: 'color-mix(in srgb, var(--accent) 85%, black)',
+  // The landing page's register (Daniel, 2026-09-19: "I prefer the more muted
+  // button color, compared to the loud bright buttons"): a translucent wash
+  // of the Mood's own accent with the Mood's text on it and a hairline of
+  // light, not a solid accent fill with dark text. Every Mood inherits it
+  // through its own accent; a Mood that wants the loud fill sets these.
+  primaryButton: 'color-mix(in srgb, var(--accent) 16%, transparent)',
+  primaryButtonHover: 'color-mix(in srgb, var(--accent) 28%, transparent)',
+  primaryButtonText: 'var(--text)',
+  primaryButtonBorder: 'color-mix(in srgb, var(--text) 22%, transparent)',
+  primaryButtonBorderHover: 'color-mix(in srgb, var(--text) 32%, transparent)',
   chatUserBubble: 'color-mix(in srgb, var(--accent) 15%, transparent)',
   chatUserBubbleText: 'var(--accent)',
   chatUserBubbleBorder: 'transparent',
@@ -47,6 +53,9 @@ export const GARDEN_DARK = {
   chatSendButtonIcon: 'var(--bg)',
   chatInputBorderFocus: 'var(--accent)',
   inputBorderActive: 'var(--accent)',
+  // Every control answers the pointer (Daniel, 2026-09-19: "any interactive
+  // input needs a hover state, the app must feel like a living thing").
+  inputBorderHover: 'color-mix(in srgb, var(--input-border) 60%, var(--text))',
   inputOutline: 'color-mix(in srgb, var(--accent) 30%, transparent)',
   badge: 'color-mix(in srgb, var(--accent) 15%, transparent)',
   badgeText: 'var(--accent)',
@@ -55,19 +64,26 @@ export const GARDEN_DARK = {
   selectionText: 'var(--accent)',
   growthCardLabel: 'var(--accent)',
   growthDotActive: 'var(--accent)',
+  // Graph roles keep categorical lanes distinct without tying them to a renderer.
+  graphLane1: 'var(--accent)',
+  graphLane2: 'var(--pane-workshop)',
+  graphLane3: 'var(--warning)',
+  graphLane4: 'var(--pane-export)',
+  graphLane5: 'var(--pane-details)',
+  graphLane6: 'var(--success)',
+  graphLink: 'var(--text-muted)',
+  graphMergeLink: 'var(--accent)',
+  graphTransferLink: 'var(--pane-workshop)',
+  graphInactive: 'color-mix(in srgb, var(--text-muted) 55%, transparent)',
+  graphLabelSize: '0.6875rem',
   settingsLabel: 'var(--accent)',
-  // The Enter button: just the glyph in the accent; the quiet accent-tinted
-  // square appears on hover (Daniel, 2026-09-07).
-  gatewayButton: 'transparent',
-  gatewayButtonHover: 'color-mix(in srgb, var(--accent) 18%, var(--surface))',
-  gatewayButtonText: 'var(--accent)',
   flowColor: 'var(--accent)',
   flowBg: 'var(--bg)',
   iconButtonIconHover: 'var(--accent)',
   iconButtonHover: 'var(--accent-muted)',
-  actionButtonHover: 'var(--accent-muted)',
+  actionButtonHover: 'color-mix(in srgb, var(--accent) 16%, transparent)',
   actionButtonTextHover: 'var(--text)',
-  actionButtonBorderHover: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+  actionButtonBorderHover: 'color-mix(in srgb, var(--text) 28%, transparent)',
   profileButtonHover: 'color-mix(in srgb, var(--accent) 15%, transparent)',
   gardenCardHover: 'var(--accent-muted)',
   // Note: --accent-muted is auto-computed as solid hex in applyMoodPalette
@@ -94,7 +110,6 @@ export const GARDEN_DARK = {
   commandPaletteItemText: 'var(--text)',
   publicTopBarText: 'var(--text)',
   tooltipText: 'var(--text)',
-  gatewayTitle: 'var(--text)',
   settingsValue: 'var(--text)',
   growthCardText: 'var(--text)',
   fileTreeItemText: 'var(--text)',
@@ -111,7 +126,6 @@ export const GARDEN_DARK = {
   publicTopBarTextMuted: 'var(--text-muted)',
   publicTopBarLink: 'var(--text-muted)',
   publicTopBarLinkHover: 'var(--text)',
-  gatewaySubtitle: 'var(--text-muted)',
   actionButtonText: 'var(--text-muted)',
   iconButtonIcon: 'var(--text-muted)',
   profileButtonIcon: 'var(--text-muted)',
@@ -138,7 +152,7 @@ export const GARDEN_DARK = {
   settingsPanelBorder: 'var(--border)',
   settingsDivider: 'var(--border)',
   codeBlockBorder: 'var(--border)',
-  actionButtonBorder: 'var(--border)',
+  actionButtonBorder: 'color-mix(in srgb, var(--text) 16%, transparent)',
   profileButtonBorder: 'var(--border)',
   scrollbarTrack: 'transparent',
   markdownHr: 'var(--border)',
@@ -149,7 +163,6 @@ export const GARDEN_DARK = {
   /** the composer strip under the messages — transparent so the pane body shows */
   chatComposer: 'transparent',
   gardenCardThumbnail: 'var(--bg)',
-  contrast: '#ffffff',
   previewBg: 'color-mix(in srgb, var(--bg) 80%, transparent)',
 
   // ── From surface ─────────────────────────────────────
@@ -184,6 +197,19 @@ export const GARDEN_DARK = {
   chatAiBubbleBorder: 'transparent',
   chatInputText: 'var(--text)',
   onError: '#ffffff',
+  // Shared transparency scale: components select a tint; Moods own its opacity.
+  tintTrace: '5%',
+  tintFaint: '10%',
+  tintLight: '15%',
+  tintSubtle: '20%',
+  tintSoft: '25%',
+  tintQuiet: '30%',
+  tintMuted: '40%',
+  tintBalanced: '50%',
+  tintMedium: '60%',
+  tintStrong: '70%',
+  tintDense: '80%',
+  tintNearSolid: '90%',
   glassBlur: '12px',
   // ── glass ── (ADR 0043; styles/glass.css) liquid glass: the Mood's default surface style and how its glass looks
   surfaceStyle: 'solid',
@@ -192,15 +218,49 @@ export const GARDEN_DARK = {
   glassHighlight: 'rgb(255 255 255 / 0.28)',
   glassRefraction: '0.35',
   glassLight: 'var(--accent)',
+  glassFrameBorder: 'color-mix(in srgb, var(--glass-highlight) 60%, transparent)',
+  glassFrameFill: 'color-mix(in srgb, var(--glass-highlight) 55%, transparent)',
+  glassFrameShadow:
+    'inset 0 1px 0 var(--glass-highlight), 0 24px 60px -28px rgb(0 0 0 / 0.55), 0 2px 6px -2px rgb(0 0 0 / 0.25)',
+  glassInnerBorder: 'transparent',
+  glassFocusBorder: 'color-mix(in srgb, var(--accent) 55%, transparent)',
+  glassSheen:
+    'linear-gradient(115deg, transparent 38%, color-mix(in srgb, var(--glass-highlight) 70%, transparent) 50%, transparent 62%)',
+  glassSheenDuration: '60s',
+  glassSheenEase: 'ease-in-out',
+  glassLightOpacity: '0.5',
+  glassLightBlur: '70px',
+  glassButton: 'color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)',
+  glassButtonHover: 'color-mix(in srgb, var(--text) 8%, var(--glass-button))',
+  glassButtonBorder: 'color-mix(in srgb, var(--glass-highlight) 90%, transparent)',
+  glassButtonBorderHover: 'var(--glass-highlight)',
+  glassButtonShadow: 'inset 0 1px 0 var(--glass-highlight), 0 1px 2px rgb(0 0 0 / 0.22)',
+  glassPrimaryButton: 'color-mix(in srgb, var(--accent) 16%, var(--glass-button))',
+  glassPrimaryButtonHover: 'color-mix(in srgb, var(--accent) 26%, var(--glass-button))',
+  glassPrimaryButtonText: 'var(--text)',
+  glassPrimaryButtonBorder: 'color-mix(in srgb, var(--accent) 22%, var(--glass-highlight))',
+  glassPrimaryButtonBorderHover: 'color-mix(in srgb, var(--accent) 40%, var(--glass-highlight))',
+  glassPrimaryButtonShadow:
+    'inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, var(--glass-highlight)), 0 1px 2px rgb(0 0 0 / 0.22)',
   focusRing: 'var(--accent)',
   focusRingWidth: '2px',
   focusRingOffset: '1px',
   disabledOpacity: '0.5',
+  busyOpacity: '0.7',
+  inactiveOpacity: '0.6',
+  secondaryActionOpacity: '0.6',
+  decorationOpacity: '0.5',
   hoverBrightness: '1.1',
   activeBrightness: '0.95',
   paneHeaderHoverBrightness: '1.15',
   cardHoverLift: '2px',
   buttonRadius: 'var(--radius-sm)',
+  buttonBorderWidth: '1px',
+  buttonFillOverlay: 'linear-gradient(to bottom, #ffffff1a, transparent)',
+  // A dialog's title: the display face by default; a Mood may set the
+  // wordmark serif and a larger size (the Plasma Mood does).
+  dialogTitleFont: 'var(--font-display)',
+  dialogTitleSize: '0.875rem',
   inputRadius: 'var(--radius-sm)',
   cardRadius: 'var(--radius)',
   chipRadius: '9999px',
@@ -215,8 +275,8 @@ export const GARDEN_DARK = {
   meterDanger: 'var(--error)',
   meterRadius: '9999px',
   meterHeight: '6px',
-  buttonDisabled: 'var(--border)',
-  buttonDisabledText: 'var(--text-muted)',
+  buttonDisabled: 'color-mix(in srgb, var(--text) 6%, transparent)',
+  buttonDisabledText: 'color-mix(in srgb, var(--text) 40%, transparent)',
   toolbarHeight: '48px',
   fileTreeRowHeight: '26px',
   fileTreeIndent: '20px',
@@ -242,7 +302,7 @@ export const GARDEN_DARK = {
   toolbarLink: 'var(--accent)',
   publicTopBar: 'var(--panel)',
   profileButton: 'transparent',
-  actionButton: 'transparent',
+  actionButton: 'color-mix(in srgb, var(--text) 6%, transparent)',
   brandAi: '#D97757',
 
   // ── From error ───────────────────────────────────────
@@ -269,6 +329,12 @@ export const GARDEN_DARK = {
   paneSync: '#8c7cc8',
   panePublish: '#c87ca8',
   paneStore: '#c0a070',
+  paneTasks: '#8fbf6a',
+  paneSynth: 'var(--accent)',
+  paneBrowser: 'var(--accent)',
+  paneSettings: 'var(--accent)',
+  paneExplore: 'var(--accent)',
+  paneMood: 'var(--accent)',
 
   // ── Pane derived (all reference their base) ──────────
   ...paneTokens('paneCollaboration'),
@@ -280,6 +346,12 @@ export const GARDEN_DARK = {
   ...paneTokens('paneSync'),
   ...paneTokens('panePublish'),
   ...paneTokens('paneStore'),
+  ...paneTokens('paneTasks'),
+  ...paneTokens('paneSynth'),
+  ...paneTokens('paneBrowser'),
+  ...paneTokens('paneSettings'),
+  ...paneTokens('paneExplore'),
+  ...paneTokens('paneMood'),
 
   // ── Markdown ─────────────────────────────────────────
   markdownText: 'var(--text)',
@@ -355,17 +427,134 @@ export const GARDEN_DARK = {
 
   // ── Workspace layout (the mosaic chrome) ─────────────
   paneGap: '4px',
+  // Plasma surface theme: how much material shows around a pane, and what the
+  // content sits on inside it. The plate exists because plasma is the quietest
+  // material there will be — a busier one (wood grain, stone) needs a calmer
+  // plate, and that is a value here rather than a redesign. Both are the
+  // person's to set, in the Mood pane.
+  // The landing page's material is the base for every Mood that wears the
+  // plasma surface (Daniel, 2026-09-19: "all the plasma should be like that"):
+  // the tint does the panel's work, so there is no plate inside a pane and no
+  // frame around one — the material is the pane. A Mood that wants a plate
+  // sets these.
+  plasmaFrame: '0px',
+  plasmaPlate: 'transparent',
+  // What sits inside a pane under Plasma — inputs, inner panels, wells — a
+  // translucent well of the Mood's own ground, no second material.
+  plasmaInner: 'color-mix(in srgb, var(--bg) 45%, transparent)',
+  // The material's optics (plasma-ui props): how far the field bends behind
+  // a pane, and how far the red and blue of that bend split — chromatic
+  // aberration, the fringe a real lens leaves. 1 is the library's default;
+  // 0 is none; 3 is a prism.
+  plasmaRefraction: '1.4',
+  plasmaDispersion: '2.2',
+  // The material itself (plasma-ui provider props), so a Mood can carry the
+  // look the landing page has: the field's three colours (deep, mid, accent),
+  // the tint every surface carries and how solid it is, how frosted the
+  // material is (the quality tier caps this), the rim's strength and width,
+  // and how high the surfaces float. Defaults are the library's.
+  // The landing page's field (plasma-ui's aurora), every surface tinted the
+  // Mood's own panel colour and half solid, frosted, a strong iridescent
+  // rim, floating a little higher. Read live by PlasmaStage; the tint may be
+  // any CSS colour and follows the Mood.
+  plasmaField: '#050b12 #0f5e46 #b04bd6',
+  // The landing page tints with a near-black teal (#061016); a Mood's panel
+  // colour is lighter than that, so panes tinted with it alone read more
+  // see-through than the landing card (Daniel). The base leans the tint
+  // toward the Mood's ground, which is the same depth for every Mood.
+  plasmaTint: 'color-mix(in srgb, var(--bg) 70%, var(--panel))',
+  plasmaOpacity: '0.55',
+  plasmaFrost: '0.5',
+  plasmaRim: '0.65',
+  plasmaRimWidth: '1.4',
+  // The rim's colour: 'iridescent' (the spectrum), 'tint' (each surface's own), or a colour — a hairline edge.
+  plasmaRimColor: 'iridescent',
+  // Outline smoothing: 1 softens every silhouette, 0 keeps a 0-radius corner hard.
+  plasmaSmoothness: '1',
+  // The hairline at a surface's edge (what reads as an edge when the rim is 0), and
+  // how much of its own cast the material puts on what shows through it.
+  // How close two surfaces come before the material joins them (px); thin
+  // gutters need a small blend or the panes read as one slab.
+  plasmaBlend: '20',
+  plasmaEdgeLine: '1',
+  plasmaWash: '1',
+  plasmaElevation: '0.5',
+  // The liquid itself (plasma-ui's motion props): how far the outline
+  // ripples (flow), how far the surface trails a moving pane (stretch), how
+  // thick it is (viscosity, 0 watery to 1 thick), and whether decorative
+  // drops drift about. Library defaults here; the Plasma Mood carries the
+  // landing page's water — flow 2, stretch 2.5, viscosity 0, drops on.
+  plasmaFlow: '0',
+  plasmaStretch: '1',
+  plasmaViscosity: '0.5',
+  plasmaAmbientDrops: 'off',
+  // The form-in: whether a new surface grows from nothing, how fast (1 is a
+  // quarter second, 2 an eighth), and whether a removed one shrinks away.
+  plasmaFormIn: 'off',
+  plasmaFormSpeed: '1',
+  plasmaFormOut: 'on',
+  // The pointer, three ways (Daniel, 2026-09-19: "two settings, turning the
+  // cursor plasma on/off and turning the cursor plasma interaction on/off"):
+  // the bead of liquid that follows it, the pull of the surface toward it as
+  // it nears an edge, and the light the edges throw toward it — each its own.
+  plasmaPointerDrop: 'off',
+  plasmaPointerPull: 'on',
+  plasmaPointerLight: 'on',
+  // Whether the chrome — the top bar, menus and dialogs — is the material too,
+  // or flat translucent plates above it, the material kept to the garden's
+  // panels and the panes (Daniel, 2026-09-19: "keep the plasma to the main
+  // garden … we should pull back on the plasma styling").
+  plasmaChrome: 'material',
+  // The material's voices, each 0 to silence it: the sheen drifting across a
+  // surface's body, the halo it casts on the field, the grain over the
+  // field. A business Mood turns them all down.
+  // What lies under the surfaces: 'field' paints the material's own aurora;
+  // any CSS colour is a still ground of that colour (a faint luminance drift).
+  plasmaBackground: 'field',
+  // The shadow that keeps text legible over the moving field; none on a still light ground.
+  plasmaTextShadow: '0 1px 2px rgb(0 0 0 / 0.35)',
+  plasmaShimmer: '1',
+  plasmaGlow: '1',
+  plasmaGrain: '1',
+  // Flat chrome's plate: its colour for a menu and the bar, its colour for a
+  // dialog (which stands over a page of text), and how far it frosts what is
+  // behind it.
+  plasmaChromePlate: 'color-mix(in srgb, var(--toolbar) 86%, transparent)',
+  plasmaChromeDialog: 'color-mix(in srgb, var(--toolbar) 95%, transparent)',
+  plasmaChromeFrost: '24px',
   paneRadius: 'var(--radius)',
   paneBorderWidth: '1px',
   paneHeaderHeight: '28px',
   paneHeaderRadius: 'var(--radius-sm)',
   paneHeaderPadding: '6px',
+  // Room between a pane's frame and what it holds; a Mood may open it up.
+  paneBodyPadding: '8px',
   workspacePadding: '4px',
   // Pane header anatomy
-  paneHeaderLabelFont: 'var(--font-mono)',
+  paneHeaderLabelFont: 'var(--font-display)',
   paneHeaderLabelSize: '11px',
   paneHeaderLabelWeight: '400',
   paneHeaderLabelCase: 'uppercase',
+  // Names (Daniel, 2026-09-20): the garden's title and what its panes are
+  // called, so a Mood or a garden can craft the metaphor ("Case files" where
+  // a studio says "Artifacts"). `none` = the usual word; read in lib/pane-labels.
+  gardenTitle: 'none',
+  paneLabelTasks: 'none',
+  paneLabelCollaboration: 'none',
+  paneLabelArtifacts: 'none',
+  paneLabelWorkshop: 'none',
+  paneLabelDetails: 'none',
+  paneLabelHistory: 'none',
+  paneLabelExport: 'none',
+  paneLabelSync: 'none',
+  paneLabelPublish: 'none',
+  paneLabelStore: 'none',
+  paneLabelMedia: 'none',
+  paneLabelSynth: 'none',
+  paneLabelBrowser: 'none',
+  paneLabelSettings: 'none',
+  paneLabelExplore: 'none',
+  paneLabelMood: 'none',
   paneHeaderLabelTracking: '0.05em',
   paneHeaderIconDisplay: 'inline-flex',
   paneHeaderCloseDisplay: 'inline-flex',
@@ -386,6 +575,10 @@ export const GARDEN_DARK = {
 
   // ── Elevation ────────────────────────────────────────
   elevationPanel: '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
+  // Workspace frames and labelled controls can wear cut-paper shadows.
+  elevationPane: '0 0 0 transparent',
+  elevationButton: 'none',
+  elevationPrimaryButton: '0 1px 1px rgb(0 0 0 / 0.18)',
   elevationCard: 'none',
   elevationCardHover: '0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2)',
   elevationModal: '0 24px 80px -16px rgb(0 0 0 / 0.65)',
@@ -436,6 +629,14 @@ export const GARDEN_DARK = {
   reactAccentAudio: '0',
   reactBackgroundTyping: '0',
   reactPaneAgent: '0',
+  flowEnabled: 'off',
+  flowSensitivity: '0.5',
+  // How much colour drains from the background when nothing has happened for a
+  // while, so the garden warms up as you work. 0 = always at full colour.
+  reactBackgroundActivity: '0.4',
+  // The last stage: how much rim a busy garden adds to the plasma material.
+  // 0.65 on top of plasmaRim 0.65 is the landing page's 1.3. 0 = still.
+  reactRimActivity: '0.65',
 
   // ── Editor (Monaco) ──────────────────────────────────
   editorFontSize: '13px',
@@ -454,6 +655,7 @@ export const GARDEN_DARK = {
   fontFaceDisplay: 'none',
   fontFaceBody: 'none',
   fontFaceMono: 'none',
+  fontFaceReading: 'none',
 
   // ── Image background ─────────────────────────────────
   bgImageDim: '0',
@@ -469,9 +671,11 @@ export const GARDEN_DARK = {
   growthCardAspect: '16 / 10',
 
   // ── Typography ───────────────────────────────────────
-  fontDisplay: "'JetBrains Mono', monospace",
-  fontBody: "'Outfit', sans-serif",
+  fontDisplay: "'Inter', sans-serif",
+  fontBody: "'Inter', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
+  // Collaboration prose shares the interface face.
+  fontReading: "'Inter', sans-serif",
 } as const;
 
 /** Generate derived pane tokens that all reference the base pane color via var() */

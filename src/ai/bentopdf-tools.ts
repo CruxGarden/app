@@ -1,3 +1,4 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 const name = { type: 'string', minLength: 1, maxLength: 200 } as const;
 export const BENTOPDF_TOOLS: AppToolDefinition[] = [
@@ -5,7 +6,7 @@ export const BENTOPDF_TOOLS: AppToolDefinition[] = [
     name: 'inspect_bentopdf',
     description:
       'Inspect the documents kept in this BentoPDF Crux: the project name and each document’s name, type, size, page count, source (upload, tool or agent), the tool that made it and when.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

@@ -1,10 +1,11 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const WEB_SYNTH_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_web_synth',
     description:
       'Inspect the open web-synth composition: its modules (view contexts with ids, kinds and titles), the patch connections between them and the global tempo.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

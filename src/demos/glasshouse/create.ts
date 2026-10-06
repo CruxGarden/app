@@ -1,4 +1,5 @@
 import { getServices } from '@/services';
+import { captureGardenId } from '@/stores/gardenContext';
 import { createTask, prepareTaskReview, verifyTaskReview, applyTaskReview } from '@/services/tasks';
 import { openWorkspace } from '@/stores/workspaceRegistry';
 import { files, brand, accessibility, checkout, guide } from './content';
@@ -7,7 +8,10 @@ import { files, brand, accessibility, checkout, guide } from './content';
 export async function createTendingDemo(progress: (message: string) => void = () => {}) {
   const services = getServices();
   progress('Planting Glasshouse…');
+  // Planted in the Garden in front, like any other Crux.
+  const gardenId = captureGardenId();
   const main = await services.crux.create({
+    ...(gardenId ? { gardenId } : {}),
     title: 'Glasshouse · Tending demo',
     type: 'workspace',
     description:

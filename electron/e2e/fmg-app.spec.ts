@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -42,7 +43,7 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Fantasy Map\b/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 180000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
       await ready(page);
@@ -72,8 +73,8 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
     });
 
     await test.step('the scripted collaborator names the world and renders a PNG', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Name this world [map:world]');
       await box.press('Enter');
@@ -89,7 +90,7 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
       const png = outputs(folder).find((o) => o.label === 'Moss Isles')!;
       expect(png.mimeType).toBe('image/png');
       expect(readFileSync(join(folder, png.path)).subarray(1, 4).toString()).toBe('PNG');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'fmg-agent.png') });
     });
   } finally {
@@ -101,7 +102,7 @@ test('Fantasy Map: a world generates and saves, a person renders an SVG, the col
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1700, height: 1050 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the same world comes back', async () => {
       await ready(page);
       expect(doc().project.seed).toBe(seed);

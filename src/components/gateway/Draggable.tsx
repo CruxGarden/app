@@ -16,7 +16,10 @@ import { cn } from '@/lib/cn';
 type Pos = { cx: number; cy: number } | { dx: number; dy: number };
 const MOVED_EVENT = 'crux:gateway-piece-moved';
 
-const INTERACTIVE = 'button, a, input, select, textarea, [role="slider"], [role="switch"]';
+// A form that is all labels and cards (the Setup wizard) opts out with data-no-drag:
+// a press captured for dragging would swallow the click on a label.
+const INTERACTIVE =
+  'button, a, input, select, textarea, label, summary, [role="slider"], [role="switch"], [data-no-drag]';
 
 export default function Draggable({
   id,
@@ -182,7 +185,7 @@ export default function Draggable({
         <span
           aria-hidden
           data-testid={`gateway-${id}-grip`}
-          className="text-text-muted/70 text-xs leading-none px-0.5"
+          className="text-subtle text-xs leading-none px-0.5"
           title="Drag to move"
         >
           ⋮⋮

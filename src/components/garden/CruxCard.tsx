@@ -1,7 +1,15 @@
+import { getSqliteClient } from '@/services/sqlite/client';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { alertDialog } from '@/stores/dialogStore';
+import { useGardenStore, type SortField } from '@/stores/gardenStore';
+import { cruxPath, gardenPath, useGardenContext } from '@/stores/gardenContext';
 import { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import { Button, Input, Modal } from '@/components/ui';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { Link } from 'react-router-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { cn } from '@/lib/cn';
+import { linkClass, menuItemClass } from '@/components/ui/button-class';
 import { formatDateTime } from '@/lib/format';
 import { useDismiss } from '@/hooks/useDismiss';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
@@ -13,7 +21,7 @@ interface CruxCardProps {
   crux: Crux;
   linkTo?: string;
   onDelete?: (id: string) => void;
-  sortBy?: 'created' | 'updated';
+  sortBy?: SortField;
   /** Hide the three-dot action menu (e.g. on public pages) */
   hideMenu?: boolean;
   /** Blob Store fingerprint of the crux's preview.jpg, when one has been captured. */
@@ -21,6 +29,8 @@ interface CruxCardProps {
   /** Already-resolved image URL (public pages, where there is no Blob Store). */
   thumbnailUrl?: string;
   tendingCount?: number;
+  /** Where the card sits in its grid: cards settle one after another as a garden opens. */
+  enterIndex?: number;
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -29,6 +39,7 @@ const KIND_LABELS: Record<string, string> = {
   document: 'Document',
   image: 'Image',
   notes: 'Notes',
+  garden: 'Garden',
 };
 
 /** Stand-in for cruxes that have no screenshot yet: the title's initial, plain. */
@@ -37,7 +48,7 @@ function Placeholder({ crux }: { crux: Crux }) {
   const initial = label.trim().charAt(0).toUpperCase() || '?';
   return (
     <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-      <span className="font-wordmark text-5xl leading-none text-accent/70 select-none">
+      <span className="font-display text-5xl leading-none text-accent/(--tint-strong) select-none">
         {initial}
       </span>
     </div>
@@ -53,25 +64,71 @@ export default function CruxCard({
   thumbnailFingerprint,
   thumbnailUrl,
   tendingCount,
+  enterIndex,
 }: CruxCardProps) {
+  const garden = useGardenContext((s) => s.garden);
   const navigate = useMoodNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
+  const duplicate = async () => {
+    if (copyStatus) return;
+    const origin = window.location.href;
+    const gardenId = garden?.id;
+    setMenuOpen(false);
+    setCopyStatus('Preparing copy…');
+    try {
+      const { duplicateCrux } = await import('@/services/duplicate-crux');
+      const copy = await duplicateCrux(crux.id, gardenId, setCopyStatus);
+      await useGardenStore.getState().refresh();
+      if (window.location.href === origin) navigate(cruxPath(copy, gardenId));
+    } catch (error) {
+      await alertDialog((error as Error).message, 'Could not duplicate Crux');
+    } finally {
+      setCopyStatus('');
+    }
+  };
   const [exportOpen, setExportOpen] = useState(false);
+  // Rename is the Details pane's title edit, reachable without opening the Crux.
+  const [renameDraft, setRenameDraft] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState('');
+  const rename = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (renameDraft === null || renaming) return;
+    setRenaming(true);
+    setRenameError('');
+    try {
+      await useGardenStore.getState().renameCrux(crux.id, renameDraft);
+      setRenameDraft(null);
+    } catch (error) {
+      setRenameError((error as Error).message || 'Could not rename this Crux.');
+    } finally {
+      setRenaming(false);
+    }
+  };
   const menuRef = useRef<HTMLDivElement>(null);
 
   const blobUrl = useBlobUrl(thumbnailFingerprint, 'image/jpeg');
   const imageUrl = thumbnailUrl || blobUrl;
 
-  const description = crux.meta?.summary?.purpose || crux.description;
+  // The written summary is the collaborator's; with AI tools off, only the person's words show.
+  const aiEnabled = useAiEnabled();
+  const description = (aiEnabled && crux.meta?.summary?.purpose) || crux.description;
   const isPublished = crux.meta?.publishedAt != null;
   const kindLabel = crux.kind ? KIND_LABELS[crux.kind] : undefined;
   const when = sortBy === 'updated' ? crux.updated : crux.created;
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   useDismiss(menuRef, closeMenu, menuOpen);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
+      style={
+        enterIndex !== undefined
+          ? ({ '--enter-index': enterIndex } as React.CSSProperties)
+          : undefined
+      }
       className={cn(
         'relative group shape-card flex flex-col rounded-[var(--radius)] overflow-hidden motion-enter-card',
         'bg-garden-card border border-garden-card-border',
@@ -86,7 +143,7 @@ export default function CruxCard({
           // being opened carries the name, set before the old screen is captured.
           const title = e.currentTarget.querySelector('h3');
           if (title) title.style.viewTransitionName = `crux-${crux.id}`;
-          navigate(linkTo || `/c/${crux.id}`);
+          navigate(linkTo || (crux.kind === 'garden' ? gardenPath(crux.id) : `/c/${crux.id}`));
         }}
         className="flex flex-col text-left cursor-pointer outline-none flex-1"
         aria-label={`Open ${crux.title || crux.slug}`}
@@ -130,7 +187,7 @@ export default function CruxCard({
           <p
             className={cn(
               'text-xs text-garden-card-text leading-relaxed line-clamp-2 min-h-[2lh]',
-              !description && 'italic opacity-70',
+              !description && 'italic text-subtle',
             )}
           >
             {description || 'No description yet'}
@@ -142,33 +199,39 @@ export default function CruxCard({
       </button>
 
       {!!tendingCount && (
-        <Link to="/tending" className="px-3 pb-2 text-xs text-accent hover:underline">
+        <Link to="/tending" className={linkClass('mx-3.5 mb-3 -mt-1 self-start text-xs')}>
           {tendingCount} {tendingCount === 1 ? 'needs' : 'need'} tending
         </Link>
       )}
 
       {/* Three-dot menu */}
       {!hideMenu && (
-        <div ref={menuRef} className="absolute top-2 right-2 z-10">
+        <div ref={menuRef} className="absolute top-2 right-2 z-10" data-plasma-host>
           <button
             onClick={(e) => {
               e.stopPropagation();
               setMenuOpen(!menuOpen);
             }}
+            disabled={!!copyStatus}
             aria-label="Crux actions"
-            className={cn(
-              'p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover:brightness-125 cursor-pointer transition-opacity',
-              menuOpen
-                ? 'opacity-100'
-                : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
-            )}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="reveal-on-hover p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover-bright active-dim motion-press cursor-pointer"
           >
             <MoreVerticalIcon size={14} />
           </button>
           {menuOpen && (
+            <PlasmaOverlay
+              surfaces={[{ ref: actionsRef, radius: 12, elevation: 0.6 }]}
+              zIndex={-1}
+              canvasStyle={{ position: 'fixed' }}
+            />
+          )}
+          {menuOpen && (
             <div
+              ref={actionsRef}
               role="menu"
-              className="absolute right-0 top-full mt-1 w-32 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 z-50"
+              className="absolute right-0 top-full mt-1 w-40 p-1 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown z-50 motion-enter-dropdown"
             >
               <button
                 role="menuitem"
@@ -177,10 +240,55 @@ export default function CruxCard({
                   setMenuOpen(false);
                   setExportOpen(true);
                 }}
-                className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted transition-colors cursor-pointer"
+                className={menuItemClass('default', 'text-xs')}
               >
                 Export...
               </button>
+              {onDelete && (
+                <button
+                  role="menuitem"
+                  className={menuItemClass('default', 'text-xs')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    setRenameError('');
+                    setRenameDraft(crux.title ?? '');
+                  }}
+                >
+                  Rename
+                </button>
+              )}
+              {onDelete && crux.kind !== 'garden' && (
+                <button
+                  role="menuitem"
+                  className={menuItemClass('default', 'text-xs')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void duplicate();
+                  }}
+                >
+                  Duplicate
+                </button>
+              )}
+              {onDelete && garden && (
+                <button
+                  role="menuitem"
+                  className={menuItemClass('default', 'text-xs')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const gardenId = garden.id;
+                    setMenuOpen(false);
+                    void getSqliteClient()
+                      .gardenMembership!.remove(gardenId, crux.id)
+                      .then(() => useGardenStore.getState().refresh())
+                      .catch((error) =>
+                        alertDialog((error as Error).message, 'Could not remove Crux'),
+                      );
+                  }}
+                >
+                  Remove from Garden
+                </button>
+              )}
               {onDelete && (
                 <button
                   role="menuitem"
@@ -189,7 +297,7 @@ export default function CruxCard({
                     setMenuOpen(false);
                     onDelete(crux.id);
                   }}
-                  className="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-error-muted transition-colors cursor-pointer"
+                  className={menuItemClass('danger', 'text-xs')}
                 >
                   Delete
                 </button>
@@ -199,6 +307,47 @@ export default function CruxCard({
         </div>
       )}
 
+      {copyStatus && (
+        <p role="status" className="px-3 pb-3 text-xs text-text-muted">
+          {copyStatus}
+        </p>
+      )}
+      {renameDraft !== null && (
+        <Modal
+          open
+          size="sm"
+          title="Rename"
+          onClose={() => {
+            if (!renaming) setRenameDraft(null);
+          }}
+        >
+          <form onSubmit={rename} className="flex flex-col gap-4">
+            <Input
+              autoFocus
+              aria-label="Crux name"
+              value={renameDraft}
+              disabled={renaming}
+              error={renameError || undefined}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={renaming}
+                onClick={() => setRenameDraft(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" loading={renaming}>
+                Rename
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {exportOpen && (
         <Suspense fallback={null}>
           <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} crux={crux} />

@@ -32,8 +32,8 @@ const PANES = [
   ['Collaboration', 'paneCollaboration'],
   ['Artifacts', 'paneArtifacts'],
   ['Workshop', 'paneWorkshop'],
-  ['Metadata', 'paneDetails'],
-  ['History', 'paneHistory'],
+  ['Details', 'paneDetails'],
+  ['Growth', 'paneHistory'],
   ['Export', 'paneExport'],
   ['Sync', 'paneSync'],
   ['Share', 'panePublish'],
@@ -100,8 +100,8 @@ export default function AssetsTab() {
     <div className="flex flex-col gap-4">
       <div
         className={cn(
-          'rounded-[var(--radius)] border border-dashed border-border/70 p-5 text-center transition-colors',
-          busy && 'opacity-60',
+          'rounded-[var(--radius)] border border-dashed border-border/(--tint-strong) p-5 text-center transition-colors',
+          busy && 'opacity-[var(--busy-opacity)]',
         )}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -226,6 +226,7 @@ export default function AssetsTab() {
                         ['Display', 'fontFaceDisplay', 'fontDisplay', 'MoodFontDisplay'],
                         ['Body', 'fontFaceBody', 'fontBody', 'MoodFontBody'],
                         ['Code', 'fontFaceMono', 'fontMono', 'MoodFontMono'],
+                        ['Reading', 'fontFaceReading', 'fontReading', 'MoodFontReading'],
                       ] as const
                     ).map(([label, faceKey, fontKey, family]) => (
                       <Button
@@ -237,7 +238,7 @@ export default function AssetsTab() {
                           setThemeOverrides(section, {
                             ...getThemeOverrides(section),
                             [faceKey]: assetRef(a.fingerprint),
-                            [fontKey]: `'${family}', ${fontKey === 'fontMono' ? 'monospace' : 'sans-serif'}`,
+                            [fontKey]: `'${family}', ${fontKey === 'fontMono' ? 'monospace' : fontKey === 'fontReading' ? 'serif' : 'sans-serif'}`,
                           });
                           applyActiveMood(section);
                           say(`"${a.name}" is now the ${label.toLowerCase()} face.`);

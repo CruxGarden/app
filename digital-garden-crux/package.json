@@ -44,5 +44,10 @@
     "typescript": "^6.0.3",
     "unist-util-visit": "^5.1.0"
   },
-  "private": true
+  "private": true,
+  "pnpm": {
+    "overrides": {
+      "devalue": "5.9.3"
+    }
+  }
 }

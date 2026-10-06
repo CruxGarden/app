@@ -105,7 +105,18 @@ export interface Crux {
   deleted?: string | null;
 }
 
-export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | 'notes' | 'mood';
+export type CruxKind =
+  | 'webapp'
+  | 'page'
+  | 'document'
+  | 'image'
+  | 'snapshot'
+  | 'notes'
+  | 'mood'
+  /** A Crux Tool as a Template Crux: installed by cloning, hidden from the garden's list (ADR 0050) */
+  | 'tool'
+  /** A garden with people in it: its Store holds the members and the shelf, its functions the rules (GARDEN-MEMBERS-PLAN) */
+  | 'garden';
 
 export interface CreateCruxDto {
   id?: string;
@@ -118,7 +129,6 @@ export interface CreateCruxDto {
   status?: CruxStatus;
   visibility?: CruxVisibility;
   discoverable?: boolean;
-  tags?: string[];
   meta?: Record<string, unknown>;
 }
 
@@ -132,7 +142,6 @@ export interface UpdateCruxDto {
   status?: CruxStatus;
   visibility?: CruxVisibility;
   discoverable?: boolean;
-  tags?: string[];
   meta?: Record<string, unknown>;
 }
 
@@ -178,6 +187,12 @@ export interface ChatMessage {
    * as the person.
    */
   origin?: 'check';
+  /**
+   * Left out of the shared conversation (CR06). A crux-level override in
+   * `CruxMeta.conversationExclusions` wins, so messages in immutable Growth
+   * segments can still be included or left out.
+   */
+  excludedFromPublish?: boolean;
 }
 
 /** Compact record of a finished Background Turn — the transcript's "Ran 3 steps · 2 snapshots". */
@@ -203,6 +218,13 @@ export interface ToolCall {
   name: string;
   input: Record<string, unknown>;
   result?: string;
+  /**
+   * Set from the producer's own status (a tool-error part, Claude Code's
+   * `is_error`, Codex's failed/declined item). Absent on records saved before
+   * this existed; the pane then falls back to an "Error:" prefix, never to
+   * searching the result body for words.
+   */
+  error?: boolean;
 }
 
 export interface CruxMeta {
@@ -210,17 +232,19 @@ export interface CruxMeta {
   messages?: ChatMessage[];
   settings?: {
     model?: string;
+    /** Follow the account/default until the person explicitly selects a model. */
+    modelAutomatic?: boolean;
     systemPrompt?: string;
     palette?: Record<string, string>;
     snapshotFrequency?: string;
-    activeBranch?: string;
+    activeBranch?: string | null;
     /** Agent Host switched on for this crux (MCP server per crux, ADR 0013). Off by default. */
     agentHost?: boolean;
     /** The Claude Code session this crux's Agent Provider turns resume (ADR 0019). */
     agentSessionId?: string;
     /** Private resumable session per hosted provider; stripped on copy/import. */
     agentSessions?: Record<string, string>;
-    /** Check automatically after a turn that claims to be done (B4). On unless false. */
+    /** Check the result after a turn that claims to be done (B4). On unless false. */
     verifyOnDone?: boolean;
     /** Port the site's dev server should try first (1024–65535); ephemeral when unset or taken. */
     previewPort?: number;
@@ -246,6 +270,10 @@ export interface CruxMeta {
   reveal?: Reveal;
   /** 5Ws configuration: where the Shelf lives in the Project Folder, and when it was last played. */
   game?: { shelfPath: string; lastRoundAt?: string };
+  /** Share "How was this made?" with the Crux (CR06). Off unless explicitly true. */
+  conversationPublished?: boolean;
+  /** Per-message share overrides keyed by `messageShareKey` (true = left out). Private. */
+  conversationExclusions?: Record<string, boolean>;
   [key: string]: unknown;
 }
 
@@ -280,6 +308,8 @@ export interface CruxEmbed {
 export interface CreateDimensionDto {
   targetId: string;
   type: DimensionType;
+  kind?: string;
+  meta?: Record<string, unknown>;
   weight?: number;
   note?: string;
 }
@@ -352,6 +382,8 @@ export interface Tag {
 // ── Artifact ────────────────────────────────────────
 
 export interface Artifact {
+  /** Exact local content selection; file identity remains owner + logical id. */
+  fileReference?: { cruxId: string; expected: { root: string; revision: number }; path: string };
   id: string;
   type: string;
   kind: string;

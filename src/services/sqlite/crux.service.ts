@@ -1,4 +1,5 @@
 import type { ICruxService } from '../crux.service';
+import { reportFlowActivity } from '@/lib/moods/flow';
 import type { Crux, CreateCruxInput, UpdateCruxInput } from '../types';
 import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
@@ -11,7 +12,6 @@ import {
   workingCopyDocument,
   updateCopyMeta,
   assertMainWorkspace,
-  isTaskHistoryReference,
 } from '../working-copies';
 
 export class SqliteCruxService implements ICruxService {
@@ -44,29 +44,41 @@ export class SqliteCruxService implements ICruxService {
 
   async listAll(): Promise<Crux[]> {
     const rows = await getSqliteClient().all(
-      "SELECT * FROM cruxes WHERE deleted IS NULL AND (kind IS NULL OR kind != 'snapshot') AND type != 'mood' ORDER BY updated DESC",
+      "SELECT * FROM cruxes WHERE deleted IS NULL AND (kind IS NULL OR kind NOT IN ('snapshot', 'tool')) AND type != 'mood' ORDER BY updated DESC",
+    );
+    return rows.map((r) => fromRow<Crux>(r));
+  }
+
+  /** The Cruxes of one kind — the installed Crux Tools are `kind: 'tool'` and stay out of `listAll`. */
+  async listByKind(kind: string): Promise<Crux[]> {
+    const rows = await getSqliteClient().all(
+      'SELECT * FROM cruxes WHERE deleted IS NULL AND kind = ? ORDER BY updated DESC',
+      [kind],
     );
     return rows.map((r) => fromRow<Crux>(r));
   }
 
   async listTrashed(): Promise<Crux[]> {
     const rows = await getSqliteClient().all(
-      "SELECT * FROM cruxes WHERE deleted IS NOT NULL AND (kind IS NULL OR kind != 'snapshot') AND type != 'mood' ORDER BY deleted DESC",
+      "SELECT * FROM cruxes WHERE deleted IS NOT NULL AND (kind IS NULL OR kind NOT IN ('snapshot', 'tool')) AND type != 'mood' ORDER BY deleted DESC",
     );
     return rows.map((r) => fromRow<Crux>(r));
   }
 
   async trash(cruxId: string): Promise<void> {
+    const db = getSqliteClient();
+    if (!db.setCruxTrashed)
+      throw new Error('Crux lifecycle storage is unavailable. Restart the updated desktop app.');
     await assertMainWorkspace(cruxId);
     await assertNoOpenTasks(cruxId);
-    await getSqliteClient().run('UPDATE cruxes SET deleted = ? WHERE id = ? AND deleted IS NULL', [
-      new Date().toISOString(),
-      cruxId,
-    ]);
+    return db.setCruxTrashed(cruxId, true);
   }
 
   async restore(cruxId: string): Promise<void> {
-    await getSqliteClient().run('UPDATE cruxes SET deleted = NULL WHERE id = ?', [cruxId]);
+    const db = getSqliteClient();
+    if (!db.setCruxTrashed)
+      throw new Error('Crux lifecycle storage is unavailable. Restart the updated desktop app.');
+    return db.setCruxTrashed(cruxId, false);
   }
 
   async purgeTrash(olderThanMs: number): Promise<number> {
@@ -103,7 +115,21 @@ export class SqliteCruxService implements ICruxService {
   }
 
   async create(input: CreateCruxInput): Promise<Crux> {
+    // Capture before identity lookup/queueing so caller mutation cannot redirect creation.
+    input = JSON.parse(JSON.stringify(input)) as CreateCruxInput;
     const identity = await getLocalIdentity();
+    const db = getSqliteClient();
+    if (db.createCrux) {
+      const id = await db.createCrux({
+        ...input,
+        slug: input.slug || generateSlug(input.title),
+        authorId: input.authorId || identity.authorId,
+        homeId: input.homeId || identity.homeId,
+      });
+      const crux = await this.findById(id);
+      if (crux.kind !== 'snapshot' && crux.kind !== 'tool') reportFlowActivity('crux');
+      return crux;
+    }
     const now = new Date().toISOString();
     const slug = await this.freeSlug(input.slug || generateSlug(input.title));
 
@@ -138,14 +164,30 @@ export class SqliteCruxService implements ICruxService {
     };
     const { sql, params } = buildInsert('cruxes', { ...crux });
     await getSqliteClient().run(sql, params);
+    if (crux.kind !== 'snapshot' && crux.kind !== 'tool') reportFlowActivity('crux');
     return crux;
   }
 
   async update(cruxId: string, updates: UpdateCruxInput): Promise<Crux> {
+    // Capture the caller's intent before the asynchronous Main/Task lookup.
+    updates = structuredClone(updates);
     if (await findWorkingCopy(cruxId)) {
       if (Object.keys(updates).some((key) => key !== 'meta' && key !== 'title'))
         throw new Error('Change the Crux’s details in Main.');
       return updateCopyMeta(cruxId, updates.meta ?? {}, updates.title);
+    }
+    const db = getSqliteClient();
+    if (db.updateCrux) {
+      await db.updateCrux(cruxId, updates);
+      return this.findById(cruxId);
+    }
+    if (
+      updates.meta !== undefined &&
+      Object.keys(updates).every((key) => key === 'meta') &&
+      db.mergeCruxMeta
+    ) {
+      await db.mergeCruxMeta(cruxId, updates.meta);
+      return this.findById(cruxId);
     }
     const existing = await this.findById(cruxId);
     const changes: Record<string, unknown> = { updated: new Date().toISOString() };
@@ -168,38 +210,10 @@ export class SqliteCruxService implements ICruxService {
 
   async delete(cruxId: string): Promise<void> {
     const db = getSqliteClient();
+    if (!db.deleteCrux)
+      throw new Error('Crux lifecycle storage is unavailable. Restart the updated desktop app.');
     await assertMainWorkspace(cruxId);
     await assertNoOpenTasks(cruxId);
-    if (await isTaskHistoryReference(cruxId))
-      throw new Error('This snapshot is used by a task or merge.');
-    const copies = await db.all<{ id: string }>('SELECT id FROM working_copies WHERE crux_id = ?', [
-      cruxId,
-    ]);
-    for (const copy of copies) {
-      await db.run(
-        'DELETE FROM artifacts WHERE resource_id = ? OR resource_id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
-        [copy.id, copy.id],
-      );
-      await db.run(
-        'DELETE FROM cruxes WHERE id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
-        [copy.id],
-      );
-      await db.run('DELETE FROM dimensions WHERE source_id = ?', [copy.id]);
-      await db.run('DELETE FROM store WHERE crux_id = ?', [copy.id]);
-    }
-    await db.run('DELETE FROM working_copies WHERE crux_id = ?', [cruxId]);
-    await db.run('DELETE FROM task_merges WHERE crux_id = ?', [cruxId]);
-    // The Main lane's own Growth snapshots go with it, as the Task lanes' did above;
-    // otherwise their rows and Artifacts linger and block restoring the same identities.
-    await db.run(
-      'DELETE FROM artifacts WHERE resource_id = ? OR resource_id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
-      [cruxId, cruxId],
-    );
-    await db.run(
-      "DELETE FROM cruxes WHERE kind = 'snapshot' AND id IN (SELECT target_id FROM dimensions WHERE source_id = ?)",
-      [cruxId],
-    );
-    await db.run('DELETE FROM dimensions WHERE source_id = ? OR target_id = ?', [cruxId, cruxId]);
-    await db.run('DELETE FROM cruxes WHERE id = ?', [cruxId]);
+    return db.deleteCrux(cruxId);
   }
 }

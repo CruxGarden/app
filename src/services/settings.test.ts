@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { initSettings, setSetting, getSetting, clearAllSettings } from './settings';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  initSettings,
+  setSetting,
+  getSetting,
+  clearAllSettings,
+  setSettingDurably,
+  flushSettings,
+  onSettingChange,
+} from './settings';
 import { getSqliteClient } from './sqlite/client';
 import { SettingsKey } from '@/lib/constants';
 
@@ -21,34 +29,28 @@ describe('Settings secrets exclusion', () => {
     clearAllSettings();
   });
 
-  it('purges a leaked API key row from SQLite and lifts it to localStorage', async () => {
-    await seedSqliteSetting(ANTHROPIC_KEY, 'sk-ant-leaked');
+  it('does not expose or move credential rows while loading ordinary preferences', async () => {
+    await seedSqliteSetting(ANTHROPIC_KEY, 'fixture-kept-on-disk');
+    await seedSqliteSetting(SettingsKey.AuthSession, 'fixture-account-pair');
+    await seedSqliteSetting(SettingsKey.Theme, 'dark');
     await initSettings();
-
-    const rows = await sqliteSettingRows();
-    expect(rows.has(ANTHROPIC_KEY)).toBe(false);
-    expect(localStorage.getItem(ANTHROPIC_KEY)).toBe('sk-ant-leaked');
-    // Not readable via settings either — secrets are not settings
     expect(getSetting(ANTHROPIC_KEY)).toBeNull();
-  });
-
-  it('purges the legacy unprefixed API key row under the canonical name', async () => {
-    await seedSqliteSetting('apiKey:anthropic', 'sk-ant-legacy');
-    await initSettings();
-
+    expect(getSetting(SettingsKey.AuthSession)).toBeNull();
+    expect(getSetting(SettingsKey.Theme)).toBe('dark');
+    expect(localStorage.getItem(ANTHROPIC_KEY)).toBeNull();
+    expect(localStorage.getItem(SettingsKey.AuthSession)).toBeNull();
     const rows = await sqliteSettingRows();
-    expect(rows.has('apiKey:anthropic')).toBe(false);
-    expect(rows.has(ANTHROPIC_KEY)).toBe(false);
-    expect(localStorage.getItem(ANTHROPIC_KEY)).toBe('sk-ant-legacy');
+    expect(rows.get(ANTHROPIC_KEY)).toBe('fixture-kept-on-disk');
+    expect(rows.get(SettingsKey.AuthSession)).toBe('fixture-account-pair');
   });
 
-  it('never clobbers a newer localStorage key while purging', async () => {
-    localStorage.setItem(ANTHROPIC_KEY, 'sk-ant-current');
-    await seedSqliteSetting(ANTHROPIC_KEY, 'sk-ant-stale');
+  it('leaves existing plaintext untouched and inaccessible as settings', async () => {
+    localStorage.setItem(ANTHROPIC_KEY, 'fixture-current');
+    await seedSqliteSetting(ANTHROPIC_KEY, 'fixture-earlier');
     await initSettings();
-
-    expect(localStorage.getItem(ANTHROPIC_KEY)).toBe('sk-ant-current');
-    expect((await sqliteSettingRows()).has(ANTHROPIC_KEY)).toBe(false);
+    expect(getSetting(ANTHROPIC_KEY)).toBeNull();
+    expect(localStorage.getItem(ANTHROPIC_KEY)).toBe('fixture-current');
+    expect((await sqliteSettingRows()).get(ANTHROPIC_KEY)).toBe('fixture-earlier');
   });
 
   it('does not sweep API keys or auth tokens from localStorage into SQLite', async () => {
@@ -70,24 +72,52 @@ describe('Settings secrets exclusion', () => {
 
   it('setSetting refuses to persist a secret to SQLite', async () => {
     await initSettings();
-    setSetting(ANTHROPIC_KEY, 'sk-ant-via-settings');
+    expect(() => setSetting(ANTHROPIC_KEY, 'sk-ant-via-settings')).toThrow(
+      'encrypted credential storage',
+    );
     // Fire-and-forget writes: give the event loop a tick
     await new Promise((r) => setTimeout(r, 10));
 
     expect((await sqliteSettingRows()).has(ANTHROPIC_KEY)).toBe(false);
-    expect(localStorage.getItem(ANTHROPIC_KEY)).toBe('sk-ant-via-settings');
+    expect(localStorage.getItem(ANTHROPIC_KEY)).toBeNull();
   });
+});
 
-  it('a garden export after init contains no API key rows', async () => {
-    await seedSqliteSetting(ANTHROPIC_KEY, 'sk-ant-leaked');
-    await initSettings();
-
-    // The backup serializes the DB wholesale — assert at the source of truth
-    const rows = await sqliteSettingRows();
-    for (const key of rows.keys()) {
-      expect(key).not.toContain('apiKey:');
-      expect(key).not.toContain('accessToken');
-      expect(key).not.toContain('refreshToken');
-    }
+it('durable markers reject their own failed write even when another consumer flushes concurrently', async () => {
+  await initSettings();
+  const key = 'cruxgarden:pending-open:write-proof';
+  const observed: (string | null)[] = [];
+  const stop = onSettingChange((changed) => {
+    if (changed === key) observed.push(getSetting(key));
   });
+  try {
+    await setSettingDurably(key, 'queued');
+    const db = getSqliteClient();
+    const run = vi.spyOn(db, 'run').mockRejectedValueOnce(new Error('disk full'));
+    const operation = setSettingDurably(key, 'dispatched');
+    const flush = flushSettings().catch(() => {});
+    await expect(operation).rejects.toThrow('disk full');
+    await flush;
+    expect(getSetting(key)).toBe('queued');
+    expect(observed).toEqual(['queued']);
+    run.mockRestore();
+    expect((await sqliteSettingRows()).get(key)).toBe('queued');
+    await setSettingDurably(key, 'dispatched');
+    expect((await sqliteSettingRows()).get(key)).toBe('dispatched');
+    expect(getSetting(key)).toBe('dispatched');
+    expect(observed).toEqual(['queued', 'dispatched']);
+  } finally {
+    vi.restoreAllMocks();
+    stop();
+  }
+});
+
+it('never exposes reserved plaintext keys before initialization', async () => {
+  vi.resetModules();
+  const fresh = await import('./settings');
+  localStorage.setItem(SettingsKey.AccessToken, 'fixture-unbound-access');
+  localStorage.setItem(SettingsKey.AuthSession, 'fixture-misplaced-pair');
+  expect(fresh.getSetting(SettingsKey.AccessToken)).toBeNull();
+  expect(fresh.getSetting(SettingsKey.AuthSession)).toBeNull();
+  expect(localStorage.getItem(SettingsKey.AccessToken)).toBe('fixture-unbound-access');
 });

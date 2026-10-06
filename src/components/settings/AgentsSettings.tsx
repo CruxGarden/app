@@ -1,5 +1,7 @@
+import AgentConnections from './AgentConnections';
+import SettingsSection from './SettingsSection';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Panel, Button, Toggle } from '@/components/ui';
+import { Button, Toggle } from '@/components/ui';
 import { Capability, can } from '@/lib/platform';
 import type { AgentHostServer } from '@/lib/platform';
 import type { Crux } from '@/api/types';
@@ -21,6 +23,7 @@ export default function AgentsSettings() {
   const [servers, setServers] = useState<AgentHostServer[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cli, setCli] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,37 +57,69 @@ export default function AgentsSettings() {
   if (!available) return null;
 
   return (
-    <Panel padding="md" data-testid="agents-settings">
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="font-display text-sm font-medium text-accent">Agents</h2>
+    <SettingsSection
+      title="Agents"
+      testId="agents-settings"
+      aside={
         <span className="text-xxs font-mono text-text-muted">
           {servers.length === 0
-            ? 'no servers running'
-            : `${servers.length} server${servers.length === 1 ? '' : 's'} running`}
+            ? 'no per-Crux servers running'
+            : `${servers.length} per-Crux server${servers.length === 1 ? '' : 's'} running`}
         </span>
-      </div>
-
+      }
+    >
       <div className="flex flex-col gap-3 text-xs">
         <p className="text-text-muted">
-          Bring your own agent. Each crux you switch on gets its own MCP server on this machine
-          (127.0.0.1 only) that Claude Code, Codex, Cursor or any MCP client can connect to — the
-          same tools the built-in collaborator has.
+          Bring your own agent. Create a named connection with permissions across your Garden, or
+          switch on an individual Crux. Connections use MCP on this computer (127.0.0.1 only).
         </p>
+
+        <div className="rounded-card border border-border p-3 flex flex-col gap-2">
+          <strong>Command line for people and agents</strong>
+          <p className="text-text-muted">
+            List and open Cruxes, discover tools, and call them with JSON. Uses this app’s
+            permissions and approvals; no separate Node or Docker installation.
+          </p>
+          <Button
+            size="sm"
+            disabled={busy === 'cli'}
+            onClick={() =>
+              run('cli', async () => {
+                const result = await window.electronAPI!.agentHost.installCli();
+                setCli(`${result.path} — ${result.instructions}`);
+              })
+            }
+          >
+            Install crux command
+          </Button>
+          {cli && (
+            <p role="status" className="text-text-muted break-all">
+              {cli}
+            </p>
+          )}
+          <p className="text-text-muted">
+            Installs in your home folder’s .local/bin. Existing commands are preserved. A named
+            connection with Read permission enables <code>crux list</code>; use{' '}
+            <code>crux --folder /path/to/project tools --json</code> for a single Crux.
+          </p>
+        </div>
 
         {/* ADR 0008-style plain statement: what an outside agent can do and see */}
         <div
           className="rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-2 text-xxs text-text-muted leading-relaxed"
           data-testid="agents-trust"
         >
-          <strong className="text-text">What a connected agent can do and see.</strong> It can read,
-          write, search and rename files in that crux&apos;s Project Folder, run the site check,
-          change the theme and soundscape, take and restore Growth snapshots, and read the persona,
-          preview URL and AGENTS.md. Deleting a file and publishing wait for your approval in the
-          app. Everything it does is recorded in the Collaboration under its name and in Growth. It
-          cannot reach other cruxes, your API keys, or your account. The token in{' '}
+          <strong className="text-text">What a per-Crux connection can do and see.</strong> It can
+          read, write, search and rename files in that crux&apos;s Project Folder, run the site
+          check, change the theme and soundscape, take and restore Growth snapshots, and read the
+          persona, preview URL and AGENTS.md. Deleting a file and publishing wait for your approval
+          in the app. Everything it does is recorded in the Collaboration under its name and in
+          Growth. It cannot reach other cruxes, your API keys, or your account. The token in{' '}
           <code>.crux/mcp.json</code> is the only key; it stays on this machine, is never published
           or versioned, and changes every time you switch a crux on.
         </div>
+
+        <AgentConnections />
 
         {error && (
           <p role="alert" className="text-error">
@@ -121,7 +156,7 @@ export default function AgentsSettings() {
           </ul>
         )}
       </div>
-    </Panel>
+    </SettingsSection>
   );
 }
 
@@ -134,7 +169,7 @@ function CruxRow({
   onSwitch,
   onRegenerate,
 }: {
-  crux: Crux;
+  crux: Pick<Crux, 'id' | 'title' | 'slug'>;
   server: AgentHostServer | null;
   busy: boolean;
   expanded: boolean;
@@ -145,7 +180,7 @@ function CruxRow({
   const title = crux.title || crux.slug;
   return (
     <li className="py-2 flex flex-col gap-2" data-testid={`agents-crux-${crux.slug}`}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-text truncate">{title}</div>
           <div className="text-2xs font-mono text-text-muted truncate">
@@ -159,7 +194,7 @@ function CruxRow({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
           {server && (
             <Button size="sm" variant="ghost" onClick={onToggleExpanded}>
               {expanded ? 'Hide' : 'Connect'}
@@ -180,7 +215,8 @@ function CruxRow({
   );
 }
 
-function ConnectPanel({
+/** The MCP snippets and token for one running server (also shown by the Setup wizard). */
+export function ConnectPanel({
   server,
   busy,
   onRegenerate,
@@ -198,7 +234,7 @@ function ConnectPanel({
     stdio: 'stdio',
   };
   const hints: Record<keyof typeof snippets, string> = {
-    claudeCode: 'Run in a terminal, then start claude in the Project Folder.',
+    claudeCode: 'Run in a terminal, then start Claude Code.',
     codex: 'Add to ~/.codex/config.toml.',
     cursor: 'Add to .cursor/mcp.json in the Project Folder (or ~/.cursor/mcp.json).',
     stdio: 'For clients that only speak stdio — a thin proxy to the same server.',
@@ -209,8 +245,8 @@ function ConnectPanel({
       className="rounded-[var(--radius-sm)] border border-border bg-surface p-3 flex flex-col gap-2"
       data-testid="agents-connect"
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1 min-w-0">
           {(Object.keys(labels) as Array<keyof typeof snippets>).map((k) => (
             <button
               key={k}
@@ -262,7 +298,7 @@ function ConnectPanel({
   );
 }
 
-function CopyButton({ text, label }: { text: string; label: string }) {
+export function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button

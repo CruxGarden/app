@@ -1,3 +1,5 @@
+import { finishSetupAtHome, goHome } from './multi-crux-helpers';
+import { enableAdvancedMode, togglePanel, openPanel } from './panel-helpers';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -45,8 +47,7 @@ async function lastBlob(page: Page): Promise<Buffer> {
 /** Open a pane if it is closed; never toggle an open one shut. */
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 
@@ -76,16 +77,17 @@ test.describe('metadata and store panes', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
+      await enableAdvancedMode(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.getByRole('button', { name: 'Toggle metadata' })).toBeVisible({
+      await expect(page.getByRole('button', { name: 'Add panel' })).toBeVisible({
         timeout: 30_000,
       });
 
       // ── Metadata: title, description, tags, kind ──
-      await ensurePane(page, 'details', 'Toggle metadata');
+      await ensurePane(page, 'details', 'Toggle details');
       const title = metaRow(page, 'Title');
       await expect(title).toContainText('My Crux');
       await title.getByRole('button').click();
@@ -124,7 +126,7 @@ test.describe('metadata and store panes', () => {
       await expect(kind).toHaveText(/^page$/i);
 
       // The Home Garden lists what the garden holds: the card carries the edits
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       const card = page.getByRole('button', { name: 'Open Solar Notes' });
       await expect(card).toBeVisible({ timeout: 15_000 });
@@ -135,13 +137,13 @@ test.describe('metadata and store panes', () => {
       // and the reopened pane agrees (wait for the workspace's panes to mount
       // before asking about one, or the toggle would shut an open pane)
       await card.click();
-      await expect(page.getByRole('button', { name: 'Toggle metadata' })).toBeVisible({
+      await expect(page.getByRole('button', { name: 'Add panel' })).toBeVisible({
         timeout: 30_000,
       });
       await expect(page.locator('[data-testid^="pane-body-"]').first()).toBeVisible({
         timeout: 30_000,
       });
-      await ensurePane(page, 'details', 'Toggle metadata');
+      await openPanel(page, 'details', 'Toggle details');
       await expect(metaRow(page, 'Title')).toContainText('Solar Notes');
       await expect(metaRow(page, 'Description')).toContainText('A field guide to the garden.');
       await expect(tagChip(metaRow(page, 'Tags'), 'notes')).toBeVisible();

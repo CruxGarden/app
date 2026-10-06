@@ -1,3 +1,4 @@
+import type { NativeStorage } from './native-storage';
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -27,7 +28,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function runSelfTest(ctx: {
   app: any;
-  db: any;
+  db: NativeStorage;
   secrets: any;
   projects: any;
   previewServer: any;
@@ -45,7 +46,7 @@ export async function runSelfTest(ctx: {
   try {
     // 1. Native SQLite is alive
     try {
-      const row = db.get('SELECT COUNT(*) as n FROM cruxes');
+      const row = await db.get('SELECT COUNT(*) as n FROM cruxes');
       check('sqlite native query', typeof row?.n === 'number', JSON.stringify(row));
     } catch (e: any) {
       check('sqlite native query', false, e.message);
@@ -86,7 +87,8 @@ export async function runSelfTest(ctx: {
         fs.writeFileSync(path.join(folder, 'external.txt'), 'external edit');
         await sleep(1200);
         const seen = batches.some((b: any) =>
-          b.events?.some((e: any) => e.relPath === 'external.txt' && e.type === 'write'));
+          b.events?.some((e: any) => e.relPath === 'external.txt' && e.type === 'write'),
+        );
         check('watcher detects external edit', seen, JSON.stringify(batches));
         await testWatcher.closeAll();
       } catch (e: any) {
@@ -99,8 +101,11 @@ export async function runSelfTest(ctx: {
       try {
         const base = await previewServer.start(folder);
         const res = await fetchText(base + '/');
-        check('preview serves index.html', res.status === 200 && res.body === '<h1>selftest</h1>',
-          `status=${res.status}`);
+        check(
+          'preview serves index.html',
+          res.status === 200 && res.body === '<h1>selftest</h1>',
+          `status=${res.status}`,
+        );
         const trav = await fetchText(base + '/..%2Fescape');
         check('preview traversal blocked', trav.status !== 200, `status=${trav.status}`);
 
@@ -117,12 +122,19 @@ export async function runSelfTest(ctx: {
           const bitmap = nativeImage.createFromBuffer(jpeg).toBitmap();
           let distinct = false;
           for (let i = 4; i < bitmap.length; i += 4) {
-            if (bitmap[i] !== bitmap[0] || bitmap[i + 1] !== bitmap[1]) { distinct = true; break; }
+            if (bitmap[i] !== bitmap[0] || bitmap[i + 1] !== bitmap[1]) {
+              distinct = true;
+              break;
+            }
           }
           check('capture is not a blank frame', distinct);
 
           let rejected = false;
-          try { await capturePreviewUrl('https://example.com/'); } catch { rejected = true; }
+          try {
+            await capturePreviewUrl('https://example.com/');
+          } catch {
+            rejected = true;
+          }
           check('capture rejects non-local URLs', rejected);
 
           // Redirect containment: a local URL that 302s off-host must never be
@@ -154,7 +166,7 @@ export async function runSelfTest(ctx: {
     try {
       let blobRejected = false;
       try {
-        db.blobRead('../../../../etc/passwd');
+        await db.blobRead('../../../../etc/passwd');
       } catch {
         blobRejected = true;
       }
@@ -178,13 +190,28 @@ export async function runSelfTest(ctx: {
         debugLog('SELFTEST astro: writing minimal project…');
         const write = (rel: string, content: string) =>
           projects.writeFile(folder, rel, new TextEncoder().encode(content));
-        write('package.json', JSON.stringify({
-          name: 'selftest-astro', type: 'module', private: true,
-          scripts: { dev: 'astro dev', build: 'astro build' },
-          dependencies: { astro: '^5.0.0' },
-        }, null, 2));
-        write('astro.config.mjs', "import { defineConfig } from 'astro/config';\nexport default defineConfig({});\n");
-        write('src/pages/index.astro', '---\n---\n<html><body><h1 id="marker">astro-selftest-ok</h1></body></html>\n');
+        write(
+          'package.json',
+          JSON.stringify(
+            {
+              name: 'selftest-astro',
+              type: 'module',
+              private: true,
+              scripts: { dev: 'astro dev', build: 'astro build' },
+              dependencies: { astro: '^5.0.0' },
+            },
+            null,
+            2,
+          ),
+        );
+        write(
+          'astro.config.mjs',
+          "import { defineConfig } from 'astro/config';\nexport default defineConfig({});\n",
+        );
+        write(
+          'src/pages/index.astro',
+          '---\n---\n<html><body><h1 id="marker">astro-selftest-ok</h1></body></html>\n',
+        );
 
         debugLog('SELFTEST astro: pnpm install (bundled toolchain)…');
         const install = await toolchain.install(folder);
@@ -194,15 +221,21 @@ export async function runSelfTest(ctx: {
           debugLog('SELFTEST astro: starting astro dev…');
           const url = await devServers.start(folder);
           const dev = await fetchText(url + '/');
-          check('astro: dev server serves page',
-            dev.status === 200 && dev.body.includes('astro-selftest-ok'), `status=${dev.status}`);
+          check(
+            'astro: dev server serves page',
+            dev.status === 200 && dev.body.includes('astro-selftest-ok'),
+            `status=${dev.status}`,
+          );
           await devServers.stop(folder);
 
           debugLog('SELFTEST astro: astro build…');
           const build = await toolchain.build(folder);
           const hasIndex = build.distFiles.includes('dist/index.html');
-          check('astro: build produces dist', build.code === 0 && hasIndex,
-            `code=${build.code} files=${build.distFiles.length} ${build.log.slice(-300)}`);
+          check(
+            'astro: build produces dist',
+            build.code === 0 && hasIndex,
+            `code=${build.code} files=${build.distFiles.length} ${build.log.slice(-300)}`,
+          );
           if (hasIndex) {
             const html = new TextDecoder().decode(projects.readFile(folder, 'dist/index.html'));
             check('astro: built html has content', html.includes('astro-selftest-ok'));
@@ -214,10 +247,16 @@ export async function runSelfTest(ctx: {
     }
   } finally {
     if (folder) {
-      try { fs.rmSync(folder, { recursive: true, force: true }); } catch { /* best effort */ }
+      try {
+        fs.rmSync(folder, { recursive: true, force: true });
+      } catch {
+        /* best effort */
+      }
     }
     for (const line of results) debugLog(line);
-    debugLog(`SELFTEST DONE: ${results.filter((r) => r.includes('PASS')).length}/${results.length} passed`);
+    debugLog(
+      `SELFTEST DONE: ${results.filter((r) => r.includes('PASS')).length}/${results.length} passed`,
+    );
     app.quit();
   }
 }

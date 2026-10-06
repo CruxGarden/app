@@ -1,3 +1,7 @@
+import { cruxModel } from '@/ai/keys';
+import { PROGRESS_PROMPT } from './task-progress';
+import { aiEnabledNow } from '@/hooks/useAiEnabled';
+import { captureEditCheckpoint } from './edit-history';
 import { createTaskSlots } from './task-slots';
 import { getSetting } from './settings';
 import { copyIdentity } from './working-copies';
@@ -9,12 +13,12 @@ import { useAppStore } from '@/stores/appStore';
 import { runConversation, type ConversationEvent } from '@/ai/engine';
 import { createToolExecutor } from '@/ai/tools';
 import { getApiKey } from '@/ai/keys';
-import { getProviderForModel, resolveModel, isAgentModel } from '@/ai/providers';
+import { getProviderForModel, isAgentModel } from '@/ai/providers';
 import { agentStatus, runAgentTurn } from '@/services/agent-provider';
 import { isAiMock } from '@/lib/platform';
 import { playCue, duckAudio } from '@/services/cues';
 import { chatSessionFor } from '@/services/chat-session';
-import type { SnapshotFrequency } from '@/services/growth';
+import { meterTurn } from '@/services/agent-metrics';
 import { isSiteCrux } from '@/services/site';
 import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
 import type { ChatMessage } from '@/api/types';
@@ -28,11 +32,10 @@ import {
   isJobActive,
   newCheckJob,
   newTurnJob,
+  promptPreview,
   runTurnJob,
   shouldAutoCheck,
   stampJob,
-  verificationOf,
-  withCheckSnapshot,
   withLiveParallelState,
   type TurnJob,
   type TurnStopReason,
@@ -137,6 +140,28 @@ export function buildNormalizedMessages(allMessages: ChatMessage[]): NormalizedM
   return result;
 }
 
+/**
+ * The request a failed job can run again ("Try again"): the index of the
+ * person's message that started it, or null when a retry would not be the same
+ * request. A check's failure has "Check it"; a message addressed to another
+ * Persona is sent again rather than retried.
+ */
+export function retryableRequest(
+  job: TurnJob | null,
+  messages: ChatMessage[],
+  personaFingerprint: string,
+): number | null {
+  if (!job || job.status !== 'failed' || job.check) return null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]!;
+    if (m.role !== 'user') continue;
+    if (m.origin === 'check') return null;
+    if (m.personaFingerprint && m.personaFingerprint !== personaFingerprint) return null;
+    return m.content === job.prompt || promptPreview(m.content) === job.prompt ? i : null;
+  }
+  return null;
+}
+
 const taskSlots = createTaskSlots(() =>
   Math.max(1, Math.min(4, Number(getSetting('cruxgarden:parallel-task-limit')) || 2)),
 );
@@ -176,17 +201,14 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     // Turn/policy/refresh state lives in a per-crux session (services/chat-session):
     // hiding the pane must not abort the turn.
     return chatSessionFor(cruxId, {
-      frequency: () =>
-        (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-        'ai-turn',
+      frequency: () => 'ai-turn',
       snapshot: () => {
         // A timed policy can fire long after the user moved on — snapshotting
         // then would capture a different crux entirely.
         if (useCruxStore.getState().crux?.id !== cruxId) return;
-        return useCruxStore
-          .getState()
-          .createSnapshot({ silent: false, ifChanged: true })
-          .catch((err) => console.warn('Auto-snapshot failed:', err));
+        return captureEditCheckpoint(cruxId)
+          .then(() => {})
+          .catch((err) => console.warn('Edit recovery failed:', err));
       },
     });
   }
@@ -250,6 +272,59 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     await startTurn(next);
   }
 
+  /** Is "Try again" on offer for the job on the card? */
+  function canRetry(): boolean {
+    const s = useCruxStore.getState();
+    if (s.turnJob?.status !== 'failed') return false;
+    return retryableRequest(s.turnJob, s.messages, getPersonaFingerprint(getPersona())) !== null;
+  }
+
+  /**
+   * "Try again" on a failed job: run the same request once more. The person's
+   * message is already in the transcript and is not added a second time; the
+   * failed reply that only carried the error is taken back out (a reply that
+   * did work stays, and the model continues from what it did). Refused while
+   * anything else runs, and bound by the same Task rules as a normal send.
+   */
+  async function retryTurn(): Promise<void> {
+    const s = useCruxStore.getState();
+    const crux = s.crux;
+    if (!crux || s.closing || starting || isJobActive(s.turnJob) || activeRuns.has(crux.id)) return;
+    const failed = s.turnJob;
+    const pf = getPersonaFingerprint(getPersona());
+    if (retryableRequest(failed, s.messages, pf) === null || !failed) return;
+    starting = true;
+    try {
+      const cruxId = crux.id;
+      await assertCopyWritable(cruxId);
+      const { model, providerId, apiKey, reason } = await resolveModelAndKey(crux);
+      const live = useCruxStore.getState();
+      if (live.closing || live.crux?.id !== cruxId || live.turnJob?.id !== failed.id) return;
+      if (retryableRequest(failed, live.messages, pf) === null) return;
+      if (!apiKey) {
+        live.addMessage({
+          role: 'assistant',
+          content: unavailableNotice(model, providerId, reason),
+        });
+        return;
+      }
+      // Only the live segment is this session's to rewrite: an earlier one
+      // belongs to the Growth version that captured it.
+      const lastIndex = live.messages.length - 1;
+      const last = live.messages[lastIndex];
+      if (
+        last?.role === 'assistant' &&
+        last.job?.status === 'failed' &&
+        !last.toolCalls?.length &&
+        lastIndex >= live.messageSegmentStart
+      )
+        live.setMessages(live.messages.slice(0, lastIndex));
+      await launch({ cruxId, job: newTurnJob(cruxId, failed.prompt), apiKey, model, pf });
+    } finally {
+      starting = false;
+    }
+  }
+
   /** Clear a finished job's card. */
   async function dismissJob(): Promise<void> {
     const s = useCruxStore.getState();
@@ -260,6 +335,8 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
 
   /** Can a turn run for the open crux — a model with a key (or the e2e mock)? */
   async function canCollaborate(): Promise<boolean> {
+    // AI tools off (Settings → AI): nothing offers a turn, whatever keys exist.
+    if (!aiEnabledNow()) return false;
     const crux = useCruxStore.getState().crux;
     if (!crux) return false;
     return (await resolveModelAndKey(crux)).apiKey !== null;
@@ -269,7 +346,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
   async function resolveModelAndKey(
     crux: NonNullable<ReturnType<typeof useCruxStore.getState>['crux']>,
   ) {
-    const model = resolveModel(crux.meta?.settings?.model);
+    const model = cruxModel(crux);
     const providerId = getProviderForModel(model);
     // The Agent Provider (ADR 0019) needs no key: Claude Code's own login pays.
     if (isAgentModel(model)) {
@@ -286,6 +363,15 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     return { model, providerId, apiKey, reason: null as string | null };
   }
 
+  /** What the Collaboration says when no provider can run the turn. */
+  function unavailableNotice(model: string, providerId: string, reason: string | null): string {
+    return isAgentModel(model)
+      ? `${reason ?? 'The agent is unavailable.'} Check its installation and sign-in, or pick another model.`
+      : providerId === 'included'
+        ? 'Sign in to your Crux Garden account in Settings to use your included collaborator.'
+        : `No API key configured for ${providerId}. Add one in Settings to start chatting.`;
+  }
+
   async function startTurn(content: string): Promise<void> {
     const store = useCruxStore.getState();
     const crux = store.crux;
@@ -299,9 +385,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     if (!apiKey) {
       store.addMessage({
         role: 'assistant',
-        content: isAgentModel(model)
-          ? `${reason ?? 'The agent is unavailable.'} Check its installation and sign-in, or pick another model.`
-          : `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
+        content: unavailableNotice(model, providerId, reason),
       });
       return;
     }
@@ -362,6 +446,14 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     const personaMessages = allMessages.filter(
       (m) => m.personaFingerprint === pf || (!m.personaFingerprint && !hasOtherPersona),
     );
+    // A turn answers the person (or the tool results it left behind). A reply
+    // with no tool work at the end of the transcript is a failed turn's note —
+    // only a retry sees one — and is not something for the model to continue.
+    while (personaMessages.length > 0) {
+      const tail = personaMessages[personaMessages.length - 1]!;
+      if (tail.role !== 'assistant' || tail.toolCalls?.length) break;
+      personaMessages.pop();
+    }
     return buildNormalizedMessages(personaMessages);
   }
 
@@ -475,12 +567,6 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       return runTool(name, input);
     };
 
-    // Per-step snapshots only under the per-turn policy. Timed and manual
-    // frequencies keep their meaning: fewer snapshots, decided at the end.
-    const perStepSnapshots =
-      ((useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-        'ai-turn') === 'ai-turn';
-
     const latestSnapshotId = () => {
       const growths = useCruxStore.getState().growths;
       return growths.length > 0 ? growths[growths.length - 1]!.targetId : null;
@@ -511,9 +597,15 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
           crux?.meta?.settings?.agentSessions?.[provider] ??
           (provider === 'claude-code' ? crux?.meta?.settings?.agentSessionId : null) ??
           null,
-        appendSystemPrompt: persona.systemPrompt
-          ? `You are working inside Crux Garden as "${persona.name}". ${persona.systemPrompt}`
-          : undefined,
+        appendSystemPrompt: [
+          persona.systemPrompt
+            ? `You are working inside Crux Garden as "${persona.name}". ${persona.systemPrompt}`
+            : '',
+          PROGRESS_PROMPT,
+          'Discover report_progress with garden_search_tools, then use garden_call_tool to report progress for this turn.',
+        ]
+          .filter(Boolean)
+          .join('\n'),
         signal: controller.signal,
         onSession: (sessionId) => {
           if (!stillHere()) return;
@@ -534,6 +626,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     };
 
     const result = await runTurnJob(args.job, {
+      checkpoint: async () => {
+        await captureEditCheckpoint(cruxId);
+      },
+      metrics: meterTurn({ model }),
       run: () =>
         isAgentModel(model)
           ? agentRun()
@@ -553,7 +649,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       onText: (delta) => {
         if (stillHere()) useCruxStore.getState().appendStreamContent(delta);
       },
-      onToolDone: () => void playCue('toolDone'),
+      onToolCalls: (calls) => {
+        if (stillHere()) useCruxStore.getState().setStreamToolCalls(calls);
+      },
+      onToolDone: () => void playCue('toolDone', useCruxStore.getState().crux?.id),
       onMutation: () => {
         // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)
         if (session.refreshTimer) clearTimeout(session.refreshTimer);
@@ -566,15 +665,6 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
         }, 150);
       },
       onUsage: (i, o, c) => useCruxStore.getState().addTokenUsage(i, o, c),
-      snapshot: perStepSnapshots
-        ? async (label) => {
-            if (!stillHere()) return null;
-            const before = latestSnapshotId();
-            await useCruxStore.getState().createSnapshot({ label, silent: true, ifChanged: true });
-            const after = latestSnapshotId();
-            return after && after !== before ? after : null;
-          }
-        : undefined,
       latestSnapshotId,
       stopReason: () => stopReasons.get(cruxId) ?? null,
       aborted: () => controller.signal.aborted,
@@ -658,8 +748,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       return;
     }
 
-    // End-of-turn auto-snapshot — only for changes no step snapshot captured,
-    // so a planned turn never doubles up on its last step.
+    // Capture remaining edits when no completed step retained them.
     if (result.uncapturedMutation) {
       await session.policy.notifyMutation();
     }
@@ -713,42 +802,15 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     });
   }
 
-  /**
-   * Record the verdict on Growth: snapshot the current state if it changed
-   * (per-turn policy), then write `verification` onto the latest snapshot —
-   * which is the state the screenshot shows either way.
-   */
-  async function recordVerification(job: TurnJob, uncapturedMutation: boolean): Promise<TurnJob> {
-    const store = useCruxStore.getState();
-    if (!store.crux || store.crux.id !== job.cruxId) return job;
-    const frequency =
-      (store.crux.meta?.settings?.snapshotFrequency as SnapshotFrequency | undefined) || 'ai-turn';
-    if (frequency === 'ai-turn') {
-      try {
-        await store.createSnapshot({ silent: true, ifChanged: true });
-      } catch (err) {
-        console.warn('Snapshot after check failed:', err);
-      }
-    } else if (uncapturedMutation) {
-      sessionFor(job.cruxId).policy.notifyMutation();
-    }
-    const verification = verificationOf(job);
-    const latest = useCruxStore.getState().growths.at(-1);
-    if (!verification || !latest) return job;
+  /** Checks stay with their Turn; routine recovery must not relabel an older chosen version. */
+  async function recordVerification(job: TurnJob): Promise<TurnJob> {
+    if (useCruxStore.getState().crux?.id !== job.cruxId) return job;
     try {
-      const { getServices } = await import('@/services');
-      await getServices().dimension.update(latest.id, {
-        meta: { ...(latest.meta ?? {}), verification },
-      });
-      useCruxStore.setState((s) => ({
-        growths: s.growths.map((g) =>
-          g.id === latest.id ? { ...g, meta: { ...g.meta, verification } } : g,
-        ),
-      }));
+      await captureEditCheckpoint(job.cruxId);
     } catch (err) {
-      console.warn('Recording the check on the snapshot failed:', err);
+      console.warn('Recovery checkpoint after check failed:', err);
     }
-    return withCheckSnapshot(job, latest.targetId);
+    return job;
   }
 
   /**
@@ -828,7 +890,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       // Restamp BEFORE the snapshot: the snapshot segments the transcript, and
       // only the live segment is persisted by saveMeta afterwards.
       restampLastReply(job);
-      job = await recordVerification(job, args.uncapturedMutation);
+      job = await recordVerification(job);
       if (!stillHere()) return;
       publishJob(job);
       await useCruxStore.getState().persistTurnState();
@@ -846,7 +908,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       note: outcome.note,
     });
     restampLastReply(job); // before the snapshot, for the same reason as above
-    job = await recordVerification(job, args.uncapturedMutation);
+    job = await recordVerification(job);
     if (!stillHere()) return;
     job = continueJobForFix(job, outcome.problems);
     useCruxStore.getState().addMessage({
@@ -856,7 +918,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       timestamp: new Date().toISOString(),
       personaFingerprint: pf,
     });
-    void playCue('error');
+    void playCue('error', useCruxStore.getState().crux?.id);
     await launch({ cruxId, job, apiKey: apiKey!, model, pf });
   }
 
@@ -914,7 +976,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     if (!apiKey) {
       s.addMessage({
         role: 'assistant',
-        content: `No API key configured for ${providerId}. Add one in Settings to run this.`,
+        content:
+          providerId === 'included'
+            ? 'Sign in to your Crux Garden account in Settings to use your included collaborator.'
+            : `No API key configured for ${providerId}. Add one in Settings to run this.`,
       });
       return;
     }
@@ -978,6 +1043,8 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     removeQueued: trackWorkspaceOperation(useCruxStore, removeQueued),
     runNextQueued: trackWorkspaceOperation(useCruxStore, runNextQueued),
     dismissJob: trackWorkspaceOperation(useCruxStore, dismissJob),
+    canRetry,
+    retryTurn: trackWorkspaceOperation(useCruxStore, retryTurn),
     canCollaborate,
     checkNow: trackWorkspaceOperation(useCruxStore, checkNow),
     runParallelJob: trackWorkspaceOperation(useCruxStore, runParallelJob),

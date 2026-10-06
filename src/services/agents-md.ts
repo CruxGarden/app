@@ -16,6 +16,8 @@
  */
 
 import type { Artifact, Crux } from '@/api/types';
+import { customNames, DEFAULT_PANE_LABELS, type GardenNames } from '@/lib/pane-labels';
+import type { PaneType } from '@/stores/uiStore';
 import type { ContentModel, ContentCollection, FormField, BuilderAction } from '@/templates';
 import type { PersonaSettings } from './persona';
 import { isSiteCrux } from './site';
@@ -40,6 +42,8 @@ export interface AgentsMdInput {
   persona: Pick<PersonaSettings, 'name' | 'systemPrompt'>;
   /** Whether `check_site` (a real build) is available where this file is read. */
   canBuild?: boolean;
+  /** The garden's own words (Settings → Names): its title and renamed panes, so the collaborator speaks the metaphor. */
+  names?: GardenNames;
 }
 
 export interface AgentsMdSections {
@@ -89,7 +93,7 @@ export function renderAgentsMdSections(input: AgentsMdInput): AgentsMdSections {
           : renderPreview(site, canBuild),
     handsOff: renderHandsOff(site),
     recording: RECORDING,
-    voice: renderVoice(input.persona),
+    voice: renderVoice(input.persona, input.names),
     instructions:
       typeof settings.systemPrompt === 'string' && settings.systemPrompt.trim()
         ? '## Instructions for this crux\n' + settings.systemPrompt.trim()
@@ -161,7 +165,7 @@ const FIGMA_CONVENTIONS = [
   '## Files and folder layout',
   '- `figma/project.json` stores the linked Figma file/frame; `brief.md` stores the creative brief.',
   '- Local Artifacts may be uploaded to Figma through its authenticated MCP tools. Download completed exports into this Project Folder so Garden can ingest them.',
-  '- The companion imports exported files as Cruxspace outputs with source provenance. Keep a receipt naming the actual Figma file/frame for agent-downloaded assets.',
+  '- The companion imports exported files as Garden outputs with source provenance. Keep a receipt naming the actual Figma file/frame for agent-downloaded assets.',
   '- Use the installed Figma skills and current MCP tools for native edits. Inspect the current design before each change and preserve intervening manual work.',
   '- This is an external-app companion, not a website. Do not create an index page or install a web toolchain to operate Figma.',
 ].join('\n');
@@ -171,7 +175,7 @@ const FIGMA_PREVIEW = [
   '- Inspect the editable native design and its rendered result in Figma after changes; verify downloaded asset bytes locally.',
   '- Report unavailable tools, authentication failures and refused edits honestly. Opening a link or arranging windows does not grant MCP access.',
   '- Growth preserves the local brief, references, exports and conversation. It does not restore the remote Figma document or its history.',
-  '- Website publishing and site-build checks do not apply to this companion. Reuse outputs in another Cruxspace member when building a site.',
+  '- Website publishing and site-build checks do not apply to this companion. Reuse outputs in another Crux of the same Garden when building a site.',
 ].join('\n');
 
 function renderConventions(site: boolean, model: ContentModel | undefined): string {
@@ -192,6 +196,10 @@ function renderConventions(site: boolean, model: ContentModel | undefined): stri
       '- Keep directories clear: `components/`, `lib/`, `assets/`.',
     );
   }
+  lines.push(
+    "- Media, documents and pictures convert in place: `run_ffmpeg`, `run_magick` (ImageMagick) and `run_pandoc` take arguments only — no program name, no shell, paths relative to this folder and inside it. `probe_media` says what a file is before you choose them; `media_tools` says which binaries this machine has. ffmpeg, ffprobe, Pandoc and Typst ship with the app; ImageMagick is the machine's own, the picture recipes fall back to ffmpeg without it, and `install_media_tool` can fetch it if asked. For a PDF of something written use `make_pdf` — Typst typesets it, or the app prints a page Pandoc wrote; never tell anyone they need LaTeX. Outputs land beside the source or in `exports/`, never over the source.",
+    "- `functions/` is the crux's backend, run in the workspace (local Store) and where the crux is shared: `functions/<name>.js` exports `default async function (req, ctx)` and answers `crux.fn(name, body)`; `functions/on-<event>.js` (optional `export const match = 'score*'`) answers `crux.emit`, `ctx.emit` and Store writes (`store:write`, data `{ key, value, mode, before }`; `ctx.reject(message, status)` refuses the write). `ctx`: `store` (get/set/increment/list/del), `visitor` (`isOwner`), `owner`, `event`, `emit`, `now`, `log`, `json`, `reject`; no network, files or process. The page loads `<script src=\"crux.js\"></script>` (the Share pane's starter writes it). A handler is the crux's own API once shared: any method at `/fn/<cruxId>/<name>[/rest]`, with `req.method`, `req.path`, `req.params`, `req.query`, `req.headers`, `req.json()`; answer with `ctx.json(value, status)`, `ctx.text(body, status)`, `ctx.html(body)` or `ctx.redirect(url)`. `export const schedule = 'every 10m'` (or five cron fields, UTC) runs it on the API's clock with `ctx.event.name === 'schedule'`; test_function tries any handler here. `ctx.secrets.get(name)` reads a secret the person set in the Share pane (never write one into a file); `ctx.fetch(url, init)` reaches only the hosts listed in `functions/egress.json` (`{ \"hosts\": [\"api.example.com\"] }`), four seconds, a megabyte.",
+  );
   lines.push('- Paths are relative to this folder, forward slashes, no leading `/`.');
   if (model?.settings) {
     lines.push(
@@ -254,9 +262,25 @@ const RECORDING = [
   'The app also snapshots automatically after a turn that changed files. Agents connected through Crux Garden (the built-in collaborator, or an MCP client once the crux is enabled as an agent host) have these as tools; edits made any other way are still recorded by the automatic history.',
 ].join('\n');
 
-function renderVoice(persona: Pick<PersonaSettings, 'name' | 'systemPrompt'>): string {
+function renderVoice(
+  persona: Pick<PersonaSettings, 'name' | 'systemPrompt'>,
+  names?: GardenNames,
+): string {
   const lines = ['## Voice', `The collaborator here is **${persona.name || 'The Keeper'}**.`];
   if (persona.systemPrompt?.trim()) lines.push('', persona.systemPrompt.trim());
+  if (names) {
+    const renamed = Object.entries(names.panes) as [PaneType, string][];
+    if (names.title) lines.push('', `This garden calls itself **${names.title}**.`);
+    if (renamed.length)
+      lines.push(
+        '',
+        'It has its own words for parts of the app; use them with the person: ' +
+          renamed
+            .map(([type, name]) => `${DEFAULT_PANE_LABELS[type]} is called "${name}"`)
+            .join(', ') +
+          '.',
+      );
+  }
   return lines.join('\n');
 }
 
@@ -447,6 +471,7 @@ export async function syncAgentsMd(
       artifacts: current,
       persona: d.persona(),
       canBuild: d.canBuild(),
+      names: customNames(),
     });
     let wrote = false;
     for (const [path, content] of [
@@ -472,13 +497,3 @@ export async function syncAgentsMd(
   }
 }
 
-/**
- * Service-backed convenience for UI hooks: call after the persona or a
- * crux's instructions are saved so the folder's guide follows.
- */
-export async function refreshAgentsMd(cruxId: string): Promise<boolean> {
-  const { getServices } = await import('./index');
-  const { crux: cruxService } = getServices();
-  const crux = await cruxService.findById(cruxId);
-  return syncAgentsMd(crux, null);
-}

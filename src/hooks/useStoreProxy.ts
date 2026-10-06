@@ -1,4 +1,6 @@
 import { useCruxStoreApi } from '@/stores/cruxStore';
+import type { Artifact } from '@/api/types';
+import { functionFiles } from '@/services/crux-functions';
 import { trackWorkspacePromise } from '@/stores/workspaceSelection';
 import { useEffect } from 'react';
 import { getServices, isServicesReady } from '@/services';
@@ -23,6 +25,38 @@ export function isPreviewOrigin(origin: string): boolean {
 /** The preview's one visitor: the author — always signed in, so every write has a writer. */
 function localVisitorId(): string | null {
   return useAppStore.getState().author?.id ?? null;
+}
+
+/**
+ * Runs the crux's `store:write` handlers, if it has any, before a write.
+ * Returns the refusal (a handler called `ctx.reject`) or null.
+ */
+async function storeWriteHook(
+  artifacts: Artifact[],
+  cruxId: string,
+  key: string,
+  value: unknown,
+  mode: StoreMode,
+  visitorId: string | null,
+): Promise<{ message: string; status: number } | null> {
+  if (!functionFiles(artifacts).some((f) => f.kind === 'event')) return null;
+  const { emitLocal } = await import('@/services/functions-runner');
+  const { store } = getServices();
+  // Capture value and privacy mode from the same read; a requested public mode
+  // must not expose an existing protected value through the validation event.
+  const entries = (await store.list(cruxId)).filter((entry) => entry.key === key);
+  const prior =
+    (visitorId ? entries.find((entry) => entry.visitorId === visitorId) : undefined) ??
+    entries.find((entry) => entry.visitorId === null);
+  const r = await emitLocal(
+    cruxId,
+    'store:write',
+    { key, value, mode, before: prior?.value ?? null },
+    visitorId,
+    0,
+    mode === 'public' && prior?.mode !== 'protected',
+  );
+  return r.refused;
 }
 
 /**
@@ -53,7 +87,39 @@ export function useStoreProxy(cruxId: string | null) {
         (f) => f.contentWindow === e.source && f.dataset.cruxId === cruxId,
       );
       if (!frame || new URL(frame.src, location.href).origin !== e.origin) return;
-      if (!e.data?.type?.startsWith('crux:store:')) return;
+      const t = String(e.data?.type ?? '');
+      if (t === 'crux:directory:search') {
+        // The directory, asked of the API as the signed-in person (GARDEN-MEMBERS-PLAN).
+        void import('@/api/authors').then(({ searchAuthors }) =>
+          searchAuthors(String(e.data.q ?? ''))
+            .then((list) =>
+              reply(e.source, e.origin, 'crux:directory:search:res', e.data.id, {
+                value: {
+                  status: 200,
+                  body: list.map((a) => ({
+                    authorId: a.id,
+                    username: a.username,
+                    displayName: a.displayName,
+                  })),
+                },
+              }),
+            )
+            .catch((err: Error) =>
+              reply(e.source, e.origin, 'crux:directory:search:res', e.data.id, {
+                value: { status: 502, body: { error: err.message } },
+              }),
+            ),
+        );
+        return;
+      }
+      if (t === 'crux:visitor') {
+        const a = useAppStore.getState().author;
+        reply(e.source, e.origin, 'crux:visitor:res', e.data.id, {
+          value: a ? { id: a.id, username: a.username, name: a.displayName } : null,
+        });
+        return;
+      }
+      if (!t.startsWith('crux:store:')) return;
       if (!isServicesReady()) return;
 
       const { store } = getServices();
@@ -72,7 +138,29 @@ export function useStoreProxy(cruxId: string | null) {
           break;
 
         case 'crux:store:set':
-          track(store.set(cruxId!, key, value, mode, visitorId)).catch(() => {});
+          // Store hooks (CRUX-FUNCTIONS-PLAN F2): a `functions/on-*.js`
+          // matching `store:write` runs first and may refuse the write —
+          // the same order the API keeps where the crux is shared.
+          track(
+            (async () => {
+              const refused = await storeWriteHook(
+                workspace.getState().artifacts,
+                cruxId!,
+                key,
+                value,
+                mode,
+                visitorId,
+              );
+              if (refused) {
+                if (id) answer('crux:store:set:res', { ok: false, error: refused.message });
+                return;
+              }
+              await store.set(cruxId!, key, value, mode, visitorId);
+              if (id) answer('crux:store:set:res', { ok: true });
+            })(),
+          ).catch((err) => {
+            if (id) answer('crux:store:set:res', { ok: false, error: (err as Error).message });
+          });
           break;
 
         case 'crux:store:inc':

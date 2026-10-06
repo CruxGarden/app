@@ -1,3 +1,16 @@
+import { cruxModel } from '@/ai/keys';
+import { captureEditCheckpoint } from './edit-history';
+import { listGrowths } from './growth';
+import { useGardenContext } from '@/stores/gardenContext';
+import { reportFlowActivity } from '@/lib/moods/flow';
+import {
+  GARDEN_HOST_ID,
+  GARDEN_ACCESS_TOOLS,
+  gardenOperatingTools,
+  isGardenAccessTool,
+  runGardenAccess,
+  runGardenOperation,
+} from '@/ai/garden-access';
 /**
  * Agent Host — renderer side (ADR 0013).
  *
@@ -21,9 +34,9 @@ import {
   createToolExecutor,
   defaultToolDefinitions,
   didMutate,
+  DELETE_DECLINED,
   type ToolDefinition,
 } from '@/ai/tools';
-import { resolveModel } from '@/ai/providers';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import * as usageApi from '@/api/usage';
 import { pathOf } from '@/lib/artifact-path';
@@ -31,7 +44,6 @@ import type { AgentHostRequest, AgentHostServer } from '@/lib/platform';
 import { publicCruxUrl } from '@/lib/public-url';
 import { getServices } from '@/services';
 import { chatSessionFor } from '@/services/chat-session';
-import type { SnapshotFrequency } from '@/services/growth';
 import { getPersona, getPersonaFingerprint } from '@/services/persona';
 import { startPreviewServer } from '@/services/preview-server';
 import { folderForCrux } from '@/services/project-folder';
@@ -83,7 +95,7 @@ export function agentToolDefinitions(cruxId?: string): ToolDefinition[] {
   // An external agent brings its own subagents; ours run only from the
   // Collaboration pane (B5), so `delegate` is not offered over MCP.
   return [
-    ...defaultToolDefinitions(cruxId).filter((t) => t.name !== 'delegate'),
+    ...defaultToolDefinitions(cruxId, false).filter((t) => t.name !== 'delegate'),
     ...HOST_TOOL_DEFINITIONS,
   ];
 }
@@ -142,6 +154,7 @@ function hostBridge() {
  * saveMeta.
  */
 async function persistAgentHostFlag(cruxId: string, on: boolean): Promise<void> {
+  if (cruxId === GARDEN_HOST_ID) return;
   const store = getWorkspace(cruxId)?.data.getState();
   if (store?.crux?.id === cruxId) {
     store.patchCruxMeta({ settings: { ...store.crux.meta?.settings, agentHost: on } });
@@ -224,6 +237,39 @@ export function startAgentHostListener(): () => void {
 }
 
 async function handleRequest(request: AgentHostRequest): Promise<unknown> {
+  if (request.cruxId === GARDEN_HOST_ID) {
+    if (request.kind === 'tools/list') return [...GARDEN_ACCESS_TOOLS, ...gardenOperatingTools()];
+    if (request.kind !== 'tools/call')
+      throw new Error('The garden host has no Crux resources. Use its operating tools.');
+    // The installation-level MCP host has a stable root owner, independent of navigation.
+    const gardenId = useGardenContext.getState().root?.id;
+    if (!gardenId) throw new Error('The local Garden is not ready.');
+    const { recordGardenAgentAction } = await import('@/stores/keeperStore');
+    // Collaboration already persists its own owner-bound history. Do not copy private
+    // transcripts returned by inspect into the installation root’s action log.
+    const operation = request.name === 'call_garden_tool' ? request.input.name : request.name;
+    const logAction = operation !== 'garden_collaboration';
+    if (logAction)
+      await recordGardenAgentAction(gardenId, request.agent, request.name, 'Working…', request.id);
+    let result: ToolResultContent;
+    try {
+      result = isGardenAccessTool(request.name)
+        ? await runGardenAccess(request.name, request.input, request.agent)
+        : await runGardenOperation(request.name, request.input, request.agent);
+    } catch (error) {
+      result = `Error: ${errorMessage(error)}`;
+    }
+    if (!resultText(result).startsWith('Error')) reportFlowActivity('tool');
+    if (logAction)
+      await recordGardenAgentAction(
+        gardenId,
+        request.agent,
+        request.name,
+        resultText(result),
+        request.id,
+      );
+    return toMcpResult(result);
+  }
   switch (request.kind) {
     case 'tools/list':
       return agentToolDefinitions(request.cruxId);
@@ -281,6 +327,7 @@ function createWorkspaceHost(w: Workspace) {
     // publish approval) waited. Never record under the wrong crux.
     if (useCruxStore.getState().crux?.id !== request.cruxId) return toMcpResult(result);
 
+    if (!resultText(result).startsWith('Error')) reportFlowActivity('tool');
     await recordToolCall(request, result);
 
     if (didMutate(request.name, result)) {
@@ -319,14 +366,14 @@ function createWorkspaceHost(w: Workspace) {
     const key = `${cruxId}::${agent}`;
     let exec = executors.get(key);
     if (!exec) {
-      const model = resolveModel(useCruxStore.getState().crux?.meta?.settings?.model);
+      const model = cruxModel(useCruxStore.getState().crux);
       exec = createToolExecutor(
         cruxId,
         // The same banner the built-in collaborator's deletes wait on: the
         // person approves in the app, never in the agent's terminal.
         (path, artifactId) => useCruxStore.getState().requestDeleteApproval(artifactId, path),
         model,
-        { requestedBy: agentActor(agent) },
+        { requestedBy: agentActor(agent), gardenAccess: false },
       );
       executors.set(key, exec);
     }
@@ -336,14 +383,11 @@ function createWorkspaceHost(w: Workspace) {
   /** The same per-crux session the chat hook uses — so the auto-snapshot policy is shared. */
   function sessionFor(cruxId: string) {
     return chatSessionFor(cruxId, {
-      frequency: () =>
-        (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-        'ai-turn',
+      frequency: () => 'ai-turn',
       snapshot: () => {
         if (useCruxStore.getState().crux?.id !== cruxId) return;
-        useCruxStore
-          .getState()
-          .createSnapshot({ silent: false })
+        return captureEditCheckpoint(cruxId)
+          .then(() => {})
           .catch((err) => console.warn('Auto-snapshot failed:', err));
       },
     });
@@ -458,7 +502,7 @@ async function readResource(
   const json = (value: unknown): McpResourceResult => ({
     contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(value, null, 2) }],
   });
-  const { artifact, dimension } = getServices();
+  const { artifact } = getServices();
 
   switch (uri) {
     case 'crux://files': {
@@ -470,16 +514,13 @@ async function readResource(
       return json({ cruxId, files });
     }
     case 'crux://growth': {
-      const growths = await dimension.findBySourceAndType(cruxId, 'growth');
-      const timeline = growths
-        .sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0))
-        .map((g) => ({
-          id: g.id,
-          snapshotCruxId: g.targetId,
-          label: (g.meta?.label as string | undefined) ?? null,
-          requestedBy: (g.meta?.requestedBy as string | undefined) ?? null,
-          created: g.created,
-        }));
+      const timeline = (await listGrowths(cruxId)).map((g) => ({
+        id: g.id,
+        snapshotCruxId: g.targetId,
+        label: (g.meta?.label as string | undefined) ?? null,
+        requestedBy: (g.meta?.requestedBy as string | undefined) ?? null,
+        created: g.created,
+      }));
       return json({ cruxId, snapshots: timeline });
     }
     case 'crux://preview': {
@@ -498,7 +539,7 @@ async function readResource(
       const all = await artifact.findByResource('crux', cruxId);
       const file = all.find((a) => a.type === 'artifact' && pathOf(a) === 'AGENTS.md');
       const text = file
-        ? await artifact.readContent(file.id)
+        ? await artifact.readContent(file)
         : '# AGENTS.md\n\nThis crux has no AGENTS.md yet. Read crux://files for the file tree and ' +
           'crux://persona for the collaborator voice; do not touch `_crux/` or `.crux/`.';
       return { contents: [{ uri, mimeType: 'text/markdown', text }] };
@@ -517,9 +558,12 @@ function resultText(result: string | ToolResultContent): string {
     .join('\n');
 }
 
-function toMcpResult(result: string | ToolResultContent): McpToolResult {
+export function toMcpResult(result: string | ToolResultContent): McpToolResult {
   if (typeof result === 'string') {
-    return { content: [{ type: 'text', text: result }], isError: result.startsWith('Error') };
+    return {
+      content: [{ type: 'text', text: result }],
+      isError: result.startsWith('Error') || result.startsWith(DELETE_DECLINED),
+    };
   }
   return {
     content: result.map((b) =>
@@ -532,4 +576,31 @@ function toMcpResult(result: string | ToolResultContent): McpToolResult {
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/** Garden authority explicitly opens the target; narrow hosts never use this entry point. */
+export async function listGardenCruxTools(cruxId: string): Promise<ToolDefinition[]> {
+  const { openWorkspace } = await import('@/stores/workspaceRegistry');
+  const w = await openWorkspace(cruxId);
+  await w.loaded;
+  if (w.phase !== 'ready') throw new Error('The Crux is not ready.');
+  return agentToolDefinitions(cruxId);
+}
+export async function executeGardenCruxTool(
+  cruxId: string,
+  agent: string,
+  name: string,
+  input: Record<string, unknown>,
+): Promise<McpToolResult> {
+  const tools = await listGardenCruxTools(cruxId);
+  if (!tools.some((t) => t.name === name))
+    return toMcpResult('Error: Unknown Crux tool. Call list_crux_tools first.');
+  return handleRequest({
+    id: crypto.randomUUID(),
+    kind: 'tools/call',
+    cruxId,
+    agent: agent.replace(/^agent:/, ''),
+    name,
+    input,
+  }) as Promise<McpToolResult>;
 }

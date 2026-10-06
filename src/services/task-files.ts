@@ -2,13 +2,28 @@ import { getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { guessMimeType, hashContent } from './sqlite/helpers';
 import { folderForCrux } from './project-folder';
-import { flushIngestion, expectProjectWrites } from './ingestion';
+import { flushIngestion, expectProjectWrites, serializeIngestion } from './ingestion';
 import {
   isTaskArtifact,
   sameTaskFile,
   validateTaskPaths,
   type TaskManifest,
 } from './task-manifest';
+
+/** Read the API-retained starting files; never reconstruct them from mutable Main. */
+export async function startingTaskManifest(id: string): Promise<TaskManifest> {
+  const read = getSqliteClient().workingCopyBase;
+  if (!read) throw new Error('Task starting-state inspection is unavailable.');
+  const base = await read(id);
+  const manifest: TaskManifest = {};
+  for (const entry of base.entries) {
+    if (!isTaskArtifact(entry.path)) continue;
+    const { fingerprint, mimeType, encoding, mode, size } = entry;
+    manifest[entry.path] = { fingerprint, mimeType, encoding, mode, size };
+  }
+  validateTaskPaths(manifest);
+  return manifest;
+}
 
 export async function indexedTaskManifest(id: string): Promise<TaskManifest> {
   const files = await getServices().artifact.findByResource('crux', id);
@@ -28,12 +43,50 @@ export async function indexedTaskManifest(id: string): Promise<TaskManifest> {
   return manifest;
 }
 
+const TEXT_MIME = /^(text\/|application\/(json|javascript|xml|x-sh)|image\/svg)/;
+
 /** Capture disk, not a possibly lagging Artifact index. Call with writers settled. */
 export async function captureTaskManifest(id: string): Promise<TaskManifest> {
   await flushIngestion();
   const folder = await folderForCrux(id);
   if (!folder) return indexedTaskManifest(id);
   const api = window.electronAPI?.project;
+  if (api?.captureManifest) {
+    // Hashed in the main process against a stat-signature cache: a reopened
+    // 2,000-file tool costs one hashing pass, later captures a stat walk, and
+    // no bytes cross IPC. Reading every file into the renderer and hashing it
+    // there kept a 151 MB Crux's export on "Saving files…" for minutes.
+    const indexed = await indexedTaskManifest(id);
+    const captured = await api.captureManifest(folder, Object.keys(indexed));
+    const manifest: TaskManifest = {};
+    for (const file of captured.files) {
+      if (!isTaskArtifact(file.path)) continue;
+      const known = indexed[file.path];
+      // Unchanged bytes keep their indexed type: re-deriving it (a bundled
+      // asset registered as binary reads as UTF-8 text) moved the head on
+      // every export, and the embedded tool reloaded itself mid-export.
+      if (known && known.fingerprint === file.fingerprint) {
+        manifest[file.path] = { ...known, mode: file.mode, size: file.size };
+        continue;
+      }
+      const mimeType = guessMimeType(file.path);
+      manifest[file.path] = {
+        fingerprint: file.fingerprint,
+        mimeType,
+        encoding: file.utf8 && TEXT_MIME.test(mimeType) ? 'utf-8' : 'binary',
+        mode: file.mode,
+        size: file.size,
+      };
+    }
+    // Indexed paths the folder's ignore rules cover (a tool's `runtime/`) are
+    // the index's own: the folder is not their truth, so a capture neither
+    // reads nor drops them. Dropping them emptied the Workshop after an export
+    // and left complete archives without the tool they claimed to hold.
+    for (const path of captured.retained)
+      if (indexed[path] && !manifest[path]) manifest[path] = indexed[path];
+    validateTaskPaths(manifest);
+    return manifest;
+  }
   if (!api?.capture) throw new Error('Restart the updated desktop app to capture a task.');
   const files = await api.capture(folder);
   const manifest: TaskManifest = {};
@@ -43,7 +96,7 @@ export async function captureTaskManifest(id: string): Promise<TaskManifest> {
     const fingerprint = await hashContent(data);
     await getSqliteClient().blobWrite(fingerprint, data);
     const mimeType = guessMimeType(file.path);
-    let text = /^(text\/|application\/(json|javascript|xml|x-sh)|image\/svg)/.test(mimeType);
+    let text = TEXT_MIME.test(mimeType);
     if (text) {
       try {
         new TextDecoder('utf-8', { fatal: true }).decode(data);
@@ -64,60 +117,42 @@ export async function captureTaskManifest(id: string): Promise<TaskManifest> {
 
 /** Record captured disk content without echoing writes back to disk. */
 export async function indexTaskManifest(id: string, manifest: TaskManifest): Promise<void> {
+  if (!getSqliteClient().fileContent)
+    throw new Error('Task file storage is unavailable. Restart the updated desktop app.');
   validateTaskPaths(manifest);
-  const { artifact } = getServices();
-  const current = await artifact.findByResource('crux', id);
-  for (const f of current) {
-    const path = String(f.meta?.path || f.filename);
-    if (isTaskArtifact(path) && !manifest[path])
-      await artifact.delete(f.id, { writeThrough: false });
-  }
-  // New paths whose blobs the store already holds (the manifest came from
-  // indexed Artifacts) are registered in bulk: no reads, no hashing, a few
-  // inserts instead of thousands of round-trips. A 400 MB native app took
-  // minutes to index one file at a time.
-  const byPath = new Map(current.map((a) => [String(a.meta?.path || a.filename), a]));
-  const fresh = Object.entries(manifest).filter(
-    ([path, f]) => !byPath.has(path) && f.size !== undefined,
-  );
-  await artifact.registerMany(
-    fresh.map(([path, f]) => ({
-      resourceId: id,
-      path,
-      fingerprint: f.fingerprint,
-      size: f.size!,
-      mimeType: f.mimeType,
-      encoding: f.encoding,
-      meta: { path, mode: f.mode },
-    })),
-  );
-  const registered = new Set(fresh.map(([path]) => path));
-  for (const [path, f] of Object.entries(manifest)) {
-    if (registered.has(path)) continue;
+  const captured = structuredClone(manifest);
+  return serializeIngestion(() => indexTaskManifestCore(id, captured));
+}
+
+async function indexTaskManifestCore(id: string, manifest: TaskManifest): Promise<void> {
+  const db = getSqliteClient();
+  if (!db.fileContent) throw new Error('Task file storage is unavailable.');
+  const head = await db.fileContent.head(id);
+  const entries = head ? (await db.fileContent.list({ cruxId: id, expected: head })).entries : [];
+  const byPath = new Map(entries.map((entry) => [entry.path, entry]));
+  const changes: Parameters<typeof db.fileContent.edit>[0]['changes'] = entries
+    .filter((entry) => isTaskArtifact(entry.path) && !manifest[entry.path])
+    .map((entry) => ({ remove: entry.path }));
+  for (const [path, file] of Object.entries(manifest)) {
     const previous = byPath.get(path);
-    if (previous?.fingerprint === f.fingerprint && previous.meta?.mode === f.mode) continue;
-    const data = await getSqliteClient().blobRead(f.fingerprint);
-    if (f.encoding === 'utf-8')
-      await artifact.create({
-        resourceId: id,
-        content: new TextDecoder().decode(data),
-        mimeType: f.mimeType,
-        meta: { path, mode: f.mode },
-        writeThrough: false,
-      });
-    else
-      await artifact.upload({
-        resourceId: id,
-        blob: new Blob([data as BlobPart]),
-        mimeType: f.mimeType,
-        meta: { path, mode: f.mode },
-        writeThrough: false,
-      });
-    await getSqliteClient().run(
-      'UPDATE artifacts SET meta = ? WHERE resource_id = ? AND path = ?',
-      [JSON.stringify({ path, mode: f.mode }), id, path],
-    );
+    if (
+      previous &&
+      sameTaskFile(previous, file) &&
+      previous.mimeType === file.mimeType &&
+      previous.encoding === file.encoding
+    )
+      continue;
+    changes.push({
+      put: {
+        ...file,
+        path,
+        id: previous?.id ?? crypto.randomUUID(),
+        size: file.size ?? (await db.blobRead(file.fingerprint)).byteLength,
+        attributes: previous?.attributes ?? {},
+      },
+    });
   }
+  if (changes.length || !head) await db.fileContent.edit({ cruxId: id, expected: head, changes });
 }
 
 /** Explicit projection only. Any failed write aborts; caller owns recovery. */
@@ -126,6 +161,8 @@ export async function projectTaskManifest(
   before: TaskManifest,
   after: TaskManifest,
 ): Promise<void> {
+  if (!getSqliteClient().fileContent)
+    throw new Error('Task file storage is unavailable. Restart the updated desktop app.');
   validateTaskPaths(after);
   const folder = await folderForCrux(id);
   if (folder) {

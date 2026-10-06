@@ -134,8 +134,8 @@ const NodeRenderer = memo(function NodeRenderer({
       ref={dragHandle}
       style={{ ...style, paddingLeft: ((style.paddingLeft as number) || 0) + 8 }}
       className={cn(
-        'group/node flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
-        'cursor-pointer select-none',
+        'group/node flex items-center gap-1.5 py-0.5 pr-2 mx-1.5 text-xs font-mono',
+        'rounded-[var(--radius-sm)] cursor-pointer select-none transition-colors',
         node.isSelected
           ? 'bg-file-tree-item-selected text-file-tree-item-text-selected'
           : 'bg-file-tree-item text-file-tree-item-text hover:bg-file-tree-item-hover',
@@ -182,7 +182,7 @@ const NodeRenderer = memo(function NodeRenderer({
           {fileSize && (
             <span
               className={cn(
-                'ml-auto shrink-0 text-2xs text-text-muted/50 transition-opacity',
+                'ml-auto shrink-0 text-2xs text-subtle transition-opacity',
                 node.isSelected ? 'opacity-100' : 'opacity-0 group-hover/node:opacity-100',
               )}
             >
@@ -580,7 +580,9 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
 
     if (artifacts.length === 0 && !isCreating) {
       return (
-        <div className="p-3 text-xs text-text-muted">No files yet. Ask the AI to create one.</div>
+        <div className="p-3 text-xs text-text-muted">
+          No files yet. Drop some here, or make one with New file.
+        </div>
       );
     }
 

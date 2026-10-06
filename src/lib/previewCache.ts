@@ -4,7 +4,8 @@
  * Two modes of operation:
  *
  * 1. **Same-origin** (no VITE_PREVIEW_ORIGIN) — Writes directly to the Cache API.
- *    The SW on the same origin reads from the same cache. Simple, no isolation.
+ *    Retired: the app-origin service worker refuses these URLs. This code
+ *    remains only until Web Mode authoring is removed (ADR 0060).
  *
  * 2. **Cross-origin** (VITE_PREVIEW_ORIGIN set) — Sends files via postMessage to a
  *    hidden receiver iframe on preview.crux.garden. The receiver writes to the Cache

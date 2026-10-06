@@ -1,6 +1,8 @@
 import { flushNotebook } from '@/services/notebook-lifecycle';
+import { markTurnSeen, seenTurn } from '@/services/tending-state';
+import { EXTERNAL_CHANGE } from '@/services/ingestion';
 import { tendingState, tendingLabel, type TendingState } from '@/services/tending-state';
-import { findWorkingCopy } from '@/services/working-copies';
+import { copyIdentity, findWorkingCopy } from '@/services/working-copies';
 import { maintainNotesManifest } from '@/services/notes-manifest';
 import { registerPreviewOwner } from '@/services/preview-owners';
 import { setActivePreview } from '@/lib/preview-registry';
@@ -34,12 +36,16 @@ export interface Workspace extends WorkspaceStores {
 }
 export interface WorkspaceSummary {
   id: string;
+  cruxId?: string;
+  phase?: Workspace['phase'];
+  lifetimeId?: string;
   title: string;
   status: string;
   dirty: boolean;
   tending?: TendingState;
 }
 const sessions = new Map<string, Workspace>();
+const replacingCruxes = new Set<string>();
 const KEY = 'cruxgarden:open-workspaces:v1';
 export const useWorkspaceRegistry = create<{
   entries: WorkspaceSummary[];
@@ -85,7 +91,7 @@ export function workspaceTending(w: Workspace): TendingState {
     streaming: s.isStreaming,
     settling: s.turnSettling,
     queued: s.turnQueue.length,
-    seenTurnId: w.seenTurnId ?? getSetting(`cruxgarden:tending-seen:${w.id}`),
+    seenTurnId: w.seenTurnId ?? seenTurn(w.id),
     folderMissing: s.folderMissing,
     requests: [
       ...s.pendingDeletes.map((d) => ({
@@ -113,11 +119,14 @@ function summarize(w: Workspace) {
     w.seenTurnId !== s.turnJob.id
   ) {
     w.seenTurnId = s.turnJob.id;
-    setSetting(`cruxgarden:tending-seen:${w.id}`, s.turnJob.id);
+    markTurnSeen(w.id, s.turnJob.id);
   }
   const tending = workspaceTending(w);
   const next = {
     id: w.id,
+    cruxId: w.cruxId,
+    phase: w.phase,
+    lifetimeId: w.lifetimeId,
     tending,
     title: s.crux?.title || 'Untitled',
     status: `${s.publishPhase ? 'Publishing' : tendingLabel(tending)}${s.turnQueue.length ? ` · ${s.turnQueue.length} queued` : ''}`,
@@ -138,10 +147,16 @@ export function allWorkspaces(): Workspace[] {
   return [...sessions.values()];
 }
 export async function openWorkspace(id: string): Promise<Workspace> {
+  if (replacingCruxes.size) {
+    const owner = replacingCruxes.has(id) ? id : (await findWorkingCopy(id))?.cruxId;
+    if (owner && replacingCruxes.has(owner))
+      throw new Error('This Crux is being restored. Wait for it to finish.');
+  }
   let w = sessions.get(id);
   if (w) {
     if (w.phase === 'closing') throw new Error('This workspace is closing.');
     await w.loaded;
+    await w.data.getState().recoverFileUpdates(id, true);
     return w;
   }
   const ui = createUIStore(id);
@@ -243,7 +258,13 @@ export async function closeWorkspace(
     await flushSettings();
     return;
   }
-  if (w.phase === 'closing') throw new Error('This workspace is already closing.');
+  const assertCloseAvailable = () => {
+    if (sessions.get(id) !== w || w.phase === 'closing')
+      throw new Error('This workspace is already closing.');
+    if (w.data.getState().closing)
+      throw new Error('Wait for this workspace’s task operation to finish before closing.');
+  };
+  assertCloseAvailable();
   const s = w.data.getState();
   const busy =
     s.isStreaming ||
@@ -256,7 +277,14 @@ export async function closeWorkspace(
   const docs = documentsFor(w.data, w.ui);
   if (docs.hasDirty() && !options.documents)
     throw new Error('Save or discard unsaved edits before closing.');
+  // A deferred file update already committed its head. Finish that intent before
+  // saving any draft or metadata; refusal leaves this workspace and drafts live.
+  // Embedded editors must still be writable while their pre-close flush runs.
+  await w.data.getState().recoverFileUpdates(id, true);
   if (options.documents === 'save') await flushNotebook(w.id);
+  // Task capture may have acquired the workspace while recovery or the guest
+  // editor was flushing. Its lifetime must outlive that admitted operation.
+  assertCloseAvailable();
   w.phase = 'closing';
   w.data.setState({ closing: true });
   summarize(w);
@@ -311,6 +339,7 @@ export async function restoreWorkspaceList(): Promise<string | null> {
     restored: true,
     entries: ids.map((id) => ({
       id,
+      cruxId: copyIdentity(valid.get(id))?.cruxId ?? id,
       title: valid.get(id)!.title || 'Untitled',
       status: 'Not loaded',
       dirty: false,
@@ -323,7 +352,7 @@ export async function restoreWorkspaceList(): Promise<string | null> {
   return saved.active && ids.includes(saved.active) ? saved.active : null;
 }
 if (typeof window !== 'undefined') {
-  window.addEventListener('crux:external-change', (e) => {
+  window.addEventListener(EXTERNAL_CHANGE, (e) => {
     const w = sessions.get((e as CustomEvent<{ cruxId: string }>).detail.cruxId);
     void w?.data.getState().refreshArtifacts().catch(console.error);
   });
@@ -341,6 +370,7 @@ if (typeof window !== 'undefined') {
 
 /** Orderly application exit preserves membership but never resumes provider calls. */
 export async function shutdownWorkspaces(documents: 'save' | 'discard'): Promise<void> {
+  await (await import('./keeperStore')).shutdownKeepers();
   const state = useWorkspaceRegistry.getState();
   const saved = {
     version: 1,
@@ -353,6 +383,7 @@ export async function shutdownWorkspaces(documents: 'save' | 'discard'): Promise
 }
 /** Garden replacement must never inherit callbacks or open sessions from the old database. */
 export async function prepareGardenReplacement(): Promise<void> {
+  await (await import('./keeperStore')).shutdownKeepers();
   if (allWorkspaces().length)
     throw new Error('Close all open Crux workspaces before replacing this garden.');
   leaveWorkspaceView();
@@ -376,4 +407,38 @@ export async function closeCruxWorkspaces(
       throw new Error('Wait for this Crux’s task operations to finish before closing.');
   }
   for (const id of ids) await closeWorkspace(id, { stop: true, documents });
+}
+
+/** Replacement excludes new sessions and disposes old callbacks before admitting
+ * the new graph. Reopen retained sessions against their new Project Folders. */
+export async function withClosedCruxWorkspaces<T>(
+  cruxId: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  if (replacingCruxes.has(cruxId)) throw new Error('This Crux is already being restored.');
+  replacingCruxes.add(cruxId);
+  const reopen: string[] = [];
+  const active = useWorkspaceRegistry.getState().activeId;
+  try {
+    for (const entry of useWorkspaceRegistry.getState().entries)
+      if (entry.id === cruxId || (await findWorkingCopy(entry.id))?.cruxId === cruxId)
+        reopen.push(entry.id);
+    await closeCruxWorkspaces(cruxId, 'save');
+    await flushIngestion();
+    return await operation();
+  } finally {
+    replacingCruxes.delete(cruxId);
+    for (const id of reopen) {
+      // A restored archive may legitimately predate a Task's creation.
+      if (id !== cruxId && !(await findWorkingCopy(id))) continue;
+      await openWorkspace(id);
+    }
+    if (
+      active &&
+      reopen.includes(active) &&
+      getWorkspace(active) &&
+      !useWorkspaceRegistry.getState().activeId
+    )
+      await activateWorkspace(active);
+  }
 }

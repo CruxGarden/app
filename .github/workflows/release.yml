@@ -1,5 +1,5 @@
 # Desktop release (ADR 0007, amended 2026-09-03 for Windows + Linux): tag `v*`
-# → build every platform, sign/notarize where secrets exist, publish one draft
+# → build every platform, require Mac signing/notarization, publish one draft
 # GitHub Release with the installers and the latest*.yml files electron-updater
 # reads. macOS is the tested platform (packaged smoke test); Windows and Linux
 # are build-only until their e2e runs are green. `workflow_dispatch` builds
@@ -25,6 +25,9 @@ permissions:
   contents: write
 
 jobs:
+  native-media:
+    uses: ./.github/workflows/native-media.yml
+
   prepare:
     name: Check version, create draft
     runs-on: ubuntu-latest
@@ -36,25 +39,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - name: Decide publish mode
+      - name: Validate release policy before creating a draft
         id: mode
-        run: |
-          VERSION=$(node -p "require('./electron/package.json').version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
-            echo "publish=always" >> "$GITHUB_OUTPUT"
-          else
-            echo "publish=never" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Tag must match electron/package.json version
-        if: steps.mode.outputs.publish == 'always'
-        run: |
-          EXPECTED="v${{ steps.mode.outputs.version }}"
-          if [[ "$GITHUB_REF_NAME" != "$EXPECTED" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match electron/package.json version ($EXPECTED)." \
-                 "Bump the version (npm version in electron/) and re-tag."
-            exit 1
-          fi
+        env:
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: node electron/scripts/release-policy.mjs
       - name: Wait for CI on this commit to be green
         if: steps.mode.outputs.publish == 'always'
         env:
@@ -95,7 +88,7 @@ jobs:
 
   mac:
     name: macOS arm64 + x64
-    needs: prepare
+    needs: [prepare, native-media]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -115,37 +108,21 @@ jobs:
       - name: Build web app + main process
         run: npm run build:all
         working-directory: electron
-      - name: Signing and notarization env (only the secrets that are set)
-        # An empty CSC_LINK is not "no certificate" to electron-builder — it is a path, and
-        # the build dies with "not a file". Decide here; the import step below runs only
-        # when a certificate exists. electron-builder's own temporary keychain broke on the
-        # macOS 26 runner image (set-key-partition-list: "passphrase you entered is not
-        # correct"), so the certificate is imported by Apple's action instead and
-        # electron-builder discovers the identity from that keychain.
+      - name: Use unsigned builds only for manual dispatch
+        if: needs.prepare.outputs.publish == 'never'
+        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+      - name: Configure required release notarization
+        if: needs.prepare.outputs.publish == 'always'
         env:
-          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [[ -n "$MAC_CERT_P12" ]]; then
-            echo "MAC_SIGN=1" >> "$GITHUB_ENV"
-            echo "Developer ID certificate present: signing"
-          else
-            echo "MAC_SIGN=0" >> "$GITHUB_ENV"
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
-            echo "No certificate secret: unsigned build"
-          fi
-          if [[ -n "$APPLE_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" && -n "$APPLE_TEAM_ID" ]]; then
-            echo "APPLE_ID=$APPLE_ID" >> "$GITHUB_ENV"
-            echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD" >> "$GITHUB_ENV"
-            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> "$GITHUB_ENV"
-            echo "Notarization credentials present"
-          else
-            echo "No notarization credentials: skipping notarization"
-          fi
+          echo "APPLE_ID=$APPLE_ID" >> "$GITHUB_ENV"
+          echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD" >> "$GITHUB_ENV"
+          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> "$GITHUB_ENV"
       - name: Import the Developer ID certificate into a build keychain
-        if: env.MAC_SIGN == '1'
+        if: needs.prepare.outputs.publish == 'always'
         uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.MAC_CERT_P12 }}
@@ -153,16 +130,28 @@ jobs:
           keychain: crux-signing
           keychain-password: ${{ github.run_id }}-${{ github.run_attempt }}
       - name: Point electron-builder at that keychain
-        if: env.MAC_SIGN == '1'
+        if: needs.prepare.outputs.publish == 'always'
         run: |
           KC=$(ls "$HOME"/Library/Keychains/crux-signing.keychain* | head -1)
           echo "CSC_KEYCHAIN=$KC" >> "$GITHUB_ENV"
           security find-identity -v -p codesigning "$KC"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-darwin-*
+          path: native-media-artifacts
+          merge-multiple: true
+      - name: Restore native binary modes and sources
+        shell: bash
+        run: |
+          mkdir -p electron/.native-tools
+          for archive in native-media-artifacts/*.tar.gz; do
+            tar -xzf "$archive" -C electron/.native-tools
+          done
       - name: Package (both architectures → one latest-mac.yml)
         working-directory: electron
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --mac dmg zip --arm64 --x64 --publish "${{ needs.prepare.outputs.publish }}"
+        run: npx electron-builder --mac dmg zip --arm64 --x64 --config.forceCodeSigning=${{ needs.prepare.outputs.publish == 'always' }} --publish "${{ needs.prepare.outputs.publish }}"
       - name: Smoke-test the packaged app (runner's native arch)
         working-directory: electron
         env:
@@ -182,7 +171,7 @@ jobs:
 
   linux:
     name: Linux x64 (AppImage + deb)
-    needs: prepare
+    needs: [prepare, native-media]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -201,6 +190,18 @@ jobs:
         working-directory: electron
       - run: npm run build:all
         working-directory: electron
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-linux-x64
+          path: native-media-artifacts
+          merge-multiple: true
+      - name: Restore native binary modes and sources
+        shell: bash
+        run: |
+          mkdir -p electron/.native-tools
+          for archive in native-media-artifacts/*.tar.gz; do
+            tar -xzf "$archive" -C electron/.native-tools
+          done
       - name: Package
         working-directory: electron
         env:
@@ -217,7 +218,7 @@ jobs:
 
   windows:
     name: Windows x64 (NSIS)
-    needs: prepare
+    needs: [prepare, native-media]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -253,6 +254,18 @@ jobs:
           else
             echo "No Windows certificate secret: unsigned build"
           fi
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-win32-x64
+          path: native-media-artifacts
+          merge-multiple: true
+      - name: Restore native binary modes and sources
+        shell: bash
+        run: |
+          mkdir -p electron/.native-tools
+          for archive in native-media-artifacts/*.tar.gz; do
+            tar -xzf "$archive" -C electron/.native-tools
+          done
       - name: Package
         working-directory: electron
         shell: bash

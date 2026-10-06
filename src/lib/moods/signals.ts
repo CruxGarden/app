@@ -1,20 +1,33 @@
 /**
- * Reactive theme signals (ADR 0014): three live numbers, 0..1, written as CSS
+ * Reactive theme signals (ADR 0014): four live numbers, 0..1, written as CSS
  * variables on <html> so a Mood can let the interface react to what is
  * happening —
  *
- *   --signal-audio   the Resonance level (what the Mood Bar's bars show)
- *   --signal-typing  1 on a keystroke in the composer or editor, decaying to 0
- *   --signal-agent   1 while a collaborator turn is streaming
+ *   --signal-audio    the Resonance level (what the Mood Bar's bars show)
+ *   --signal-typing   1 on a keystroke in the composer or editor, decaying to 0
+ *   --signal-agent    1 while a collaborator turn is streaming
+ *   --signal-activity how much has been going on lately — every event lifts it
+ *                     and it falls over minutes, far slower than the other
+ *                     three, so it reads as a mood rather than a blink
  *
  * CSS multiplies each by a binding token (reactAccentAudio, reactBackgroundTyping,
- * reactPaneAgent; default 0) — see motion.css and bloom.css — so a Mood that
- * says nothing does not move. Writes are rAF-throttled and smoothed, and the
+ * reactPaneAgent, reactBackgroundActivity; default 0) — see motion.css and
+ * bloom.css — so a Mood that says nothing does not move. Writes are rAF-throttled and smoothed, and the
  * loop stops when every signal is at rest. `startSignals()` is called once
  * from the app root; the pure parts (decay, smoothing, clamping) are tested.
  */
 import { useAudioStore } from '@/stores/audioStore';
+import { EXTERNAL_CHANGE } from '@/services/ingestion';
 import { useWorkspaceRegistry } from '@/stores/workspaceRegistry';
+import { onGardenEvent } from '@/services/garden-events';
+import { Capability, can } from '@/lib/platform';
+import {
+  FlowState,
+  onFlowActivity,
+  readFlowSettings,
+  type FlowActivity,
+  type FlowSettings,
+} from './flow';
 
 export const TYPING_DECAY_MS = 1500;
 /** Per-frame approach rate toward a target (1 = jump, 0 = never) at 60fps. */
@@ -49,6 +62,7 @@ export interface SignalValues {
   audio: number;
   typing: number;
   agent: number;
+  activity: number;
 }
 
 /** Is a keystroke in this element "writing" (composer textarea, Monaco's input, contenteditable)? */
@@ -77,10 +91,20 @@ export class SignalState {
   private lastKeyAt = -Infinity;
   private audioTarget = 0;
   private agentTarget = 0;
-  readonly values: SignalValues = { audio: 0, typing: 0, agent: 0 };
+  private flow = new FlowState();
+  readonly values: SignalValues = { audio: 0, typing: 0, agent: 0, activity: 0 };
 
   keystroke(now: number): void {
     this.lastKeyAt = now;
+    this.happened(now, 'writing');
+  }
+
+  /** Something happened: a key was pressed, a file arrived, a turn began. */
+  happened(now: number, kind: FlowActivity = 'interaction'): void {
+    this.flow.happened(kind, now);
+  }
+  configureFlow(settings: FlowSettings, now: number): void {
+    this.flow.configure(settings, now);
   }
   setAudio(meter: number, playing: boolean): void {
     this.audioTarget = audioLevel(meter, playing);
@@ -98,12 +122,15 @@ export class SignalState {
     if (audio !== this.values.audio) changed.audio = this.values.audio = audio;
     const agent = approach(this.values.agent, this.agentTarget);
     if (agent !== this.values.agent) changed.agent = this.values.agent = agent;
+    const activity = this.flow.tick(now);
+    if (activity !== this.values.activity) changed.activity = this.values.activity = activity;
     return changed;
   }
 
   get settled(): boolean {
     return (
       this.values.typing === 0 &&
+      this.flow.settled &&
       this.values.audio === this.audioTarget &&
       this.values.agent === this.agentTarget
     );
@@ -114,13 +141,28 @@ const VARS: Record<keyof SignalValues, string> = {
   audio: '--signal-audio',
   typing: '--signal-typing',
   agent: '--signal-agent',
+  activity: '--signal-activity',
 };
+
+/**
+ * Activity is also read outside CSS — the plasma material is WebGL, so its rim
+ * cannot be driven by a variable. Listeners get every quantised step.
+ */
+type ActivityListener = (level: number) => void;
+const activityListeners = new Set<ActivityListener>();
+let lastActivity = 0;
+
+export function onActivity(fn: ActivityListener): () => void {
+  activityListeners.add(fn);
+  fn(lastActivity);
+  return () => void activityListeners.delete(fn);
+}
 
 let stop: (() => void) | null = null;
 
 /**
- * Subscribe to the audio store, the crux store and keystrokes; write the
- * signals to <html>. Idempotent; returns the stop function.
+ * Follow creative actions, collaborator progress and the active Mood.
+ * Idempotent; every listener is released by the stop function.
  */
 export function startSignals(): () => void {
   if (stop) return stop;
@@ -133,6 +175,10 @@ export function startSignals(): () => void {
     for (const k of Object.keys(changed) as (keyof SignalValues)[]) {
       root.style.setProperty(VARS[k], changed[k]!.toFixed(3));
     }
+    if (changed.activity !== undefined) {
+      lastActivity = changed.activity;
+      for (const fn of activityListeners) fn(lastActivity);
+    }
   };
   const loop = () => {
     frame = 0;
@@ -143,9 +189,52 @@ export function startSignals(): () => void {
     if (!frame) frame = requestAnimationFrame(loop);
   };
 
+  const happened = (kind: FlowActivity) => {
+    state.happened(performance.now(), kind);
+    wake();
+  };
+  const configureFlow = () => {
+    const settings = readFlowSettings();
+    const off = root.dataset.motionIntensity === 'off';
+    state.configureFlow({ ...settings, enabled: settings.enabled && !off }, performance.now());
+    root.dataset.flow = settings.enabled && !off ? 'on' : 'off';
+    write(state.tick(performance.now()));
+    wake();
+  };
+  document.addEventListener('palette-change', configureFlow);
+  const motionObserver = new MutationObserver(configureFlow);
+  motionObserver.observe(root, { attributes: true, attributeFilter: ['data-motion-intensity'] });
+  configureFlow();
+
+  // A completed action counts; idle pointer motion, focus changes, background
+  // animation, timer ticks and token streaming do not keep the garden lit.
+  const onPointer = (e: PointerEvent) => {
+    if (e.isTrusted) happened('interaction');
+  };
+  const onDrag = (e: PointerEvent) => {
+    if (e.isTrusted && e.buttons) happened('arranging');
+  };
+  const onResize = () => happened('arranging');
+  const onExternalEdit = () => happened('artifact');
+  document.addEventListener('pointerup', onPointer, true);
+  document.addEventListener('pointermove', onDrag, true);
+  window.addEventListener('resize', onResize);
+  window.addEventListener(EXTERNAL_CHANGE, onExternalEdit);
+  const unFlow = onFlowActivity(happened);
+  const unGarden = onGardenEvent((event) => {
+    if (event.name === 'toolDone') happened('tool');
+    else if (event.name === 'message') happened('collaboration');
+    else if (event.name === 'snapshot' || event.name === 'published') happened('artifact');
+  });
+  const unWindow = can(Capability.DesktopChrome)
+    ? window.electronAPI?.desktop?.onCreativeActivity?.(happened)
+    : undefined;
+
   const onKey = (e: KeyboardEvent) => {
-    if (!isWritingKey(e) || !isWritingTarget(e.target)) return;
-    state.keystroke(performance.now());
+    if (!e.isTrusted) return;
+    if (isWritingKey(e) && isWritingTarget(e.target)) state.keystroke(performance.now());
+    else if (!e.repeat && (e.key === 'Enter' || e.key === ' ' || e.metaKey || e.ctrlKey))
+      happened('interaction');
     wake();
   };
   document.addEventListener('keydown', onKey, true);
@@ -155,12 +244,23 @@ export function startSignals(): () => void {
     state.setAudio(s.level, s.playing);
     wake();
   });
+  let workingIds = new Set<string>();
+  let activeId = useWorkspaceRegistry.getState().activeId;
   const updateAgent = () => {
-    state.setAgent(
-      useWorkspaceRegistry
-        .getState()
-        .entries.some((e) => e.status === 'Working' || e.status === 'Checking'),
+    const registry = useWorkspaceRegistry.getState();
+    const next = new Set(
+      registry.entries
+        .filter((e) => e.status.startsWith('Working') || e.status.startsWith('Checking'))
+        .map((e) => e.id),
     );
+    const working = next.size > 0;
+    // A turn beginning is an event; a turn running is not, or activity would
+    // pin to 1 for as long as the collaborator worked.
+    if ([...next].some((id) => !workingIds.has(id))) happened('collaboration');
+    workingIds = next;
+    if (registry.activeId !== activeId) happened('interaction');
+    activeId = registry.activeId;
+    state.setAgent(working);
     wake();
   };
   const unCrux = useWorkspaceRegistry.subscribe(updateAgent);
@@ -169,10 +269,22 @@ export function startSignals(): () => void {
 
   stop = () => {
     document.removeEventListener('keydown', onKey, true);
+    document.removeEventListener('pointerup', onPointer, true);
+    document.removeEventListener('pointermove', onDrag, true);
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener(EXTERNAL_CHANGE, onExternalEdit);
+    document.removeEventListener('palette-change', configureFlow);
+    motionObserver.disconnect();
+    unFlow();
+    unGarden();
+    unWindow?.();
+    delete root.dataset.flow;
     unAudio();
     unCrux();
     if (frame) cancelAnimationFrame(frame);
     for (const v of Object.values(VARS)) root.style.removeProperty(v);
+    lastActivity = 0;
+    for (const fn of activityListeners) fn(0);
     stop = null;
   };
   return stop;

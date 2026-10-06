@@ -1,9 +1,11 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
+import { indexedFiles } from './content-helpers';
 
 /**
  * Find media (V1-GAPS-PLAN.md §2.7): the Find media pane searches Openverse
@@ -25,20 +27,16 @@ test('Find media: an image, a sound and a video from the catalogues land in the 
   const { app, page } = await launchApp({
     env: { CRUX_API_URL: api.url, CRUX_MEDIA_API: api.url },
   });
-  const evidence = resolve(__dirname, '../../docs/find-media');
+  const evidence = test.info().outputDir;
   try {
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
     await enterGarden(page);
-    await page.getByRole('button', { name: 'Add Crux' }).click();
-    await page.getByRole('button', { name: /^miniPaint/ }).click();
-    await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
-    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const id = await createCrux(page, 'Media catalogue');
     const folder = (await storedCrux(page, id)).projectFolder as string;
 
     await test.step('open Find media and bring an image in', async () => {
-      await page.getByRole('button', { name: 'Toggle find media', exact: true }).click();
+      await togglePanel(page, 'Toggle find media');
       const pane = page.getByTestId('pane-body-media');
       await expect(pane).toBeVisible();
       await pane.getByLabel('Search media').fill('seedlings');
@@ -102,22 +100,18 @@ test('Find media: an image, a sound and a video from the catalogues land in the 
     });
 
     await test.step('the files and their origins are Artifacts of the Crux', async () => {
-      const paths = (await page.evaluate(
-        async (cruxId) =>
-          window.electronAPI!.sqlite.all(
-            "SELECT path FROM artifacts WHERE resource_id = ? AND (path LIKE 'images/%' OR path LIKE 'audio/%' OR path LIKE 'media/%' OR path LIKE 'media-origins/%') ORDER BY path",
-            [cruxId],
-          ),
-        id,
-      )) as { path: string }[];
-      expect(paths.map((p) => p.path)).toEqual(
-        expect.arrayContaining([
-          'images/seedlings-for-seedlings-img-1.png',
-          'audio/chime-for-bell-aud-1.wav',
-          'media/bees-at-work-900.webm',
-        ]),
-      );
-      expect(paths.filter((p) => p.path.startsWith('media-origins/')).length).toBe(3);
+      // Files are read through the API's content heads, not per-file rows.
+      await expect
+        .poll(async () => Object.keys(await indexedFiles(page, id)).sort())
+        .toEqual(
+          expect.arrayContaining([
+            'images/seedlings-for-seedlings-img-1.png',
+            'audio/chime-for-bell-aud-1.wav',
+            'media/bees-at-work-900.webm',
+          ]),
+        );
+      const paths = Object.keys(await indexedFiles(page, id));
+      expect(paths.filter((p) => p.startsWith('media-origins/')).length).toBe(3);
     });
   } finally {
     await app.close();

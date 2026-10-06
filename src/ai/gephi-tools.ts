@@ -1,9 +1,10 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const GEPHI_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_gephi',
     description: 'Read the native network title, node/edge counts, fields and filter count.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

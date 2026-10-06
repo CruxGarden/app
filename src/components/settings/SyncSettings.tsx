@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import * as syncApi from '@/api/sync';
-import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
-import { Panel, Spinner, Button, Toggle } from '@/components/ui';
+import { assertAuthCurrent, captureAuth, type AuthContext } from '@/api/session';
+import { confirmAndImportGarden } from '@/services/garden-io';
+import { backupGarden } from '@/services/backup';
+import { Spinner, Button, Toggle, SectionLabel } from '@/components/ui';
 import {
   isAutoBackupOn,
   setAutoBackup,
@@ -13,21 +16,6 @@ import {
 } from '@/services/auto-backup';
 import { cn } from '@/lib/cn';
 
-const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={cn('text-text-muted', collapsed ? '-rotate-90' : 'rotate-0')}
-  >
-    <polyline points="6 9 12 15 18 9" />
-  </svg>
-);
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
@@ -38,6 +26,47 @@ import * as usageApi from '@/api/usage';
 
 export default function SyncSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const accountId = useAuthStore((s) => s.account?.id);
+  if (!isAuthenticated || !accountId) return null;
+  const context = captureAuth();
+  // Backup metadata belongs to this exact connection. Disconnecting, switching
+  // accounts or reconnecting must discard its state before showing another one.
+  return (
+    <ConnectedSyncSettings
+      key={`${context.endpoint}:${context.revision}:${accountId}`}
+      accountId={accountId}
+      context={context}
+    />
+  );
+}
+
+function ConnectedSyncSettings({
+  accountId,
+  context,
+}: {
+  accountId: string;
+  context: AuthContext;
+}) {
+  const [owner] = useState(() => ({ accountId, context }));
+  const live = useRef(true);
+  const loadGeneration = useRef(0);
+  const isCurrent = useCallback(() => {
+    const auth = useAuthStore.getState();
+    if (!live.current || !auth.isAuthenticated || auth.account?.id !== owner.accountId)
+      return false;
+    try {
+      assertAuthCurrent(owner.context);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [owner]);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
 
   const [gardenStatus, setGardenStatus] = useState<GardenStatus | null>(null);
   const [budget, setBudget] = useState<usageApi.BudgetLine | null>(null);
@@ -55,8 +84,8 @@ export default function SyncSettings() {
     return () => window.removeEventListener(AUTO_BACKUP_CHANGED, sync);
   }, []);
   const [syncedCruxes, setSyncedCruxes] = useState<SyncedCrux[]>([]);
-  const [collapsed, setCollapsed] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [pushing, setPushing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -65,55 +94,62 @@ export default function SyncSettings() {
   const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
+    if (!isCurrent()) return;
+    const generation = ++loadGeneration.current;
+    const canApply = () => isCurrent() && generation === loadGeneration.current;
     setLoading(true);
+    setLoadError('');
+    setGardenStatus(null);
+    setSyncedCruxes([]);
     try {
       const [gs, cruxes] = await Promise.all([
-        syncApi.getGardenStatus(),
-        syncApi.listSyncedCruxes(),
+        syncApi.getGardenStatus(owner.context),
+        syncApi.listSyncedCruxes(owner.context),
       ]);
+      if (!canApply()) return;
       setGardenStatus(gs);
       setSyncedCruxes(cruxes);
     } catch {
-      // Not critical — just show empty state
+      if (canApply())
+        setLoadError('Could not load cloud backups. Check your connection and try again.');
     } finally {
-      setLoading(false);
+      if (canApply()) setLoading(false);
     }
-  }, []);
+  }, [isCurrent, owner.context]);
 
   useEffect(() => {
-    if (isAuthenticated) refresh();
-  }, [isAuthenticated, refresh]);
+    void refresh();
+  }, [refresh]);
   useEffect(() => {
-    if (!isAuthenticated) return;
     let cancelled = false;
     usageApi
       .me()
-      .then((u) => !cancelled && setBudget(u.budgets.storage))
+      .then((u) => !cancelled && isCurrent() && setBudget(u.budgets.storage))
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, gardenStatus]);
-
-  if (!isAuthenticated) return null;
+  }, [isCurrent, gardenStatus]);
 
   const handlePush = async () => {
     setPushing(true);
     setError('');
     setStatus('Exporting garden...');
     try {
-      const result = await exportGarden({ onProgress: setStatus });
-      setStatus('Uploading to cloud...');
-      const meta = await syncApi.pushGarden(result.blob);
+      const meta = await backupGarden((message) => {
+        if (isCurrent()) setStatus(message);
+      }, owner.context);
+      if (!isCurrent()) return;
       setGardenStatus(meta);
       setStatus('Garden pushed successfully');
       notifyUsageChanged();
     } catch (err) {
       console.error('Garden push failed:', err);
-      setError('Push failed');
+      if (!isCurrent()) return;
+      setError(err instanceof Error ? err.message : 'Push failed');
       setStatus('');
     } finally {
-      setPushing(false);
+      if (isCurrent()) setPushing(false);
     }
   };
 
@@ -146,12 +182,15 @@ export default function SyncSettings() {
     setError('');
     setStatus('Downloading from cloud...');
     try {
-      const blob = await syncApi.pullGarden();
+      const blob = await syncApi.pullGarden(owner.context);
       setStatus('Importing garden...');
 
       const imported = await confirmAndImportGarden({
         data: blob,
-        onProgress: setStatus,
+        beforeCommit: () => assertAuthCurrent(owner.context),
+        onProgress: (message) => {
+          if (isCurrent()) setStatus(message);
+        },
         onPostImport: async () => {
           await useAppStore.getState().ensureAuthor();
         },
@@ -161,17 +200,18 @@ export default function SyncSettings() {
       notifyUsageChanged();
     } catch (err) {
       console.error('Garden pull failed:', err);
-      setError('Pull failed');
+      if (!isCurrent()) return;
+      setError(err instanceof Error ? err.message : 'Pull failed');
       setStatus('');
     } finally {
-      setPulling(false); // success path used to leave the button spinning forever
+      if (isCurrent()) setPulling(false);
     }
   };
 
   const handleDeleteCrux = async (cruxId: string) => {
     setDeletingId(cruxId);
     try {
-      await syncApi.deleteSyncedCrux(cruxId);
+      await syncApi.deleteSyncedCrux(cruxId, owner.context);
       setSyncedCruxes((prev) => prev.filter((c) => c.cruxId !== cruxId));
       notifyUsageChanged();
     } catch {
@@ -195,7 +235,7 @@ export default function SyncSettings() {
     setDeletingGarden(true);
     setError('');
     try {
-      await syncApi.deleteGarden();
+      await syncApi.deleteGarden(owner.context);
       setGardenStatus(null);
       setStatus('Cloud backup deleted');
       notifyUsageChanged();
@@ -209,146 +249,154 @@ export default function SyncSettings() {
   const busy = pushing || pulling || deletingGarden;
 
   return (
-    <Panel padding="md">
-      <button
-        onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center gap-2 w-full cursor-pointer group"
-      >
-        <ChevronIcon collapsed={collapsed} />
-        <h2 className="font-display text-sm font-medium text-accent">Sync</h2>
-      </button>
-
-      {!collapsed && (
-        <div className="mt-5">
-          {/* Automatic backup */}
-          <div
-            className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-border"
-            data-testid="auto-backup"
-          >
-            <div className="min-w-0">
-              <p className="text-sm text-text">Back up my garden to crux.garden automatically</p>
-              <p className="text-xs text-text-muted mt-0.5">
-                A crux is backed up ten minutes after it goes quiet, the whole garden once a day,
-                and every crux you share. A published site is not a backup — this is.
-              </p>
-              {auto && autoPause && (
-                <p
-                  role="alert"
-                  className="text-xs text-error mt-1.5"
-                  data-testid="auto-backup-paused"
-                >
-                  Paused — {autoPause} Switch it off and on to try again.
-                </p>
-              )}
-              {auto && !autoPause && (
-                <p
-                  className="text-xs text-text-muted mt-1.5 font-mono"
-                  data-testid="auto-backup-status"
-                >
-                  {autoLast
-                    ? `Garden backed up ${formatDateTime(autoLast)}`
-                    : 'On — the first garden backup runs shortly'}
-                </p>
-              )}
-            </div>
-            <Toggle checked={auto} onChange={(on) => setAutoBackup(on)} label="Automatic backup" />
-          </div>
-
-          {/* Garden backup */}
-          <h3 className="text-2xs font-mono text-caption mb-2 uppercase tracking-wider">
-            Garden Backup
-          </h3>
-
-          {gardenStatus && (
-            <p className="text-xs text-text-muted mb-3">
-              Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)}
-              )
+    <SettingsSection title="Sync" collapsible>
+      <div>
+        {/* Automatic backup */}
+        <div
+          className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-border"
+          data-testid="auto-backup"
+        >
+          <div className="min-w-0">
+            <p className="text-sm text-text">Back up my garden to crux.garden automatically</p>
+            <p className="text-xs text-text-muted mt-0.5">
+              A crux is backed up ten minutes after it goes quiet, the whole garden once a day, and
+              every crux you share. A published site is not a backup — this is.
             </p>
-          )}
-          {budget && budget.limit > 0 && budget.used / budget.limit >= 0.8 && (
-            <p
-              role={budget.over ? 'alert' : undefined}
-              className={cn('text-xs mb-3', budget.over ? 'text-error' : 'text-text-muted')}
-              data-testid="settings-sync-budget"
-            >
-              {budget.over
-                ? `Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit.`
-                : `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan — a push may soon be refused.`}
-            </p>
-          )}
-
-          <div className="flex items-center gap-2 mb-4">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handlePush}
-              disabled={busy}
-              loading={pushing}
-            >
-              {pushing ? 'Pushing...' : 'Push garden'}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handlePull}
-              disabled={busy}
-              loading={pulling}
-            >
-              {pulling ? 'Pulling...' : 'Pull garden'}
-            </Button>
-            {gardenStatus && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleDeleteGarden}
-                disabled={busy}
-                loading={deletingGarden}
+            {auto && autoPause && (
+              <p
+                role="alert"
+                className="text-xs text-error mt-1.5"
+                data-testid="auto-backup-paused"
               >
-                {deletingGarden ? 'Deleting...' : 'Delete backup'}
-              </Button>
+                Paused — {autoPause} Switch it off and on to try again.
+              </p>
+            )}
+            {auto && !autoPause && (
+              <p
+                className="text-xs text-text-muted mt-1.5 font-mono"
+                data-testid="auto-backup-status"
+              >
+                {autoLast
+                  ? `Garden backed up ${formatDateTime(autoLast)}`
+                  : 'On — the first garden backup runs shortly'}
+              </p>
             )}
           </div>
-
-          {/* Synced cruxes */}
-          <div className="border-t border-border my-4" />
-          <h3 className="text-2xs font-mono text-caption mb-2 uppercase tracking-wider">
-            Synced Cruxes
-          </h3>
-
-          {loading ? (
-            <div className="flex items-center gap-2 text-xs text-text-muted">
-              <Spinner size={12} /> Loading...
-            </div>
-          ) : syncedCruxes.length === 0 ? (
-            <p className="text-xs text-text-muted">No cruxes synced to cloud yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {syncedCruxes.map((c) => (
-                <div key={c.cruxId} className="flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-text font-medium">{c.title}</span>
-                    <span className="text-text-muted ml-2">
-                      {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
-                    </span>
-                  </div>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDeleteCrux(c.cruxId)}
-                    disabled={deletingId === c.cruxId}
-                    loading={deletingId === c.cruxId}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
-          {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
+          <Toggle checked={auto} onChange={(on) => setAutoBackup(on)} label="Automatic backup" />
         </div>
-      )}
-    </Panel>
+
+        {loadError && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <p role="alert" className="text-xs text-error flex-1 min-w-0">
+              {loadError}
+            </p>
+            <Button size="sm" variant="secondary" onClick={() => void refresh()} disabled={busy}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* Garden backup */}
+        <SectionLabel as="h3" className="mb-2">
+          Garden Backup
+        </SectionLabel>
+
+        {gardenStatus && (
+          <p className="text-xs text-text-muted mb-3">
+            Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)})
+          </p>
+        )}
+        {budget && budget.limit > 0 && budget.used / budget.limit >= 0.8 && (
+          <p
+            role={budget.over ? 'alert' : undefined}
+            className={cn('text-xs mb-3', budget.over ? 'text-error' : 'text-text-muted')}
+            data-testid="settings-sync-budget"
+          >
+            {budget.over
+              ? `Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit.`
+              : `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan — a push may soon be refused.`}
+          </p>
+        )}
+
+        <div className="flex items-center gap-2 mb-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePush}
+            disabled={busy}
+            loading={pushing}
+          >
+            {pushing ? 'Pushing...' : 'Push garden'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePull}
+            disabled={busy || loading || !!loadError || !gardenStatus}
+            loading={pulling}
+          >
+            {pulling ? 'Pulling...' : 'Pull garden'}
+          </Button>
+          {gardenStatus && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleDeleteGarden}
+              disabled={busy}
+              loading={deletingGarden}
+            >
+              {deletingGarden ? 'Deleting...' : 'Delete backup'}
+            </Button>
+          )}
+        </div>
+
+        {/* Synced cruxes */}
+        <div className="border-t border-border my-4" />
+        <SectionLabel as="h3" className="mb-2">
+          Synced Cruxes
+        </SectionLabel>
+
+        {loading ? (
+          <div role="status" className="flex items-center gap-2 text-xs text-text-muted">
+            <Spinner size={12} /> Loading...
+          </div>
+        ) : loadError ? null : syncedCruxes.length === 0 ? (
+          <p className="text-xs text-text-muted">No cruxes synced to cloud yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {syncedCruxes.map((c) => (
+              <div key={c.cruxId} className="flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-text font-medium">{c.title}</span>
+                  <span className="text-text-muted ml-2">
+                    {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
+                  </span>
+                </div>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleDeleteCrux(c.cruxId)}
+                  disabled={deletingId === c.cruxId}
+                  loading={deletingId === c.cruxId}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {status && (
+          <p role="status" className="text-xs font-mono text-text-muted mt-3">
+            {status}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-xs font-mono text-error mt-3">
+            {error}
+          </p>
+        )}
+      </div>
+    </SettingsSection>
   );
 }

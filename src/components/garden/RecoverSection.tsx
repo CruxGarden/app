@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { useAppStore } from '@/stores/appStore';
 import { useGardenStore } from '@/stores/gardenStore';
-import { Button } from '@/components/ui';
+import { Button, Panel } from '@/components/ui';
+import { getServices } from '@/services';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
 import * as cruxesApi from '@/api/cruxes';
@@ -20,8 +21,9 @@ import {
  * takes an orphaned site down.
  */
 export default function RecoverSection() {
+  const aiEnabled = useAiEnabled();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const author = useAppStore((s) => s.author);
+  const account = useAuthStore((s) => s.account);
   const allCruxes = useGardenStore((s) => s.allCruxes);
   const trashed = useGardenStore((s) => s.trashed);
   const refresh = useGardenStore((s) => s.refresh);
@@ -29,21 +31,36 @@ export default function RecoverSection() {
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadRevision = useRef({ revision: 0 });
 
   const load = useCallback(async () => {
-    if (!isAuthenticated) {
-      setRows(null);
+    const revision = ++loadRevision.current.revision;
+    setLoadError(null);
+    setRows(null);
+    if (!isAuthenticated || !account) {
       return;
     }
     try {
-      setRows(await listCloudOnlyCruxes(new Set([...allCruxes, ...trashed].map((c) => c.id))));
-    } catch {
-      setRows(null); // the account could not be read; the section simply stays away
+      // On this machine means anywhere in it, not only the Garden being viewed.
+      const { crux } = getServices();
+      const [local, bin] = await Promise.all([crux.listAll(), crux.listTrashed()]);
+      const next = await listCloudOnlyCruxes(new Set([...local, ...bin].map((c) => c.id)));
+      if (revision === loadRevision.current.revision) setRows(next);
+    } catch (err) {
+      if (revision !== loadRevision.current.revision) return;
+      setRows(null);
+      setLoadError(err instanceof Error ? err.message : 'Could not read the account');
     }
-  }, [isAuthenticated, allCruxes, trashed]);
+  }, [isAuthenticated, account]);
+  // Re-read whenever this machine's Cruxes change.
   useEffect(() => {
+    const pending = loadRevision.current;
     void load();
-  }, [load]);
+    return () => {
+      pending.revision++;
+    };
+  }, [load, allCruxes, trashed]);
 
   const run = async (row: CloudOnlyCrux, action: 'restore' | 'recover' | 'unshare') => {
     setBusy(`${row.id}:${action}`);
@@ -51,8 +68,8 @@ export default function RecoverSection() {
     try {
       if (action === 'restore') await restoreSyncedCrux(row, setProgress);
       else if (action === 'recover') {
-        if (!row.published || !author) throw new Error('Nothing published to recover from');
-        await recoverPublishedCrux(row.published, author.username, setProgress);
+        if (!row.published) throw new Error('Nothing published to recover from');
+        await recoverPublishedCrux(row.published, setProgress);
       } else {
         if (
           !(await confirmDialog({
@@ -75,25 +92,38 @@ export default function RecoverSection() {
     }
   };
 
-  if (!rows || rows.length === 0) return null;
+  if (!isAuthenticated || (!loadError && (!rows || rows.length === 0))) return null;
   return (
-    <section
-      className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6"
+    <Panel
+      as="section"
+      padding="sm"
+      className="sm:p-5 mb-6"
       data-testid="recover-section"
       aria-label="In your account, not on this machine"
     >
       <div className="flex items-baseline justify-between gap-3 mb-1">
         <h2 className="font-display text-base text-text">In your account, not on this machine</h2>
-        <span className="text-xxs font-mono text-text-muted">
-          {rows.length} crux{rows.length === 1 ? '' : 'es'}
-        </span>
+        {rows && (
+          <span className="text-xxs font-mono text-text-muted">
+            {rows.length} crux{rows.length === 1 ? '' : 'es'}
+          </span>
+        )}
       </div>
       <p className="text-xs text-text-muted mb-3">
         Restore brings a backup back whole. Recover rebuilds a crux from what its published site
-        serves — the files visitors see and the public conversation, not the history.
+        serves — the files visitors see{aiEnabled ? ' and the public conversation' : ''}, not the
+        history.
       </p>
+      {loadError && (
+        <div role="alert" className="text-xs text-error mb-3">
+          <p>Could not check the Cruxes in your account: {loadError}</p>
+          <Button size="sm" onClick={() => void load()}>
+            Retry
+          </Button>
+        </div>
+      )}
       <ul className="flex flex-col divide-y divide-border">
-        {rows.map((row) => {
+        {rows?.map((row) => {
           const isSite = !!(row.published?.meta as Record<string, unknown> | undefined)?.site;
           return (
             <li
@@ -116,17 +146,31 @@ export default function RecoverSection() {
               ) : (
                 <div className="flex items-center gap-1.5 shrink-0">
                   {row.synced && (
-                    <Button size="sm" onClick={() => void run(row, 'restore')}>
+                    <Button
+                      disabled={busy !== null}
+                      size="sm"
+                      onClick={() => void run(row, 'restore')}
+                    >
                       Restore
                     </Button>
                   )}
                   {row.published && !row.synced && (
-                    <Button size="sm" variant="secondary" onClick={() => void run(row, 'recover')}>
+                    <Button
+                      disabled={busy !== null}
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void run(row, 'recover')}
+                    >
                       Recover
                     </Button>
                   )}
                   {row.published && (
-                    <Button size="sm" variant="ghost" onClick={() => void run(row, 'unshare')}>
+                    <Button
+                      disabled={busy !== null}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void run(row, 'unshare')}
+                    >
                       Unshare
                     </Button>
                   )}
@@ -141,6 +185,6 @@ export default function RecoverSection() {
           {error}
         </p>
       )}
-    </section>
+    </Panel>
   );
 }

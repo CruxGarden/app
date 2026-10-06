@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { initServices, getServices } from './index';
@@ -11,7 +12,8 @@ const content = readFileSync(
   new URL('../../cardinal-crux/music/instrument.json', import.meta.url),
   'utf8',
 );
-beforeEach(() => initServices('local'));
+localApiFixture();
+beforeEach(() => initServices());
 it.each(['../instrument.json', 'runtime/CardinalMini.js', 'starter.vcv', 'notebook/Welcome.md'])(
   'restricts the instrument bridge: %s',
   (path) => expect(() => cardinalPath(path)).toThrow(),
@@ -33,6 +35,8 @@ it('preserves a Cardinal instrument in Growth and archives, protects ownership a
     content,
     expected: null,
   })) as { fingerprint: string };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   expect(store.getState().growths).toHaveLength(1);
   await expect(
     call({ op: 'write', path: 'instrument.json', content, expected: null }),
@@ -59,7 +63,7 @@ it('preserves a Cardinal instrument in Growth and archives, protects ownership a
   const file = (await services.artifact.findByResource('crux', copy.id)).find(
     (a) => a.meta?.path === 'music/instrument.json',
   )!;
-  expect(await services.artifact.readContent(file.id)).toBe(content);
+  expect(await services.artifact.readContent(file)).toBe(content);
   await expect(publishPipeline(crux, artifacts)).rejects.toThrow('local creation tool');
   store.setState({ viewingSnapshotId: 'past' });
   await expect(

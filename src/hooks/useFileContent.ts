@@ -38,11 +38,11 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
   const data = useCruxStoreApi();
   const ui = useWorkspaceUIStoreApi();
   const documents = documentsFor(data, ui);
-  const doc = documents.get(artifact.id);
+  const doc = documents.get(artifact);
   const content = useStore(doc, (s) => s.content);
   const setContent = useCallback(
-    (value: string) => documents.edit(artifact.id, value),
-    [documents, artifact.id],
+    (value: string) => documents.edit(artifact, value),
+    [documents, artifact],
   );
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(content === null);
@@ -83,7 +83,7 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
 
     const { artifact: artifactService } = getServices();
     artifactService
-      .downloadBlob(artifact.id)
+      .downloadBlob(artifact)
       .then((blob) => {
         if (cancelled) return;
         if (isTextMime(mime, filename)) {

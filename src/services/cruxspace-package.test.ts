@@ -1,9 +1,21 @@
-import { beforeEach, expect, it } from 'vitest';
+import { useGardenContext } from '@/stores/gardenContext';
+import { localApiFixture } from '@/test/local-api-fixture';
+import { createLocalApiTestClient } from '@/test/local-api-client';
+import { setSqliteClient } from './sqlite/client';
+import { allWorkspaces, closeWorkspace } from '@/stores/workspaceRegistry';
+import { beforeEach, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { getServices, initServices } from './index';
-import { createCruxspace, deleteCruxspace, getCruxspace, listCruxspaces } from './cruxspaces';
+import { createCruxspace, getCruxspace, listCruxspaces } from './cruxspaces';
 import { saveCruxOutput, listCruxspaceAssets, copyCruxspaceAsset } from './cruxspace-assets';
-import { exportCruxspace, importCruxspace, peekCruxspace } from './cruxspace-package';
+import {
+  exportCruxspace,
+  importCruxspace,
+  peekCruxspace,
+  toolsNeeded,
+  missingTools,
+} from './cruxspace-package';
+import { keeperFor, keeperConversationsFor } from '@/stores/keeperStore';
 import { growthHostFor } from './growth';
 
 const png = () =>
@@ -19,7 +31,10 @@ const png = () =>
     { type: 'image/png' },
   );
 
-beforeEach(() => initServices('local'));
+const native = localApiFixture();
+beforeEach(async () => {
+  await initServices();
+});
 
 async function makeSpace() {
   const { crux, artifact } = getServices();
@@ -56,8 +71,10 @@ it('packs every member once, with outputs, transfers and checkpoint labels in th
   expect(result.failed).toEqual([]);
   const { manifest } = result;
   expect(manifest.space).toMatchObject({ id: space.id, name: 'Release', brief: 'Ship the cover.' });
-  expect(manifest.members.map((m) => m.id)).toEqual([source.id, target.id]);
-  expect(manifest.members[0]!.outputs).toMatchObject([{ id: output.id, label: 'Cover' }]);
+  expect(manifest.members.map((m) => m.id).sort()).toEqual([source.id, target.id].sort());
+  expect(manifest.members.find((m) => m.id === source.id)!.outputs).toMatchObject([
+    { id: output.id, label: 'Cover' },
+  ]);
   expect(manifest.transfers).toMatchObject([
     {
       sourceCruxId: source.id,
@@ -66,11 +83,13 @@ it('packs every member once, with outputs, transfers and checkpoint labels in th
       path: 'assets/cover.png',
     },
   ]);
-  expect(manifest.members[1]!.checkpoints.map((c) => c.label)).toContain('Cover placed');
+  expect(
+    manifest.members.find((m) => m.id === target.id)!.checkpoints.map((c) => c.label),
+  ).toContain('Cover placed');
   const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
   const names = Object.keys(zip.files).filter((n) => !zip.files[n]!.dir);
   expect(names).toContain('cruxspace.json');
-  expect(names).toContain(`members/${source.id}/crux.json`);
+  expect(names).toContain(`members/${source.id}/graph.json`);
   expect(names).toContain(`members/${target.id}/blobs.json`);
   // The cover's bytes live in the source output and in the target's copy, yet travel once.
   const blobs = names.filter((n) => n.startsWith('blobs/'));
@@ -82,38 +101,43 @@ it('packs every member once, with outputs, transfers and checkpoint labels in th
 it('restores a package into an empty Garden with the original identities, then copies with lineage', async () => {
   const { source, target, space, output } = await makeSpace();
   const { blob } = await exportCruxspace({ spaceId: space.id });
-  const { crux } = getServices();
-  await deleteCruxspace(space.id);
-  await crux.delete(source.id);
-  await crux.delete(target.id);
-  expect((await peekCruxspace(blob)).conflicts).toEqual([]);
+  await destination(async (owner) => {
+    expect((await peekCruxspace(blob)).conflicts).toEqual([]);
 
-  const restored = await importCruxspace({ data: blob });
-  expect(restored.space.id).toBe(space.id);
-  expect(restored.space.origin).toBeUndefined();
-  expect(restored.members.map((m) => m.id)).toEqual([source.id, target.id]);
-  expect((await getCruxspace(space.id)).cruxIds).toEqual([source.id, target.id]);
-  const assets = await listCruxspaceAssets(space.id);
-  expect(assets).toMatchObject([{ id: output.id, sourceCruxId: source.id, label: 'Cover' }]);
-  expect(
-    (await getServices().artifact.findByResource('crux', target.id)).map((f) => f.meta?.path),
-  ).toEqual(expect.arrayContaining(['index.html', 'assets/cover.png']));
-  const growth = await growthHostFor(target.id);
-  expect((await growth.list()).map((g) => g.label)).toContain('Cover placed');
+    const restored = await importCruxspace({ data: blob });
+    expect(restored.space.id).toBe(space.id);
+    expect(restored.space.origin).toBeUndefined();
+    expect(restored.members.map((m) => m.id).sort()).toEqual([source.id, target.id].sort());
+    expect((await getCruxspace(space.id)).cruxIds.sort()).toEqual([source.id, target.id].sort());
+    const assets = await listCruxspaceAssets(space.id);
+    expect(assets).toMatchObject([{ id: output.id, sourceCruxId: source.id, label: 'Cover' }]);
+    expect(
+      (await getServices().artifact.findByResource('crux', target.id)).map((f) => f.meta?.path),
+    ).toEqual(expect.arrayContaining(['index.html', 'assets/cover.png']));
+    const growth = await growthHostFor(target.id);
+    expect((await growth.list()).map((g) => g.label)).toContain('Cover placed');
 
-  // The same package again: identities exist, so it becomes a copy that records where it came from.
-  expect((await peekCruxspace(blob)).conflicts).toEqual([source.id, target.id, space.id]);
-  const copy = await importCruxspace({ data: blob });
-  expect(copy.space.id).not.toBe(space.id);
-  expect(copy.space.origin).toMatchObject({ spaceId: space.id });
-  expect(Object.keys(copy.space.origin!.members)).toEqual([source.id, target.id]);
-  expect(copy.members.map((m) => m.sourceId)).toEqual([source.id, target.id]);
-  expect(copy.members.every((m) => m.id !== m.sourceId)).toBe(true);
-  expect((await listCruxspaces()).map((s) => s.name)).toEqual(['Release', 'Release']);
-  expect(await listCruxspaceAssets(copy.space.id)).toMatchObject([{ label: 'Cover' }]);
+    // The same package again: identities exist, so it becomes a copy that records where it came from.
+    expect((await peekCruxspace(blob)).conflicts.sort()).toEqual(
+      [source.id, target.id, space.id].sort(),
+    );
+    const copy = await importCruxspace({ data: blob });
+    expect(copy.space.id).not.toBe(space.id);
+    expect(copy.space.origin).toMatchObject({ spaceId: space.id });
+    expect(Object.keys(copy.space.origin!.members).sort()).toEqual([source.id, target.id].sort());
+    expect(copy.members.map((m) => m.sourceId).sort()).toEqual([source.id, target.id].sort());
+    expect(copy.members.every((m) => m.id !== m.sourceId)).toBe(true);
+    expect((await listCruxspaces()).map((s) => s.name)).toEqual(['Release', 'Release']);
+    expect(await listCruxspaceAssets(copy.space.id)).toMatchObject([{ label: 'Cover' }]);
+    expect((await getCruxspace(copy.space.id)).origin).toEqual(copy.space.origin);
+    await owner.restart();
+    expect((await getCruxspace(copy.space.id)).origin).toEqual(copy.space.origin);
+    expect((await getCruxspace(space.id)).cruxIds.sort()).toEqual([source.id, target.id].sort());
+  });
 });
 
 it('refuses packages that are not Cruxspaces and leaves nothing behind', async () => {
+  const before = (await getServices().crux.listAll()).map((c) => c.id).sort();
   const zip = new JSZip();
   zip.file(
     'cruxspace.json',
@@ -128,10 +152,114 @@ it('refuses packages that are not Cruxspaces and leaves nothing behind', async (
   const broken = await zip.generateAsync({ type: 'blob' });
   await expect(importCruxspace({ data: broken })).rejects.toThrow(/missing the file list/);
   expect(await listCruxspaces()).toEqual([]);
-  expect(await getServices().crux.listAll()).toEqual([]);
+  expect((await getServices().crux.listAll()).map((c) => c.id).sort()).toEqual(before);
   const other = new JSZip();
   other.file('crux.json', '{}');
   await expect(
     importCruxspace({ data: await other.generateAsync({ type: 'blob' }) }),
   ).rejects.toThrow(/cruxspace\.json is missing/);
 });
+
+it("carries the Keeper's conversation that built the Cruxspace, and brings it back retagged", async () => {
+  const { space } = await makeSpace();
+  const keeper = keeperFor(space.id);
+  await keeper.getState().load();
+  // The Garden owns the conversation that built the collection.
+  keeper.setState({
+    conversations: [
+      {
+        id: 'k1',
+        title: 'Build me a release',
+        createdAt: Date.now(),
+        messages: [
+          { role: 'user', content: 'Build me a release', timestamp: 't' },
+          { role: 'assistant', content: 'Planted Release.', timestamp: 't' },
+        ],
+      },
+    ],
+    activeId: 'k1',
+  });
+  const { blob } = await exportCruxspace({ spaceId: space.id });
+  const { manifest } = await peekCruxspace(blob);
+  expect(manifest.keeper).toHaveLength(1);
+  expect(manifest.keeper![0]!.messages[1]!.content).toBe('Planted Release.');
+
+  // A copy into the same Garden: the conversation arrives with a new id, tagged to the copy.
+  keeper.setState({ conversations: [], activeId: null });
+  const copy = await importCruxspace({ data: blob });
+  const carried = await keeperConversationsFor(copy.space.id);
+  expect(carried).toHaveLength(1);
+  expect(carried[0]!.id).not.toBe('k1');
+  expect(carried[0]!.messages.map((m) => m.content)).toEqual([
+    'Build me a release',
+    'Planted Release.',
+  ]);
+});
+
+/**
+ * A package that needs Kan and Piskel should say so, because its members
+ * import perfectly well and then open empty (the office-garden kink).
+ */
+const manifestWith = (templates: (string | null)[]) =>
+  ({
+    version: 1,
+    format: 'cruxspace/1.0',
+    exportedAt: new Date().toISOString(),
+    space: { id: 's', name: 'S', brief: '', created: '', updated: '' },
+    members: templates.map((template, index) => ({
+      id: `m${index}`,
+      title: `M${index}`,
+      slug: `m${index}`,
+      template,
+      archive: '',
+      checkpoints: [],
+      outputs: [],
+    })),
+    transfers: [],
+    unavailable: [],
+  }) as unknown as Parameters<typeof toolsNeeded>[0];
+
+it('names the Crux Tools its members were made with, once each', () => {
+  const needed = toolsNeeded(manifestWith(['kan-app', 'piskel-app', 'kan-app', null, 'blank']));
+  expect(needed.map((t) => t.id).sort()).toEqual(['kan-app', 'piskel-app']);
+  expect(needed.every((t) => t.name)).toBe(true);
+});
+
+it('prefers what the package recorded over what the members imply', () => {
+  const manifest = manifestWith(['piskel-app']);
+  manifest.tools = [{ id: 'kan-app', name: 'Kan' }];
+  expect(toolsNeeded(manifest).map((t) => t.id)).toEqual(['kan-app']);
+});
+
+it('counts a tool this Garden cannot open a member with as missing', async () => {
+  // Exercise the availability filter against an installation without either tool.
+  const registry = await import('./crux-tools/registry');
+  const available = vi.spyOn(registry, 'isToolAvailable').mockReturnValue(false);
+  try {
+    expect(missingTools(manifestWith(['kan-app'])).map((t) => t.id)).toEqual(['kan-app']);
+    // A template that is not a Crux Tool needs nothing installed.
+    expect(missingTools(manifestWith(['blank', null]))).toEqual([]);
+  } finally {
+    available.mockRestore();
+  }
+});
+
+/** Restore uses a fresh installation, not deleted identities in the source. */
+async function destination<T>(
+  action: (owner: Awaited<ReturnType<typeof createLocalApiTestClient>>) => Promise<T>,
+) {
+  for (const workspace of allWorkspaces())
+    await closeWorkspace(workspace.id, { stop: true, documents: 'discard' });
+  const target = await createLocalApiTestClient();
+  try {
+    setSqliteClient(target.client);
+    useGardenContext.getState().initialize(await target.client.enterLocalGarden!());
+    return await action(target);
+  } finally {
+    for (const workspace of allWorkspaces())
+      await closeWorkspace(workspace.id, { stop: true, documents: 'discard' });
+    await target.client.close();
+    setSqliteClient(native().client);
+    useGardenContext.getState().initialize(await native().client.enterLocalGarden!());
+  }
+}

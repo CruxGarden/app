@@ -1,14 +1,11 @@
 import { SnapshotPolicy, type SnapshotFrequency } from './growth';
 
 /**
- * Per-crux Collaboration session state that must OUTLIVE the chat pane.
- *
- * The in-flight AI turn's AbortController, the auto-snapshot policy (which
- * may hold a 2m/5m/10m timer), and the debounced artifact refresh used to be
- * refs inside the ChatPanel component — so hiding the Collaboration pane
- * mid-turn aborted the turn and dropped the pending snapshot. They belong to
- * the CRUX: created on first use, disposed when the workspace closes
- * (cruxStore.reset), untouched by pane mounting.
+ * Per-crux Collaboration session state that outlives the pane: the in-flight
+ * turn's AbortController, the snapshot policy (which may hold a 2m/5m/10m
+ * timer) and the debounced artifact refresh. They belong to the Crux: created
+ * on first use, disposed when the workspace closes (cruxStore.reset),
+ * untouched by pane mounting.
  */
 export interface ChatSession {
   /** The turn currently streaming, if any. */

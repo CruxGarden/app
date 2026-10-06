@@ -1,11 +1,13 @@
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useState, useEffect } from 'react';
+import { useObjectUrl } from '@/hooks/useBlobUrl';
 import { appChangesLabel } from '@/services/app-changes';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { cn } from '@/lib/cn';
+import { linkClass } from '@/components/ui/button-class';
 import type { Dimension, Artifact } from '@/api/types';
 import { getServices } from '@/services';
-import { useUIStore } from '@/stores/uiStore';
 import { pathOf, basename } from '@/lib/artifact-path';
 
 interface GrowthCardProps {
@@ -15,6 +17,8 @@ interface GrowthCardProps {
   isViewing: boolean;
   onClick: () => void;
   onDetailClick: (e: React.MouseEvent) => void;
+  /** Open the comparison of this version with the current files. */
+  onCompare?: () => void;
 }
 
 interface PreviewInfo {
@@ -169,42 +173,27 @@ function usePreview(growth: Dimension): PreviewInfo | null {
   return stored || discovered;
 }
 
-/** Hook to load thumbnail blob URL from a snapshot's thumb.png */
+/** The snapshot's thumbnail, if it kept one. */
 function useThumbnail(growth: Dimension): string | null {
   const thumbnailId = growth.meta?.thumbnailId as string | undefined;
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!thumbnailId) return;
-    let cancelled = false;
-    let objectUrl: string | null = null;
-
-    (async () => {
-      try {
-        const { artifact } = getServices();
-        const blob = await artifact.downloadBlob(thumbnailId);
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        setUrl(objectUrl);
-      } catch {
-        // ignore — thumbnail not available
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [thumbnailId]);
-
-  return url;
+  return useObjectUrl(
+    thumbnailId
+      ? async () => {
+          const { artifact } = getServices();
+          const files = await artifact.findByResource('crux', growth.targetId);
+          const file = files.find((item) => item.id === thumbnailId);
+          return file ? artifact.downloadBlob(file) : null;
+        }
+      : null,
+    [thumbnailId, growth.targetId],
+  );
 }
 
 /** Stand-in for a snapshot without a screenshot: just its number. */
 function Placeholder({ index }: { index: number }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-      <span className="font-wordmark text-3xl leading-none text-growth-card-label/60 select-none">
+      <span className="font-display text-3xl leading-none text-growth-card-label/(--tint-medium) select-none">
         {index + 1}
       </span>
     </div>
@@ -218,6 +207,7 @@ export default function GrowthCard({
   isViewing,
   onClick,
   onDetailClick,
+  onCompare,
 }: GrowthCardProps) {
   const label = (growth.meta?.label as string) || null;
   const summary = (growth.meta?.summary as string) || null;
@@ -226,7 +216,7 @@ export default function GrowthCard({
   const artifactCount = (growth.meta?.artifactCount as number) || 0;
   // Verify-before-done (B4): the check recorded on this snapshot, if one ran.
   const verification = growth.meta?.verification as { status?: string } | undefined;
-  const aiEnabled = useUIStore((s) => s.aiEnabled);
+  const aiEnabled = useAiEnabled();
   const [expanded, setExpanded] = useState(false);
 
   // "Summarizing…" is only honest while a summary can actually arrive.
@@ -247,9 +237,9 @@ export default function GrowthCard({
         'group/card relative w-full text-left rounded-[var(--radius)] overflow-hidden cursor-pointer',
         'bg-growth-card border transition-[border-color,transform,box-shadow] duration-200',
         isViewing
-          ? 'border-growth-card-label/60 ring-1 ring-growth-card-label/30'
+          ? 'border-growth-card-label/(--tint-medium) ring-1 ring-growth-card-label/(--tint-quiet)'
           : isActive
-            ? 'border-growth-card-label/40'
+            ? 'border-growth-card-label/(--tint-muted)'
             : 'border-garden-card-border shadow-card hover:border-garden-card-border-hover hover:-translate-y-px hover:shadow-card-hover',
       )}
     >
@@ -308,7 +298,7 @@ export default function GrowthCard({
           aria-label="Snapshot details"
           title="Details"
           className={cn(
-            'absolute top-2 right-2 p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover:brightness-125 cursor-pointer transition-opacity',
+            'absolute top-2 right-2 p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover-bright active-dim motion-press cursor-pointer',
             isActive
               ? 'opacity-100'
               : 'opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100',
@@ -364,7 +354,7 @@ export default function GrowthCard({
           )}
         </div>
 
-        {summary ? (
+        {aiEnabled && summary ? (
           <p
             onClick={(e) => {
               e.stopPropagation();
@@ -383,6 +373,21 @@ export default function GrowthCard({
             Summarizing…
           </p>
         ) : null}
+
+        {onCompare && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompare();
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+            className={linkClass('mt-1 self-start text-xs')}
+            data-testid="growth-compare"
+          >
+            Compare with current
+          </button>
+        )}
       </div>
     </div>
   );

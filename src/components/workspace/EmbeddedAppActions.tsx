@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
 import { useNavigate } from 'react-router-dom';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
@@ -7,14 +8,16 @@ import { documentsFor } from '@/services/workspace-documents';
 import { createTask } from '@/services/tasks';
 import { copyIdentity } from '@/services/working-copies';
 import { isEmbeddedApp, isLocalCreationTool, embeddedContentRoot } from '@/services/embedded-app';
+import { publicationPlan } from '@/services/publication-plan';
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
 import { can, Capability } from '@/lib/platform';
-import { Modal, Button } from '@/components/ui';
+import { Modal, Button, buttonClass, fieldClass } from '@/components/ui';
 
 /** Make a source-editing Task through the same save and copy boundary as TaskBar. */
 export default function EmbeddedAppActions() {
   const crux = useCruxStore((s) => s.crux);
+  const artifacts = useCruxStore((s) => s.artifacts);
   const historical = useCruxStore((s) => !!s.viewingSnapshotId);
   const data = useCruxStoreApi();
   const ui = useWorkspaceUIStoreApi();
@@ -23,8 +26,10 @@ export default function EmbeddedAppActions() {
   const [prompt, setPrompt] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const aiEnabled = useAiEnabled();
   if (!isEmbeddedApp(crux) || !crux || historical) return null;
   const identity = copyIdentity(crux);
+  const publication = publicationPlan(crux, artifacts);
   const showPane = (pane: 'publish' | 'export') => {
     ui.getState().setPaneVisible(pane, true);
     ui.getState().setMobileActivePane(pane);
@@ -62,20 +67,21 @@ export default function EmbeddedAppActions() {
       setBusy(false);
     }
   }
-  const button =
-    'px-3 py-1.5 text-xs rounded-[var(--radius-sm)] hover:bg-accent-muted cursor-pointer';
+  const button = buttonClass('ghost', 'xs', 'text-text-muted hover:text-text');
   return (
     <>
-      <button
-        className={button}
-        title="Ask the agent to help with this app or its content"
-        onClick={() => {
-          ui.getState().setPaneVisible('collaboration', true);
-          ui.getState().setMobileActivePane('collaboration');
-        }}
-      >
-        Ask agent
-      </button>
+      {aiEnabled && (
+        <button
+          className={button}
+          title="Ask the agent to help with this app or its content"
+          onClick={() => {
+            ui.getState().setPaneVisible('collaboration', true);
+            ui.getState().setMobileActivePane('collaboration');
+          }}
+        >
+          Ask agent
+        </button>
+      )}
       {can(Capability.ProjectFolder) &&
         (!identity || (identity.role === 'task' && identity.phase === 'ready')) && (
           <button
@@ -90,7 +96,11 @@ export default function EmbeddedAppActions() {
         <>
           {!isLocalCreationTool(crux) && (
             <button className={button} onClick={() => showPane('publish')}>
-              Share selected content
+              {publication.kind === 'garden-package'
+                ? 'Share workspace'
+                : publication.kind === 'unavailable'
+                  ? 'Sharing options'
+                  : 'Share selected content'}
             </button>
           )}
           <button className={button} onClick={() => showPane('export')}>
@@ -110,7 +120,7 @@ export default function EmbeddedAppActions() {
         }}
         title="Customize app in a Task"
       >
-        <div role="dialog" aria-label="Customize app" className="space-y-3">
+        <div className="space-y-3">
           <p className="text-sm text-text-muted">
             Keep using Main while you change the app in a separate Task. Review and merge when
             ready. The Task starts with a copy of your current content; changes to the same files
@@ -123,7 +133,7 @@ export default function EmbeddedAppActions() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               disabled={busy}
-              className="block w-full mt-2 p-2 bg-surface border border-border rounded"
+              className={fieldClass(undefined, 'block mt-2 h-auto py-2 resize-y')}
               placeholder="A quieter editor, a reading mode, a new tool…"
             />
           </label>

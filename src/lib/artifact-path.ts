@@ -58,6 +58,16 @@ export function isWorkspaceThumbnail(path: string): boolean {
 }
 
 /**
+ * The guides Crux Garden writes for agents working in the Project Folder
+ * (services/agents-md.ts): `AGENTS.md` and the one-line `CLAUDE.md`. They are
+ * the collaborator's plumbing, not the creation — never its entry page, and
+ * folded out of Artifacts unless asked for.
+ */
+export function isAgentFile(path: string): boolean {
+  return /(^|\/)(AGENTS|CLAUDE)\.md$/i.test(path);
+}
+
+/**
  * Resolve `.` / `..` segments and collapse empty ones: 'a/./b/../c' → 'a/c'.
  * Clamps at the root — a path can never climb above the crux.
  */

@@ -34,6 +34,8 @@ const files = import.meta.glob('./*.md', {
 }) as Record<string, string>;
 
 function parseSkill(path: string, text: string): Skill {
+  // Raw imports retain checkout line endings; Windows must load the same registry.
+  text = text.replace(/\r\n/g, '\n');
   const [first = '', second = ''] = text.split('\n');
   const name = /^# Skill:\s*(\S+)\s*$/.exec(first)?.[1];
   const summary = /^Use when:\s*(.+)$/.exec(second)?.[1]?.trim();
@@ -57,16 +59,44 @@ export const SKILLS: Readonly<Record<string, Skill>> = Object.freeze(
   ),
 );
 
+/**
+ * The Keeper's own skills (`keeper/*.md`): the garden-level conversation's
+ * ways of working — "build me something" — kept out of every crux's
+ * stable prefix, which lists only the crux skills.
+ */
+const keeperFiles = import.meta.glob('./keeper/*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+export const KEEPER_SKILLS: Readonly<Record<string, Skill>> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(keeperFiles)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([path, text]) => {
+        const skill = parseSkill(path, text);
+        return [skill.name, skill];
+      }),
+  ),
+);
+
 export function skillNames(): string[] {
   return Object.keys(SKILLS);
 }
+export function keeperSkillNames(): string[] {
+  return Object.keys(KEEPER_SKILLS);
+}
 
 export function hasSkill(name: unknown): name is string {
-  return typeof name === 'string' && Object.prototype.hasOwnProperty.call(SKILLS, name);
+  return (
+    typeof name === 'string' &&
+    (Object.prototype.hasOwnProperty.call(SKILLS, name) ||
+      Object.prototype.hasOwnProperty.call(KEEPER_SKILLS, name))
+  );
 }
 
 export function getSkill(name: string): Skill | null {
-  return hasSkill(name) ? SKILLS[name]! : null;
+  return hasSkill(name) ? (SKILLS[name] ?? KEEPER_SKILLS[name] ?? null) : null;
 }
 
 /**
@@ -82,6 +112,8 @@ export const TEMPLATE_SKILLS: Readonly<Record<string, string>> = Object.freeze({
   'astro-homepage': 'homepage',
   'astro-empty': 'astro-basics',
   '5ws': '5ws',
+  'order-desk': 'order-desk',
+  garden: 'garden',
 });
 
 /** Skill loaded for every Site Crux regardless of template. */
@@ -106,12 +138,39 @@ export function skillsForCrux(crux: Pick<Crux, 'meta'>, artifacts: ArtifactPathS
 }
 
 /** The index the stable prefix carries: one line per skill plus the rule. */
-export function renderSkillsIndex(): string {
-  return [
+/**
+ * The skills worth a line of the cached prefix for *every* crux: the ones any
+ * crux might reach for, whatever it grew from.
+ *
+ * A template's own skill is deliberately not here. It is loaded automatically
+ * for its cruxes (`skillsForCrux`) and is no use to any other, so advertising
+ * it costs every crux in the garden a line on every turn and buys nothing —
+ * the Photo Gallery skill was being described to Order Desk cruxes. This is
+ * what the embedded-app tool adapters already do: dispatch on the crux rather
+ * than advertise everything (`services/embedded-app-tool-adapters.ts`).
+ *
+ * The template skills stay reachable by name, listed without their summaries,
+ * so a Blog crux can still load `photo-gallery` if the work calls for it — and
+ * so a new starter costs the prefix a word rather than a sentence.
+ */
+const OFFERED = ['astro-basics', 'crux-store', 'mood-design', 'parallel-work'] as const;
+
+/** Skills a crux already has in its context need no advertising. */
+export function renderSkillsIndex(loaded: readonly Skill[] = []): string {
+  const have = new Set(loaded.map((s) => s.name));
+  const offered = OFFERED.filter((n) => SKILLS[n] && !have.has(n)).map((n) => SKILLS[n]!);
+  const byName = new Set<string>(OFFERED);
+  const others = Object.keys(SKILLS)
+    .filter((n) => !byName.has(n) && !have.has(n))
+    .sort();
+  const lines = [
     '## Skills',
-    "Know-how lives in skills, not here. Before that kind of work, call load_skill(name) unless it is already in this conversation (this crux's are in <workspace_context>).",
-    ...Object.values(SKILLS).map((s) => `- **${s.name}** — ${s.summary}`),
-  ].join('\n');
+    'Know-how lives in skills. Before that kind of work, call load_skill(name) unless it is already in this conversation.',
+    ...offered.map((s) => `- **${s.name}** — ${s.summary}`),
+  ];
+  if (others.length)
+    lines.push(`Also loadable by name, for that kind of crux: ${others.join(', ')}.`);
+  return lines.join('\n');
 }
 
 /** The auto-loaded skills as they appear in the volatile block (empty string when none). */

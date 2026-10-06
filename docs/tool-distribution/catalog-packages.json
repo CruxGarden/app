@@ -1,0 +1,308 @@
+[
+  {
+    "tool": "abc-app",
+    "size": 1818535,
+    "version": 1,
+    "fileCount": 102,
+    "artifactId": "9883b810-8e4f-44ed-83b9-8842ac7e5e75",
+    "fingerprint": "a5a7d68be5fa7a6b5de8f1929364e170b13184de2ccddc49c4e34ad3e1bc7c6b",
+    "unpackedBytes": 1997075
+  },
+  {
+    "tool": "am-1-app",
+    "size": 290078,
+    "version": 1,
+    "fileCount": 17,
+    "artifactId": "2b15dd45-0a9d-4a11-bfa6-e594a68d6fd9",
+    "fingerprint": "c35efbbfd2053896fe38132992d418eecff10d4b9d15b890267c556046f2ef12",
+    "unpackedBytes": 571607
+  },
+  {
+    "tool": "audiomass-app",
+    "size": 14216108,
+    "version": 1,
+    "fileCount": 98,
+    "artifactId": "856801d4-5739-4ebe-b7e4-66b963137ce2",
+    "fingerprint": "3055b0a1d51109b4ba2e3a002ceb75df01ae57d25039e8de60a78517ebbb44d6",
+    "unpackedBytes": 16499959
+  },
+  {
+    "tool": "beepbox-app",
+    "size": 2203584,
+    "version": 1,
+    "fileCount": 114,
+    "artifactId": "f720b583-f2f4-43a3-8b8e-fc9e171f0a35",
+    "fingerprint": "2a2b82ce5a50f1f59f70fa5e6dcdd745bbc66da9d265da535d57d1710dca1322",
+    "unpackedBytes": 9070421
+  },
+  {
+    "tool": "bentopdf-app",
+    "size": 99128437,
+    "version": 1,
+    "fileCount": 2129,
+    "artifactId": "2158dc96-4285-448a-bdd9-b7aa74958e06",
+    "fingerprint": "069c2d8ef9615154aec0db9bbf891723a3de4b393c454d940f0bf634be7eb1e7",
+    "unpackedBytes": 167732706
+  },
+  {
+    "tool": "blockbench-app",
+    "size": 10278657,
+    "version": 1,
+    "fileCount": 498,
+    "artifactId": "6cd40030-58f7-452f-bb9b-963f7701e77c",
+    "fingerprint": "26ac10875bc9559cae0e7a1fdde578c0af43b82dad7c6fdb1f5342b8d86e5546",
+    "unpackedBytes": 24063933
+  },
+  {
+    "tool": "fmg-app",
+    "size": 32900489,
+    "version": 1,
+    "fileCount": 1338,
+    "artifactId": "f2a4347d-e3ee-44be-a767-9bf295fd6e74",
+    "fingerprint": "7e88e31d2be1696f7f708cc7a81fd8c7d530bdd5e507772a568fb08380f746b4",
+    "unpackedBytes": 43380073
+  },
+  {
+    "tool": "formjs-app",
+    "size": 1288804,
+    "version": 1,
+    "fileCount": 20,
+    "artifactId": "1efc8dc3-0fc6-4065-bb9b-72de5c5b8ba0",
+    "fingerprint": "938e93523ff7df95b5891aae58756aec94974477c2b534eea948a6c87f7bd454",
+    "unpackedBytes": 4509333
+  },
+  {
+    "tool": "gdevelop-app",
+    "size": 115429264,
+    "version": 1,
+    "fileCount": 7772,
+    "artifactId": "d47c9970-6aa1-4bb0-b215-f05951f11de6",
+    "fingerprint": "1f8d32bd52b14a96d84b0a7904fe566e65fde70569e6cb87279a3c67801fddd7",
+    "unpackedBytes": 390745038
+  },
+  {
+    "tool": "gephi-app",
+    "size": 7719271,
+    "version": 1,
+    "fileCount": 482,
+    "artifactId": "aed9c10c-e6fc-4a4e-a0c7-916b8200a674",
+    "fingerprint": "11eb6833f002babbf5eb93cb3e4a01375e5909e6627cf179fe98d31bbb2fdc66",
+    "unpackedBytes": 33024010
+  },
+  {
+    "tool": "glsl-app",
+    "size": 212025,
+    "version": 1,
+    "fileCount": 15,
+    "artifactId": "8b5dbe00-337e-485d-a37d-dc22b05116e2",
+    "fingerprint": "33ffb322a7b931b60883c2acafc8d3e1b91437bfc19fa79ec72cd4c18dd01c48",
+    "unpackedBytes": 524226
+  },
+  {
+    "tool": "glyphr-app",
+    "size": 3378172,
+    "version": 1,
+    "fileCount": 217,
+    "artifactId": "e3d1c633-f1a7-4f60-a3fb-f11d429feace",
+    "fingerprint": "d0e8679f25cddb7dc96d64322ebe0e8f65a37cc6ea9334b06a6ecc5b25c2a5e9",
+    "unpackedBytes": 13541940
+  },
+  {
+    "tool": "jscad-app",
+    "size": 848502,
+    "version": 1,
+    "fileCount": 67,
+    "artifactId": "a74a962c-85be-4ac7-821b-9f41888633a6",
+    "fingerprint": "2483f9741f650576cd94ac96195c59dcfcef42bced0b948c5bf32b64804426a0",
+    "unpackedBytes": 2057807
+  },
+  {
+    "tool": "jupyterlite-app",
+    "size": 41657403,
+    "version": 1,
+    "fileCount": 822,
+    "artifactId": "77de9cd1-2106-4459-b756-dce3780a408c",
+    "fingerprint": "a05008f510bbeac7088a95eacdd10ed06dbbe4fa07797709f9758519258f1e78",
+    "unpackedBytes": 95575598
+  },
+  {
+    "tool": "kan-app",
+    "size": 5298993,
+    "version": 1,
+    "fileCount": 496,
+    "artifactId": "6ea9b8f9-ee7b-4502-90de-8dafe75a89ac",
+    "fingerprint": "042d6dafb3469fe5186d3abffdb87f6c5143551ba3b180327800ccd9c736d0b6",
+    "unpackedBytes": 14766470
+  },
+  {
+    "tool": "ketcher-app",
+    "size": 9139176,
+    "version": 1,
+    "fileCount": 25,
+    "artifactId": "cdf5b7f3-8688-46af-8ce8-3ae4f0884194",
+    "fingerprint": "ef2a0a7a40971786a1c7f3057dadc7f7be04fce9be25fdd8e6e0d08dd80d90ab",
+    "unpackedBytes": 26501741
+  },
+  {
+    "tool": "maps-app",
+    "size": 441741,
+    "version": 1,
+    "fileCount": 23,
+    "artifactId": "feb29c2a-1713-430e-8b98-8e798c473bf2",
+    "fingerprint": "73ede3800df17039b08056c02081481051dc127e6c1a26b254f9e6ea9b5dfab4",
+    "unpackedBytes": 1407880
+  },
+  {
+    "tool": "mermaid-app",
+    "size": 9021052,
+    "version": 1,
+    "fileCount": 549,
+    "artifactId": "0d4a071f-3155-48d6-a628-f028bb917bc8",
+    "fingerprint": "f455645e55d83a17ace9373d449df906e7c799bd626910021d69ebec92c525dc",
+    "unpackedBytes": 28197157
+  },
+  {
+    "tool": "minipaint-app",
+    "size": 4597251,
+    "version": 1,
+    "fileCount": 304,
+    "artifactId": "d10f414b-0e65-4cf3-a1f1-dc6c2bc74b8b",
+    "fingerprint": "a152ea62ebda3a2c01ce89cb7cb58114ce9c798a61ead67c2e79c422bdf8ffc4",
+    "unpackedBytes": 6878861
+  },
+  {
+    "tool": "opencut-app",
+    "size": 10100316,
+    "version": 1,
+    "fileCount": 1437,
+    "artifactId": "5b858179-7424-456e-9c36-5e2c74883918",
+    "fingerprint": "0c232990d08e69bf895f2258836cb840942738006432fa5f6f36b51f053c4666",
+    "unpackedBytes": 19011752
+  },
+  {
+    "tool": "openmosh-app",
+    "size": 5840172,
+    "version": 1,
+    "fileCount": 415,
+    "artifactId": "810d5b02-5fb4-4c68-8110-9067c6ab2d5b",
+    "fingerprint": "9d7366f2442d6a48c998cf29ebf3a94c1ea285179809285ce0ff1290ce3b52f4",
+    "unpackedBytes": 13667109
+  },
+  {
+    "tool": "p5-app",
+    "size": 1254929,
+    "version": 1,
+    "fileCount": 14,
+    "artifactId": "aa7c0119-0a3a-431e-bbbc-ec4c14ff0d51",
+    "fingerprint": "c1a9a2e1aab353d5e9b5033835ca3b2861a29d8542d8ce7f1bc05ca1f7d798eb",
+    "unpackedBytes": 5677286
+  },
+  {
+    "tool": "pdfme-app",
+    "size": 11171427,
+    "version": 1,
+    "fileCount": 24,
+    "artifactId": "f063f5c2-270f-426d-aea3-b3ed06f2557a",
+    "fingerprint": "186a3a5aed3c1ad8e2c77f84b0f80ca9a5b421a9594dcf7002e3b78f482ca239",
+    "unpackedBytes": 24048131
+  },
+  {
+    "tool": "piskel-app",
+    "size": 2990450,
+    "version": 1,
+    "fileCount": 702,
+    "artifactId": "19c52b59-ce29-4c35-ac1c-27ec473c1c75",
+    "fingerprint": "8de43853a1ba908a266aae8b6a747fdea1cf865df4b7efc12b002fb8c877ed9d",
+    "unpackedBytes": 8931810
+  },
+  {
+    "tool": "playcanvas-editor-app",
+    "size": 22497285,
+    "version": 1,
+    "fileCount": 1217,
+    "artifactId": "ca812772-81aa-4823-9f69-035ef4d586b8",
+    "fingerprint": "7a703505cbe6e3184fe0e63b0610180d33cb76576b7cc95ced3b6edecf02c80c",
+    "unpackedBytes": 63747554
+  },
+  {
+    "tool": "pptist-app",
+    "size": 90963012,
+    "version": 1,
+    "fileCount": 464,
+    "artifactId": "f8ac9f00-7519-47c8-90c9-04972d420fd6",
+    "fingerprint": "6952c4ff58a9c6f211d21d78975882fa7b07d53f24c3a4fb63c6d48ca8a71dae",
+    "unpackedBytes": 97103830
+  },
+  {
+    "tool": "rawgraphs-app",
+    "size": 24024954,
+    "version": 1,
+    "fileCount": 672,
+    "artifactId": "50ae2d8d-0b70-417c-a10e-20b1873c37f0",
+    "fingerprint": "56f8579b285fa3c0918e872ae54d58386ea08cd9b7aa24817e8ea719c5006753",
+    "unpackedBytes": 41853921
+  },
+  {
+    "tool": "recorder-app",
+    "size": 2067236,
+    "version": 1,
+    "fileCount": 148,
+    "artifactId": "6372e345-d48e-422a-b41c-4a392f6f8260",
+    "fingerprint": "7078b6d1b4f319b898e1d4fa7244e6dba79a775ef0564ce51631eb817b9d0160",
+    "unpackedBytes": 4439316
+  },
+  {
+    "tool": "signal-app",
+    "size": 10993377,
+    "version": 1,
+    "fileCount": 582,
+    "artifactId": "5e5a3c75-76bc-466b-9ec9-5f01d21a0a7a",
+    "fingerprint": "346c6c94dca6afc004f7eae60a272e11480e451c6ac65540e5977fae988dd46b",
+    "unpackedBytes": 15195144
+  },
+  {
+    "tool": "svgedit-app",
+    "size": 3569598,
+    "version": 1,
+    "fileCount": 798,
+    "artifactId": "ee01bc2b-c02c-41b6-b213-8e4e6045349e",
+    "fingerprint": "538e037abd77230faceaf125826d05d4c1c255b72c8d09cdc8a62cd5311584bf",
+    "unpackedBytes": 10189802
+  },
+  {
+    "tool": "timeline-app",
+    "size": 326739,
+    "version": 1,
+    "fileCount": 111,
+    "artifactId": "8b981820-3a65-4793-adf9-74a4cdbe74c2",
+    "fingerprint": "785a9092a9fdf220024af63013086984e631a53de3e78ad78bb857536709d2b9",
+    "unpackedBytes": 1004934
+  },
+  {
+    "tool": "twine-app",
+    "size": 3107014,
+    "version": 1,
+    "fileCount": 879,
+    "artifactId": "42d233fa-db1b-46f4-a0b5-5972b081a19a",
+    "fingerprint": "8bff80d747f8503a49663b5798a8cd419e45993def70603902eca49364cc0955",
+    "unpackedBytes": 7248284
+  },
+  {
+    "tool": "web-synth-app",
+    "size": 27854269,
+    "version": 1,
+    "fileCount": 960,
+    "artifactId": "02eb5772-74a2-478a-98c7-10e7ee22f8a2",
+    "fingerprint": "8b50df1034a0fe513ef20739231c0b34955744dab1d619ad082aedf0eb1e4256",
+    "unpackedBytes": 101751144
+  },
+  {
+    "tool": "wick-editor-app",
+    "size": 106628860,
+    "version": 1,
+    "fileCount": 2396,
+    "artifactId": "66873091-c9df-4bcc-8918-af9fd8f47893",
+    "fingerprint": "8d9bb469228fe6138b592b5a63bbf1a2cd94f542d694e5a46d857282e9eba8bc",
+    "unpackedBytes": 211453921
+  }
+]

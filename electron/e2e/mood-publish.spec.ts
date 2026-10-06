@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { showPane, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -16,7 +18,7 @@ test.describe('publish + discover moods (mocked API)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
 
       // Connect the account (via the Share pane's inline form, like publish.spec)
       await page.getByRole('button', { name: 'Add Crux' }).click();
@@ -32,7 +34,7 @@ test.describe('publish + discover moods (mocked API)', () => {
       await monaco.click();
       await page.keyboard.type('<h1>Hi</h1>');
       await page.keyboard.press('ControlOrMeta+s');
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -47,16 +49,22 @@ test.describe('publish + discover moods (mocked API)', () => {
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
 
       // Save the current look as a Mood and publish it
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await showPane(page, 'Mood');
       await page.getByRole('button', { name: 'Save current as Mood' }).click();
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Sea Glass');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
-      await expect(page.getByRole('status')).toContainText('Saved "Sea Glass"');
-      await page.getByRole('button', { name: 'Publish Sea Glass' }).click();
-      await expect(page.getByRole('status')).toContainText('Published "Sea Glass"', {
+      await expect(page.getByRole('status').filter({ hasText: 'Saved "Sea Glass"' })).toBeVisible();
+      await page.getByRole('button', { name: 'Share Sea Glass' }).click();
+      // Sharing asks Discoverable or link only (default: listed in Explore).
+      await page
+        .getByRole('dialog')
+        .filter({ hasText: 'Discoverable' })
+        .getByRole('button', { name: 'Share', exact: true })
+        .click();
+      await expect(page.getByRole('status').filter({ hasText: 'Shared "Sea Glass"' })).toBeVisible({
         timeout: 60_000,
       });
-      await expect(page.getByRole('button', { name: 'Republish Sea Glass' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Share update of Sea Glass' })).toBeVisible();
 
       // The mock saw a mood crux published with the three files
       const moodCrux = Object.values(api.state.cruxes).find((c) => c.kind === 'mood');
@@ -68,14 +76,56 @@ test.describe('publish + discover moods (mocked API)', () => {
       expect(paths).toEqual(['index.html', 'mood.cruxmood', 'mood.json']);
       expect((moodCrux!.meta as Record<string, unknown>).mood).toMatchObject({ section: 'Dark' });
 
+      // A failed unshare keeps the public badge and saved Mood; retry removes
+      // the visitor-facing edition while retaining the local library entry.
+      api.state.failUnpublish = true;
+      await page.getByRole('button', { name: 'Unshare Sea Glass', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Unshare Sea Glass?' })
+        .getByRole('button', { name: 'Unshare', exact: true })
+        .click();
+      await expect(page.getByRole('status').filter({ hasText: 'Unshare failed:' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Share update of Sea Glass' })).toBeVisible();
+      expect(api.state.cruxes[moodCrux!.id as string]).toBeDefined();
+      api.state.failUnpublish = false;
+      await page.getByRole('button', { name: 'Unshare Sea Glass', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: 'Unshare Sea Glass?' })
+        .getByRole('button', { name: 'Unshare', exact: true })
+        .click();
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Unshared "Sea Glass"' }),
+      ).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Apply Sea Glass' })).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Unshare Sea Glass', exact: true }),
+      ).toHaveCount(0);
+      const visitor = await fetch(`${api.url}/authors/tester/cruxes/${moodCrux!.slug}`);
+      expect(visitor.status).toBe(404);
+      await page.getByRole('button', { name: 'Share Sea Glass', exact: true }).click();
+      // Sharing asks Discoverable or link only (default: listed in Explore).
+      await page
+        .getByRole('dialog')
+        .filter({ hasText: 'Discoverable' })
+        .getByRole('button', { name: 'Share', exact: true })
+        .click();
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Shared "Sea Glass"' }),
+      ).toBeVisible();
+
       // Explore → Moods shows it with a swatch; Install pulls the package from the API
-      await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: 'Explore', exact: true }).click();
-      await page.getByRole('button', { name: 'Moods', exact: true }).click();
+      await showPane(page, 'Explore');
+      await page
+        .getByRole('region', { name: 'Explore', exact: true })
+        .getByRole('tab', { name: 'Moods', exact: true })
+        .click();
       const card = page.getByTestId(`explore-mood-${moodCrux!.id as string}`);
       await expect(card).toBeVisible({ timeout: 30_000 });
       await expect(card).toContainText('Sea Glass');
-      await expect(card).toContainText('by tester');
+      await expect(card.getByRole('link', { name: "Visit Tester's Garden" })).toHaveAttribute(
+        'href',
+        '/tester',
+      );
       await page.screenshot({ path: 'e2e/.results/mood-publish-1-explore.png' });
       await card.getByRole('button', { name: 'Install', exact: true }).click();
       await expect(card).toContainText('Installed', { timeout: 30_000 });

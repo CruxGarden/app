@@ -1,7 +1,10 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { togglePanel, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { home } from './game-cruxspace-helpers';
 
 /**
  * Growth journey: edit → snapshot → edit → snapshot → view the first →
@@ -29,7 +32,7 @@ test.describe('snapshots & revert', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -48,16 +51,15 @@ test.describe('snapshots & revert', () => {
       await expect.poll(fileOnDisk).toBe('version one');
 
       // Snapshot "v1"
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle growth');
       const snapshotWithLabel = async (label: string) => {
-        await page
-          .getByRole('button', { name: /snapshot/i })
-          .first()
-          .click();
+        await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
         const input = page.getByPlaceholder('Label (optional)');
         await input.fill(label);
         await input.press('Enter');
-        await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 30_000 });
+        await expect(
+          page.getByTestId('pane-body-history').getByText(label, { exact: true }),
+        ).toBeVisible({ timeout: 30_000 });
       };
       await snapshotWithLabel('v1');
 
@@ -77,7 +79,9 @@ test.describe('snapshots & revert', () => {
       await expect(removeDialog).toContainText(/Remove "v2"/);
       await removeDialog.getByRole('button', { name: 'Remove' }).click();
       await expect(page.getByText('v2', { exact: true })).toHaveCount(0);
-      await expect(page.getByText('v1', { exact: true })).toBeVisible();
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
+      ).toBeVisible();
       await expect.poll(fileOnDisk).toBe('version one and version two');
       await expect(monaco).toContainText('version two');
       // …and take it again so the rest of the journey has its v2
@@ -95,19 +99,19 @@ test.describe('snapshots & revert', () => {
       await expect(monaco).toContainText('version one', { timeout: 30_000 });
       await expect(monaco).not.toContainText('version two');
       await expect.poll(fileOnDisk).toBe('version one');
-      await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
+      // What was there before is kept as a safety copy in Edit history.
+      const historyPane = page.getByTestId('pane-body-history');
+      await historyPane.getByRole('button', { name: 'Edits', exact: true }).click();
+      await expect(historyPane.getByText('Safety copy').first()).toBeVisible({ timeout: 30_000 });
+      await historyPane.getByRole('button', { name: 'Versions', exact: true }).click();
       await page.screenshot({ path: 'e2e/.results/snapshots-2-reverted.png' });
 
       // Leave and come back: the reconstructed conversation/history must be
       // the reverted one, not the pre-revert branch.
-      await page
-        .getByRole('link', { name: /garden|home/i })
-        .first()
-        .click()
-        .catch(async () => {
-          await page.evaluate(() => window.history.back());
-        });
-      await page.getByText('My Crux', { exact: true }).first().click();
+      await home(page);
+      // By its accessible name: the header's workspace switcher also carries
+      // the crux title, and a bare text match clicks that instead of the card.
+      await page.getByRole('button', { name: 'Open My Crux' }).click();
       // Tabs are not restored on reopen — open the file from the tree.
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
@@ -116,12 +120,22 @@ test.describe('snapshots & revert', () => {
       await expect(reopened).toBeVisible({ timeout: 30_000 });
       await expect(reopened).toContainText('version one');
       await expect(reopened).not.toContainText('version two');
-      if (!(await page.getByText('Before revert', { exact: true }).isVisible())) {
-        await page.getByRole('button', { name: 'Toggle history' }).click();
-      }
-      await expect(page.getByText('v1', { exact: true })).toBeVisible();
-      await expect(page.getByText('v2', { exact: true })).toBeVisible();
-      await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
+      await openPanel(page, 'history', 'Toggle growth');
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v1', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId('pane-body-history').getByText('v2', { exact: true }),
+      ).toBeVisible();
+      const storage = await page.evaluate(async () => {
+        const db = window.electronAPI!.sqlite;
+        return {
+          files: await db.all('SELECT id FROM artifacts'),
+          heads: await db.all('SELECT crux_id FROM file_content_heads'),
+        };
+      });
+      expect(storage.files).toEqual([]);
+      expect(storage.heads.length).toBeGreaterThanOrEqual(3);
     } finally {
       await app.close();
     }

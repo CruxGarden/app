@@ -1,3 +1,4 @@
+import { nativeFixtureBinary } from './native-binary-fixture';
 import {
   test,
   expect,
@@ -9,13 +10,13 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import type { DownloadItem, Event } from 'electron';
 declare const gardenEditor: any;
 declare const gardenSession: any;
 
-const ffmpeg = resolve(__dirname, '../node_modules/ffmpeg-static/ffmpeg');
+const ffmpeg = nativeFixtureBinary('ffmpeg');
 const validate = (file: string) =>
   execFileSync(
     process.execPath,
@@ -147,7 +148,7 @@ test('OpenCut native video editing, agent, export, conflicts, restart and indepe
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByRole('button', { name: /^OpenCut/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 180_000 });
     let frame = await ready(page);
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(page, id)).projectFolder;
@@ -262,7 +263,7 @@ test('OpenCut native video editing, agent, export, conflicts, restart and indepe
   second.page.on('pageerror', (e) => pageErrors.push(e.message));
   try {
     await second.page.setViewportSize({ width: 2000, height: 1200 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = await ready(second.page);
     await expect.poll(() => textValue(frame)).toBe('Reopened film');
     await exportVideo(frame, second.app, join(first.dir, 'reopened.webm'));

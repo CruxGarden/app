@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-06",
+  "status": "locally accepted",
+  "baseCommit": "b8d759f34",
+  "branch": "wip/setup-wizard-and-triage",
+  "scope": [
+    "Plain explanations of Garden, Mood, optional AI, Advanced Mode and templates.",
+    "Selected interests show useful features inside the card, visible in a short window.",
+    "The next action says Preview my workspace; Skip explains its destination and preserved choices.",
+    "App starter descriptions use customer outcomes instead of Functions/Store jargon.",
+    "Collapsed setup disclosures no longer reference unmounted content for assistive technology."
+  ],
+  "verification": {
+    "app": {
+      "command": "npm run verify",
+      "passed": 2090,
+      "skipped": 18,
+      "files": 324,
+      "build": "passed",
+      "log": "/tmp/crux-setup-plain-language-final.log"
+    },
+    "electron": {
+      "command": "npm run verify",
+      "passed": 204,
+      "skipped": 1,
+      "log": "/tmp/crux-setup-plain-language-electron.log"
+    },
+    "accessibility": {
+      "passed": 1,
+      "screens": 23,
+      "automatedViolations": 0,
+      "danglingReferences": 0,
+      "log": "/tmp/crux-setup-plain-language-accessibility-accepted.log",
+      "summary": "friendly/accessibility.json"
+    },
+    "packaged": {
+      "passed": 14,
+      "failed": 0,
+      "duration": "1.8m",
+      "log": "/tmp/crux-setup-plain-language-packaged.log",
+      "coverage": [
+        "seven wizard journeys",
+        "three Advanced Mode journeys",
+        "visible benefits and matching workspace preview",
+        "compact and resumable tutorial",
+        "compact Notes editing/restart",
+        "packaged startup, SQLite and CLI"
+      ]
+    },
+    "format": "Prettier and git diff --check passed",
+    "visualReview": "Final selected writing card inspected at1000x720; benefits now visible."
+  },
+  "reproducedIssue": {
+    "log": "/tmp/crux-setup-plain-language-accessibility.log",
+    "issue": "Garden and AI steps had dangling aria-controls references while sections were collapsed. Corrected in both setup disclosure components; the same complete23-screen scan now passes."
+  },
+  "manualCandidate": "electron/release/manual-testing-wizard-friendly-oct6/mac-arm64/Crux Garden.app",
+  "signature": "ad-hoc; codesign --verify --deep --strict passed",
+  "limits": [
+    "Automated host-UI accessibility scan excludes embedded tool interiors; it is not a complete accessibility certification.",
+    "Local macOS acceptance; no new Windows/Linux or whole-desktop-suite certification.",
+    "No real/manual Garden opened, live AI request, deployment or merge."
+  ]
+}

@@ -1,6 +1,7 @@
+import Download from './Download';
+import { useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { PlasmaProvider, Plasma } from '@cruxgarden/plasma-ui';
-import { APP_NAME } from '@/lib/constants';
+import { TeaserMaterial, TeaserPanel, TeaserBrand } from '@/components/landing/TeaserMaterial';
 import TeaserTrack from '@/components/landing/TeaserTrack';
 import '@/components/landing/teaser.css';
 
@@ -9,18 +10,6 @@ const MAILCHIMP_ACTION =
   'https://tech.us13.list-manage.com/subscribe/post?u=4c2e196117cdb095809f3bb3b&id=f31692b207&f_id=008b35e5f0';
 /** Mailchimp's bot trap: a real person never fills a field they cannot see. */
 const HONEYPOT_FIELD = 'b_4c2e196117cdb095809f3bb3b_f31692b207';
-
-/**
- * The field behind everything. Aurora's own palette ends on a violet accent,
- * which is what put a pink blob in the corner; this keeps its deep base and
- * runs the other two through green instead, so the page is one colour family.
- * Spring and blend are aurora's, unchanged.
- */
-const FIELD = {
-  colors: ['#050b12', '#0f5e46', '#3fbf8f'] as [string, string, string],
-  blend: 40,
-  spring: { stiffness: 120, damping: 11 },
-};
 
 const SUBSCRIBED_MESSAGE = 'Thank you, we will notify you at launch';
 /**
@@ -77,6 +66,7 @@ function hasSubscribed() {
  */
 /** `/subscribed` renders the same teaser with the form already answered. */
 export default function Landing({ subscribed = false }: { subscribed?: boolean }) {
+  const location = useLocation();
   // Declared first so the flag is cleared before the read below sees it.
   const [reset] = useState(() => {
     const asked = new URLSearchParams(window.location.search).has(RESET_PARAM);
@@ -94,43 +84,16 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
   useEffect(() => {
     if (subscribed && !reset) rememberSubscribed();
   }, [subscribed, reset]);
+  if (location.hash === '#download') return <Download />;
   return (
     <div className="teaser">
-      <PlasmaProvider
-        theme="dark"
-        mood={FIELD}
-        tint="#ffffff"
-        opacity={0}
-        frost={0.25}
-        rimColor="iridescent"
-        rim={1.3}
-        rimWidth={1.4}
-        highlight={1}
-        edgeLine={1}
-        viscosity={0}
-        stretch={2.5}
-        flow={2}
-        blend={56}
-        refraction={1.4}
-        dispersion={2.2}
-        elevation={0.5}
-        ambientDrops
-        pointerDrop
-      >
+      <TeaserMaterial>
         <main className="teaser-stage">
           {/* The panel carries the plate's colour itself: one surface, not a
               solid card floating on glass. No padding prop — it writes an
               inline style that would beat the stylesheet. */}
-          <Plasma
-            className="teaser-panel"
-            radius={24}
-            tint="#061016"
-            opacity={0.55}
-            frost={0.5}
-            draggable
-          >
-            <h1 className="teaser-title">{APP_NAME}</h1>
-            <p className="teaser-line">Grow Anything</p>
+          <TeaserPanel draggable>
+            <TeaserBrand />
 
             {answered ? (
               <p className="teaser-sent" role="status">
@@ -168,12 +131,12 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
                 </button>
               </form>
             )}
-          </Plasma>
+          </TeaserPanel>
 
           {/* Under the panel, clear of its blend distance. Draggable from here. */}
           <TeaserTrack />
         </main>
-      </PlasmaProvider>
+      </TeaserMaterial>
     </div>
   );
 }

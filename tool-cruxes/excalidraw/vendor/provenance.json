@@ -4,7 +4,7 @@
   "artifacts": {
     "THIRD-PARTY-NOTICES.md": {
       "bytes": 233574,
-      "sha256": "5f2b9698ae65d3041f76a19033a7547bb2b133d333c540e2e75867df8eb81e69"
+      "sha256": "8ec310ede8d8dc84d38b97a0954d9c8fb6dbcd41870d69f9ef374fb20e852a46"
     },
     "assets/Assistant-Bold-ZDZZ6JHA.woff2": {
       "bytes": 20380,
@@ -27,8 +27,8 @@
       "sha256": "4c00d3b34635c24c854178a19900cf4899e1105df2767cbdcffa1e954fc5aa7d"
     },
     "engine.js": {
-      "bytes": 8450543,
-      "sha256": "b6671d0a414e059dd446461125c1b6a04dd3d5a2c74e3d608eda386292e8cb24"
+      "bytes": 8451884,
+      "sha256": "f92e284c71e556f8e0a349403e5e51de852a6495e8412eff5fc49fe86d8e14e2"
     },
     "fonts/Assistant/Assistant-Bold.woff2": {
       "bytes": 20380,

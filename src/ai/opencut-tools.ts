@@ -1,10 +1,11 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const OPENCUT_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_opencut',
     description:
       'Inspect the open video project, scenes and first 100 timeline elements/media assets. Timeline times are native ticks (120,000 per second); media durations are seconds.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

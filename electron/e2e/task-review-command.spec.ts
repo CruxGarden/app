@@ -1,0 +1,144 @@
+import { test, expect } from '@playwright/test';
+import { launchApp } from './launch';
+import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
+import { newTaskButton } from './panel-helpers';
+
+test('review checking and closing report refused writes, retry and preserve Task content after restart', async () => {
+  const env = { CRUX_API_OWNER: '1' };
+  let launch = await launchApp({ env });
+  const dir = launch.dir;
+  try {
+    let page = launch.page;
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await enterGarden(page);
+    const main = await createCrux(page, 'Close review');
+    await addArtifact(page, 'kept.txt');
+    await page.locator('.monaco-editor').click();
+    await page.keyboard.type('Keep both task and candidate content');
+    await page.keyboard.press('ControlOrMeta+s');
+    await (await newTaskButton(page)).click();
+    await page.getByRole('textbox', { name: 'Task name', exact: true }).fill('Retained task');
+    await page.getByRole('button', { name: 'Save and start task' }).click();
+    await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();
+    const copy = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    await page.evaluate(() =>
+      window.electronAPI!.sqlite.run(
+        "CREATE TRIGGER refuse_initial_review BEFORE INSERT ON task_merges BEGIN SELECT RAISE(ABORT, 'Review create refused'); END",
+      ),
+    );
+    await page.getByRole('button', { name: 'Review changes', exact: true }).click();
+    await expect(page.getByTestId('task-bar').getByRole('alert')).toContainText(
+      'Review create refused',
+    );
+    expect(
+      await page.evaluate(() => window.electronAPI!.sqlite.all('SELECT id FROM task_merges')),
+    ).toEqual([]);
+    const candidates = await page.evaluate(() =>
+      window.electronAPI!.sqlite.all("SELECT id, phase FROM working_copies WHERE role='review'"),
+    );
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({ phase: 'ready' });
+    expect(
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.all("SELECT id FROM dimensions WHERE type='growth'"),
+      ),
+    ).toEqual([]);
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_initial_review'));
+    await page.getByRole('button', { name: 'Review changes', exact: true }).click();
+
+    const review = page.getByRole('dialog', { name: 'Review changes for Main' });
+    await expect(review).toBeVisible();
+    const saved = await page.evaluate(async (copy) => {
+      const db = window.electronAPI!.sqlite;
+      const journal = (await db.get('SELECT id, candidate_id FROM task_merges WHERE copy_id = ?', [
+        copy,
+      ])) as { id: string; candidate_id: string };
+      const candidate = await db.get(
+        'SELECT phase, revision, project_folder FROM working_copies WHERE id = ?',
+        [journal.candidate_id],
+      );
+      await db.run(
+        "CREATE TRIGGER refuse_cancel BEFORE UPDATE ON task_merges WHEN NEW.phase = 'cancelled' BEGIN SELECT RAISE(ABORT, 'Cancellation refused'); END",
+      );
+      return { ...journal, candidate };
+    }, copy);
+    const beforeCheck = await page.evaluate(
+      (id) => window.electronAPI!.sqlite.get('SELECT data FROM task_merges WHERE id = ?', [id]),
+      saved.id,
+    );
+    await page.evaluate(() =>
+      window.electronAPI!.sqlite.run(
+        "CREATE TRIGGER refuse_check BEFORE UPDATE ON task_merges WHEN NEW.phase = 'review' BEGIN SELECT RAISE(ABORT, 'Review check refused'); END",
+      ),
+    );
+    await review.getByRole('button', { name: 'Check combined result' }).click();
+    await expect(review.getByRole('alert')).toContainText('Review check refused');
+    expect(
+      await page.evaluate(
+        (id) => window.electronAPI!.sqlite.get('SELECT data FROM task_merges WHERE id = ?', [id]),
+        saved.id,
+      ),
+    ).toEqual(beforeCheck);
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_check'));
+    await review.getByRole('button', { name: 'Check combined result' }).click();
+    await expect(review.getByRole('checkbox')).toBeEnabled();
+    await review.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(review.getByRole('alert')).toContainText('Cancellation refused');
+    expect(
+      await page.evaluate(
+        (id) =>
+          window.electronAPI!.sqlite.get(
+            'SELECT phase, revision, project_folder FROM working_copies WHERE id = ?',
+            [id],
+          ),
+        saved.candidate_id,
+      ),
+    ).toEqual(saved.candidate);
+    expect(
+      await page.evaluate(
+        (id) => window.electronAPI!.sqlite.get('SELECT phase FROM task_merges WHERE id = ?', [id]),
+        saved.id,
+      ),
+    ).toEqual({ phase: 'review' });
+    await page.evaluate(() => window.electronAPI!.sqlite.run('DROP TRIGGER refuse_cancel'));
+    await review.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(review).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeVisible();
+    await launch.app.close();
+    launch = await launchApp({ dir, env });
+    page = launch.page;
+    const restored = await page.evaluate(
+      async ({ copy, saved, main }) => {
+        const db = window.electronAPI!.sqlite;
+        const content = async (id: string) => {
+          const head = await db.fileContent!.head(id);
+          const file = await db.fileContent!.read({
+            cruxId: id,
+            expected: head!,
+            path: 'kept.txt',
+          });
+          return new TextDecoder().decode(file!.bytes);
+        };
+        return {
+          journal: await db.get('SELECT phase FROM task_merges WHERE id = ?', [saved.id]),
+          copies: await db.all('SELECT id, phase FROM working_copies WHERE id IN (?, ?)', [
+            copy,
+            saved.candidate_id,
+          ]),
+          contents: await Promise.all([main, copy, saved.candidate_id].map(content)),
+        };
+      },
+      { copy, saved, main },
+    );
+    expect(restored.journal).toEqual({ phase: 'cancelled' });
+    expect(restored.copies).toEqual(
+      expect.arrayContaining([
+        { id: copy, phase: 'ready' },
+        { id: saved.candidate_id, phase: 'archived' },
+      ]),
+    );
+    expect(restored.contents).toEqual(Array(3).fill('Keep both task and candidate content'));
+  } finally {
+    await launch.app.close();
+  }
+});

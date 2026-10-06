@@ -6,8 +6,10 @@ import type {
   RegisterArtifactInput,
 } from './types';
 
+export type ArtifactReference = string | Artifact;
+
 export interface IArtifactService {
-  findById(id: string): Promise<Artifact>;
+  findById(id: ArtifactReference): Promise<Artifact>;
   findByResource(resourceType: string, resourceId: string): Promise<Artifact[]>;
   create(input: CreateArtifactInput): Promise<Artifact>;
   upload(input: UploadArtifactInput): Promise<Artifact>;
@@ -15,11 +17,11 @@ export interface IArtifactService {
   register(input: RegisterArtifactInput): Promise<Artifact>;
   /** Index many stored blobs at once (chunked multi-row inserts); callers guarantee the paths are new and the blobs stored. */
   registerMany(inputs: RegisterArtifactInput[]): Promise<number>;
-  update(id: string, updates: UpdateArtifactInput): Promise<Artifact>;
+  update(id: ArtifactReference, updates: UpdateArtifactInput): Promise<Artifact>;
   /** opts.writeThrough=false records a deletion already made on disk (ingestion). */
-  delete(id: string, opts?: { writeThrough?: boolean }): Promise<void>;
-  readContent(id: string): Promise<string>;
-  downloadBlob(id: string): Promise<Blob>;
+  delete(id: ArtifactReference, opts?: { writeThrough?: boolean }): Promise<void>;
+  readContent(id: ArtifactReference): Promise<string>;
+  downloadBlob(id: ArtifactReference): Promise<Blob>;
 
   /** Compute SHA-256 fingerprint of sorted path:fingerprint pairs for a resource's artifacts */
   computeSnapshotFingerprint(resourceId: string): Promise<string>;

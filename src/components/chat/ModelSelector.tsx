@@ -1,6 +1,8 @@
-import { includedUsage } from '@/api/inference';
+import { refreshIncludedAccess, useIncludedAccess } from '@/services/included-access';
+import { SectionLabel, menuItemClass } from '@/components/ui';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useAuthStore } from '@/stores/authStore';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useId } from 'react';
 import { ChevronDownIcon } from '@/components/ui/icons';
 import { PROVIDERS, isAgentModel } from '@/ai/providers';
 import { Capability, can } from '@/lib/platform';
@@ -71,14 +73,77 @@ function getProviderLabel(modelId: string): string {
 
 export default function ModelSelector({ value, onChange, disabled }: ModelSelectorProps) {
   const accountId = useAuthStore((s) => s.account?.id);
-  const [included, setIncluded] = useState(false);
+  const access = useIncludedAccess();
+  const included = access.usage?.eligible === true;
   const [open, setOpen] = useState(false);
   const [localEndpoints, setLocalEndpoints] = useState<LocalAiEndpoint[]>([]);
   const [agents, setAgents] = useState<Record<string, AgentStatus>>({});
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  /**
+   * Where the menu opens, and how tall it may be.
+   *
+   * The pane normally sits at the bottom of the window, so the menu opens
+   * upward. But the control row moves — expanding the model info panel pushes
+   * the button near the top — and a height capped against the viewport is not
+   * a height that fits above the button. Measure the real room on both sides
+   * and cap against that, or the list opens off the top edge.
+   */
+  const [placement, setPlacement] = useState<{ side: 'top' | 'bottom'; maxHeight: number }>({
+    side: 'top',
+    maxHeight: 0,
+  });
 
-  const close = useCallback(() => setOpen(false), []);
+  const pickerId = useId();
+  const close = useCallback(() => {
+    setOpen(false);
+    if (menuRef.current?.contains(document.activeElement)) buttonRef.current?.focus();
+  }, []);
   useDismiss(menuRef, close, open);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const picker = pickerRef.current;
+    (
+      picker?.querySelector<HTMLElement>('button[aria-pressed="true"]:not(:disabled)') ??
+      picker?.querySelector<HTMLElement>('button:not(:disabled)')
+    )?.focus();
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measure = () => {
+      const button = buttonRef.current;
+      const rect = button?.getBoundingClientRect();
+      if (!button || !rect) return;
+      const gap = 8;
+      // The room that counts is the pane's, not the window's: the pane clips
+      // whatever hangs out of it, and a menu measured against the window
+      // opened downward into a pane's bottom edge and was cut off there.
+      let top = 0;
+      let bottom = window.innerHeight;
+      for (let el = button.parentElement; el; el = el.parentElement) {
+        const { overflowY } = getComputedStyle(el);
+        if (overflowY === 'visible') continue;
+        const box = el.getBoundingClientRect();
+        top = Math.max(top, box.top);
+        bottom = Math.min(bottom, box.bottom);
+      }
+      const above = rect.top - top - gap;
+      const below = bottom - rect.bottom - gap;
+      const cap = window.innerHeight * 0.6;
+      // Keep opening upward while there is real room; flip only when below is
+      // genuinely roomier, so the common case does not move under the cursor.
+      const side = above >= below ? 'top' : 'bottom';
+      const room = side === 'top' ? above : below;
+      // A floor keeps the menu usable (and scrollable) in a cramped pane
+      // rather than collapsing to a sliver.
+      setPlacement({ side, maxHeight: Math.max(120, Math.min(cap, room)) });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [open]);
 
   // Re-probe local servers each time the menu opens (fast when none run),
   // so the list tracks the user starting/stopping Ollama or LM Studio.
@@ -96,20 +161,10 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   }, [open]);
 
   useEffect(() => {
-    let cancelled = false;
-    setIncluded(false);
-    if (open && accountId)
-      void includedUsage()
-        .then((u) => {
-          if (!cancelled) setIncluded(u.available && u.eligible);
-        })
-        .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    if (open && accountId) void refreshIncludedAccess();
   }, [open, accountId]);
   const groups = getAllModels().filter(
-    (g) => !isAgentModel(g.providerId) && (g.providerId !== 'included' || included),
+    (g) => !isAgentModel(g.providerId) && (g.providerId !== 'included' || !!accountId),
   );
   const agentGroups = getAllModels().filter((g) => isAgentModel(g.providerId));
   const label = getModelLabel(value);
@@ -121,16 +176,24 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   return (
     <div ref={menuRef} className="relative">
       <button
+        ref={buttonRef}
+        data-testid="model-selector"
+        aria-haspopup="dialog"
+        aria-controls={open ? pickerId : undefined}
+        aria-expanded={open}
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          'flex items-center gap-1.5 px-2 py-0.5 text-xxs font-mono rounded transition-colors cursor-pointer',
-          'bg-accent-muted text-accent',
+          'flex items-center gap-1.5 h-6 px-2 text-xxs font-mono rounded-[var(--radius-sm)] cursor-pointer',
+          'bg-accent-muted text-accent hover-bright active-dim',
+          open && 'ring-1 ring-accent/(--tint-muted)',
           'disabled:cursor-not-allowed',
         )}
       >
         {SelectedIcon && <SelectedIcon size={12} />}
-        <span className="text-text-muted">{provider}</span>
+        {/* An agent provider has one model named after itself; "Claude Code
+            Claude Code" told the person nothing twice. */}
+        {provider !== label && <span className="text-text-muted">{provider}</span>}
         <span>{label}</span>
         <ChevronDownIcon
           size={8}
@@ -139,44 +202,109 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         />
       </button>
 
+      {/* Under Plasma the picker is a raised surface of the material: the canvas sits
+
+
+          beside the animated menu, not inside it — a transform would misplace a fixed
+
+
+          canvas — one step below the menu in the pane's own stacking order. */}
+
+      {open && (
+        <PlasmaOverlay
+          surfaces={[{ ref: pickerRef, radius: 12, elevation: 0.6 }]}
+          zIndex={49}
+          canvasStyle={{ position: 'fixed' }}
+        />
+      )}
+
       <AnimatePresence>
         {open && (
           <motion.div
             key="models"
+            data-testid="model-selector-menu"
+            id={pickerId}
+            role="dialog"
+            aria-label="Choose a model"
+            onKeyDown={(event) => {
+              const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+              if (!keys.includes(event.key)) return;
+              const choices = [
+                ...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+              ];
+              if (!choices.length) return;
+              event.preventDefault();
+              const index = choices.indexOf(document.activeElement as HTMLButtonElement);
+              const next =
+                event.key === 'Home'
+                  ? 0
+                  : event.key === 'End'
+                    ? choices.length - 1
+                    : (index + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) %
+                      choices.length;
+              choices[next]?.focus();
+            }}
+            onBlur={(event) => {
+              if (event.relatedTarget && !menuRef.current?.contains(event.relatedTarget))
+                setOpen(false);
+            }}
             data-motion-role="dropdown"
             initial={role.initial}
             animate={role.animate}
             exit={role.exit}
-            className="absolute left-0 bottom-full mb-1 z-50 min-w-48"
+            data-placement={placement.side}
+            className={cn(
+              'absolute left-0 z-50 min-w-48',
+              placement.side === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
+            )}
+            data-plasma-host
           >
             <GlassSurface role="dropdown">
-              <div className="w-full max-h-[60vh] overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1">
+              <div
+                ref={pickerRef}
+                style={{ maxHeight: placement.maxHeight || undefined }}
+                className="w-full overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown p-1"
+              >
                 {groups.map((group) => (
                   <div key={group.providerId}>
                     {(() => {
                       const Icon = PROVIDER_ICONS[group.providerId];
                       return (
-                        <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                        <SectionLabel
+                          as="div"
+                          tone="muted"
+                          className="px-2.5 pt-2 pb-1 flex items-center gap-1.5"
+                        >
                           {Icon && <Icon size={10} />}
                           {group.provider}
-                        </div>
+                        </SectionLabel>
                       );
                     })()}
                     {group.models.map((model) => (
                       <button
                         key={model.id}
+                        disabled={group.providerId === 'included' && !included}
+                        aria-pressed={model.id === value}
                         onClick={() => {
                           onChange(model.id);
-                          setOpen(false);
+                          close();
                         }}
-                        className={cn(
-                          'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
-                          model.id === value
-                            ? 'text-accent bg-accent-muted'
-                            : 'text-text hover:bg-accent-muted',
+                        className={menuItemClass(
+                          'default',
+                          cn(
+                            'text-xs font-mono',
+                            model.id === value && 'text-accent bg-accent-muted',
+                          ),
                         )}
                       >
                         {model.name}
+                        {group.providerId === 'included' && !included
+                          ? access.status === 'ready'
+                            ? ' · paid plan'
+                            : access.status === 'unavailable'
+                              ? ' · access unavailable'
+                              : ' · checking access'
+                          : ''}
                       </button>
                     ))}
                   </div>
@@ -192,36 +320,42 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                       key={agentGroup.providerId}
                       data-testid={`model-group-${agentGroup.providerId}`}
                     >
-                      <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                      <SectionLabel
+                        as="div"
+                        tone="muted"
+                        className="px-2.5 pt-2 pb-1 flex items-center gap-1.5"
+                      >
                         {(() => {
                           const Icon = PROVIDER_ICONS[agentGroup.providerId];
                           return Icon ? <Icon size={10} /> : null;
                         })()}
                         Your agent
-                      </div>
+                      </SectionLabel>
                       {agentGroup.models.map((model) => (
                         <button
                           key={model.id}
+                          aria-pressed={model.id === value}
                           disabled={!available}
                           title={
                             available ? (agent.version ?? undefined) : (agent.reason ?? undefined)
                           }
                           onClick={() => {
                             onChange(model.id);
-                            setOpen(false);
+                            close();
                           }}
-                          className={cn(
-                            'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors',
-                            !available
-                              ? 'text-text-muted/60 cursor-not-allowed'
-                              : model.id === value
-                                ? 'text-accent bg-accent-muted cursor-pointer'
-                                : 'text-text hover:bg-accent-muted cursor-pointer',
+                          className={menuItemClass(
+                            'default',
+                            cn(
+                              'text-xs font-mono',
+                              !available
+                                ? 'text-subtle'
+                                : model.id === value && 'text-accent bg-accent-muted',
+                            ),
                           )}
                         >
                           {model.name}
                           {!available && (
-                            <span className="ml-1.5 text-2xs text-text-muted/70">
+                            <span className="ml-1.5 text-2xs text-subtle">
                               · {agent.installed ? 'unavailable' : 'not installed'}
                             </span>
                           )}
@@ -234,34 +368,35 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                 {/* Local inference (desktop, running servers only) */}
                 {localEndpoints.map((endpoint) => (
                   <div key={endpoint.id}>
-                    <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider">
+                    <SectionLabel as="div" tone="muted" className="px-2.5 pt-2 pb-1">
                       {endpoint.name} · local
-                    </div>
+                    </SectionLabel>
                     {sortLocalModels(endpoint.models).map((name) => {
                       const id = `${endpoint.id}/${name}`;
                       return (
                         <button
                           key={id}
+                          aria-pressed={id === value}
                           onClick={() => {
                             onChange(id);
-                            setOpen(false);
+                            close();
                           }}
-                          className={cn(
-                            'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
-                            id === value
-                              ? 'text-accent bg-accent-muted'
-                              : 'text-text hover:bg-accent-muted',
+                          className={menuItemClass(
+                            'default',
+                            cn('text-xs font-mono', id === value && 'text-accent bg-accent-muted'),
                           )}
                         >
                           {name}
                           {isToolCapableLocalModel(name) && (
-                            <span className="ml-1.5 text-2xs text-accent/70">· tools</span>
+                            <span className="ml-1.5 text-2xs text-accent/(--tint-strong)">
+                              · tools
+                            </span>
                           )}
                         </button>
                       );
                     })}
                     {endpoint.models.length === 0 && (
-                      <div className="px-3 py-1.5 text-xs font-mono text-text-muted">
+                      <div className="px-2.5 py-1.5 text-xs font-mono text-text-muted">
                         No models installed
                       </div>
                     )}

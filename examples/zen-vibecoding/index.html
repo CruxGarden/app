@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Crux Garden: The Zen of Vibecoding</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <a href="#" class="brand">✳ CRUX GARDEN</a
+      ><span>A field trip through your creative workspace</span
+      ><button id="journal-open">Field journal</button>
+    </header>
+    <main>
+      <section class="landscape" aria-label="Your growing garden">
+        <div class="intro">
+          <p class="eyebrow">LEARN BY MAKING SOMETHING</p>
+          <h1>The Zen of<br /><em>Vibecoding</em></h1>
+          <p>One seed. A few collaborators.<br />A little world that grows as you learn.</p>
+        </div>
+        <svg
+          viewBox="0 0 800 560"
+          role="img"
+          aria-label="A quiet island that grows with your completed missions"
+        >
+          <defs>
+            <linearGradient id="ground" x2="0" y2="1">
+              <stop stop-color="#b5cbb3" />
+              <stop offset="1" stop-color="#719e92" />
+            </linearGradient>
+            <radialGradient id="glow">
+              <stop stop-color="#fff6c1" />
+              <stop offset="1" stop-color="#fff6c1" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+          <g class="cloud">
+            <path
+              d="M55 140 Q120 118 192 144 M597 101 Q650 80 721 106"
+              fill="none"
+              stroke="#e1e9dc"
+              stroke-width="14"
+              stroke-linecap="round"
+            />
+          </g>
+          <ellipse cx="402" cy="472" rx="246" ry="36" fill="#77968d" opacity=".16" />
+          <path d="M141 361 Q164 491 406 507 Q633 481 663 361" fill="#64887d" />
+          <ellipse cx="402" cy="361" rx="263" ry="109" fill="url(#ground)" />
+          <path d="M304 453 Q485 377 379 288" fill="none" stroke="#e6d7af" stroke-width="25" />
+          <g id="seed-art" class="sleeping">
+            <path d="M283 344 Q280 305 292 291" stroke="#476952" stroke-width="5" fill="none" />
+            <ellipse
+              cx="268"
+              cy="310"
+              rx="19"
+              ry="9"
+              fill="#577c52"
+              transform="rotate(28 268 310)"
+            />
+            <ellipse
+              cx="302"
+              cy="296"
+              rx="20"
+              ry="10"
+              fill="#718d4f"
+              transform="rotate(-25 302 296)"
+            />
+            <circle id="seed-flower" cx="288" cy="282" r="13" fill="#f3bb82" />
+          </g>
+          <g id="pond-art" class="sleeping">
+            <ellipse cx="498" cy="390" rx="74" ry="35" fill="#cee3cf" />
+            <ellipse cx="498" cy="387" rx="66" ry="29" fill="#75b1b0" />
+            <path
+              d="M462 386h31m12 11h22"
+              stroke="#cce6d6"
+              stroke-width="3"
+              stroke-linecap="round"
+            />
+            <ellipse cx="524" cy="374" rx="12" ry="6" fill="#619568" />
+          </g>
+          <g id="tree-art" class="sleeping">
+            <path d="M497 312v-75" stroke="#6e6752" stroke-width="13" />
+            <ellipse cx="496" cy="225" rx="47" ry="55" fill="#6c946c" />
+            <ellipse cx="480" cy="213" rx="28" ry="37" fill="#8ba87a" />
+          </g>
+          <g id="lantern-art" class="sleeping">
+            <circle cx="356" cy="370" r="62" fill="url(#glow)" />
+            <path d="M357 397v-72m-7 0h21" stroke="#666a50" stroke-width="5" />
+            <rect x="359" y="330" width="20" height="26" rx="5" fill="#f7d893" />
+          </g>
+          <g id="bridge-art" class="sleeping">
+            <path d="M446 404 Q502 356 548 390" fill="none" stroke="#795f49" stroke-width="12" />
+            <path d="M443 393 Q502 340 552 378" fill="none" stroke="#dec99e" stroke-width="5" />
+          </g>
+          <g id="fireflies-art" class="sleeping" fill="#fff7bb">
+            <circle cx="229" cy="234" r="4" />
+            <circle cx="570" cy="272" r="5" />
+            <circle cx="328" cy="244" r="4" />
+            <circle cx="432" cy="195" r="3" />
+            <circle cx="601" cy="345" r="4" />
+          </g>
+          <text
+            id="garden-name"
+            x="399"
+            y="548"
+            text-anchor="middle"
+            fill="#50685e"
+            font-size="15"
+            font-family="Georgia,serif"
+          >
+            Your garden is waiting.
+          </text>
+        </svg>
+        <p id="world-caption">Nothing is timed. Curiosity counts more than speed.</p>
+        <nav id="trail" aria-label="Missions"></nav>
+        <blockquote id="poem" hidden></blockquote>
+        <img id="postcard" alt="Your postcard made in Media Tools" hidden />
+      </section>
+      <section class="guide" aria-label="Mission guide">
+        <div class="guide-top">
+          <span id="chapter-number" class="eyebrow"></span><span id="completion"></span>
+        </div>
+        <h2 id="mission-title"></h2>
+        <p id="mission-description"></p>
+        <div id="mission-body"></div>
+        <div id="feedback" role="status" aria-live="polite"></div>
+        <div class="actions">
+          <button id="check" class="primary">Check my garden</button
+          ><button id="next" hidden>Next stepping stone →</button>
+        </div>
+        <p class="honesty">
+          Artifact checks read files from this preview. UI observations are your report. The game
+          cannot inspect agent status or certify which agent made a file.
+        </p>
+      </section>
+    </main>
+    <dialog id="journal">
+      <form method="dialog"><button class="close" aria-label="Close journal">×</button></form>
+      <p class="eyebrow">YOUR FIELD JOURNAL</p>
+      <h2>How did it feel?</h2>
+      <p>
+        Save surprises as they happen. This stays in this preview’s browser storage. Download it
+        before changing profiles or preview addresses.
+      </p>
+      <label
+        >Moment or mission<input
+          id="note-title"
+          maxlength="120"
+          placeholder="e.g. Finding the waiting agent" /></label
+      ><label
+        >The experience<select id="feeling">
+          <option>Delightful</option>
+          <option>Clear</option>
+          <option>Confusing</option>
+          <option>Slow</option>
+          <option>Blocked</option>
+        </select></label
+      ><label
+        >What happened? What would help?<textarea
+          id="note"
+          rows="4"
+          maxlength="3000"
+        ></textarea></label
+      ><button id="save-note" class="primary">Keep this observation</button>
+      <ol id="notes"></ol>
+      <button id="download">Download journal & progress</button
+      ><label class="restore"
+        >Restore a saved journal<input id="restore" type="file" accept="application/json,.json"
+      /></label>
+      <p id="journal-status" role="status"></p>
+    </dialog>
+    <script type="module" src="app.mjs"></script>
+  </body>
+</html>

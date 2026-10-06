@@ -1,14 +1,39 @@
+import PublishedPackage from '@/components/explore/PublishedPackage';
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import PublicLoading from '@/components/display/PublicLoading';
+import { PublicApiError } from '@/api/public';
+import DeadEnd from '@/components/layout/DeadEnd';
+import { buttonClass } from '@/components/ui/button-class';
+import { Button } from '@/components/ui';
+import { Link, useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Artifact } from '@/api/types';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
-import { useStoreApiProxy } from '@/hooks/useStoreApiProxy';
-import { publishOriginFor } from '@/lib/public-url';
-import MetadataContent from '@/components/workspace/MetadataContent';
+import PublicCruxAbout from '@/components/public/PublicCruxAbout';
+import { publicConversationState, publicTranscript } from '@/services/shared-conversation';
+import { canonicalUrl, usePageMeta } from '@/hooks/usePageMeta';
+import { metaDescription } from '@/lib/page-meta';
+import { publicCoverUrl } from '@/lib/public-cover';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
+
+/** A dead end still offers the way back: the author's garden, Explore, home. */
+function WayBack({ username }: { username?: string }) {
+  const link = buttonClass('ghost', 'sm');
+  return (
+    <>
+      {username && (
+        <Link to={`/${username}`} className={link}>
+          {username.startsWith('@') ? username : `@${username}`}
+        </Link>
+      )}
+      <Link to="/explore" className={link}>
+        Explore Home
+      </Link>
+    </>
+  );
+}
 
 export default function PublicCrux() {
   const {
@@ -20,15 +45,14 @@ export default function PublicCrux() {
   const [crux, setCrux] = useState<Crux | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [state, setState] = useState<LoadState>('loading');
+  const [attempt, setAttempt] = useState(0);
   const [metadataOpen, setMetadataOpen] = useState(false);
 
-  // Proxy store postMessages to the API when running locally
-  // (browser blocks published iframe from fetching localhost directly)
-  // Store calls from the published page are always proxied through this
-  // window so the visitor's credentials never reach third-party crux code.
-  useStoreApiProxy(crux?.id ?? null, crux ? publishOriginFor(crux.id) : null);
-
   const hasMetadata = !!crux;
+  const transcript = publicTranscript(crux);
+  const purpose =
+    crux?.description ||
+    (typeof crux?.meta?.summary?.purpose === 'string' ? crux.meta.summary.purpose : '');
 
   // Download function: always from API for public pages
   const downloadBlob = useCallback(
@@ -45,18 +69,23 @@ export default function PublicCrux() {
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
     setState('loading');
-    Promise.all([publicApi.getCruxBySlug(username, slug), publicApi.getArtifacts(username, slug)])
+    setCrux(null);
+    setMetadataOpen(false);
+    Promise.all([
+      publicApi.getCruxBySlug(username, slug, controller.signal),
+      publicApi.getArtifacts(username, slug, controller.signal),
+    ])
       .then(([cruxData, artifactsData]) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setCrux(cruxData);
         setArtifacts(artifactsData);
         setState('ready');
       })
       .catch((err) => {
-        if (cancelled) return;
-        if (err.message?.includes('404') || err.message?.includes('not found')) {
+        if (controller.signal.aborted) return;
+        if (err instanceof PublicApiError && err.status === 404) {
           setState('not-found');
         } else {
           setState('error');
@@ -64,43 +93,43 @@ export default function PublicCrux() {
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [username, slug]);
+  }, [username, slug, attempt]);
 
-  // Set document title
-  useEffect(() => {
-    if (crux?.title) {
-      document.title = crux.title;
-    }
-    return () => {
-      document.title = APP_NAME;
-    };
-  }, [crux?.title]);
+  // Title, description and link-preview tags for this creation
+  const handle = (username || '').replace(/^@/, '');
+  usePageMeta(
+    crux && state === 'ready'
+      ? {
+          title: `${crux.title || crux.slug} — ${APP_NAME}`,
+          description:
+            metaDescription(purpose) ?? `A creation by @${handle} published with ${APP_NAME}.`,
+          canonical: canonicalUrl(`/${handle}/${crux.slug}`),
+          // Tools and Moods publish a package, not a site, so they have no cover file.
+          image: crux.kind === 'tool' || crux.kind === 'mood' ? undefined : publicCoverUrl(crux.id),
+        }
+      : null,
+  );
 
   if (state === 'loading') {
-    return <div className="min-h-screen bg-bg" />;
+    return <PublicLoading label="Loading creation…" username={username} />;
   }
 
   if (state === 'not-found') {
     return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
-          <span className="font-display font-bold text-text">Not found</span>
-          <span className="text-text-muted">This creation doesn't exist or is private</span>
-        </div>
-      </div>
+      <DeadEnd title="Not found" body="This creation doesn't exist or is private">
+        <WayBack username={username} />
+      </DeadEnd>
     );
   }
 
   if (state === 'error') {
     return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
-          <span className="font-display font-bold text-text">Something went wrong</span>
-          <span className="text-text-muted">We couldn't load this creation</span>
-        </div>
-      </div>
+      <DeadEnd title="Something went wrong" body="We couldn't load this creation">
+        <Button onClick={() => setAttempt((value) => value + 1)}>Try again</Button>
+        <WayBack username={username} />
+      </DeadEnd>
     );
   }
 
@@ -109,6 +138,7 @@ export default function PublicCrux() {
       <PublicTopBar
         title={crux?.title}
         username={username || ''}
+        reportCruxId={crux?.id}
         hasMetadata={hasMetadata}
         metadataOpen={metadataOpen}
         onToggleMetadata={() => setMetadataOpen((v) => !v)}
@@ -116,31 +146,27 @@ export default function PublicCrux() {
 
       <div className="flex-1 min-h-0 relative z-10 flex">
         <div className={`flex-1 min-w-0 ${metadataOpen ? 'hidden sm:block' : ''}`}>
-          <ArtifactRenderer
-            artifacts={artifacts}
-            username={username || ''}
-            slug={slug || ''}
-            cruxId={crux?.id || ''}
-            subPath={subPath}
-            downloadBlob={downloadBlob}
-          />
+          {crux && (crux.kind === 'tool' || crux.kind === 'mood') ? (
+            <PublishedPackage crux={crux} artifacts={artifacts} username={username || ''} />
+          ) : (
+            <ArtifactRenderer
+              artifacts={artifacts}
+              username={username || ''}
+              slug={slug || ''}
+              cruxId={crux?.id || ''}
+              subPath={subPath}
+              downloadBlob={downloadBlob}
+            />
+          )}
         </div>
 
         {metadataOpen && crux && (
-          <div className="w-full sm:w-[300px] sm:max-w-[40%] shrink-0 border-l border-border bg-bg overflow-hidden flex flex-col">
-            <div className="flex items-center px-3 h-8 border-b border-border shrink-0">
-              <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
-                Metadata
-              </span>
-            </div>
-            <MetadataContent
-              crux={crux}
-              summary={crux.meta?.summary}
-              authorName={username}
-              messages={crux.meta?.messages}
-              readOnly
-            />
-          </div>
+          <PublicCruxAbout
+            crux={crux}
+            username={username || ''}
+            transcript={transcript}
+            conversation={publicConversationState(crux.meta, transcript.length)}
+          />
         )}
       </div>
     </div>

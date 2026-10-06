@@ -44,6 +44,7 @@ function configPathFromArgs(argv: string[]): string {
 
 function readConfig(file: string): Config {
   const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!parsed.token && process.env.CRUX_AGENT_TOKEN) parsed.token = process.env.CRUX_AGENT_TOKEN;
   if (typeof parsed.url !== 'string' || typeof parsed.token !== 'string') {
     throw new Error(`${file} is not an Agent Host config (missing url/token)`);
   }

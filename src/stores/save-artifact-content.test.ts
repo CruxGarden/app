@@ -12,7 +12,7 @@ import { initServices, getServices } from '@/services';
 
 describe('saveArtifactContent', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
   });
 
   it('keeps a text artifact readable after a save (utf-8, same id, same path)', async () => {

@@ -1,0 +1,428 @@
+{
+  "date": "2026-10-02",
+  "scope": "Default bundled desktop build; current branch. npm registry audit responses captured; no assertion that default-branch Dependabot alerts were all individually adjudicated. GitHub CLI is unavailable and private alerts were not retrieved.",
+  "bundledTools": [
+    {
+      "id": "bitsy-app",
+      "manifest": "bitsy-crux/crux-tool.json",
+      "sha256": "b57953965901024cfaf85025e6b27bbf9e3de72214ee8d4adcab844a40f1ed06"
+    },
+    {
+      "id": "eventcalendar-app",
+      "manifest": "eventcalendar-crux/crux-tool.json",
+      "sha256": "8cc9212ad2e1a8cef7f121581f7509ce9a73c522ce2b8bf34f64bc84d88bf3aa"
+    },
+    {
+      "id": "hextris-app",
+      "manifest": "hextris-crux/crux-tool.json",
+      "sha256": "3ba47e5511df3e3d00dd7741c84bb093846e9934cbebda36b53b2d75f702e7ae"
+    },
+    {
+      "id": "link-app",
+      "manifest": "link-crux/crux-tool.json",
+      "sha256": "e59aacb24c2a93c6e734cb2e89ef64669b0b7e95f83c0fcc0fed910ee4b9eedd"
+    },
+    {
+      "id": "media-app",
+      "manifest": "media-crux/crux-tool.json",
+      "sha256": "3d307307d20de94757b521f3fdf1f74327825a63cb2d84f5f48869665ae9da00"
+    },
+    {
+      "id": "runner-app",
+      "manifest": "runner-crux/crux-tool.json",
+      "sha256": "3d70895b8f426f6833491956c9fbad841a44b6193d5f9615b6783e26371a55f9"
+    },
+    {
+      "id": "stack-app",
+      "manifest": "stack-crux/crux-tool.json",
+      "sha256": "117104fedd1a26af5763d60167bac7a4f6fff320bda12ffc4717ceadb89b9e76"
+    },
+    {
+      "id": "underrun-app",
+      "manifest": "underrun-crux/crux-tool.json",
+      "sha256": "8b6572759f2e2e828acbc6c9e23eb266d81cdd8e54fc9fcca38334f9779a1fa7"
+    }
+  ],
+  "alwaysIncluded": "Host renderer and Electron main/native API; app-owned Notes/Moqira/OneBigSky/Cardinal/Digital Garden/site starters including Documentation; static help; packaged native binaries with existing source/license verification. Unbundled tool manifests are discoverable, their template runtime is excluded by vite-plugin-crux-tools.ts unless CRUX_BUNDLE_TOOLS=all. Downloaded community tools remain separate runtime inputs.",
+  "packaging": [
+    "electron/package.json build.files -> dist + production node_modules in app.asar",
+    "extraResources ../dist -> Resources/app; resources/bin/${arch} -> bin",
+    "vite-plugin-crux-assets.ts emits imported runtime bytes; source files/lockfiles carried as template content are not equivalent to Node modules executing in Electron main"
+  ],
+  "audits": {
+    "app": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "findings": {}
+    },
+    "electron": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 2,
+        "critical": 0,
+        "total": 2
+      },
+      "findings": {
+        "braces": {
+          "name": "braces",
+          "severity": "high",
+          "isDirect": false,
+          "via": [
+            {
+              "source": 1240992,
+              "name": "braces",
+              "dependency": "braces",
+              "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+              "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+              "severity": "high",
+              "cwe": ["CWE-674"],
+              "cvss": {
+                "score": 7.5,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+              },
+              "range": "<=3.0.3"
+            }
+          ],
+          "effects": ["chokidar"],
+          "range": "*",
+          "nodes": ["node_modules/braces"],
+          "fixAvailable": {
+            "name": "chokidar",
+            "version": "5.0.0",
+            "isSemVerMajor": true
+          }
+        },
+        "chokidar": {
+          "name": "chokidar",
+          "severity": "high",
+          "isDirect": true,
+          "via": ["braces"],
+          "effects": [],
+          "range": "2.0.0 - 3.6.0",
+          "nodes": ["node_modules/chokidar-fsevents"],
+          "fixAvailable": {
+            "name": "chokidar",
+            "version": "5.0.0",
+            "isSemVerMajor": true
+          }
+        }
+      }
+    },
+    "notes-crux": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "findings": {}
+    },
+    "moqira-crux": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "findings": {}
+    },
+    "documentation-crux": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 5,
+        "critical": 0,
+        "total": 5
+      },
+      "findings": {
+        "@astrojs/mdx": {
+          "name": "@astrojs/mdx",
+          "severity": "high",
+          "isDirect": false,
+          "via": ["astro"],
+          "effects": [],
+          "range": "<=0.0.0-vercel-upgrade-20230905174957 || >=1.0.0-beta.0",
+          "nodes": ["node_modules/@astrojs/mdx"],
+          "fixAvailable": true
+        },
+        "@astrojs/starlight": {
+          "name": "@astrojs/starlight",
+          "severity": "high",
+          "isDirect": true,
+          "via": ["@astrojs/mdx", "astro", "astro-expressive-code"],
+          "effects": [],
+          "range": ">=0.9.0",
+          "nodes": ["node_modules/@astrojs/starlight"],
+          "fixAvailable": {
+            "name": "@astrojs/starlight",
+            "version": "0.8.1",
+            "isSemVerMajor": true
+          }
+        },
+        "astro": {
+          "name": "astro",
+          "severity": "high",
+          "isDirect": true,
+          "via": ["http-cache-semantics"],
+          "effects": ["@astrojs/mdx", "@astrojs/starlight", "astro-expressive-code"],
+          "range": "<=0.0.0-head-body-content-20240329190922 || >=2.10.10",
+          "nodes": ["node_modules/astro"],
+          "fixAvailable": {
+            "name": "astro",
+            "version": "2.10.9",
+            "isSemVerMajor": true
+          }
+        },
+        "astro-expressive-code": {
+          "name": "astro-expressive-code",
+          "severity": "high",
+          "isDirect": false,
+          "via": ["astro"],
+          "effects": ["@astrojs/starlight"],
+          "range": ">=0.30.0",
+          "nodes": ["node_modules/astro-expressive-code"],
+          "fixAvailable": {
+            "name": "@astrojs/starlight",
+            "version": "0.8.1",
+            "isSemVerMajor": true
+          }
+        },
+        "http-cache-semantics": {
+          "name": "http-cache-semantics",
+          "severity": "high",
+          "isDirect": false,
+          "via": [
+            {
+              "source": 1240991,
+              "name": "http-cache-semantics",
+              "dependency": "http-cache-semantics",
+              "title": "http-cache-semantics max-stale handling can disclose cross-user cached responses",
+              "url": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp",
+              "severity": "high",
+              "cwe": ["CWE-524"],
+              "cvss": {
+                "score": 7.5,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+              },
+              "range": "<=4.2.0"
+            }
+          ],
+          "effects": ["astro"],
+          "range": "*",
+          "nodes": ["node_modules/http-cache-semantics"],
+          "fixAvailable": {
+            "name": "astro",
+            "version": "2.10.9",
+            "isSemVerMajor": true
+          }
+        }
+      }
+    },
+    "api": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "findings": {}
+    },
+    "cli": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "findings": {}
+    },
+    "plasma-ui": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "findings": {}
+    },
+    "tool-cruxes": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 4,
+        "critical": 0,
+        "total": 4
+      },
+      "findings": {
+        "@excalidraw/excalidraw": {
+          "name": "@excalidraw/excalidraw",
+          "severity": "high",
+          "isDirect": true,
+          "via": ["sass"],
+          "effects": [],
+          "range": "0.5.0-a78d45417 || 0.17.1-08b13f9 - 0.17.1-test || >=0.18.0-699826",
+          "nodes": ["node_modules/@excalidraw/excalidraw"],
+          "fixAvailable": {
+            "name": "@excalidraw/excalidraw",
+            "version": "0.17.6",
+            "isSemVerMajor": true
+          }
+        },
+        "braces": {
+          "name": "braces",
+          "severity": "high",
+          "isDirect": false,
+          "via": [
+            {
+              "source": 1240992,
+              "name": "braces",
+              "dependency": "braces",
+              "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+              "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+              "severity": "high",
+              "cwe": ["CWE-674"],
+              "cvss": {
+                "score": 7.5,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+              },
+              "range": "<=3.0.3"
+            }
+          ],
+          "effects": ["chokidar"],
+          "range": "*",
+          "nodes": ["node_modules/braces"],
+          "fixAvailable": {
+            "name": "@excalidraw/excalidraw",
+            "version": "0.17.6",
+            "isSemVerMajor": true
+          }
+        },
+        "chokidar": {
+          "name": "chokidar",
+          "severity": "high",
+          "isDirect": false,
+          "via": ["braces"],
+          "effects": ["sass"],
+          "range": "2.0.0 - 3.6.0",
+          "nodes": ["node_modules/chokidar"],
+          "fixAvailable": {
+            "name": "@excalidraw/excalidraw",
+            "version": "0.17.6",
+            "isSemVerMajor": true
+          }
+        },
+        "sass": {
+          "name": "sass",
+          "severity": "high",
+          "isDirect": false,
+          "via": ["chokidar"],
+          "effects": ["@excalidraw/excalidraw"],
+          "range": "1.6.0 - 1.78.0",
+          "nodes": ["node_modules/sass"],
+          "fixAvailable": {
+            "name": "@excalidraw/excalidraw",
+            "version": "0.17.6",
+            "isSemVerMajor": true
+          }
+        }
+      }
+    },
+    "digital-garden-crux": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 1,
+        "critical": 0
+      },
+      "findings": {
+        "1240991": {
+          "findings": [
+            {
+              "version": "4.2.0",
+              "paths": [".>astro>http-cache-semantics"]
+            }
+          ],
+          "found_by": null,
+          "deleted": null,
+          "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-93748\n- https://github.com/kornelski/http-cache-semantics/issues/56\n- https://github.com/kornelski/http-cache-semantics/blob/f01112e954b83cfa8765b633ba880e5e980aa54c/index.js#L425-L441\n- https://github.com/kornelski/http-cache-semantics/blob/f01112e954b83cfa8765b633ba880e5e980aa54c/index.js#L603-L623\n- https://www.vulncheck.com/advisories/http-cache-semantics-through-4.2.0-cross-user-cache-disclosure-via-max-stale\n- https://github.com/advisories/GHSA-ch52-4w7c-c8xp",
+          "created": "2026-09-18T18:31:44.000Z",
+          "id": 1240991,
+          "npm_advisory_id": null,
+          "overview": "http-cache-semantics through 4.2.0 fails to properly validate security-zeroed cache entries when processing client max-stale directives, allowing unauthenticated attackers to retrieve cached responses belonging to other users. Attackers can request the same URL with a large max-stale value to obtain another user's Set-Cookie session credentials from shared-cache entries that were deliberately zeroed for security reasons.",
+          "reported_by": null,
+          "title": "http-cache-semantics max-stale handling can disclose cross-user cached responses",
+          "metadata": null,
+          "cves": ["CVE-2026-93748"],
+          "access": "public",
+          "severity": "high",
+          "module_name": "http-cache-semantics",
+          "vulnerable_versions": "<=4.2.0",
+          "github_advisory_id": "GHSA-ch52-4w7c-c8xp",
+          "recommendation": "None",
+          "patched_versions": "<0.0.0",
+          "updated": "2026-10-02T22:36:44.000Z",
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "cwe": ["CWE-524"],
+          "url": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp"
+        }
+      }
+    }
+  },
+  "dispositions": [
+    {
+      "advisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "package": "braces <=3.0.3 via chokidar-fsevents",
+      "status": "Vulnerable package remains; no upstream patch available at review. Mitigated in the shipping watcher by disableGlobbing:true. All watcher roots are literal registered folders; ignore is a function, not an untrusted glob string. Existing backend retained for macOS FSEvents scaling (ADR0038).",
+      "evidence": "The literal-brace/bracket native filesystem test reproduced the defect and passes with disableGlobbing. Actual Electron external file ingestion and restart passes10.9s. Larger scale timings are recorded separately in performance evidence. This is reachability mitigation, not an audit-zero claim."
+    },
+    {
+      "advisory": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp",
+      "package": "http-cache-semantics <=4.2.0 via Documentation Astro build",
+      "status": "No upstream patch available. The module is in Astro remote-image build cache, not static help JS or Electron main. Current documentation uses local image assets; no authenticated multi-user image response cache is deployed by this template. Source/lockfile travels with a Documentation Crux and future user modifications can change exposure. Track an upstream fix; do not downgrade Astro to the npm suggested obsolete major."
+    },
+    {
+      "advisory": "https://github.com/advisories/GHSA-62ch-8vmq-8xm7",
+      "package": "figlet",
+      "status": "Unused Nursery CLI dependency removed; no imports/callers. CLI verify5 and production audit0 pass. CLI559d83b pushed. The separate desktop companion CLI does not use it."
+    },
+    {
+      "advisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "package": "braces via Excalidraw -> Sass -> Chokidar",
+      "status": "Four propagated npm findings. This Sass watcher dependency is build tooling in the upstream Excalidraw production manifest. The shipped Whiteboard is prebuilt browser JS/CSS; it cannot execute a Node Sass watcher. The tool-cruxes build graph emits engine and assets, not its node_modules tree. Kept explicit as a manifest finding, not erased with a downgrade to Excalidraw0.17.6. No claim that arbitrary user-rebuilt upstream tooling is safe."
+    },
+    {
+      "advisory": "https://github.com/advisories/GHSA-j22f-vq7h-c4qm",
+      "package": "devalue5.9.2 via Digital Garden Astro",
+      "status": "Pinned patched5.9.3 in pnpm.overrides and regenerated frozen lockfile. Six devalue advisories cleared; remaining audit finding is the unpatched remote-image build-cache http-cache-semantics already scoped above. This changes newly created starter source, not existing user projects. Full app1,814/build and actual Digital Garden create/edit/link/graph/scripted Collaboration/fixture Share/restart/clean import journey pass56.7s. Newly created starter installs and builds using the patched frozen lockfile."
+    }
+  ],
+  "limits": [
+    "Manifest audits do not certify every vendored minified/native dependency. Existing source/license and package smoke remain required.",
+    "Default-branch push warning counts are not current feature-branch exposure counts.",
+    "No live hosted application or arbitrary downloaded catalog tool was security-certified."
+  ]
+}

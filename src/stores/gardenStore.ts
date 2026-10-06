@@ -1,3 +1,5 @@
+import { captureGardenId } from './gardenContext';
+import { gardenMembers, opensAsWorkspace } from '@/services/garden-navigation';
 import { allWorkspaces } from './workspaceRegistry';
 
 import { create } from 'zustand';
@@ -6,7 +8,7 @@ import { getServices } from '@/services';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { WORKSPACE_THUMBNAIL_PATH } from '@/lib/artifact-path';
 
-export type SortField = 'created' | 'updated';
+export type SortField = 'created' | 'updated' | 'name';
 
 /** How long a deleted crux waits in the Trash before it is purged for good. */
 export const TRASH_RETENTION_DAYS = 30;
@@ -22,6 +24,7 @@ interface GardenState {
   /** cruxId → fingerprint of its captured preview.jpg (only cruxes that have one). */
   thumbnails: Record<string, string>;
   loading: boolean;
+  error: string | null;
   search: string;
   sortBy: SortField;
 
@@ -32,34 +35,73 @@ interface GardenState {
   restoreCrux: (id: string) => Promise<void>;
   /** Delete a trashed crux for good — rows gone, the Project Folder left where it is. */
   destroyCrux: (id: string) => Promise<void>;
+  /**
+   * Rename a Crux from Home: the Details pane's own title edit (`crux.update`
+   * with only the title), so the slug and any shared address stay as they are.
+   */
+  renameCrux: (id: string, title: string) => Promise<void>;
   setSearch: (query: string) => void;
   setSortBy: (field: SortField) => void;
   refresh: () => Promise<void>;
 }
 
-function filterAndSort(cruxes: Crux[], search: string, sortBy: SortField): Crux[] {
-  const needle = search.toLowerCase();
-  const filtered = needle
-    ? cruxes.filter(
-        (c) =>
-          (c.title || '').toLowerCase().includes(needle) ||
-          (c.slug || '').toLowerCase().includes(needle) ||
-          (c.description || '').toLowerCase().includes(needle),
-      )
-    : cruxes;
+const byName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const nameOf = (crux: Crux) => crux.title || crux.slug || '';
+const tagsOf = (crux: Crux): string[] =>
+  Array.isArray(crux.meta?.tags) ? (crux.meta.tags as unknown[]).map(String) : [];
+
+/** Plain words search the title, slug, description and tags; `#word` searches tags alone. */
+export function filterAndSort(cruxes: Crux[], search: string, sortBy: SortField): Crux[] {
+  const query = search.trim().toLowerCase();
+  const tagOnly = query.startsWith('#');
+  const needle = tagOnly ? query.slice(1).trim() : query;
+  const tagged = (c: Crux) => tagsOf(c).some((tag) => tag.toLowerCase().includes(needle));
+  const filtered = !query
+    ? cruxes
+    : cruxes.filter((c) =>
+        tagOnly
+          ? tagged(c)
+          : (c.title || '').toLowerCase().includes(needle) ||
+            (c.slug || '').toLowerCase().includes(needle) ||
+            (c.description || '').toLowerCase().includes(needle) ||
+            tagged(c),
+      );
   return [...filtered].sort(
-    (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
+    sortBy === 'name'
+      ? (a, b) => byName.compare(nameOf(a), nameOf(b))
+      : (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
   );
 }
 
-/**
- * One query for every crux's thumbnail: the workspace's preview.jpg artifact,
- * keyed by the crux that owns it. Snapshot clones carry their own copies under
- * the snapshot's id, so this naturally yields only live cruxes.
- */
+const thumbnailRoots = new Map<string, { root: string; fingerprint: string | null }>();
+/** Lookup only preview metadata in each changed root; never list a project's files. */
 async function loadThumbnails(): Promise<Record<string, string>> {
   try {
-    const rows = await getSqliteClient().all<{ resource_id: string; fingerprint: string }>(
+    const db = getSqliteClient();
+    if (db.fileContent) {
+      const content = db.fileContent;
+      const heads = await db.all<{ crux_id: string; root: string; revision: number }>(
+        "SELECT h.* FROM file_content_heads h JOIN cruxes c ON c.id = h.crux_id WHERE c.deleted IS NULL AND (c.kind IS NULL OR c.kind <> 'snapshot')",
+      );
+      const map: Record<string, string> = {};
+      const owners = new Set(heads.map((head) => head.crux_id));
+      for (const id of thumbnailRoots.keys()) if (!owners.has(id)) thumbnailRoots.delete(id);
+      for (const head of heads) {
+        let cached = thumbnailRoots.get(head.crux_id);
+        if (cached?.root !== head.root) {
+          const file = await content.lookup({
+            cruxId: head.crux_id,
+            expected: head,
+            path: WORKSPACE_THUMBNAIL_PATH,
+          });
+          cached = { root: head.root, fingerprint: file?.entry.fingerprint ?? null };
+          thumbnailRoots.set(head.crux_id, cached);
+        }
+        if (cached.fingerprint) map[head.crux_id] = cached.fingerprint;
+      }
+      return map;
+    }
+    const rows = await db.all<{ resource_id: string; fingerprint: string }>(
       `SELECT resource_id, fingerprint FROM artifacts
        WHERE resource_type = 'crux' AND fingerprint IS NOT NULL
          AND (lower(path) = ? OR lower(json_extract(meta, '$.path')) = ?)`,
@@ -74,80 +116,106 @@ async function loadThumbnails(): Promise<Record<string, string>> {
   }
 }
 
-export const useGardenStore = create<GardenState>((set, get) => ({
-  allCruxes: [],
-  cruxList: [],
-  trashed: [],
-  thumbnails: {},
-  loading: true,
-  search: '',
-  sortBy: 'created',
+let loadGeneration = 0;
 
-  deleteCrux: async (id: string) => {
-    if (allWorkspaces().some((w) => w.cruxId === id))
-      throw new Error('Close this Crux workspace before deleting it.');
-    const { crux: cruxService } = getServices();
-    await cruxService.trash(id);
-    await get().load();
-  },
+/** The Garden's lists as one read: its Cruxes (or every Crux without a Garden), the Trash, thumbnails. */
+async function fetchLists() {
+  const gardenId = captureGardenId();
+  const { crux: cruxService } = getServices();
+  const [data, trashed, thumbnails] = await Promise.all([
+    gardenId
+      ? gardenMembers(gardenId).then((rows) => rows.filter(opensAsWorkspace))
+      : cruxService.listAll(),
+    cruxService.listTrashed(),
+    loadThumbnails(),
+  ]);
+  return { allCruxes: data, trashed, thumbnails };
+}
 
-  restoreCrux: async (id: string) => {
-    await getServices().crux.restore(id);
-    await get().load();
-  },
+export const useGardenStore = create<GardenState>((set, get) => {
+  // Read the controls when results arrive: typing during a refresh must win.
+  const acceptLists = (patch: Awaited<ReturnType<typeof fetchLists>>) =>
+    set((state) => ({
+      ...patch,
+      cruxList: filterAndSort(patch.allCruxes, state.search, state.sortBy),
+      loading: false,
+      error: null,
+    }));
+  return {
+    allCruxes: [],
+    cruxList: [],
+    trashed: [],
+    thumbnails: {},
+    loading: true,
+    error: null,
+    search: '',
+    sortBy: 'created',
 
-  destroyCrux: async (id: string) => {
-    await getServices().crux.delete(id);
-    await get().load();
-  },
-
-  load: async () => {
-    set({ loading: true });
-    try {
-      const { search, sortBy } = get();
+    deleteCrux: async (id: string) => {
+      if (allWorkspaces().some((w) => w.cruxId === id))
+        throw new Error('Close this Crux workspace before deleting it.');
       const { crux: cruxService } = getServices();
-      await cruxService.purgeTrash(TRASH_RETENTION_MS).catch((err) => {
-        console.warn('[gardenStore] trash purge skipped:', err);
+      await cruxService.trash(id);
+      await get().load();
+    },
+
+    restoreCrux: async (id: string) => {
+      await getServices().crux.restore(id);
+      await get().load();
+    },
+
+    destroyCrux: async (id: string) => {
+      await getServices().crux.delete(id);
+      await get().load();
+    },
+
+    renameCrux: async (id: string, title: string) => {
+      const next = title.trim();
+      const current = get().allCruxes.find((crux) => crux.id === id);
+      if (current && next === (current.title ?? '')) return;
+      await getServices().crux.update(id, { title: next });
+      await get().refresh();
+    },
+
+    load: async () => {
+      const generation = ++loadGeneration;
+      set({ loading: true, error: null });
+      try {
+        await getServices()
+          .crux.purgeTrash(TRASH_RETENTION_MS)
+          .catch((err) => {
+            console.warn('[gardenStore] trash purge skipped:', err);
+          });
+        const patch = await fetchLists();
+        if (generation === loadGeneration) acceptLists(patch);
+      } catch (err) {
+        if (generation === loadGeneration) set({ loading: false, error: (err as Error).message });
+      }
+    },
+
+    setSearch: (query: string) => {
+      const { allCruxes, sortBy } = get();
+      set({
+        search: query,
+        cruxList: filterAndSort(allCruxes, query, sortBy),
       });
-      const [data, trashed, thumbnails] = await Promise.all([
-        cruxService.listAll(),
-        cruxService.listTrashed(),
-        loadThumbnails(),
-      ]);
-      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), trashed, thumbnails });
-    } catch (err) {
-      console.error('[gardenStore] Failed to load cruxes:', err);
-    } finally {
-      set({ loading: false });
-    }
-  },
+    },
 
-  setSearch: (query: string) => {
-    const { allCruxes, sortBy } = get();
-    set({
-      search: query,
-      cruxList: filterAndSort(allCruxes, query, sortBy),
-    });
-  },
+    setSortBy: (field: SortField) => {
+      const { allCruxes, search } = get();
+      set({ sortBy: field, cruxList: filterAndSort(allCruxes, search, field) });
+    },
 
-  setSortBy: (field: SortField) => {
-    const { allCruxes, search } = get();
-    set({ sortBy: field, cruxList: filterAndSort(allCruxes, search, field) });
-  },
-
-  /** Reload the lists in place: no `loading` flip, so the Home Garden stays mounted. */
-  refresh: async () => {
-    try {
-      const { search, sortBy } = get();
-      const { crux: cruxService } = getServices();
-      const [data, trashed, thumbnails] = await Promise.all([
-        cruxService.listAll(),
-        cruxService.listTrashed(),
-        loadThumbnails(),
-      ]);
-      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), trashed, thumbnails });
-    } catch (err) {
-      console.error('[gardenStore] Failed to refresh cruxes:', err);
-    }
-  },
-}));
+    /** Reload the lists in place: no `loading` flip, so the Home Garden stays mounted. */
+    refresh: async () => {
+      const generation = ++loadGeneration;
+      try {
+        const patch = await fetchLists();
+        if (generation === loadGeneration) acceptLists(patch);
+      } catch (err) {
+        console.error('[gardenStore] Failed to refresh cruxes:', err);
+        if (generation === loadGeneration) set({ loading: false, error: (err as Error).message });
+      }
+    },
+  };
+});

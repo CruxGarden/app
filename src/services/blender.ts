@@ -26,7 +26,7 @@ export async function registerBlenderOutput(
   const type = guessMimeType(path);
   if (!['image/png', 'image/jpeg', 'image/webp', 'model/gltf-binary'].includes(type))
     throw new Error('Choose a saved PNG, JPEG, WebP or GLB Artifact.');
-  const bytes = new Uint8Array(await (await artifact.downloadBlob(file.id)).arrayBuffer());
+  const bytes = new Uint8Array(await (await artifact.downloadBlob(file)).arrayBuffer());
   if ((await hashContent(bytes)) !== fingerprint)
     throw new Error('The selected output changed. Select its current saved version.');
   if (type === 'model/gltf-binary') {

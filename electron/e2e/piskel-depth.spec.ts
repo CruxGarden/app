@@ -1,8 +1,9 @@
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { collaborator, outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -62,8 +63,8 @@ test('sprite depth: draw and animate, preserve manual pixels, native Undo, sheet
     await instance.page.keyboard.press(direction === 'undo' ? 'Meta+z' : 'Meta+Shift+z');
   }
   const toggleChat = async () => {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
   };
   async function manualStroke() {
     await toggleChat();
@@ -86,6 +87,11 @@ test('sprite depth: draw and animate, preserve manual pixels, native Undo, sheet
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Piskel/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+      await togglePanel(page, 'Toggle tasks');
     await ready();
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(page, id)).projectFolder;
@@ -175,7 +181,7 @@ test('sprite depth: draw and animate, preserve manual pixels, native Undo, sheet
     await instance.app.close();
     instance = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     await check(revised);
     await exportNativeCrux(page, archive, instance.app);

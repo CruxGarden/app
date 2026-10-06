@@ -3,6 +3,8 @@
 @import './motion.css';
 @import './shape.css';
 @import './glass.css';
+@import './plasma.css';
+@import './interaction.css';
 @import 'highlight.js/styles/github-dark.min.css';
 
 @keyframes fade-in {
@@ -28,13 +30,39 @@
 
 /* ── Fonts ─────────────────────────────────────────────── */
 
-/* Press Start 2P by CodeMan38, SIL OFL 1.1; license ships in /fonts. */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+  }
+}
+
+/* Inter by Rasmus Andersson, SIL OFL 1.1 (variable, via Fontsource); license
+   ships in /fonts. The face Tigrana reads in (Daniel, 2026-09-19). */
 @font-face {
-  font-family: 'Press Start 2P';
-  src: url('/fonts/PressStart2P-Regular.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Latin.woff2') format('woff2');
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-LatinExt.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
 }
 
 @font-face {
@@ -61,14 +89,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Outfit';
-  src: url('/fonts/Outfit-Regular.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* Wordmark only — a garden serif, not an app font. Variable file; use it at
    500-600 and display sizes: its hairline strokes drop out small on dark. */
 @font-face {
@@ -82,14 +102,15 @@
 /* ── Theme: Custom Properties ──────────────────────────── */
 
 @theme inline {
-  /* Titles use the native system stack (deliberately plain). Body stays
-     Outfit; code/editor surfaces keep JetBrains Mono via --font-mono.
-     The wordmark gets its own face so the brand can feel like a garden
-     without the UI feeling like a magazine. */
-  --font-display: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-body: 'Outfit', sans-serif;
+  /* Fallback faces; Mood tokens replace them at runtime. The font utilities
+     below reference these variables so @theme inline cannot freeze a face. */
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --font-wordmark: 'Cormorant Garamond', Georgia, serif;
+  /* The Collaboration's reading face (Mood token fontReading) */
+  --font-reading: 'Inter', sans-serif;
 
   /* ── Dimensions driven by Mood tokens ──────────────────
      Tailwind's spacing unit and default transition follow the Mood, so
@@ -139,7 +160,6 @@
   --color-accent-muted: var(--accent-muted);
   --color-error: var(--error);
   --color-error-muted: var(--error-muted);
-  --color-contrast: var(--contrast);
   --color-preview-bg: var(--preview-bg);
   --color-brand-ai: var(--brand-ai);
 
@@ -164,9 +184,11 @@
   --color-input: var(--input);
   --color-input-text: var(--input-text);
   --color-placeholder: var(--placeholder);
+  --color-subtle: var(--text-subtle);
   --color-input-outline: var(--input-outline);
   --color-input-border: var(--input-border);
   --color-input-border-active: var(--input-border-active);
+  --color-input-border-hover: var(--input-border-hover);
 
   /* ── V3: ActionButton ─────────────────────────────── */
   --color-action-button: var(--action-button);
@@ -315,7 +337,7 @@
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
 
-  /* ── V3: Overlay badges + toggle (Mood Builder-editable) ── */
+  /* ── V3: Overlay badges + toggle (editable in the Mood pane) ── */
   --color-overlay-badge: var(--overlay-badge);
   --color-overlay-badge-text: var(--overlay-badge-text);
   --color-toggle: var(--toggle);
@@ -333,13 +355,6 @@
   --color-garden-card-text: var(--garden-card-text);
   --color-garden-card-meta: var(--garden-card-meta);
   --color-garden-card-thumbnail: var(--garden-card-thumbnail);
-
-  /* ── V3: Gateway ──────────────────────────────────── */
-  --color-gateway-title: var(--gateway-title);
-  --color-gateway-subtitle: var(--gateway-subtitle);
-  --color-gateway-button: var(--gateway-button);
-  --color-gateway-button-hover: var(--gateway-button-hover);
-  --color-gateway-button-text: var(--gateway-button-text);
 
   /* ── V3: Settings ─────────────────────────────────── */
   --color-settings-panel: var(--settings-panel);
@@ -416,7 +431,6 @@
   /* Text on top of --error (danger buttons). Always white: red buttons must read the same in every theme. */
   --on-error: #ffffff;
   --error-muted: rgba(230, 57, 70, 0.15);
-  --contrast: #ffffff;
   --preview-bg: rgba(0, 0, 0, 0.2);
   --brand-ai: #d97757;
   --pane-collaboration: #d47080;
@@ -429,6 +443,7 @@
   --pane-publish: #c87ca8;
   --pane-store: #c0a070;
   --pane-media: #5fa8a0;
+  --pane-tasks: #8fbf6a;
   --bloom-bg1: #0a1810;
   --bloom-bg2: #060d08;
   --bloom-1: #1a5a99;
@@ -461,11 +476,12 @@
   --pane-header-height: 28px;
   --pane-header-radius: var(--radius-sm);
   --pane-header-padding: 6px;
+  --pane-body-padding: 8px;
   --workspace-padding: 4px;
   --overlay-badge-text: #ffffff;
   --overlay-badge: rgba(0, 0, 0, 0.55);
   --editor-background: var(--bg);
-  --pane-header-label-font: var(--font-mono);
+  --pane-header-label-font: var(--font-display);
   --pane-header-label-size: 11px;
   --pane-header-label-weight: 400;
   --pane-header-label-case: uppercase;
@@ -526,11 +542,6 @@
   --garden-card-text: #8b908d;
   --garden-card-meta: #6a6e6b;
   --garden-card-thumbnail: #0b0d0c;
-  --gateway-title: #e2e4e3;
-  --gateway-subtitle: #8b908d;
-  --gateway-button: transparent;
-  --gateway-button-hover: color-mix(in srgb, var(--accent) 18%, var(--surface));
-  --gateway-button-text: var(--accent);
   --settings-panel: #141816;
   --settings-panel-border: rgba(82, 96, 86, 0.18);
   --settings-label: #7db3a3;
@@ -618,6 +629,10 @@
   --pane-media-button-icon: #5fa8a0;
   --pane-media-button-icon-active: #5fa8a0;
   --pane-media-button-border-active: rgba(95, 168, 160, 0.3);
+  --pane-tasks-button-active: rgba(143, 191, 106, 0.15);
+  --pane-tasks-button-icon: #8fbf6a;
+  --pane-tasks-button-icon-active: #8fbf6a;
+  --pane-tasks-button-border-active: rgba(143, 191, 106, 0.3);
 
   /* Pane header tokens */
   --pane-collaboration-header: rgba(212, 112, 128, 0.15);
@@ -666,6 +681,11 @@
   --pane-media-header: rgba(95, 168, 160, 0.15);
   --pane-media-header-border: rgba(95, 168, 160, 0.2);
   --pane-media-header-text: #5fa8a0;
+  --pane-tasks-header: rgba(143, 191, 106, 0.15);
+  --pane-tasks-header-border: rgba(143, 191, 106, 0.2);
+  --pane-tasks-header-text: #8fbf6a;
+  --pane-tasks-header-icon: #8fbf6a;
+  --pane-tasks-header-close: #8fbf6a;
   --pane-store-header-icon: #c0a070;
   --pane-store-header-close: #c0a070;
   color-scheme: dark;
@@ -705,10 +725,27 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Font utilities must follow runtime Mood values, not @theme inline defaults. */
+.font-display {
+  font-family: var(--font-display);
+}
+.font-body {
+  font-family: var(--font-body);
+}
+.font-wordmark {
+  font-family: var(--font-wordmark);
+}
+
 /* Display and code faces carry their own tracking */
 .font-display,
 .font-wordmark {
   letter-spacing: var(--letter-spacing-display);
+}
+/* What the collaborator says reads like a page: the Mood's reading face,
+   a size and leading made for prose rather than for controls. */
+.font-reading {
+  font-family: var(--font-reading);
+  letter-spacing: 0;
 }
 /* …and the display face its own weight, in the base layer so a component's
    font-medium / font-bold utility still wins (today's look is unchanged). */
@@ -735,7 +772,7 @@ body {
   background-size: var(--bg-image-fit);
   background-position: var(--bg-image-position);
   background-repeat: no-repeat;
-  filter: blur(var(--bg-image-blur));
+  filter: blur(var(--bg-image-blur)) saturate(var(--life, 1)) brightness(var(--life-dim, 1));
   transform: scale(var(--bg-image-scale));
 }
 .mood-bg-dim {
@@ -945,7 +982,7 @@ html.palette-transition *::after {
   border: none;
   padding: var(--pane-border-width);
   border-radius: var(--pane-radius);
-  box-shadow: none;
+  box-shadow: var(--elevation-pane);
   background: var(--border);
   color: var(--text);
 }
@@ -1192,11 +1229,165 @@ html.palette-transition *::after {
   border-radius: var(--pane-store-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-store-pulse);
 }
+.mosaic.crux-mosaic-theme .mosaic-window.pane-tasks {
+  --panel: var(--pane-tasks-body);
+  --pane-header-close-hover: var(--pane-tasks-header-close-hover);
+  --border: var(--pane-tasks-border);
+  --radius: var(--pane-tasks-radius);
+  --text: var(--pane-tasks-text);
+  --text-muted: var(--pane-tasks-text-muted);
+  --surface: var(--pane-tasks-surface);
+  --accent: var(--pane-tasks-accent);
+  --accent-muted: var(--pane-tasks-accent-muted);
+  --surface-solid: var(--pane-tasks-surface-solid);
+  --radius-sm: var(--pane-tasks-radius-sm);
+  --caption: var(--pane-tasks-caption);
+  --heading: var(--pane-tasks-heading);
+  --pane-header-radius: var(--pane-tasks-header-radius);
+  --pane-header-height: var(--pane-tasks-header-height);
+  --pane-border-width: var(--pane-tasks-border-width);
+  --pane-header-label-case: var(--pane-tasks-header-label-case);
+  --pane-header-justify: var(--pane-tasks-header-justify);
+  --pane-texture: var(--pane-tasks-texture);
+  --pane-texture-size: var(--pane-tasks-texture-size);
+  --pane-texture-blend: var(--pane-tasks-texture-blend);
+  border-radius: var(--pane-tasks-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-tasks-pulse);
+}
+.mosaic.crux-mosaic-theme .mosaic-window.pane-mood {
+  --panel: var(--pane-mood-body);
+  --pane-header-close-hover: var(--pane-mood-header-close-hover);
+  --border: var(--pane-mood-border);
+  --radius: var(--pane-mood-radius);
+  --text: var(--pane-mood-text);
+  --text-muted: var(--pane-mood-text-muted);
+  --surface: var(--pane-mood-surface);
+  --accent: var(--pane-mood-accent);
+  --accent-muted: var(--pane-mood-accent-muted);
+  --surface-solid: var(--pane-mood-surface-solid);
+  --radius-sm: var(--pane-mood-radius-sm);
+  --caption: var(--pane-mood-caption);
+  --heading: var(--pane-mood-heading);
+  --pane-header-radius: var(--pane-mood-header-radius);
+  --pane-header-height: var(--pane-mood-header-height);
+  --pane-border-width: var(--pane-mood-border-width);
+  --pane-header-label-case: var(--pane-mood-header-label-case);
+  --pane-header-justify: var(--pane-mood-header-justify);
+  --pane-texture: var(--pane-mood-texture);
+  --pane-texture-size: var(--pane-mood-texture-size);
+  --pane-texture-blend: var(--pane-mood-texture-blend);
+  border-radius: var(--pane-mood-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-mood-pulse);
+}
+.mosaic.crux-mosaic-theme .mosaic-window.pane-synth {
+  --panel: var(--pane-synth-body);
+  --pane-header-close-hover: var(--pane-synth-header-close-hover);
+  --border: var(--pane-synth-border);
+  --radius: var(--pane-synth-radius);
+  --text: var(--pane-synth-text);
+  --text-muted: var(--pane-synth-text-muted);
+  --surface: var(--pane-synth-surface);
+  --accent: var(--pane-synth-accent);
+  --accent-muted: var(--pane-synth-accent-muted);
+  --surface-solid: var(--pane-synth-surface-solid);
+  --radius-sm: var(--pane-synth-radius-sm);
+  --caption: var(--pane-synth-caption);
+  --heading: var(--pane-synth-heading);
+  --pane-header-radius: var(--pane-synth-header-radius);
+  --pane-header-height: var(--pane-synth-header-height);
+  --pane-border-width: var(--pane-synth-border-width);
+  --pane-header-label-case: var(--pane-synth-header-label-case);
+  --pane-header-justify: var(--pane-synth-header-justify);
+  --pane-texture: var(--pane-synth-texture);
+  --pane-texture-size: var(--pane-synth-texture-size);
+  --pane-texture-blend: var(--pane-synth-texture-blend);
+  border-radius: var(--pane-synth-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-synth-pulse);
+}
+.mosaic.crux-mosaic-theme .mosaic-window.pane-browser {
+  --panel: var(--pane-browser-body);
+  --pane-header-close-hover: var(--pane-browser-header-close-hover);
+  --border: var(--pane-browser-border);
+  --radius: var(--pane-browser-radius);
+  --text: var(--pane-browser-text);
+  --text-muted: var(--pane-browser-text-muted);
+  --surface: var(--pane-browser-surface);
+  --accent: var(--pane-browser-accent);
+  --accent-muted: var(--pane-browser-accent-muted);
+  --surface-solid: var(--pane-browser-surface-solid);
+  --radius-sm: var(--pane-browser-radius-sm);
+  --caption: var(--pane-browser-caption);
+  --heading: var(--pane-browser-heading);
+  --pane-header-radius: var(--pane-browser-header-radius);
+  --pane-header-height: var(--pane-browser-header-height);
+  --pane-border-width: var(--pane-browser-border-width);
+  --pane-header-label-case: var(--pane-browser-header-label-case);
+  --pane-header-justify: var(--pane-browser-header-justify);
+  --pane-texture: var(--pane-browser-texture);
+  --pane-texture-size: var(--pane-browser-texture-size);
+  --pane-texture-blend: var(--pane-browser-texture-blend);
+  border-radius: var(--pane-browser-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-browser-pulse);
+}
+.mosaic.crux-mosaic-theme .mosaic-window.pane-settings {
+  --panel: var(--pane-settings-body);
+  --pane-header-close-hover: var(--pane-settings-header-close-hover);
+  --border: var(--pane-settings-border);
+  --radius: var(--pane-settings-radius);
+  --text: var(--pane-settings-text);
+  --text-muted: var(--pane-settings-text-muted);
+  --surface: var(--pane-settings-surface);
+  --accent: var(--pane-settings-accent);
+  --accent-muted: var(--pane-settings-accent-muted);
+  --surface-solid: var(--pane-settings-surface-solid);
+  --radius-sm: var(--pane-settings-radius-sm);
+  --caption: var(--pane-settings-caption);
+  --heading: var(--pane-settings-heading);
+  --pane-header-radius: var(--pane-settings-header-radius);
+  --pane-header-height: var(--pane-settings-header-height);
+  --pane-border-width: var(--pane-settings-border-width);
+  --pane-header-label-case: var(--pane-settings-header-label-case);
+  --pane-header-justify: var(--pane-settings-header-justify);
+  --pane-texture: var(--pane-settings-texture);
+  --pane-texture-size: var(--pane-settings-texture-size);
+  --pane-texture-blend: var(--pane-settings-texture-blend);
+  border-radius: var(--pane-settings-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-settings-pulse);
+}
+.mosaic.crux-mosaic-theme .mosaic-window.pane-explore {
+  --panel: var(--pane-explore-body);
+  --pane-header-close-hover: var(--pane-explore-header-close-hover);
+  --border: var(--pane-explore-border);
+  --radius: var(--pane-explore-radius);
+  --text: var(--pane-explore-text);
+  --text-muted: var(--pane-explore-text-muted);
+  --surface: var(--pane-explore-surface);
+  --accent: var(--pane-explore-accent);
+  --accent-muted: var(--pane-explore-accent-muted);
+  --surface-solid: var(--pane-explore-surface-solid);
+  --radius-sm: var(--pane-explore-radius-sm);
+  --caption: var(--pane-explore-caption);
+  --heading: var(--pane-explore-heading);
+  --pane-header-radius: var(--pane-explore-header-radius);
+  --pane-header-height: var(--pane-explore-header-height);
+  --pane-border-width: var(--pane-explore-border-width);
+  --pane-header-label-case: var(--pane-explore-header-label-case);
+  --pane-header-justify: var(--pane-explore-header-justify);
+  --pane-texture: var(--pane-explore-texture);
+  --pane-texture-size: var(--pane-explore-texture-size);
+  --pane-texture-blend: var(--pane-explore-texture-blend);
+  border-radius: var(--pane-explore-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-explore-pulse);
+}
 
 /* Clip overflow on body (not window) so drop target overlays remain visible */
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {
   overflow: hidden;
   contain: layout style;
+  /* Breathing room between the frame and the contents (Daniel: "the crux
+     workspace panels need more padding"); a Mood token, so Plasma opens
+     it up further than a dense Mood would. */
+  padding: var(--pane-body-padding);
   /* texture image (asset) blended over the body color */
   background:
     var(--pane-texture) center / var(--pane-texture-size) repeat,
@@ -1204,10 +1395,33 @@ html.palette-transition *::after {
   background-blend-mode: var(--pane-texture-blend), normal;
   border-radius: 0 0 var(--pane-inner-radius) var(--pane-inner-radius);
 }
+/* The Tasks pane is a pane like any other (Daniel, 2026-09-19): a list when
+   it stands tall, a row when it is dragged into a strip across the top —
+   the shape decides, not the pane. */
+.task-pane {
+  container-type: size;
+}
+@container (min-aspect-ratio: 4 / 1) {
+  .task-pane {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .task-pane-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .task-pane-list a {
+    gap: 0.5rem;
+  }
+}
 
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
   height: auto;
   padding: var(--pane-header-padding);
+  padding-top: 12px;
   background: var(--panel);
   border-radius: var(--pane-inner-radius) var(--pane-inner-radius) 0 0;
   border-bottom: none;
@@ -1218,18 +1432,28 @@ html.palette-transition *::after {
   cursor: grabbing;
 }
 .mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar {
+  container-type: inline-size;
+  container-name: pane-header;
   display: flex;
   align-items: center;
   justify-content: var(--pane-header-justify);
   width: 100%;
-  height: var(--pane-header-height);
-  padding: 0 10px;
-  border-radius: var(--pane-header-radius);
+  min-height: max(28px, var(--pane-header-height));
+  padding: 0 12px;
+  border-radius: max(var(--pane-header-radius), var(--pane-inner-radius));
   border: none;
-  transition: filter 150ms;
+  transition:
+    background-color 150ms,
+    filter 150ms;
 }
-.mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
+/* The header is the handle: under the pointer it lights as a panel of its
+   own and the cursor says it can be moved (Daniel, 2026-09-19). */
+.mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar:hover {
   filter: brightness(var(--pane-header-hover-brightness));
+  cursor: grab;
+}
+.mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar:active {
+  cursor: grabbing;
 }
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-title {
   display: none;
@@ -1254,6 +1478,26 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .pane-toolbar-close:hover {
   color: var(--pane-header-close-hover);
+}
+
+/* Preserve both actions when the title shares a narrow header. Appearance
+   still comes from the Mood; the compact form only changes its layout. */
+.pane-focus-icon {
+  display: none;
+}
+@container pane-header (max-width: 200px) {
+  .pane-toolbar-focus {
+    width: 24px;
+    min-height: 24px;
+    padding-inline: 0;
+  }
+  .pane-focus-label {
+    display: none;
+  }
+  .pane-focus-icon {
+    display: flex;
+    justify-content: center;
+  }
 }
 
 /* Frame pulse — a pane's --pane-<name>-pulse token is the iteration count:
@@ -1384,6 +1628,109 @@ html.palette-transition *::after {
 }
 @media (prefers-reduced-motion: reduce) {
   .mood-bar-dance {
+    animation: none;
+  }
+}
+
+/* ── The plasma button (ui/PlasmaButton) ──────────────────────────
+   A button that looks like a pane: the landing page's mossy frost for a
+   plate, an iridescent hairline for a rim, and on hover the iridescence
+   fills it — a blurred swirl — and it glows. Its own paint everywhere: a
+   shape drawn by the ground inside a pane's shape fuses into it and is
+   never seen, and the ground cannot reach into a dialog. */
+@property --plasma-swirl {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.plasma-button {
+  --plasma-button-rim: conic-gradient(
+    from 210deg,
+    rgb(159 243 228 / 0.7),
+    rgb(176 75 214 / 0.7),
+    rgb(255 210 122 / 0.6),
+    rgb(95 210 165 / 0.7),
+    rgb(110 168 255 / 0.7),
+    rgb(159 243 228 / 0.7)
+  );
+  color: var(--text);
+  background: var(--plasma-chrome-plate, color-mix(in srgb, var(--panel) 78%, transparent));
+  border: 1px solid transparent;
+  backdrop-filter: blur(24px) saturate(105%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 1px 2px rgb(0 0 0 / 0.25);
+  transition:
+    box-shadow var(--motion-ms-fast, 160ms) ease-out,
+    color var(--motion-ms-fast, 160ms) ease-out;
+}
+/* The rim: the iridescent gradient masked down to a one-pixel ring. */
+.plasma-button::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--plasma-button-rim);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--motion-ms-fast, 160ms) ease-out;
+}
+.plasma-button-swirl {
+  position: absolute;
+  inset: -45%;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--plasma-swirl),
+    #9ff3e4,
+    #b04bd6,
+    #ffd27a,
+    #5fd2a5,
+    #6ea8ff,
+    #9ff3e4
+  );
+  filter: blur(16px) saturate(140%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 380ms ease-out;
+  animation: plasma-swirl 5s linear infinite;
+  animation-play-state: paused;
+}
+@keyframes plasma-swirl {
+  to {
+    --plasma-swirl: 360deg;
+  }
+}
+.plasma-button:hover:not(:disabled),
+.plasma-button:focus-visible {
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    0 0 28px color-mix(in srgb, var(--accent) 50%, transparent),
+    0 4px 18px rgb(0 0 0 / 0.3);
+}
+.plasma-button:hover:not(:disabled)::after,
+.plasma-button:focus-visible::after {
+  opacity: 1;
+}
+.plasma-button:hover:not(:disabled) .plasma-button-swirl,
+.plasma-button:focus-visible .plasma-button-swirl {
+  opacity: 0.55;
+  animation-play-state: running;
+}
+.plasma-button:active:not(:disabled) .plasma-button-swirl {
+  opacity: 0.8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .plasma-button-swirl {
     animation: none;
   }
 }

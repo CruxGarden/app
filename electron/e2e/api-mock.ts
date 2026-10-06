@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -27,6 +28,17 @@ export interface MockApi {
   url: string;
   state: {
     failPublish: boolean;
+    includedMessages?: Record<string, unknown>[];
+    includedImages?: Record<string, unknown>[];
+    failIncludedImages?: boolean;
+    failUnpublish?: boolean;
+    failAccountClosure?: boolean;
+    accountClosed?: boolean;
+    accountClosureSupported?: boolean;
+    failPublishedDownloadPath?: string;
+    publishedDownloadDelayMs?: number;
+    /** Refuse one recovery listing page to exercise visible retry. */
+    failCruxPage?: number;
     /** This server's own URL (for canned file links). */
     baseUrl: string;
     publishedVersion: number;
@@ -38,13 +50,33 @@ export interface MockApi {
     published: Record<string, PublishedFile[]>;
     /** Answer every sync push with 402 (over the plan's storage) */
     syncOverLimit?: boolean;
+    /** Find media: every file download answers 503 (the catalogue still lists it) */
+    failMediaFile?: boolean;
+    /** Publish: drop the connection while the upload is still arriving (a mid-upload disconnect) */
+    dropPublish?: boolean;
     /** Extra bytes counted against the storage budget (usage/me) */
     storageUsedBytes?: number;
     includedUsagePercent?: number;
     includedUncertain?: number;
     failIncludedUsage?: boolean;
+    /** Answer GET /usage/me with 503 (Settings → Usage's error state) */
+    failUsage?: boolean;
+    /** Refuse backup discovery independently; retained backup data is unchanged. */
+    failSyncGardenStatus?: boolean;
+    failSyncCruxList?: boolean;
     /** The email of the last login; other@example.com is a second account */
     loginEmail?: string;
+    /** GET /account role; 'admin' opens the operator routes (/admin/*), anyone else gets 403 */
+    accountRole?: 'author' | 'admin';
+    /** Operator fixtures: open reports and suspended accounts (id → reason) */
+    adminReports?: Array<{
+      id: string;
+      cruxId: string;
+      reason: string;
+      status: string;
+      note?: string;
+    }>;
+    suspended?: Record<string, string>;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
     billing: { planId: string; status: string; customer: boolean; checkouts: number };
     sync: {
@@ -66,6 +98,10 @@ export interface MockApi {
         verifies: number;
       }
     >;
+    /** Reports visitors sent about published creations (POST /explore/reports). */
+    reports?: Array<Record<string, unknown>>;
+    /** Answer the next reports with this status instead of 201 (429, 500…). */
+    reportStatus?: number;
     /** Author-side Crux Store rows (what visitors wrote); seeded on first read. */
     store?: Array<{
       key: string;
@@ -173,6 +209,12 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       res.end(bytes);
     };
     if (method === 'OPTIONS') return send(204, null);
+    if (state.dropPublish && method === 'POST' && /^\/cruxes\/[^/]+\/publish$/.test(path)) {
+      // The socket dies under the upload: no status, no body — a network failure.
+      log.push(`${method} ${path} -> (dropped)`);
+      req.socket.destroy();
+      return;
+    }
     const rawBuf = await readBody(req);
     const raw = rawBuf.toString();
     const bodyJson = (): Record<string, unknown> => {
@@ -182,17 +224,82 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         return {}; // multipart (publish) — parsed separately
       }
     };
-    const publicCrux = (c: Record<string, unknown>) => ({
-      ...c,
+    // Tools carry the API's sanitized trust summary in public meta (ADR 0084).
+    const withToolSummary = (c: Record<string, unknown>) => {
+      if (c.kind !== 'tool') return c;
+      const meta = (c.meta as Record<string, unknown> | undefined) ?? {};
+      const manifest = (meta.toolManifest as Record<string, unknown> | undefined) ?? {};
+      const pkg = (meta.toolPackage as Record<string, unknown> | undefined) ?? {};
+      return {
+        ...c,
+        meta: {
+          ...meta,
+          toolSummary: {
+            name: String(manifest.name ?? c.title ?? ''),
+            version: manifest.releaseVersion ?? manifest.version,
+            publisher: AUTHOR.username,
+            sizeBytes: typeof pkg.size === 'number' ? pkg.size : undefined,
+            permissions: [],
+            sandboxed: true,
+          },
+        },
+      };
+    };
+    const publicCrux = (raw: Record<string, unknown>) => ({
+      ...withToolSummary(raw),
       author_username: AUTHOR.username,
       author_display_name: AUTHOR.displayName,
       author_meta: {},
-      tags: ((c.meta as Record<string, unknown> | undefined)?.tags as string[] | undefined) ?? [],
+      tags: ((raw.meta as Record<string, unknown> | undefined)?.tags as string[] | undefined) ?? [],
     });
 
     // ── Explore (public) ──
-    if (path === '/explore/tags') return send(200, { data: [] });
+    if (path === '/explore/reports' && method === 'POST') {
+      if (state.reportStatus) return send(state.reportStatus, { message: 'refused' });
+      const report = bodyJson();
+      const reasons = ['illegal', 'harmful', 'spam', 'copyright', 'other'];
+      if (typeof report.cruxId !== 'string' || !reasons.includes(String(report.reason)))
+        return send(400, { message: 'invalid report' });
+      (state.reports ??= []).push(report);
+      return send(201, { ok: true });
+    }
+    if (path === '/explore/tags') {
+      // The tags people used, most-used first, optionally for one kind.
+      const kind = parsedUrl.searchParams.get('kind');
+      const counts = new Map<string, number>();
+      for (const c of Object.values(state.cruxes)) {
+        // Like the API: discoverable defaults to false, so only an explicit true is listed.
+        if (c.visibility !== 'public' || c.discoverable !== true) continue;
+        if (kind && c.kind !== kind) continue;
+        const tags = (c.meta as { tags?: string[] } | undefined)?.tags ?? [];
+        for (const t of tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+      }
+      const data = [...counts]
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      return send(200, { data });
+    }
+    // Install links: one published Tool or Mood by id, Discoverable not required.
+    const byId = /^\/explore\/cruxes\/([^/]+)$/.exec(path);
+    if (byId && method === 'GET') {
+      const c = state.cruxes[byId[1]!];
+      return c && c.visibility === 'public' && (c.kind === 'tool' || c.kind === 'mood')
+        ? send(200, publicCrux(c))
+        : send(404, { message: 'Not found' });
+    }
     if (path === '/explore' && method === 'GET') {
+      // People: the one author this mock knows, when the term fits.
+      if (parsedUrl.searchParams.get('type') === 'authors') {
+        const term = (parsedUrl.searchParams.get('q') ?? '').toLowerCase().replace(/^@/, '');
+        const hit =
+          !term ||
+          AUTHOR.username.toLowerCase().includes(term) ||
+          String(AUTHOR.displayName ?? '')
+            .toLowerCase()
+            .includes(term);
+        res.setHeader('Pagination', JSON.stringify({ currentPage: 1, lastPage: 1 }));
+        return send(200, hit ? [AUTHOR] : []);
+      }
       const kind = parsedUrl.searchParams.get('kind');
       let q = parsedUrl.searchParams.get('q')?.toLowerCase() ?? '';
       let author = parsedUrl.searchParams.get('author')?.toLowerCase() ?? '';
@@ -205,7 +312,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         q = '';
       }
       const items = Object.values(state.cruxes)
-        .filter((c) => c.visibility === 'public' && c.discoverable !== false)
+        .filter((c) => c.visibility === 'public' && c.discoverable === true)
         .filter((c) => !kind || c.kind === kind)
         .filter(() => !author || AUTHOR.username.toLowerCase().startsWith(author))
         .filter((c) => {
@@ -232,7 +339,13 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         return send(404, { statusCode: 404, message: 'Author not found' });
       if (!pubAuthor[2]) return send(200, AUTHOR);
       const list = Object.values(state.cruxes).filter(
-        (c) => (c.meta as Record<string, unknown> | undefined)?.publishedAt,
+        (c) =>
+          (c.meta as Record<string, unknown> | undefined)?.publishedAt &&
+          c.visibility === 'public' &&
+          (!parsedUrl.searchParams.get('kind') ||
+            (parsedUrl.searchParams.get('kind') === 'creations'
+              ? !['tool', 'mood'].includes(String(c.kind))
+              : c.kind === parsedUrl.searchParams.get('kind'))),
       );
       res.setHeader(
         'Pagination',
@@ -247,7 +360,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     );
     if (pub && method === 'GET') {
       const crux = Object.values(state.cruxes).find((c) => c.slug === pub[2]);
-      if (!crux) return send(404, { statusCode: 404, message: 'Crux not found' });
+      if (!crux || (pub[1] !== crux.authorId && pub[1] !== AUTHOR.username))
+        return send(404, { statusCode: 404, message: 'Crux not found' });
       const files = state.published[crux.id as string] ?? [];
       if (!pub[3]) return send(200, crux);
       if (!pub[4])
@@ -263,6 +377,24 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       const idx = parseInt(pub[4].replace('art-', ''), 10);
       const f = files[idx];
       if (!f) return send(404, { statusCode: 404, message: 'No file' });
+      if (state.failPublishedDownloadPath === f.path)
+        return send(503, { message: 'Published download interrupted' });
+      if (state.publishedDownloadDelayMs) {
+        log.push(`${method} ${path} -> 200 (streaming)`);
+        res.writeHead(200, {
+          'Content-Type': f.mime,
+          'Content-Length': f.bytes.length,
+          'Access-Control-Allow-Origin': '*',
+        });
+        const split = Math.max(1, Math.floor(f.bytes.length / 2));
+        res.write(f.bytes.subarray(0, split));
+        const timer = setTimeout(
+          () => res.end(f.bytes.subarray(split)),
+          state.publishedDownloadDelayMs,
+        );
+        res.on('close', () => clearTimeout(timer));
+        return;
+      }
       return sendRaw(200, f.mime, f.bytes);
     }
 
@@ -270,9 +402,11 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     if (path.startsWith('/openverse/v1/images')) {
       const q = parsedUrl.searchParams.get('q') ?? '';
       const file = `${state.baseUrl}/media-file/seedling.png`;
+      // "nothing" is the one query the catalogue has no pictures for (the empty state).
+      const hits = !!q && q !== 'nothing';
       return send(200, {
-        result_count: q ? 2 : 0,
-        results: q
+        result_count: hits ? 2 : 0,
+        results: hits
           ? [
               {
                 id: 'img-1',
@@ -360,6 +494,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       });
     }
     if (path.startsWith('/media-file/')) {
+      if (state.failMediaFile) return send(503, { message: 'The file host is down' });
       const name = path.slice('/media-file/'.length);
       const png = readFileSync(join(__dirname, 'fixtures/documents/seal.png'));
       const wav = Buffer.concat([
@@ -395,7 +530,13 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       if (!file) return send(404, { message: 'Not found' });
       let bytes = file.bytes;
       if (file.path.endsWith('.html')) {
-        const tag = `<script data-crux-inject>window.crux=window.crux||{};window.crux.publish={cruxId:${JSON.stringify(servedPublished[1])},apiBase:${JSON.stringify(state.baseUrl)}};</script>`;
+        const tag = `<script data-crux-inject>window.crux=window.crux||{};window.crux.publish={cruxId:${JSON.stringify(servedPublished[1])},apiBase:${JSON.stringify(state.baseUrl)}};(function(){
+          var base=${JSON.stringify(state.baseUrl)},id=${JSON.stringify(servedPublished[1])},token=null;
+          function call(path,method,body){return fetch(base+path,{method:method||'GET',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})}).then(function(r){if(!r.ok)throw new Error('Request refused');return r.status===204?null:r.json();});}
+          window.crux.auth={requestCode:function(email){return call('/published-auth/'+id+'/code','POST',{email:email});},login:function(email,code){return call('/published-auth/'+id+'/login','POST',{email:email,code:code}).then(function(s){token=s.accessToken;window.crux.visitor=s.visitor;return s.visitor;});},profile:function(){return Promise.resolve(window.crux.visitor||null);}};
+          window.crux.store={get:function(k){return call('/store/'+id+'/'+encodeURIComponent(k)).then(function(d){return d.value;});},set:function(k,v,o){return call('/store/'+id+'/'+encodeURIComponent(k),'PUT',{value:v,mode:o.mode});}};
+          window.crux.whenReady=function(){return Promise.resolve();};
+        })();</script>`;
         const html = bytes.toString('utf8');
         bytes = Buffer.from(
           html.includes('</head>') ? html.replace('</head>', `${tag}</head>`) : tag + html,
@@ -408,12 +549,86 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       res.end(bytes);
       return;
     }
+    if (/^\/published-auth\/[^/]+\/code$/.test(path) && method === 'POST')
+      return send(200, { message: 'sent' });
+    if (/^\/published-auth\/[^/]+\/login$/.test(path) && method === 'POST')
+      return send(200, {
+        accessToken: 'pv_fixture',
+        visitor: { id: 'visitor', username: 'tester', name: 'Tester' },
+      });
+    // Operator routes (ADR 0081/0083/0084): admin only.
+    if (path.startsWith('/admin/')) {
+      if (state.accountRole !== 'admin') return send(403, { message: 'Forbidden' });
+      const reports = (state.adminReports ??= []);
+      const suspended = (state.suspended ??= {});
+      const accountView = (id: string) => ({
+        id,
+        email: id === 'acct-2' ? 'other@example.com' : 'tester@example.com',
+        username: id === 'acct-2' ? 'other' : 'tester',
+        suspended: suspended[id] ? '2026-10-05T00:00:00.000Z' : null,
+        suspendedReason: suspended[id] ?? null,
+      });
+      if (path === '/admin/reports/summary' && method === 'GET')
+        return send(200, {
+          open: reports.filter((r) => r.status === 'open').length,
+          resolvedLast30d: reports.filter((r) => r.status !== 'open').length,
+          takenDown: 0,
+        });
+      if (path === '/admin/reports' && method === 'GET') {
+        const status = parsedUrl.searchParams.get('status') ?? 'open';
+        return send(
+          200,
+          reports
+            .filter((r) => r.status === status)
+            .map((r) => ({ ...r, targetPath: '/tester/' + r.cruxId, created: AUTHOR.created })),
+        );
+      }
+      const report = /^\/admin\/reports\/([^/]+)$/.exec(path);
+      if (report && method === 'PATCH') {
+        const found = reports.find((r) => r.id === report[1]);
+        if (!found) return send(404, {});
+        found.status = String(bodyJson().status);
+        return send(200, found);
+      }
+      if (path === '/admin/takedowns' && method === 'GET') return send(200, []);
+      if (path === '/admin/accounts' && method === 'GET')
+        return send(200, ['acct-1', 'acct-2'].map(accountView));
+      const acct = /^\/admin\/accounts\/([^/]+)\/(suspend|unsuspend)$/.exec(path);
+      if (acct && method === 'POST') {
+        if (acct[2] === 'suspend') suspended[acct[1]] = String(bodyJson().reason ?? '');
+        else delete suspended[acct[1]];
+        return send(200, accountView(acct[1]));
+      }
+      return send(404, {});
+    }
+    if (path === '/account/closure' && method === 'GET')
+      return state.accountClosureSupported === false
+        ? send(404, {})
+        : send(200, { version: 1, confirmationText: 'DELETE MY ACCOUNT' });
+    if (path === '/account' && method === 'DELETE') {
+      if (bodyJson().confirmationText !== 'DELETE MY ACCOUNT')
+        return send(400, { message: 'Confirmation does not match' });
+      if (state.failAccountClosure)
+        return send(503, { message: 'Backup cleanup failed. Retry account closure.' });
+      state.accountClosed = true;
+      state.cruxes = {};
+      state.published = {};
+      state.sync.garden = null;
+      state.sync.cruxes = {};
+      state.billing.status = 'canceled';
+      return send(204, null);
+    }
     if (path === '/auth/code' && method === 'POST') return send(200, { message: 'sent' });
     if (path === '/auth/login' && method === 'POST') {
-      state.loginEmail = String(bodyJson().email ?? 'tester@example.com');
+      const body = bodyJson();
+      // The one code that works is 123456; anything else is a wrong or expired code.
+      if (body.code !== undefined && String(body.code) !== '123456')
+        return send(401, { statusCode: 401, message: 'Invalid or expired code' });
+      state.loginEmail = String(body.email ?? 'tester@example.com');
       return send(200, { accessToken: 'test-access', refreshToken: 'test-refresh' });
     }
     if (path === '/auth/profile' && method === 'GET') {
+      if (state.accountClosed) return send(401, { message: 'Account closed' });
       // other@example.com is a second account with its own author (two-machines.spec)
       const other = state.loginEmail === 'other@example.com';
       const author = other
@@ -428,7 +643,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       return send(200, {
         id: other ? 'acct-2' : 'acct-1',
         email: state.loginEmail ?? 'tester@example.com',
-        role: 'author',
+        role: state.accountRole ?? 'author',
         homeId: 'home-1',
         created: AUTHOR.created,
         updated: AUTHOR.updated,
@@ -436,13 +651,30 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       });
     }
     if (path === '/auth/logout') return send(200, {});
-    if (path === '/authors/check-username') return send(200, { available: true });
+    // 'taken' is the one username someone else already has.
+    if (path === '/authors/check-username')
+      return send(200, { available: parsedUrl.searchParams.get('username') !== 'taken' });
     if (path.startsWith('/authors/') && method === 'PATCH')
       return send(200, { ...AUTHOR, ...bodyJson() });
     if (path.startsWith('/authors/') && path.endsWith('/avatar')) return send(200, AUTHOR);
 
     // The account's cruxes (what publish upserted) — the Recover section reads this
-    if (path === '/cruxes' && method === 'GET') return send(200, Object.values(state.cruxes));
+    if (path === '/cruxes' && method === 'GET') {
+      const page = Number(parsedUrl.searchParams.get('page') || 1);
+      const perPage = Math.min(Number(parsedUrl.searchParams.get('perPage') || 25), 100);
+      if (state.failCruxPage === page) return send(503, { message: 'Account listing unavailable' });
+      const items = Object.values(state.cruxes);
+      res.setHeader(
+        'Pagination',
+        JSON.stringify({
+          currentPage: page,
+          perPage,
+          total: items.length,
+          lastPage: Math.max(1, Math.ceil(items.length / perPage)),
+        }),
+      );
+      return send(200, items.slice((page - 1) * perPage, page * perPage));
+    }
 
     if (path === '/cruxes' && method === 'POST') {
       const body = bodyJson();
@@ -476,6 +708,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         storeKeys: storageBytes ? 2 : 0,
         storeReads: storageBytes ? 30 : 0,
         storeWrites: storageBytes ? 4 : 0,
+        fnCalls: 0,
+        fnMs: 0,
       };
     };
     // ── billing (ADR 0012): mock provider — checkout "pays" instantly
@@ -508,15 +742,103 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       canManage: state.billing.customer,
       provider: 'mock',
     });
+    if (path === '/inference/v1/messages' && method === 'POST') {
+      if (!req.headers.authorization?.startsWith('Bearer '))
+        return send(401, { message: 'Sign in' });
+      const body = bodyJson();
+      (state.includedMessages ??= []).push(body);
+      log.push('POST /inference/v1/messages -> 200');
+      const messages = body.messages as { role: string; content: unknown }[];
+      const last = messages.at(-1);
+      const editingImage = JSON.stringify(last?.content).includes('background lighter');
+      const makingImage = editingImage || JSON.stringify(last?.content).includes('Make a banner');
+      const toolName = makingImage ? 'generate_image' : 'write_file';
+      const toolInput = makingImage
+        ? {
+            path: 'banner.png',
+            prompt: editingImage ? 'A lighter background' : 'A garden banner',
+            ...(editingImage ? { source_path: 'banner.png' } : {}),
+          }
+        : { path: 'index.html', content: '<h1>Made with included AI</h1>' };
+      const toolResult =
+        Array.isArray(last?.content) &&
+        last.content.some((p: { type?: string }) => p.type === 'tool_result') &&
+        !last.content.some(
+          (p: { type?: string; text?: string }) =>
+            p.type === 'text' && !p.text?.startsWith('<workspace_context>'),
+        );
+      const events = [
+        {
+          type: 'message_start',
+          message: {
+            id: 'included-fixture',
+            type: 'message',
+            role: 'assistant',
+            model: 'claude-sonnet-5-5',
+            content: [],
+            stop_reason: null,
+            stop_sequence: null,
+            usage: { input_tokens: 100, output_tokens: 1 },
+          },
+        },
+        {
+          type: 'content_block_start',
+          index: 0,
+          content_block: toolResult
+            ? { type: 'text', text: '' }
+            : { type: 'tool_use', id: 'write-included', name: toolName, input: {} },
+        },
+        {
+          type: 'content_block_delta',
+          index: 0,
+          delta: toolResult
+            ? { type: 'text_delta', text: 'Your included creation is ready.' }
+            : { type: 'input_json_delta', partial_json: JSON.stringify(toolInput) },
+        },
+        { type: 'content_block_stop', index: 0 },
+        {
+          type: 'message_delta',
+          delta: { stop_reason: toolResult ? 'end_turn' : 'tool_use', stop_sequence: null },
+          usage: { output_tokens: 30 },
+        },
+        { type: 'message_stop' },
+      ];
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(
+        events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(''),
+      );
+      return;
+    }
+    if (path === '/inference/images' && method === 'POST') {
+      if (!req.headers.authorization?.startsWith('Bearer '))
+        return send(401, { message: 'Sign in' });
+      const body = bodyJson();
+      (state.includedImages ??= []).push(body);
+      if (state.failIncludedImages)
+        return send(503, {
+          message: 'Included images are temporarily unavailable. Please try again shortly.',
+        });
+      return send(200, {
+        image: body.image
+          ? 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGPY9+wEEDFAKABDtgmxkV+TzgAAAABJRU5ErkJggg=='
+          : 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGMQCVAGIgYIBQAOlgIdBN2aogAAAABJRU5ErkJggg==',
+        mimeType: 'image/png',
+        model: 'gpt-image-2.5-flare',
+        requestId: req.headers['x-request-id'],
+      });
+    }
     if (path === '/inference/usage' && method === 'GET') {
       if (state.failIncludedUsage) return send(503, { message: 'Unavailable' });
-      const plus = state.billing.planId === 'gardener_plus';
       const percent = state.includedUsagePercent ?? 25;
       return send(200, {
         available: true,
+        imagesAvailable: true,
         eligible: state.billing.planId !== 'free',
         planId: state.billing.planId,
-        model: plus ? 'claude-sonnet-5' : 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-5-5',
         asOf: new Date().toISOString(),
         windows:
           state.billing.planId === 'free'
@@ -594,6 +916,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     }
     // ── sync: garden backup + crux archives (multipart PUT), metered into usage
     if (path === '/sync/garden/status' && method === 'GET') {
+      if (state.failSyncGardenStatus)
+        return send(503, { message: 'Garden backup status unavailable' });
       return state.sync.garden
         ? send(200, { syncedAt: state.sync.garden.syncedAt, size: state.sync.garden.bytes })
         : send(404, { statusCode: 404, message: 'No garden backup found' });
@@ -617,6 +941,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       return send(204, null);
     }
     if (path === '/sync/crux' && method === 'GET') {
+      if (state.failSyncCruxList) return send(503, { message: 'Crux backup list unavailable' });
       return send(
         200,
         Object.entries(state.sync.cruxes).map(([cruxId, c]) => ({
@@ -695,6 +1020,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       ]);
     }
     if (path === '/usage/me' && method === 'GET') {
+      if (state.failUsage) return send(503, { message: 'Usage unavailable' });
       const cruxes = Object.keys(state.published).map(usageFor);
       const syncCruxes = Object.entries(state.sync.cruxes);
       const gardenBytes = state.sync.garden?.bytes ?? 0;
@@ -749,6 +1075,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         keys: cruxes.reduce((n, c) => n + c.storeKeys, 0),
         reads: cruxes.reduce((n, c) => n + c.storeReads, 0),
         writes: cruxes.reduce((n, c) => n + c.storeWrites, 0),
+        fnCalls: 0,
+        fnMs: 0,
         requests: 0,
       };
       store.requests = store.reads + store.writes;
@@ -828,7 +1156,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         return send(200, doc);
       }
       if (storeIo?.[2] === 'import' && method === 'POST') {
-        const doc = body as {
+        const doc = bodyJson() as {
           public?: Record<string, unknown>;
           protected?: Record<string, Record<string, unknown>>;
         };
@@ -932,10 +1260,24 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
           bytes: f.bytes,
         }));
         state.publishedVersion++;
+        const toolIndex = state.published[id]!.findIndex(
+          (file) => file.path === '_crux/tool-package.zip',
+        );
+        const toolFile = state.published[id]![toolIndex];
         const meta = {
           ...(((current ?? {}).meta as Record<string, unknown>) ?? {}),
           publishedAt: new Date().toISOString(),
           publishedVersion: state.publishedVersion,
+          ...(toolFile
+            ? {
+                toolPackage: {
+                  version: 1,
+                  artifactId: `art-${toolIndex}`,
+                  fingerprint: createHash('sha256').update(toolFile.bytes).digest('hex'),
+                  size: toolFile.bytes.length,
+                },
+              }
+            : {}),
         };
         const updated = { ...(current ?? { id }), meta, visibility: 'public' };
         state.cruxes[id] = updated;
@@ -995,6 +1337,10 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       }
       if (sub === '/tags' && method === 'PUT') return send(200, []);
       if (sub === '/unpublish' && method === 'POST') {
+        if (state.failUnpublish)
+          return send(500, {
+            message: 'Could not finish removing the published site. Please retry.',
+          });
         delete state.cruxes[id];
         delete state.published[id];
         if (state.crux?.id === id) state.crux = null;

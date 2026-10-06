@@ -1,15 +1,16 @@
+import { togglePanel, expectPanelBarReady } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { finishSetupAtHome, storedCrux } from './multi-crux-helpers';
 
 /**
  * B0 — Growth as an API, with the scripted model (CRUX_AI_MOCK=1):
  * "rewind" makes the model snapshot ("Checkpoint"), break hello.txt, and
  * restore the checkpoint. The file comes back on disk and in the editor, and
- * the history holds both the checkpoint and the safety snapshot the restore
- * took first — also after leaving and re-opening the crux, which is how the
- * persisted chain (not the in-memory list) is checked.
+ * Growth holds only the explicitly marked checkpoint. Restore safety lives in
+ * Edit history and the preserved conversation remains coherent after reopening.
  *
  * B1 — AGENTS.md: creating a Blog crux writes AGENTS.md (with the content
  * model) and a one-line CLAUDE.md into the Project Folder.
@@ -18,11 +19,11 @@ test.describe('growth tools (mock AI)', () => {
   test.setTimeout(150_000);
 
   test('the model checkpoints, breaks a file, and restores it', async () => {
-    const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
-    const gardenRoot = join(dir, 'garden');
+    const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+    let projectFolder = '';
     const fileOnDisk = (rel: string): string | null => {
       try {
-        return readFileSync(join(gardenRoot, readdirSync(gardenRoot)[0]!, rel), 'utf8');
+        return readFileSync(join(projectFolder, rel), 'utf8');
       } catch {
         return null;
       }
@@ -30,12 +31,17 @@ test.describe('growth tools (mock AI)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
 
-      // Turn 1: a file to break (existing "write" script) + its auto-snapshot
+      await expect(page.locator('[data-workspace-id]')).toBeVisible();
+      const ownerId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
+      projectFolder = (await storedCrux(page, ownerId)).projectFolder;
+      // Turn 1: a file to break and ordinary edit recovery, without Growth.
       const input = page.getByPlaceholder('Send a message...');
       await expect(input).toBeVisible({ timeout: 30_000 });
       await input.fill('Please write hello');
@@ -58,42 +64,48 @@ test.describe('growth tools (mock AI)', () => {
         .toBe('Hello from the mock AI.\n');
       await page.screenshot({ path: 'e2e/.results/growth-tools-1-restored.png' });
 
-      // LIVE, without re-opening: the timeline already holds the checkpoint
-      // and the safety snapshot (the tools ran through the open workspace's
-      // store), and the restore rebuilt the conversation without duplicating
-      // it — each user message appears exactly once.
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      // LIVE: only the deliberately marked checkpoint is in Growth; protected
+      // recovery remains separate. Restore rebuilds the conversation without
+      // duplicating it — each user message appears exactly once.
+      await togglePanel(page, 'Toggle growth');
       await expect(page.getByText('Checkpoint', { exact: true })).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
+      await expect(page.getByText('Before revert', { exact: true })).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          (id) =>
+            window.electronAPI!.sqlite.all(
+              "SELECT id FROM dimensions WHERE source_id=? AND type='growth'",
+              [id],
+            ),
+          ownerId,
+        ),
+      ).toHaveLength(1);
+      expect(
+        (
+          await page.evaluate((id) => window.electronAPI!.sqlite.fileContent!.history(id), ownerId)
+        ).checkpoints.some((p) => p.workspace),
+      ).toBe(true);
       await expect(page.getByText('Please write hello', { exact: true })).toHaveCount(1);
       await expect(page.getByText('Please rewind', { exact: true })).toHaveCount(1);
       await expect(page.getByText('Done — rewound to the checkpoint.')).toHaveCount(1);
       await expect(page.getByText('Done — I wrote that file for you.')).toHaveCount(1);
-      await page.getByRole('button', { name: 'Toggle history' }).click();
+      await togglePanel(page, 'Toggle growth');
 
-      // Re-open the crux: history and files are read back from the store —
-      // the checkpoint and the safety snapshot are both in the timeline, and
-      // the editor shows the restored content.
-      await page
-        .getByRole('link', { name: /garden|home/i })
-        .first()
-        .click()
-        .catch(async () => {
-          await page.evaluate(() => window.history.back());
-        });
-      // Back into the open workspace through the switcher (the Home card's text also appears in the switcher's list)
-      await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
-      await page
-        .getByRole('dialog', { name: 'Switch Crux workspace' })
-        .getByRole('button', { name: /^(✓ )?My Crux / })
-        .click();
+      // Re-open the Crux: the chosen version and protected recovery both persist,
+      // and the editor shows the restored content.
+      {
+        await page.getByRole('button', { name: 'Garden location', exact: true }).click();
+        await page
+          .getByRole('dialog', { name: 'Garden location', exact: true })
+          .getByRole('button', { name: 'Close crux', exact: true })
+          .click();
+      }
+      await page.getByRole('button', { name: 'Open My Crux', exact: true }).click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 30_000 });
       // Artifacts is not an open-by-default pane
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
-        timeout: 30_000,
-      });
+      await expectPanelBarReady(page);
       if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+        await togglePanel(page, 'Toggle artifacts');
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
       await tree.getByText('hello.txt', { exact: true }).click();
@@ -103,10 +115,25 @@ test.describe('growth tools (mock AI)', () => {
       await expect(monaco).not.toContainText('BROKEN');
 
       if (!(await page.getByText('Checkpoint', { exact: true }).isVisible())) {
-        await page.getByRole('button', { name: 'Toggle history' }).click();
+        await togglePanel(page, 'Toggle growth');
       }
       await expect(page.getByText('Checkpoint', { exact: true })).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText('Before revert', { exact: true })).toBeVisible();
+      await expect(page.getByText('Before revert', { exact: true })).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          (id) =>
+            window.electronAPI!.sqlite.all(
+              "SELECT id FROM dimensions WHERE source_id=? AND type='growth'",
+              [id],
+            ),
+          ownerId,
+        ),
+      ).toHaveLength(1);
+      expect(
+        (
+          await page.evaluate((id) => window.electronAPI!.sqlite.fileContent!.history(id), ownerId)
+        ).checkpoints.some((p) => p.workspace),
+      ).toBe(true);
       await page.screenshot({ path: 'e2e/.results/growth-tools-2-timeline.png' });
     } finally {
       await app.close();
@@ -131,7 +158,7 @@ test.describe('AGENTS.md per Project Folder', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Blog/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();

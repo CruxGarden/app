@@ -1,0 +1,68 @@
+name: Private published app
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - '.github/workflows/**'
+      - 'private-requests-crux/**'
+      - 'src/**'
+      - 'electron/e2e/private-request*.ts'
+      - 'package*.json'
+permissions:
+  contents: read
+concurrency:
+  group: private-app-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: app
+      # Pin the companion API so this test never silently uses an incompatible backend.
+      - uses: actions/checkout@v4
+        with:
+          repository: CruxGarden/api
+          ref: bf1796da619373b97a152769b30315cdce970b40
+          path: api
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: api/.nvmrc
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+        working-directory: api
+      - name: Keep the API's Node runtime
+        run: echo "CRUX_TEST_API_NODE=$(command -v node)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: app/electron/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/electron/package-lock.json
+      - run: npm ci
+        working-directory: app/electron
+      - run: npm ci
+        working-directory: app
+      - run: npm run build:all
+        working-directory: app/electron
+      - run: npx playwright install --with-deps chromium
+        working-directory: app/electron
+      - name: Exercise real template, scoped auth, Functions and PostgreSQL
+        run: xvfb-run -a npm run test:e2e -- e2e/private-requests-hosted.spec.ts
+        working-directory: app/electron
+        env:
+          CRUX_PRIVATE_ACCEPTANCE: '1'
+          CRUX_TEST_API_ROOT: ${{ github.workspace }}/api
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-app-results
+          path: app/electron/e2e/.results
+          include-hidden-files: true
+          if-no-files-found: ignore

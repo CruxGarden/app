@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -50,7 +52,7 @@ test.describe('bundled mood screenshots', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       // A crux with a file so the workspace has content to style
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Blog/ }).click();
@@ -61,10 +63,7 @@ test.describe('bundled mood screenshots', () => {
       });
       await page.getByText('Hello, world').first().click();
       await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 30_000 });
-      await page
-        .getByRole('button', { name: 'Toggle metadata' })
-        .click()
-        .catch(() => {});
+      await togglePanel(page, 'Toggle details').catch(() => {});
 
       for (const id of IDS) {
         const before = { accent: await cssVar('--accent') };
@@ -76,8 +75,8 @@ test.describe('bundled mood screenshots', () => {
         await page.keyboard.press('Escape');
         await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
         if (id === 'graphite') {
-          await page.getByRole('button', { name: 'Toggle metadata' }).click();
-          await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+          await togglePanel(page, 'Toggle details');
+          await togglePanel(page, 'Toggle artifacts');
           await expect(page.locator('.pane-artifacts').getByRole('tree')).toBeVisible();
         }
         await page.mouse.move(0, 0);

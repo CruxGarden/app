@@ -1,95 +1,54 @@
 import { TYPES, validateProject } from '../../tool-cruxes/shared/model.js';
 import { validateDocument } from '../../cardinal-crux/model.js';
+import { manifestFor } from '@/services/crux-tools/registry';
 
-const NATIVE_TEMPLATES = {
-  'kan-app': 'kan',
-  'web-synth-app': 'web-synth',
-  'beepbox-app': 'beepbox',
-  'hextris-app': 'hextris',
-  'pptist-app': 'pptist',
-  'wick-editor-app': 'wick-editor',
-  'bentopdf-app': 'bentopdf',
-  'eventcalendar-app': 'eventcalendar',
-  'formjs-app': 'formjs',
-  'pdfme-app': 'pdfme',
-  'maps-app': 'maps',
-  'p5-app': 'p5',
-  'glsl-app': 'glsl',
-  'glyphr-app': 'glyphr',
-  'fmg-app': 'fmg',
-  'abc-app': 'abc',
-  'signal-app': 'signal',
-  'jscad-app': 'jscad',
-  'timeline-app': 'timeline',
-  'recorder-app': 'recorder',
-  'am-1-app': 'am-1',
-  'opencut-app': 'opencut',
-  'playcanvas-editor-app': 'playcanvas-editor',
-  'openmosh-app': 'openmosh',
-  'minipaint-app': 'minipaint',
-  'audiomass-app': 'audiomass',
-  'bitsy-app': 'bitsy',
-  'mermaid-app': 'mermaid',
-  'piskel-app': 'piskel',
-  'rawgraphs-app': 'rawgraphs',
-  'gephi-app': 'gephi',
-  'ketcher-app': 'ketcher',
-  'twine-app': 'twine',
-  'blockbench-app': 'blockbench',
-  'gdevelop-app': 'gdevelop',
-  'svgedit-app': 'svgedit',
-  'jupyterlite-app': 'jupyterlite',
-} as const;
-/** Native adapters share the owner-bound document and binary bridge. */
+/** Use the project's own manifest snapshot, even after its installation is removed. */
 export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  const template = crux?.meta?.template;
-  return typeof template === 'string' && Object.hasOwn(NATIVE_TEMPLATES, template)
-    ? NATIVE_TEMPLATES[template as keyof typeof NATIVE_TEMPLATES]
-    : null;
+  return manifestFor(crux)?.app ?? null;
 }
 
 export function isOpenMosh(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'openmosh-app';
+  return nativeAppType(crux) === 'openmosh';
 }
 
 export function isWickEditor(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'wick-editor-app';
+  return nativeAppType(crux) === 'wick-editor';
 }
 
 export function isBentoPDF(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'bentopdf-app';
+  return nativeAppType(crux) === 'bentopdf';
 }
 
 export function isAM1(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'am-1-app';
+  return nativeAppType(crux) === 'am-1';
 }
 
 export function isEventCalendar(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'eventcalendar-app';
+  return nativeAppType(crux) === 'eventcalendar';
 }
 
 export function isPPTist(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'pptist-app';
+  return nativeAppType(crux) === 'pptist';
 }
 
 export function isHextris(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'hextris-app';
+  return nativeAppType(crux) === 'hextris';
 }
 
 export function isBeepBox(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'beepbox-app';
+  return nativeAppType(crux) === 'beepbox';
 }
 
 export function isWebSynth(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'web-synth-app';
+  return nativeAppType(crux) === 'web-synth';
 }
 
 export function isAudioMass(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'audiomass-app';
+  return nativeAppType(crux) === 'audiomass';
 }
 
 export function isMiniPaint(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return crux?.meta?.template === 'minipaint-app';
+  return nativeAppType(crux) === 'minipaint';
 }
 
 /** Built-in apps with editable data owned by the Crux. */
@@ -122,6 +81,9 @@ export function isMoqira(crux: { meta?: Record<string, unknown> } | null | undef
 export function isEmbeddedApp(
   crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
 ) {
+  // A Crux Tool's Template Crux (ADR 0050) is a package, not a project: it
+  // publishes whole — runtime and all — for other gardens to install from.
+  if (crux?.kind === 'tool') return false;
   return (
     !!nativeAppType(crux) ||
     crux?.kind === 'notes' ||
@@ -174,17 +136,15 @@ export function samplerType(
   return TYPES.includes(type) ? type : null;
 }
 /** Apps whose Crux stays on this machine: no public edition, so no Share. A form publishes its viewer edition. */
-export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  const native = nativeAppType(crux);
+export function isLocalCreationTool(
+  crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
+) {
+  // A Tool template publishes whatever its tool's share rule says: the
+  // package is the thing being shared, not a creation made with it.
+  if (crux?.kind === 'tool') return false;
+  const manifest = manifestFor(crux);
+  if (manifest) return !manifest.share;
   return (
-    (!!native &&
-      native !== 'formjs' &&
-      native !== 'maps' &&
-      native !== 'p5' &&
-      native !== 'glsl' &&
-      native !== 'abc' &&
-      native !== 'jscad' &&
-      native !== 'timeline') ||
     isCardinal(crux) ||
     ['figma', 'blender'].includes(String(crux?.meta?.template)) ||
     // the Whiteboard sampler shares its drawing as a view-mode page; the other samplers stay local

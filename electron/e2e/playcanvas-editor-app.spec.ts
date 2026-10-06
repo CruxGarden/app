@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
+import { expectPanelBarReady, giveToolRoom, panelPressed, togglePanel } from './panel-helpers';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 declare const editor: any;
@@ -52,6 +53,11 @@ test('PlayCanvas native editing, source, agent, launch and independent complete 
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByRole('button', { name: /^PlayCanvas Editor/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the tool wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+      await togglePanel(page, 'Toggle tasks');
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 45000 });
     const frame = await ready(page);
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
@@ -123,8 +129,10 @@ test('PlayCanvas native editing, source, agent, launch and independent complete 
   renameSync(originalFolder, originalFolder + '-unavailable');
   const second = await launchApp();
   try {
+    await second.page.setViewportSize({ width: 1800, height: 1200 });
     await enterGarden(second.page);
     await importNativeCrux(second.page, archive);
+    await giveToolRoom(second.page);
     const frame = await ready(second.page);
     const id = (await second.page
       .locator('[data-workspace-id]')

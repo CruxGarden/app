@@ -248,4 +248,21 @@ describe('syncAgentsMd', () => {
     };
     expect(await syncAgentsMd(crux, null, failing)).toBe(false);
   });
+
+  it("carries the garden's own words when it has them (Settings → Names)", async () => {
+    const { renderAgentsMd } = await import('./agents-md');
+    const md = renderAgentsMd({
+      crux: { title: 'Case 4471', kind: undefined, meta: {} } as never,
+      artifacts: [],
+      persona: { name: 'Vel', systemPrompt: '' },
+      names: {
+        title: 'Floyd County Police Department',
+        panes: { collaboration: 'Interview room', artifacts: 'Case files' },
+      },
+    });
+    expect(md).toContain('This garden calls itself **Floyd County Police Department**.');
+    expect(md).toContain(
+      'Collaboration is called "Interview room", Artifacts is called "Case files".',
+    );
+  });
 });

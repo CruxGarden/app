@@ -1,0 +1,30 @@
+{
+  "environment": "local test API only",
+  "evidence": "Outside MCP, visible publication approval, native build, API objects, separate browser",
+  "examples": [
+    {
+      "template": "home-page",
+      "localCruxId": "ba228cf3-85e2-4e09-b0b2-4c127f6aa0c2"
+    },
+    {
+      "template": "small-game",
+      "localCruxId": "1c25ddee-d9a5-4bca-bce8-eab3067960b5"
+    },
+    {
+      "template": "short-book",
+      "localCruxId": "5b964352-08f0-44e5-9de2-0a85a722d0a1"
+    },
+    {
+      "template": "small-business",
+      "localCruxId": "91325185-b8f5-4e0b-a344-bca2f7d44367"
+    },
+    {
+      "template": "research-question",
+      "localCruxId": "e0adde58-9e25-4242-92c2-a9cc71864428"
+    },
+    {
+      "template": "family-history",
+      "localCruxId": "8a6d7302-b975-41ef-a9ce-7353c62248fc"
+    }
+  ]
+}

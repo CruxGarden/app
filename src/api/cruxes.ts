@@ -1,4 +1,5 @@
 import client from './client';
+import { captureAuth, type AuthContext } from './session';
 import type {
   Crux,
   CreateCruxDto,
@@ -8,61 +9,83 @@ import type {
   CreateDimensionDto,
   Artifact,
   Tag,
-  PaginationMeta,
 } from './types';
 
 // ── List + Search ────────────────────────────────────
 
 interface ListParams {
   search?: string;
-  limit?: number;
-  offset?: number;
+  page?: number;
+  perPage?: number;
 }
 
-export async function list(params?: ListParams): Promise<{ data: Crux[]; meta: PaginationMeta }> {
-  const query: Record<string, string> = {};
-  if (params?.search) query.search = params.search;
-  if (params?.limit) query.limit = String(params.limit);
-  if (params?.offset) query.offset = String(params.offset);
+interface CruxPage {
+  currentPage: number;
+  perPage: number;
+  total: number;
+  lastPage: number;
+}
 
-  const res = await client.get<Crux[]>('/cruxes', { params: query });
-
-  // Parse pagination from response headers
-  const paginationHeader = res.headers['pagination'];
-  let meta: PaginationMeta = {
-    limit: params?.limit || 24,
-    offset: params?.offset || 0,
-    total: 0,
-  };
-
-  if (paginationHeader) {
-    try {
-      meta = JSON.parse(paginationHeader);
-    } catch {
-      // Header not parseable — use defaults
-    }
+export async function list(
+  params: ListParams = {},
+  context: AuthContext = captureAuth(),
+): Promise<{ data: Crux[]; meta: CruxPage }> {
+  const res = await client.get<Crux[]>('/cruxes', { params, authContext: context });
+  let meta: CruxPage;
+  try {
+    meta = JSON.parse(res.headers['pagination']);
+    if (
+      !meta ||
+      ![meta.currentPage, meta.perPage, meta.total, meta.lastPage].every(Number.isSafeInteger) ||
+      meta.currentPage !== (params.page ?? 1) ||
+      meta.perPage < 1 ||
+      meta.perPage > 100 ||
+      meta.total < 0 ||
+      meta.lastPage < 1 ||
+      meta.lastPage > 1_000_000
+    )
+      throw new Error();
+  } catch {
+    throw new Error('The account returned invalid pagination. Please try again.');
   }
-
-  // Fallback: estimate total from data length when no header
-  if (!meta.total && res.data.length > 0) {
-    meta.total = res.data.length;
-  }
-
   return { data: res.data, meta };
 }
 
-export async function get(identifier: string): Promise<Crux> {
-  const res = await client.get<Crux>(`/cruxes/${identifier}`);
+/** Keep every page bound to the account connection that started the read. */
+export async function listAll(context: AuthContext = captureAuth()): Promise<Crux[]> {
+  const cruxes = new Map<string, Crux>();
+  let page = 1;
+  let perPage = 100;
+  while (true) {
+    const result = await list({ page, perPage }, context);
+    for (const crux of result.data) cruxes.set(crux.id, crux);
+    if (page >= result.meta.lastPage) return [...cruxes.values()];
+    if (result.data.length === 0)
+      throw new Error('The account returned an incomplete Crux list. Please try again.');
+    perPage = result.meta.perPage;
+    page++;
+  }
+}
+
+export async function get(identifier: string, context: AuthContext = captureAuth()): Promise<Crux> {
+  const res = await client.get<Crux>(`/cruxes/${identifier}`, { authContext: context });
   return res.data;
 }
 
-export async function create(dto: CreateCruxDto): Promise<Crux> {
-  const res = await client.post<Crux>('/cruxes', dto);
+export async function create(
+  dto: CreateCruxDto,
+  context: AuthContext = captureAuth(),
+): Promise<Crux> {
+  const res = await client.post<Crux>('/cruxes', dto, { authContext: context });
   return res.data;
 }
 
-export async function update(id: string, dto: UpdateCruxDto): Promise<Crux> {
-  const res = await client.patch<Crux>(`/cruxes/${id}`, dto);
+export async function update(
+  id: string,
+  dto: UpdateCruxDto,
+  context: AuthContext = captureAuth(),
+): Promise<Crux> {
+  const res = await client.patch<Crux>(`/cruxes/${id}`, dto, { authContext: context });
   return res.data;
 }
 
@@ -143,6 +166,7 @@ export async function deleteArtifact(artifactId: string): Promise<void> {
 export async function publish(
   cruxId: string,
   files: Array<{ blob: Blob; path: string; type?: string; kind?: string; mimeType: string }>,
+  context: AuthContext = captureAuth(),
 ): Promise<Crux> {
   const form = new FormData();
   const metas: Array<{ path: string; type?: string; kind?: string }> = [];
@@ -156,17 +180,22 @@ export async function publish(
   form.append('meta', JSON.stringify(metas));
 
   const res = await client.post<Crux>(`/cruxes/${cruxId}/publish`, form, {
+    authContext: context,
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
   });
   return res.data;
 }
 
-export async function unpublish(cruxId: string): Promise<Crux> {
+export async function unpublish(
+  cruxId: string,
+  context: AuthContext = captureAuth(),
+): Promise<Crux> {
   const res = await client.post<Crux>(
     `/cruxes/${cruxId}/unpublish`,
     {},
     {
+      authContext: context,
       timeout: 60000,
     },
   );
@@ -180,7 +209,15 @@ export async function getTags(cruxId: string): Promise<Tag[]> {
   return res.data;
 }
 
-export async function syncTags(cruxId: string, labels: string[]): Promise<Tag[]> {
-  const res = await client.put<Tag[]>(`/cruxes/${cruxId}/tags`, { labels });
+export async function syncTags(
+  cruxId: string,
+  labels: string[],
+  context: AuthContext = captureAuth(),
+): Promise<Tag[]> {
+  const res = await client.put<Tag[]>(
+    `/cruxes/${cruxId}/tags`,
+    { labels },
+    { authContext: context },
+  );
   return res.data;
 }

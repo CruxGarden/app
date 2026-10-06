@@ -1,14 +1,19 @@
+import PaneOptions from './PaneOptions';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import { deferNotebookAction } from '@/services/notebook-lifecycle';
+import { buttonClass } from '@/components/ui/button-class';
+import { linkClass } from '@/components/ui/button-class';
 import { copyIdentity } from '@/services/working-copies';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { documentsFor } from '@/services/workspace-documents';
 import { useStore } from 'zustand';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor from '@/lib/monaco-editor';
 
 const FORM_AUTOSAVE_MS = 300;
 import type * as Monaco from 'monaco-editor';
+import { applyEditorReveal, onEditorReveal, takeEditorReveal } from './editor-reveal';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { useThemeStore } from '@/stores/themeStore';
@@ -19,11 +24,13 @@ import { getMonacoLanguage, getExtension } from '@/lib/monacoLanguages';
 import { pathOf, basename } from '@/lib/artifact-path';
 import { isImageMime, isVideoMime } from '@/lib/mime';
 import { Capability, can } from '@/lib/platform';
+import PreviewCaptureActions from './PreviewCaptureActions';
 import {
   previewFor,
   mountedIframeSrc,
   isHtmlPath,
   isConfigJsonPath,
+  settingsPathOf,
   isPreviewJpgPath,
 } from '@/lib/preview-decision';
 import {
@@ -68,6 +75,8 @@ export default function EditorContent({
   captureRef,
   clean = false,
 }: EditorContentProps) {
+  const advancedMode = useAdvancedMode();
+  const historical = useCruxStore((s) => s.viewingSnapshotId !== null);
   const readOnlyTask = useCruxStore((s) => {
     const copy = copyIdentity(s.crux);
     return s.closing || !!s.viewingSnapshotId || (!!copy && copy.phase !== 'ready');
@@ -75,9 +84,10 @@ export default function EditorContent({
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
   const documents = documentsFor(cruxStore, uiStore);
-  const documentSession = documents.get(artifact.id);
+  const documentSession = documents.get(artifact);
   const documentError = useStore(documentSession, (s) => s.error);
   const documentConflict = useStore(documentSession, (s) => s.conflict);
+  const documentDirty = useStore(documentSession, (s) => s.revision !== s.savedRevision);
   const { content, blobUrl, loading, contentVersion, setContent, expectOwnSave } = useFileContent(
     cruxId,
     artifact,
@@ -85,11 +95,16 @@ export default function EditorContent({
   const { setTabDirty, setTabScrollTop } = useUIStore(
     useShallow((s) => ({ setTabDirty: s.setTabDirty, setTabScrollTop: s.setTabScrollTop })),
   );
+  // Rebinding a tab for history resets its display flag. The retained document
+  // owns draft state, including when returning without another keystroke.
+  useEffect(() => {
+    setTabDirty(tab.id, !readOnlyTask && documentDirty);
+  }, [tab.id, setTabDirty, readOnlyTask, documentDirty]);
   const activeMode = useThemeStore((s) => s.activeMode);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const contentRef = useRef<string | null>(documentSession.getState().content);
-  const dirtyRef = useRef(documents.dirty(artifact.id));
+  const dirtyRef = useRef(documents.dirty(artifact));
   const saveHandlerRef = useRef<() => void>(() => {});
   const scrollRafRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
@@ -110,17 +125,20 @@ export default function EditorContent({
   const language = getMonacoLanguage(path);
   const themeName = activeMode === 'dark' ? 'crux-garden-dark' : 'crux-garden-light';
   const isHtmlFile = isHtmlPath(path);
-  const isConfigJson = isConfigJsonPath(path);
-
-  // Form schema from crux meta (set during template creation)
+  // Form schema from crux meta (set during template creation), and the file it edits
   const formSchema = useCruxStore((s) => {
     const meta = s.crux?.meta as Record<string, unknown> | undefined;
     return (meta?.formSchema as FormSchema | undefined) ?? null;
   });
+  const settingsPath = useCruxStore((s) =>
+    settingsPathOf(s.crux?.meta as Record<string, unknown> | undefined),
+  );
+  const isConfigJson = isConfigJsonPath(path, settingsPath);
 
   // Form data change handler — updates content as pretty JSON, marks dirty, triggers save
   const handleFormChange = useCallback(
     (newData: Record<string, unknown>) => {
+      if (readOnlyTask) return;
       const json = JSON.stringify(newData, null, 2);
       contentRef.current = json;
       dirtyRef.current = true;
@@ -132,7 +150,7 @@ export default function EditorContent({
       if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
       formSaveTimerRef.current = setTimeout(() => saveHandlerRef.current(), FORM_AUTOSAVE_MS);
     },
-    [tab.id, setContent, setTabDirty],
+    [tab.id, setContent, setTabDirty, readOnlyTask],
   );
 
   // Auto-switch config.json to form mode on first open when schema exists
@@ -197,15 +215,15 @@ export default function EditorContent({
     if (current === null || !dirtyRef.current) return;
     const cancelOwnSave = expectOwnSave();
     try {
-      await documents.save(artifact.id);
-      dirtyRef.current = documents.dirty(artifact.id);
+      await documents.save(artifact);
+      dirtyRef.current = documents.dirty(artifact);
       setSavedVersion((v) => v + 1);
       cancelOwnSave();
     } catch (err: unknown) {
       cancelOwnSave();
       console.error('Save failed:', err);
     }
-  }, [expectOwnSave, documents, artifact.id]);
+  }, [expectOwnSave, documents, artifact]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
@@ -224,7 +242,12 @@ export default function EditorContent({
   // no-write-through rule (it's app state, not a user file), and the upload.
   const savePreviewBlob = useCallback(
     (blob: Blob) => {
-      if (cruxStore.getState().closing || cruxStore.getState().crux?.id !== cruxId) return;
+      if (
+        cruxStore.getState().closing ||
+        cruxStore.getState().viewingSnapshotId ||
+        cruxStore.getState().crux?.id !== cruxId
+      )
+        return;
       saveWorkspacePreviewJpeg(cruxId, blob)
         .then((saved) => cruxStore.getState().upsertArtifact(saved))
         .catch((err) => console.error('Thumbnail save failed:', err));
@@ -281,11 +304,13 @@ export default function EditorContent({
   const isImage = isImageMime(mime);
   const isVideo = isVideoMime(mime);
   const handleCapture = useCallback(() => {
+    if (cruxStore.getState().viewingSnapshotId) return;
     if (desktopCaptureUrlRef.current) handleDesktopCapture();
     else if (isHtmlFile) handleHtmlCapture();
     else if (isImage) handleImageCapture();
     else if (isVideo) handleVideoCapture();
   }, [
+    cruxStore,
     isHtmlFile,
     isImage,
     isVideo,
@@ -310,7 +335,7 @@ export default function EditorContent({
   // rewrite preview.jpg (new JPEG bytes → new fingerprint → phantom
   // "unpublished changes").
   const isPreviewFile = isPreviewJpgPath(path);
-  const canAutoCapture = isHtmlFile && !isPreviewFile;
+  const canAutoCapture = isHtmlFile && !isPreviewFile && !historical;
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baselineVersionRef = useRef<number | null>(null);
   const changeSignal = contentVersion + savedVersion; // external loads + own saves
@@ -348,7 +373,13 @@ export default function EditorContent({
     disposedRef.current = false;
     return () => {
       disposedRef.current = true;
-      if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
+      if (formSaveTimerRef.current) {
+        clearTimeout(formSaveTimerRef.current);
+        formSaveTimerRef.current = null;
+        // A form promises autosave: moving straight to preview must not cancel
+        // the last keystroke's pending write. Source drafts stay manual-save.
+        saveHandlerRef.current();
+      }
       if (scrollRafRef.current) {
         cancelAnimationFrame(scrollRafRef.current);
         scrollRafRef.current = null;
@@ -382,6 +413,12 @@ export default function EditorContent({
 
       monacoRef.current = monaco;
       editorRef.current = editor;
+      // A retained model can outlive the widget that received a restore or an
+      // external edit. defaultValue only initializes new models; reconcile the
+      // existing one with its document before showing it again.
+      const restoredContent = documentSession.getState().content;
+      if (restoredContent !== null && editor.getValue() !== restoredContent)
+        editor.getModel()?.setValue(restoredContent);
       documentSession.setState({ model: editor.getModel(), focus: () => editor.focus() });
       editor.onDidChangeCursorSelection(() =>
         documentSession.setState({ view: editor.saveViewState() }),
@@ -403,6 +440,9 @@ export default function EditorContent({
       if (!savedView && tab.scrollTop > 0) {
         editor.setScrollTop(tab.scrollTop);
       }
+      // Opened from find in files: go to the line, with the match selected.
+      const reveal = takeEditorReveal(artifact.id);
+      if (reveal) applyEditorReveal(editor, reveal);
 
       // Track scroll position (debounced via rAF, guarded against unmount)
       editor.onDidScrollChange(() => {
@@ -420,7 +460,20 @@ export default function EditorContent({
         saveHandlerRef.current();
       });
     },
-    [documentSession, tab.scrollTop, tab.id, themeName, setTabScrollTop],
+    [documentSession, tab.scrollTop, tab.id, themeName, setTabScrollTop, artifact.id],
+  );
+
+  // The same request for a file whose source editor is already on screen. An
+  // editor that has left the page leaves the request for the one that mounts.
+  useEffect(
+    () =>
+      onEditorReveal(artifact.id, () => {
+        const editor = editorRef.current;
+        if (!editor || disposedRef.current || !editor.getDomNode()?.isConnected) return;
+        const reveal = takeEditorReveal(artifact.id);
+        if (reveal) applyEditorReveal(editor, reveal);
+      }),
+    [artifact.id],
   );
 
   // External content arrived (first load is handled by defaultValue; later
@@ -430,10 +483,10 @@ export default function EditorContent({
   const appliedVersionRef = useRef(0);
   useEffect(() => {
     if (contentVersion === appliedVersionRef.current) return;
-    appliedVersionRef.current = contentVersion;
     const editor = editorRef.current;
     const model = editor?.getModel();
     if (!editor || !model || content === null || dirtyRef.current) return;
+    appliedVersionRef.current = contentVersion;
     if (model.getValue() === content) return;
     const viewState = editor.saveViewState();
     model.setValue(content);
@@ -445,14 +498,19 @@ export default function EditorContent({
   // Using defaultValue means React re-renders won't cause Monaco to re-apply content
   const handleEditorChange = useCallback(
     (value: string | undefined) => {
-      if (value !== undefined) {
+      if (!readOnlyTask && value !== undefined) {
         contentRef.current = value;
+        // Applying hydrated content to Monaco is not a new user edit.
+        if (value === documentSession.getState().content) {
+          dirtyRef.current = documents.dirty(artifact);
+          return;
+        }
         dirtyRef.current = true;
         setContent(value);
         setTabDirty(tab.id, true);
       }
     },
-    [tab.id, setContent, setTabDirty],
+    [tab.id, setContent, setTabDirty, readOnlyTask, documentSession, documents, artifact],
   );
 
   // Site cruxes (Astro): preview = the project's own dev server with HMR.
@@ -466,7 +524,7 @@ export default function EditorContent({
   // Keep the desktop capture target current: whatever local-server URL the
   // preview iframe is showing (dev server for Site Cruxes, static server for
   // plain cruxes). Null on web — the postMessage capture handles that path.
-  const currentIframeSrc = mountedIframeSrc({ path, site, previewUrl });
+  const currentIframeSrc = mountedIframeSrc({ path, site, previewUrl, historical });
   useEffect(() => {
     const isLocalServer =
       !!currentIframeSrc && /^http:\/\/(127\.0\.0\.1|localhost):/.test(currentIframeSrc);
@@ -492,10 +550,12 @@ export default function EditorContent({
 
   // ── Preview decision (pure) — what does this pane show? ──
   const target = previewFor({
+    historical,
     path,
     viewMode: tab.viewMode,
     mimeType: mime,
     hasFormSchema: !!formSchema,
+    settingsPath,
     hasContent: content !== null,
     hasBlob: blobUrl !== null,
     site,
@@ -519,7 +579,12 @@ export default function EditorContent({
         // If JSON is malformed, show an error hint
       }
       mainContent = formSchema ? (
-        <TemplateForm schema={formSchema} data={parsedData} onChange={handleFormChange} />
+        <TemplateForm
+          schema={formSchema}
+          data={parsedData}
+          onChange={handleFormChange}
+          disabled={readOnlyTask}
+        />
       ) : null;
       break;
     }
@@ -529,7 +594,7 @@ export default function EditorContent({
         <div className="flex-1 min-h-0">
           <Editor
             key={tab.id}
-            path={`crux://${cruxId}/${artifact.id}`}
+            path={`crux://${encodeURIComponent(artifact.resourceId)}/${encodeURIComponent(artifact.id)}`}
             keepCurrentModel
             height="100%"
             language={language}
@@ -607,7 +672,7 @@ export default function EditorContent({
           <a
             href={blobUrl}
             download={basename(path) || 'file'}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors motion-press"
+            className={buttonClass('primary', 'md')}
           >
             Download
           </a>
@@ -630,8 +695,8 @@ export default function EditorContent({
           {documentError || 'This Artifact changed externally. Your unsaved edits are retained.'}
           {documentConflict && (
             <button
-              className="ml-2 underline"
-              onClick={() => void documents.save(artifact.id, true).catch(() => {})}
+              className={linkClass('ml-2')}
+              onClick={() => void documents.save(artifact, true).catch(() => {})}
             >
               Overwrite with my edits
             </button>
@@ -641,81 +706,88 @@ export default function EditorContent({
       {mainContent}
       {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
       {target.kind === 'iframe' && target.localBase && (
-        <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-2xs font-mono text-text-muted">
-          {site.isSite && !clean && (
-            <SitePreviewControls
-              site={site}
-              onRefresh={() => {
-                const refresh = () => {
-                  const iframe = previewIframeRef.current;
-                  if (!iframe) return;
-                  try {
-                    iframe.contentWindow?.location.reload();
-                  } catch {
-                    const src = iframe.src;
-                    iframe.src = 'about:blank';
-                    requestAnimationFrame(() => {
-                      iframe.src = src;
-                    });
-                  }
-                };
-                if (!deferNotebookAction(cruxId, refresh)) refresh();
+        <PaneOptions pane="workshop" label="Preview tools">
+          <div className="min-w-0 w-full flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-2xs font-mono text-text-muted">
+            {site.isSite && !clean && (
+              <SitePreviewControls
+                site={site}
+                onRefresh={() => {
+                  const refresh = () => {
+                    const iframe = previewIframeRef.current;
+                    if (!iframe) return;
+                    try {
+                      iframe.contentWindow?.location.reload();
+                    } catch {
+                      const src = iframe.src;
+                      iframe.src = 'about:blank';
+                      requestAnimationFrame(() => {
+                        iframe.src = src;
+                      });
+                    }
+                  };
+                  if (!deferNotebookAction(cruxId, refresh)) refresh();
+                }}
+              />
+            )}
+            {(clean || !site.isSite) && (
+              <button
+                className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
+                title="Return to the entry page"
+                onClick={() => {
+                  const home = () => {
+                    const iframe = previewIframeRef.current;
+                    if (iframe && iframeSrc) iframe.src = iframeSrc;
+                  };
+                  if (!deferNotebookAction(cruxId, home)) home();
+                }}
+              >
+                Home
+              </button>
+            )}
+            {(clean || !site.isSite) && (
+              <button
+                data-testid="preview-refresh"
+                className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
+                title="Reload the preview"
+                onClick={() => {
+                  const refresh = () => {
+                    const iframe = previewIframeRef.current;
+                    if (iframe) iframe.setAttribute('src', iframe.src);
+                  };
+                  if (!deferNotebookAction(cruxId, refresh)) refresh();
+                }}
+              >
+                Refresh
+              </button>
+            )}
+            <span className="truncate flex-1" title={target.localBase}>
+              {clean ? path : target.localBase}
+            </span>
+            <button
+              onClick={() => navigator.clipboard?.writeText(target.localBase!)}
+              className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
+              title="Copy URL"
+            >
+              Copy
+            </button>
+            <button
+              onClick={() => {
+                import('@/services/desktop').then(({ openExternal }) =>
+                  openExternal(target.localBase!),
+                );
               }}
+              className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
+              title="Open in browser"
+            >
+              Open ↗
+            </button>
+            <PreviewCaptureActions
+              cruxId={cruxId}
+              base={target.localBase}
+              page={clean ? path : ''}
             />
-          )}
-          {(clean || !site.isSite) && (
-            <button
-              className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
-              title="Return to the entry page"
-              onClick={() => {
-                const home = () => {
-                  const iframe = previewIframeRef.current;
-                  if (iframe && iframeSrc) iframe.src = iframeSrc;
-                };
-                if (!deferNotebookAction(cruxId, home)) home();
-              }}
-            >
-              Home
-            </button>
-          )}
-          {(clean || !site.isSite) && (
-            <button
-              data-testid="preview-refresh"
-              className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
-              title="Reload the preview"
-              onClick={() => {
-                const refresh = () => {
-                  const iframe = previewIframeRef.current;
-                  if (iframe) iframe.setAttribute('src', iframe.src);
-                };
-                if (!deferNotebookAction(cruxId, refresh)) refresh();
-              }}
-            >
-              Refresh
-            </button>
-          )}
-          <span className="truncate flex-1" title={target.localBase}>
-            {clean ? path : target.localBase}
-          </span>
-          <button
-            onClick={() => navigator.clipboard?.writeText(target.localBase!)}
-            className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
-            title="Copy URL"
-          >
-            Copy
-          </button>
-          <button
-            onClick={() => {
-              import('@/services/desktop').then(({ openExternal }) =>
-                openExternal(target.localBase!),
-              );
-            }}
-            className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
-            title="Open in browser"
-          >
-            Open ↗
-          </button>
-        </div>
+          </div>
+        </PaneOptions>
       )}
       {/* Site crux: dev server is installing/starting (or failed) */}
       {target.kind === 'site-status' && (
@@ -725,22 +797,17 @@ export default function EditorContent({
               <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
               <p className="text-xs text-text-muted">
                 {target.phase === 'installing'
-                  ? 'Preparing project (first run installs dependencies)…'
-                  : 'Starting dev server…'}
+                  ? 'Preparing your first preview. This may take a minute and needs an internet connection…'
+                  : 'Opening your preview…'}
               </p>
-              {target.detail && (
-                <p className="text-2xs font-mono text-text-muted/70 max-w-md truncate">
-                  {target.detail}
-                </p>
+              {advancedMode && target.detail && (
+                <p className="text-2xs font-mono text-subtle max-w-md truncate">{target.detail}</p>
               )}
             </>
           ) : (
             <>
               <p className="text-xs text-error">Preview could not start</p>
-              <button
-                className="text-xs underline cursor-pointer"
-                onClick={() => void site.restart()}
-              >
+              <button className={linkClass('text-xs')} onClick={() => void site.restart()}>
                 Retry preview
               </button>
               <pre className="text-2xs font-mono text-text-muted max-w-md max-h-40 overflow-auto whitespace-pre-wrap text-left">

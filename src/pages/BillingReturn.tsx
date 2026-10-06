@@ -1,6 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { APP_NAME } from '@/lib/constants';
+import { buttonClass } from '@/components/ui/button-class';
+import { Capability, can } from '@/lib/platform';
+import { deepLinkUrl } from '@/services/deep-links';
+
+/** One automatic hand-off per page load: a reload must not keep re-prompting. */
+let attempted = false;
 
 /**
  * Where Stripe sends people back: /billing/success, /billing/cancel,
@@ -8,12 +14,35 @@ import { APP_NAME } from '@/lib/constants';
  * this page only needs to say "you can go back to the app".
  */
 export default function BillingReturn() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const kind = pathname.endsWith('/success')
     ? 'success'
     : pathname.endsWith('/cancel')
       ? 'cancel'
       : 'return';
+  // Inside the desktop app the page is already home; elsewhere hand the person
+  // back to the app with a crux-garden:// link that makes it re-check at once.
+  const inApp = can(Capability.DeepLinks);
+  const appLink = useMemo(() => {
+    const status = kind === 'cancel' ? 'cancel' : 'success';
+    const sessionId = new URLSearchParams(search).get('session_id');
+    try {
+      // A session id the link grammar refuses is dropped, not the hand-off.
+      if (sessionId) return deepLinkUrl({ kind: 'billing-return', status, sessionId });
+    } catch {
+      /* fall through */
+    }
+    try {
+      return deepLinkUrl({ kind: 'billing-return', status });
+    } catch {
+      return null;
+    }
+  }, [kind, search]);
+  useEffect(() => {
+    if (inApp || !appLink || attempted) return;
+    attempted = true;
+    window.location.assign(appLink);
+  }, [inApp, appLink]);
   useEffect(() => {
     document.title = `${kind === 'success' ? 'Thank you' : 'Billing'} — ${APP_NAME}`;
     return () => {
@@ -26,24 +55,40 @@ export default function BillingReturn() {
       <div className="relative z-10 max-w-md w-full bg-panel border border-border rounded-[var(--radius)] p-6 text-center">
         <h1 className="font-display text-2xl text-text">
           {kind === 'success'
-            ? 'You’re all set'
+            ? 'Return to your Garden'
             : kind === 'cancel'
-              ? 'No changes made'
-              : 'Billing updated'}
+              ? 'Checkout closed'
+              : 'Back from billing'}
         </h1>
         <p className="text-sm text-text-muted mt-2">
           {kind === 'success'
-            ? 'Your plan is active. Switch back to Crux Garden — it has already picked it up. A receipt is on its way from Stripe.'
+            ? 'Switch back to Crux Garden and open Settings → Plan to check your subscription. The app verifies your plan with the payment provider; this page alone does not confirm payment.'
             : kind === 'cancel'
-              ? 'Checkout was cancelled. Your plan is unchanged; you can pick one any time from Settings → Plan.'
-              : 'Anything you changed is reflected in the app within a few seconds.'}
+              ? 'Return to Settings → Plan in Crux Garden to check your current plan or start checkout again.'
+              : 'Return to Settings → Plan in Crux Garden to verify any changes. Updates may take a moment to arrive.'}
         </p>
-        <div className="mt-5 flex justify-center gap-3 text-xs font-mono">
+        {!inApp && appLink && (
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <a href={appLink} className={buttonClass('primary', 'md')} data-testid="open-app">
+              Open Crux Garden
+            </a>
+            <p className="text-xs text-text-muted">
+              If nothing happens, switch to Crux Garden yourself.
+            </p>
+          </div>
+        )}
+        <div className="mt-5 flex flex-wrap justify-center gap-3 text-xs font-mono">
           <Link to="/" className="text-text-muted hover:text-text">
             crux.garden
           </Link>
           <Link to="/explore" className="text-text-muted hover:text-text">
             Explore
+          </Link>
+          <Link to="/terms" className="text-text-muted hover:text-text">
+            Terms
+          </Link>
+          <Link to="/privacy" className="text-text-muted hover:text-text">
+            Privacy
           </Link>
         </div>
       </div>

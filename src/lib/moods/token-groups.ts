@@ -1,5 +1,5 @@
 /**
- * How the Mood Builder presents the palette: every GARDEN_DARK key belongs to
+ * How the Mood pane presents the palette: every GARDEN_DARK key belongs to
  * exactly one group, has a kind (which control edits it) and a short label.
  * Pure data + string functions — no DOM, no React.
  */
@@ -11,7 +11,7 @@ export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text' | 'asset
 
 /**
  * Tokens whose value is one of a fixed set of names (a border style, an enter
- * animation, an icon set). The Mood Builder renders a select; set_theme refuses
+ * animation, an icon set). The Mood pane renders a select; set_theme refuses
  * anything else. Register a token here when you add one — keep the sections.
  */
 // ── motion ──
@@ -19,6 +19,7 @@ const MOTION_ENTER = ['none', 'fade', 'slide-up', 'slide-down', 'scale', 'pop', 
 const MOTION_EXIT = ['none', 'fade', 'scale', 'slide-down'] as const;
 
 export const TOKEN_CHOICES: Record<string, readonly string[]> = {
+  flowEnabled: ['on', 'off'],
   // ── motion (motion.css) ──
   motionEnterPane: MOTION_ENTER,
   motionEnterDialog: MOTION_ENTER,
@@ -42,7 +43,13 @@ export const TOKEN_CHOICES: Record<string, readonly string[]> = {
   dividerStyle: ['hairline', 'double', 'dotted', 'dashed', 'etched', 'ornament', 'none'],
   cardBorderStyle: ['solid', 'double', 'dashed', 'none'],
   // ── glass (glass.css) ──
-  surfaceStyle: ['solid', 'glass'],
+  surfaceStyle: ['solid', 'glass', 'plasma'],
+  plasmaFormIn: ['on', 'off'],
+  plasmaFormOut: ['on', 'off'],
+  plasmaAmbientDrops: ['on', 'off'],
+  plasmaPointerDrop: ['on', 'off'],
+  plasmaPointerPull: ['on', 'off'],
+  plasmaPointerLight: ['on', 'off'],
   // ── icons (ui/icons) ──
   iconSet: ICON_SETS,
 };
@@ -56,6 +63,10 @@ export interface TokenGroup {
   id: string;
   label: string;
   hint: string;
+  /** The hint while AI tools are off, when the usual one speaks of the collaborator. */
+  plainHint?: string;
+  /** Dresses only what the collaborator uses: hidden while AI tools are off. */
+  ai?: boolean;
   /** Key prefix stripped from labels inside this group (pane groups). */
   strip?: string;
   match: (key: string) => boolean;
@@ -65,12 +76,18 @@ const PANES: { id: string; label: string }[] = [
   { id: 'Collaboration', label: 'Collaboration' },
   { id: 'Artifacts', label: 'Artifacts' },
   { id: 'Workshop', label: 'Workshop' },
-  { id: 'Details', label: 'Metadata' },
-  { id: 'History', label: 'History' },
+  { id: 'Details', label: 'Details' },
+  { id: 'History', label: 'Growth' },
   { id: 'Export', label: 'Export' },
   { id: 'Sync', label: 'Sync' },
   { id: 'Publish', label: 'Share' },
   { id: 'Store', label: 'Store' },
+  { id: 'Tasks', label: 'Tasks' },
+  { id: 'Mood', label: 'Mood' },
+  { id: 'Synth', label: 'Crux Synth' },
+  { id: 'Browser', label: 'WWW' },
+  { id: 'Settings', label: 'Settings' },
+  { id: 'Explore', label: 'Explore' },
 ];
 
 const LAYOUT_KEYS = new Set([
@@ -78,6 +95,7 @@ const LAYOUT_KEYS = new Set([
   'radiusSm',
   'radiusLg',
   'buttonRadius',
+  'buttonBorderWidth',
   'inputRadius',
   'cardRadius',
   'chipRadius',
@@ -94,11 +112,48 @@ const LAYOUT_KEYS = new Set([
   'scrollbarWidth',
   'cardHoverLift',
   'paneGap',
+  'plasmaFrame',
+  'plasmaPlate',
+  'plasmaInner',
+  'plasmaRefraction',
+  'plasmaDispersion',
+  'plasmaField',
+  'plasmaTint',
+  'plasmaOpacity',
+  'plasmaFrost',
+  'plasmaRim',
+  'plasmaRimWidth',
+  'plasmaElevation',
+  'plasmaFlow',
+  'plasmaStretch',
+  'plasmaViscosity',
+  'plasmaAmbientDrops',
+  'plasmaFormIn',
+  'plasmaFormSpeed',
+  'plasmaFormOut',
+  'plasmaPointerDrop',
+  'plasmaPointerPull',
+  'plasmaPointerLight',
+  'plasmaChrome',
+  'plasmaBackground',
+  'plasmaTextShadow',
+  'plasmaRimColor',
+  'plasmaSmoothness',
+  'plasmaBlend',
+  'plasmaEdgeLine',
+  'plasmaWash',
+  'plasmaShimmer',
+  'plasmaGlow',
+  'plasmaGrain',
+  'plasmaChromePlate',
+  'plasmaChromeDialog',
+  'plasmaChromeFrost',
   'paneRadius',
   'paneBorderWidth',
   'paneHeaderHeight',
   'paneHeaderRadius',
   'paneHeaderPadding',
+  'paneBodyPadding',
   'workspacePadding',
   'density',
 ]);
@@ -106,6 +161,7 @@ const TYPE_KEYS = new Set([
   'fontDisplay',
   'fontBody',
   'fontMono',
+  'fontReading',
   'fontScale',
   'lineHeightBody',
   'fontWeightBody',
@@ -113,6 +169,26 @@ const TYPE_KEYS = new Set([
   'letterSpacingBody',
   'letterSpacingDisplay',
   'letterSpacingMono',
+]);
+/** Names: the garden's title and the panes' words — text, not colour. */
+const NAME_KEYS = new Set([
+  'gardenTitle',
+  'paneLabelTasks',
+  'paneLabelCollaboration',
+  'paneLabelArtifacts',
+  'paneLabelWorkshop',
+  'paneLabelDetails',
+  'paneLabelHistory',
+  'paneLabelExport',
+  'paneLabelSync',
+  'paneLabelPublish',
+  'paneLabelStore',
+  'paneLabelMedia',
+  'paneLabelSynth',
+  'paneLabelBrowser',
+  'paneLabelSettings',
+  'paneLabelExplore',
+  'paneLabelMood',
 ]);
 const HEADER_KEYS = new Set([
   'paneHeaderHoverBrightness',
@@ -127,6 +203,10 @@ const HEADER_KEYS = new Set([
 ]);
 const ELEVATION_KEYS = new Set([
   'elevationPanel',
+  'elevationPane',
+  'elevationButton',
+  'elevationPrimaryButton',
+  'buttonFillOverlay',
   'elevationCard',
   'elevationCardHover',
   'elevationModal',
@@ -137,6 +217,10 @@ const ELEVATION_KEYS = new Set([
   'hoverBrightness',
   'activeBrightness',
   'disabledOpacity',
+  'busyOpacity',
+  'inactiveOpacity',
+  'secondaryActionOpacity',
+  'decorationOpacity',
 ]);
 const EDITOR_KEYS = new Set([
   'editorBackground',
@@ -159,7 +243,12 @@ const TEXTURE_KEYS = new Set([
   'workspaceTextureOpacity',
   'grainOpacity',
 ]);
-const FONT_ASSET_KEYS = new Set(['fontFaceDisplay', 'fontFaceBody', 'fontFaceMono']);
+const FONT_ASSET_KEYS = new Set([
+  'fontFaceDisplay',
+  'fontFaceBody',
+  'fontFaceMono',
+  'fontFaceReading',
+]);
 const GRID_KEYS = new Set([
   'gardenCardMinWidth',
   'gardenCardAspect',
@@ -173,6 +262,7 @@ const FOUNDATION_KEYS = new Set([
   'bg',
   'text',
   'textMuted',
+  'textSubtle',
   'accent',
   'accentMuted',
   'border',
@@ -183,7 +273,6 @@ const FOUNDATION_KEYS = new Set([
   'error',
   'warning',
   'success',
-  'contrast',
   'heading',
   'caption',
   'placeholder',
@@ -198,8 +287,14 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'foundation',
     label: 'Foundation',
-    hint: 'The root colors everything else derives from.',
+    hint: 'The root colors everything else derives from. Colors accept hex, rgba() and theme variables; the percentage controls color opacity.',
     match: (k) => FOUNDATION_KEYS.has(k),
+  },
+  {
+    id: 'transparency',
+    label: 'Transparency',
+    hint: 'Shared tint strengths used by text, borders and backgrounds. Enter 0% for transparent or 100% for the full color. The underlying color can also include alpha. Changing a strength updates every component that uses it.',
+    match: (k) => k.startsWith('tint'),
   },
   {
     id: 'layout',
@@ -235,6 +330,12 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     match: (k) => TYPE_KEYS.has(k) || FONT_ASSET_KEYS.has(k),
   },
   {
+    id: 'names',
+    label: 'Names',
+    hint: 'What this garden calls itself and its panes — "Case files" where a studio says "Artifacts". Leave `none` for the usual word.',
+    match: (k) => NAME_KEYS.has(k),
+  },
+  {
     id: 'header',
     label: 'Pane headers',
     hint: 'How every pane title bar is set: label font, size, case, tracking, icon and close visibility, alignment. Per-pane groups override case and alignment.',
@@ -242,14 +343,14 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   },
   {
     id: 'glass',
-    label: 'Glass',
-    hint: 'Liquid glass (a person can switch it on over any Mood): whether this Mood wears glass by default, how much of each surface colour stays, the backdrop blur and saturation, the specular highlight, how far the backdrop wavers (0 = still) and the colour of the moving light.',
+    label: 'Surface',
+    hint: 'The surface this Mood wears by default - plasma (one shared WebGL material), glass, or solid - and, when it is glass, how much of each surface colour stays, the backdrop blur and saturation, the specular highlight, how far the backdrop wavers (0 = still) and the colour of the moving light. Plasma draws its own surfaces, so the glass tokens below do not apply to it.',
     match: (k) => k === 'surfaceStyle' || k.startsWith('glass'),
   },
   {
     id: 'elevation',
     label: 'Elevation & motion',
-    hint: 'Shadows for panels, cards and modals, the modal scrim, and how fast things move (0 = instant).',
+    hint: 'Shadows for workspace panes, panels, cards, buttons and modals; the primary button highlight (none for flat paper); the modal scrim and motion speed (0 = instant).',
     match: (k) => ELEVATION_KEYS.has(k),
   },
   // ── icons ──
@@ -271,18 +372,26 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     hint: 'Card width, thumbnail shape and gap on the Home Garden; snapshot card shape.',
     match: (k) => GRID_KEYS.has(k),
   },
+  {
+    id: 'graphs',
+    label: 'Graphs',
+    hint: 'Lane colors, connections, unselected branches and label size. Graphs share the Mood’s panel, text, body font, focus outline and motion. Color alpha is used directly.',
+    match: (key) => key.startsWith('graph'),
+  },
   ...PANES.map<TokenGroup>((p) => ({
     id: `pane-${p.id.toLowerCase()}`,
     label: `${p.label} pane`,
     hint: `Everything about the ${p.label} pane: header, toggle button, body surface, text, labels, radii. Tokens inherit the shared ones until you set them.`,
     strip: `pane${p.id}`,
     match: (k) => k === `pane${p.id}` || k.startsWith(`pane${p.id}`),
+    ai: p.id === 'Collaboration',
   })),
   {
     id: 'chat',
     label: 'Collaboration chat',
     hint: 'Bubbles, input, send button, model selector.',
     match: starts('chat', 'brandAi', 'modelSelector'),
+    ai: true,
   },
   {
     id: 'controls',
@@ -318,7 +427,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'surfaces',
     label: 'Pages & overlays',
-    hint: 'Gateway, Settings, Console, Command palette, top bars, toolbars.',
+    hint: 'Gateway, Settings, the command palette, top bars and toolbars.',
     match: starts(
       'gateway',
       'settings',
@@ -352,14 +461,16 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'motion',
     label: 'Motion',
-    hint: 'How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Springs (stiffness damping mass) drive pops and expressive enters; frames steps every motion for pixel Moods; intensity is the Mood\'s default for the person\'s Motion setting.',
+    hint: "How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, message bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Springs (stiffness damping mass) drive pops and expressive enters; frames steps every motion for pixel Moods; intensity is the Mood's default for the person's Motion setting.",
     match: (k) => k.startsWith('motion') && k !== 'motionScale',
   },
   {
     id: 'reactions',
     label: 'Reactions',
     hint: 'How much the interface reacts to what is happening, 0 (not at all) to 1: the accent glows with the soundscape level, the background lifts while you type, the Collaboration pane glows while a collaborator turn runs.',
-    match: (k) => k.startsWith('react'),
+    plainHint:
+      'How much the interface reacts to what is happening, 0 (not at all) to 1: the accent glows with the soundscape level, the background lifts while you type.',
+    match: (k) => k.startsWith('react') || k.startsWith('flow'),
   },
 ];
 
@@ -386,16 +497,27 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 
 export function tokenKind(key: string): TokenKind {
   if (key in TOKEN_CHOICES) return 'choice';
+  if (key.startsWith('tint')) return 'text';
   // ── motion ── easings are curves (text), durations are <time> lengths, bindings 0..1 numbers
   if (/^motionEase|^motionSpring/.test(key)) return 'text';
-  if (/^glass(Opacity|Saturation)$/.test(key)) return 'text';
-  if (key === 'glassRefraction') return 'number';
+  if (/^glass(Opacity|Saturation|Sheen|SheenEase)$/.test(key)) return 'text';
+  if (key === 'glassSheenDuration') return 'length';
+  if (
+    /^(glassRefraction|plasmaRefraction|plasmaDispersion|plasmaOpacity|plasmaFrost|plasmaRim|plasmaRimWidth|plasmaElevation|plasmaFormSpeed|plasmaFlow|plasmaStretch|plasmaViscosity)$/.test(
+      key,
+    )
+  )
+    return 'number';
+  if (key === 'plasmaField') return 'text';
+  if (/^plasma(Tint|Plate|Inner)$/.test(key)) return 'color';
   if (/^motionDuration/.test(key)) return 'length';
-  if (/^react/.test(key)) return 'number';
+  if (/^react|^flowSensitivity$/.test(key)) return 'number';
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';
   if (/TextureSize$|TextureBlend$/.test(key)) return 'text';
   if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';
+  if (NAME_KEYS.has(key)) return 'text';
   if (TEXT_KEYS.test(key)) return 'text';
+  if (key === 'buttonFillOverlay') return 'text';
   if (/Shadow$|^elevation/.test(key)) return 'text';
   if (/Brightness$|^disabledOpacity$/.test(key)) return 'number';
   if (
@@ -403,7 +525,7 @@ export function tokenKind(key: string): TokenKind {
   )
     return 'number';
   if (/Weight$/.test(key)) return 'number';
-  if (/^font(Display|Body|Mono)$|LabelFont$/.test(key)) return 'font';
+  if (/^font(Display|Body|Mono|Reading)$|LabelFont$|TitleFont$/.test(key)) return 'font';
   if (LAYOUT_KEYS.has(key)) return 'length';
   if (
     /(Radius|RadiusSm|Height|Padding|Width|Gap|Size|Blur|Tracking|Spacing)$|^letterSpacing|^gardenGridGap|Aspect$/.test(
@@ -435,4 +557,11 @@ export function tokenLabel(key: string, group?: TokenGroup): string {
 /** Does this value reference another token rather than name a color/length? */
 export function isDerived(value: string): boolean {
   return /var\(|color-mix\(/.test(value);
+}
+
+/** Tokens that dress only what the collaborator uses: hidden in the Theme tab while AI tools are off. */
+export function isAiToken(key: string): boolean {
+  return /^(chat|console|brandAi|modelSelector|paneCollaboration|paneLabelCollaboration|paneLabelConsole|reactPaneAgent|motionEnterBubble|motionExitBubble|bubbleRadius)/.test(
+    key,
+  );
 }

@@ -1,0 +1,61 @@
+{
+  "status": "accepted",
+  "baseline": {
+    "app": "e91d8ad1b",
+    "api": "fa632ef"
+  },
+  "scope": "Desktop v1 breadth review and reproduced high-impact UX friction; not an exhaustive third-party editor audit",
+  "red": {
+    "attachments": "/tmp/crux-v1-composer-files-red.log",
+    "reading": "/tmp/crux-v1-reading-red.log",
+    "ime": "/tmp/crux-v1-keyboard-red.log",
+    "sharing": "/tmp/crux-v1-share-red.log",
+    "domain_validation": "/tmp/crux-v1-polish-acceptance.log",
+    "memory_mirror": "/tmp/crux-v1-polish-final-focused.log",
+    "metrics_append": "/tmp/crux-v1-metrics-red-detail.log",
+    "reading_control_overlap": "/tmp/crux-v1-reading-layout-red.log"
+  },
+  "tests": {
+    "new_actual_desktop": "9 new cases accepted: eight passed in /tmp/crux-v1-desktop-acceptance.log; Memory external-edit/reload/restart passed11.8s in /tmp/crux-v1-memory-replay-accepted.log",
+    "electron_verify": "99 passed / 1 platform skip; final /tmp/crux-v1-final-native-verify.log",
+    "app_verify": "1,830 / 292 passed +18 existing skips, full production build/typecheck/lint/runtime checks; /tmp/crux-v1-reading-final-app-gate.log",
+    "story_game": "128 stories / 1,266 criteria; all346 baseline checks and71 creation choices mapped; final offline acceptance passed (/tmp/crux-v1-polish-guide-final.log); source metadata9a5222f7e",
+    "affected_actual_desktop": "14 passed / one new-test setup failure in first combined batch; corrected setup and accepted Memory replay. Original memory, usage-domains, IPC3 and visual audit passed.",
+    "desktop_gate": "127 passed / one missed-click fixture failure in 25.5m; /tmp/crux-v1-full-desktop-final.log. Diagnostic repeat proved no click handler or new permission request began after iframe replacement. Move off discarded iframe before clicking its replacement; all original consent assertions preserved. Both permission cases repeated ten times:20 passed52.2s, /tmp/crux-v1-permissions-pointer.log. No shipping permission code changed; not claimed as a single all-green128-case run.",
+    "metrics_native": "99 passed / 1 platform skip; /tmp/crux-v1-metrics-native.log",
+    "metrics_actual_desktop": "Metrics append/refusal/retry/reset and IPC3: 4 passed14.1s; /tmp/crux-v1-metrics-desktop.log",
+    "final_visual_desktop": "Reading2 (non-overlap geometry, actual movement/preservation/resume), Memory1 and Share2: five passed1.3m; /tmp/crux-v1-final-visual-desktop.log",
+    "packaged_mac": "5 passed59.1s: packaged startup/SQLite/CLI, local staging, Memory conflict/restart, Plasma separation, recovery/Trash/restart; /tmp/crux-v1-polish-packaged-acceptance.log"
+  },
+  "boundaries": [
+    "No live AI calls or provider quality/spend acceptance",
+    "No production publication, deployment, signing, or notarization",
+    "Manual profile left empty and unopened",
+    "Existing dependency advisories and broader AR06 retirement unchanged"
+  ],
+  "implementation": "76680ffce559af870c6cee94a477c49d7ab98ace",
+  "native_ci": {
+    "shipping_source": "db536a618",
+    "run": "37166945530",
+    "url": "https://github.com/CruxGarden/app/actions/runs/37166945530",
+    "status": "success",
+    "prior_runs": "76680ffce run37165704334 Linux22pass/2fail Windows23pass/1fail; cd9d568c1 run37166458676 failed the same test portability assumptions; superseded by db536a618.",
+    "portability_diagnosis": "Published cover image makes exact file-count assumption invalid; preserve complete captured published bytes instead. Wheel trace1171\u2192105 remains stable; assert actual upward movement and held reading position rather than pixel zero. Downloaded artifact11289985341 verified SHA256 bab96d61f5dc7b172bd33608d64d1cedb538e59fcb94d9c07a817d193ca5b94c.",
+    "linux": "success:25 desktop/package checks;99 native checks +1 platform skip",
+    "windows": "success:25 desktop/package checks;96 native checks +4 platform skips",
+    "test_only_follow_through": "9a5222f7e changes only the local permission fixture; 20 repeated cases and final Electron verify accepted. Its automatic CI repeat does not change the shipping source accepted by run37166945530."
+  },
+  "shipping_source": "db536a618",
+  "test_follow_through": "9a5222f7e",
+  "manual_candidate": {
+    "path": "electron/release/manual-testing-polish-oct3/mac-arm64/Crux Garden.app",
+    "launcher": "electron/release/manual-testing-current/Launch Manual Testing.command",
+    "shipping_source": "db536a618",
+    "test_source": "9a5222f7e",
+    "asar_sha256": "5554ae6d502c314bdc1c9b1f1fe05bbb1f6c1b6f25baad7ae1f2397ce4096610",
+    "signature": "ad-hoc; codesign --verify --deep --strict passed; not notarized",
+    "manual_profile": "/Users/daniel/CruxGarden-ManualTesting",
+    "manual_profile_entries": 0,
+    "manual_profile_opened": false
+  }
+}

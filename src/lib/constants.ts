@@ -9,25 +9,39 @@ export const API_KEY_PREFIX = 'cruxgarden:apiKey:';
  * sync, and export surfaces serialize that table wholesale (`db.export()`),
  * so exclusion happens here, by construction, not per-consumer.
  */
+/** Per-crux function secrets kept locally: `cruxgarden:fn-secrets:<cruxId>` → JSON map. */
+export const FN_SECRETS_PREFIX = 'cruxgarden:fn-secrets:';
+
 export function isSecretSettingKey(key: string): boolean {
   return (
     key.startsWith(API_KEY_PREFIX) ||
+    key.startsWith(FN_SECRETS_PREFIX) ||
     key === 'apiKey:anthropic' || // legacy unprefixed SQLite row
     key === SettingsKey.AccessToken ||
     key === SettingsKey.RefreshToken ||
+    key === SettingsKey.AuthSession ||
     key === SettingsKey.LegacyAnthropicApiKey
   );
 }
 
 /** All settings keys used in getSetting/setSetting. */
 export enum SettingsKey {
+  ResumeWorkspace = 'cruxgarden:resumeWorkspace',
+  CelebratePublication = 'cruxgarden:celebratePublication',
+  FirstPublication = 'cruxgarden:firstPublication',
+  /** Last eight Explore topics explicitly selected, remembered on this installation. */
+  ExploreRecentTags = 'cruxgarden:exploreRecentTags',
   // Identity
   LocalAuthorId = 'cruxgarden:localAuthorId',
   LocalAuthorIdLegacy = 'cruxgarden:local:authorId',
   LocalHomeId = 'cruxgarden:local:homeId',
-  Backend = 'cruxgarden:backend',
+  /** The garden's API address — which garden this one meets (ADR 0049); empty = the build's default */
+  ApiUrl = 'cruxgarden:apiUrl',
+  /** Crux Tools installed into this garden: tool id → its Template Crux (JSON; ADR 0050) */
+  InstalledTools = 'cruxgarden:installedTools',
 
-  // Auth tokens (localStorage only, not in SQLite)
+  // Account credentials are one encrypted record. Old unbound keys are never used.
+  AuthSession = 'cruxgarden:authSession',
   AccessToken = 'cruxgarden:accessToken',
   RefreshToken = 'cruxgarden:refreshToken',
 
@@ -45,11 +59,13 @@ export enum SettingsKey {
   /** Custom theme token overrides layered on the active preset, per mode (JSON) */
   MoodThemeDark = 'cruxgarden:moodThemeDark',
   MoodThemeLight = 'cruxgarden:moodThemeLight',
-  /** Presets the user saved from the Mood Builder (JSON array) */
+  /** Presets the user saved from the Mood pane (JSON array) */
   MoodUserPresets = 'cruxgarden:moodUserPresets',
 
   // Sound — the Mood's track (see audio/track.ts)
   /** The track the Mood plays (JSON: fingerprint or url, name, type) */
+  SynthPatch = 'cruxgarden:synthPatch',
+  SynthPresetBanks = 'cruxgarden:synthPresetBanks',
   SoundTrack = 'cruxgarden:soundTrack',
   /** Sound switched on for this Mood ('' = off) */
   SoundEnabled = 'cruxgarden:soundEnabled',
@@ -76,6 +92,10 @@ export enum SettingsKey {
   LastGardenBackupAt = 'cruxgarden:lastGardenBackupAt',
   /** The Mood Package last applied in the app (bundled or installed id); the Gateway wears it before services init */
   WornMoodId = 'cruxgarden:wornMoodId',
+  /** Which Garden-resolved Mood this device last painted (a projection record, never a selection) */
+  MoodProjection = 'cruxgarden:moodProjection',
+  /** Panels whose top-bar square stays while closed, per workspace kind (device presentation). */
+  PanelPins = 'cruxgarden:pins',
   /** The bundled Mood the public website wears (localStorage; The Keeper until the visitor picks another) */
   PublicMoodId = 'cruxgarden:publicMoodId',
   /** Index of files the user brought into their Mood (bytes in the Blob Store) */
@@ -90,15 +110,28 @@ export enum SettingsKey {
   AiEnabled = 'cruxgarden:aiEnabled',
   DefaultModel = 'cruxgarden:defaultModel',
   ApiKeyAnthropic = 'cruxgarden:apiKey:anthropic',
+  /** Running agent speed/accuracy counters (JSON, see services/agent-metrics.ts) */
+  AgentMetrics = 'cruxgarden:agentMetrics',
+  /** Record those counters at all ('false' to stop; recording is on by default) */
+  AgentMetricsCapture = 'cruxgarden:agentMetricsCapture',
+  /** Where Save writes the report, relative to the Garden Root */
+  AgentMetricsPath = 'cruxgarden:agentMetricsPath',
+  /** Docked mode: keep running from the menu bar when the window closes */
+  DockedMode = 'cruxgarden:dockedMode',
 
   // Layout
   GlobalLayout = 'cruxgarden:layout:global',
+  WorkspaceLayouts = 'cruxgarden:workspaceLayouts',
 
   // Keeper console
   KeeperModel = 'cruxgarden:keeper-model',
   KeeperConversations = 'cruxgarden:keeper-conversations',
 
   // Misc
+  /** Installation-wide UI preference; never a permission or AI setting. */
+  AdvancedMode = 'cruxgarden:advancedMode',
+  /** Interest selected in Setup or Settings; ranks Add Crux suggestions and preselects setup */
+  SetupNeed = 'cruxgarden:setupNeed',
   TutorialSeeded = 'cruxgarden:tutorialSeeded',
   ApiKeyBannerDismissed = 'cruxgarden:apiKeyBannerDismissed',
 

@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-02",
+  "status": "accepted for human refinement on October 3",
+  "appGate": {
+    "log": "/tmp/crux-followthrough-app-release.log",
+    "tests": 1814,
+    "files": 288,
+    "skips": 18,
+    "build": true
+  },
+  "electronGate": {
+    "log": "/tmp/crux-windows-handle-fixture-verify.log",
+    "tests": 88,
+    "skips": 1
+  },
+  "desktop": {
+    "initialLog": "/tmp/crux-followthrough-desktop-final.log",
+    "initialPass": 7,
+    "followupLog": "/tmp/crux-followthrough-desktop-replay.log",
+    "followupPass": 3,
+    "note": "All10 named desktop journeys accepted in two batches. Restart fixture corrected; dependency exclusion asserts local sentinel and manifest because Preview reinstalls dependencies."
+  },
+  "game": {
+    "stories": 126,
+    "criteria": 1246,
+    "evidence": "docs/manual-testing/story-guide-evidence/verification.json",
+    "fixes": [
+      "concurrent-tab compare-before-save preserves both runs",
+      "valid >5MB evidence files can be reimported",
+      "record/input size bounds aligned without silent truncation",
+      "new recovery criteria; old IDs preserved",
+      "browser storage events immediately replace stale Saved status and preserve the current tab for export"
+    ],
+    "finalLog": "/tmp/crux-story-storage-event-green.log"
+  },
+  "cli": {
+    "commit": "559d83b",
+    "verify": 5,
+    "audit": 0,
+    "log": "/tmp/crux-followthrough-cli-verify.log"
+  },
+  "remaining": [],
+  "noLiveProviderCalls": true,
+  "preserved": ["real Garden", "existing manual Garden", "unrelated working changes"],
+  "sourceCommit": "20436fc061e74cc4c21c8621c6e86be2133b4609",
+  "nativeCI": {
+    "initialRun": 37095316024,
+    "source": "20436fc061e74cc4c21c8621c6e86be2133b4609",
+    "linux": "success",
+    "windows": "success",
+    "diagnosticRun": 37095617962,
+    "diagnosticCommit": "a371d2112",
+    "status": "success",
+    "windowsDiagnosis": "The retained open handle makes Windows refuse directory rename with EPERM before the simulated post-move mutation. Shipping code remains unchanged. Test3654d59c9 asserts unchanged bytes/empty Trash on that OS refusal and adds a separate actual concurrent-write case on every platform; existing POSIX handle race remains.",
+    "finalRun": 37096319330,
+    "testCommit": "3654d59c9",
+    "url": "https://github.com/CruxGarden/app/actions/runs/37096319330",
+    "jobs": [
+      {
+        "id": 111128065813,
+        "name": "Packaged runtime (windows-latest)",
+        "conclusion": "success",
+        "completedAt": "2026-10-03T04:46:27Z"
+      },
+      {
+        "id": 111128065994,
+        "name": "Packaged runtime (ubuntu-latest)",
+        "conclusion": "success",
+        "completedAt": "2026-10-03T04:38:35Z"
+      }
+    ]
+  },
+  "performance": {
+    "log": "/tmp/crux-followthrough-performance.log",
+    "tests": 4,
+    "pass": true,
+    "projectFiles": [1000, 10000],
+    "notes": "Production renderer in development Electron, process-cold startup with filesystem caches retained. 12 workspace switches with actual synth signal and 60s post-close observation; no claim of hours-long or all-hardware certification. Raw phase, heap/DOM/process samples stored alongside this report."
+  },
+  "package": {
+    "directory": "app/electron/release/manual-testing-ready-oct2/mac-arm64/Crux Garden.app",
+    "signature": "ad-hoc; not notarized",
+    "buildLog": "/tmp/crux-morning-package.log",
+    "smokeLog": "/tmp/crux-morning-packaged-smoke.log",
+    "tests": 4,
+    "pass": true,
+    "asarSHA256": "66c98e143e269911f343e02d69855dcb493ff2b70b6a5a5ae84f5e8898a74b6a",
+    "launcher": "app/electron/release/manual-testing-current/Launch Manual Testing.command",
+    "preservedProfile": "$HOME/CruxGarden-ManualTesting",
+    "profileOpenedByAgent": false
+  },
+  "verifiedTestHead": "3654d59c9b554d4b9b432de4abc19dea59ab70f5",
+  "reservedForHumanOrReleaseOperations": [
+    "Live AI/provider quality and spend (explicitly reserved by Daniel)",
+    "Human UX and hardware refinement with Release Expedition",
+    "Public-release signing/notarization and hosted rollout/Stripe/SES acceptance"
+  ]
+}

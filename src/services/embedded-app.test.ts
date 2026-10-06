@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -5,7 +6,8 @@ import { notebookSession } from './notebook';
 import { moqiraPath } from './embedded-app';
 import { exportCrux, importCrux } from './crux-io';
 
-beforeEach(() => initServices('local'));
+localApiFixture();
+beforeEach(() => initServices());
 it.each([
   '../project.json',
   '/project.json',
@@ -32,6 +34,8 @@ it('saves Moqira as Artifacts, records Growth, rejects stale writes and survives
   const result = (await call({ op: 'write', path: 'project.json', content, expected: null })) as {
     fingerprint: string;
   };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   expect(store.getState().growths).toHaveLength(1);
   await expect(
     call({ op: 'write', path: 'project.json', content, expected: null }),

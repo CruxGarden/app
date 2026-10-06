@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 function stereo() {
@@ -57,7 +58,8 @@ test('audio waveform tools preserve manual work, native history and portable PCM
   const run = async (action: string) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const previous = (await storedCrux(page, id)).messages.filter(
       (m: any) => m.role === 'assistant' && m.content === 'Audio depth ' + action + ' complete.',
     ).length;
@@ -251,7 +253,7 @@ test('audio waveform tools preserve manual work, native history and portable PCM
     await instance.app.close();
     instance = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     expect(pcm()).toEqual(finalPCM);
     expect(doc().multitrack).toEqual(finalArrangement);

@@ -50,9 +50,9 @@ describe('modelFor', () => {
     expect(validateConfig({ provider: 'google', apiKey: 'k' })).toBeNull();
   });
 
-  it('sends no temperature to OpenAI (reasoning models reject it); the engine defaults elsewhere', () => {
+  it('uses provider sampling defaults for OpenAI and Anthropic reasoning models', () => {
     expect(temperatureFor({ provider: 'openai', apiKey: 'k' })).toBe('default');
-    expect(temperatureFor({ provider: 'anthropic', apiKey: 'k' })).toBeUndefined();
+    expect(temperatureFor({ provider: 'anthropic', apiKey: 'k' })).toBe('default');
     expect(temperatureFor({ provider: 'google', apiKey: 'k' })).toBeUndefined();
   });
 

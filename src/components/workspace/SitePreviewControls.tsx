@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
 import type { SitePreview } from '@/hooks/useSitePreview';
 
 /**
@@ -59,8 +60,11 @@ export default function SitePreviewControls({
     if (n !== site.port || n !== site.preferredPort) void restart(n);
   };
 
-  const btn =
-    'shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default';
+  const btn = buttonClass(
+    'ghost',
+    'xs',
+    'min-h-6 py-0.5 px-2 text-2xs font-mono text-text-muted hover:text-text',
+  );
 
   return (
     <>

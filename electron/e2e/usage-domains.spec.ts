@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { togglePanel, hidePane, openPanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -16,7 +18,7 @@ test.describe('usage + custom domains (mocked API)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -32,7 +34,7 @@ test.describe('usage + custom domains (mocked API)', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Connect + publish through the Share pane
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -68,8 +70,8 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(domains.getByRole('button', { name: 'Connect a domain' })).toHaveCount(0);
       // Upgrade (the mock account's plan) and reopen the pane: the form is back
       api.state.billing.planId = 'gardener';
-      await page.getByRole('button', { name: 'Toggle share' }).click();
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
+      await togglePanel(page, 'Toggle share');
       await expect(page.getByTestId('crux-usage')).toBeVisible({ timeout: 30_000 });
       // Custom domain: add → records → verify ×3 → live
       await domains.getByRole('button', { name: 'Connect a domain' }).click();
@@ -125,7 +127,8 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(settings.getByTestId('settlement-note')).toContainText(/settle 48 hours/);
       await expect(settings.getByTestId('settlement-note')).toContainText(/CloudFront: matches/);
       await page.screenshot({ path: 'e2e/.results/usage-domains-2-settings.png' });
-      await page.keyboard.press('Escape');
+      await hidePane(page, 'Settings');
+      await openPanel(page, 'publish', 'Toggle share');
 
       // Remove the domain: confirmDialog first (a live domain says "Disconnect")
       await dom.getByRole('button', { name: 'Remove blog.example.com' }).click();

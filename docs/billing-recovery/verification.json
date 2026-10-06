@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-01",
+  "scope": "Subscription recovery and operator health; isolated API/PostgreSQL and desktop fixtures",
+  "checks": {
+    "appGate": "1698 tests / 269 files, 18 skips, build; /tmp/billing-health-app-verify.log",
+    "electronGate": "77 passed, 1 skipped; /tmp/billing-runtime-electron-verify.log",
+    "desktop": "6 passed in46.7s, including runtime owner/fresh schema/Task restart/billing; /tmp/billing-runtime-desktop.log",
+    "publicWebsite": "11 passed in 2.6m; /tmp/billing-ui-public.log",
+    "focused": "13 passed; /tmp/billing-ui-focused.log",
+    "accessibility": "Plan including expanded operator health: zero Axe violations, Electron legacy mode",
+    "apiGate": "1143 tests +5 skips;369 PostgreSQL/SQLite integration tests;build/runtime; /tmp/billing-monitor-release-verify.log",
+    "guide": "126 stories/1244 criteria; offline acceptance passes; /tmp/billing-monitor-guide.log",
+    "runtime": "Installed r919709969ecd.h9a2ff88c passes native smoke; /tmp/billing-runtime-installed-smoke.log"
+  },
+  "initialFailures": [
+    "Axe default mode tried to open an unsupported Electron target; use the established legacy-mode adapter.",
+    "Existing included-allowance test still expected Haiku after the earlier Sonnet refresh; assertion now checks current Gardener depth."
+  ],
+  "coverage": [
+    "Unavailable interval cannot be purchased or appear Free",
+    "One account owns its requests, timers and external-link response; disposal/account switch rejects stale results",
+    "Interval-only portal changes stop polling; ordinary refresh invalidates usage",
+    "Confirmation timeout/retry/offline and grace deadline/expiry",
+    "Expired grace directs an existing subscriber to Manage billing rather than another checkout",
+    "Publish/unpublish success invalidates account usage",
+    "Return URL does not claim payment success",
+    "Persistent simulation across API and desktop restart",
+    "Resume/Cancel pending checkout; completed payment wins cancellation race",
+    "Durable checkout intent, external idempotency key and account closing fence",
+    "Missed webhooks, provider/write refusals, signed delivery failures and metadata/audited-absence recovery",
+    "Operational leases, restart, safe diagnostics, automatic-worker lifecycle and admin guards",
+    "Durable notice retry; log-only delivery refusal and obsolete/deleted-account notice suppression",
+    "Trial-ending intent deduplicated by subscription/end date",
+    "Operator health Refresh/Retry; unavailable database is visible; ordinary account hides the controls"
+  ],
+  "limits": [
+    "No real payment or Stripe dashboard configuration tested",
+    "Cross-account late response is covered by the request-owner fixture, not a full two-account desktop journey",
+    "Production monitoring/alert destination and SES delivery have not been configured or exercised",
+    "Notice delivery is at least once: a crash after external send and before the local stamp may duplicate mail",
+    "Current-process worker heartbeat; bounded fixture checks do not establish production workload capacity"
+  ]
+}

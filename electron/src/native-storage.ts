@@ -1,0 +1,77 @@
+import type {
+  LocalWorkingCopyCreate,
+  LocalCruxCreate,
+  PrepareCruxFolder,
+  PrepareWorkingCopyFolder,
+} from '@cruxgarden/local-api';
+import type { SqliteBridge } from './bridge';
+type Awaitable<T> = T | Promise<T>;
+
+/** Host storage boundary. Consumers await results before using them, whether
+ * supplied by the legacy native client or the queued local API owner. */
+export interface NativeStorage {
+  fileContent?: SqliteBridge['fileContent'];
+  createCrux?(input: LocalCruxCreate, prepareFolder?: PrepareCruxFolder): Promise<string>;
+  onChange?: SqliteBridge['onChange'];
+  run(sql: string, params?: unknown[]): Awaitable<{ changes: number }>;
+  get<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T | undefined>;
+  all<T = Record<string, unknown>>(sql: string, params?: unknown[]): Awaitable<T[]>;
+  /** Available when the owning backend can commit the complete metadata merge. */
+  mergeCruxMeta?(id: string, patch: Record<string, unknown>): Promise<void>;
+  /** Complete local Crux lifecycle commands; host workspace guards still apply. */
+  prepareWorkingCopyFolder?(
+    id: string,
+    revision: number,
+    prepare: PrepareWorkingCopyFolder,
+  ): Promise<string>;
+  finishWorkingCopySetup?(id: string, revision: number, phase: 'ready' | 'failed'): Promise<void>;
+  createWorkingCopy?(input: LocalWorkingCopyCreate): Promise<void>;
+  workingCopyBase?: SqliteBridge['workingCopyBase'];
+  inspectTaskHistory?: SqliteBridge['inspectTaskHistory'];
+  readTaskHistoryFile?: SqliteBridge['readTaskHistoryFile'];
+  saveTaskReview?(reviewData: string, expectedData?: string): Promise<void>;
+  beginTaskMerge?(id: string, reviewData: string): Promise<void>;
+  releaseTaskReview?(id: string): Promise<void>;
+  completeTaskMerge?(id: string): Promise<void>;
+  setWorkingCopyArchived?(id: string, archived: boolean, revision: number): Promise<void>;
+  setCruxTrashed?(id: string, trashed: boolean): Promise<void>;
+  deleteCrux?(id: string): Promise<void>;
+  /** Atomically merge descriptive Task state without changing its identity or folder. */
+  updateWorkingCopyMeta?(id: string, patch: Record<string, unknown>, title?: string): Promise<void>;
+  updateCrux?: SqliteBridge['updateCrux'];
+  export(): Awaitable<ArrayBuffer>;
+  import(data: ArrayBuffer): Awaitable<void>;
+  /** Required content; an optional archive inventory bounds manifest traversal. */
+  inspectImport(data: ArrayBuffer, availableFingerprints?: string[]): Awaitable<string[]>;
+  close(): Awaitable<void>;
+  blobWrite(fingerprint: string, data: Uint8Array): Awaitable<void>;
+  blobRead(fingerprint: string): Awaitable<Uint8Array>;
+  blobDelete(fingerprint: string): Awaitable<void>;
+  blobExists(fingerprint: string): Awaitable<boolean>;
+  blobWipeAll(): Awaitable<void>;
+}
+
+/** Resolve native work to its actual Main or ready Task copy, never to the
+ * currently selected UI route. Deleted owners and unavailable copies refuse. */
+export async function lookupProjectCrux(db: Pick<NativeStorage, 'get'>, cruxId: string) {
+  const row = await db.get<{ slug: string; title: string | null; meta: string | null }>(
+    'SELECT slug, title, meta FROM cruxes WHERE id = ? AND deleted IS NULL',
+    [cruxId],
+  );
+  if (!row) {
+    const copy = await db.get<{ project_folder: string | null; title: string }>(
+      "SELECT w.project_folder, w.title FROM working_copies w JOIN cruxes c ON c.id = w.crux_id WHERE w.id = ? AND w.phase = 'ready' AND w.role = 'task' AND c.deleted IS NULL",
+      [cruxId],
+    );
+    return copy?.project_folder
+      ? { slug: `task-${cruxId}`, title: copy.title, folder: copy.project_folder }
+      : null;
+  }
+  try {
+    const meta = JSON.parse(row.meta || '{}');
+    if (typeof meta.projectFolder !== 'string') return null;
+    return { slug: row.slug, title: row.title || '', folder: meta.projectFolder };
+  } catch {
+    return null;
+  }
+}

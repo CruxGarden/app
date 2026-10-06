@@ -1,206 +1,239 @@
-import { useMoodNavigate } from '@/hooks/useMoodNavigate';
-import { useUIStore, useWorkspaceUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
-import TendingLink from '@/components/tending/TendingLink';
+import { Link } from 'react-router-dom';
+import AreaNavigation from './AreaNavigation';
+import { inGarden } from '@/stores/gardenContext';
+import { buttonClass } from '@/components/ui';
+import { openFieldGuide } from '@/stores/fieldGuide';
+import { useGardenContext } from '@/stores/gardenContext';
+import GardenLocation from './GardenLocation';
+import NavigationHistory from './NavigationHistory';
+import { useUIStore, useWorkspaceUIStore, type PaneType } from '@/stores/uiStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
-import { useAppStore } from '@/stores/appStore';
+import AlertsBell from '@/components/tending/AlertsBell';
+import UpdateNotice from './UpdateNotice';
+import TimerChip from '@/components/tending/TimerChip';
+import PanelPicker from './PanelPicker';
+import { COMMAND_SHORTCUT } from './command-score';
+import { openCommandPalette } from '@/stores/commandPalette';
+import { usePaneLabels } from '@/hooks/usePaneLabels';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
-import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/cn';
-import MoodBar from '@/components/mood/MoodBar';
 import { ConsoleAvatar } from '@/components/keeper/Console';
-import { SearchIcon, MoodIcon, ChevronRightIcon } from '@/components/ui/icons';
-import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
+import KeeperActivity from '@/components/keeper/KeeperActivity';
+import MoodBar from '@/components/mood/MoodBar';
+import { ChevronRightIcon, PlusCircleIcon, SearchIcon } from '@/components/ui/icons';
+import { PANES } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
 import { useShallow } from 'zustand/react/shallow';
+import { usePinned } from '@/stores/pins';
 
+/** Panes with their own control in the bar: the Navigator, the Mood chip, the Keeper. */
+const OWN_BUTTON = new Set<PaneType>(['navigator', 'mood', 'console']);
+const NO_DRAG = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
+
+/**
+ * The top bar, calm (UX pass 2, 2026-09-27): where you are on the left; in the
+ * middle one command bar — ⌘K for everything, then the square toggles of the
+ * open and pinned panels and the Panels picker; on the right what is yours —
+ * alerts, the Mood (theme and sound in one chip), the Keeper, the account.
+ * Explore and Tending are panels: the picker and ⌘K open them.
+ */
 export default function TopBar() {
-  const navigate = useMoodNavigate();
-  const { paneOrder, paneVisibility, togglePane, activeCruxId } = useWorkspaceUIStore(
+  const { paneOrder, paneVisibility, togglePane, activeCruxId, scope } = useWorkspaceUIStore(
     useShallow((s) => ({
       paneOrder: s.paneOrder,
       paneVisibility: s.paneVisibility,
       togglePane: s.togglePane,
       activeCruxId: s.activeCruxId,
+      scope: s.workspaceScope,
     })),
   );
-  const username = useAppStore((s) => s.author?.username);
+  const garden = useGardenContext((s) => s.garden);
+  const navigatorOpen = useGardenContext((s) => s.navigatorOpen);
+  // The garden's own title, if it has one; the pane names as the garden calls them.
+  const paneLabels = usePaneLabels();
   const aiEnabled = useUIStore((s) => s.aiEnabled);
 
-  // Split panes into enabled (in paneOrder) and disabled (in default order)
-  const enabledPanes = paneOrder.filter((p) => paneVisibility[p]);
-  const disabledPanes = DEFAULT_PANE_ORDER.filter((p) => !paneVisibility[p]);
+  // The squares mirror the visible workspace plus pinned panels; the rest live
+  // in the picker and in ⌘K.
+  const pinned = usePinned(scope);
+  // Open panes in their arrangement's order, then pinned ones that are closed.
+  const enabledPanes = [
+    ...paneOrder.filter((p) => paneVisibility[p]),
+    ...pinned.filter((p) => !paneVisibility[p]),
+  ].filter((p) => !OWN_BUTTON.has(p));
 
   const desktopChrome = can(Capability.DesktopChrome);
+  const noDrag = desktopChrome ? NO_DRAG : undefined;
 
   return (
     <header
       className={cn(
-        'flex items-center justify-between px-3 border-b border-toolbar-border bg-toolbar',
+        'flex flex-wrap items-center gap-x-4 gap-y-1 px-3 border-b border-toolbar-border bg-toolbar',
         desktopChrome && 'pl-24', // left padding for macOS traffic lights
       )}
       style={{
-        height: 'var(--toolbar-height)',
+        minHeight: 'var(--toolbar-height)',
         ...(desktopChrome ? ({ WebkitAppRegion: 'drag' } as React.CSSProperties) : {}),
       }}
     >
-      {/* Left: branding + breadcrumb */}
-      <div
-        className="flex flex-1 items-center gap-1.5 min-w-0"
-        style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
-      >
-        {username ? (
-          <button
-            onClick={() => navigate('/home')}
-            className="shrink-0 text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap hover:underline"
-          >
-            <span className="md:hidden">Garden</span>
-            <span className="hidden md:inline">{username}</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => navigate('/')}
-            className="shrink-0 cursor-pointer text-sm font-display font-medium text-toolbar-text whitespace-nowrap hover:underline"
-          >
-            {APP_NAME}
-          </button>
-        )}
-        <span className="text-toolbar-text-muted shrink-0">
-          <ChevronRightIcon />
-        </span>
-        <WorkspaceSwitcher />
-        <div className="hidden md:block">
-          <TendingLink />
+      {/* Left: where you are */}
+      <div className="flex flex-wrap flex-1 basis-60 min-w-0 items-center gap-1">
+        <div style={noDrag}>
+          <AreaNavigation area="garden" />
         </div>
+        <nav
+          aria-label="Workspace breadcrumbs"
+          className="flex flex-wrap items-center gap-1.5 min-w-0"
+          style={noDrag}
+        >
+          <IconButton
+            label="Navigator"
+            size="sm"
+            active={navigatorOpen}
+            onClick={() => useGardenContext.getState().setNavigatorOpen(!navigatorOpen)}
+            tooltip={{ label: 'Navigator' }}
+          >
+            <PlusCircleIcon />
+          </IconButton>
+          <NavigationHistory />
+          <Link to={inGarden('/home')} className={buttonClass('ghost', 'xs')}>
+            Garden Home
+          </Link>
+          <GardenLocation />
+          {scope === 'crux' && activeCruxId && (
+            <span className="text-toolbar-text-muted shrink-0">
+              <ChevronRightIcon />
+            </span>
+          )}
+          <WorkspaceSwitcher />
+          <TimerChip />
+        </nav>
       </div>
 
-      {/* Right: pane toggles + console + user menu */}
+      {/* Middle: one command bar — ⌘K, the panel squares, the picker */}
       <div
-        className="flex shrink-0 items-center gap-1"
-        style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
+        className="flex items-center gap-3 min-h-8 px-1"
+        data-testid="command-bar"
+        style={noDrag}
       >
-        {activeCruxId && (
+        <button
+          type="button"
+          aria-label="Search or run a command"
+          aria-keyshortcuts="Meta+K Control+K"
+          onClick={() => openCommandPalette()}
+          className={cn(
+            'group/cmd flex items-center gap-2 h-8 px-2 rounded-[var(--radius-sm)] cursor-pointer',
+            'text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover',
+            'transition-[color,background-color] motion-press',
+          )}
+        >
+          <SearchIcon size={14} />
+          <span className="hidden lg:inline text-xs pr-6">Search or run a command</span>
+          <kbd className="hidden sm:inline-flex items-center leading-none text-3xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-mood-bar-border text-toolbar-text-muted group-hover/cmd:text-toolbar-text transition-colors">
+            {COMMAND_SHORTCUT}
+          </kbd>
+        </button>
+        {enabledPanes.length > 0 && (
           <>
-            <div className="hidden md:flex items-center">
-              {/* Enabled panes — in paneOrder */}
-              <div className="flex items-center gap-1">
-                {enabledPanes.map((paneType) => {
-                  const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
-                  const Icon = config.icon;
-                  const prefix = PANE_VAR_PREFIX[paneType];
-                  return (
-                    <IconButton
-                      key={paneType}
-                      label={`Toggle ${config.label.toLowerCase()}`}
-                      size="sm"
-                      onClick={() => togglePane(paneType)}
-                      active
-                      className="pane-toggle"
-                      style={
-                        {
-                          color: `var(${prefix}-button-icon-active)`,
-                          backgroundColor: `var(${prefix}-button-active)`,
-                          borderColor: `var(${prefix}-button-border-active)`,
-                          '--pt-hover': `var(${prefix}-button-hover)`,
-                          '--pt-hover-icon': `var(${prefix}-button-icon-hover)`,
-                          '--pt-hover-border': `var(${prefix}-button-border-hover)`,
-                        } as React.CSSProperties
-                      }
-                      tooltip={{ label: config.label }}
-                    >
-                      <Icon />
-                    </IconButton>
-                  );
-                })}
-              </div>
-
-              {/* Divider between enabled and disabled */}
-              {disabledPanes.length > 0 && enabledPanes.length > 0 && (
-                <div className="w-px h-5 bg-toolbar-divider mx-1.5" />
-              )}
-
-              {/* Disabled panes — fixed default order, not draggable */}
-              {disabledPanes.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {disabledPanes.map((paneType) => {
-                    const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
-                    const Icon = config.icon;
-                    const prefix = PANE_VAR_PREFIX[paneType];
-                    return (
-                      <IconButton
-                        key={paneType}
-                        label={`Toggle ${config.label.toLowerCase()}`}
-                        size="sm"
-                        onClick={() => togglePane(paneType)}
-                        active={false}
-                        className="pane-toggle"
-                        style={
-                          {
-                            color: `var(${prefix}-button-icon)`,
-                            '--pt-hover': `var(${prefix}-button-hover)`,
-                            '--pt-hover-icon': `var(${prefix}-button-icon-hover)`,
-                            '--pt-hover-border': `var(${prefix}-button-border-hover)`,
-                          } as React.CSSProperties
-                        }
-                        tooltip={{ label: config.label }}
-                      >
-                        <Icon />
-                      </IconButton>
-                    );
-                  })}
-                </div>
-              )}
+            {/* The builder's lane: open and pinned panels as square toggles. */}
+            <div
+              className="hidden md:flex flex-wrap items-center gap-1.5"
+              role="group"
+              aria-label="Open panels"
+              data-testid="builder-lane"
+            >
+              {enabledPanes.map((paneType) => {
+                const { icon: Icon, label, prefix } = PANES[paneType];
+                const open = paneVisibility[paneType];
+                return (
+                  <IconButton
+                    key={paneType}
+                    label={`Toggle ${label.toLowerCase()}`}
+                    size="sm"
+                    onClick={(e) => {
+                      // Keep keyboard focus in the bar if this button disappears.
+                      if (open && !pinned.includes(paneType))
+                        e.currentTarget
+                          .closest('header')
+                          ?.querySelector<HTMLButtonElement>('[aria-label="Add panel"]')
+                          ?.focus();
+                      togglePane(paneType);
+                    }}
+                    active={open}
+                    className="pane-toggle"
+                    style={
+                      {
+                        color: open
+                          ? `var(${prefix}-button-icon-active)`
+                          : `var(${prefix}-button-icon)`,
+                        backgroundColor: open ? `var(${prefix}-button-active)` : undefined,
+                        borderColor: open ? `var(${prefix}-button-border-active)` : undefined,
+                        '--pt-hover': `var(${prefix}-button-hover)`,
+                        '--pt-hover-icon': `var(${prefix}-button-icon-hover)`,
+                        '--pt-hover-border': `var(${prefix}-button-border-hover)`,
+                      } as React.CSSProperties
+                    }
+                    tooltip={{ label: paneLabels[paneType] }}
+                  >
+                    <Icon />
+                  </IconButton>
+                );
+              })}
             </div>
-            <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
           </>
         )}
-        <div className="hidden md:block">
-          <MoodBar className="mr-1" />
+        <PanelPicker key={activeCruxId || garden?.id} />
+      </div>
+
+      {/* Right: what is yours */}
+      <div className="flex flex-1 basis-60 min-w-0 items-center justify-end">
+        <div className="flex items-center gap-3" style={noDrag}>
+          <UpdateNotice />
+          <button
+            onClick={() => openFieldGuide()}
+            aria-label="Help and field guide"
+            className="h-8 px-2 rounded-[var(--radius-sm)] text-xs text-toolbar-text-muted hover:text-toolbar-text hover:bg-icon-button-hover"
+          >
+            Help
+          </button>
+          <AlertsBell />
+          <MoodBar />
+          {aiEnabled && (
+            <>
+              <KeeperActivity />
+              <div className="relative group/btn flex items-center">
+                <button
+                  onClick={() => togglePane('console')}
+                  aria-label="Console"
+                  aria-pressed={paneVisibility.console}
+                  className={cn(
+                    'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
+                    'ring-1 hover:ring-2 hover:ring-accent/(--tint-muted) active-dim motion-press cursor-pointer',
+                    paneVisibility.console
+                      ? 'ring-accent/(--tint-medium)'
+                      : 'ring-text-muted/(--tint-subtle)',
+                  )}
+                >
+                  <ConsoleAvatar className="w-6 h-6" />
+                </button>
+                <div
+                  aria-hidden
+                  className="tooltip-reveal absolute top-full right-0 mt-2 z-50 pointer-events-none"
+                >
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-tooltip bg-tooltip border border-tooltip-border shadow-tooltip whitespace-nowrap">
+                    <span className="text-xs font-medium text-tooltip-text">Console</span>
+                    <kbd className="text-xxs font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
+                      Esc
+                    </kbd>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+          <div className="w-px h-5 bg-toolbar-divider mx-1" />
+          <UserMenu />
         </div>
-        <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
-        <IconButton
-          label="Explore"
-          size="sm"
-          onClick={() => useUIStore.getState().setExploreOpen(true)}
-          tooltip={{ label: 'Explore', shortcut: 'K' }}
-        >
-          <SearchIcon />
-        </IconButton>
-        <IconButton
-          label="Mood"
-          size="sm"
-          onClick={() => useUIStore.getState().toggleMoodPanel()}
-          tooltip={{ label: 'Mood', shortcut: 'M' }}
-        >
-          <MoodIcon />
-        </IconButton>
-        {aiEnabled && (
-          <>
-            <div className="w-px h-5 bg-toolbar-divider mx-1" />
-            <div className="relative group/btn flex items-center">
-              <button
-                onClick={() => useUIStore.getState().toggleConsole()}
-                aria-label="Console"
-                className={cn(
-                  'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
-                  'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
-                )}
-              >
-                <ConsoleAvatar className="w-6 h-6" />
-              </button>
-              <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-                <div className="flex items-center gap-2.5 px-3 py-2 rounded-tooltip bg-tooltip border border-tooltip-border shadow-tooltip whitespace-nowrap">
-                  <span className="text-xs font-medium text-tooltip-text">Console</span>
-                  <kbd className="text-xxs font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
-                    Esc
-                  </kbd>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-        <div className="w-px h-5 bg-toolbar-divider mx-1" />
-        <UserMenu />
       </div>
     </header>
   );

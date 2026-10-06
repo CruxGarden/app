@@ -126,6 +126,7 @@ import { LatestNotebookSnapshot } from "./lib/notebookSnapshot";
 import { PendingNoteContents } from "./lib/pendingNoteContents";
 import { buildRecentNoteViews } from "./lib/recentNotes";
 import { useNoteTextStats } from "./lib/useNoteTextStats";
+import { useNotebookPanes } from "./lib/useNotebookPanes";
 import { readStoredWordCountVisibility, writeStoredWordCountVisibility } from "./lib/wordCountVisibility";
 import { useNoteOutline } from "./lib/useNoteOutline";
 import type { BookmarkEntry, FolderEntry, LinkIndex, NavigationStyle, NotebookSnapshot, NotebookThemeColors, NoteEntry, NotePositionMetadata, WorkspaceMetadata } from "./types";
@@ -625,8 +626,7 @@ export default function App() {
   const [versionHistory, setVersionHistory] = useState<VersionHistoryState | null>(null);
   const [recentNotebooks, setRecentNotebooks] = useState<RecentNotebook[]>(() => readRecentNotebooks());
   const [appMenuOpen, setAppMenuOpen] = useState(false);
-  const [leftVisible, setLeftVisible] = useState(true);
-  const [outlineVisible, setOutlineVisible] = useState(true);
+  const { compact, leftVisible, setLeftVisible, outlineVisible, setOutlineVisible } = useNotebookPanes();
   const focusRestoreRef = useRef<PaneVisibility | null>(null);
   const [wordCountVisible, setWordCountVisible] = useState(() => readStoredWordCountVisibility());
   const [noteScrollFades, setNoteScrollFades] = useState<ScrollFadeVisibility>({ top: false, bottom: false });
@@ -2688,7 +2688,8 @@ export default function App() {
       validateNoteTitle(titleDraft);
     } catch (error) {
       setAppError(error instanceof Error ? error.message : String(error));
-      return;
+      // Callers must distinguish a refused save from a completed save before navigating.
+      throw error;
     }
 
     const snapshot = {
@@ -4396,6 +4397,7 @@ export default function App() {
       return;
     }
     selectNote(path, options);
+    if (compact) setLeftVisible(false);
   }
 
   function openContextMenu(event: React.MouseEvent, state: ContextMenuTarget) {

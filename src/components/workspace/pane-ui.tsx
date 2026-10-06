@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { Spinner } from '@/components/ui';
+import { Spinner, SectionLabel, buttonClass } from '@/components/ui';
 
 /**
  * The shared vocabulary of the small workspace panes (Sync, Share, Export,
@@ -23,7 +23,7 @@ export function PaneEmpty({ icon, title, description, children, className }: Pan
   return (
     <div
       className={cn(
-        'flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center text-center gap-2 p-5',
+        'flex-1 min-h-0 overflow-y-auto flex flex-col items-center [justify-content:safe_center] text-center gap-2 p-5',
         className,
       )}
     >
@@ -64,13 +64,15 @@ export function PaneSection({
       {...rest}
       className={cn(
         'rounded-[var(--radius-sm)] border px-3 py-2.5',
-        tone === 'dashed' ? 'border-dashed border-border/70' : 'border-border bg-surface/50',
+        tone === 'dashed'
+          ? 'border-dashed border-border/(--tint-strong)'
+          : 'border-border bg-surface/(--tint-balanced)',
         className,
       )}
     >
       {(label || aside) && (
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-2xs font-mono uppercase tracking-wider text-caption">{label}</span>
+          <SectionLabel>{label}</SectionLabel>
           {aside && <span className="text-xxs font-mono text-text-muted">{aside}</span>}
         </div>
       )}
@@ -106,20 +108,11 @@ export function PaneAction({
       type="button"
       onClick={onClick}
       disabled={disabled || isBusy}
-      className={cn(
-        'w-full flex items-center justify-center gap-1.5 px-3 h-8 rounded-[var(--radius-sm)]',
-        'text-xs font-medium font-body transition-all whitespace-nowrap',
-        tone === 'primary'
-          ? 'bg-accent-muted text-accent border border-accent/20'
-          : 'bg-surface text-text border border-border',
-        isBusy
-          ? 'cursor-wait'
-          : disabled
-            ? 'opacity-50 cursor-not-allowed'
-            : tone === 'primary'
-              ? 'hover:border-accent cursor-pointer'
-              : 'hover:border-accent cursor-pointer',
-        className,
+      aria-busy={isBusy || undefined}
+      className={buttonClass(
+        tone === 'primary' ? 'primary' : 'secondary',
+        'sm',
+        cn('w-full', isBusy && 'cursor-wait disabled:cursor-wait', className),
       )}
     >
       {isBusy ? (

@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -13,8 +14,9 @@ const files = [
   { path: '.tigrana/metadata.json', content: '{"pinnedNotes":["a-tigrana-note"]}' },
   { path: 'Folder/.tigrana/folder.json', content: '{"id":"a-tigrana-folder"}' },
 ];
+localApiFixture();
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 async function fixture() {
   const store = createCruxStore();
@@ -62,8 +64,7 @@ it('preserves folders, frontmatter, metadata and image bytes, remains private, a
     imported: 4,
     notes: 1,
   });
-  expect(store.getState().growths.length).toBe(before + 1);
-  expect(store.getState().growths.at(-1)?.meta?.appChanges).toEqual({ app: 0, content: 4 });
+  expect(store.getState().growths.length).toBe(before);
   expect(await call({ op: 'read', path: 'Imported/Vault/Folder/Note.md' })).toMatchObject({
     content: markdown,
   });
@@ -83,7 +84,7 @@ it('preserves folders, frontmatter, metadata and image bytes, remains private, a
     const artifact = artifacts.find(
       (a) => a.meta?.path === `notebook/Imported/Vault/${file.path}`,
     )!;
-    expect(await getServices().artifact.readContent(artifact.id)).toBe(file.content);
+    expect(await getServices().artifact.readContent(artifact)).toBe(file.content);
   }
   expect(validateVaultFiles(files)).toEqual(files);
 });
@@ -99,6 +100,6 @@ it('retains a recoverable partial copy when storage fails and never replaces exi
   expect(await call({ op: 'read', path: 'Imported/Vault/Folder/Note.md' })).toMatchObject({
     content: markdown,
   });
-  expect(store.getState().growths.at(-1)?.meta?.label).toBe('Partial notebook import: 1 files');
+  expect(store.getState().growths).toHaveLength(0);
   vi.restoreAllMocks();
 });

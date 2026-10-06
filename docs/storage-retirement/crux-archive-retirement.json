@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-02",
+  "stage": "AR06 native generic Crux archive facade and serializer retirement",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "verification": {
+    "focused": {
+      "passed": 57,
+      "suites": 8,
+      "log": "/tmp/native-facade-focused.log"
+    },
+    "app": {
+      "passed": 1676,
+      "skipped": 18,
+      "files": 272,
+      "build": true,
+      "log": "/tmp/native-facade-app-verify.log"
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1,
+      "log": "/tmp/package-community-electron.log",
+      "hostSourceUnchanged": true
+    },
+    "desktop": {
+      "status": "passed",
+      "log": "/tmp/native-facade-desktop.log",
+      "command": "CRUX_UNDERTAKINGS=home-page npm run test:e2e -- e2e/private-archive-ui.spec.ts e2e/community-tool.spec.ts e2e/manifest-garden-archive.spec.ts e2e/undertakings.spec.ts --project=desktop",
+      "passed": 5,
+      "duration": "2.1m"
+    }
+  },
+  "changes": [
+    "Crux facade now delegates only to the native API private archive3 service. Native absence refuses instead of selecting a format1/2 fallback.",
+    "Crux IO shrinks from926 to154 lines. Removed416-line task-archive.ts and67-line task-import-replacement.ts. The retained portable metadata policy is22 lines in its own module; core production reduction1233 lines.",
+    "Plain Artifact ZIP export remains unchanged, separate from graph import/export.",
+    "Two former SQL.js generic format suites (62 tests) are replaced with17 meaningful native tests. Existing native facade/private-content/Task-replacement tests retain restore/replay, visitors, branching, Task bases and replacement rollback.",
+    "Native tests retain empty/presentation metadata, authoritative Collaboration, marked Growth timestamps/annotations, private deployment/session exclusions, own Project Folder, real Store read/write failure and retry, archive graph/content hashes, deduplication, corrupt/missing/unsupported/extra container refusal, named file fingerprint/rename identity.",
+    "Export captures source identity and progress callback before asynchronous ownership checks; caller mutation cannot redirect the archived Crux.",
+    "Publication and installation consumers import the same portable metadata policy without retaining a Task serializer.",
+    "Reviewed persistence inventory falls59 to52 literal SQL mutation sites."
+  ],
+  "baselines": [
+    "Native round-trip replacement baseline: one failed/six passed. Caller changes source options during await; exporter returns the other Crux UUID.",
+    "Native conformance replacement baseline: one failed/nine passed. Absent archive/content ports select the old crux.json decoder, reporting the wrong format error; the final facade refuses the unavailable native owner."
+  ],
+  "retiredAssertions": [
+    "Format1/2 acceptance, crux.json/version/dimensions.json shapes and their fingerprint formula.",
+    "Constructing Growth from missing dimensions or accepting incomplete snapshot directories.",
+    "Overriding authoritative saved Collaboration with stale dialog message fields.",
+    "Runtime-reference/catalog hydration in private Crux archives.",
+    "Renderer SQL.js replacement graph transactions and ID-only per-file row reads."
+  ],
+  "limits": [
+    "No complete AR06 claim: native installation consumers, required client commands, Task/Garden/worker/schema fallbacks remain. AR07\u2013AR09 and graph Mood-token follow-through remain.",
+    "Garden package still uses sequential member intake and compensating cleanup, not one API-selected Garden transaction.",
+    "Full-suite count drops45 because62 old fixture assertions become17 native cases; this is neither45 lost features nor increased test quantity as a quality claim.",
+    "No API/runtime, live publication/deployment/merge, real Garden or manual-candidate changes. New-head Windows/Linux CI requires separate acceptance.",
+    "Previous e27 native CI run36972754082 was in progress when inspected; no new-head native acceptance claimed."
+  ]
+}

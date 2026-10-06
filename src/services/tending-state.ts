@@ -1,3 +1,5 @@
+import { progressDisplay, type ProgressDisplay } from './task-progress';
+import { getSetting, setSetting } from './settings';
 import type { TurnJob } from './turn-jobs';
 
 /** Observation only. A result, an unanswered decision and a check are independent. */
@@ -26,6 +28,7 @@ export interface TendingState {
   runId: string | null;
   model?: string;
   activity: Activity;
+  progress?: ProgressDisplay;
   attention: Attention[];
   verification: {
     status: 'not-checked' | 'checking' | 'passed' | 'failed';
@@ -146,6 +149,10 @@ export function tendingState(input: TendingInput): TendingState {
     runId: job?.id ?? null,
     model: job?.model,
     activity,
+    progress: progressDisplay(
+      interrupted ? 'interrupted' : activity === 'waiting' ? 'paused' : job?.status,
+      job?.progress,
+    ),
     attention,
     verification,
     evidence,
@@ -192,4 +199,13 @@ export function targetMatches(target: TendingTarget, current: TendingState): boo
 }
 export function attentionCount(states: TendingState[]): number {
   return new Set(states.filter((s) => s.attention.length).map((s) => s.copyId)).size;
+}
+
+/** The last turn of a Crux the person has looked at; Tending marks the newer ones. */
+const seenKey = (cruxId: string) => `cruxgarden:tending-seen:${cruxId}`;
+export function seenTurn(cruxId: string): string | null {
+  return getSetting(seenKey(cruxId));
+}
+export function markTurnSeen(cruxId: string, turnId: string): void {
+  setSetting(seenKey(cruxId), turnId);
 }

@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef } from 'react';
 import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d';
 import { layoutGrowthGraph, type GrowthLink } from '@/services/growth-graph';
 import {
-  endpointId,
+  graphLinkColor,
   laneColor,
   safeGraphLabel,
   type GraphCanvasProps,
   type RenderNode,
 } from './graph-style';
+import { graphLinkMaterial, GRAPH_ARROW_OPACITY } from './graph-material';
 
 export default function GrowthGraph3D({
   graph,
@@ -18,6 +19,7 @@ export default function GrowthGraph3D({
   onSelect,
   fit,
   reducedMotion,
+  appearance,
 }: GraphCanvasProps) {
   const ref = useRef<ForceGraphMethods<RenderNode, GrowthLink> | undefined>(undefined);
   const data = useMemo(() => {
@@ -50,10 +52,28 @@ export default function GrowthGraph3D({
     };
   }, [graph]);
   const layoutKey = graph.nodes.map((n) => n.id).join('|');
+  const materials = useMemo(
+    () =>
+      new Map(
+        [
+          ...new Set([
+            appearance.link,
+            appearance.mergeLink,
+            appearance.transferLink,
+            appearance.inactive,
+          ]),
+        ].map((color) => [color, graphLinkMaterial(color)]),
+      ),
+    [appearance.link, appearance.mergeLink, appearance.transferLink, appearance.inactive],
+  );
+  useEffect(() => () => materials.forEach((material) => material.dispose()), [materials]);
   useEffect(() => {
-    const timer = setTimeout(() => ref.current?.zoomToFit(reducedMotion ? 0 : 400, 70), 100);
+    const timer = setTimeout(
+      () => ref.current?.zoomToFit(reducedMotion ? 0 : appearance.motion.slow, 70),
+      100,
+    );
     return () => clearTimeout(timer);
-  }, [layoutKey, width, height, fit, reducedMotion]);
+  }, [layoutKey, width, height, fit, reducedMotion, appearance.motion.slow]);
   useEffect(() => {
     const visibility = () => {
       if (document.hidden) ref.current?.pauseAnimation();
@@ -69,32 +89,28 @@ export default function GrowthGraph3D({
       graphData={data}
       width={width}
       height={height}
-      backgroundColor="#101c19"
+      backgroundColor="rgba(0, 0, 0, 0)"
       showNavInfo={false}
       cooldownTicks={0}
       enableNodeDrag={false}
       nodeResolution={8}
       nodeRelSize={6}
+      nodeOpacity={1}
       nodeLabel={(n) =>
         safeGraphLabel(
           `${graph.lanes[n.lane]?.title} · ${n.title}${n.kind === 'merge' ? ' · Merge' : ''}`,
         )
       }
-      nodeColor={(n) => (selectedId && !ancestry.has(n.id) ? '#34483f' : laneColor(n.lane))}
+      nodeColor={(n) =>
+        selectedId && !ancestry.has(n.id) ? appearance.inactive : laneColor(appearance, n.lane)
+      }
       nodeVal={(n) =>
         n.id === selectedId ? 8 : n.kind === 'copy' ? 5 : n.kind === 'merge' ? 4 : 2
       }
-      linkColor={(l) =>
-        selectedId && !ancestry.has(endpointId(l.target))
-          ? '#293831'
-          : l.kind === 'merge'
-            ? '#dfb56f'
-            : l.kind === 'transfer'
-              ? '#df94ab'
-              : '#648374'
-      }
+      linkColor={(l) => graphLinkColor(appearance, l, selectedId, ancestry)}
+      linkMaterial={(l) => materials.get(graphLinkColor(appearance, l, selectedId, ancestry))!}
       linkWidth={(l) => (l.kind === 'merge' || l.kind === 'transfer' ? 1.6 : 0.7)}
-      linkOpacity={0.8}
+      linkOpacity={GRAPH_ARROW_OPACITY}
       linkDirectionalArrowLength={5}
       linkDirectionalArrowRelPos={0.8}
       onNodeClick={(n) => {
@@ -102,7 +118,7 @@ export default function GrowthGraph3D({
         ref.current?.cameraPosition(
           { x: n.x + 90, y: n.y + 40, z: n.z + 260 },
           n,
-          reducedMotion ? 0 : 450,
+          reducedMotion ? 0 : appearance.motion.slow,
         );
       }}
       onBackgroundClick={() => onSelect('')}

@@ -1,9 +1,10 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -39,7 +40,9 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     page.setDefaultTimeout(60000);
     page.on('console', (message) => {
       if (message.type() === 'error' || message.text().includes('[garden]'))
-        console.log(`[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`);
+        console.log(
+          `[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`,
+        );
     });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.setViewportSize({ width: 1700, height: 1050 });
@@ -73,7 +76,9 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
       expect(doc().project.name).toBe('Moss Stone');
       await frame.locator('#output-name').fill('Stone, print');
       await frame.locator('#save-model').click();
-      await expect(status(page)).toContainText('Saved Stone, print as a STL output', { timeout: 120000 });
+      await expect(status(page)).toContainText('Saved Stone, print as a STL output', {
+        timeout: 120000,
+      });
       await expect.poll(() => outputs(folder).length).toBe(1);
       const [stl] = outputs(folder);
       expect(stl!.mimeType).toBe('model/stl');
@@ -83,15 +88,18 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     });
 
     await test.step('the scripted collaborator names it, models a coaster and saves a 3MF', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Model me a coaster [model:coaster]');
       await box.press('Enter');
       await expect(
-        page.getByText('Named the model Moss Coaster, wrote a hexagonal coaster with a leaf groove and saved a 3MF of it.', {
-          exact: true,
-        }),
+        page.getByText(
+          'Named the model Moss Coaster, wrote a hexagonal coaster with a leaf groove and saved a 3MF of it.',
+          {
+            exact: true,
+          },
+        ),
       ).toBeVisible({ timeout: 8 * 60_000 });
       await ready(page);
       expect(doc().project.name).toBe('Moss Coaster');
@@ -100,22 +108,29 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
       const threemf = outputs(folder).find((o) => o.label === 'Moss Coaster')!;
       expect(threemf.mimeType).toBe('model/3mf');
       expect(readFileSync(join(folder, threemf.path)).subarray(0, 2).toString()).toBe('PK');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'jscad-agent.png') });
     });
 
     await test.step('Share publishes the page with the bundle and the examples', async () => {
-      await page.getByTestId('workshop-view').getByRole('button', { name: 'Share selected content', exact: true }).click();
+      await page
+        .getByTestId('workshop-view')
+        .getByRole('button', { name: 'Share selected content', exact: true })
+        .click();
       const share = page.getByTestId('pane-body-publish');
       await share.getByRole('button', { name: 'Share selected content', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
-      const backupAsk = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
       await expect(backupAsk).toBeVisible({ timeout: 60000 });
       await backupAsk.getByRole('button', { name: 'Share without a backup', exact: true }).click();
-      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({ timeout: 6 * 60_000 });
+      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({
+        timeout: 6 * 60_000,
+      });
       const paths = (api.state.published[id] ?? []).map((f) => f.path);
       expect(paths).toEqual(
         expect.arrayContaining([
@@ -129,7 +144,7 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
         ]),
       );
       await page.screenshot({ path: join(evidence, 'jscad-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
     expect(errors).toEqual([]);
   } finally {
@@ -141,7 +156,7 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1700, height: 1050 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the coaster comes back in the editor with its outputs', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#model-name')).toHaveValue('Moss Coaster');
@@ -163,7 +178,9 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     await enterGarden(page);
     await test.step('clean Garden: the complete Crux imports and the coaster evaluates', async () => {
       await importNativeCrux(page, archive);
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       await expect(frameOf(page).locator('#model-name')).toHaveValue('Moss Coaster');

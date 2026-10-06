@@ -1,0 +1,316 @@
+# Manual test plan — everything, in the order you'd meet it
+
+For a hands-on pass over the desktop app. Written 2026-09-21.
+
+**Read this first.** This is Daniel's full manual pass after the agreed v1 features are in place. Automated evidence helps locate regressions; it does not replace checking the design, wording and behavior yourself. Every section is marked:
+
+- **[auto]** — an automated journey covers part of this area; still check the experience manually.
+- **[MANUAL]** — human judgment or a path without automated coverage.
+- **[LIVE]** — needs real credentials or a signed build.
+
+Work top to bottom: each section assumes the state the previous one left.
+
+Keep a note of anything that makes you hesitate, even if it "works" — the
+judgement calls (does this feel right? is this the word for it?) are the only
+thing a test suite can never give you.
+
+---
+
+## The question underneath all of it
+
+Daniel, 2026-09-21: _"how effortless does it feel to use, once you know it —
+does it make your job easier?"_ And then, sharper: **not fun — addictive.**
+
+Everything below checks whether something **works**. None of it checks whether
+you want to come back to it. That second question is the one no suite can
+answer and the one the product lives on, so carry it through every section.
+
+**Addictive in the sense that matters here** is the craft-tool kind — the way
+people lose an evening to Ableton or Blender, and open them on a Saturday with
+nothing to make. Not the engineered kind: streaks, nudges, a feed that will not
+end. That sort would actively hurt a tool people do real work in, and it is
+also the thing that makes software feel cheap. The goal is _I want to be in
+here_, not _I feel bad when I am not_.
+
+**Six probes that give real answers:**
+
+1. **Do you open it when you do not have to?** The single strongest signal, and
+   the only one you cannot fake. Note the days you went in with nothing to do.
+2. **Do you lose track of time?** Note when you next looked at the clock. An
+   hour that felt like twenty minutes is the thing.
+3. **Does it pull you to one more thing?** You finish what you came for — do
+   you stop, or do you start the next crux? Where exactly does that pull come
+   from, so it can be strengthened.
+4. **How cheap is coming back?** This is the mechanism for a tool like this: if
+   the conversation and the history mean you can resume a week later without
+   reloading it all into your head, returning is easy and you will. If you have
+   to reconstruct where you were, you will not.
+5. **Test the second time, not the first.** Novelty and confusion both wear off.
+   Effortless means the second time took no thought.
+6. **Watch what you avoid.** Not bothering to snapshot, going to Finder instead
+   of the Artifacts pane, leaving a Mood alone because changing it is a faff —
+   the avoidance is the finding. Write down what you dodged and why.
+
+**It has to feel alive** (Daniel, 2026-09-21: _"the whole app has to feel alive
+in the sense that everything responds to your input — hover states,
+animations"_). Aliveness is what makes the other five probes possible: a dead
+surface is never addictive. Go looking for the opposite —
+
+- **Anything that does not acknowledge you.** Hover, press, focus, drag. A
+  control that looks the same before and after you touch it reads as broken
+  even when it worked.
+- **Anything that goes quiet while it thinks.** Slow is forgivable; silent is
+  not. Installing, building, publishing, a long turn — each should say it is
+  happening, and say what.
+- **The half-second after a click.** Did something move, or did you wonder
+  whether it registered? That wondering is the whole problem.
+- **Where the app is alive and where it stops.** The Collaboration pane and the
+  Mood Bar are the most animated parts; note where you cross into somewhere
+  that feels static by comparison, because that seam is what people feel.
+
+Aliveness is the **default** to protect, not an accessibility risk to trim: the
+reduced-motion path exists for whoever needs it and should not set the ceiling
+for everyone else.
+
+**Write down the moments, not the verdict.** "I opened it on Sunday to move one
+card and stayed an hour" is worth more than "feels good". So is "I closed the
+pane and could not remember how to get it back".
+
+**Two honest cautions.** You cannot read your own app cold — you know where
+everything is, so "obvious" is not yours to judge alone. And this is easiest to
+feel on a new empty garden; the twentieth crux and the crowded one tell the
+truth.
+
+---
+
+## 0. Before you start
+
+- [ ] `cd app && npm run verify` — green.
+- [ ] `cd app/electron && npm run verify` — green.
+- [ ] Launch the real app, not the dev server: `cd app/electron && npm start`.
+      (Embedded-app journeys are blank under `CRUX_DEV_SERVER` — § Kinks.)
+- [ ] Note which build you are on: a dev build behaves differently from the
+      packaged DMG for updates, signing and native tools.
+
+---
+
+## 1. First run and the Gateway **[auto: `gateway-layout`, `smoke`]**
+
+- [ ] Enter → _Plant a new garden_ → Welcome. You land in the Home Garden.
+- [ ] **[MANUAL]** Does the first screen explain itself to somebody who has
+      never seen this? You cannot un-know what it does; try to read it cold.
+- [ ] Username: type one, see it validated; type a taken one, see it said.
+- [ ] Avatar: upload, see it in the top bar and on your garden.
+- [ ] AI keys: add a key in Settings → AI. It disappears from the field once
+      saved (it is stored, not shown).
+- [ ] Restart the app. You are still you, still in your garden.
+
+## 2. Home Garden **[auto: `garden-panes`, `starters`, `tending`]**
+
+- [ ] Crux list: created/updated sort, search, thumbnails.
+- [ ] _Add Crux_ opens the picker; every starter is listed with a thumbnail.
+- [ ] Crux actions menu: rename, duplicate, export, delete.
+- [ ] Tending: the page lists what wants attention.
+- [ ] **[MANUAL]** With 20+ cruxes, is the garden still legible? Most testing
+      happens with three.
+
+## 3. Every starter, created and opened **[auto: per-template journeys]**
+
+Create one of each, let it finish installing, and look at it. For the Astro
+ones the Workshop's Clean view _is_ the live site.
+
+- [ ] Blank, Empty (Astro)
+- [ ] Home Page (Keel), Blog (Cactus), Digital Garden (Veka)
+- [ ] **Photo Gallery** — drop a `.jpg` into `src/assets/digital/` from Finder;
+      it appears in the gallery, captioned from the filename.
+- [ ] **Business Page** — change `name` in `src/config.json`; the site renames.
+- [ ] **Resume** — edit `src/pages/index.md`; the page follows. The button at
+      the top right prints it.
+- [ ] Feed, Media, Recipe Book, Storefront, Order Desk, Garden, 5Ws
+- [ ] **[MANUAL]** Read the placeholder copy in each. Does it tell you what to
+      put there, or does it read as somebody else's content you have to delete?
+- [ ] **[MANUAL]** Create one of each _tool_ crux (Piskel, Kan, GDevelop,
+      Notes, Moqira…). They are individually journey-covered, but nobody has
+      sat and used them in a row. Watch for slow first opens and disk use.
+
+## 4. The workspace and its panes **[auto: `garden-panes`, `files`]**
+
+- [ ] Open each pane from the top bar; close each from its own header.
+- [ ] Layout survives a restart, per crux.
+- [ ] **[MANUAL]** Open _all_ panes at once. Known bug: at nine the leftmost
+      run off canvas and Collaboration becomes unreachable (§ handoff open
+      threads 7). Decide what you want to happen.
+- [ ] **[MANUAL]** Resize the window narrow and wide. Panes ask for room rather
+      than breaking — does the message read well?
+
+## 5. Collaboration **[auto: `chat`, `background-turn`, `parallel-tasks`]**
+
+- [ ] Send a message with a real key. Words stream; tool calls fold under the
+      reply as one expandable line; the line grows as work arrives.
+- [ ] Stop mid-turn. Steer mid-turn.
+- [ ] A multi-step request produces a plan, steps tick over, snapshots per step.
+- [ ] Model selector, usage and context readout below the composer.
+- [ ] Ask it to remember something → Settings → Memory shows it.
+- [ ] **[MANUAL]** **This is the heart of the product and the least testable.**
+      Spend an hour making something real with it. Does it feel like working
+      with someone, or like operating a machine? That judgement is yours alone.
+- [ ] **[MANUAL]** Persona: switch in Mood → Persona. Does the voice change?
+
+## 6. Artifacts and the editor **[auto: `files`, `upload-skills-apex`]**
+
+- [ ] New file, rename, move between folders, delete (with the confirm), undo
+      via Growth.
+- [ ] Upload by button and by dragging from Finder.
+- [ ] Edit in Monaco, ⌘S, the file changes on disk.
+- [ ] **Edit the file in an external editor.** The tree and the preview follow.
+- [ ] **[MANUAL]** Delete a file in Finder while the app is open. Does the app
+      cope, and does Growth still hold the old version?
+
+## 7. Growth **[auto: `snapshots`, `growth-actions`, `growth-tools`, `growth-graph`]**
+
+- [ ] Take a snapshot, label it, see it in the timeline.
+- [ ] View an old snapshot; the banner offers Branch / Revert / Back.
+- [ ] Revert — editor, disk and history agree afterwards.
+- [ ] Branch, then switch between branches.
+- [ ] Remove the last snapshot.
+- [ ] Whole-Crux Growth explorer; the graph view.
+- [ ] **[MANUAL]** Restore something from a week of real work, not a fixture.
+      This is the promise the product makes; it deserves a real test.
+
+## 8. Tasks **[auto: `task-details`, `parallel-tasks`, `cruxspace-task-transfer`]**
+
+- [ ] New task, work in it, review changes, merge into Main.
+- [ ] Two tasks at once; they do not tread on each other.
+- [ ] **[MANUAL]** Abandon a task halfway and come back tomorrow. Is its state
+      obvious?
+
+## 9. Preview **[auto: `multi-crux-preview`, `devserver.unit`]**
+
+- [ ] Site Crux: `astro dev` starts by itself; Refresh; Open externally.
+- [ ] Static crux: the plain server serves it.
+- [ ] Screenshot, Export video, Check it.
+- [ ] **[MANUAL]** Break a build on purpose (bad frontmatter). The failure is
+      explained, not just red, and _Retry preview_ recovers.
+
+## 10. Cruxspaces **[auto: `cruxspace`, `business-cruxspace`, `game-cruxspace`]**
+
+- [ ] Create one, add members, write the brief.
+- [ ] Save an output in one member; use it in another; the origin is recorded.
+- [ ] The story walkthrough; revert every member to a moment.
+- [ ] Export a `.cruxspace`, import into a clean garden.
+- [ ] **[MANUAL]** Import `demos/office-garden/bloom-and-ink.cruxspace` on a
+      machine that does _not_ have Kan and PPTist. It now tells you which tools
+      are missing — is that message enough to act on?
+
+## 11. The Keeper console **[auto: `keeper-plants`, `keeper-operates`, `keeper-tour`]**
+
+- [ ] Escape opens it. Ask it to plant a crux; watch it happen.
+- [ ] The activity chip in the top bar while it works, with Stop.
+- [ ] **[MANUAL]** Ask it to _build you something_ — the multi-step skill. This
+      is the "I sit down and say what I want" story; it needs a human.
+
+## 12. Moods and appearance **[auto: `bundled-moods`, `mood-builder`, `plasma`, `names`]**
+
+- [ ] **Flow** (automated controls, persistence, collaborator activity and fade: `flow.spec.ts`): on by default only in Plasma, sensitivity 50%; off returns to the Mood's normal brightness and colour. On allows a dimmer resting material and gradually stronger colour/light/iridescence.
+- [ ] **[MANUAL]** At 50%, create for about a minute: write, arrange panes/windows, open Artifacts, make a Crux, and let collaborators use tools. The glow should feel organic and subtly alive, never flash per action. Pause: it should linger, then return toward baseline over a minute or two. Resume during that fade: it should build from the remaining glow. Check both sensitivity extremes and Motion off.
+- [ ] Switch Moods from the Mood Bar; the whole app changes.
+- [ ] Mood Builder: theme, background, sound, persona.
+- [ ] Soundscape plays; volume; per-Mood track.
+- [ ] Names: change what panes are called (Settings → Names).
+- [ ] **[MANUAL]** Live with one Mood for an evening. Moods are judged by
+      dwelling in them, not by switching.
+- [ ] **[MANUAL]** Check light Moods as carefully as dark ones — most work
+      happens in dark.
+
+- Typography: Plasma pane titles use Garamond at 18px; Soft uses Inter at 13px. Change **Titles** and check pane/modal headings together. Collaboration and console prose stay in the sans-serif body face. The idle keyboard helper line is gone.
+
+## 13. Settings **[auto: `settings`, `billing` partial]**
+
+- [ ] Account, Names, AI, Memory, Agents, Plan, Usage, Data, Desktop, Sync,
+      Installed tools — open each, change something in each.
+- [ ] Sign out: **your local author stays** (name, avatar). Only the account
+      connection goes.
+- [ ] Data → wipe the garden (in a throwaway garden, with "delete me").
+
+### Connected agents (MCP)
+
+- Settings → Agents: enable **Whole garden**, connect your preferred outside MCP client using its snippet, and ask it to create two Cruxes, work in each, bring one into view, make a Cruxspace and snapshot the work. Check the agent's named garden-action conversation in the Keeper and its tool calls in each Crux's Collaboration.
+- Ask a built-in collaborator to discover the garden tools and create a second Crux. These should be ordinary supported actions from either route.
+- Restart with the outside client configured, reconnect, regenerate its token, then switch access off. Old credentials must stop working. Try the narrower per-Crux connection: it must not gain whole-garden authority.
+- Publishing and file deletion retain the person's approval. Check this with a disposable Crux before using a real project.
+
+## 14. Multiple workspaces **[auto: `multi-crux-*`]**
+
+- [ ] Open several cruxes at once; the switcher (⌘⌥K, Ctrl+Tab).
+- [ ] Close one with unsaved work — you are asked.
+- [ ] Quit with turns running — you are warned.
+- [ ] **[MANUAL]** Seven or more open, as in the office garden. Watch memory
+      and whether anything gets slow.
+
+## 15. Export, import, backup **[auto: `data-safety`, `auto-backup`, `recover`, `trash`]**
+
+- [ ] `.crux` export and import round trip.
+- [ ] `.garden` full backup and restore into a clean garden.
+- [ ] Trash: delete, recover, delete forever; survives restart.
+- [ ] **[MANUAL]** Note the file sizes. A GDevelop crux exports at ~194 MB
+      because the runtime travels with it — the v1 by-reference work (ROADMAP
+      § 9b) is aimed at exactly this. Is the current size tolerable meanwhile?
+
+## 16. Publish and share **[LIVE + auto: `publish`, `guestbook`, `functions`]**
+
+- [ ] Publish a crux; visit the URL; _How was this made?_ shows the conversation.
+- [ ] Republish after a change; unpublish.
+- [ ] Guestbook on a published site; a visitor signs in and leaves a note.
+- [ ] Crux Store: add keys locally, then live.
+- [ ] Functions: an event function, the custom API, a schedule, a secret.
+- [ ] **[LIVE]** Custom domain end to end.
+- [ ] **[LIVE]** Sync push/pull, and the new-device flow on a second machine.
+
+## 17. Native tools (desktop only) **[auto: `media-tools`, `convert-actions`]**
+
+- [ ] Media Tools crux: convert a video, an image, a document.
+- [ ] Artifacts' contextual Convert buttons on a dropped file.
+- [ ] Markdown → PDF (Typst).
+- [ ] **[MANUAL]** Install ImageMagick from inside the app when a picture
+      recipe needs it. Does the prompt make sense if you have never heard of it?
+
+## 18. Stack, Link and Runner (the workspace, ADR 0053) **[MANUAL — untried by you]**
+
+Built 2026-09-20, never driven by hand.
+
+- [ ] Import `demos/sitemetric/sitemetric-workspace.cruxspace`.
+- [ ] Point the two Link Cruxes at real checkouts.
+- [ ] Press Start in the Runner; Postgres and Redis come up; ports are assigned
+      and remembered; the log shows every service.
+- [ ] Stop; reopen; the Runner still knows what is running.
+- [ ] **[MANUAL]** This is the thing you wanted for the team. Judge it against
+      "make running our platform locally as easy as clicking a button".
+
+## 19. Explore and tool installation **[auto: `tool-info`, `tool-sampler`]**
+
+- [ ] Explore lists tools; install one; create from it.
+- [ ] Tool Info shows the upstream project and what Crux Garden changed.
+
+## 20. The packaged app **[LIVE — never done]**
+
+- [ ] Build a DMG, install it as a stranger would, and run § 1–7 again on it.
+      **Nothing below the DMG has ever been acceptance-tested.** Updates,
+      signing, native binaries and the `userData` path all differ from a dev
+      build.
+
+---
+
+## Known open issues — do not report these as new
+
+- Nine panes: the leftmost run off canvas (§ 4).
+- `SyncPane` reloads the whole window after a pull, dropping open workspaces.
+- `keeper-plants` and `data-safety` flake in a batch, pass alone.
+- `trash` "delete forever survives restart" fails on its own (pre-existing; the Artifacts pane toggle races).
+- A GDevelop crux exports at ~194 MB (§ 15).
+- `/fn/*` is not routed on the publish subdomain in production.
+
+## What no amount of clicking will tell you
+
+Real model behaviour, Stripe, CloudFront, DNS, certificates, Apple
+notarization, and how any of this feels on Windows or Linux. Those are the
+eval harness, the console runbooks, and machines neither of us has.

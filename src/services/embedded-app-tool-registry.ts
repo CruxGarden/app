@@ -1,4 +1,6 @@
+import { reportFlowActivity } from '@/lib/moods/flow';
 import type { ToolDefinition } from '@/ai/tools';
+import { checkAppToolInput } from '@/ai/app-tool-schema';
 
 export type AppToolDefinition = ToolDefinition & {
   writes: readonly string[];
@@ -40,7 +42,14 @@ export const isAppToolName = (name: string) => catalog.has(name);
 export const isMutatingAppTool = (name: string) => !!catalog.get(name)?.writes.length;
 export async function executeAppTool(id: string, name: string, input: Record<string, unknown>) {
   const controller = controllers.get(id);
-  if (!controller || !controller.tools.some((tool) => tool.name === name))
+  const tool = controller?.tools.find((t) => t.name === name);
+  if (!controller || !tool)
     throw new Error('Open the app in this Crux’s Workshop before using its tools.');
-  return controller.execute(name, input);
+  // The declared shape is checked once here, so each app's command keeps only
+  // what a schema cannot say.
+  const problem = checkAppToolInput(tool, input);
+  if (problem) throw new Error(problem);
+  const result = await controller.execute(name, input);
+  reportFlowActivity('tool');
+  return result;
 }

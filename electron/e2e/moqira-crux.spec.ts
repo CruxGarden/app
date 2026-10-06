@@ -1,9 +1,10 @@
+import { enableAdvancedMode, showPane, hidePane } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createServer } from 'node:http';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 
 /**
  * The actual Moqira (upstream's app, believing it runs in Tauri while the
@@ -32,6 +33,7 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1050 });
     await enterGarden(page);
+    await enableAdvancedMode(page);
 
     await test.step('create; the app starts as upstream does and its first save records the project', async () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
@@ -68,13 +70,10 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
         .locator('.canvas-node')
         .first()
         .evaluate((el) => getComputedStyle(el).fontFamily);
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      // The Mood browser is a workspace pane, not a modal.
+      await showPane(page, 'Mood');
       await page.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
-      await page
-        .locator('[data-modal-open]')
-        .getByRole('button', { name: 'Close', exact: true })
-        .click();
-      await expect(page.locator('[data-modal-open]')).toHaveCount(0);
+      await hidePane(page, 'Mood');
       await expect(frameOf(page).locator('html')).toHaveAttribute('data-garden-mood', 'true');
       expect(
         await frameOf(page)
@@ -164,15 +163,15 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
       await expect.poll(() => publication().wireframes.length).toBe(2);
       await expect(status(page)).toHaveText('Saved');
       await frameOf(page).getByRole('button', { name: 'Public edition…' }).click();
-      const growth = (await page.evaluate(
-        async (id) =>
-          window.electronAPI!.sqlite.get(
-            "SELECT COUNT(*) AS count FROM dimensions WHERE source_id = ? AND type = 'growth'",
-            [id],
-          ),
-        (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!,
-      )) as { count: number };
-      expect(growth.count).toBeGreaterThan(2);
+      // App saves are not Growth: the API retains bounded Edit history as the
+      // content changes, so the project has recovery points without a snapshot.
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const history = (await page.evaluate(
+        (id) => window.electronAPI!.sqlite.fileContent!.history(id),
+        id,
+      )) as { revision: number; checkpoints: unknown[] };
+      console.log('Moqira edit history', history.revision, history.checkpoints.length);
+      expect(history.checkpoints.length).toBeGreaterThan(0);
       await page.screenshot({ path: join(evidence, 'moqira-editor.png') });
     });
 
@@ -190,7 +189,7 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
     await page.setViewportSize({ width: 1600, height: 1050 });
 
     await test.step('restart: the project reopens; a stale write is refused and the draft kept', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
       await expect(frameOf(page).getByRole('button', { name: /Second screen/ })).toBeVisible();
       const external = read();

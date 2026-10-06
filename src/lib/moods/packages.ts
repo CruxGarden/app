@@ -1,6 +1,23 @@
+import { captureGardenId } from '@/stores/gardenContext';
+import {
+  cachedMoodLibrary,
+  nativeMoodLibrary,
+  refreshMoodLibrary,
+  saveMoodCrux,
+  trashMoodCrux,
+  retainCurrentMoodPackages,
+} from '@/services/mood-library';
+import { hashContent } from '@/services/sqlite/helpers';
+import {
+  parseSynthPatch,
+  parseSynthPresets,
+  synthForMood,
+  synthPresetsForMood,
+  type SynthPatch,
+} from '@/audio/synth-patch';
 /**
  * Mood Packages — the installable, shareable bundle: theme + background +
- * sound + persona + meta. Stored in settings (JSON) with every binary
+ * sound + persona + meta. Stored as native Mood Crux content (settings on Web), with every binary
  * (cover, background image, the track, persona avatars) in the Blob Store
  * by fingerprint; exported as a `.cruxmood` zip that carries those assets.
  */
@@ -16,15 +33,22 @@ import {
   setThemeOverrides,
   type MoodSection,
 } from './active';
-import { getSetting, setSetting } from '@/services/settings';
+import { getSetting, setSetting, setSettingDurably } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { BgType } from '@/lib/types';
 import type { PersonaSettings } from '@/services/persona';
 import { getPersona, savePersona } from '@/services/persona';
-import { DEFAULT_CUES, getCues, saveCues, type SoundCues } from '@/services/cues';
+import { DEFAULT_CUES, getCues, saveCues, parseCueChoice, type SoundCues } from '@/services/cues';
 import * as sound from '@/services/sound';
 import { validateTrack, type SoundTrack } from '@/services/sound';
 import { getAssets, addAsset, isAssetRef, refFingerprint, kindOf, type MoodAsset } from './assets';
+import {
+  isAction,
+  isTrigger,
+  moodSchedules,
+  syncMoodSchedules,
+  type MoodSchedule,
+} from '@/services/schedules';
 
 export interface MoodPackage {
   format: 'crux-mood';
@@ -46,6 +70,13 @@ export interface MoodPackage {
   /** The Mood's sound: one looping track, its volume, on/off, and the cues. */
   sound: MoodSound;
   /**
+   * Schedules the Mood brings along (GARDEN-SCHEDULER-PLAN): a cron that
+   * wears its night variant at dusk, a timer for its way of working. Applied
+   * with the Mood, replaced by the next Mood's, each switchable in Tending
+   * and all of them behind one switch.
+   */
+  schedules?: MoodSchedule[];
+  /**
    * Files a bundled Mood ships inside the app (URLs). On apply they are
    * ingested into the Blob Store where there is one, so what the user then
    * saves or exports carries fingerprints like any other Mood. Never set on
@@ -59,6 +90,8 @@ export interface MoodPackage {
 }
 
 export interface MoodSound {
+  synth?: SynthPatch;
+  synthPresets?: SynthPatch[];
   track: SoundTrack | null;
   volume: number;
   enabled: boolean;
@@ -111,12 +144,19 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
   // `sound` is the shape since 2026-09-07; packages saved before carried a
   // `resonance` block (synthesized mixes) — its volume and cues still apply.
   const snd = (p.sound ?? p.resonance ?? {}) as Record<string, unknown>;
+  let synth: SynthPatch | undefined;
+  let synthPresets: SynthPatch[] | undefined;
+  try {
+    if (snd.synth) synth = parseSynthPatch(snd.synth);
+    if (snd.synthPresets !== undefined) synthPresets = parseSynthPresets(snd.synthPresets);
+  } catch {
+    return null;
+  }
   const cues = { ...DEFAULT_CUES };
   for (const k of Object.keys(cues) as (keyof SoundCues)[]) {
     const v = (snd.cues as Record<string, unknown> | undefined)?.[k];
     if (v === null) cues[k] = null;
-    else if (v === 'tick' || v === 'chime' || v === 'bloom' || v === 'thud' || v === 'coin')
-      cues[k] = v;
+    else if (v !== undefined) cues[k] = parseCueChoice(v);
   }
   const persona =
     p.persona && typeof p.persona === 'object' ? (p.persona as PersonaSettings) : undefined;
@@ -141,14 +181,36 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
       : undefined,
     sound: {
       track: validateTrack(snd.track),
+      ...(synth ? { synth } : {}),
+      ...(synthPresets ? { synthPresets } : {}),
       volume: typeof snd.volume === 'number' ? Math.min(1, Math.max(0, snd.volume)) : 0.7,
       enabled: snd.enabled !== false,
       cues,
     },
+    ...(Array.isArray(p.schedules) && p.schedules.length
+      ? { schedules: p.schedules.flatMap(cleanSchedule) }
+      : {}),
   };
 }
 
-export function getInstalledMoods(): MoodPackage[] {
+function cleanSchedule(raw: unknown): MoodSchedule[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const s = raw as Record<string, unknown>;
+  if (typeof s.title !== 'string' || !isTrigger(s.trigger) || !Array.isArray(s.actions)) return [];
+  const actions = s.actions.filter(isAction);
+  if (!actions.length) return [];
+  return [
+    {
+      id: typeof s.id === 'string' && s.id ? s.id : crypto.randomUUID(),
+      title: s.title,
+      trigger: s.trigger,
+      actions,
+      ...(typeof s.enabled === 'boolean' ? { enabled: s.enabled } : {}),
+    },
+  ];
+}
+
+function settingsMoods(): MoodPackage[] {
   const raw = getSetting(SettingsKey.MoodPackages) as string | null;
   if (!raw) return [];
   try {
@@ -166,14 +228,56 @@ function write(list: MoodPackage[]) {
   listeners.forEach((fn) => fn());
 }
 
-export function installMood(pkg: MoodPackage): MoodPackage {
-  const rest = getInstalledMoods().filter((m) => m.id !== pkg.id);
-  write([...rest, pkg]);
-  return pkg;
+export function getInstalledMoods(): MoodPackage[] {
+  return nativeMoodLibrary() ? cachedMoodLibrary() : settingsMoods();
 }
 
-export function deleteMood(id: string): void {
-  write(getInstalledMoods().filter((m) => m.id !== id));
+async function retainSavedMoods(): Promise<void> {
+  const raw = getSetting(SettingsKey.MoodPackages);
+  if (!raw) return;
+  const parsed: unknown = JSON.parse(raw);
+  if (
+    !Array.isArray(parsed) ||
+    parsed.some((pkg) => pkg?.version !== 1 || !validateMoodPackage(pkg))
+  )
+    throw new Error('The saved Mood library needs attention before it can be moved.');
+  await retainCurrentMoodPackages(parsed, async () => {
+    if (getSetting(SettingsKey.MoodPackages) !== raw)
+      throw new Error('The saved Mood library changed. Retry.');
+    await setSettingDurably(SettingsKey.MoodPackages, '');
+  });
+}
+
+export async function refreshInstalledMoods(gardenId = captureGardenId()): Promise<MoodPackage[]> {
+  if (!nativeMoodLibrary()) return settingsMoods();
+  await retainSavedMoods();
+  const packages = await refreshMoodLibrary(gardenId);
+  listeners.forEach((fn) => fn());
+  return packages;
+}
+
+export async function installMood(
+  pkg: MoodPackage,
+  options: { source?: MoodPackage; gardenId?: string } = {},
+): Promise<MoodPackage> {
+  const gardenId = options.gardenId ?? captureGardenId();
+  const captured = structuredClone(pkg);
+  if (nativeMoodLibrary()) {
+    await retainSavedMoods();
+    const saved = await saveMoodCrux(captured, options.source, gardenId);
+    listeners.forEach((fn) => fn());
+    return saved;
+  }
+  const rest = settingsMoods().filter((m) => m.id !== captured.id);
+  write([...rest, captured]);
+  return captured;
+}
+
+export async function deleteMood(id: string): Promise<void> {
+  if (nativeMoodLibrary()) {
+    await trashMoodCrux(id);
+    listeners.forEach((fn) => fn());
+  } else write(settingsMoods().filter((m) => m.id !== id));
 }
 
 /** Everything the app is wearing right now, as one package. */
@@ -211,10 +315,13 @@ export function captureCurrentMood(input: {
     assets: getAssets(),
     sound: {
       track: sound.getTrack(),
+      synth: sound.getSynth(),
+      synthPresets: sound.getSynthPresets(),
       volume: sound.getVolume(),
       enabled: sound.getEnabled(),
       cues: getCues(),
     },
+    ...(moodSchedules().length ? { schedules: moodSchedules() } : {}),
   };
 }
 
@@ -301,6 +408,11 @@ export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}
   setSetting(SettingsKey.WornMoodId, pkg.id);
   if (opts.sound === false) return;
 
+  // The Mood's schedules take over from the previous Mood's. Like sound, they
+  // are the garden's — the Gateway's pre-garden wear (`sound: false`) has no
+  // garden to keep them in and wears the Mood again once one exists.
+  syncMoodSchedules(pkg.id, pkg.schedules ?? []);
+
   // Sound — the package's track, volume, on/off and cues take over.
   const track = shipped.track ?? pkg.sound.track;
   sound.setTrack(track);
@@ -313,7 +425,14 @@ export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}
   useAudioStore.setState({ volume: pkg.sound.volume, enabled: pkg.sound.enabled });
   s.setVolume(pkg.sound.volume);
   await s.setTrack(track);
-  // The Mood intro (a set piece, ADR 0041) plays on a wear, never on a restore
+  s.setSynthPresets(
+    sound.getSynthPresets(pkg.id, pkg.sound.synthPresets ?? synthPresetsForMood(pkg.id, pkg.name)),
+  );
+  await s.setSynth(pkg.sound.synth ?? synthForMood(pkg.id, pkg.name));
+  if (!pkg.sound.enabled) s.pause();
+  // A wear, as opposed to a restore at startup: cues and journeys listen. The
+  // intro that used to play here (a wash and the name) is gone — Daniel,
+  // 2026-09-19: "it feels corny".
   if (typeof document !== 'undefined')
     document.dispatchEvent(new CustomEvent('mood-worn', { detail: { name: pkg.name } }));
 }
@@ -383,7 +502,17 @@ export function packageAssets(pkg: MoodPackage): string[] {
   return [...fps];
 }
 
-/** Zip: package.json + assets/<fingerprint> for every referenced blob that exists. */
+/** A Mood archive is complete: every retained reference has verified bytes. */
+function moodFingerprint(fp: string): void {
+  if (!/^[a-f0-9]{64}$/.test(fp)) throw new Error('Mood asset has an invalid fingerprint.');
+}
+async function verifyMoodAsset(fp: string, bytes: Uint8Array): Promise<void> {
+  moodFingerprint(fp);
+  if (!(bytes instanceof Uint8Array) || (await hashContent(bytes)) !== fp)
+    throw new Error(`Mood asset fingerprint does not match its content: ${fp}`);
+}
+
+/** Zip: package.json + assets/<fingerprint> for every retained reference. */
 export async function exportMoodPackage(
   pkg: MoodPackage,
   readBlob: (fp: string) => Promise<Uint8Array>,
@@ -391,6 +520,7 @@ export async function exportMoodPackage(
 ): Promise<Blob> {
   const zip = new JSZip();
   const portable: MoodPackage = structuredClone(pkg);
+  const includeAudio = opts.includeAudio !== false;
   // Export from Built in must carry shipped files even before the Mood is worn.
   // Ingest without applying: exporting must not change the person's current room.
   const shippedBytes = new Map<string, Uint8Array>();
@@ -400,30 +530,41 @@ export async function exportMoodPackage(
     shippedBytes.set(got.fingerprint, new Uint8Array(await got.blob.arrayBuffer()));
     return got.fingerprint;
   };
-  if (pkg.bundled?.background)
-    portable.background.image = await includeShipped(pkg.bundled.background);
-  if (pkg.bundled?.avatar && portable.persona) {
-    const fp = await includeShipped(pkg.bundled.avatar);
+  if (portable.bundled?.background)
+    portable.background.image = await includeShipped(portable.bundled.background);
+  if (portable.bundled?.avatar && portable.persona) {
+    const fp = await includeShipped(portable.bundled.avatar);
     portable.persona.thumbnailFingerprint = fp;
     portable.persona.thumbnailFingerprintLight = fp;
   }
-  if (pkg.bundled?.track && opts.includeAudio !== false) {
-    const { url, name, type } = pkg.bundled.track;
+  if (portable.bundled?.track && includeAudio) {
+    const { url, name, type } = portable.bundled.track;
     portable.sound.track = { fingerprint: await includeShipped(url), name, type };
   }
   delete portable.bundled;
+  if (!includeAudio) {
+    const audioFps = new Set<string>();
+    if (portable.sound.track?.fingerprint) audioFps.add(portable.sound.track.fingerprint);
+    for (const asset of portable.assets ?? [])
+      if (asset.kind === 'audio') audioFps.add(asset.fingerprint);
+    portable.sound.track = null;
+    portable.assets = portable.assets?.filter((asset) => asset.kind !== 'audio');
+    for (const [key, value] of Object.entries(portable.theme.overrides))
+      if (isAssetRef(value) && audioFps.has(refFingerprint(value)))
+        delete portable.theme.overrides[key];
+  }
   zip.file('package.json', JSON.stringify(portable, null, 2));
-  const audioFps = new Set<string>();
-  if (portable.sound.track?.fingerprint) audioFps.add(portable.sound.track.fingerprint);
-  for (const a of portable.assets ?? []) if (a.kind === 'audio') audioFps.add(a.fingerprint);
   for (const fp of packageAssets(portable)) {
-    if (opts.includeAudio === false && audioFps.has(fp)) continue;
+    moodFingerprint(fp);
+    let bytes: Uint8Array;
     try {
-      const bytes = shippedBytes.get(fp) ?? (await readBlob(fp));
-      if (bytes?.length) zip.file(`assets/${fp}`, bytes, { binary: true });
-    } catch {
-      /* missing asset: the package still describes the look */
+      bytes = shippedBytes.get(fp) ?? (await readBlob(fp));
+      if (bytes instanceof Uint8Array) bytes = Uint8Array.from(bytes);
+    } catch (cause) {
+      throw new Error(`Mood asset could not be read. Export stopped: ${fp}`, { cause });
     }
+    await verifyMoodAsset(fp, bytes);
+    zip.file(`assets/${fp}`, bytes, { binary: true });
   }
   return zip.generateAsync({ type: 'blob' });
 }
@@ -433,16 +574,26 @@ export async function importMoodPackage(
   data: ArrayBuffer | Blob,
   putBlob: (bytes: Uint8Array) => Promise<string>,
 ): Promise<MoodPackage | null> {
-  const buf = data instanceof Blob ? await data.arrayBuffer() : data;
+  const buf = data instanceof Blob ? await data.arrayBuffer() : data.slice(0);
   const zip = await JSZip.loadAsync(buf);
   const manifest = zip.file('package.json');
   if (!manifest) return null;
-  const pkg = validateMoodPackage(JSON.parse(await manifest.async('string')));
+  const raw = JSON.parse(await manifest.async('string'));
+  if (raw.version !== 1) throw new Error('This Mood package version is unsupported.');
+  const pkg = validateMoodPackage(raw);
   if (!pkg) return null;
-  for (const [path, entry] of Object.entries(zip.files)) {
-    if (entry.dir || !path.startsWith('assets/')) continue;
+  // Validate the complete incoming inventory before writing any blobs. A local
+  // cached asset cannot make an incomplete portable archive appear valid.
+  const assets = new Map<string, Uint8Array>();
+  for (const fp of packageAssets(pkg)) {
+    moodFingerprint(fp);
+    const entry = zip.file(`assets/${fp}`);
+    if (!entry) throw new Error(`Mood asset is missing from the package: ${fp}`);
     const bytes = await entry.async('uint8array');
-    await putBlob(bytes); // content-addressed: the fingerprint is the filename
+    await verifyMoodAsset(fp, bytes);
+    assets.set(fp, bytes);
   }
+  for (const [fp, bytes] of assets)
+    if ((await putBlob(bytes)) !== fp) throw new Error(`Mood asset could not be stored: ${fp}`);
   return pkg;
 }

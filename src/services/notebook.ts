@@ -1,3 +1,4 @@
+import { captureEditCheckpoint } from './edit-history';
 import { importNativeAsset, readNativeAsset, validateNativeDocument } from './native-app-document';
 import { notebookPath, isNotebookImage } from './notebook-path';
 import { importNotebook } from './notebook-import';
@@ -42,7 +43,9 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
   const owner = workspace.getState().crux?.id;
   let tail: Promise<unknown> = Promise.resolve();
   return (request: Record<string, unknown>) => {
-    const operation = tail.then(async () => {
+    // The whole request is retried once when the Crux's content head moved
+    // under it (a thumbnail save, the watcher): every step re-selects fresh.
+    const attempt = async (): Promise<unknown> => {
       const state = workspace.getState();
       if (!owner || state.crux?.id !== owner || !isEmbeddedApp(state.crux) || state.closing)
         throw new Error('This app is no longer open.');
@@ -116,7 +119,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         if (!file) throw new Error('This file no longer exists.');
         if ((file.size ?? 0) > 32_000_000)
           throw new Error('This file is too large to use (32 MB).');
-        const blob = await artifact.downloadBlob(file.id);
+        const blob = await artifact.downloadBlob(file);
         return {
           bytes: await blob.arrayBuffer(),
           mimeType: blob.type || guessMimeType(path),
@@ -130,7 +133,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           (f) => pathOf(f) === 'notebook/publish.json',
         );
         if (!manifest) throw new Error('The notebook publication settings are missing.');
-        const config = JSON.parse(await artifact.readContent(manifest.id));
+        const config = JSON.parse(await artifact.readContent(manifest));
         if (config.format !== 'epub')
           throw new Error(
             'Choose “Web pages and an EPUB book” under Notebook sharing settings before saving the book.',
@@ -221,7 +224,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         }
         if (!existing) throw new Error('This notebook file no longer exists.');
         if (isNotebookImage(path)) {
-          const blob = await artifact.downloadBlob(existing.id);
+          const blob = await artifact.downloadBlob(existing);
           const bytes = new Uint8Array(await blob.arrayBuffer());
           let binary = '';
           for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -231,7 +234,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           };
         }
         return {
-          content: await artifact.readContent(existing.id),
+          content: await artifact.readContent(existing),
           fingerprint: existing.fingerprint,
         };
       }
@@ -256,12 +259,8 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         )
           throw new Error('Only an existing note, folder marker or image can be deleted.');
         // Preserve a recovery point even for a note changed by an external editor.
-        await state.createSnapshot({
-          label: 'Before deleting a note',
-          ifChanged: true,
-          silent: true,
-        });
-        await artifact.delete(existing.id);
+        await captureEditCheckpoint(owner, 'safety');
+        await artifact.delete(existing);
       } else {
         if (typeof request.content !== 'string' || request.content.length > 8_000_000)
           throw new Error('The notebook file is too large.');
@@ -313,25 +312,26 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         }
       }
       await workspace.getState().refreshArtifacts();
-      await workspace.getState().createSnapshot({
-        label:
-          sampler || native
-            ? 'Project saved'
-            : cardinal
-              ? 'Instrument saved'
-              : moqira
-                ? 'Wireframes saved'
-                : op === 'delete'
-                  ? 'Deleted a note'
-                  : 'Notebook saved',
-        ifChanged: true,
-        silent: true,
-      });
-      // A watcher can ingest another writer during refresh/snapshot. Acknowledge
+      // The API retains bounded edit history as content changes; saves are not Growth.
+      // A watcher can ingest another writer during refresh. Acknowledge
       // our bytes, never that newer version: the next save must detect its conflict.
       return { fingerprint: writtenFingerprint };
+    };
+    const operation = tail.then(async () => {
+      try {
+        return await attempt();
+      } catch (err) {
+        if (isHeadConflict(err)) return attempt();
+        throw err;
+      }
     });
     tail = operation.catch(() => {});
     return operation;
   };
+}
+
+/** The content service refused a read or edit because the head moved under it. */
+function isHeadConflict(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /ConflictException|File content changed/.test(message);
 }

@@ -1,38 +1,29 @@
 import { useCruxStoreApi } from '@/stores/cruxStore';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
+import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useAppStore } from '@/stores/appStore';
 import { getServices } from '@/services';
 import { cn } from '@/lib/cn';
 import { publicCruxUrl } from '@/lib/public-url';
-import {
-  parseFrontmatter,
-  serializeFrontmatter,
-  slugify,
-  interpolate,
-  globToRegex,
-} from '@/lib/frontmatter';
-import { Modal, Input, Button } from '@/components/ui';
+import { parseFrontmatter, slugify, globToRegex } from '@/lib/frontmatter';
+import { Modal, Input, Button, Select, Textarea, SectionLabel } from '@/components/ui';
 import type { ContentModel, ContentCollection, BuilderAction } from '@/templates';
 import type { Artifact } from '@/api/types';
-import { confirmDialog, alertDialog } from '@/stores/dialogStore';
-import { Capability, can } from '@/lib/platform';
-import { mediaKindFor, isStreamingReady } from '@/lib/media-kind';
-import { formatBytes } from '@/lib/format';
-import {
-  CAPTION_OFFER_MIN,
-  MAX_TRANSCODE_BYTES,
-  captionTasksFor,
-  describeBatch,
-  titleFromFileName,
-  uniqueFileName,
-  uniqueItemPath,
-  type CaptionItem,
-} from './builder-files';
-import { useTurns } from '@/services/turns';
-import { parseShelf, type Shelf, type ShelfEntry } from '@/game/shelf';
+import { alertDialog } from '@/stores/dialogStore';
+import { parseShelf, type ShelfEntry } from '@/game/shelf';
 import { HIDDEN_KINDS, type HiddenKind } from '@/game/hidden';
+import { shelfPathOf, useShelf } from './useShelf';
+import {
+  ActionButton,
+  NewItemButton,
+  AddImageButton,
+  AddPhotosButton,
+  AddMediaButton,
+  CustomAction,
+} from './builder-actions';
 
 /** Action types the Builder renders from dedicated components, not CustomAction. */
 const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
@@ -44,13 +35,6 @@ const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
 ]);
 
 /** Paths of every artifact in the crux (meta.path, falling back to filename). */
-function artifactPaths(useCruxStore: ReturnType<typeof useCruxStoreApi>): Set<string> {
-  return new Set(
-    useCruxStore
-      .getState()
-      .artifacts.map((a) => (a.meta?.path as string | undefined) || a.filename || ''),
-  );
-}
 
 /** An item's label: its title, or the first declared field (a product's `name`, a shelf entry's `question`). */
 function itemLabel(data: Record<string, string>, collection: ContentCollection): string {
@@ -58,12 +42,6 @@ function itemLabel(data: Record<string, string>, collection: ContentCollection):
 }
 
 /** Filenames already present under `folder` (e.g. 'public/images'). */
-function namesInFolder(paths: Set<string>, folder: string): Set<string> {
-  const prefix = folder + '/';
-  const names = new Set<string>();
-  for (const p of paths) if (p.startsWith(prefix)) names.add(p.slice(prefix.length));
-  return names;
-}
 
 /**
  * The Builder — the Workshop's home view for content-model cruxes.
@@ -151,7 +129,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
                   {publishedUrl.replace(/^https?:\/\//, '')}
                 </a>
                 {hasUnpublishedChanges && (
-                  <span className="px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                  <span className="px-1.5 py-0.5 rounded bg-accent/(--tint-light) text-accent">
                     unpublished changes
                   </span>
                 )}
@@ -159,10 +137,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
             ) : (
               <span>Not published yet</span>
             )}
-            <button
-              onClick={openPublish}
-              className="ml-auto shrink-0 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] bg-accent text-bg hover:opacity-90 transition-opacity cursor-pointer"
-            >
+            <button onClick={openPublish} className={buttonClass('primary', 'sm', 'ml-auto')}>
               🚀 Publish
             </button>
           </div>
@@ -227,518 +202,17 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
           <CollectionSection key={collection.name} collection={collection} />
         ))}
 
-        <p className="text-2xs text-text-muted/60 text-center">
+        <p className="text-2xs text-subtle text-center">
           This is a real Astro project — open the Artifacts panel to work with the files directly.
         </p>
       </div>
     </div>
   );
 }
-
-// ── Action buttons ───────────────────────────────────────────────────────────
-
-function ActionButton({
-  icon,
-  label,
-  onClick,
-}: {
-  icon?: string;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-2 px-3 py-2 text-xs rounded-[var(--radius-sm)]',
-        'bg-surface border border-border text-text',
-        'hover:border-accent hover:text-accent transition-colors cursor-pointer',
-      )}
-    >
-      {icon && <span>{icon}</span>}
-      {label}
-    </button>
-  );
-}
-
-function NewItemButton({ collection }: { collection: ContentCollection }) {
-  const createFile = useCruxStore((s) => s.createFile);
-  const openFile = useUIStore((s) => s.openFile);
-  // In-app title dialog — window.prompt() does not exist in Electron, so the
-  // old code threw before a post could ever be created on desktop.
-  const [asking, setAsking] = useState(false);
-  const [title, setTitle] = useState('');
-  const [creating, setCreating] = useState(false);
-
-  const handleCreate = useCallback(async () => {
-    const trimmed = title.trim();
-    if (!trimmed || creating) return;
-    setCreating(true);
-    try {
-      const vars = {
-        slug: slugify(trimmed),
-        title: trimmed,
-        today: new Date().toISOString().slice(0, 10),
-      };
-      const path = interpolate(collection.new.pathTemplate, vars);
-      const frontmatter: Record<string, string> = {};
-      for (const [key, value] of Object.entries(collection.new.frontmatter)) {
-        frontmatter[key] = interpolate(value, vars);
-      }
-      const content = serializeFrontmatter(frontmatter, collection.new.body ?? '\n');
-      const artifact = await createFile(path, content);
-      setAsking(false);
-      setTitle('');
-      openFile(artifact.id, path);
-    } finally {
-      setCreating(false);
-    }
-  }, [collection, createFile, openFile, title, creating]);
-
-  return (
-    <>
-      <ActionButton
-        icon="✏️"
-        label={`New ${collection.singular.toLowerCase()}`}
-        onClick={() => setAsking(true)}
-      />
-      <Modal
-        open={asking}
-        onClose={() => setAsking(false)}
-        size="sm"
-        title={`New ${collection.singular.toLowerCase()}`}
-      >
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void handleCreate();
-          }}
-        >
-          <Input
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={`${collection.singular} title`}
-          />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setAsking(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={!title.trim()} loading={creating}>
-              Create
-            </Button>
-          </div>
-        </form>
-      </Modal>
-    </>
-  );
-}
-
-function AddImageButton() {
-  const uploadFiles = useCruxStore((s) => s.uploadFiles);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFiles = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
-      if (!files.length) return;
-      const entries = files.map((f) => ({
-        file: f,
-        path: `public/images/${f.name.replace(/\s+/g, '-')}`,
-      }));
-      await uploadFiles(entries);
-      const snippet = entries
-        .map((entry) => `![](${entry.path.replace(/^public/, '')})`)
-        .join('\n');
-      try {
-        await navigator.clipboard.writeText(snippet);
-      } catch {
-        /* clipboard unavailable — snippet still valid */
-      }
-      void alertDialog(
-        `Added ${entries.length} image${entries.length > 1 ? 's' : ''}. ` +
-          `Markdown snippet copied — paste it into any post.`,
-        'Images added',
-      );
-      e.target.value = '';
-    },
-    [uploadFiles],
-  );
-
-  return (
-    <>
-      <ActionButton icon="🖼️" label="Add images" onClick={() => inputRef.current?.click()} />
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleFiles}
-      />
-    </>
-  );
-}
-
-/**
- * Add photos: upload images into public/images/ and write one post per image
- * (the collection's `image` field), so a feed fills from a file picker.
- */
-function AddPhotosButton({
-  collection,
-  label,
-  icon,
-}: {
-  collection: ContentCollection;
-  label: string;
-  icon?: string;
-}) {
-  const cruxStore = useCruxStoreApi();
-  const { canCollaborate, runParallelJob } = useTurns();
-  const uploadFile = useCruxStore((s) => s.uploadFile);
-  const createFile = useCruxStore((s) => s.createFile);
-  const openFile = useUIStore((s) => s.openFile);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleFiles = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
-      e.target.value = '';
-      if (!files.length) return;
-      // Names taken before this batch, plus what the batch itself adds — so
-      // two "IMG_0001.jpg" never share one artifact path or one image URL.
-      const takenPaths = artifactPaths(cruxStore);
-      const takenNames = namesInFolder(takenPaths, 'public/images');
-      let last: { artifact: Artifact; path: string } | null = null;
-      const failed: string[] = [];
-      const captionItems: CaptionItem[] = [];
-      let added = 0;
-      try {
-        for (const [i, file] of files.entries()) {
-          setStatus(`Adding ${file.name} (${i + 1}/${files.length})…`);
-          try {
-            // Upload under the sanitised name — the frontmatter points at it,
-            // and a raw name with spaces or parentheses would 404 once published.
-            const publicName = uniqueFileName(file.name, takenNames);
-            takenNames.add(publicName);
-            const upload = new File([file], publicName, { type: file.type });
-            const uploaded = await uploadFile(upload, 'public/images');
-            const uploadedPath = (uploaded.meta?.path as string | undefined) || '';
-            takenPaths.add(uploadedPath);
-            const imageUrl = uploadedPath.startsWith('public/')
-              ? uploadedPath.slice('public'.length)
-              : `/images/${publicName}`;
-
-            const title = titleFromFileName(file.name);
-            const { path, vars } = uniqueItemPath(collection.new.pathTemplate, title, takenPaths);
-            const frontmatter: Record<string, string> = {};
-            for (const [key, value] of Object.entries(collection.new.frontmatter))
-              frontmatter[key] = interpolate(value, vars);
-            frontmatter.image = imageUrl;
-            const artifact = await createFile(
-              path,
-              serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
-            );
-            takenPaths.add(path);
-            captionItems.push({ path, imagePath: uploadedPath });
-            last = { artifact, path };
-            added += 1;
-          } catch (err) {
-            failed.push(`${file.name}: ${(err as Error).message || 'unknown error'}`);
-          }
-        }
-        if (last) openFile(last.artifact.id, last.path);
-        const summary = describeBatch({
-          added,
-          singular: collection.singular.toLowerCase(),
-          failed,
-        });
-        // A big batch is wide, independent work: offer to caption it with
-        // parallel workers (B5) — only when a model can actually run.
-        if (added >= CAPTION_OFFER_MIN && (await canCollaborate())) {
-          const write = await confirmDialog({
-            title: 'Photos added',
-            message: `${summary} Write a caption for each one now? Workers look at the photos in parallel, each on its own Growth branch, and the captions merge into the posts.`,
-            confirmLabel: 'Write captions',
-            cancelLabel: 'Not now',
-          });
-          if (write)
-            void runParallelJob(
-              `Write captions for ${added} photos`,
-              captionTasksFor(captionItems),
-            );
-        } else {
-          void alertDialog(
-            summary + (added ? ' One per photo — add captions in each, or ask for them.' : ''),
-            failed.length && !added ? 'Add photos' : 'Photos added',
-          );
-        }
-      } finally {
-        setStatus(null);
-      }
-    },
-    [
-      cruxStore,
-      openFile,
-      collection.singular,
-      collection.new.pathTemplate,
-      collection.new.body,
-      collection.new.frontmatter,
-      canCollaborate,
-      uploadFile,
-      createFile,
-      runParallelJob,
-    ],
-  );
-
-  return (
-    <>
-      <ActionButton
-        icon={icon ?? '📷'}
-        label={status ?? label}
-        onClick={() => !status && inputRef.current?.click()}
-      />
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleFiles}
-        data-testid="add-photos-input"
-      />
-    </>
-  );
-}
-
-/**
- * Add media: upload audio/video into public/media/, transcoding through ffmpeg
- * when the browser couldn't play the original (desktop only — on web the file
- * is uploaded as-is), then write one item per file into the collection so it
- * shows up with a player immediately.
- */
-function AddMediaButton({
-  collection,
-  label,
-  icon,
-}: {
-  collection: ContentCollection;
-  label: string;
-  icon?: string;
-}) {
-  const cruxStore = useCruxStoreApi();
-  const uploadFile = useCruxStore((s) => s.uploadFile);
-  const createFile = useCruxStore((s) => s.createFile);
-  const openFile = useUIStore((s) => s.openFile);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<string | null>(null);
-
-  const handleFiles = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
-      e.target.value = '';
-      if (!files.length) return;
-      const canTranscode = can(Capability.Transcode);
-      const takenPaths = artifactPaths(cruxStore);
-      const takenNames = namesInFolder(takenPaths, 'public/media');
-      let last: { artifact: Artifact; path: string } | null = null;
-      let converted = 0;
-      let skipped = 0;
-      let added = 0;
-      const failed: string[] = [];
-      try {
-        for (const [i, file] of files.entries()) {
-          const kind = mediaKindFor(file.type, file.name);
-          if (!kind) {
-            skipped += 1;
-            continue;
-          }
-          try {
-            let publicName = file.name;
-            let toUpload: File = file;
-            let mimeType = file.type;
-            if (canTranscode && !isStreamingReady(file.type, file.name)) {
-              // The transcode path reads the whole file into memory and sends
-              // it over IPC in one message — refuse anything past the cap.
-              if (file.size > MAX_TRANSCODE_BYTES) {
-                throw new Error(
-                  `too large to convert (${formatBytes(file.size)}; the limit is ${formatBytes(MAX_TRANSCODE_BYTES)}). Convert it to MP4 or M4A first.`,
-                );
-              }
-              setStatus(`Converting ${file.name} (${i + 1}/${files.length})…`);
-              const { transcode } = await import('@/services/media');
-              const outputs = await transcode(
-                {
-                  inputData: new Uint8Array(await file.arrayBuffer()),
-                  inputName: file.name,
-                  isAudio: kind === 'audio',
-                },
-                (p) => setStatus(`Converting ${file.name} — ${Math.round(p)}%`),
-              );
-              const out = outputs[0];
-              // No output is a failure, not a reason to ship the unplayable original.
-              if (!out || !out.data || out.data.byteLength === 0) {
-                throw new Error('conversion produced no output');
-              }
-              publicName = out.name;
-              mimeType = out.mimeType;
-              toUpload = new File([new Uint8Array(out.data)], publicName, { type: mimeType });
-              converted += 1;
-            }
-            publicName = uniqueFileName(publicName, takenNames);
-            takenNames.add(publicName);
-            if (toUpload.name !== publicName) {
-              toUpload = new File([toUpload], publicName, { type: mimeType });
-            }
-            setStatus(`Adding ${publicName}…`);
-            const uploaded = await uploadFile(toUpload, 'public/media');
-            const uploadedPath = (uploaded.meta?.path as string | undefined) || '';
-            takenPaths.add(uploadedPath);
-            const mediaUrl = uploadedPath.startsWith('public/')
-              ? uploadedPath.slice('public'.length)
-              : `/media/${publicName}`;
-
-            const title = titleFromFileName(file.name);
-            const { path, vars } = uniqueItemPath(collection.new.pathTemplate, title, takenPaths);
-            const frontmatter: Record<string, string> = {};
-            for (const [key, value] of Object.entries(collection.new.frontmatter))
-              frontmatter[key] = interpolate(value, vars);
-            frontmatter.kind = kind;
-            frontmatter.media = mediaUrl;
-            const artifact = await createFile(
-              path,
-              serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
-            );
-            takenPaths.add(path);
-            last = { artifact, path };
-            added += 1;
-          } catch (err) {
-            failed.push(`${file.name}: ${(err as Error).message || 'unknown error'}`);
-          }
-        }
-        if (last) openFile(last.artifact.id, last.path);
-        void alertDialog(
-          describeBatch({ added, singular: 'item', converted, skipped, failed }),
-          failed.length && !added ? 'Add media' : 'Media added',
-        );
-      } finally {
-        setStatus(null);
-      }
-    },
-    [
-      cruxStore,
-      openFile,
-      uploadFile,
-      collection.new.pathTemplate,
-      collection.new.body,
-      collection.new.frontmatter,
-      createFile,
-    ],
-  );
-
-  return (
-    <>
-      <ActionButton
-        icon={icon ?? '🎬'}
-        label={status ?? label}
-        onClick={() => !status && inputRef.current?.click()}
-      />
-      <input
-        ref={inputRef}
-        type="file"
-        accept="audio/*,video/*,.mov,.mkv,.flac,.wav,.m4a,.mp3,.mp4,.webm"
-        multiple
-        className="hidden"
-        onChange={handleFiles}
-        data-testid="add-media-input"
-      />
-    </>
-  );
-}
-
-function CustomAction({
-  action,
-  onSettings,
-  onPublish,
-}: {
-  action: BuilderAction;
-  onSettings: () => void;
-  onPublish: () => void;
-}) {
-  const openFileByPath = useOpenFileByPath();
-  const openRound = useOpenRound();
-  const handle = useCallback(() => {
-    switch (action.do.type) {
-      case 'edit-settings':
-        onSettings();
-        break;
-      case 'publish':
-        onPublish();
-        break;
-      case 'open-file':
-        openFileByPath(action.do.path);
-        break;
-      case 'open-round':
-        openRound();
-        break;
-      default:
-        break; // new-item / add-image / add-media / add-photos / add-shelf-entry render as derived buttons already
-    }
-  }, [action, onSettings, onPublish, openFileByPath, openRound]);
-
-  return <ActionButton icon={action.icon} label={action.label} onClick={handle} />;
-}
-
-/**
- * Start a round (5Ws, ADR 0016): the game is the site's own /play page — a
- * React island that runs the round in the browser with the AI the player
- * connects — so playing from the app means opening that page in the preview.
- * Opening the source file makes the Workshop's astro dev preview show its route.
- */
-const PLAY_PAGE_PATH = 'src/pages/play.astro';
-
-function useOpenRound() {
-  const cruxStore = useCruxStoreApi();
-  const openFileByPath = useOpenFileByPath();
-  return useCallback(() => {
-    const has = cruxStore
-      .getState()
-      .artifacts.some(
-        (a) => ((a.meta?.path as string | undefined) || a.filename) === PLAY_PAGE_PATH,
-      );
-    if (!has) {
-      void alertDialog(
-        `This crux has no ${PLAY_PAGE_PATH}. The game page ships with the 5Ws template; add one to play here.`,
-        'Start a round',
-      );
-      return;
-    }
-    openFileByPath(PLAY_PAGE_PATH);
-  }, [cruxStore, openFileByPath]);
-}
-
-function useOpenFileByPath() {
-  const cruxStore = useCruxStoreApi();
-  const openFile = useUIStore((s) => s.openFile);
-  return useCallback(
-    (path: string) => {
-      const artifact = cruxStore
-        .getState()
-        .artifacts.find((a) => ((a.meta?.path as string | undefined) || a.filename) === path);
-      if (artifact) openFile(artifact.id, path);
-    },
-    [cruxStore, openFile],
-  );
-}
-
-// ── Collection cards ─────────────────────────────────────────────────────────
-
 function CollectionSection({ collection }: { collection: ContentCollection }) {
   const items = useCollectionItems(collection);
   const openFile = useUIStore((s) => s.openFile);
-  const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
+  const cruxStore = useCruxStoreApi();
 
   // Read frontmatter lazily per render from the store's cached content is not
   // available — items carry parsed data via readContent on demand instead.
@@ -747,9 +221,9 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
 
   return (
     <section>
-      <h2 className="text-xs font-mono uppercase tracking-wider text-text-muted mb-3">
+      <SectionLabel as="h2" tone="muted" className="mb-3">
         {collection.name} · {items.length}
-      </h2>
+      </SectionLabel>
       {sorted.length === 0 ? (
         <p className="text-xs text-text-muted">
           Nothing here yet — create your first {collection.singular.toLowerCase()} above.
@@ -761,7 +235,7 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
               key={item.artifact.id}
               className={cn(
                 'group flex items-center gap-3 px-4 py-3 rounded-[var(--radius-sm)]',
-                'bg-surface border border-border hover:border-accent/60 transition-colors',
+                'bg-surface border border-border hover:border-accent/(--tint-medium) hover:bg-action-button-hover transition-colors',
               )}
             >
               <button
@@ -784,17 +258,13 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
               </button>
               <button
                 onClick={async () => {
-                  if (
-                    await confirmDialog({
-                      message: `Delete "${itemLabel(data, collection) || item.path}"? It stays in history.`,
-                      confirmLabel: 'Delete',
-                      danger: true,
-                    })
-                  ) {
-                    await deleteArtifacts([item.artifact.id]);
-                  }
+                  await confirmAndDeleteArtifacts(
+                    cruxStore,
+                    [item.artifact.id],
+                    `Delete "${itemLabel(data, collection) || item.path}"?`,
+                  );
                 }}
-                className="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-xs text-text-muted hover:text-error transition-opacity cursor-pointer px-1"
+                className="shrink-0 opacity-0 group-hover:opacity-[var(--secondary-action-opacity)] hover:!opacity-100 text-xs text-text-muted hover:text-error transition-opacity cursor-pointer px-1"
                 title={`Delete ${collection.singular.toLowerCase()}`}
               >
                 ✕
@@ -825,7 +295,7 @@ function useCollectionData(items: CollectionItem[], collection: ContentCollectio
         let data = fmCache.get(fp);
         if (!data) {
           try {
-            const content = await artifactService.readContent(item.artifact.id);
+            const content = await artifactService.readContent(item.artifact);
             data = parseFrontmatter(content).data;
             fmCache.set(fp, data);
             if (fmCache.size > 500) fmCache.clear();
@@ -852,67 +322,14 @@ function useCollectionData(items: CollectionItem[], collection: ContentCollectio
   return parsed;
 }
 
-// ── The Shelf (ADR 0016) ─────────────────────────────────────────────────────
-
-function shelfPathOf(meta: Record<string, unknown> | undefined): string | null {
-  const game = meta?.game;
-  if (!game || typeof game !== 'object') return null;
-  const path = (game as { shelfPath?: unknown }).shelfPath;
-  return typeof path === 'string' && path ? path : null;
-}
-
-function useShelfArtifact(path: string): Artifact | null {
-  const artifacts = useCruxStore((s) => s.artifacts);
-  return useMemo(
-    () =>
-      artifacts.find((a) => ((a.meta?.path as string | undefined) || a.filename) === path) ?? null,
-    [artifacts, path],
-  );
-}
-
-/** The parsed Shelf at `path`, re-read whenever the file's fingerprint changes. */
-function useShelf(path: string): {
-  shelf: Shelf | null;
-  error: string | null;
-  artifact: Artifact | null;
-} {
-  const artifact = useShelfArtifact(path);
-  const fingerprint = artifact?.fingerprint ?? artifact?.id ?? null;
-  const [state, setState] = useState<{ shelf: Shelf | null; error: string | null }>({
-    shelf: null,
-    error: null,
-  });
-  useEffect(() => {
-    let cancelled = false;
-    if (!artifact) {
-      setState({ shelf: null, error: null });
-      return;
-    }
-    (async () => {
-      try {
-        const content = await getServices().artifact.readContent(artifact.id);
-        const shelf = parseShelf(content);
-        if (!cancelled) setState({ shelf, error: null });
-      } catch (err) {
-        if (!cancelled) setState({ shelf: null, error: (err as Error).message });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artifact?.id, fingerprint]);
-  return { ...state, artifact };
-}
-
 function ShelfSection({ path }: { path: string }) {
   const { shelf, error, artifact } = useShelf(path);
   const openFile = useUIStore((s) => s.openFile);
   return (
     <section data-testid="shelf-section">
-      <h2 className="text-xs font-mono uppercase tracking-wider text-text-muted mb-1">
+      <SectionLabel as="h2" tone="muted" className="mb-1">
         Shelf{shelf ? ` · ${shelf.entries.length}` : ''}
-      </h2>
+      </SectionLabel>
       {shelf && (
         <p className="text-xs text-text-muted mb-3">
           <span className="text-text">{shelf.title}</span> — {shelf.question}
@@ -930,7 +347,7 @@ function ShelfSection({ path }: { path: string }) {
           {shelf.entries.map((e) => (
             <li
               key={e.id}
-              className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/60 text-sm"
+              className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/(--tint-medium) text-sm"
               data-testid="shelf-entry"
             >
               <span className="text-text truncate">{e.name}</span>
@@ -954,9 +371,6 @@ function ShelfSection({ path }: { path: string }) {
     </section>
   );
 }
-
-const fieldClass =
-  'w-full px-3 py-2 text-sm rounded-[var(--radius-sm)] bg-surface border border-border text-text focus:outline-none focus:border-accent';
 
 const EMPTY_ENTRY = {
   name: '',
@@ -1013,7 +427,7 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
     setSaving(true);
     try {
       // Re-read at save time so a concurrent edit is not clobbered
-      const current = parseShelf(await getServices().artifact.readContent(artifact.id));
+      const current = parseShelf(await getServices().artifact.readContent(artifact));
       const next = { ...current, entries: [...current.entries, entry] };
       await saveArtifactContent(artifact.id, JSON.stringify(next, null, 2) + '\n');
       setOpen(false);
@@ -1044,42 +458,37 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
             placeholder="Aliases, comma-separated (variants, spellings, titles)"
           />
           <div className="flex gap-2">
-            <select
-              value={form.kind}
-              onChange={set('kind')}
-              className={fieldClass}
-              aria-label="Kind"
-            >
+            <Select value={form.kind} onChange={set('kind')} fieldSize="sm" aria-label="Kind">
               {HIDDEN_KINDS.map((k) => (
                 <option key={k} value={k}>
                   {k}
                 </option>
               ))}
-            </select>
+            </Select>
             <Input value={form.era} onChange={set('era')} placeholder="Era — c. 355–415" />
           </div>
-          <textarea
+          <Textarea
             value={form.voiceNote}
             onChange={set('voiceNote')}
             placeholder="Voice note — one line: temperament, and how they deflect"
             rows={2}
-            className={fieldClass}
+            fieldSize="sm"
           />
-          <select
+          <Select
             value={form.provenance}
             onChange={set('provenance')}
-            className={fieldClass}
+            fieldSize="sm"
             aria-label="Provenance"
           >
             <option value="sourced">sourced — facts can be checked against the pages below</option>
             <option value="unsourced">unsourced — spoken from what is commonly told</option>
-          </select>
-          <textarea
+          </Select>
+          <Textarea
             value={form.sources}
             onChange={set('sources')}
             placeholder="Sources — one URL per line"
             rows={2}
-            className={fieldClass}
+            fieldSize="sm"
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>

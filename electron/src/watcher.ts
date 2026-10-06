@@ -1,3 +1,4 @@
+import { isPrivateProjectPath } from './project-private';
 // Chokidar 4 uses a kqueue descriptor per file on macOS. Large Project
 // Folders can then prevent Electron's sandboxed child processes from starting.
 // The pinned macOS adapter retains Chokidar's FSEvents backend and the same
@@ -29,20 +30,8 @@ const createIgnore = require('ignore');
  *   instead — a missing folder must never cascade into artifact deletion.
  */
 
-export const DEFAULT_IGNORES = [
-  'node_modules/',
-  'dist/',
-  '.astro/',
-  '.git/',
-  '.crux/', // app-internal per-folder state (MCP token, ADR 0013) — never ingested or published
-  '.DS_Store',
-  'Thumbs.db',
-  '*.swp',
-  '*.swx',
-  '.#*',
-  '*~',
-  '*.crux-write-*',
-];
+export { DEFAULT_IGNORES } from './folder-scan';
+import { DEFAULT_IGNORES } from './folder-scan';
 
 export interface WatchEvent {
   type: 'write' | 'delete' | 'mkdir' | 'rmdir';
@@ -74,7 +63,8 @@ class FolderWatch {
   ) {
     this.loadIgnores();
     this.watcher = chokidar.watch(folder, {
-      ...(nativeMacWatch ? { useFsEvents: true } : {}),
+      // Registered folders are literal paths, never glob expressions (GHSA-vfj7-8cjw-p6xm).
+      ...(nativeMacWatch ? { useFsEvents: true, disableGlobbing: true } : {}),
       ignoreInitial: true,
       ignored: (p: string) => this.isIgnored(p),
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
@@ -113,12 +103,12 @@ class FolderWatch {
     if (!rel) return false;
     // Directory-only patterns ("node_modules/") need the trailing slash to
     // match a directory path — test both forms.
-    return this.ig.ignores(rel) || this.ig.ignores(rel + '/');
+    return isPrivateProjectPath(rel) || this.ig.ignores(rel) || this.ig.ignores(rel + '/');
   }
 
   private record(type: WatchEvent['type'], absPath: string) {
     const rel = this.rel(absPath);
-    if (!rel) return;
+    if (!rel || isPrivateProjectPath(rel)) return;
 
     // Editing .cruxignore re-arms the rules (and is itself ingested)
     if (rel === '.cruxignore') this.loadIgnores();
@@ -164,7 +154,8 @@ class FolderWatch {
     }
 
     // Folder-deletion guard: never turn a missing folder into mass deletion
-    if (!fs.existsSync(this.folder)) return { folder: this.folder, folderMissing: true, events: [] };
+    if (!fs.existsSync(this.folder))
+      return { folder: this.folder, folderMissing: true, events: [] };
     return { folder: this.folder, events };
   }
 

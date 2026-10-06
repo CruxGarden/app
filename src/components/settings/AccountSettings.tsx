@@ -1,10 +1,17 @@
+import { isReservedUsername } from '@/lib/site';
+import CloseAccount from './CloseAccount';
 import { useState, useRef, useEffect } from 'react';
+import SettingsSection from './SettingsSection';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { authors as authorsApi } from '@/api';
-import { Panel, Button } from '@/components/ui';
+import { Button, Input, SectionLabel } from '@/components/ui';
+import { apiBaseUrl, apiUrlIsLaunched, normalizeApiUrl, DEFAULT_API_URL } from '@/api/client';
+import { getSetting, setSetting, removeSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import ConnectAccount from '@/components/auth/ConnectAccount';
+import LegalLinks from '@/components/public/LegalLinks';
 import AvatarUpload from '@/components/auth/AvatarUpload';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -29,6 +36,7 @@ export default function AccountSettings() {
     if (!name) return '';
     if (name.length < 3) return 'At least 3 characters';
     if (!/^[a-zA-Z0-9_-]+$/.test(name)) return 'Letters, numbers, hyphens, underscores only';
+    if (isReservedUsername(name)) return 'That name is kept for the website';
     return '';
   };
 
@@ -108,9 +116,7 @@ export default function AccountSettings() {
   };
 
   return (
-    <Panel padding="md">
-      <h2 className="font-display text-sm font-medium text-settings-label mb-4">Account</h2>
-
+    <SettingsSection title="Account" testId="account-settings">
       {/* Avatar */}
       <div className="mb-4">
         <AvatarUpload />
@@ -177,7 +183,7 @@ export default function AccountSettings() {
         </div>
         {editingUsername && (
           <p className="text-xs text-text-muted text-right">
-            Be aware. Changing your username also changes your public garden URL
+            Be aware. Changing your username also changes your Explore profile URL
           </p>
         )}
         {usernameError && <p className="text-xs text-error text-right">{usernameError}</p>}
@@ -200,9 +206,120 @@ export default function AccountSettings() {
       {/* Connection */}
       <div className="border-t border-border my-5" />
       <h3 className="font-display text-sm font-medium text-accent mb-2">
-        Connection{isAuthenticated ? ' (crux.garden)' : ''}
+        Connection{isAuthenticated ? ` (${hostOf(apiBaseUrl())})` : ''}
       </h3>
       <ConnectAccount description="Connect to your crux.garden account to enable sync and sharing." />
-    </Panel>
+      <details className="mt-4 text-sm">
+        <summary className="text-text-muted cursor-pointer hover:text-text">
+          Advanced connection settings
+        </summary>
+        <p className="mt-3 text-xs text-text-muted">
+          Only change this if you run your own Crux Garden API.
+        </p>
+        <ApiAddress />
+      </details>
+      <LegalLinks className="mt-5 border-t border-border pt-4" />
+      {isAuthenticated && <CloseAccount />}
+    </SettingsSection>
+  );
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Which garden this one meets (ADR 0049): the API's address is a setting
+ * of the garden, not a constant of the build. crux.garden by default; a
+ * garden running on this machine, or a friend's, by typing its address.
+ * Changing it signs out first — the tokens belong to the old address.
+ */
+function ApiAddress() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [value, setValue] = useState(() => getSetting(SettingsKey.ApiUrl) ?? '');
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+  const launched = apiUrlIsLaunched();
+  const current = apiBaseUrl();
+  const chosen = normalizeApiUrl(value);
+  const unchanged = (chosen ?? DEFAULT_API_URL) === current;
+  const apply = async (next: string | null) => {
+    if (next) {
+      try {
+        const u = new URL(next);
+        if (
+          !['http:', 'https:'].includes(u.protocol) ||
+          u.username ||
+          u.password ||
+          u.search ||
+          u.hash
+        )
+          throw new Error();
+      } catch {
+        setError('Enter an http or https address, like http://localhost:3001.');
+        return;
+      }
+    }
+    setError('');
+    try {
+      if (isAuthenticated) await useAuthStore.getState().disconnectAccount();
+    } catch {
+      setError('Could not remove the saved connection. Restore credential storage and retry.');
+      return;
+    }
+    if (next) setSetting(SettingsKey.ApiUrl, next);
+    else removeSetting(SettingsKey.ApiUrl);
+    setValue(next ?? '');
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  return (
+    <div className="mt-4" data-testid="api-address">
+      <SectionLabel as="p" tone="muted" className="mb-1">
+        API address
+      </SectionLabel>
+      {launched ? (
+        <p className="text-xs text-text-muted">
+          Pinned for this launch: <span className="font-mono text-text">{current}</span>
+        </p>
+      ) : (
+        <>
+          <div className="flex gap-2 items-start">
+            <Input
+              aria-label="API address"
+              placeholder={DEFAULT_API_URL}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void apply(chosen);
+              }}
+              error={error || undefined}
+              className="flex-1"
+            />
+            <Button size="sm" onClick={() => void apply(chosen)} disabled={unchanged}>
+              Use this address
+            </Button>
+            {getSetting(SettingsKey.ApiUrl) ? (
+              <Button size="sm" variant="ghost" onClick={() => void apply(null)}>
+                Back to default
+              </Button>
+            ) : null}
+          </div>
+          <p className="text-xs text-text-muted mt-1.5">
+            {saved ? 'Saved. ' : ''}
+            Talking to <span className="font-mono text-text">{current}</span>
+            {current === DEFAULT_API_URL ? ' (the default)' : ''}. Changing it signs you out; a
+            garden running on this machine is{' '}
+            <span className="font-mono">http://localhost:3001</span>
+            after <span className="font-mono">npm run dev</span> in{' '}
+            <span className="font-mono">api/</span>.
+          </p>
+        </>
+      )}
+    </div>
   );
 }

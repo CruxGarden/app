@@ -1,0 +1,42 @@
+{
+  "stage": "AR04 consumer and AR05 source publication",
+  "date": "2026-10-01",
+  "runtime": "r4d984f15f5d7.h037a33c6",
+  "appGate": {
+    "command": "npm run verify",
+    "passed": 1706,
+    "skipped": 18,
+    "files": 270,
+    "build": true
+  },
+  "electronGate": {
+    "command": "npm run verify",
+    "passed": 77,
+    "skipped": 1
+  },
+  "desktop": {
+    "command": "npm run test:e2e -- e2e/journeys/01-create-version-publish.spec.ts e2e/publication-source.spec.ts e2e/editor-history-draft.spec.ts e2e/local-api-owner.spec.ts",
+    "passed": 6,
+    "duration": "1.1m",
+    "invariants": [
+      "Current source drafts are saved before immutable publication staging.",
+      "Database save refusal retains the visible draft and makes no remote publication.",
+      "Retry, UI Share, publish_crux and call_crux_tool publish send the exact visible source bytes.",
+      "History inspection preserves the live draft and Undo model.",
+      "Offline JSON language validation uses the bundled worker.",
+      "The actual API owns fresh schema and retains content across restart."
+    ]
+  },
+  "unitRegressions": [
+    "Changed workspace owner cannot publish or run a queued metadata save against a different Crux.",
+    "Typing during preparation remains dirty and refuses publication of an older draft.",
+    "Historical selection refuses publication and retains the live draft.",
+    "Save and close can drain an empty workspace whose initial load failed."
+  ],
+  "redEvidence": "Four source publication regressions failed before the fix; the empty failed-load close case also failed before its guard.",
+  "limits": [
+    "Remote publication uses isolated HTTP fixtures, not live S3.",
+    "Windows/Linux acceptance must be checked on this app commit. Previous head Linux passed; Windows failed packaged/CLI runtime checks and anonymous logs are unavailable.",
+    "Real Garden and existing manual candidate preserved."
+  ]
+}

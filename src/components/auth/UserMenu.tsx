@@ -1,24 +1,32 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Avatar, menuItemClass } from '@/components/ui';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
+import { openSettings } from '@/components/layout/app-commands';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { ThemeMode } from '@/lib/types';
-import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
 import { useShallow } from 'zustand/react/shallow';
-import { SunIcon, MoonIcon, MonitorIcon } from '@/components/ui/icons';
+import { SunIcon, MoonIcon, MonitorIcon, CheckIcon } from '@/components/ui/icons';
 
 export default function UserMenu() {
   const navigate = useNavigate();
-  const logout = useAuthStore((s) => s.logout);
+  const disconnectAccount = useAuthStore((s) => s.disconnectAccount);
   const author = useAppStore((s) => s.author);
   const { mode, setMode } = useThemeStore(
     useShallow((s) => ({ mode: s.mode, setMode: s.setMode })),
   );
   const [open, setOpen] = useState(false);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  // The top bar the menu grows out of, for the Plasma overlay.
+  const barRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    barRef.current = menuRef.current?.closest<HTMLElement>('.bg-toolbar') ?? null;
+  }, [open]);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -30,8 +38,15 @@ export default function UserMenu() {
 
   const handleLogout = async () => {
     setOpen(false);
-    await logout();
-    navigate('/home', { replace: true });
+    // The account is the connection to crux.garden; the author is who you are
+    // in your own garden, and it is kept — signing out is not forgetting. The
+    // work in front stays in front (it used to jump to Home, and not always).
+    try {
+      await disconnectAccount();
+    } catch {
+      // The shared account form displays the persisted-removal failure and retry.
+      openSettings({ section: 'account' });
+    }
   };
 
   return (
@@ -41,30 +56,38 @@ export default function UserMenu() {
         aria-label="Account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className={cn(
-          'w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center overflow-hidden',
-          !avatarUrl &&
-            'bg-profile-button text-profile-button-icon text-2xs font-display font-bold',
-          'ring-1 ring-profile-button-border hover:ring-profile-button-hover transition-shadow cursor-pointer',
-        )}
+        className="rounded-[var(--radius-sm)] ring-1 ring-profile-button-border hover:ring-profile-button-hover hover:ring-2 active-dim motion-press cursor-pointer"
       >
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-        ) : (
-          initial
-        )}
+        <Avatar
+          url={avatarUrl}
+          initial={initial}
+          fallbackClassName="bg-profile-button text-profile-button-icon"
+        />
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full w-48 pt-2 z-50">
-          <div className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1">
+        <div className="absolute right-0 top-full w-48 pt-2 z-50" data-plasma-host="right">
+          {/* Under Plasma the menu is material grown out of the top bar: an
+              overlay draws the bar and the menu as one fused shape (PlasmaOverlay). */}
+          <PlasmaOverlay
+            surfaces={[
+              { ref: barRef, radius: 14, fuse: true, formIn: false, elevation: 0.5, claim: true },
+              { ref: menuPanelRef, radius: 12, fuse: true, elevation: 0.5 },
+            ]}
+            zIndex={-1}
+            canvasStyle={{ position: 'fixed' }}
+          />
+          <div
+            ref={menuPanelRef}
+            className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown p-1 motion-enter-dropdown"
+          >
             {author ? (
               <button
                 onClick={() => {
                   setOpen(false);
                   navigate('/home');
                 }}
-                className="w-full px-3 py-2 border-b border-border text-left hover:bg-accent-muted transition-colors cursor-pointer"
+                className={menuItemClass('default', 'flex-col items-start gap-0')}
               >
                 <p className="text-sm font-medium text-text truncate">{author.username}</p>
                 <p className="text-xs text-text-muted truncate">Home Garden</p>
@@ -76,7 +99,7 @@ export default function UserMenu() {
                 setOpen(false);
                 useUIStore.getState().setSettingsOpen(true);
               }}
-              className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-accent-muted transition-colors cursor-pointer"
+              className={menuItemClass()}
             >
               <span className="flex items-center justify-between w-full">
                 Settings
@@ -88,41 +111,44 @@ export default function UserMenu() {
 
             <button
               onClick={() => setMode(ThemeMode.Light)}
-              className={cn(
-                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-                mode === 'light' ? 'text-text' : 'text-text-muted hover:text-text',
+              aria-current={mode === 'light' || undefined}
+              className={menuItemClass(
+                'default',
+                mode !== 'light' && 'text-text-muted hover:text-text',
               )}
             >
               <SunIcon />
-              Light
+              <span className="flex-1">Light</span>
+              {mode === 'light' && <CheckIcon size={14} />}
             </button>
             <button
               onClick={() => setMode(ThemeMode.Dark)}
-              className={cn(
-                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-                mode === 'dark' ? 'text-text' : 'text-text-muted hover:text-text',
+              aria-current={mode === 'dark' || undefined}
+              className={menuItemClass(
+                'default',
+                mode !== 'dark' && 'text-text-muted hover:text-text',
               )}
             >
               <MoonIcon />
-              Dark
+              <span className="flex-1">Dark</span>
+              {mode === 'dark' && <CheckIcon size={14} />}
             </button>
             <button
               onClick={() => setMode(ThemeMode.Auto)}
-              className={cn(
-                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-                mode === 'auto' ? 'text-text' : 'text-text-muted hover:text-text',
+              aria-current={mode === 'auto' || undefined}
+              className={menuItemClass(
+                'default',
+                mode !== 'auto' && 'text-text-muted hover:text-text',
               )}
             >
               <MonitorIcon />
-              System
+              <span className="flex-1">System</span>
+              {mode === 'auto' && <CheckIcon size={14} />}
             </button>
 
             <div className="divider my-1" />
 
-            <button
-              onClick={handleLogout}
-              className="w-full px-3 py-2 text-left text-sm text-error hover:bg-error-muted transition-colors cursor-pointer"
-            >
+            <button onClick={handleLogout} className={menuItemClass('danger')}>
               Log out
             </button>
           </div>

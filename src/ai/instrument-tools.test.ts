@@ -5,7 +5,7 @@ import { embeddedAppToolAdapter } from '@/services/embedded-app-tool-adapters';
 import { createToolExecutor, defaultToolDefinitions, didMutate } from './tools';
 import { instrumentCommand } from './instrument-tools';
 
-beforeEach(() => initServices('local'));
+beforeEach(() => initServices());
 it('validates bounded commands before reaching the instrument', () => {
   for (const values of [{}, { brightness: NaN }, { brightness: -0.1 }, { brightness: 1.1 }, []])
     expect(() => instrumentCommand('set_instrument_controls', { values })).toThrow();

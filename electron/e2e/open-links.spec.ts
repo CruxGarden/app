@@ -1,3 +1,5 @@
+import { finishSetupAtHome, goHome } from './multi-crux-helpers';
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -29,7 +31,7 @@ test.describe('links out of the app', () => {
 
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -45,7 +47,7 @@ test.describe('links out of the app', () => {
       await page.keyboard.press('ControlOrMeta+s');
 
       // Connect + publish from the Share pane
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code' }).click();
@@ -60,15 +62,16 @@ test.describe('links out of the app', () => {
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
 
       // Share pane → Open
-      await page.getByRole('link', { name: 'Open' }).click();
+      await page.getByRole('link', { name: 'View published Crux', exact: true }).click();
       await expect
         .poll(opened)
         .toEqual([expect.stringMatching(/^https:\/\/crux\.garden\/tester\//)]);
 
-      // Home Garden banner → Public Garden
-      // The breadcrumb's first segment (the username) is the way home
-      await page.getByRole('banner').getByText('tester', { exact: true }).click();
-      await page.getByRole('button', { name: 'Public Garden' }).click({ timeout: 30_000 });
+      // Garden Home → Public Garden
+      await goHome(page);
+      await page
+        .getByRole('button', { name: 'Your creator profile in Explore' })
+        .click({ timeout: 30_000 });
       await expect.poll(opened).toHaveLength(2);
       expect((await opened())[1]).toBe('https://crux.garden/tester');
     } finally {

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pocket Notes</title>
+  <style>
+    :root {
+      font-family: system-ui, sans-serif;
+      color: #243831;
+      background: #f3f5ed;
+      color-scheme: light;
+    }
+    body {
+      max-width: 42rem;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+    }
+    h1 {
+      font-size: 2.3rem;
+    }
+    label {
+      display: block;
+      font-weight: 650;
+    }
+    textarea {
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 14rem;
+      margin: 1rem 0;
+      padding: 1rem;
+      border: 2px solid #b4c6b9;
+      border-radius: 12px;
+      font: inherit;
+      background: #fffef8;
+      color: inherit;
+    }
+    button {
+      padding: 0.7rem 1.2rem;
+      border: 0;
+      border-radius: 9px;
+      background: #24634b;
+      color: white;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.5;
+    }
+    a {
+      color: #24634b;
+    }
+    p {
+      line-height: 1.6;
+    }
+  </style>
+  <h1>Pocket Notes</h1>
+  <p>A tiny tool you can make your own. Your notes save into this Crux.</p>
+  <label for="note">Your note</label
+  ><textarea id="note" disabled></textarea>
+  <button id="save" disabled>Save note</button>
+  <span id="status" role="status">Opening…</span>
+  <p>
+    Making a tool? Edit <code>index.html</code> and <code>crux-tool.json</code> in Artifacts. Read
+    <code>README.md</code> for the publishing steps.
+  </p>
+  <script type="module">
+    import { request, dirty, flushWith } from './garden/client.js';
+    const input = document.querySelector('#note'),
+      status = document.querySelector('#status'),
+      button = document.querySelector('#save');
+    let expected = null,
+      documentState,
+      revision = 0,
+      saved = 0,
+      tail = Promise.resolve();
+    function save() {
+      const operation = tail.then(async () => {
+        if (!documentState || revision === saved) return;
+        const saving = revision;
+        const content = JSON.stringify({ ...documentState, text: input.value });
+        status.textContent = 'Saving…';
+        const result = await request({ op: 'write', path: 'project.json', expected, content });
+        expected = result.fingerprint;
+        saved = saving;
+        dirty(revision !== saved);
+        status.textContent = revision === saved ? 'Saved to Garden' : 'Unsaved changes';
+      });
+      tail = operation.catch((error) => {
+        status.textContent = error.message;
+      });
+      return operation;
+    }
+    flushWith(save);
+    button.onclick = () => {
+      void save().catch(() => {});
+    };
+    input.oninput = () => {
+      revision++;
+      dirty(true);
+      status.textContent = 'Unsaved changes';
+    };
+    try {
+      const result = await request({ op: 'read', path: 'project.json' });
+      documentState = JSON.parse(result.content);
+      expected = result.fingerprint;
+      input.value = documentState.text || '';
+      input.disabled = button.disabled = false;
+      status.textContent = 'Ready';
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  </script>
+</html>

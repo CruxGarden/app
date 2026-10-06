@@ -1,0 +1,45 @@
+---
+// Components
+// - Layout
+import Layout from '../layouts/Layout.astro'
+// - UI
+import Feature from '../components/blocks/features/FeatureSticky.astro'
+import Hero from '../components/blocks/hero/PageHeader.astro'
+import CTA from '../components/blocks/CTA/BasicDark.astro'
+
+// Data
+import featuresData from '../data/json-files/featuresData.json'
+// - Feature Categories. The categories are whatever `category` says in
+// src/data/json-files/featuresData.json — change them there and here together.
+const whatWeDo = featuresData.filter((feature) => feature.category === 'What we do')
+const whoWeServe = featuresData.filter((feature) => feature.category === 'Who we serve')
+
+// Content
+// - SEO
+const SEO = {
+	title: 'What we do',
+	description:
+		"The work we take on, who it is for, and what it costs."
+}
+// - Page Header
+const header = {
+	title: 'What we <strong>do</strong>.',
+	text: 'The work we take on, who it is for, and what it costs.'
+}
+---
+
+<Layout title={SEO.title} description={SEO.description}>
+	<Hero title={header.title} text={header.text} />
+	<Feature
+		title="The work we take on"
+		text="A group of related work — name it the way your clients do."
+		data={whatWeDo}
+	/>
+	<Feature
+		title="Who it is for"
+		text="Two or three groups is plenty; more reads as a list of anything-for-anyone."
+		data={whoWeServe}
+		classes="bg-neutral-50 dark:bg-neutral-900"
+	/>
+	<CTA />
+</Layout>

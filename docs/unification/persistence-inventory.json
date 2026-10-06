@@ -1,0 +1,845 @@
+{
+  "version": 1,
+  "scope": "Literal cruxgarden keys and literal mutation SQL in app src + electron/src; excludes tests/generated sources. Not a transitive writer/callgraph audit. Dynamic wrappers, per-Crux metadata, files, secrets and external services require separate review.",
+  "settings": [
+    {
+      "key": "cruxgarden:accessToken",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:accessToken"
+    },
+    {
+      "key": "cruxgarden:activeMoodId",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:activeMoodId"
+    },
+    {
+      "key": "cruxgarden:advancedMode",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:advancedMode"
+    },
+    {
+      "key": "cruxgarden:agentMetrics",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:agentMetrics"
+    },
+    {
+      "key": "cruxgarden:agentMetricsCapture",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:agentMetricsCapture"
+    },
+    {
+      "key": "cruxgarden:agentMetricsPath",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:agentMetricsPath"
+    },
+    {
+      "key": "cruxgarden:aiEnabled",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:aiEnabled"
+    },
+    {
+      "key": "cruxgarden:alerts",
+      "sources": [
+        "src/services/alerts.ts"
+      ],
+      "ledger": "cruxgarden:alerts"
+    },
+    {
+      "key": "cruxgarden:anthropicApiKey",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:anthropicApiKey"
+    },
+    {
+      "key": "cruxgarden:apiKey:",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:apiKey:"
+    },
+    {
+      "key": "cruxgarden:apiKey:anthropic",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:apiKey:anthropic"
+    },
+    {
+      "key": "cruxgarden:apiKeyBannerDismissed",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:apiKeyBannerDismissed"
+    },
+    {
+      "key": "cruxgarden:apiUrl",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:apiUrl"
+    },
+    {
+      "key": "cruxgarden:app-appearance:",
+      "sources": [
+        "src/services/app-appearance.ts"
+      ],
+      "ledger": "cruxgarden:app-appearance:"
+    },
+    {
+      "key": "cruxgarden:authSession",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:authSession"
+    },
+    {
+      "key": "cruxgarden:autoBackup",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:autoBackup"
+    },
+    {
+      "key": "cruxgarden:autoBackupPaused",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:autoBackupPaused"
+    },
+    {
+      "key": "cruxgarden:backgroundBlockSize",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:backgroundBlockSize"
+    },
+    {
+      "key": "cruxgarden:backgroundImage",
+      "sources": [
+        "src/lib/constants.ts",
+        "src/services/sqlite/content-reference-sql.ts"
+      ],
+      "ledger": "cruxgarden:backgroundImage"
+    },
+    {
+      "key": "cruxgarden:backgroundType",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:backgroundType"
+    },
+    {
+      "key": "cruxgarden:backupOnShare",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:backupOnShare"
+    },
+    {
+      "key": "cruxgarden:browser:",
+      "sources": [
+        "src/services/browser-panel.ts"
+      ],
+      "ledger": "cruxgarden:browser:"
+    },
+    {
+      "key": "cruxgarden:celebratePublication",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:celebratePublication"
+    },
+    {
+      "key": "cruxgarden:composer:",
+      "sources": [
+        "src/components/garden/NewCruxModal.tsx",
+        "src/stores/uiStore.ts"
+      ],
+      "ledger": "cruxgarden:composer:"
+    },
+    {
+      "key": "cruxgarden:connectedAccountId",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:connectedAccountId"
+    },
+    {
+      "key": "cruxgarden:content-projection:",
+      "sources": [
+        "src/services/file-content.ts"
+      ],
+      "ledger": "cruxgarden:content-projection:"
+    },
+    {
+      "key": "cruxgarden:cruxspace-moment",
+      "sources": [
+        "src/services/cruxspace-moment.ts"
+      ],
+      "ledger": "cruxgarden:cruxspace-moment"
+    },
+    {
+      "key": "cruxgarden:cruxspace:",
+      "sources": [
+        "src/services/cruxspaces.ts"
+      ],
+      "ledger": "cruxgarden:cruxspace:"
+    },
+    {
+      "key": "cruxgarden:defaultModel",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:defaultModel"
+    },
+    {
+      "key": "cruxgarden:dockedMode",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:dockedMode"
+    },
+    {
+      "key": "cruxgarden:editor-tabs:",
+      "sources": [
+        "src/components/garden/NewCruxModal.tsx",
+        "src/stores/uiStore.ts"
+      ],
+      "ledger": "cruxgarden:editor-tabs:"
+    },
+    {
+      "key": "cruxgarden:exploreRecentTags",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:exploreRecentTags"
+    },
+    {
+      "key": "cruxgarden:first-project:",
+      "sources": [
+        "src/components/workspace/FirstProjectGuide.tsx"
+      ],
+      "ledger": "cruxgarden:first-project:"
+    },
+    {
+      "key": "cruxgarden:firstPublication",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:firstPublication"
+    },
+    {
+      "key": "cruxgarden:fn-secrets:",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:fn-secrets:"
+    },
+    {
+      "key": "cruxgarden:folder-state:",
+      "sources": [
+        "src/components/garden/NewCruxModal.tsx",
+        "src/stores/uiStore.ts"
+      ],
+      "ledger": "cruxgarden:folder-state:"
+    },
+    {
+      "key": "cruxgarden:garden-layout:",
+      "sources": [
+        "src/stores/uiStore.ts"
+      ],
+      "ledger": "cruxgarden:garden-layout:"
+    },
+    {
+      "key": "cruxgarden:graph-import:",
+      "sources": [
+        "src/services/sqlite/content-reference-sql.ts"
+      ],
+      "ledger": "cruxgarden:graph-import:"
+    },
+    {
+      "key": "cruxgarden:installedMoodSources",
+      "sources": [
+        "src/services/update-notices.ts"
+      ],
+      "ledger": "cruxgarden:installedMoodSources"
+    },
+    {
+      "key": "cruxgarden:installedTools",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:installedTools"
+    },
+    {
+      "key": "cruxgarden:keeper-conversations",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:keeper-conversations"
+    },
+    {
+      "key": "cruxgarden:keeper-history",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:keeper-history"
+    },
+    {
+      "key": "cruxgarden:keeper-model",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:keeper-model"
+    },
+    {
+      "key": "cruxgarden:lastGardenBackupAt",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:lastGardenBackupAt"
+    },
+    {
+      "key": "cruxgarden:layout:",
+      "sources": [
+        "src/components/garden/NewCruxModal.tsx",
+        "src/stores/uiStore.ts"
+      ],
+      "ledger": "cruxgarden:layout:"
+    },
+    {
+      "key": "cruxgarden:layout:global",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:layout:global"
+    },
+    {
+      "key": "cruxgarden:liquidGlass",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:liquidGlass"
+    },
+    {
+      "key": "cruxgarden:local:authorId",
+      "sources": [
+        "electron/src/sqlite-api.ts",
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:local:authorId"
+    },
+    {
+      "key": "cruxgarden:local:homeId",
+      "sources": [
+        "electron/src/sqlite-api.ts",
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:local:homeId"
+    },
+    {
+      "key": "cruxgarden:localAuthorId",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:localAuthorId"
+    },
+    {
+      "key": "cruxgarden:location",
+      "sources": [
+        "src/services/weather.ts"
+      ],
+      "ledger": "cruxgarden:location"
+    },
+    {
+      "key": "cruxgarden:memory",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:memory"
+    },
+    {
+      "key": "cruxgarden:moodAssets",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodAssets"
+    },
+    {
+      "key": "cruxgarden:moodCover",
+      "sources": [
+        "src/lib/constants.ts",
+        "src/services/sqlite/content-reference-sql.ts"
+      ],
+      "ledger": "cruxgarden:moodCover"
+    },
+    {
+      "key": "cruxgarden:moodDockState",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodDockState"
+    },
+    {
+      "key": "cruxgarden:moodOverrides",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodOverrides"
+    },
+    {
+      "key": "cruxgarden:moodPackages",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodPackages"
+    },
+    {
+      "key": "cruxgarden:moodPreset",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodPreset"
+    },
+    {
+      "key": "cruxgarden:moodPresetDark",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodPresetDark"
+    },
+    {
+      "key": "cruxgarden:moodPresetLight",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodPresetLight"
+    },
+    {
+      "key": "cruxgarden:moodProjection",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodProjection"
+    },
+    {
+      "key": "cruxgarden:moodSchedules",
+      "sources": [
+        "src/services/schedules.ts"
+      ],
+      "ledger": "cruxgarden:moodSchedules"
+    },
+    {
+      "key": "cruxgarden:moodThemeDark",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodThemeDark"
+    },
+    {
+      "key": "cruxgarden:moodThemeLight",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodThemeLight"
+    },
+    {
+      "key": "cruxgarden:moodUserPresets",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:moodUserPresets"
+    },
+    {
+      "key": "cruxgarden:motionIntensity",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:motionIntensity"
+    },
+    {
+      "key": "cruxgarden:navigation:",
+      "sources": [
+        "src/services/navigation-preferences.ts"
+      ],
+      "ledger": "cruxgarden:navigation:"
+    },
+    {
+      "key": "cruxgarden:open-workspaces:v1",
+      "sources": [
+        "src/stores/workspaceRegistry.ts"
+      ],
+      "ledger": "cruxgarden:open-workspaces:v1"
+    },
+    {
+      "key": "cruxgarden:parallel-task-limit",
+      "sources": [
+        "src/components/workspace/TaskBar.tsx",
+        "src/services/turns.ts"
+      ],
+      "ledger": "cruxgarden:parallel-task-limit"
+    },
+    {
+      "key": "cruxgarden:pending-open:",
+      "sources": [
+        "src/services/deferred-import.ts"
+      ],
+      "ledger": "cruxgarden:pending-open:"
+    },
+    {
+      "key": "cruxgarden:persona",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:persona"
+    },
+    {
+      "key": "cruxgarden:pins",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:pins"
+    },
+    {
+      "key": "cruxgarden:publicMoodId",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:publicMoodId"
+    },
+    {
+      "key": "cruxgarden:refreshToken",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:refreshToken"
+    },
+    {
+      "key": "cruxgarden:resonanceCues",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:resonanceCues"
+    },
+    {
+      "key": "cruxgarden:resonanceOptIn",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:resonanceOptIn"
+    },
+    {
+      "key": "cruxgarden:resonancePlaying",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:resonancePlaying"
+    },
+    {
+      "key": "cruxgarden:resonanceVolume",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:resonanceVolume"
+    },
+    {
+      "key": "cruxgarden:resumeWorkspace",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:resumeWorkspace"
+    },
+    {
+      "key": "cruxgarden:schedules",
+      "sources": [
+        "src/services/schedules.ts"
+      ],
+      "ledger": "cruxgarden:schedules"
+    },
+    {
+      "key": "cruxgarden:selftest",
+      "sources": [
+        "electron/src/selftest.ts"
+      ],
+      "ledger": "cruxgarden:selftest"
+    },
+    {
+      "key": "cruxgarden:setupNeed",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:setupNeed"
+    },
+    {
+      "key": "cruxgarden:soundEnabled",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:soundEnabled"
+    },
+    {
+      "key": "cruxgarden:soundTrack",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:soundTrack"
+    },
+    {
+      "key": "cruxgarden:synthPatch",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:synthPatch"
+    },
+    {
+      "key": "cruxgarden:synthPresetBanks",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:synthPresetBanks"
+    },
+    {
+      "key": "cruxgarden:tending-notifications",
+      "sources": [
+        "src/services/tending-notifications.ts"
+      ],
+      "ledger": "cruxgarden:tending-notifications"
+    },
+    {
+      "key": "cruxgarden:tending-seen:",
+      "sources": [
+        "src/services/tending-state.ts"
+      ],
+      "ledger": "cruxgarden:tending-seen:"
+    },
+    {
+      "key": "cruxgarden:theme",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:theme"
+    },
+    {
+      "key": "cruxgarden:tint",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:tint"
+    },
+    {
+      "key": "cruxgarden:tutorialSeeded",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:tutorialSeeded"
+    },
+    {
+      "key": "cruxgarden:ui",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:ui"
+    },
+    {
+      "key": "cruxgarden:update-notice-later",
+      "sources": [
+        "src/lib/update-notice.ts"
+      ],
+      "ledger": "cruxgarden:update-notice-later"
+    },
+    {
+      "key": "cruxgarden:weather",
+      "sources": [
+        "src/services/weather.ts"
+      ],
+      "ledger": "cruxgarden:weather"
+    },
+    {
+      "key": "cruxgarden:weatherError",
+      "sources": [
+        "src/services/weather.ts"
+      ],
+      "ledger": "cruxgarden:weatherError"
+    },
+    {
+      "key": "cruxgarden:weatherUrl",
+      "sources": [
+        "src/services/weather.ts"
+      ],
+      "ledger": "cruxgarden:weatherUrl"
+    },
+    {
+      "key": "cruxgarden:workshop-view:",
+      "sources": [
+        "src/stores/uiStore.ts"
+      ],
+      "ledger": "cruxgarden:workshop-view:"
+    },
+    {
+      "key": "cruxgarden:workspaceLayouts",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:workspaceLayouts"
+    },
+    {
+      "key": "cruxgarden:wornMoodId",
+      "sources": [
+        "src/lib/constants.ts"
+      ],
+      "ledger": "cruxgarden:wornMoodId"
+    }
+  ],
+  "literalSqlMutations": [
+    {
+      "file": "electron/src/sqlite-native.ts",
+      "method": "db.exec",
+      "statement": "'ALTER TABLE cruxes ADD COLUMN deleted TEXT'"
+    },
+    {
+      "file": "src/services/cruxspaces.ts",
+      "method": "getSqliteClient().run",
+      "statement": "'INSERT INTO settings (key, value) VALUES (?, ?)'"
+    },
+    {
+      "file": "src/services/cruxspaces.ts",
+      "method": "getSqliteClient().run",
+      "statement": "'UPDATE settings SET value = ? WHERE key = ?'"
+    },
+    {
+      "file": "src/services/cruxspaces.ts",
+      "method": "getSqliteClient().run",
+      "statement": "'DELETE FROM settings WHERE key = ?'"
+    },
+    {
+      "file": "src/services/project-folder.ts",
+      "method": "db.run",
+      "statement": "'UPDATE working_copies SET project_folder = ? WHERE id = ?'"
+    },
+    {
+      "file": "src/services/settings.ts",
+      "method": "db.run",
+      "statement": "'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'"
+    },
+    {
+      "file": "src/services/settings.ts",
+      "method": "db.run",
+      "statement": "'DELETE FROM settings WHERE key = ?'"
+    },
+    {
+      "file": "src/services/sqlite/artifact.service.ts",
+      "method": "db.run",
+      "statement": "'UPDATE artifacts SET encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?'"
+    },
+    {
+      "file": "src/services/sqlite/artifact.service.ts",
+      "method": "db.run",
+      "statement": "`INSERT INTO artifacts (${columns.join(', ')}) VALUES ${chunk.map(() => row).join(', ')}`"
+    },
+    {
+      "file": "src/services/sqlite/artifact.service.ts",
+      "method": "getSqliteClient().run",
+      "statement": "`UPDATE artifacts SET ${sets} WHERE id = ?`"
+    },
+    {
+      "file": "src/services/sqlite/artifact.service.ts",
+      "method": "db.run",
+      "statement": "'DELETE FROM artifacts WHERE id = ?'"
+    },
+    {
+      "file": "src/services/sqlite/artifact.service.ts",
+      "method": "db.run",
+      "statement": "`INSERT INTO artifacts (${columns.join(', ')}) VALUES ${chunk.map(() => placeholder).join(', ')}`"
+    },
+    {
+      "file": "src/services/sqlite/dimension.service.ts",
+      "method": "db.run",
+      "statement": "'DELETE FROM dimensions WHERE id = ?'"
+    },
+    {
+      "file": "src/services/sqlite/identity.ts",
+      "method": "db.run",
+      "statement": "`INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorIdLegacy}', ?)`"
+    },
+    {
+      "file": "src/services/sqlite/identity.ts",
+      "method": "db.run",
+      "statement": "`INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalHomeId}', ?)`"
+    },
+    {
+      "file": "src/services/sqlite/store.service.ts",
+      "method": "db.run",
+      "statement": "'UPDATE store SET value = ?, mode = ?, updated = ? WHERE id = ?'"
+    },
+    {
+      "file": "src/services/sqlite/store.service.ts",
+      "method": "db.run",
+      "statement": "'INSERT INTO store (id, crux_id, visitor_id, key, value, mode, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'"
+    },
+    {
+      "file": "src/services/sqlite/store.service.ts",
+      "method": "db.run",
+      "statement": "'UPDATE store SET value = ?, mode = ?, updated = ? WHERE id = ?'"
+    },
+    {
+      "file": "src/services/sqlite/store.service.ts",
+      "method": "db.run",
+      "statement": "'INSERT INTO store (id, crux_id, visitor_id, key, value, mode, created, updated) VALUES (?, ?, NULL, ?, ?, ?, ?, ?)'"
+    },
+    {
+      "file": "src/services/sqlite/store.service.ts",
+      "method": "db.run",
+      "statement": "'DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id = ?'"
+    },
+    {
+      "file": "src/services/sqlite/store.service.ts",
+      "method": "db.run",
+      "statement": "'DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id IS NULL'"
+    },
+    {
+      "file": "src/services/sqlite/store.service.ts",
+      "method": "db.run",
+      "statement": "'DELETE FROM store WHERE crux_id = ?'"
+    },
+    {
+      "file": "src/stores/authStore.ts",
+      "method": "db.run",
+      "statement": "'UPDATE cruxes SET author_id = ? WHERE author_id = ?'"
+    },
+    {
+      "file": "src/stores/authStore.ts",
+      "method": "db.run",
+      "statement": "'UPDATE artifacts SET author_id = ? WHERE author_id = ?'"
+    },
+    {
+      "file": "src/stores/authStore.ts",
+      "method": "db.run",
+      "statement": "'UPDATE dimensions SET author_id = ? WHERE author_id = ?'"
+    },
+    {
+      "file": "src/stores/authStore.ts",
+      "method": "db.run",
+      "statement": "'UPDATE authors SET id = ?, account_id = ?, updated = ? WHERE id = ?'"
+    },
+    {
+      "file": "src/stores/authStore.ts",
+      "method": "db.run",
+      "statement": "`INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorId}', ?)`"
+    }
+  ]
+}

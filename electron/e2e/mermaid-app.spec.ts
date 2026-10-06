@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 test('Mermaid native editor, agent, SVG/PNG exports, conflict and restart', async () => {
   test.setTimeout(180000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
@@ -19,6 +20,11 @@ test('Mermaid native editor, agent, SVG/PNG exports, conflict and restart', asyn
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Mermaid Live Editor/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // The Tasks pane opens with every app Crux now; the editor wants the width.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+    await expectPanelBarReady(page);
+    if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+      await togglePanel(page, 'Toggle tasks');
     const frame = page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 60000,
@@ -72,6 +78,13 @@ test('Mermaid native editor, agent, SVG/PNG exports, conflict and restart', asyn
     }
     expect((await download('SVG')).toString()).toContain('Research');
     expect((await download('PNG')).subarray(1, 4).toString()).toBe('PNG');
+    // The exports touch the editor's stored state, and the bridge autosaves
+    // 800 ms after any change. Let that save land on disk before writing the
+    // file from outside: an external write inside a save already in flight is
+    // the save's to overwrite, not a conflict.
+    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden');
+    await page.waitForTimeout(1500);
+    await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden');
     const external = doc();
     const updated = state();
     updated.code = 'flowchart LR\n  External --> Diagram';
@@ -92,7 +105,7 @@ test('Mermaid native editor, agent, SVG/PNG exports, conflict and restart', asyn
   const second = await launchApp({ dir: first.dir, env: { CRUX_AI_MOCK: '1' } });
   try {
     await second.page.setViewportSize({ width: 1900, height: 1100 });
-    await second.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(second.page);
     const frame = second.page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
       timeout: 60000,

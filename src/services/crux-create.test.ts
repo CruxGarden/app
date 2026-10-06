@@ -1,17 +1,25 @@
+import { localApiFixture } from '@/test/local-api-fixture';
+import { setSetting } from './settings';
+import { SettingsKey } from '@/lib/constants';
+import { DEFAULT_PERSONA, getPersonaFingerprint } from './persona';
+import { createCruxStore } from '@/stores/cruxStore';
+import { runGardenTool } from '@/ai/garden-tools';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { initServices, getServices } from './index';
 import { applyTemplateToCrux } from './crux-create';
 
+localApiFixture();
+
 describe('applyTemplateToCrux', () => {
   beforeEach(async () => {
-    await initServices('local');
+    await initServices();
   });
   afterEach(() => vi.unstubAllGlobals());
 
   it('writes the template files, stamps the Builder inputs and the template id', async () => {
     // Bundled binaries (fonts, images) are `?url` assets the dev server would serve; here a stub answers.
     vi.stubGlobal('fetch', async (url: string) =>
-      url.startsWith('/blog-crux/')
+      url.startsWith('/__crux-assets/')
         ? new Response(new Uint8Array([0, 1, 2]), { status: 200 })
         : new Response('', { status: 404 }),
     );
@@ -31,8 +39,39 @@ describe('applyTemplateToCrux', () => {
     expect(result.crux.meta?.contentModel).toBeTruthy();
     expect(result.messages?.[0]?.role).toBe('assistant');
     expect(result.layout).toBeTruthy();
-    // No Project Folder in the test environment → no AGENTS.md (Desktop Mode writes it)
+    // No Electron project bridge in this service fixture; desktop journeys cover AGENTS.md.
     expect(paths).not.toContain('AGENTS.md');
+  });
+
+  it('keeps the original creator on template greetings when Mood changes during creation and setup', async () => {
+    const original = { ...DEFAULT_PERSONA, name: 'Studio guide', systemPrompt: 'Studio voice' };
+    const other = { ...DEFAULT_PERSONA, name: 'Writing guide', systemPrompt: 'Writing voice' };
+    setSetting(SettingsKey.Persona, JSON.stringify(original));
+    const pending = createCruxStore().getState().createCrux('Captured creator');
+    setSetting(SettingsKey.Persona, JSON.stringify(other));
+    const crux = await pending;
+    vi.stubGlobal('fetch', async () => new Response(new Uint8Array([0, 1, 2])));
+    const result = await applyTemplateToCrux(crux, 'astro-blog', 'webapp');
+    const fingerprint = getPersonaFingerprint(original);
+    expect(result.messages?.[0]?.personaFingerprint).toBe(fingerprint);
+    expect(result.crux.meta?.personaSnapshots).toEqual({
+      [fingerprint]: expect.objectContaining({
+        name: 'Studio guide',
+        systemPrompt: 'Studio voice',
+      }),
+    });
+  });
+
+  it('captures an agent creation’s Persona before asynchronous discovery', async () => {
+    const original = { ...DEFAULT_PERSONA, name: 'Original agent creator' };
+    setSetting(SettingsKey.Persona, JSON.stringify(original));
+    const pending = runGardenTool('plant_crux', { title: 'Agent context', template: 'blank' });
+    setSetting(SettingsKey.Persona, JSON.stringify({ ...DEFAULT_PERSONA, name: 'Later visitor' }));
+    const result = await pending;
+    const id = /^id: (.+)$/m.exec(result)?.[1];
+    expect(id).toBeTruthy();
+    const crux = await getServices().crux.findById(id!);
+    expect(crux.meta?.messages?.[0]?.personaFingerprint).toBe(getPersonaFingerprint(original));
   });
 
   it('an unknown template only sets the kind', async () => {
@@ -57,7 +96,7 @@ describe('applyTemplateToCrux', () => {
     expect(result.crux.meta?.settings).toMatchObject({ entryFile: 'index.html' });
     for (const name of ['Silkscreen-Regular', 'Silkscreen-Bold']) {
       const file = files.find((file) => file.meta?.path === `assets/fonts/${name}.ttf`)!;
-      const bytes = new Uint8Array(await (await artifact.downloadBlob(file.id)).arrayBuffer());
+      const bytes = new Uint8Array(await (await artifact.downloadBlob(file)).arrayBuffer());
       const { readFileSync } = await import('node:fs');
       const original = readFileSync(
         new URL(`../../onebigsky-crux/assets/fonts/${name}.ttf`, import.meta.url),

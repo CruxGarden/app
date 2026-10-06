@@ -16,13 +16,25 @@ export const EXPLORE_KINDS: readonly string[] = [
   'document',
   'image',
   'mood',
+  'tool',
 ];
 
-export type ExploreResultType = 'cruxes' | 'authors';
+/** What Explore looks through: everything, or one of the four things people share. */
+export type ExploreView = 'all' | 'cruxes' | 'people' | 'tools' | 'moods';
+export const EXPLORE_VIEWS: readonly ExploreView[] = ['all', 'cruxes', 'people', 'tools', 'moods'];
+/** @deprecated the URL's `type=authors` still opens People. */
+export type ExploreResultType = ExploreView;
+
+export function parseExploreView(value: string | null): ExploreView {
+  if (value === 'authors') return 'people';
+  return value && (EXPLORE_VIEWS as readonly string[]).includes(value)
+    ? (value as ExploreView)
+    : 'all';
+}
 
 export interface ParsedExploreParams {
   q: string;
-  type: ExploreResultType;
+  type: ExploreView;
   /** Undefined when absent or invalid — Explore picks its default from `q`. */
   sort: ExploreSort | undefined;
   kind: string;
@@ -51,7 +63,7 @@ export function parseExplorePage(value: string | null): number {
 export function parseExploreParams(params: URLSearchParams): ParsedExploreParams {
   return {
     q: params.get('q') ?? '',
-    type: params.get('type') === 'authors' ? 'authors' : 'cruxes',
+    type: parseExploreView(params.get('type')),
     sort: parseExploreSort(params.get('sort')),
     kind: parseExploreKind(params.get('kind')),
     tags: params.getAll('tag').filter(Boolean),

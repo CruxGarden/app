@@ -1,10 +1,12 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
-beforeEach(() => initServices('local'));
+localApiFixture();
+beforeEach(() => initServices());
 it('retains native notebook cells, outputs and folders through Growth and portable Crux archives', async () => {
   const services = getServices();
   const crux = await services.crux.create({
@@ -73,6 +75,8 @@ it('retains native notebook cells, outputs and folders through Growth and portab
   const saved = (await call({ op: 'write', path: 'project.json', content, expected: null })) as {
     fingerprint: string;
   };
+  expect(store.getState().growths).toHaveLength(0);
+  await store.getState().createSnapshot({ label: 'Chosen version' });
   const snapshot = store.getState().growths[0]!.targetId;
   await expect(
     call({ op: 'write', path: 'project.json', content, expected: null }),
@@ -105,17 +109,15 @@ it('retains native notebook cells, outputs and folders through Growth and portab
   });
   const files = await services.artifact.findByResource('crux', imported.cruxId);
   expect(
-    await services.artifact.readContent(
-      files.find((f) => f.meta?.path === 'data/project.json')!.id,
-    ),
+    await services.artifact.readContent(files.find((f) => f.meta?.path === 'data/project.json')!),
   ).toBe(content);
   const data = await services.artifact.downloadBlob(
-    files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,
+    files.find((f) => f.meta?.path === 'data/' + asset.path)!,
   );
   expect(new Uint8Array(await data.arrayBuffer())).toEqual(bytes);
   const exportedNotebook = files.find((f) => f.meta?.path === output.path)!;
   expect(
-    new Uint8Array(await (await services.artifact.downloadBlob(exportedNotebook.id)).arrayBuffer()),
+    new Uint8Array(await (await services.artifact.downloadBlob(exportedNotebook)).arrayBuffer()),
   ).toEqual(bytes);
 });
 it('validates native notebook commands and keeps cell insertion separate from execution', () => {

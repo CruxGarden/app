@@ -1,3 +1,10 @@
+import {
+  parseSynthPatch,
+  parseSynthPresets,
+  synthForMood,
+  synthPresetsForMood,
+  type SynthPatch,
+} from '@/audio/synth-patch';
 /**
  * Persistence for the Mood's sound: the track, volume, on/off, the opt-in
  * that lets sound resume on launch, and the Mood Bar's collapsed state.
@@ -102,4 +109,43 @@ export function getDockState(): DockState | null {
 }
 export function setDockState(s: DockState): void {
   setSetting(SettingsKey.MoodDockState, JSON.stringify(s));
+}
+
+export function getSynth(): SynthPatch {
+  try {
+    const raw = getSetting(SettingsKey.SynthPatch);
+    if (raw) return parseSynthPatch(JSON.parse(raw));
+  } catch {
+    /* older or invalid setting */
+  }
+  return synthForMood(String(getSetting(SettingsKey.WornMoodId) || 'plasma'), 'Crux Synth');
+}
+export function setSynth(patch: SynthPatch): void {
+  setSetting(SettingsKey.SynthPatch, JSON.stringify(parseSynthPatch(patch)));
+}
+
+function presetBanks(): Record<string, SynthPatch[]> {
+  try {
+    const raw = JSON.parse(String(getSetting(SettingsKey.SynthPresetBanks) || '{}'));
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  } catch {
+    return {};
+  }
+}
+export function getSynthPresets(
+  id = String(getSetting(SettingsKey.WornMoodId) || 'plasma'),
+  defaults?: SynthPatch[],
+): SynthPatch[] {
+  try {
+    const saved = presetBanks()[id];
+    if (saved) return parseSynthPresets(saved);
+  } catch {
+    /* recover corrupt local bank from the Mood */
+  }
+  return parseSynthPresets(defaults ?? synthPresetsForMood(id, 'Crux Synth'));
+}
+export function setSynthPresets(presets: SynthPatch[]): void {
+  const id = String(getSetting(SettingsKey.WornMoodId) || 'plasma');
+  const bank = { ...presetBanks(), [id]: parseSynthPresets(presets) };
+  setSetting(SettingsKey.SynthPresetBanks, JSON.stringify(bank));
 }

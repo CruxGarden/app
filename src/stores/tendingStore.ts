@@ -1,9 +1,9 @@
-import { getSetting } from '@/services/settings';
+import { opensAsWorkspace } from '@/services/garden-navigation';
+import { listTaskCopies } from '@/services/working-copies';
+import { seenTurn } from '@/services/tending-state';
 import { create } from 'zustand';
 import { useMemo } from 'react';
 import { getServices } from '@/services';
-import { getSqliteClient } from '@/services/sqlite/client';
-import { fromRow } from '@/services/sqlite/helpers';
 import { TASKS_CHANGED, type WorkingCopy } from '@/services/working-copies';
 import { GROWTH_CHANGED_EVENT } from '@/services/growth';
 import { tendingState, type TendingState } from '@/services/tending-state';
@@ -30,7 +30,7 @@ function savedState(id: string, cruxId: string, meta: CruxMeta): TendingState {
     cruxId,
     job: (meta.turnJob as TurnJob | undefined) ?? null,
     queued: Array.isArray(meta.turnQueue) ? meta.turnQueue.length : 0,
-    seenTurnId: getSetting(`cruxgarden:tending-seen:${id}`),
+    seenTurnId: seenTurn(id),
   });
 }
 /** Read metadata only: browsing Tending never opens an editor, preview or agent. */
@@ -41,16 +41,11 @@ export function startTendingCatalog(): () => void {
   const refresh = async () => {
     const ticket = ++generation;
     try {
-      const [cruxes, raw] = await Promise.all([
-        getServices().crux.listAll(),
-        getSqliteClient().all(
-          "SELECT * FROM working_copies WHERE role = 'task' ORDER BY created, id",
-        ),
-      ]);
+      const [cruxes, copies] = await Promise.all([getServices().crux.listAll(), listTaskCopies()]);
       if (disposed || ticket !== generation) return;
-      const copies = raw.map((row) => fromRow<WorkingCopy>(row));
+      // Gardens and Moods are places and looks, not work that needs tending.
       const rows = cruxes
-        .filter((c) => c.kind !== 'snapshot')
+        .filter((c) => c.kind !== 'snapshot' && c.kind !== 'garden' && opensAsWorkspace(c))
         .flatMap((c): TendingRow[] => {
           const cruxTitle = c.title || 'Untitled';
           return [

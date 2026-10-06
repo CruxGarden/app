@@ -1,3 +1,7 @@
+import { hasMoodCruxReference } from '@/services/mood-library';
+import { captureGardenId } from '@/stores/gardenContext';
+import JSZip from 'jszip';
+import { recordMoodSource } from '@/services/update-notices';
 /**
  * Publishing a Mood: the package becomes a crux of kind "mood" in your garden
  * — a real Project Folder holding mood.cruxmood (the package with assets),
@@ -13,7 +17,7 @@ import {
   packageAssets,
   type MoodPackage,
 } from './packages';
-import type { Crux } from '@/api/types';
+import type { Artifact, Crux } from '@/api/types';
 
 /** The few facts an Explore card needs, stored on crux.meta.mood */
 export interface MoodSummary {
@@ -24,6 +28,8 @@ export interface MoodSummary {
   author?: string;
   /** Published file name of the cover image (e.g. "cover.png"), when the Mood has one */
   cover?: string;
+  /** When this edition was shared — installed copies compare it for update notices. */
+  revision?: string;
 }
 
 const SWATCH_KEYS = [
@@ -53,7 +59,7 @@ export function moodSummary(pkg: MoodPackage): MoodSummary {
   return {
     section: pkg.theme.section,
     swatch,
-    track: pkg.sound.track?.name ?? pkg.bundled?.track?.name,
+    track: pkg.sound.synth?.name ?? pkg.sound.track?.name ?? pkg.bundled?.track?.name,
     author: pkg.author,
     cover: coverFileName(pkg),
   };
@@ -88,7 +94,7 @@ ${s.cover ? `<img class="cover" src="${esc(s.cover)}" alt="">` : ''}<h1>${esc(pk
 <div class="muted">A Crux Garden Mood${pkg.author ? ` by ${esc(pkg.author)}` : ''} · ${esc(s.section)}${s.track ? ` · plays “${esc(s.track)}”` : ' · quiet'}</div>
 <div class="panes">${panes}</div>
 <a class="btn" href="mood.cruxmood" download>Download mood.cruxmood</a>
-<p class="how">In Crux Garden, open Explore → Moods and press Install, or import the file from the Mood modal.</p>
+<p class="how">In Crux Garden, open Explore → Moods and press Install, or import the file in the Mood pane.</p>
 </main></body></html>`;
 }
 
@@ -100,18 +106,20 @@ export interface PublishMoodDeps {
       findById?(id: string): Promise<Crux | null>;
     };
     artifact: {
-      findByResource(
-        type: string,
-        id: string,
-      ): Promise<{ id: string; meta?: { path?: string } | null; filename?: string }[]>;
+      findByResource(type: string, id: string): Promise<Artifact[]>;
       create(input: Record<string, unknown>): Promise<unknown>;
       upload(input: Record<string, unknown>): Promise<unknown>;
-      delete(id: string): Promise<void>;
+      delete(file: Artifact): Promise<void>;
     };
   }>;
   readBlob: (fp: string) => Promise<Uint8Array>;
   publish: (crux: Crux, artifacts: unknown[]) => Promise<Crux>;
   now?: () => string;
+  /**
+   * Listed in Explore (true) or link-only (false). Omitted: a new share is
+   * Discoverable and an update keeps the publication's current choice.
+   */
+  discoverable?: boolean;
 }
 
 /**
@@ -119,8 +127,19 @@ export interface PublishMoodDeps {
  * the package with publishedCruxId/publishedAt set (and installs that).
  */
 export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Promise<MoodPackage> {
+  const source = hasMoodCruxReference(pkg) ? pkg : undefined;
+  const gardenId = captureGardenId();
+  pkg = structuredClone(pkg);
+  // Prepare and verify the complete archive before replacing any existing files.
+  const zip = await exportMoodPackage(pkg, deps.readBlob);
+  const coverBytes = pkg.cover
+    ? await (await JSZip.loadAsync(await zip.arrayBuffer()))
+        .file(`assets/${pkg.cover}`)!
+        .async('uint8array')
+    : null;
   const { crux: cruxService, artifact: artifactService } = await deps.services();
-  const summary = moodSummary(pkg);
+  const now = deps.now ?? (() => new Date().toISOString());
+  const summary: MoodSummary = { ...moodSummary(pkg), revision: now() };
   const meta = {
     mood: summary,
     tags: [
@@ -137,7 +156,7 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
       title: pkg.name,
       description: `A Crux Garden Mood: ${summary.section}${summary.track ? `, plays “${summary.track}”` : ''}.`,
       kind: 'mood',
-      discoverable: true,
+      discoverable: deps.discoverable ?? crux.discoverable ?? true,
       meta: { ...(crux.meta as Record<string, unknown>), ...meta },
     });
   } else {
@@ -148,34 +167,28 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
       meta,
     });
     crux = await cruxService.update(crux.id, {
-      discoverable: true,
+      discoverable: deps.discoverable ?? true,
       meta: { ...(crux.meta as Record<string, unknown>), ...meta },
     });
   }
 
   // Replace the files (a Mood crux holds nothing else)
   const existing = await artifactService.findByResource('crux', crux.id);
-  for (const a of existing) await artifactService.delete(a.id);
-  const zip = await exportMoodPackage(pkg, deps.readBlob);
+  for (const a of existing) await artifactService.delete(a);
   await artifactService.upload({
     resourceId: crux.id,
     resourceType: 'crux',
     blob: zip,
     meta: { path: 'mood.cruxmood' },
   });
-  if (pkg.cover && summary.cover) {
-    try {
-      const bytes = await deps.readBlob(pkg.cover);
-      const type = pkg.assets?.find((a) => a.fingerprint === pkg.cover)?.type || 'image/png';
-      await artifactService.upload({
-        resourceId: crux.id,
-        resourceType: 'crux',
-        blob: new Blob([bytes as BlobPart], { type }),
-        meta: { path: summary.cover },
-      });
-    } catch {
-      /* no cover bytes: the card falls back to the swatch */
-    }
+  if (coverBytes && summary.cover) {
+    const type = pkg.assets?.find((a) => a.fingerprint === pkg.cover)?.type || 'image/png';
+    await artifactService.upload({
+      resourceId: crux.id,
+      resourceType: 'crux',
+      blob: new Blob([coverBytes as BlobPart], { type }),
+      meta: { path: summary.cover },
+    });
   }
   await artifactService.create({
     resourceId: crux.id,
@@ -195,15 +208,20 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
   const stamped: MoodPackage = {
     ...pkg,
     publishedCruxId: published.id,
-    publishedAt: (deps.now ?? (() => new Date().toISOString()))(),
+    publishedAt: now(),
   };
-  installMood(stamped);
-  return stamped;
+  return installMood(stamped, { source, gardenId });
 }
 
 /** Fetch a published Mood's package and install it. Tries the published files, then the public API. */
 export async function installMoodFromPublished(
-  crux: { id: string; slug: string; author_username: string; title?: string },
+  crux: {
+    id: string;
+    slug: string;
+    author_username: string;
+    title?: string;
+    meta?: Record<string, unknown> | null;
+  },
   deps: {
     publishBaseUrl: (id: string) => string;
     fetchBlob: (url: string) => Promise<Blob | null>;
@@ -215,6 +233,7 @@ export async function installMoodFromPublished(
     putBlob: (bytes: Uint8Array) => Promise<string>;
   },
 ): Promise<MoodPackage | null> {
+  const gardenId = captureGardenId();
   // The published copy is the fast path, but whatever answers there is not
   // necessarily the package: without a publish origin configured the URL is
   // relative and the app's own shell answers with index.html; a CDN answers a
@@ -233,8 +252,16 @@ export async function installMoodFromPublished(
   }
   if (!pkg) return null;
   const installed: MoodPackage = { ...pkg, publishedCruxId: pkg.publishedCruxId ?? crux.id };
-  installMood(installed);
-  return installed;
+  const result = await installMood(installed, { gardenId });
+  // Remember the source so Settings can say when its creator shares an update.
+  const revision = (crux.meta?.mood as MoodSummary | undefined)?.revision;
+  recordMoodSource(result.id, {
+    publishedCruxId: crux.id,
+    author: crux.author_username,
+    slug: crux.slug,
+    ...(typeof revision === 'string' ? { revision } : {}),
+  });
+  return result;
 }
 
 export { packageAssets };

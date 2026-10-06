@@ -1,0 +1,382 @@
+{
+  "date": "2026-10-02",
+  "status": "review-block-accepted-external-release-gates-remain",
+  "baseApp": "add8edbba815e8919db692e5e7507066e796c194",
+  "baseApi": "33691b02cad8",
+  "preserveBehaviorTests": true,
+  "desktopBaseline": {
+    "firstReview": {
+      "log": "/tmp/crux-review-desktop-red.log",
+      "failed": 4,
+      "passed": 1,
+      "meaning": "Import collision, two Sync outages and Underrun Share fail; AI cross-workspace behavior passes before simplification."
+    },
+    "upload": {
+      "log": "/tmp/crux-upload-desktop-red.log",
+      "meaning": "Artifacts missing failure report reproduced; Builder setup selector fixed, no false baseline claim."
+    },
+    "rename": {
+      "log": "/tmp/crux-rename-desktop-red.log",
+      "meaning": "Actual Replace confirmation leaves source unchanged."
+    }
+  },
+  "firstDesktopBatch": {
+    "log": "/tmp/crux-release-desktop-first.log",
+    "passed": 7,
+    "failed": 13,
+    "acceptedJourneys": [
+      "Import collision refusal, corrected retry, restart",
+      "Rename Replace with retained original bytes and unrelated file/restart",
+      "Narrow Growth to Navigate without pointer interception",
+      "Underrun source gameplay/remix/archive/clean import plus real uploaded game playback",
+      "Artifacts partial upload refusal/retry/restart",
+      "Builder partial image refusal without false clipboard/success then retry",
+      "Apex domain existing journey"
+    ],
+    "testSetupRepairs": [
+      "Resolve Project Folder from actual current Crux metadata rather than first directory; welcome Crux creates additional folder.",
+      "Include uninstalled tools before inspecting unavailable miniPaint option.",
+      "Wait for actual Settings navigation control before choosing compact versus wide mode."
+    ],
+    "pendingProductFix": "Settings keyboard/scroll at transformed narrow pane requires layout-coordinate scrolling; source fix pending rebuild."
+  },
+  "accountReplay": {
+    "log": "/tmp/crux-release-account-replay.log",
+    "status": "completed-with-failures",
+    "firstFourPassed": [
+      "Whole-Garden export account switch/refusal/retry/archive bytes",
+      "Publication preparation account switch/refusal/retry/source retained",
+      "Crux archive account switch/refusal/retry",
+      "Sync second-account listing outage hides prior account metadata/budget; Retry"
+    ],
+    "passed": 7,
+    "failed": 2,
+    "remaining": [
+      "native select automation setup revised using selectOption plus real Tab/Enter; needs acceptance",
+      "Tracing HAR re-fetch explained; exact1 passes with diagnostics unset, safer diagnostics final acceptance pending."
+    ]
+  },
+  "native": {
+    "publicationAndCredentials": 65,
+    "moods": 4,
+    "pullAndRecovery": 32,
+    "backupAndScheduler": 11,
+    "importRouting": 9,
+    "uploadsFocused": 16,
+    "renameApi": 5,
+    "renameHost": 9,
+    "renameRendererAndRelated": 30,
+    "gardenPullBeforeCommit": {
+      "red": "/tmp/crux-garden-pull-owner-red.log",
+      "green": "/tmp/crux-garden-pull-owner-green.log",
+      "passed": 1
+    },
+    "fileRecovery": 5,
+    "tasksWithRealProjectFolders": 27,
+    "fixtureFinalRecheck": {
+      "tests": 51,
+      "files": 5
+    }
+  },
+  "apiGate": {
+    "log": "/tmp/crux-release-api-retention-verify.log",
+    "unitPassed": 1180,
+    "skipped": 5,
+    "integrationPassed": 407,
+    "runtimeSmoke": "passed",
+    "limit": "Committed API accepted; exact installed runtime passes complete desktop gate and named follow-throughs."
+  },
+  "remainingReleaseBlockers": [
+    "External signing/notarization, hosted migration/rollout, actual provider/Stripe/SES and manual/hardware acceptance in ROADMAP"
+  ],
+  "constraints": [
+    "No production deployment or merge.",
+    "Real Garden and manual-testing candidate preserved.",
+    "Verified source040e7e90b committed/pushed; APIa1435e5 runtime in both consumers. Isolated macOS package and native Windows/Linux packages accepted; familiar manual candidate preserved."
+  ],
+  "appGate": {
+    "log": "/tmp/crux-release-plasma-layout-verify.log",
+    "passed": 1812,
+    "files": 287,
+    "skipped": 18,
+    "build": "passed",
+    "limit": "Final source accepted by local gate, all named actual desktop follow-throughs, inspected visuals, macOS package smoke and native Windows/Linux CI. External operational/manual gates remain separate."
+  },
+  "electronGate": {
+    "log": "/tmp/crux-release-electron-accepted.log",
+    "passed": 80,
+    "skipped": 1
+  },
+  "installedRuntime": "0.0.0-unification.ra1435e5dc008.h2d03f470",
+  "gateRepairs": {
+    "root": "/tmp/crux-release-gate-repair-focused.log",
+    "passed": 10,
+    "files": 2,
+    "remaining": "Actual native ProjectFolders setup in Task/import fixtures; no guard bypass."
+  },
+  "apiCommit": "a1435e5dc0080b4bbc817e0d35156adc01f72393",
+  "filesReplay": {
+    "log": "/tmp/crux-release-files-desktop-final.log",
+    "passed": 15,
+    "failed": 3,
+    "remaining": [
+      "native stale-head polling test setup repaired",
+      "close during pending recovery fixed with native regression",
+      "empty parent delete fixed with native host regressions"
+    ]
+  },
+  "accountsSettingsReplay": {
+    "log": "/tmp/crux-release-accounts-settings-desktop.log",
+    "passed": 17,
+    "failed": 4,
+    "accepted": [
+      "All publication/Crux backup/Garden push account fences",
+      "Sync listing outages and stale-account metadata refusal",
+      "Crux pull exact-one request with diagnostic tracing enabled",
+      "Settings Glass Light/Dark compact/wide drafts and keyboard navigation"
+    ],
+    "remaining": [
+      "Garden pull Monaco setup repaired; rerun",
+      "Three original guide25 failures under diagnosis"
+    ]
+  },
+  "settingsVisualReview": {
+    "inspected": true,
+    "views": ["glass-light-compact", "glass-light-wide", "glass-dark-compact", "glass-dark-wide"],
+    "axe": "zero violations; incomplete checks retained in individual reports"
+  },
+  "originalDesktopReplay": {
+    "log": "/tmp/crux-release-lifecycle-desktop.log",
+    "passed": 22,
+    "failed": 1,
+    "failure": "Fresh whole-Garden restore validly refuses an open workspace; test must close first."
+  },
+  "fixtureFollowThrough": {
+    "log": "/tmp/crux-release-final-fixture-replay.log",
+    "passed": 4,
+    "failed": 0,
+    "behaviors": [
+      "Garden account refusal and open-workspace refusal preserve bytes; Save and close then fresh restore succeeds",
+      "Billing success URL not payment proof; cancel and unknown guidance",
+      "Canonical old/new Garden folders retain existing work",
+      "Installed-tool Keep/Remove and restart preserve other Cruxes"
+    ]
+  },
+  "dependencyAudit": {
+    "command": "npm audit --omit=dev --json",
+    "projects": ["app", "app/electron", "api", "cli", "plasma-ui"],
+    "reportedVulnerabilities": 0,
+    "logPattern": "/tmp/crux-release-audit-*.json"
+  },
+  "supportingGates": {
+    "cli": {
+      "log": "/tmp/crux-release-cli-verify.log",
+      "status": "passed",
+      "tests": 5
+    },
+    "plasma-ui": {
+      "log": "/tmp/crux-release-plasma-ui-verify.log",
+      "status": "passed"
+    }
+  },
+  "apiDocsCommit": "176cce7",
+  "ar08Baseline": {
+    "nativeRed": "/tmp/crux-ar08-native-red.log",
+    "nativeGreen": "/tmp/crux-ar08-native-green.log",
+    "desktopRed": "/tmp/crux-ar08-desktop-red.log",
+    "desktopMeaning": "Old parser drops the new declaration before publish. This is not visitor-rendering failure evidence.",
+    "status": "actual-desktop-accepted"
+  },
+  "finalGateAttempt": {
+    "log": "/tmp/crux-release-app-cardinal-red.log",
+    "passed": 1804,
+    "failed": 1,
+    "skipped": 18,
+    "files": 284,
+    "failure": "Existing Cardinal local-creation refusal message assertion; restore meaningful shared wording rather than weaken test.",
+    "followThrough": "Production refusal copy restored; original assertion retained; focused70/4 pass. Complete app gate running at /tmp/crux-release-app-accepted.log."
+  },
+  "taskToolReview": {
+    "log": "/tmp/crux-share-review/tool-task.log",
+    "finding": "Task provisioning omits source toolManifest; after uninstall/restart guest editor is unrecognized.",
+    "privacy": "Actual pipeline and reopened store both reject Task publishing from Main-only guard; loopback receives no requests.",
+    "status": "actual-desktop-accepted",
+    "nativeGreen": "/tmp/crux-tool-task-green.log",
+    "passed": 31,
+    "files": 2,
+    "desktopSpec": "electron/e2e/community-tool.spec.ts: Task keeps its editor after uninstall/restart",
+    "desktopGreen": "/tmp/crux-release-task-tool.log"
+  },
+  "currentAcceptance": {
+    "state": "review-block-accepted-external-release-gates-remain",
+    "desktopScope": "Desktop application, normal window/panel resizing; no expanded mobile matrix.",
+    "testReview": "Read-only diff audit found no concrete weakening of existing test assertions.",
+    "pending": [
+      "External signing/hosted/provider/manual acceptance; see ROADMAP. Structural AR06 and broader AR07 remain tracked separately."
+    ],
+    "log": "/tmp/crux-release-originals-desktop.log",
+    "passedSoFar": [
+      "File recovery receipt and reopen",
+      "Create/rename/delete tree and Project Folder parity",
+      "Account backup/pull fences and restart",
+      "Unknown static tool actual public visitor edition",
+      "Partial selected-Garden import discoverability/restart/removal/retry"
+    ],
+    "fixtureFailure": {
+      "test": "Task editor after uninstall/restart",
+      "reason": "Host Settings shortcut sent while focus remained in guest iframe. Task creation/contract/save assertions passed before failure.",
+      "repair": "Click visible Task heading to return focus; explicitly name Main for restart selection. Original assertions retained.",
+      "replay": "Task accepted1/1 /tmp/crux-release-task-tool.log; Mood1/1 /tmp/crux-release-fixture-replay.log"
+    },
+    "originalReplay": {
+      "log": "/tmp/crux-release-originals-desktop.log",
+      "passed": 19,
+      "failed": 3,
+      "followThrough": [
+        "Recent successful backup suppresses duplicate-copy offer; preserve wipe/refusal/restore checks.",
+        "Native Garden transaction wraps membership fault; preserve rollback/retry, strengthen membership snapshot assertions.",
+        "Settings groups have named regions; preserve navigation, account and shortcut checks."
+      ],
+      "followThroughAcceptance": {
+        "log": "/tmp/crux-release-originals-final.log",
+        "passed": 3,
+        "failed": 1,
+        "accepted": [
+          "Plasma normal/reduced motion and settled resize",
+          "Data export/wipe/open-workspace refusal/restore/history",
+          "Garden membership refusal/rollback/retry/move/external agent/restart"
+        ],
+        "remaining": "Settings selector must distinguish focusable outer Account group from nested Account card."
+      }
+    },
+    "guideReplay": {
+      "log": "/tmp/crux-release-guide-final.log",
+      "passed": 3,
+      "failed": 0,
+      "scenarios": [
+        "Moved Project Folder explicit recovery",
+        "Kill after save and pending-edit loss-window recording",
+        "125 percent text Settings and account menu accessibility"
+      ]
+    },
+    "settingsFollowThrough": {
+      "log": "/tmp/crux-release-settings-final.log",
+      "passed": 1,
+      "failed": 0,
+      "meaning": "Focusable outer section selected; original Mood/persona/Settings/disconnected-Sync/shortcut assertions retained plus navigation/focus/viewport."
+    }
+  },
+  "reviewedNewCaptures": [
+    "community-static-shared.png",
+    "partial-garden-import-refusal.png",
+    "community-static-visitor.png",
+    "workspace-package-exported.png",
+    "workspace-package-folder-refusal.png"
+  ],
+  "completeDesktopGate": {
+    "log": "/tmp/crux-release-desktop-gate.log",
+    "passed": 104,
+    "failed": 3,
+    "minutes": 21.6,
+    "artifactDirectory": "/tmp/crux-release-desktop-gate-artifacts",
+    "remaining": [],
+    "followThrough": "All three initial fixture failures accepted in named follow-through logs; Growth3 and Plasma1 later added to gate and passed separately. No claim that all111 ran together."
+  },
+  "polishDesktopBatch": {
+    "log": "/tmp/crux-release-polish-desktop.log",
+    "passed": 3,
+    "failed": 1,
+    "accepted": [
+      "Workspace package first restore then repeated copy, original secret/folder-grant and restart checks",
+      "Glass Light/Dark Growth 2D/3D",
+      "OS reduced-motion Growth"
+    ],
+    "failure": "Custom Graph restart helper toggled restored Growth closed; preceding exact pixels/font/GPU/save/export/import checks passed. Trace confirms fixture timing; existing idempotent openPanel helper and correct workspace wait repair pending replay."
+  },
+  "plasmaPanelSeparation": {
+    "status": "full-app-production-desktop-and-visual-accepted",
+    "red": "/tmp/crux-plasma-red.log",
+    "cause": "Collapsed WorkspaceStatus disclosure body has nonzero bounds and was registered as a fourth solo rectangle across three headers. Existing fuse:false reaches GPU correctly.",
+    "fix": "Exclude closed details content and checkVisibility without opacity filtering; observe open/hidden mutations and only relevant ancestor disclosure layout changes with ResizeObserver.",
+    "desktopSpec": "electron/e2e/plasma-panel-separation.spec.ts",
+    "fullGate": "/tmp/crux-release-plasma-layout-verify.log",
+    "openingRed": "/tmp/crux-plasma-open-repro.log",
+    "openingCause": "Mood-owned details::details-content discrete content-visibility transition changes after open mutation; first rAF observes hidden even with nonzero bounds. Drawing remains3 when disclosure opens.",
+    "timingProbe": "/tmp/crux-plasma-transition-probe.log",
+    "devAcceptance": "/tmp/crux-plasma-disclosure-layout.log",
+    "cleanDevAcceptance": "/tmp/crux-plasma-clean-dev.log",
+    "productionAcceptance": "/tmp/crux-release-originals-final.log",
+    "productionSeconds": 9.8,
+    "screenshots": [
+      "plasma-panels-before.png",
+      "plasma-panels-after.png",
+      "plasma-panels-resized.png"
+    ],
+    "resizeFollowThrough": {
+      "status": "accepted",
+      "finding": "First resized capture occurred during the renderer 120 ms bitmap resize debounce. Surface bounds already matched DOM but uRes/canvas bitmap had not settled. Extending the observer to require final uRes/uView/uScale and bitmap agreement before screenshot. No library change.",
+      "acceptance": "/tmp/crux-release-originals-final.log",
+      "result": "Final actual composite draw has matching resolution, viewport, scale and canvas bitmap; both desktop screenshots inspected and copied. Resize mismatch was pre-settlement capture, no library change."
+    }
+  },
+  "growthGraphAcceptance": {
+    "log": "/tmp/crux-release-plasma-desktop.log",
+    "passed": 3,
+    "scenarios": [
+      "Custom RGBA pixels, actual Three alpha, font, zero-motion, Mood save/export/import/clean recipient/restart",
+      "Glass Light/Dark 2D/3D, graph selection and Artifact bytes",
+      "OS reduced motion with enabled Mood motion and Fit/selection"
+    ],
+    "reviewed": [
+      "default-glass-light-2d.png",
+      "default-glass-light-3d.png",
+      "default-glass-dark-2d.png",
+      "default-glass-dark-3d.png",
+      "graph-restarted-2d.png",
+      "graph-restarted-3d.png"
+    ]
+  },
+  "verifiedSourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b",
+  "sourcePushed": true,
+  "macosPackage": {
+    "directory": "electron/release/v1-readiness-oct2/mac-arm64/Crux Garden.app",
+    "buildLog": "/tmp/crux-release-package.log",
+    "signing": "ad-hoc; not notarized",
+    "smoke": {
+      "log": "/tmp/crux-release-packaged-smoke.log",
+      "passed": 1,
+      "seconds": 8.1,
+      "scope": "Actual packaged launch, SQLite, CLI, FFmpeg/source/licenses, isolated storage and refusal of development test overrides"
+    },
+    "plasmaRegression": {
+      "log": "/tmp/crux-release-packaged-plasma.log",
+      "passed": 1,
+      "seconds": 11,
+      "scope": "Same GPU/DOM/settled viewport regression against actual packaged executable, normal/reduced motion and disclosure transitions"
+    }
+  },
+  "nativeCI": {
+    "sourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b",
+    "run": 37089492260,
+    "url": "https://github.com/CruxGarden/app/actions/runs/37089492260",
+    "status": "completed",
+    "conclusion": "success",
+    "completedAt": "2026-10-03T02:38:46Z",
+    "jobs": [
+      {
+        "id": 111106585100,
+        "name": "Packaged runtime (windows-latest)",
+        "conclusion": "success",
+        "url": "https://github.com/CruxGarden/app/actions/runs/37089492260/job/111106585100",
+        "completedAt": "2026-10-03T02:38:45Z"
+      },
+      {
+        "id": 111106585189,
+        "name": "Packaged runtime (ubuntu-latest)",
+        "conclusion": "success",
+        "url": "https://github.com/CruxGarden/app/actions/runs/37089492260/job/111106585189",
+        "completedAt": "2026-10-03T02:33:42Z"
+      }
+    ]
+  }
+}

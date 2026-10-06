@@ -5,6 +5,13 @@ import type { CruxState } from '@/stores/cruxStore';
 import type { UIState } from '@/stores/uiStore';
 import type { Artifact } from '@/api/types';
 
+export type DocumentReference = Pick<Artifact, 'id' | 'resourceId'>;
+/** Current owners and snapshot owners can contain the same logical file ID.
+ * Content revisions and paths are deliberately absent: saving/renaming a live
+ * file must keep its draft, undo stack and cursor in the same editor model. */
+export const documentIdentity = (file: DocumentReference) =>
+  JSON.stringify([file.resourceId, file.id]);
+
 export interface DocumentState {
   content: string | null;
   revision: number;
@@ -19,8 +26,19 @@ export interface DocumentState {
 export function createDocuments(data: StoreApi<CruxState>, ui: StoreApi<UIState>) {
   const entries = new Map<string, StoreApi<DocumentState>>();
   const saves = new Map<string, Promise<void>>();
-  const get = (id: string) => {
-    let doc = entries.get(id);
+  const references = new Map<string, DocumentReference>();
+  const reference = (file: string | DocumentReference): DocumentReference => {
+    if (typeof file !== 'string') return { id: file.id, resourceId: file.resourceId };
+    const current = data.getState();
+    const artifact =
+      current.artifacts.find((a) => a.id === file) ??
+      current.workspaceArtifacts?.find((a) => a.id === file);
+    return { id: file, resourceId: artifact?.resourceId ?? current.crux?.id ?? '' };
+  };
+  const get = (file: string | DocumentReference) => {
+    const ref = reference(file);
+    const key = documentIdentity(ref);
+    let doc = entries.get(key);
     if (!doc) {
       doc = createStore<DocumentState>(() => ({
         content: null,
@@ -33,47 +51,56 @@ export function createDocuments(data: StoreApi<CruxState>, ui: StoreApi<UIState>
         model: null,
         focus: null,
       }));
-      entries.set(id, doc);
+      entries.set(key, doc);
+      references.set(key, ref);
     }
     return doc;
   };
-  const dirty = (id: string) => {
-    const s = get(id).getState();
+  const dirty = (file: string | DocumentReference) => {
+    const s = get(file).getState();
     return s.revision !== s.savedRevision;
   };
   return {
     get,
     dirty,
-    edit(id: string, content: string) {
-      const doc = get(id);
+    edit(file: string | DocumentReference, content: string) {
+      const ref = reference(file);
+      if (ref.resourceId !== data.getState().crux?.id)
+        throw new Error('Historical files are read-only.');
+      const doc = get(ref);
       if (doc.getState().content === content) return;
       doc.setState((s) => ({ content, revision: s.revision + 1 }));
-      ui.getState().setTabDirty(id, true);
+      ui.getState().setTabDirty(ref.id, true);
     },
     hydrate(artifact: Artifact, content: string) {
-      const doc = get(artifact.id);
+      const doc = get(artifact);
       const s = doc.getState();
       const fingerprint = artifact.fingerprint ?? null;
-      if (dirty(artifact.id)) {
+      if (dirty(artifact)) {
         if (s.fingerprint !== fingerprint) doc.setState({ conflict: true });
         return;
       }
-      doc.setState({ content, fingerprint, conflict: false });
+      doc.setState({ content, fingerprint, conflict: false, error: null });
     },
-    save(id: string, overwrite = false): Promise<void> {
-      const pending = (saves.get(id) ?? Promise.resolve())
+    save(file: string | DocumentReference, overwrite = false): Promise<void> {
+      // Capture before queueing. A later history selection cannot redirect it.
+      const ref = reference(file);
+      const key = documentIdentity(ref);
+      if (ref.resourceId !== data.getState().crux?.id)
+        return Promise.reject(new Error('Historical files are read-only.'));
+      const pending = (saves.get(key) ?? Promise.resolve())
         .catch(() => {})
         .then(async () => {
-          const doc = get(id);
+          const doc = get(ref);
           const before = doc.getState();
-          if (!dirty(id) || before.content === null) return;
+          if (!dirty(ref) || before.content === null) return;
           if (before.conflict && !overwrite)
             throw new Error(
               'This Artifact changed outside the editor. Review the conflict before saving.',
             );
           const current = data.getState();
           const artifact = (current.workspaceArtifacts ?? current.artifacts).find(
-            (a) => a.id === id,
+            (a) => a.id === ref.id && a.resourceId === ref.resourceId,
           );
           if (!artifact || artifact.resourceId !== current.crux?.id)
             throw new Error(
@@ -85,7 +112,7 @@ export function createDocuments(data: StoreApi<CruxState>, ui: StoreApi<UIState>
               'This Artifact changed outside the editor. Review the conflict before saving.',
             );
           }
-          const saved = await current.saveArtifactContent(id, before.content);
+          const saved = await current.saveArtifactContent(ref.id, before.content);
           if (!saved) throw new Error('The Artifact could not be saved. Your edits are retained.');
           doc.setState({
             savedRevision: before.revision,
@@ -93,31 +120,53 @@ export function createDocuments(data: StoreApi<CruxState>, ui: StoreApi<UIState>
             conflict: false,
             error: null,
           });
-          ui.getState().setTabDirty(id, dirty(id));
+          // History can be showing the same tab ID; its tab remains read-only.
+          if (!data.getState().viewingSnapshotId) ui.getState().setTabDirty(ref.id, dirty(ref));
         })
         .catch((error: unknown) => {
-          get(id).setState({ error: (error as Error).message });
+          get(ref).setState({ error: (error as Error).message });
           throw error;
         });
-      saves.set(id, pending);
+      saves.set(key, pending);
       void pending
         .finally(() => {
-          if (saves.get(id) === pending) saves.delete(id);
+          if (saves.get(key) === pending) saves.delete(key);
         })
         .catch(() => {});
       return pending;
     },
-    async saveAll() {
-      await flushNotebook(data.getState().crux?.id);
-      for (const id of entries.keys()) await this.save(id);
+    async saveAll(ownerId = data.getState().crux?.id) {
+      // An initial load can fail before any document exists. Closing that empty
+      // workspace still drains work, while retained edits require a real owner.
+      if (!ownerId && !this.hasDirty()) {
+        await this.drain();
+        return;
+      }
+      const requireOwner = () => {
+        if (!ownerId || data.getState().crux?.id !== ownerId)
+          throw new Error('This workspace changed. Your edits are retained.');
+      };
+      requireOwner();
+      const owned = [...references.values()].filter((ref) => ref.resourceId === ownerId);
+      await flushNotebook(ownerId);
+      requireOwner();
+      for (const ref of owned) {
+        await this.save(ref);
+        requireOwner();
+      }
     },
     async drain() {
       await Promise.all([...saves.values()]);
     },
-    hasDirty: () => notebookIsDirty(data.getState().crux?.id) || [...entries.keys()].some(dirty),
+    hasDirtyFor: (ownerId: string) =>
+      notebookIsDirty(ownerId) ||
+      [...references.values()].some((ref) => ref.resourceId === ownerId && dirty(ref)),
+    hasDirty: () =>
+      notebookIsDirty(data.getState().crux?.id) || [...references.values()].some(dirty),
     dispose() {
       for (const doc of entries.values()) doc.getState().model?.dispose();
       entries.clear();
+      references.clear();
     },
   };
 }
@@ -129,4 +178,41 @@ export function documentsFor(data: StoreApi<CruxState>, ui: StoreApi<UIState>) {
     registries.set(data, docs);
   }
   return docs;
+}
+
+/** Publication consumes a captured workspace, never the currently selected tab.
+ * All UI and agent publication entry points use this preparation boundary. */
+export function assertPublicationWorkspace(
+  data: StoreApi<CruxState>,
+  ui: StoreApi<UIState>,
+  ownerId: string,
+) {
+  const current = data.getState();
+  if (current.crux?.id !== ownerId || current.closing)
+    throw new Error('This workspace changed or is closing. Your edits are retained.');
+  if (current.viewingSnapshotId) throw new Error('Return to the current work before sharing.');
+  if (documentsFor(data, ui).hasDirtyFor(ownerId))
+    throw new Error(
+      'Edits changed while preparing to share. Your draft is retained; share again when ready.',
+    );
+}
+
+export async function prepareWorkspacePublication(
+  data: StoreApi<CruxState>,
+  ui: StoreApi<UIState>,
+  ownerId: string,
+) {
+  const before = data.getState();
+  if (before.crux?.id !== ownerId || before.closing || before.viewingSnapshotId)
+    throw new Error('Return to the current workspace before sharing.');
+  await documentsFor(data, ui).saveAll(ownerId);
+  assertPublicationWorkspace(data, ui, ownerId);
+  await data.getState().saveMeta();
+  assertPublicationWorkspace(data, ui, ownerId);
+  const current = data.getState();
+  return structuredClone({
+    crux: current.crux!,
+    artifacts: current.artifacts,
+    messages: current.messages,
+  });
 }

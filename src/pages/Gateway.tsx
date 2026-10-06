@@ -1,31 +1,29 @@
+import { restoreWorkspaceList, useWorkspaceRegistry } from '@/stores/workspaceRegistry';
+import { tendingPath } from '@/services/tending-actions';
+import { showBackgroundFallback } from '@/services/background';
+import { isPublicSite } from '@/lib/site';
+import BackButton from '@/components/gateway/BackButton';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { applyMood, type MoodPackage } from '@/lib/moods/packages';
-import MoodBar from '@/components/mood/MoodBar';
+import { TeaserMaterial, TeaserPanel, TeaserBrand } from '@/components/landing/TeaserMaterial';
+import PlasmaSurfaces from '@/components/plasma/PlasmaSurfaces';
+import '@/components/landing/teaser.css';
 import Draggable from '@/components/gateway/Draggable';
 import { BgType } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
-import { Panel, Spinner, Button, IconButton, ApiKeySetup, Toggle } from '@/components/ui';
-import {
-  PlusCircleIcon,
-  CloudIcon,
-  FileUploadIcon,
-  SproutIcon,
-  ArrowLeftIcon,
-} from '@/components/ui/icons';
+import { Panel, Spinner, Button, IconButton } from '@/components/ui';
+import { PlusCircleIcon, CloudIcon, FileUploadIcon, SproutIcon } from '@/components/ui/icons';
 import ConnectAccount from '@/components/auth/ConnectAccount';
-import AvatarUpload from '@/components/auth/AvatarUpload';
-import { APP_NAME, SettingsKey } from '@/lib/constants';
-import { PROVIDERS } from '@/ai/providers';
-import { getApiKey } from '@/ai/keys';
-import { getSetting, setSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
+import { getSetting } from '@/services/settings';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
-import { useUIStore } from '@/stores/uiStore';
 import { importGarden } from '@/services/garden-io';
 import * as syncApi from '@/api/sync';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
-import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
+import SetupWizard from '@/components/setup/SetupWizard';
+import { useSetupWizard } from '@/components/setup/setup-store';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -41,25 +39,21 @@ enum Step {
 // ── Main Component ─────────────────────────────────────
 
 /**
- * The Gateway wears a Mood too. First run: The Keeper's look (theme and the
- * vista from its shipped URL — no garden yet, so no sound and nothing to
- * ingest). Returning: the theme is already painted from the synced settings;
- * a bundled Mood's background image is shown from its URL until the garden's
- * own copy resolves after Enter.
+ * Prepare the workspace's Mood before Enter. The entry surface has the shared
+ * teaser design; it does not replace the person's saved Mood. A bundled
+ * background remains ready until the Garden's own copy resolves after Enter.
  */
 async function wearGatewayMood(): Promise<void> {
   const { bundledMood } = await import('@/lib/moods/bundled-moods');
   const worn = getSetting(SettingsKey.WornMoodId);
   const fresh = !worn && !getSetting(SettingsKey.MoodPresetDark);
-  const keeper = bundledMood('digital-fractal-garden');
+  const keeper = bundledMood('plasma');
   if (fresh) {
     if (keeper) await applyMood(keeper, { sound: false });
   } else {
     const pkg = worn ? bundledMood(worn) : undefined;
     if (pkg?.bundled?.background && getSetting(SettingsKey.BackgroundType) === BgType.Image) {
-      const { useMoodStore } = await import('@/stores/moodStore');
-      if (!useMoodStore.getState().backgroundUrl)
-        useMoodStore.setState({ backgroundUrl: pkg.bundled.background });
+      showBackgroundFallback(pkg.bundled.background);
     }
   }
   await startGatewaySound(fresh ? keeper : worn ? bundledMood(worn) : undefined);
@@ -76,6 +70,7 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
   const { useAudioStore } = await import('@/stores/audioStore');
   const sound = await import('@/services/sound');
   useAudioStore.getState().init();
+  if (!isPublicSite() && !sound.getOptIn()) return;
   const st = useAudioStore.getState();
   const shipped = pkg?.bundled?.track;
   if (shipped) {
@@ -108,19 +103,49 @@ const REVEAL_AFTER_MS = CURTAIN_MS;
 const ENTRANCE_MS = 2_000;
 const IDLE_AFTER_MS = 15_000;
 
+let startupConsumed = false;
+
 export default function Gateway() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(Step.Banner);
   useEffect(() => {
+    if (startupConsumed) return;
+    if (getSetting(SettingsKey.ResumeWorkspace) !== 'true') {
+      startupConsumed = true;
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      await useAppStore.getState().bootstrap();
+      if (!getSetting(SettingsKey.LocalAuthorId)) return;
+      await useAppStore.getState().ensureAuthor();
+      const last = await restoreWorkspaceList();
+      if (cancelled) return;
+      const entry = useWorkspaceRegistry.getState().entries.find((e) => e.id === last);
+      navigate(
+        entry ? tendingPath({ cruxId: entry.cruxId ?? entry.id, copyId: entry.id }) : '/home',
+        { replace: true },
+      );
+    })()
+      .catch(() => {
+        // Keep Enter available if storage cannot be read. Normal entry owns recovery.
+      })
+      .finally(() => {
+        if (!cancelled) startupConsumed = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  useEffect(() => {
     void wearGatewayMood().catch(() => {});
   }, []);
+  const wornAccent = useWornAccent();
 
-  // Arrival: the music starts and the background fades in; the banner and the
-  // player wait until the person stirs — mouse, click, key — or half a minute
-  // — or ten seconds pass — then rise out of the image (a fade with a lift
-  // and a clearing blur). On the banner step they sink away again after ten
-  // seconds without movement, to let the room be looked at; any stir brings
-  // them back (Daniel, 2026-09-07). A curtain in the page colour lifts first.
+  // The curtain lifts first, then the banner arrives. After fifteen idle
+  // seconds it rests; pointer or keyboard activity brings it back immediately.
+  // Setup forms remain visible until the person finishes them.
   const [curtain, setCurtain] = useState<'down' | 'lifting' | 'gone'>('down');
   const [visible, setVisible] = useState(false);
   const visibleRef = useRef(false);
@@ -174,57 +199,121 @@ export default function Gateway() {
   }, [step]);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4">
-      {/* Desktop: Gateway renders outside the Shell (no TopBar), so provide a
+    <div className="teaser gateway">
+      <TeaserMaterial>
+        <PlasmaSurfaces />
+        <div className="relative min-h-screen flex items-center justify-center p-6">
+          {/* Desktop: Gateway renders outside the Shell (no TopBar), so provide a
           drag region or the frameless window can't be moved */}
-      {can(Capability.DesktopChrome) && (
-        <div
-          className="fixed top-0 left-0 right-0 h-10 z-50"
-          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-        />
-      )}
-      {curtain !== 'gone' && (
-        <div
-          aria-hidden
-          data-testid="gateway-curtain"
-          className={cn(
-            'fixed inset-0 z-30 bg-bg pointer-events-none transition-opacity duration-[1000ms] ease-out',
-            curtain === 'lifting' ? 'opacity-0' : 'opacity-100',
+          {can(Capability.DesktopChrome) && (
+            <div
+              className="fixed top-0 left-0 right-0 h-10 z-50"
+              style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+            />
           )}
-        />
-      )}
-      {/* The banner with the Mood's player directly below it, centred. Both can be
-          dragged anywhere; the place is remembered. Hidden until the person stirs. */}
-      <div
-        data-testid="gateway-stage"
-        data-visible={visible ? 'true' : 'false'}
-        data-entrance={entrance ? 'true' : undefined}
-        onClickCapture={guardHiddenClick}
-        className="gateway-stage relative w-full max-w-md flex flex-col items-center"
-      >
-        <Draggable id="banner" label="Banner" className="w-full">
-          <div className="w-full flex flex-col items-center gap-6">
-            {(step === Step.Banner || step === Step.Checking) && (
-              <BannerStep
-                checking={step === Step.Checking}
-                onSetStep={setStep}
-                onNavigateHome={() => navigate('/home', { replace: true })}
-              />
+          {step === Step.Setup && <PreviewBackdrop />}
+          {curtain !== 'gone' && (
+            <div
+              aria-hidden
+              data-testid="gateway-curtain"
+              className={cn(
+                'fixed inset-0 z-30 bg-bg pointer-events-none transition-opacity duration-[1000ms] ease-out',
+                curtain === 'lifting' ? 'opacity-0' : 'opacity-100',
+              )}
+            />
+          )}
+          {/* The entry panel can be dragged; a new launch starts centred. */}
+          <div
+            data-testid="gateway-stage"
+            data-visible={visible ? 'true' : 'false'}
+            data-entrance={entrance ? 'true' : undefined}
+            onClickCapture={guardHiddenClick}
+            className={cn(
+              'gateway-stage relative w-full flex flex-col items-center',
+              step === Step.Setup ? 'max-w-[38rem]' : 'max-w-[30rem]',
             )}
-            {step === Step.Choose && <ChooseStep onChoice={setStep} />}
-            {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
-            {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
-            {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
+          >
+            <Draggable id="banner" label="Banner" className="w-full">
+              <div className="w-full flex flex-col items-center gap-6">
+                {(step === Step.Banner || step === Step.Checking) && (
+                  <BannerStep
+                    checking={step === Step.Checking}
+                    onSetStep={setStep}
+                    onNavigateHome={() => navigate('/home', { replace: true })}
+                  />
+                )}
+                {step === Step.Choose && <ChooseStep onChoice={setStep} />}
+                {step === Step.Setup && (
+                  <Panel
+                    padding="lg"
+                    style={wornAccent}
+                    className="w-full motion-enter-dialog flex flex-col max-h-[calc(100vh-4rem)]"
+                  >
+                    <SetupWizard mode="first" onCancel={() => setStep(Step.Choose)} />
+                  </Panel>
+                )}
+                {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
+                {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
+              </div>
+            </Draggable>
           </div>
-        </Draggable>
-        {/* The banner keeps the exact centre of the window; the player hangs below it */}
-        <div className="absolute inset-x-0 top-full mt-5 flex justify-center">
-          <Draggable id="player" label="Player" handle riseDelayMs={55} anchorId="banner">
-            <MoodBar gateway />
-          </Draggable>
         </div>
-      </div>
+      </TeaserMaterial>
     </div>
+  );
+}
+
+// ── Setup: the previewed Mood reaches the Gateway ─────
+
+/**
+ * The entry teaser pins its own accent; inside the wizard the person is
+ * choosing a Mood, so the wizard wears the Mood's accent instead.
+ */
+function useWornAccent(): React.CSSProperties | undefined {
+  const read = () => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    return value ? ({ '--accent': value } as React.CSSProperties) : undefined;
+  };
+  const [style, setStyle] = useState(read);
+  useEffect(() => {
+    const update = () => setStyle(read());
+    document.addEventListener('palette-change', update);
+    return () => document.removeEventListener('palette-change', update);
+  }, []);
+  return style;
+}
+
+/**
+ * While a Mood is previewed in setup, its background shows behind the wizard
+ * (the Gateway does not mount the app's background layer). The Default Mood
+ * keeps the teaser's own field.
+ */
+function PreviewBackdrop() {
+  const moodId = useSetupWizard((s) => s.moodId);
+  const [image, setImage] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    if (!moodId) {
+      setImage(null);
+      return;
+    }
+    void import('@/lib/moods/bundled-moods').then(({ bundledMood }) => {
+      if (live) setImage(bundledMood(moodId)?.bundled?.background ?? null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [moodId]);
+  if (!moodId || moodId === 'plasma') return null;
+  return (
+    <div
+      aria-hidden
+      data-testid="gateway-mood-backdrop"
+      data-mood={moodId}
+      key={moodId}
+      className="fixed inset-0 bg-bg bg-cover bg-center motion-enter-pane pointer-events-none"
+      style={image ? { backgroundImage: `url("${image}")` } : undefined}
+    />
   );
 }
 
@@ -259,9 +348,8 @@ function BannerStep({
   };
 
   return (
-    <Panel padding="lg" className="w-fit flex flex-col items-center px-8 py-6">
-      <h1 className="font-wordmark text-5xl font-semibold text-gateway-title">{APP_NAME}</h1>
-      <p className="text-gateway-subtitle text-lg mt-1">grow anything</p>
+    <TeaserPanel>
+      <TeaserBrand />
 
       <div className="mt-6">
         <IconButton
@@ -269,12 +357,12 @@ function BannerStep({
           size="lg"
           onClick={onEnter}
           disabled={checking}
-          className="!w-14 !h-14 bg-gateway-button !text-gateway-button-text hover:bg-gateway-button-hover hover:!text-gateway-button-text"
+          className="!w-14 !h-14"
         >
           {checking ? <Spinner size={20} /> : <PlusCircleIcon size={40} />}
         </IconButton>
       </div>
-    </Panel>
+    </TeaserPanel>
   );
 }
 
@@ -291,7 +379,7 @@ function ChooseStep({ onChoice }: { onChoice: (s: Step) => void }) {
         <OptionCard
           icon={<SproutIcon size={28} />}
           title="Plant a new garden"
-          description="Begin fresh with an empty workspace"
+          description="Set up your workspace and make your first project with guidance"
           onClick={() => onChoice(Step.Setup)}
         />
         <OptionCard
@@ -342,396 +430,6 @@ function OptionCard({
 }
 
 // ── Step: Setup ───────────────────────────────────────
-
-enum SetupSection {
-  Username = 'username',
-  Avatar = 'avatar',
-  Connect = 'connect',
-  Keys = 'keys',
-  GardenRoot = 'gardenRoot',
-}
-
-function SetupStep({ onBack }: { onBack: () => void }) {
-  const navigate = useNavigate();
-  const author = useAppStore((s) => s.author);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [username, setUsername] = useState('');
-  const [usernameError, setUsernameError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [openSection, setOpenSection] = useState<SetupSection | null>(SetupSection.Username);
-  const [aiEnabled, setAiEnabled] = useState(() => getSetting(SettingsKey.AiEnabled) === 'true');
-  const [keysConfigured, setKeysConfigured] = useState(false);
-  const desktop = can(Capability.ProjectFolder);
-  const [gardenRoot, setGardenRoot] = useState<string | null>(null);
-
-  // Desktop: show where Project Folders will live
-  useEffect(() => {
-    if (desktop) getGardenRoot().then(setGardenRoot);
-  }, [desktop]);
-
-  const handleChooseGardenRoot = async () => {
-    const chosen = await chooseGardenRoot();
-    if (chosen) setGardenRoot(chosen);
-  };
-
-  const handleAiToggle = (enabled: boolean) => {
-    setAiEnabled(enabled);
-    setSetting(SettingsKey.AiEnabled, enabled ? 'true' : 'false');
-    useUIStore.getState().setAiEnabled(enabled);
-  };
-
-  const checkApiKeys = async () => {
-    for (const id of Object.keys(PROVIDERS)) {
-      if (await getApiKey(id)) {
-        setKeysConfigured(true);
-        return;
-      }
-    }
-    setKeysConfigured(false);
-  };
-
-  const toggle = (section: SetupSection) =>
-    setOpenSection((prev) => (prev === section ? null : section));
-
-  // Inline format validation (runs on every keystroke)
-  const validateFormat = (name: string): string => {
-    if (!name) return '';
-    if (name.length < 3) return 'At least 3 characters';
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) return 'Letters, numbers, hyphens, underscores only';
-    return '';
-  };
-
-  // Debounced API availability check
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
-  const checkAvailability = (name: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!name || name.length < 3 || !isAuthenticated) return;
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const { authors } = await import('@/api');
-        const { available } = await authors.checkUsername(name.toLowerCase());
-        // Only set error if the username hasn't changed since the check started
-        if (useAppStore.getState().author?.username !== name) {
-          setUsernameError((prev) => prev || (available ? '' : 'Username is taken at crux.garden'));
-        }
-        if (!available) setUsernameError('Username is taken at crux.garden');
-      } catch {
-        /* API unavailable — skip check */
-      }
-    }, 400);
-  };
-
-  const handleUsernameChange = (value: string) => {
-    setUsername(value);
-    const formatError = validateFormat(value.trim());
-    setUsernameError(formatError);
-    if (!formatError) checkAvailability(value.trim());
-  };
-
-  // Cleanup debounce timer
-  useEffect(
-    () => () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    },
-    [],
-  );
-
-  // Validate username against the API when connected (used by handleFinish)
-  const validateUsername = async (name: string): Promise<boolean> => {
-    const formatError = validateFormat(name);
-    if (formatError) {
-      setUsernameError(formatError);
-      setOpenSection(SetupSection.Username);
-      return false;
-    }
-    if (!isAuthenticated) return true;
-    try {
-      const { authors } = await import('@/api');
-      const { available } = await authors.checkUsername(name.toLowerCase());
-      if (!available) {
-        setUsernameError('Username is taken at crux.garden');
-        setOpenSection(SetupSection.Username);
-        return false;
-      }
-    } catch {
-      /* API unavailable — skip check */
-    }
-    return true;
-  };
-
-  const handleFinish = async () => {
-    const trimmed = username.trim();
-
-    setSaving(true);
-    try {
-      // Final validation (format + API availability)
-      if (!(await validateUsername(trimmed))) {
-        setSaving(false);
-        return;
-      }
-
-      await useAppStore.getState().ensureAuthor();
-
-      if (trimmed) {
-        await useAppStore.getState().updateAuthor({ username: trimmed });
-      }
-
-      // A new garden wears the Default Mood — Fractal Garden (ADR 0043):
-      // the fractal render, liquid glass, Iris's voice and the Keeper's track.
-      // Restored gardens bring their own and skip this.
-      try {
-        const { bundledMood } = await import('@/lib/moods/bundled-moods');
-        const keeper = bundledMood('digital-fractal-garden');
-        if (keeper) await applyMood(keeper);
-      } catch {
-        /* the garden still opens; the Mood can be applied from the Mood modal */
-      }
-
-      navigate('/home', { replace: true });
-    } catch {
-      setUsernameError('Something went wrong');
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Panel padding="lg" className="w-full motion-enter-dialog">
-      <BackButton onClick={onBack} disabled={saving} />
-
-      <h2 className="font-display text-sm font-medium text-accent mb-1">Set up your garden</h2>
-      <p className="text-xs text-text-muted mb-6">You can always change these later in Settings</p>
-
-      <div className="flex flex-col gap-2">
-        {/* Username */}
-        <AccordionHeader
-          label="Pick Username"
-          open={openSection === SetupSection.Username}
-          onToggle={() => toggle(SetupSection.Username)}
-          summary={username || 'Optional'}
-          completed={!!username && !usernameError}
-          required={!!usernameError}
-        />
-        {openSection === SetupSection.Username && (
-          <div className="pt-3 pb-4 px-1">
-            <p className="text-xs text-text-muted mb-2">
-              Optional — you can pick one when you publish or connect
-            </p>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => handleUsernameChange(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleFinish()}
-              placeholder="wanderer"
-              disabled={saving}
-              className={cn(
-                'w-full px-3 py-2 text-sm font-mono rounded-[var(--radius-sm)]',
-                'bg-surface-solid border text-text placeholder:text-text-muted',
-                'focus:outline-none focus:border-input-border-active',
-                usernameError ? 'border-error' : 'border-border',
-              )}
-              autoFocus
-            />
-            {usernameError && <p className="text-xs text-error mt-1">{usernameError}</p>}
-          </div>
-        )}
-
-        {/* Garden Location (desktop only) */}
-        {desktop && (
-          <>
-            <AccordionHeader
-              label="Garden Location"
-              open={openSection === SetupSection.GardenRoot}
-              onToggle={() => toggle(SetupSection.GardenRoot)}
-              summary={gardenRoot ? shortenHomePath(gardenRoot) : '…'}
-              completed={!!gardenRoot}
-            />
-            {openSection === SetupSection.GardenRoot && (
-              <div className="pt-3 pb-4 px-1">
-                <p className="text-xs text-text-muted mb-3">
-                  Every crux you create becomes a real folder here — open them in Finder, your
-                  editor, or any tool. You can move this later in Settings.
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 text-xs font-mono rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text truncate">
-                    {gardenRoot ? shortenHomePath(gardenRoot) : 'Loading…'}
-                  </code>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleChooseGardenRoot}
-                    disabled={saving}
-                  >
-                    Choose…
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Avatar */}
-        <AccordionHeader
-          label="Upload Avatar"
-          open={openSection === SetupSection.Avatar}
-          onToggle={() => toggle(SetupSection.Avatar)}
-          summary={author?.meta?.avatarFingerprint ? 'Uploaded' : 'Optional'}
-          completed={!!author?.meta?.avatarFingerprint}
-        />
-        {openSection === SetupSection.Avatar && (
-          <div className="pt-3 pb-4 px-1">
-            <AvatarUpload compact />
-          </div>
-        )}
-
-        {/* AI Tools */}
-        <AccordionHeader
-          label="Configure AI Tools"
-          open={openSection === SetupSection.Keys}
-          onToggle={() => toggle(SetupSection.Keys)}
-          summary={!aiEnabled ? 'Disabled' : keysConfigured ? 'Configured' : 'Optional'}
-          completed={aiEnabled && keysConfigured}
-        />
-        {openSection === SetupSection.Keys && (
-          <div className="pt-3 pb-4 px-1">
-            <div className="flex items-center justify-between">
-              <Toggle checked={aiEnabled} onChange={handleAiToggle} label="Enable AI Tools" />
-            </div>
-            {aiEnabled && (
-              <div className="mt-3">
-                <p className="text-xs text-text-muted mb-3">
-                  {can(Capability.SecureSecrets)
-                    ? 'Add one or more API keys to build with AI agents. Keys are encrypted in your Mac’s Keychain'
-                    : 'Add one or more API keys to build with AI agents. Keys stay in your browser'}
-                </p>
-                <ApiKeySetup compact autoFocus onKeyChange={checkApiKeys} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Connect */}
-        <AccordionHeader
-          label="Connect to crux.garden"
-          open={openSection === SetupSection.Connect}
-          onToggle={() => toggle(SetupSection.Connect)}
-          summary={isAuthenticated ? 'Connected' : 'Optional'}
-          completed={isAuthenticated}
-        />
-        {openSection === SetupSection.Connect && (
-          <div className="pt-3 pb-4 px-1">
-            <ConnectAccount
-              compact
-              autoFocus
-              description="Enables storage, sync, and share features"
-              onDisconnected={() => {
-                // Clear API-specific errors — username is only local now
-                if (usernameError.includes('crux.garden')) setUsernameError('');
-              }}
-              onConnected={async () => {
-                const apiAuthor = useAppStore.getState().author;
-                if (!apiAuthor) return;
-
-                // If the API account already has a real username, adopt it
-                if (apiAuthor.username && !apiAuthor.username.startsWith('wanderer-')) {
-                  setUsername(apiAuthor.username);
-                  setUsernameError('');
-                  return;
-                }
-
-                // New account — validate the locally chosen username against the API
-                // Read isAuthenticated directly from store since the closure value may be stale
-                const trimmed = username.trim();
-                if (trimmed && useAuthStore.getState().isAuthenticated) {
-                  try {
-                    const { authors } = await import('@/api');
-                    const { available } = await authors.checkUsername(trimmed.toLowerCase());
-                    if (!available) {
-                      setUsernameError('Username is taken at crux.garden');
-                      setOpenSection(SetupSection.Username);
-                    }
-                  } catch {
-                    /* API unavailable */
-                  }
-                }
-              }}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Continue */}
-      <div className="mt-6">
-        <Button
-          onClick={handleFinish}
-          loading={saving}
-          disabled={!!usernameError}
-          fullWidth
-          size="md"
-        >
-          Welcome
-        </Button>
-      </div>
-    </Panel>
-  );
-}
-
-function AccordionHeader({
-  label,
-  open,
-  onToggle,
-  summary,
-  completed,
-  required,
-}: {
-  label: string;
-  open: boolean;
-  onToggle: () => void;
-  summary?: string;
-  completed?: boolean;
-  required?: boolean;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={cn(
-        'w-full flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)]',
-        'text-left cursor-pointer',
-        open
-          ? 'bg-surface border border-accent/20 text-accent'
-          : 'text-text-muted hover:text-text hover:bg-surface/50',
-      )}
-    >
-      <span className="text-xs font-mono uppercase tracking-wider">{label}</span>
-      <div className="flex items-center gap-2">
-        {!open && summary && (
-          <span
-            className={cn(
-              'text-2xs font-mono',
-              required ? 'text-error' : completed ? 'text-accent' : 'text-text-muted',
-            )}
-          >
-            {summary}
-          </span>
-        )}
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={cn(open && 'rotate-180')}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </div>
-    </button>
-  );
-}
-
-// ── Step 2a: Cloud Sign-in + Pull ──────────────────────
 
 function CloudStep({ onBack }: { onBack: () => void }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -902,19 +600,3 @@ function ImportStep({ onBack }: { onBack: () => void }) {
 }
 
 // ── Shared Components ──────────────────────────────────
-
-function BackButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        'flex items-center gap-1 text-xs text-text-muted hover:text-text mb-4 cursor-pointer',
-        'disabled:cursor-not-allowed',
-      )}
-    >
-      <ArrowLeftIcon />
-      Back
-    </button>
-  );
-}

@@ -1,6 +1,7 @@
+import { togglePanel } from './panel-helpers';
 import { test } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden, createCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
 
 /** Type audit: dump the distinct font-size / family / weight combos on key screens. */
 test('type audit', async () => {
@@ -15,7 +16,7 @@ test('type audit', async () => {
     await nameInput.fill('index.html');
     await nameInput.press('Enter');
     await page.locator('.monaco-editor').first().waitFor({ timeout: 30_000 });
-    await page.getByRole('button', { name: 'Toggle share' }).click();
+    await togglePanel(page, 'Toggle share');
     await page.getByTestId('pane-body-publish').waitFor();
     const audit = async (label: string) => {
       const rows = await page.evaluate(() => {
@@ -30,8 +31,8 @@ test('type audit', async () => {
           const cs = getComputedStyle(el);
           const fam = cs.fontFamily.includes('Mono')
             ? 'mono'
-            : cs.fontFamily.includes('Outfit')
-              ? 'outfit'
+            : cs.fontFamily.includes('Inter')
+              ? 'inter'
               : cs.fontFamily.includes('Cormorant')
                 ? 'serif'
                 : 'sys';
@@ -57,15 +58,13 @@ test('type audit', async () => {
     };
     await audit('builder');
     const cc = await page
-      .getByTestId('check-controls')
-      .getByRole('button')
-      .first()
+      .getByTestId('preview-check')
       .evaluate((el) => {
         const cs = getComputedStyle(el);
         return { size: cs.fontSize, fam: cs.fontFamily, cls: el.className, pad: cs.padding };
       })
       .catch(() => null);
-    console.log('check-controls:', JSON.stringify(cc));
+    console.log('preview-check:', JSON.stringify(cc));
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('heading', { name: 'Settings' }).waitFor();
     await page.locator('h2', { hasText: /^AI$/ }).click();
@@ -73,7 +72,7 @@ test('type audit', async () => {
     await page.waitForTimeout(300);
     await audit('settings');
     await page.keyboard.press('Escape');
-    await page.locator('header').getByRole('button').first().click();
+    await goHome(page);
     await page.getByText('Home Garden', { exact: true }).waitFor();
     await audit('home');
   } finally {

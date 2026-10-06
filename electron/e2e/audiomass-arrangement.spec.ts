@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 function stereo() {
@@ -53,7 +54,8 @@ test('native multitrack tools arrange and mix clips while preserving manual chan
   const run = async (action: string, waveform = false) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const done = 'Audio ' + (waveform ? 'depth ' : 'arrangement ') + action + ' complete.';
     const count = async () =>
       (await storedCrux(page, id)).messages.filter(
@@ -184,7 +186,7 @@ test('native multitrack tools arrange and mix clips while preserving manual chan
     await instance.app.close();
     instance = await launchApp({ dir, env: { CRUX_AI_MOCK: '1' } });
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     expect(doc()).toEqual(final);
     expect(

@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -19,7 +20,7 @@ test.describe('sync: new-device restore (mocked API)', () => {
       const page = a.page;
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByPlaceholder('My Crux').fill('Carried Over');
@@ -55,14 +56,17 @@ test.describe('sync: new-device restore (mocked API)', () => {
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await page.getByRole('button', { name: 'Restore garden' }).click({ timeout: 30_000 });
-      // The restored garden includes its remembered open workspace.
-      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
-        'Carried Over',
-        { timeout: 90_000 },
-      );
+      // The restored garden opens on its Home with the Crux listed; workspaces come back lazily.
+      await expect(
+        page.getByRole('button', { name: 'Open Carried Over', exact: true }),
+      ).toBeVisible({ timeout: 90_000 });
       expect(api.state.sync.down).toBeGreaterThan(0);
       await page.screenshot({ path: 'e2e/.results/new-device-1-restored.png' });
-      // The restored Crux is already open through lazy workspace restoration.
+      await page.getByRole('button', { name: 'Open Carried Over', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
+        'Carried Over',
+        { timeout: 60_000 },
+      );
       await expect(page.locator('.mosaic-window').first()).toBeVisible({ timeout: 30_000 });
     } finally {
       await b.app.close();

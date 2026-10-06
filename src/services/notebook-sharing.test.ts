@@ -1,3 +1,4 @@
+import { localApiFixture } from '@/test/local-api-fixture';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -7,8 +8,10 @@ import { registerNotebookEditor } from './notebook-lifecycle';
 import { createTask } from './tasks';
 import { exportCrux, importCrux } from './crux-io';
 
+localApiFixture({ project: true });
+
 beforeEach(async () => {
-  await initServices('local');
+  await initServices();
 });
 async function fixture() {
   const store = createCruxStore();
@@ -69,7 +72,7 @@ it('flushes pending edits, preserves publication fields and carries the choice t
     custom: { color: 'green' },
     layout: 'separate-pages',
   });
-  expect(store.getState().growths.length).toBeGreaterThanOrEqual(3);
+  expect(store.getState().growths).toHaveLength(0);
   const task = await createTask(crux.id, 'Try another layout');
   const taskStore = createCruxStore();
   taskStore.setState({ crux: await getServices().crux.findById(task.id) });
@@ -110,7 +113,7 @@ it('rejects unsupported layouts, history edits, failed editor saves and readers 
   const route = (await getServices().artifact.findByResource('crux', crux.id)).find(
     (a) => a.meta?.path === NOTEBOOK_PAGE_ROUTE,
   )!;
-  await getServices().artifact.delete(route.id);
+  await getServices().artifact.delete(route);
   await expect(setNotebookLayout(store, 'separate-pages')).rejects.toThrow('updated public reader');
   expect(await config(call)).toEqual(current);
 });

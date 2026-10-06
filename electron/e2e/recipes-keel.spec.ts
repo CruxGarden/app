@@ -1,9 +1,10 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, chromium } from '@playwright/test';
 import { existsSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { openBuilder } from './builder-helpers';
 
@@ -119,8 +120,8 @@ test('Recipe Book: Builder recipe, live route with print, collaborator recipe, s
     });
 
     await test.step('the scripted collaborator drafts a post with write_file', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Write a recipe for moss tea [recipes:recipe]');
       await box.press('Enter');
@@ -149,11 +150,11 @@ test('Recipe Book: Builder recipe, live route with print, collaborator recipe, s
       } finally {
         await close();
       }
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
     });
 
     await test.step('Share builds the site and publishes it with search and a feed', async () => {
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
@@ -182,7 +183,7 @@ test('Recipe Book: Builder recipe, live route with print, collaborator recipe, s
       ).toString('utf8');
       expect(home).not.toMatch(/fonts\.googleapis|cdn\.jsdelivr/);
       await page.screenshot({ path: join(evidence, 'recipes-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
   } finally {
     await first.app.close();
@@ -193,14 +194,14 @@ test('Recipe Book: Builder recipe, live route with print, collaborator recipe, s
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the posts are still there', async () => {
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       await openBuilder(page);
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('Compost').first()).toBeVisible();
       await exportNativeCrux(page, archive, second.app, async () => {
-        await page.getByRole('button', { name: 'Toggle export' }).click();
+        await togglePanel(page, 'Toggle export');
         await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
       });
     });

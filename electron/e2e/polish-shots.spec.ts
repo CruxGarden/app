@@ -1,7 +1,8 @@
+import { hidePane, showPane, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, createCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, goHome } from './multi-crux-helpers';
 
 /**
  * Screenshots of every major screen, for the UI polish pass. Not assertions of
@@ -13,8 +14,7 @@ const OUT = (name: string) => `e2e/.results/polish/${name}.png`;
 
 async function ensurePane(page: Page, type: string, toggle: string) {
   const body = page.getByTestId(`pane-body-${type}`);
-  if (!(await body.isVisible().catch(() => false)))
-    await page.getByRole('button', { name: toggle }).click();
+  if (!(await body.isVisible().catch(() => false))) await togglePanel(page, toggle);
   await expect(body).toBeVisible({ timeout: 30_000 });
 }
 async function closePane(page: Page, label: string) {
@@ -64,7 +64,7 @@ test.describe('polish tour', () => {
       await shot(page, '05-settings-ai');
       await page.locator('h2', { hasText: /^Garden$/ }).click();
       await shot(page, '06-settings-garden');
-      await page.keyboard.press('Escape');
+      await hidePane(page, 'Settings');
 
       // Share pane → connect → publish (with the backup prompt)
       await ensurePane(page, 'publish', 'Toggle share');
@@ -85,8 +85,8 @@ test.describe('polish tour', () => {
       // Each remaining pane, one at a time beside Collaboration + Artifacts
       await closePane(page, 'Share');
       for (const [type, label, n] of [
-        ['history', 'History', '11'],
-        ['details', 'Metadata', '12'],
+        ['history', 'Growth', '11'],
+        ['details', 'Details', '12'],
         ['store', 'Store', '13'],
         ['sync', 'Sync', '14'],
         ['export', 'Export', '15'],
@@ -98,8 +98,8 @@ test.describe('polish tour', () => {
       }
       // All panes open
       for (const [type, label] of [
-        ['history', 'History'],
-        ['details', 'Metadata'],
+        ['history', 'Growth'],
+        ['details', 'Details'],
         ['store', 'Store'],
         ['sync', 'Sync'],
         ['export', 'Export'],
@@ -119,17 +119,17 @@ test.describe('polish tour', () => {
       await shot(page, '19-settings-plan');
       await page.keyboard.press('Escape');
 
-      // Mood bar + Mood Builder
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      // The Mood pane
+      const mood = await showPane(page, 'Mood');
       await shot(page, '20-mood-bar');
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await mood.getByRole('button', { name: 'Theme', exact: true }).click();
       await shot(page, '21-mood-builder');
-      await page.getByRole('button', { name: 'Persona', exact: true }).click();
+      await mood.getByRole('button', { name: 'Persona', exact: true }).click();
       await shot(page, '22-mood-persona');
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
 
       // Home Garden with a card, the new crux modal, the delete dialog, the Trash
-      await page.locator('header').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
       await shot(page, '23-home-cards');
       await page.getByRole('button', { name: 'Add Crux' }).click();

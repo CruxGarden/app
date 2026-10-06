@@ -1,3 +1,7 @@
+import { editableColor, colorWithAlpha, type EditableColor } from '@/lib/moods/color-controls';
+import ContrastCheck from './ContrastCheck';
+import { fieldClass } from '@/components/ui/field-class';
+import { downloadBlob } from '@/lib/download';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK, getVar } from '@/lib/moods';
@@ -30,12 +34,12 @@ import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 
 /**
- * The Theme tab of the Mood Builder: every palette token, grouped, editable,
+ * The Theme tab of the Mood pane: every palette token, grouped, editable,
  * applied live. Edits are stored per mode as overrides on top of the active
  * preset (lib/moods/active.ts) — picking another preset keeps them.
  */
 
-/** Resolve any CSS color expression (var(), color-mix(), rgba) to #rrggbb. */
+/** Resolve the RGB channels and alpha without silently discarding transparency. */
 function useColorResolver(onReady?: () => void) {
   const probe = useRef<HTMLSpanElement | null>(null);
   const readyRef = useRef(onReady);
@@ -52,19 +56,11 @@ function useColorResolver(onReady?: () => void) {
       probe.current = null;
     };
   }, []);
-  return useCallback((cssVar: string): string | null => {
+  return useCallback((cssVar: string): EditableColor | null => {
     const el = probe.current;
     if (!el) return null;
     el.style.color = `var(${cssVar})`;
-    const m = getComputedStyle(el).color.match(/rgba?\(([^)]+)\)/);
-    if (!m) return null;
-    const parts = m[1]!
-      .split(/[\s,/]+/)
-      .filter(Boolean)
-      .map(Number);
-    if (parts.length >= 4 && parts[3] === 0) return null;
-    const hex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
-    return `#${hex(parts[0]!)}${hex(parts[1]!)}${hex(parts[2]!)}`;
+    return editableColor(getComputedStyle(el).color);
   }, []);
 }
 
@@ -80,7 +76,7 @@ interface RowProps {
   overridden: boolean;
   onChange: (value: string) => void;
   onReset: () => void;
-  resolveColor: (cssVar: string) => string | null;
+  resolveColor: (cssVar: string) => EditableColor | null;
   /** re-resolve trigger */
   tick: number;
 }
@@ -119,7 +115,7 @@ function TokenRow({
     <div
       className={cn(
         'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)]',
-        overridden ? 'bg-accent-muted/40' : 'hover:bg-surface/60',
+        overridden ? 'bg-accent-muted/(--tint-muted)' : 'hover:bg-surface/(--tint-medium)',
       )}
     >
       <div className="min-w-0">
@@ -129,7 +125,7 @@ function TokenRow({
         </div>
         <div className="text-2xs font-mono text-text-muted truncate">
           {cssVar}
-          {!overridden && isDerived(value) && <span className="ml-1.5 opacity-70">inherits</span>}
+          {!overridden && isDerived(value) && <span className="ml-1.5 text-subtle">inherits</span>}
         </div>
       </div>
 
@@ -137,8 +133,10 @@ function TokenRow({
         {kind === 'color' && (
           <label
             className="relative w-7 h-7 rounded-[var(--radius-sm)] border border-border overflow-hidden cursor-pointer shrink-0"
-            style={{ backgroundColor: swatch ?? 'transparent' }}
-            title={swatch ?? 'transparent'}
+            style={{
+              backgroundColor: swatch ? colorWithAlpha(swatch.hex, swatch.alpha) : 'transparent',
+            }}
+            title={value}
           >
             {!swatch && (
               <span className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent_0_4px,rgba(128,128,128,.35)_4px_8px)]" />
@@ -146,10 +144,30 @@ function TokenRow({
             <input
               type="color"
               aria-label={`${label} color`}
-              value={swatch ?? '#000000'}
-              onChange={(e) => onChange(e.target.value)}
+              value={swatch?.hex ?? '#000000'}
+              onChange={(e) => onChange(colorWithAlpha(e.target.value, swatch?.alpha ?? 1))}
               className="absolute inset-0 opacity-0 cursor-pointer"
             />
+          </label>
+        )}
+        {kind === 'color' && swatch && (
+          <label className="inline-flex items-center gap-1 text-2xs text-text-muted">
+            <input
+              type="number"
+              aria-label={`${label} opacity percent`}
+              title="Color opacity: 0% transparent, 100% opaque"
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(swatch.alpha * 100)}
+              onChange={(e) => {
+                const percent = e.target.valueAsNumber;
+                if (Number.isFinite(percent) && percent >= 0 && percent <= 100)
+                  onChange(colorWithAlpha(swatch.hex, percent / 100));
+              }}
+              className="h-7 w-14 rounded-[var(--radius-sm)] border border-border bg-surface px-1 text-text"
+            />
+            %
           </label>
         )}
         {kind === 'length' && len && (
@@ -206,8 +224,16 @@ function TokenRow({
             type="range"
             aria-label={`${label} slider`}
             min={0}
-            max={/Density$/.test(tokenKey) ? 1000 : /^react/.test(tokenKey) ? 1 : 2}
-            step={/Density$/.test(tokenKey) ? 10 : /^react/.test(tokenKey) ? 0.05 : 0.05}
+            max={
+              /Density$/.test(tokenKey)
+                ? 1000
+                : /^react|Opacity$/.test(tokenKey)
+                  ? 1
+                  : /Weight$/.test(tokenKey)
+                    ? 900
+                    : 2
+            }
+            step={/Density$/.test(tokenKey) ? 10 : /Weight$/.test(tokenKey) ? 100 : 0.05}
             value={Number(value) || 0}
             onChange={(e) => onChange(e.target.value)}
             className="w-24 accent-accent"
@@ -216,6 +242,11 @@ function TokenRow({
         <input
           type="text"
           aria-label={`${label} value`}
+          title={
+            kind === 'color'
+              ? 'CSS color: hex, rgba(40, 43, 76, 0.5), or a theme variable'
+              : undefined
+          }
           hidden={kind === 'choice'}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -254,6 +285,7 @@ function TokenRow({
 export default function ThemeTokensTab() {
   const section: MoodSection = resolvedSection();
   const preset = activePreset(section);
+  // The full builder exposes every registered token, even when a feature is off.
   const groups = useMemo(() => groupTokens(), []);
   const [groupId, setGroupId] = useState(groups[0]!.group.id);
   const [query, setQuery] = useState('');
@@ -402,12 +434,7 @@ export default function ThemeTokensTab() {
     const name = preset ? `${preset.name}${total ? ' (edited)' : ''}` : 'Garden Dark';
     const file = toThemeFile({ name, section, overrides: fullLook(), author });
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood.json`);
   };
 
   /** Import: a named theme file becomes a preset under Yours; a bare map becomes edits. */
@@ -455,10 +482,10 @@ export default function ThemeTokensTab() {
           <button
             type="button"
             onClick={() => setThemePreview(null)}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-xxs cursor-pointer"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-xxs cursor-pointer hover-bright active-dim motion-press"
             title="A conversation is previewing tokens on top of your theme"
           >
-            AI preview: {previewCount} token{previewCount === 1 ? '' : 's'} · clear
+            Preview from Collaboration: {previewCount} token{previewCount === 1 ? '' : 's'} · clear
           </button>
         )}
         <div className="flex-1" />
@@ -468,7 +495,7 @@ export default function ThemeTokensTab() {
           aria-label="Find a token"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-8 w-48 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
+          className={fieldClass(undefined, 'w-48', 'sm')}
         />
         <Button
           variant="ghost"
@@ -538,6 +565,7 @@ export default function ThemeTokensTab() {
           Reset all
         </Button>
       </div>
+      <ContrastCheck watch={total} />
 
       {savedNote && (
         <p role="status" className="text-xxs text-accent -mt-1">
@@ -566,7 +594,7 @@ export default function ThemeTokensTab() {
                   'flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-left text-xs cursor-pointer transition-colors',
                   active
                     ? 'bg-surface text-text'
-                    : 'text-text-muted hover:text-text hover:bg-surface/60',
+                    : 'text-text-muted hover:text-text hover:bg-surface/(--tint-medium)',
                 )}
               >
                 <span className="truncate">{group.label}</span>

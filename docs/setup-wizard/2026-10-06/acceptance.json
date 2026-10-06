@@ -1,0 +1,510 @@
+{
+  "date": "2026-10-06",
+  "baseCommit": "dcae52477",
+  "branch": "wip/setup-wizard-and-triage",
+  "scope": "Installation-wide Advanced Mode and interest-based setup; inherits unfinished scoped agent connections.",
+  "gates": {
+    "app": {
+      "command": "npm run verify",
+      "passed": 2083,
+      "skipped": 18,
+      "files": 323,
+      "build": "passed",
+      "log": "/tmp/crux-setup-oct6-final-app-verify.log"
+    },
+    "electron": {
+      "command": "npm run verify",
+      "passed": 202,
+      "skipped": 1,
+      "log": "/tmp/crux-setup-oct6-electron-verify.log"
+    }
+  },
+  "desktopRuns": [
+    {
+      "log": "/tmp/crux-setup-oct6-acceptance.log",
+      "passed": 22,
+      "failed": 3
+    },
+    {
+      "log": "/tmp/crux-setup-oct6-regressions.log",
+      "passed": 34,
+      "failed": 4
+    },
+    {
+      "log": "/tmp/crux-setup-oct6-rerun.log",
+      "passed": 12,
+      "failed": 4
+    },
+    {
+      "log": "/tmp/crux-setup-oct6-sharing-rerun.log",
+      "passed": 1,
+      "failed": 1
+    },
+    {
+      "log": "/tmp/crux-setup-oct6-notes-final.log",
+      "passed": 2,
+      "failed": 1
+    },
+    {
+      "log": "/tmp/crux-setup-oct6-notes-sharing-final.log",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "log": "/tmp/crux-setup-oct6-packaged-final.log",
+      "passed": 4,
+      "failed": 0
+    }
+  ],
+  "pending": [],
+  "knownBlocker": {
+    "description": "Whole-Garden agent access still uses the old toggle in Settings/setup, but the inherited backend requires named connections and rejects @garden. Per-Crux MCP works.",
+    "source": "electron/src/mcp-server.ts:703",
+    "presentInStartingCommit": true,
+    "failingSpecs": [
+      "electron/e2e/desktop-cli.spec.ts",
+      "electron/e2e/journeys/09-outside-agent.spec.ts"
+    ],
+    "screenshot": "existing-whole-garden-connection-error.png"
+  },
+  "manualPackage": {
+    "path": "electron/release/manual-testing-setup-oct6/mac-arm64/Crux Garden.app",
+    "signing": "ad-hoc; codesign --verify --deep --strict passed",
+    "manualProfileOpened": false,
+    "acceptance": "4/4 passed; startup/SQLite/CLI smoke, ordinary setup, Advanced Mode cancel, Notes single-pane restart.",
+    "launcher": "electron/release/manual-testing-current/Launch Manual Testing.command"
+  },
+  "limits": [
+    "No full 882-test run; selected affected journeys only.",
+    "Named scoped connections and hardware-ranked model recommendations remain unfinished prior WIP.",
+    "No live provider, deploy, merge or push."
+  ],
+  "notes": {
+    "change": "Garden NotebookStorage defaults fresh metadata and saved appearance without a navigation choice to single-pane; explicit choices are preserved.",
+    "unitTests": 275,
+    "expectedFailures": 1,
+    "expectedFailure": "Pre-existing Markdown blockquote case",
+    "runtime": "Rebuilt bundled Tigrana runtime; existing Project Folders require runtime upgrade to receive it.",
+    "desktopAcceptance": "Passed in development and final packaged build: one navigation pane, width <=320px, editing and restart.",
+    "compactWidthRegression": {
+      "before": 560,
+      "assertedMaximum": 320,
+      "redLog": "/tmp/crux-setup-oct6-width-red.log",
+      "greenLog": "/tmp/crux-setup-oct6-packaged-final.log"
+    },
+    "followUpValidation": "After the width-only adapter change: Notes typecheck and runtime build passed; final host production build passed (/tmp/crux-setup-oct6-final-host-build.log); final packaged checks 4/4."
+  },
+  "latestResults": [
+    {
+      "project": "gate",
+      "file": "e2e/advanced-mode.spec.ts",
+      "name": "Advanced Mode starts the first-project guide folded, with guidance still available",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/advanced-mode.spec.ts",
+      "name": "Advanced Mode changes actual controls with AI off, preserves work, and survives restart",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/advanced-mode.spec.ts",
+      "name": "an app interest keeps setup simple until Advanced Mode is chosen; cancel does not save it",
+      "result": "passed",
+      "runtime": "packaged"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/documentation.spec.ts",
+      "name": "offline field guide has working search and creates an editable ordinary Crux without AI",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/documentation.spec.ts",
+      "name": "help returns to the current work and the tutorial starts as a fresh Crux",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/local-staging.spec.ts",
+      "name": "a website can be tested locally without an account, restarted and published without mixing staging and live copies",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/local-staging.spec.ts",
+      "name": "a fresh home page reaches a saved local visitor edition without hosted services",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/setup-wizard.spec.ts",
+      "name": "Setup wizard \u203a the full path: a website, a name, No AI, a Mood, then Create & open with its walkthrough",
+      "result": "passed",
+      "runtime": "packaged"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/setup-wizard.spec.ts",
+      "name": "Setup wizard \u203a Skip setup from step 1 lands at Home with the defaults and makes nothing",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/setup-wizard.spec.ts",
+      "name": "Setup wizard \u203a Back from step 4 keeps the step-2 name; Edit from the summary returns to it",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/setup-wizard.spec.ts",
+      "name": "Setup wizard \u203a an app with a backend opens the developer options; Esc asks before skipping",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/setup-wizard.spec.ts",
+      "name": "Setup wizard \u203a cancel midway plants nothing: the next launch still offers a new garden",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/setup-wizard.spec.ts",
+      "name": "Setup wizard \u203a Run setup again from Settings edits the garden and removes nothing",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/setup-wizard.spec.ts",
+      "name": "Setup wizard \u203a with reduced motion the garden grows in still stages",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/welcome-crux.spec.ts",
+      "name": "a new Garden teaches a home page with name, photo, Growth and Share, entirely with AI off",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/ai-off.spec.ts",
+      "name": "AI off: a whole Crux by hand, and nothing on screen is AI",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/composer-add-file.spec.ts",
+      "name": "Add a file feeds the hidden multiple input; the files land in Artifacts and the next message names them",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/01-gateway.spec.ts",
+      "name": "guide 01 \u00b7 Gateway and first garden \u203a START-01 \u2014 an empty profile enters the garden after a resize, without signing in",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/01-gateway.spec.ts",
+      "name": "guide 01 \u00b7 Gateway and first garden \u203a START-02 \u2014 the planted garden survives a relaunch and is not planted twice",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/01-gateway.spec.ts",
+      "name": "guide 01 \u00b7 Gateway and first garden \u203a START-04 \u2014 undertakings are one click away; cancelling leaves no Garden; Just a Crux makes a Blank one",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/01-gateway.spec.ts",
+      "name": "guide 01 \u00b7 Gateway and first garden \u203a START-05 \u2014 at a narrow width the welcome works from the keyboard alone",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/notes-compact.spec.ts",
+      "name": "a narrow Notes panel keeps navigation and outline usable while editing and after restart",
+      "result": "passed",
+      "runtime": "packaged"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/settings-section-link.spec.ts",
+      "name": "a named Settings place opens Settings at that card, whether Settings was closed or open",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/streaming-scroll.spec.ts",
+      "name": "a streaming reply is followed at the end, left alone after scrolling up, and followed again back at the end",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/tool-catalog-journey.spec.ts",
+      "name": "a tool made and shared by one account is found, reviewed, installed and kept by another",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/community-tool.spec.ts",
+      "name": "a creator exports an unknown .cruxtool and a clean recipient installs, edits and restarts",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/community-tool.spec.ts",
+      "name": "an unfamiliar installed tool shares its declared static edition with the recipient\u2019s saved document and asset",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/community-tool.spec.ts",
+      "name": "an unfamiliar tool Task keeps its editor after uninstall and restart while Share stays in Main",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/functions-local.spec.ts",
+      "name": "a page calls its functions, hears events and is refused by a Store hook, all in the workspace",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/package-imports.spec.ts",
+      "name": "OS opens queue all three packages through reviewed import, deduplicate and report malformed files",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/clean-workshop.spec.ts",
+      "name": "idea \u2192 clean preview \u2192 entry choice \u2192 advanced edits \u2192 restart",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guestbook.spec.ts",
+      "name": "Guestbook: added from the Share pane, signed in the preview, added by the collaborator, signed on the shared site",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/13-store.spec.ts",
+      "name": "guide 13 \u00b7 Crux Store \u203a STORE-01 \u2014 string, number, Boolean, object and array keep their types",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/13-store.spec.ts",
+      "name": "guide 13 \u00b7 Crux Store \u203a STORE-02 \u2014 malformed JSON stays text, a duplicate key replaces in place, an empty value is kept empty",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/13-store.spec.ts",
+      "name": "guide 13 \u00b7 Crux Store \u203a STORE-05 \u2014 a visitor value shows on Live after a refresh; local test values never cross over",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/13-store.spec.ts",
+      "name": "guide 13 \u00b7 Crux Store \u203a STORE-06 \u2014 a per-visitor key is marked with its visitor; deleting it asks and removes only that row",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/13-store.spec.ts",
+      "name": "guide 13 \u00b7 Crux Store \u203a STORE-07 \u2014 Live going offline is recoverable and never disables the local Store",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/17-share.spec.ts",
+      "name": "guide 17 \u00b7 Share \u203a SHARE-03 \u2014 a visitor gets v1; an edit says so; Update ships v2 and the visitor gets it",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/17-share.spec.ts",
+      "name": "guide 17 \u00b7 Share \u203a SHARE-07 \u2014 guestbook entries show on Live in the Store pane; Refresh reads new ones; deleting one asks and removes only it",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/17-share.spec.ts",
+      "name": "guide 17 \u00b7 Share \u203a SHARE-09 \u2014 the connection drops under an Update: the pane says so, the first edition stays live, a retry lands",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/17-share.spec.ts",
+      "name": "guide 17 \u00b7 Share \u203a SHARE-05 \u2014 Discoverable off removes the Crux from Explore but not from its address",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/17-share.spec.ts",
+      "name": "guide 17 \u00b7 Share \u203a SHARE-02/08 \u2014 declining the first-share question shares nothing; Unshare asks, cancel keeps it live, confirm takes it down",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/18-functions.spec.ts",
+      "name": "guide 18 \u00b7 Functions \u203a FUNC-02 \u2014 emit and log rules act once; an edited rule runs edited; a deleted rule stops",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/18-functions.spec.ts",
+      "name": "guide 18 \u00b7 Functions \u203a FUNC-03 \u2014 a scheduled rule: bad schedule text is refused with words, a valid one is listed and runs by hand, and removal clears it",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/18-functions.spec.ts",
+      "name": "guide 18 \u00b7 Functions \u203a FUNC-04 \u2014 Run answers a good handler and reports a handler error as a failure, never as success",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/18-functions.spec.ts",
+      "name": "guide 18 \u00b7 Functions \u203a FUNC-07 \u2014 a secret is listed by name, read by a handler, never written as source, and stops resolving once removed",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/guide/18-functions.spec.ts",
+      "name": "guide 18 \u00b7 Functions \u203a FUNC-08 \u2014 ctx.fetch reaches a host listed in functions/egress.json and is refused for one that is not",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/mcp.spec.ts",
+      "name": "Agent Host (MCP server per crux) \u203a Blog crux: enable, connect, write, attribute, snapshot, approve a delete, refuse strangers",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/mcp.spec.ts",
+      "name": "Agent Host (MCP server per crux) \u203a Blank crux + mock API: publish waits for the in-app approval, then get_usage reads back",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/metadata-store.spec.ts",
+      "name": "metadata and store panes \u203a metadata edits persist; the local store adds, edits, deletes, clears and round-trips a file",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/agent-metrics.spec.ts",
+      "name": "agent metrics: a turn is counted and the report lands in the Garden Root",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/desktop-cli.spec.ts",
+      "name": "desktop CLI discovers tools, operates on real Cruxes and retains app approvals",
+      "result": "failed",
+      "runtime": "development"
+    },
+    {
+      "project": "gate",
+      "file": "e2e/journeys/09-outside-agent.spec.ts",
+      "name": "an outside agent plants a Crux the app shows",
+      "result": "failed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/app-appearance.spec.ts",
+      "name": "Notes follows live Garden Moods without reloading drafts; app appearance persists",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/embedded-app-sharing.spec.ts",
+      "name": "Notes Share uploads only selected saved content; failed updates retain the last edition and can be retried",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/embedded-app-sharing.spec.ts",
+      "name": "Moqira Share replaces the public selection while retaining excluded frames locally",
+      "result": "passed",
+      "runtime": "development"
+    },
+    {
+      "project": "desktop",
+      "file": "e2e/packaged.spec.ts",
+      "name": "packaged app \u203a the packaged app launches, serves its web app, opens SQLite and runs its CLI",
+      "result": "passed",
+      "runtime": "packaged"
+    }
+  ],
+  "latestResultCounts": {
+    "passed": 55,
+    "failed": 2
+  },
+  "fixedDuringAcceptance": [
+    "Run setup again uses the selected Garden, not its root.",
+    "Garden title input reflects setup-again renaming without erasing a draft.",
+    "Username field has a stable accessible label.",
+    "Technical tests explicitly choose Advanced Mode through Settings.",
+    "Notes Welcome navigation no longer mistakes the note for setup; compact sidebars are explicitly opened.",
+    "Tool install size labels, explicit publication title and privacy/error expectations match current behavior."
+  ]
+}

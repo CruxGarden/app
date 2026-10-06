@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, setAutoCheck, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -28,7 +29,8 @@ test('Calendar tools revise and duplicate events, preserve drafts and manual fie
   const run = async (action: string) => {
     const page = instance.page,
       toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const done = 'Calendar depth ' + action + ' complete.';
     const count = async () =>
       (await storedCrux(page, id)).messages.filter(
@@ -59,7 +61,7 @@ test('Calendar tools revise and duplicate events, preserve drafts and manual fie
     await ready();
     id = (await instance.page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     folder = (await storedCrux(instance.page, id)).projectFolder;
-    await instance.page.getByRole('switch', { name: 'Check automatically ✓', exact: true }).click();
+    await setAutoCheck(instance.page, false);
     await run('create');
     const originalId = doc().events[0].id;
     expect(doc().events[0].start).toBe('2026-09-15T10:00:30');
@@ -128,7 +130,7 @@ test('Calendar tools revise and duplicate events, preserve drafts and manual fie
     await instance.app.close();
     instance = await launchApp({ dir });
     await instance.page.setViewportSize({ width: 2000, height: 1200 });
-    await instance.page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(instance.page);
     await ready();
     expect(doc().view).toBe('listWeek');
     await expect(frame().locator('.ec-event').filter({ hasText: 'Manual review' })).toBeVisible();

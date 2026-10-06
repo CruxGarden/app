@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { collaborator, outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 for (const kind of ['SVG-Edit', 'Layout'] as const) {
@@ -79,6 +80,11 @@ for (const kind of ['SVG-Edit', 'Layout'] as const) {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: new RegExp('^' + kind + '\\b') }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // The Tasks pane opens with every app Crux now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 120_000 });
+      await expectPanelBarReady(page);
+      if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+        await togglePanel(page, 'Toggle tasks');
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
       folder = (
         await storedCrux(
@@ -152,7 +158,7 @@ for (const kind of ['SVG-Edit', 'Layout'] as const) {
       page = instance.page;
       page.setDefaultTimeout(60000);
       await page.setViewportSize({ width: 2000, height: 1200 });
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready();
       await verify();
       await page.screenshot({ path: join(evidence, `${kind}-reopened.png`) });

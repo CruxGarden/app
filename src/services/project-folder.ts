@@ -16,6 +16,8 @@ import { isWorkspaceThumbnail } from '@/lib/artifact-path';
 import type { Artifact } from '@/api/types';
 import { findWorkingCopy } from './working-copies';
 import { expectProjectWrites } from './ingestion';
+import { selectCruxFiles } from './file-content';
+import { reportFlowActivity } from '@/lib/moods/flow';
 
 function projectBridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
@@ -79,6 +81,7 @@ export async function writeThroughArtifact(
 ): Promise<void> {
   const relPath = artifactRelPath(artifact);
   await withFolder(cruxId, (api, folder) => api.writeFile(folder, relPath, content));
+  reportFlowActivity('artifact');
 }
 
 /** Remove an artifact's file from the crux's Project Folder. */
@@ -88,6 +91,7 @@ export async function deleteThroughArtifact(
 ): Promise<void> {
   const relPath = artifactRelPath(artifact);
   await withFolder(cruxId, (api, folder) => api.deleteFile(folder, relPath));
+  reportFlowActivity('artifact');
 }
 
 /** Rename/move an artifact's file inside the crux's Project Folder. */
@@ -98,6 +102,7 @@ export async function renameThroughArtifact(
 ): Promise<void> {
   if (fromRel === toRel) return;
   await withFolder(cruxId, (api, folder) => api.renameFile(folder, fromRel, toRel));
+  reportFlowActivity('artifact');
 }
 
 /** Reveal the crux's folder (or one file in it) in Finder. */
@@ -118,16 +123,12 @@ export async function projectFolderExists(cruxId: string): Promise<boolean | nul
 }
 
 /**
- * Give every workspace crux a Project Folder that exists on THIS machine.
- *
- * `meta.projectFolder` is an absolute path, so a garden pulled from another
- * machine (or another account name) arrives pointing at folders that are not
- * under this Garden Root: no folder is created, write-through silently
- * no-ops, and `astro dev` has nothing to run in. Re-homing creates a fresh
- * folder for each such crux and materializes its artifacts into it.
- *
- * Cruxes whose folder already exists are left alone, so this is safe to run
- * after any import. Returns the number re-homed (0 on web).
+ * Materialize restored work into fresh local Project Folders. An exporting
+ * folder may still exist on this machine but contain different (or untracked)
+ * work. Reusing it would let stale disk files override restored database bytes;
+ * overwriting it would destroy the pre-restore work. Keep that folder intact.
+ * Called after full Garden import, not during ordinary startup. Returns the
+ * number re-homed (0 on web).
  */
 export async function rehomeProjectFolders(
   onProgress?: (done: number, total: number) => void,
@@ -136,8 +137,8 @@ export async function rehomeProjectFolders(
   if (!api) return 0;
 
   const db = getSqliteClient();
-  const rows = await db.all<{ id: string; slug: string | null; meta: string | null }>(
-    "SELECT id, slug, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL",
+  const rows = await db.all<{ id: string; slug: string | null }>(
+    "SELECT id, slug FROM cruxes WHERE type = 'workspace' AND deleted IS NULL AND (kind IS NULL OR kind <> 'snapshot')",
   );
 
   const { getServices } = await import('./index');
@@ -148,20 +149,9 @@ export async function rehomeProjectFolders(
     const row = rows[i]!;
     onProgress?.(i, rows.length);
     try {
-      let meta: { projectFolder?: unknown } = {};
-      try {
-        meta = JSON.parse(row.meta || '{}');
-      } catch {
-        /* unreadable meta — treat as no folder */
-      }
-      const folder = typeof meta.projectFolder === 'string' ? meta.projectFolder : null;
-      // folderExists answers false for a path outside every known root, which
-      // is exactly the foreign-machine case.
-      if (folder && (await api.folderExists(folder))) continue;
-
       const created = await api.createFolder(row.slug || 'crux');
+      await projectAllArtifacts(row.id, created);
       await cruxService.update(row.id, { meta: { projectFolder: created } });
-      await projectAllArtifacts(row.id);
       rehomed++;
     } catch (err) {
       console.error(`[project-folder] re-homing ${row.id} failed:`, err);
@@ -173,7 +163,9 @@ export async function rehomeProjectFolders(
   for (const copy of copies) {
     if (copy.project_folder && (await api.folderExists(copy.project_folder))) continue;
     const folder = await api.createFolder(`task-${copy.id}`);
-    await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, copy.id]);
+    if (db.installation) await db.installation.setWorkingCopyFolder(copy.id, folder);
+    else
+      await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, copy.id]);
     await projectAllArtifacts(copy.id);
     rehomed++;
   }
@@ -188,7 +180,10 @@ export async function rehomeProjectFolders(
  * folder exactly matches the store. Returns the folder path (null on web).
  */
 /** Project only these paths from the store onto the Project Folder (no-op on web). */
-export async function projectArtifactPaths(cruxId: string, paths: string[]): Promise<string | null> {
+export async function projectArtifactPaths(
+  cruxId: string,
+  paths: string[],
+): Promise<string | null> {
   const api = projectBridge();
   if (!api) return null;
   const folder = await folderForCrux(cruxId);
@@ -197,17 +192,7 @@ export async function projectArtifactPaths(cruxId: string, paths: string[]): Pro
   await api.ensureFolder(folder);
   const db = getSqliteClient();
   const wanted = new Set(paths);
-  const rows = await db.all<{ path: string | null; filename: string; fingerprint: string | null; meta: string }>(
-    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
-    [cruxId],
-  );
-  const entries: { path: string; fingerprint: string; mode?: number }[] = [];
-  for (const row of rows) {
-    const relPath = row.path || row.filename;
-    if (!relPath || !row.fingerprint || !wanted.has(relPath)) continue;
-    const mode = JSON.parse(row.meta || '{}').mode;
-    entries.push({ path: relPath, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined });
-  }
+  const entries = (await projectionEntries(cruxId)).filter((entry) => wanted.has(entry.path));
   expectProjectWrites(
     folder,
     entries.map((e) => ({ relPath: e.path, fingerprint: e.fingerprint })),
@@ -223,34 +208,21 @@ export async function projectArtifactPaths(cruxId: string, paths: string[]): Pro
   return folder;
 }
 
-export async function projectAllArtifacts(cruxId: string): Promise<string | null> {
+export async function projectAllArtifacts(
+  cruxId: string,
+  destination?: string,
+): Promise<string | null> {
   const api = projectBridge();
   if (!api) return null;
-  const folder = await folderForCrux(cruxId);
+  const folder = destination ?? (await folderForCrux(cruxId));
   if (!folder) return null;
 
   await api.ensureFolder(folder);
   const db = getSqliteClient();
-  const rows = await db.all<{
-    path: string | null;
-    filename: string;
-    fingerprint: string | null;
-    meta: string;
-  }>(
-    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
-    [cruxId],
+  const entries = (await projectionEntries(cruxId)).filter(
+    (entry) => !isWorkspaceThumbnail(entry.path),
   );
-
-  const wanted = new Set<string>();
-  const entries: { path: string; fingerprint: string; mode?: number }[] = [];
-  for (const row of rows) {
-    const relPath = row.path || row.filename;
-    if (!relPath || !row.fingerprint) continue;
-    if (isWorkspaceThumbnail(relPath)) continue; // app state, not a user file
-    wanted.add(relPath);
-    const mode = JSON.parse(row.meta || '{}').mode;
-    entries.push({ path: relPath, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined });
-  }
+  const wanted = new Set(entries.map((entry) => entry.path));
   // The watcher will see these writes; they are the store's own, not new edits.
   expectProjectWrites(
     folder,
@@ -274,4 +246,31 @@ export async function projectAllArtifacts(cruxId: string): Promise<string | null
   }
 
   return folder;
+}
+
+/** Resolve one captured manifest listing, or the not-yet-replaced Artifact
+ * consumer. A manifest owner never falls back to Artifact rows on failure. */
+async function projectionEntries(
+  cruxId: string,
+): Promise<{ path: string; fingerprint: string; mode?: number }[]> {
+  const selected = await selectCruxFiles(cruxId);
+  if (selected)
+    return selected.entries.map(({ path, fingerprint, mode }) => ({ path, fingerprint, mode }));
+  const rows = await getSqliteClient().all<{
+    path: string | null;
+    filename: string;
+    fingerprint: string | null;
+    meta: string;
+  }>(
+    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+    [cruxId],
+  );
+  return rows.flatMap((row) => {
+    const path = row.path || row.filename;
+    if (!path || !row.fingerprint) return [];
+    const mode = JSON.parse(row.meta || '{}').mode;
+    return [
+      { path, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined },
+    ];
+  });
 }

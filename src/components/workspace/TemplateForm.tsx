@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
-import { cn } from '@/lib/cn';
+import { Input, Select, Textarea } from '@/components/ui';
+import TemplateImageField from './TemplateImageField';
 import type { FormField, FormSchema, RepeaterFormField } from '@/templates';
 
 interface TemplateFormProps {
   schema: FormSchema;
+  disabled?: boolean;
   data: Record<string, unknown>;
   onChange: (data: Record<string, unknown>) => void;
 }
@@ -12,10 +14,12 @@ interface TemplateFormProps {
  * Renders a form schema as editable fields.
  * Supports text, textarea, color, number, select, image, and nested repeaters.
  */
-export default function TemplateForm({ schema, data, onChange }: TemplateFormProps) {
+export default function TemplateForm({ schema, data, onChange, disabled }: TemplateFormProps) {
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4">
-      <FieldList fields={schema.fields} data={data} onChange={onChange} />
+      <fieldset disabled={disabled} className="min-w-0 border-0 p-0 space-y-4">
+        <FieldList fields={schema.fields} data={data} onChange={onChange} />
+      </fieldset>
     </div>
   );
 }
@@ -69,14 +73,14 @@ function FieldRenderer({
       return (
         <label className="block">
           <span className={labelClass}>{field.label}</span>
-          <input
+          <Input
             type={field.type === 'number' ? 'number' : 'text'}
             value={String(value ?? '')}
             placeholder={field.placeholder}
             onChange={(e) =>
               onChange(field.type === 'number' ? Number(e.target.value) : e.target.value)
             }
-            className={inputClass}
+            fieldSize="sm"
           />
         </label>
       );
@@ -85,12 +89,14 @@ function FieldRenderer({
       return (
         <label className="block">
           <span className={labelClass}>{field.label}</span>
-          <textarea
+          <Textarea
+            aria-label={field.label}
             value={String(value ?? '')}
             placeholder={field.placeholder}
             rows={3}
             onChange={(e) => onChange(e.target.value)}
-            className={cn(inputClass, 'resize-y')}
+            fieldSize="sm"
+            className={'resize-y'}
           />
         </label>
       );
@@ -111,26 +117,17 @@ function FieldRenderer({
 
     case 'image':
       return (
-        <label className="block">
-          <span className={labelClass}>{field.label}</span>
-          <input
-            type="text"
-            value={String(value ?? '')}
-            placeholder={field.placeholder || 'Image URL'}
-            onChange={(e) => onChange(e.target.value)}
-            className={inputClass}
-          />
-        </label>
+        <TemplateImageField label={field.label} value={String(value ?? '')} onChange={onChange} />
       );
 
     case 'select':
       return (
         <label className="block">
           <span className={labelClass}>{field.label}</span>
-          <select
+          <Select
             value={String(value ?? '')}
             onChange={(e) => onChange(e.target.value)}
-            className={inputClass}
+            fieldSize="sm"
           >
             {'options' in field &&
               field.options.map((opt) => (
@@ -138,7 +135,7 @@ function FieldRenderer({
                   {opt.label}
                 </option>
               ))}
-          </select>
+          </Select>
         </label>
       );
 
@@ -219,7 +216,7 @@ function RepeaterField({
         <span className={labelClass}>{field.label}</span>
         <button
           onClick={addItem}
-          className="text-2xs font-mono text-accent hover:text-accent/80 transition-colors cursor-pointer"
+          className="text-2xs font-mono text-accent hover:text-accent/(--tint-dense) transition-colors cursor-pointer"
         >
           + Add
         </button>
@@ -242,20 +239,20 @@ function RepeaterField({
                 <button
                   onClick={() => moveItem(i, -1)}
                   disabled={i === 0}
-                  className="text-2xs text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
+                  className="text-2xs text-text-muted hover:text-text px-1 cursor-pointer"
                 >
                   &uarr;
                 </button>
                 <button
                   onClick={() => moveItem(i, 1)}
                   disabled={i === value.length - 1}
-                  className="text-2xs text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
+                  className="text-2xs text-text-muted hover:text-text px-1 cursor-pointer"
                 >
                   &darr;
                 </button>
                 <button
                   onClick={() => removeItem(i)}
-                  className="text-2xs text-error/70 hover:text-error px-1 cursor-pointer"
+                  className="text-2xs text-error/(--tint-strong) hover:text-error px-1 cursor-pointer"
                 >
                   &times;
                 </button>
@@ -281,9 +278,3 @@ function RepeaterField({
 // ── Shared styles ──
 
 const labelClass = 'block text-xs font-mono text-text-muted mb-1';
-
-const inputClass = cn(
-  'w-full px-2 py-1.5 text-sm font-mono rounded-[var(--radius-sm)]',
-  'bg-surface-solid border border-border text-text placeholder:text-text-muted/50',
-  'focus:outline-none focus:border-input-border-active transition-colors',
-);

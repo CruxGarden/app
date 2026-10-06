@@ -27,8 +27,8 @@ export function publicCruxUrl(username: string, slug: string): string {
 }
 
 // Where a crux's PUBLISHED FILES are served from (distinct from its public
-// page on crux.garden). Per-crux subdomain in production; legacy flat prefix;
-// same-origin service-worker preview in local dev.
+// page on crux.garden). Per-crux subdomain in production; a separate publishing
+// server in local development. HTML never falls back to the app origin.
 const PUBLISH_ORIGIN_TEMPLATE = import.meta.env.VITE_PUBLISH_ORIGIN_TEMPLATE || '';
 const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
 
@@ -48,6 +48,23 @@ export function hasRemotePublishOrigin(): boolean {
 export function publishBaseUrlFor(cruxId: string): string {
   if (PUBLISH_ORIGIN_TEMPLATE) return PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId);
   return `${PUBLISHED_CONTENT_URL}/${cruxId}`;
+}
+
+/** A published document must never inherit the app's storage or DOM origin. */
+export function isolatedPublishUrl(source: string, appOrigin: string): URL | null {
+  try {
+    const url = new URL(source);
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      url.origin === appOrigin ||
+      url.username ||
+      url.password
+    )
+      return null;
+    return url;
+  } catch {
+    return null;
+  }
 }
 
 /**

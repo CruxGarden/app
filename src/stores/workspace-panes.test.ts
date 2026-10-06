@@ -1,0 +1,151 @@
+import { expect, it } from 'vitest';
+import type { MosaicNode } from 'react-mosaic-component';
+import { createUIStore, getMosaicLeaves, useUIStore, type PaneType } from './uiStore';
+
+// These layouts include Collaboration, an AI pane: offered only with AI tools on.
+useUIStore.getState().setAiEnabled(true);
+
+/** Width of a pane as a fraction of the workspace (a column split shares its width). */
+function share(node: MosaicNode<PaneType> | null, pane: PaneType, of = 1): number {
+  if (node === null) return 0;
+  if (typeof node === 'string') return node === pane ? of : 0;
+  if (node.direction === 'column')
+    return share(node.first, pane, of) + share(node.second, pane, of);
+  const split = (node.splitPercentage ?? 50) / 100;
+  return share(node.first, pane, of * split) + share(node.second, pane, of * (1 - split));
+}
+
+it('opens a Garden on its Home alone and offers only Garden panes', () => {
+  const ui = createUIStore('garden-a', 'garden');
+  expect(getMosaicLeaves(ui.getState().mosaicLayout)).toEqual(['home']);
+  ui.getState().setPaneVisible('tasks', true);
+  expect(getMosaicLeaves(ui.getState().mosaicLayout)).toEqual(['home']);
+  expect(ui.getState().workspaceScope).toBe('garden');
+});
+
+it('docks the Navigator left and stacks Garden-wide panes in one right column', () => {
+  const ui = createUIStore('garden-b', 'garden');
+  ui.getState().setPaneVisible('mood', true);
+  ui.getState().setPaneVisible('navigator', true);
+  ui.getState().setPaneVisible('settings', true);
+  const tree = ui.getState().mosaicLayout;
+  expect(share(tree, 'navigator')).toBeCloseTo(0.2, 2);
+  expect(share(tree, 'mood')).toBeCloseTo(0.32, 2);
+  expect(share(tree, 'settings')).toBeCloseTo(0.32, 2);
+  expect(getMosaicLeaves(tree)[0]).toBe('navigator');
+});
+
+it('opening a pane brings it forward in the one-pane narrow layout', () => {
+  const ui = createUIStore('crux-c');
+  ui.getState().setPaneVisible('mood', true);
+  expect(ui.getState().mobileActivePane).toBe('mood');
+  ui.getState().togglePane('navigator');
+  expect(ui.getState().mobileActivePane).toBe('navigator');
+});
+
+it('shares the Tasks rail only once the rest is crowded', () => {
+  const ui = createUIStore('crux-d');
+  for (const pane of ['tasks', 'collaboration', 'workshop'] as const)
+    ui.getState().setPaneVisible(pane, true);
+  // A new Crux: the Tasks rail beside Collaboration and the Workshop.
+  ui.setState({
+    mosaicLayout: {
+      direction: 'row',
+      first: 'tasks',
+      second: { direction: 'row', first: 'collaboration', second: 'workshop' },
+      splitPercentage: 20,
+    },
+  });
+  for (const pane of ['artifacts', 'publish', 'store'] as const)
+    ui.getState().setPaneVisible(pane, true);
+  // The tile's height as a fraction of the workspace: the rail keeps all of it.
+  const height = (node: MosaicNode<PaneType> | null, pane: PaneType, of = 1): number => {
+    if (node === null) return 0;
+    if (typeof node === 'string') return node === pane ? of : 0;
+    const split = (node.splitPercentage ?? 50) / 100;
+    if (node.direction === 'row')
+      return height(node.first, pane, of) + height(node.second, pane, of);
+    return height(node.first, pane, of * split) + height(node.second, pane, of * (1 - split));
+  };
+  const tree = ui.getState().mosaicLayout;
+  expect(height(tree, 'tasks')).toBe(1);
+  expect(getMosaicLeaves(tree)).toContain('store');
+});
+
+it('a new pane never squeezes another below its least width', () => {
+  const ui = createUIStore('crux-e');
+  for (const pane of ['tasks', 'collaboration', 'workshop', 'history', 'publish'] as const)
+    ui.getState().setPaneVisible(pane, true);
+  // Every open pane keeps at least its share of a typical workspace.
+  const tree = ui.getState().mosaicLayout;
+  const px = (pane: PaneType) => share(tree, pane) * 1400;
+  expect(px('collaboration')).toBeGreaterThanOrEqual(260);
+  expect(px('publish')).toBeGreaterThanOrEqual(270);
+  expect(px('workshop')).toBeGreaterThanOrEqual(280);
+});
+
+it('Tasks arrives as the narrow full-height column at the left of the work', () => {
+  const ui = createUIStore('crux-f');
+  ui.getState().setMosaicLayout({
+    direction: 'row',
+    first: 'collaboration',
+    second: 'workshop',
+    splitPercentage: 40,
+  });
+  ui.getState().setPaneVisible('tasks', true);
+  const tree = ui.getState().mosaicLayout;
+  expect(tree).toMatchObject({ direction: 'row', first: 'tasks' });
+  expect(share(tree, 'tasks')).toBeGreaterThan(0.1);
+  expect(share(tree, 'tasks')).toBeLessThan(0.25);
+  // Beside the Navigator, it docks right of it rather than taking its place.
+  const nav = createUIStore('crux-g');
+  nav.getState().setMosaicLayout({
+    direction: 'row',
+    first: 'navigator',
+    second: 'workshop',
+    splitPercentage: 20,
+  });
+  nav.getState().setPaneVisible('tasks', true);
+  expect(nav.getState().mosaicLayout).toMatchObject({
+    direction: 'row',
+    first: 'navigator',
+    second: { direction: 'row', first: 'tasks', second: 'workshop' },
+  });
+});
+
+it('a Garden-wide pane takes less than a third when the work beside it needs the room', () => {
+  const ui = createUIStore('crux-h');
+  ui.getState().setMosaicLayout({
+    direction: 'row',
+    first: { direction: 'row', first: 'collaboration', second: 'workshop', splitPercentage: 45 },
+    second: { direction: 'column', first: 'details', second: 'publish', splitPercentage: 50 },
+    splitPercentage: 70,
+  });
+  ui.getState().setPaneVisible('explore', true);
+  const tree = ui.getState().mosaicLayout;
+  // The work needs 260 + 280 + 270 px of a typical 1400: Explore yields.
+  expect(share(tree, 'explore')).toBeLessThan(0.32);
+  expect(share(tree, 'explore') * 1400).toBeGreaterThanOrEqual(300 - 1);
+  expect((1 - share(tree, 'explore')) * 1400).toBeGreaterThanOrEqual(810 - 1);
+});
+
+it('opens readable Settings using the actual smaller workspace and its frame gutters', () => {
+  const ui = createUIStore('garden-small', 'garden');
+  ui.getState().setWorkspaceGeometry(980, 26);
+  ui.getState().setPaneVisible('settings', true);
+  expect(share(ui.getState().mosaicLayout, 'settings') * 980 - 26).toBeGreaterThanOrEqual(
+    360 - 0.01,
+  );
+  expect(share(ui.getState().mosaicLayout, 'home') * 980 - 26).toBeGreaterThanOrEqual(300);
+});
+
+it('stacks a new side pane when two readable columns cannot fit', () => {
+  const ui = createUIStore('garden-narrow', 'garden');
+  ui.getState().setWorkspaceGeometry(600, 26);
+  ui.getState().setPaneVisible('settings', true);
+  expect(ui.getState().mosaicLayout).toMatchObject({
+    direction: 'column',
+    first: 'home',
+    second: 'settings',
+  });
+});

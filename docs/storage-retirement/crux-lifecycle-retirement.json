@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-02",
+  "status": "review-slice-locally-and-portably-accepted",
+  "baseApp": "add8edbba815e8919db692e5e7507066e796c194",
+  "runtime": "ra1435e5dc008.h2d03f470",
+  "changes": [
+    "Require native Trash/restore/purge; remove renderer deletion fallback and unused planner.",
+    "Capture detail patches before asynchronous Working Copy lookup.",
+    "Move lifecycle and directly affected consumer tests onto real local API/native SQLite, preserving all behavior purposes.",
+    "Move open-workspace deletion protection to native lifecycle suite; other workspace remains open."
+  ],
+  "nativeBaseline": {
+    "log": "/tmp/crux-lifecycle-red.log",
+    "expectedFailures": 4,
+    "passes": 12
+  },
+  "verification": {
+    "focused": {
+      "tests": 87,
+      "suites": 12,
+      "log": "/tmp/crux-lifecycle-focused-accepted.log"
+    },
+    "appVerify": {
+      "passed": 1689,
+      "suites": 273,
+      "skipped": 18,
+      "build": "passed",
+      "log": "/tmp/crux-lifecycle-app-accepted.log"
+    },
+    "electronVerify": {
+      "passed": 77,
+      "skipped": 1,
+      "log": "/tmp/crux-lifecycle-electron-verify.log"
+    },
+    "desktop": {
+      "passed": 7,
+      "failed": 0,
+      "logs": [
+        "/tmp/crux-release-lifecycle-desktop.log",
+        "/tmp/crux-release-files-desktop-final.log"
+      ],
+      "scope": "Creation2/lifecycle1/Trash1/shared-history purge1/search1/narrow Growth-navigation1; larger batches contain separately diagnosed unrelated failures."
+    },
+    "finalReleaseAppVerify": {
+      "passed": 1812,
+      "suites": 287,
+      "skipped": 18,
+      "build": "passed",
+      "log": "/tmp/crux-release-plasma-layout-verify.log"
+    },
+    "finalReleaseElectronVerify": {
+      "passed": 80,
+      "skipped": 1,
+      "log": "/tmp/crux-release-electron-accepted.log"
+    },
+    "nativeCI": {
+      "run": 37089492260,
+      "sourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b",
+      "conclusion": "success",
+      "platforms": ["windows-latest", "ubuntu-latest"]
+    },
+    "macosPackageSmoke": {
+      "log": "/tmp/crux-release-packaged-smoke.log",
+      "passed": 1
+    }
+  },
+  "productionReductionLines": 54,
+  "persistenceInventory": {
+    "keys": 95,
+    "mutationSitesBefore": 36,
+    "mutationSitesAfter": 28
+  },
+  "limits": [
+    "Verified source040e7e90b committed/pushed; exact-source native Windows/Linux CI and fresh isolated macOS package smoke pass.",
+    "Create/update SQL fallback, legacy Artifact snapshot guard and AR06 remaining consumers are retained pending migration.",
+    "AR06 structural retirement and larger AR07 cycle refactor stay tracked; AR08/AR09 are locally accepted. External release gates remain open.",
+    "No real Garden/manual candidate changes, hosted deployment or merge."
+  ],
+  "verifiedSourceCommit": "040e7e90bde926f8dd85b5eae3649821eaea2f3b"
+}

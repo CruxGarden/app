@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "name": "The lights are still on",
+  "root": 42,
+  "mode": "minor",
+  "tempo": 30,
+  "space": 1,
+  "tracks": [
+    {
+      "voice": "pad",
+      "level": 0.8,
+      "tone": 0.16,
+      "movement": 0.72,
+      "muted": false
+    },
+    {
+      "voice": "bass",
+      "level": 0.55,
+      "tone": 0.08,
+      "movement": 0.08,
+      "muted": false
+    },
+    {
+      "voice": "bell",
+      "level": 0.3,
+      "tone": 0.28,
+      "movement": 0.12,
+      "muted": false
+    },
+    {
+      "voice": "air",
+      "level": 0.52,
+      "tone": 0.1,
+      "movement": 0.75,
+      "muted": false
+    }
+  ]
+}

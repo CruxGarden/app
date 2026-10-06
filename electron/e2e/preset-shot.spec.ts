@@ -1,3 +1,5 @@
+import { finishSetupAtHome, goHome } from './multi-crux-helpers';
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -14,7 +16,7 @@ test.describe('preset screenshots', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -31,11 +33,8 @@ test.describe('preset screenshots', () => {
       );
       await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
-      await page.getByRole('button', { name: 'Toggle history' }).click();
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
+      await togglePanel(page, 'Toggle growth');
+      await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('cells interlinked');
       await label.press('Enter');
@@ -48,12 +47,12 @@ test.describe('preset screenshots', () => {
       await page.waitForTimeout(400);
       await shot('1-mood');
       await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       const input = page.getByPlaceholder('Send a message...');
       await input.fill('Do you like our owl?');
       await page.waitForTimeout(800);
       await shot('2-workspace');
-      await page.getByRole('banner').getByRole('button').first().click();
+      await goHome(page);
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible({ timeout: 30_000 });
       await page.waitForTimeout(800);
       await shot('3-home');

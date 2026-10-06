@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
+import { FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
+import { menuItemClass } from '@/components/ui/button-class';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useDismiss } from '@/hooks/useDismiss';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import GlassSurface from '@/components/ui/GlassSurface';
-import { cn } from '@/lib/cn';
 
 interface MenuItem {
   label: string;
@@ -21,6 +23,7 @@ interface ContextMenuProps {
   onDeleteMultiple: (ids: string[]) => void;
   onDeleteFolder: (folderPath: string) => void;
   onOpen: (id: string) => void;
+  onCopyToCrux?: (ids: string[]) => void;
   onCopyUrl?: (id: string) => void;
   onTranscode?: (id: string) => void;
   isMediaFile?: (id: string) => boolean;
@@ -36,6 +39,7 @@ export default function ContextMenu({
   onDeleteFolder,
   onOpen,
   onCopyUrl,
+  onCopyToCrux,
   onTranscode,
   isMediaFile,
   ffmpegAvailable,
@@ -47,6 +51,7 @@ export default function ContextMenu({
 
   // Close on click outside
   useDismiss(ref, hideContextMenu, contextMenu.visible);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape
   useEffect(() => {
@@ -63,7 +68,23 @@ export default function ContextMenu({
 
   const items: MenuItem[] = [];
 
-  // Multi-select: only show batch delete
+  const copyIds = isMultiSelect
+    ? selectedIds
+    : isFolder && targetPath
+      ? [`${FOLDER_ID_PREFIX}${targetPath}`]
+      : targetId
+        ? [targetId]
+        : selectedIds;
+  if (onCopyToCrux && copyIds.length)
+    items.push({
+      label: 'Copy to another Crux…',
+      action: () => {
+        onCopyToCrux(copyIds);
+        hideContextMenu();
+      },
+    });
+
+  // Multi-select actions
   if (isMultiSelect) {
     items.push({
       label: `Delete ${selectedIds.length} items`,
@@ -172,22 +193,25 @@ export default function ContextMenu({
           exit={role.exit}
           className="fixed z-50 min-w-[140px]"
           style={{ left: x, top: y }}
+          data-plasma-host
         >
+          <PlasmaOverlay
+            surfaces={[{ ref: panelRef, radius: 12, elevation: 0.6 }]}
+            zIndex={45}
+            portal
+          />
           <GlassSurface role="dropdown">
-            <div className="w-full bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden">
+            <div
+              ref={panelRef}
+              className="w-full bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown p-1 overflow-hidden"
+            >
               {items.map((item) => (
                 <button
                   key={item.label}
                   role="menuitem"
                   onClick={item.action}
                   disabled={item.disabled}
-                  className={cn(
-                    'w-full text-left px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer',
-                    'disabled:cursor-not-allowed',
-                    item.destructive
-                      ? 'text-error hover:bg-error-muted'
-                      : 'text-text hover:bg-accent-muted/20',
-                  )}
+                  className={menuItemClass(item.destructive ? 'danger' : 'default', 'text-xs')}
                 >
                   {item.label}
                 </button>

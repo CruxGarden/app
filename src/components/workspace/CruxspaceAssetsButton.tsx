@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal } from '@/components/ui';
+import { Modal, buttonClass } from '@/components/ui';
 import Cruxspaces from '@/components/garden/Cruxspaces';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { trackWorkspacePromise } from '@/stores/workspaceSelection';
@@ -13,12 +13,12 @@ export default function CruxspaceAssetsButton() {
   return (
     <>
       <button
-        className="text-xs px-2 py-1 rounded-[var(--radius-sm)] hover:bg-accent-muted text-text-muted cursor-pointer"
+        className={buttonClass('ghost', 'xs', 'text-text-muted hover:text-text')}
         onClick={() => setOpen(true)}
       >
-        Cruxspace assets
+        Garden outputs
       </button>
-      <Modal open={open} title="Cruxspace assets" size="xl" onClose={() => setOpen(false)}>
+      <Modal open={open} title="Garden outputs" size="xl" onClose={() => setOpen(false)}>
         <Cruxspaces
           targetId={id}
           runOperation={(operation) =>

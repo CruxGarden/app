@@ -1,3 +1,5 @@
+import { toArrayBuffer } from '@/lib/bytes';
+import { generateZip } from '@/lib/zip-off-thread';
 import JSZip from 'jszip';
 import { getSqliteClient } from './sqlite/client';
 import { hashContent } from './sqlite/helpers';
@@ -5,7 +7,7 @@ import { clearAllSettings } from './settings';
 
 // ── Constants ────────────────────────────────────────────
 
-const SUPPORTED_MANIFEST_MAJOR = '2';
+const SUPPORTED_MANIFEST_MAJOR = '4';
 
 // ── Types ───────────────────────────────────────────────
 
@@ -22,6 +24,8 @@ export interface GardenExportResult {
 export interface GardenImportOptions {
   data: Blob | ArrayBuffer;
   onProgress?: (status: string) => void;
+  /** Cloud callers recheck the captured account before replacing local data. */
+  beforeCommit?: () => void;
 }
 
 export interface GardenImportResult {
@@ -29,33 +33,19 @@ export interface GardenImportResult {
   artifactCount: number;
 }
 
-// ── Helpers ─────────────────────────────────────────────
-
-async function toArrayBuffer(data: Blob | ArrayBuffer): Promise<ArrayBuffer> {
-  return data instanceof Blob ? data.arrayBuffer() : data;
+function installationClient() {
+  const db = getSqliteClient();
+  if (!db.installation || !db.fileContent)
+    throw new Error('The API installation service is unavailable. Restart Garden and retry.');
+  return { db, installation: db.installation };
 }
 
-// ── Wipe ────────────────────────────────────────────────
-
-const ALL_TABLES = [
-  'task_merges',
-  'working_copies',
-  'store',
-  'cruxes',
-  'artifacts',
-  'dimensions',
-  'authors',
-  'settings',
-];
-
 export async function wipeGarden(onProgress?: (status: string) => void): Promise<void> {
+  const { db, installation } = installationClient();
   await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
-  const db = getSqliteClient();
 
   onProgress?.('Deleting all data...');
-  for (const table of ALL_TABLES) {
-    await db.run(`DELETE FROM ${table}`);
-  }
+  await installation.wipeGarden();
 
   onProgress?.('Removing all files...');
   await db.blobWipeAll();
@@ -81,11 +71,11 @@ export async function wipeGarden(onProgress?: (status: string) => void): Promise
 
 export async function exportGarden(options: GardenExportOptions = {}): Promise<GardenExportResult> {
   const { author = null, onProgress } = options;
-  const db = getSqliteClient();
+  const { db } = installationClient();
 
   if (await db.get("SELECT id FROM task_merges WHERE phase = 'applying'"))
     throw new Error('Recover pending task merges before exporting the garden.');
-  const hasTasks = !!(await db.get('SELECT id FROM working_copies LIMIT 1'));
+  await (await import('./file-content')).finishPendingContentProjections();
   onProgress?.('Exporting database...');
   const sqliteData = await db.export();
 
@@ -97,33 +87,29 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
   );
   const cruxCount = cruxCountRow?.count ?? 0;
 
-  // Get unique fingerprints from all artifacts + author avatars
-  const fingerprintRows = await db.all<{ fingerprint: string }>(
-    `SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL
-     UNION
-     SELECT DISTINCT json_extract(meta, '$.avatarFingerprint') AS fingerprint
-     FROM authors
-     WHERE json_extract(meta, '$.avatarFingerprint') IS NOT NULL`,
-  );
+  // Match the captured database, even if live references change afterward.
+  const fingerprints = await db.inspectImport(sqliteData);
 
   const zip = new JSZip();
 
   // garden.sqlite — metadata only (no content column)
   zip.file('garden.sqlite', sqliteData);
 
-  // Artifact blobs from OPFS, keyed by fingerprint
+  // Complete immutable content inventory, keyed by fingerprint
   let artifactCount = 0;
-  for (let i = 0; i < fingerprintRows.length; i++) {
-    const { fingerprint } = fingerprintRows[i]!;
-    onProgress?.(`Extracting artifact ${i + 1}/${fingerprintRows.length}...`);
+  for (let i = 0; i < fingerprints.length; i++) {
+    const fingerprint = fingerprints[i]!;
+    onProgress?.(`Extracting artifact ${i + 1}/${fingerprints.length}...`);
 
     try {
       const bytes = await db.blobRead(fingerprint);
+      if ((await hashContent(bytes)) !== fingerprint)
+        throw new Error('Content failed its fingerprint integrity check.');
       zip.file(`artifacts/${fingerprint}`, bytes);
       artifactCount++;
     } catch (err) {
       throw new Error(
-        `Garden backup stopped because an Artifact could not be read: ${fingerprint}`,
+        `Garden backup stopped because retained content failed its read or integrity check: ${fingerprint}`,
         { cause: err },
       );
     }
@@ -138,7 +124,8 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
     'manifest.json',
     JSON.stringify(
       {
-        version: hasTasks ? '2.0' : '1.0',
+        version: '4.0',
+        scope: 'installation',
         exportedAt: new Date().toISOString(),
         fingerprint,
         cruxCount,
@@ -151,7 +138,7 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
   );
 
   onProgress?.('Compressing...');
-  const blob = await zip.generateAsync({ type: 'blob' });
+  const blob = await generateZip(zip);
 
   const now = new Date();
   const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -163,199 +150,110 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
 // ── Import ──────────────────────────────────────────────
 
 export async function importGarden(options: GardenImportOptions): Promise<GardenImportResult> {
-  const { data, onProgress } = options;
-  const raw = await toArrayBuffer(data);
-  const db = getSqliteClient();
+  const { data, onProgress, beforeCommit } = options;
+  const { db, installation } = installationClient();
+  beforeCommit?.();
+  // Capture mutable caller buffers before the first asynchronous operation.
+  const raw = await toArrayBuffer(data instanceof Blob ? data : data.slice(0));
 
-  // Try ZIP format first; fall back to legacy raw SQLite
-  let sqliteData: ArrayBuffer;
-  // eslint-disable-next-line no-useless-assignment -- reassigned in catch fallback
-  let zip: JSZip | null = null;
-
+  let zip: JSZip;
   try {
     zip = await JSZip.loadAsync(raw);
-
-    // Validate manifest
-    const manifestFile = zip.file('manifest.json');
-    if (!manifestFile) throw new Error('Invalid .garden file: missing manifest.json');
-
-    const manifest = JSON.parse(await manifestFile.async('text'));
-    const majorVersion = String(manifest.version ?? '').split('.')[0];
-    if (majorVersion !== '1' && majorVersion !== SUPPORTED_MANIFEST_MAJOR) {
+  } catch (cause) {
+    throw new Error('Invalid .garden file: expected a current ZIP archive.', { cause });
+  }
+  const manifestFile = zip.file('manifest.json');
+  if (!manifestFile) throw new Error('Invalid .garden file: missing manifest.json');
+  const manifest = JSON.parse(await manifestFile.async('text'));
+  if (String(manifest.version ?? '').split('.')[0] !== SUPPORTED_MANIFEST_MAJOR)
+    throw new Error(
+      `Unsupported .garden format version "${manifest.version}". This app supports v${SUPPORTED_MANIFEST_MAJOR}.x.`,
+    );
+  if (manifest.scope !== 'installation')
+    throw new Error('Invalid .garden file: expected an installation backup.');
+  const sqliteFile = zip.file('garden.sqlite');
+  if (!sqliteFile) throw new Error('Invalid .garden file: missing garden.sqlite');
+  if (
+    !/^[a-f0-9]{64}$/.test(manifest.fingerprint) ||
+    !Number.isSafeInteger(manifest.artifactCount) ||
+    manifest.artifactCount < 0
+  )
+    throw new Error('Invalid .garden integrity metadata.');
+  onProgress?.('Extracting database...');
+  const sqliteData = await sqliteFile.async('arraybuffer');
+  if ((await hashContent(new Uint8Array(sqliteData))) !== manifest.fingerprint)
+    throw new Error(
+      'Garden file integrity check failed — the database may be corrupted or tampered with.',
+    );
+  const entries: { fingerprint: string; entry: JSZip.JSZipObject }[] = [];
+  zip.folder('artifacts')?.forEach((fingerprint, entry) => {
+    if (!entry.dir) entries.push({ fingerprint, entry });
+  });
+  if (entries.length !== manifest.artifactCount)
+    throw new Error(
+      `Artifact count mismatch: manifest says ${manifest.artifactCount}, but archive contains ${entries.length}. The archive may be incomplete.`,
+    );
+  for (const { fingerprint, entry } of entries) {
+    const bytes = await entry.async('uint8array');
+    if (!/^[a-f0-9]{64}$/.test(fingerprint) || (await hashContent(bytes)) !== fingerprint)
       throw new Error(
-        `Unsupported .garden format version "${manifest.version}". This app supports v${SUPPORTED_MANIFEST_MAJOR}.x.`,
+        'Artifact blob failed integrity check — file contents do not match their fingerprint.',
+      );
+  }
+  // Stage verified immutable objects before traversing manifests. Restrict that
+  // traversal to this archive's inventory so existing cache cannot hide a hole.
+  // A refused intake may retain staged objects; it never wipes current content.
+  for (let i = 0; i < entries.length; i++) {
+    const { fingerprint, entry } = entries[i]!;
+    onProgress?.(`Preparing content ${i + 1}/${entries.length}...`);
+    await db.blobWrite(fingerprint, await entry.async('uint8array'));
+  }
+  onProgress?.('Checking required content...');
+  const available = entries.map((entry) => entry.fingerprint);
+  const fingerprints = await db.inspectImport(sqliteData, available);
+  const missing = fingerprints.filter((fingerprint) => !zip.file(`artifacts/${fingerprint}`));
+  if (missing.length)
+    throw new Error(`Garden archive is missing required content (${missing.length} blob(s)).`);
+  for (const fingerprint of fingerprints) {
+    let bytes: Uint8Array;
+    try {
+      bytes = await db.blobRead(fingerprint);
+    } catch (cause) {
+      throw new Error(`Garden restore is missing required content: ${fingerprint}`, { cause });
+    }
+    if ((await hashContent(bytes)) !== fingerprint)
+      throw new Error(`Garden restore content failed integrity check: ${fingerprint}`);
+  }
+
+  beforeCommit?.();
+  await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
+  onProgress?.('Creating safety backup...');
+  // An empty garden still has a valid database image. An export failure is
+  // never evidence that there is nothing to preserve.
+  const backupSqlite = await db.export();
+  onProgress?.('Importing database...');
+  // Refusal precedes the replacement/rollback block: no database changed yet.
+  beforeCommit?.();
+  try {
+    await db.import(sqliteData);
+    // Another installation's sessions, folders and live reviews are cleared atomically.
+    await installation.sanitizeImportedGarden();
+  } catch (error) {
+    onProgress?.('Import failed — restoring previous data...');
+    try {
+      await db.import(backupSqlite);
+    } catch (recoveryError) {
+      throw new AggregateError(
+        [error, recoveryError],
+        'Garden import failed and its database could not be restored. Existing content files have been retained.',
+        { cause: recoveryError },
       );
     }
-
-    // Extract garden.sqlite
-    const sqliteFile = zip.file('garden.sqlite');
-    if (!sqliteFile) throw new Error('Invalid .garden file: missing garden.sqlite');
-
-    onProgress?.('Extracting database...');
-    sqliteData = await sqliteFile.async('arraybuffer');
-
-    // Verify SQLite fingerprint
-    if (manifest.fingerprint) {
-      onProgress?.('Verifying database integrity...');
-      const actualFingerprint = await hashContent(new Uint8Array(sqliteData));
-      if (actualFingerprint !== manifest.fingerprint) {
-        throw new Error(
-          'Garden file integrity check failed — the database may be corrupted or tampered with.',
-        );
-      }
-    }
-
-    // Verify artifact blob integrity — each file in artifacts/ should match its fingerprint name
-    const artifactsFolder = zip.folder('artifacts');
-    if (artifactsFolder) {
-      const blobEntries: { name: string; entry: JSZip.JSZipObject }[] = [];
-      artifactsFolder.forEach((relativePath, entry) => {
-        if (!entry.dir) blobEntries.push({ name: relativePath, entry });
-      });
-
-      if (blobEntries.length > 0) {
-        onProgress?.(`Validating ${blobEntries.length} artifact blobs...`);
-        const corrupted: string[] = [];
-        for (let i = 0; i < blobEntries.length; i++) {
-          const { name, entry } = blobEntries[i]!;
-          onProgress?.(`Validating blob ${i + 1}/${blobEntries.length}...`);
-          const ab = await entry.async('arraybuffer');
-          const actualHash = await hashContent(new Uint8Array(ab));
-          if (actualHash !== name) {
-            corrupted.push(name);
-          }
-        }
-        if (corrupted.length > 0) {
-          throw new Error(
-            `${corrupted.length} artifact blob(s) failed integrity check — file contents do not match their fingerprint. The archive may be corrupted.`,
-          );
-        }
-      }
-    }
-
-    // Verify expected artifact count matches manifest
-    if (typeof manifest.artifactCount === 'number') {
-      let actualBlobCount = 0;
-      zip.folder('artifacts')?.forEach((_, entry) => {
-        if (!entry.dir) actualBlobCount++;
-      });
-      if (actualBlobCount !== manifest.artifactCount) {
-        throw new Error(
-          `Artifact count mismatch: manifest says ${manifest.artifactCount}, but archive contains ${actualBlobCount}. The archive may be incomplete.`,
-        );
-      }
-    }
-  } catch (err) {
-    // If JSZip fails to parse, this might be a legacy raw SQLite file
-    if (
-      err instanceof Error &&
-      (err.message.includes('not a valid zip') ||
-        err.message.includes('Corrupted zip') ||
-        err.message.includes('end of central directory'))
-    ) {
-      zip = null;
-      sqliteData = raw;
-      onProgress?.('Detected legacy format...');
-    } else {
-      throw err;
-    }
+    throw error;
   }
 
-  // ── Safety backup ─────────────────────────────────────
-  // Snapshot current SQLite + blob fingerprints before destructive import.
-  // If anything fails after db.import(), we can restore the original state.
-  onProgress?.('Creating safety backup...');
-  // eslint-disable-next-line no-useless-assignment -- used in catch rollback block
-  let backupSqlite: ArrayBuffer | null = null;
-  // eslint-disable-next-line no-useless-assignment -- fingerprints used indirectly via backupBlobs loop
-  let backupFingerprints: string[] = [];
-  const backupBlobs = new Map<string, Uint8Array>();
-
-  try {
-    backupSqlite = await db.export();
-    const fpRows = await db.all<{ fingerprint: string }>(
-      `SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL
-       UNION
-       SELECT DISTINCT json_extract(meta, '$.avatarFingerprint') AS fingerprint
-       FROM authors
-       WHERE json_extract(meta, '$.avatarFingerprint') IS NOT NULL`,
-    );
-    backupFingerprints = fpRows.map((r) => r.fingerprint);
-    for (const fp of backupFingerprints) {
-      try {
-        backupBlobs.set(fp, await db.blobRead(fp));
-      } catch {
-        // Blob missing — skip (can't back up what doesn't exist)
-      }
-    }
-  } catch {
-    // Empty garden — nothing to back up, that's fine
-    backupSqlite = null;
-  }
-
-  // ── Destructive import ────────────────────────────────
-  try {
-    onProgress?.('Importing database...');
-    await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
-    await db.import(sqliteData);
-
-    // Wipe existing blobs so orphaned files from the old garden don't linger
-    await db.blobWipeAll();
-
-    // Restore OPFS blobs from the ZIP's artifacts/ directory
-    if (zip) {
-      const artifactsFolder = zip.folder('artifacts');
-      if (artifactsFolder) {
-        const entries: { fingerprint: string; entry: JSZip.JSZipObject }[] = [];
-        artifactsFolder.forEach((relativePath, entry) => {
-          if (!entry.dir) {
-            entries.push({ fingerprint: relativePath, entry });
-          }
-        });
-
-        onProgress?.(`Restoring ${entries.length} artifact blobs...`);
-        for (let i = 0; i < entries.length; i++) {
-          const { fingerprint, entry } = entries[i]!;
-          onProgress?.(`Restoring blob ${i + 1}/${entries.length}...`);
-          const ab = await entry.async('arraybuffer');
-          await db.blobWrite(fingerprint, new Uint8Array(ab));
-        }
-      }
-    }
-  } catch (err) {
-    // ── Rollback: restore original database + blobs ────
-    onProgress?.('Import failed — restoring previous data...');
-    if (backupSqlite) {
-      try {
-        await db.import(backupSqlite);
-        await db.blobWipeAll();
-        for (const [fp, bytes] of backupBlobs) {
-          await db.blobWrite(fp, bytes);
-        }
-      } catch (restoreErr) {
-        console.error('Failed to restore backup after import failure:', restoreErr);
-      }
-    }
-    throw err;
-  }
-
-  // Provider sessions belong to the exporting installation, including Main's.
-  await db.run(`UPDATE cruxes SET meta = json_remove(meta,
-    '$.settings.agentSessionId', '$.settings.agentSessions', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue')
-    WHERE meta IS NOT NULL`);
-
-  // A restored task always gets a fresh directory and provider session.
-  const { portableMeta } = await import('./task-archive');
-  const copies = await db.all<{ id: string; meta: string }>('SELECT id, meta FROM working_copies');
-  for (const copy of copies)
-    await db.run('UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?', [
-      JSON.stringify(portableMeta(copy.meta)),
-      copy.id,
-    ]);
-  await db.run("UPDATE task_merges SET phase = 'cancelled' WHERE phase = 'review'");
-
-  // Desktop: the imported cruxes carry the *exporting* machine's absolute
-  // Project Folder paths. Give them folders that exist here (no-op on web).
+  // Desktop: materialize into fresh folders even on the exporting machine.
+  // Existing folders may hold different work and must remain intact (no-op on web).
   onProgress?.('Setting up project folders...');
   try {
     const { rehomeProjectFolders } = await import('./project-folder');
@@ -372,15 +270,12 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
   const cruxCountRow = await db.get<{ count: number }>(
     "SELECT COUNT(*) as count FROM cruxes WHERE type = 'workspace'",
   );
-  const artifactCountRow = await db.get<{ count: number }>(
-    'SELECT COUNT(DISTINCT fingerprint) as count FROM artifacts WHERE fingerprint IS NOT NULL',
-  );
 
   onProgress?.('Import complete');
 
   return {
     cruxCount: cruxCountRow?.count ?? 0,
-    artifactCount: artifactCountRow?.count ?? 0,
+    artifactCount: fingerprints.length,
   };
 }
 
@@ -391,6 +286,7 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
 export interface ConfirmAndImportOptions {
   data: Blob | ArrayBuffer;
   onProgress?: (status: string) => void;
+  beforeCommit?: () => void;
   /** Called after successful import to reconcile auth state */
   onPostImport?: () => Promise<void>;
   /** Ask the user a yes/no question. Defaults to the app's dialog; tests inject their own. */
@@ -431,7 +327,7 @@ export async function confirmAndImportGarden(options: ConfirmAndImportOptions): 
   // Final confirmation
   if (!(await confirm('This will replace your entire garden. Continue?'))) return false;
 
-  await importGarden({ data, onProgress });
+  await importGarden({ data, onProgress, beforeCommit: options.beforeCommit });
   await onPostImport?.();
 
   onProgress?.('Redirecting...');

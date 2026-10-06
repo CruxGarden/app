@@ -1,4 +1,5 @@
 import client from './client';
+import { captureAuth, type AuthContext } from './session';
 
 /** Mirrors the API's DomainsModule (ADR 0011). */
 export type DomainStatus = 'pending_dns' | 'issuing' | 'active' | 'failed';
@@ -18,8 +19,13 @@ export interface CustomDomain {
   updated: string;
 }
 
-export async function list(cruxId: string): Promise<CustomDomain[]> {
-  const { data } = await client.get<CustomDomain[]>(`/cruxes/${cruxId}/domains`);
+export async function list(
+  cruxId: string,
+  context: AuthContext = captureAuth(),
+): Promise<CustomDomain[]> {
+  const { data } = await client.get<CustomDomain[]>(`/cruxes/${cruxId}/domains`, {
+    authContext: context,
+  });
   return data;
 }
 

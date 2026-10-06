@@ -10,6 +10,7 @@
  * paths are asked of that base instead.
  */
 import { Capability, can } from '@/lib/platform';
+import { slugify } from '@/lib/slug';
 import { getServices } from './index';
 import { hashContent } from './sqlite/helpers';
 
@@ -54,9 +55,10 @@ export interface MediaOrigin {
 }
 const OPENVERSE = 'https://api.openverse.org';
 const COMMONS = 'https://commons.wikimedia.org';
-const bridge = () => (can(Capability.ProjectFolder) ? window.electronAPI?.media ?? null : null);
+const bridge = () => (can(Capability.ProjectFolder) ? (window.electronAPI?.media ?? null) : null);
 const base = () => window.electronAPI?.test?.mediaApiBase ?? null;
-const openverseUrl = (path: string) => (base() ? `${base()}/openverse${path}` : `${OPENVERSE}${path}`);
+const openverseUrl = (path: string) =>
+  base() ? `${base()}/openverse${path}` : `${OPENVERSE}${path}`;
 const commonsUrl = (path: string) => (base() ? `${base()}/commons${path}` : `${COMMONS}${path}`);
 
 async function getJson(url: string): Promise<unknown> {
@@ -73,7 +75,10 @@ const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : n
 export function fromOpenverse(rows: unknown, kind: 'image' | 'audio'): MediaItem[] {
   if (!Array.isArray(rows)) return [];
   return rows
-    .filter((r): r is Record<string, unknown> => !!r && typeof r === 'object' && typeof (r as Record<string, unknown>).url === 'string')
+    .filter(
+      (r): r is Record<string, unknown> =>
+        !!r && typeof r === 'object' && typeof (r as Record<string, unknown>).url === 'string',
+    )
     .map((r) => ({
       provider: 'openverse' as const,
       id: str(r.id),
@@ -84,7 +89,9 @@ export function fromOpenverse(rows: unknown, kind: 'image' | 'audio'): MediaItem
       license: str(r.license).toUpperCase(),
       licenseVersion: str(r.license_version) || null,
       licenseUrl: str(r.license_url) || null,
-      attribution: str(r.attribution) || `"${str(r.title, 'Untitled')}" by ${str(r.creator, 'Unknown')} is licensed under ${str(r.license).toUpperCase()}.`,
+      attribution:
+        str(r.attribution) ||
+        `"${str(r.title, 'Untitled')}" by ${str(r.creator, 'Unknown')} is licensed under ${str(r.license).toUpperCase()}.`,
       sourceUrl: str(r.foreign_landing_url) || str(r.url),
       fileUrl: str(r.url),
       thumbnail: str(r.thumbnail) || null,
@@ -100,10 +107,14 @@ export function fromCommons(pages: unknown): MediaItem[] {
   const strip = (html: string) => html.replace(/<[^>]+>/g, '').trim();
   return Object.values(pages as Record<string, Record<string, unknown>>)
     .map((page): MediaItem | null => {
-      const info = Array.isArray(page.imageinfo) ? (page.imageinfo[0] as Record<string, unknown>) : null;
+      const info = Array.isArray(page.imageinfo)
+        ? (page.imageinfo[0] as Record<string, unknown>)
+        : null;
       if (!info || typeof info.url !== 'string') return null;
       const meta = (info.extmetadata ?? {}) as Record<string, { value?: unknown }>;
-      const title = str(page.title).replace(/^File:/, '').replace(/\.[^.]+$/, '');
+      const title = str(page.title)
+        .replace(/^File:/, '')
+        .replace(/\.[^.]+$/, '');
       const creator = strip(str(meta.Artist?.value, 'Unknown'));
       const license = str(meta.LicenseShortName?.value, str(meta.License?.value, 'See source'));
       return {
@@ -117,7 +128,8 @@ export function fromCommons(pages: unknown): MediaItem[] {
         licenseVersion: null,
         licenseUrl: str(meta.LicenseUrl?.value) || null,
         attribution: `"${title}" by ${creator}, Wikimedia Commons, ${license}.`,
-        sourceUrl: str(info.descriptionurl) || `${COMMONS}/wiki/${encodeURIComponent(str(page.title))}`,
+        sourceUrl:
+          str(info.descriptionurl) || `${COMMONS}/wiki/${encodeURIComponent(str(page.title))}`,
         fileUrl: str(info.url),
         thumbnail: str(info.thumburl) || null,
         filetype: str(info.mime).split('/')[1] || null,
@@ -139,29 +151,66 @@ export async function searchMedia(kind: MediaKind, query: string, page = 1): Pro
     const data = (await getJson(url)) as { query?: { pages?: unknown } };
     return fromCommons(data.query?.pages);
   }
-  const url = openverseUrl(`/v1/${kind === 'image' ? 'images' : 'audio'}/?q=${encodeURIComponent(q)}&page_size=20&page=${page}`);
+  const url = openverseUrl(
+    `/v1/${kind === 'image' ? 'images' : 'audio'}/?q=${encodeURIComponent(q)}&page_size=20&page=${page}`,
+  );
   const data = (await getJson(url)) as { results?: unknown };
   return fromOpenverse(data.results, kind);
 }
 
-const safe = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'media';
-export const defaultFolder = (kind: MediaKind) => (kind === 'image' ? 'images' : kind === 'audio' ? 'audio' : 'media');
+const safe = (s: string) => slugify(s, 'media', 60);
+export const defaultFolder = (kind: MediaKind) =>
+  kind === 'image' ? 'images' : kind === 'audio' ? 'audio' : 'media';
 export const originPath = async (path: string) => `media-origins/${await hashContent(path)}.json`;
 
 /** Bring an item into a Crux: the file at `folder/<name>` and its origin beside it. */
-export async function addMedia(cruxId: string, item: MediaItem, folder: string = defaultFolder(item.kind)): Promise<{ path: string; origin: MediaOrigin }> {
+/**
+ * Bytes of a result for a preview before it is used: an object URL the caller
+ * revokes when the preview closes. Same bridge and size cap as `addMedia`.
+ */
+export async function previewMedia(item: MediaItem): Promise<string> {
+  const api = bridge();
+  if (!api) throw new Error('Previewing media needs the desktop app.');
+  const result = await api.fetch(item.fileUrl, {
+    maxBytes: item.kind === 'video' ? 512_000_000 : 64_000_000,
+  });
+  if (!result.ok) throw new Error(`The file could not be fetched (${result.status}).`);
+  const type = result.mimeType || item.filetype || '';
+  return URL.createObjectURL(new Blob([result.bytes as BlobPart], type ? { type } : undefined));
+}
+
+export async function addMedia(
+  cruxId: string,
+  item: MediaItem,
+  folder: string = defaultFolder(item.kind),
+): Promise<{ path: string; origin: MediaOrigin }> {
   const api = bridge();
   if (!api) throw new Error('Using media needs the desktop app.');
   const dir = folder.replace(/^\/+|\/+$/g, '');
-  if (!dir || dir.split('/').some((p) => !p || p === '.' || p === '..' || p.startsWith('.')) || !/^[\w /.-]+$/.test(dir))
+  if (
+    !dir ||
+    dir.split('/').some((p) => !p || p === '.' || p === '..' || p.startsWith('.')) ||
+    !/^[\w /.-]+$/.test(dir)
+  )
     throw new Error('Choose a folder inside the Crux.');
-  const result = await api.fetch(item.fileUrl, { maxBytes: item.kind === 'video' ? 512_000_000 : 64_000_000 });
-  if (!result.ok || !result.bytes.byteLength) throw new Error(`The file could not be fetched (${result.status}).`);
+  const result = await api.fetch(item.fileUrl, {
+    maxBytes: item.kind === 'video' ? 512_000_000 : 64_000_000,
+  });
+  if (!result.ok || !result.bytes.byteLength)
+    throw new Error(`The file could not be fetched (${result.status}).`);
   const mime = result.mimeType || `${item.kind}/${item.filetype ?? 'octet-stream'}`;
-  const ext = (item.filetype || mime.split('/')[1] || 'bin').replace(/^jpeg$/, 'jpg').replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const ext = (item.filetype || mime.split('/')[1] || 'bin')
+    .replace(/^jpeg$/, 'jpg')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase();
   const path = `${dir}/${safe(item.title)}-${safe(item.id).slice(0, 12)}.${ext}`;
   const { artifact } = getServices();
-  await artifact.upload({ resourceId: cruxId, blob: new Blob([result.bytes as BlobPart], { type: mime }), mimeType: mime, meta: { path } });
+  await artifact.upload({
+    resourceId: cruxId,
+    blob: new Blob([result.bytes as BlobPart], { type: mime }),
+    mimeType: mime,
+    meta: { path },
+  });
   const origin: MediaOrigin = {
     version: 1,
     provider: item.provider,
@@ -179,6 +228,11 @@ export async function addMedia(cruxId: string, item: MediaItem, folder: string =
     path,
     fetched: new Date().toISOString(),
   };
-  await artifact.create({ resourceId: cruxId, content: JSON.stringify(origin, null, 2), mimeType: 'application/json', meta: { path: await originPath(path) } });
+  await artifact.create({
+    resourceId: cruxId,
+    content: JSON.stringify(origin, null, 2),
+    mimeType: 'application/json',
+    meta: { path: await originPath(path) },
+  });
   return { path, origin };
 }

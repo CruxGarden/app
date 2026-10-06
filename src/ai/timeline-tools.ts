@@ -1,3 +1,4 @@
+import { NO_INPUT, onlyKeys } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 const DATE = {
   type: 'object',
@@ -53,7 +54,7 @@ export const TIMELINE_TOOLS: AppToolDefinition[] = [
     name: 'inspect_timeline',
     description:
       'Read the open timeline: its name, title headline, groups, the number of events and eras, and the events (unique_id, headline, start, end, group, media URL; first 200). Read data/project.json for the whole JSON.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {
@@ -126,21 +127,20 @@ export const TIMELINE_TOOLS: AppToolDefinition[] = [
 ];
 export function timelineCommand(name: string, input: Record<string, unknown>) {
   const keys = Object.keys(input);
-  const only = (allowed: string[]) => keys.every((k) => allowed.includes(k));
   if (name === 'inspect_timeline' && !keys.length) return { op: 'inspect' };
   if (name === 'set_timeline_name') {
-    if (!only(['name']) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 200)
+    if (!onlyKeys(input, ['name']) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 200)
       throw new Error('Name the timeline (up to 200 characters).');
     return { op: 'set-name', name: input.name.trim() };
   }
   if (name === 'set_timeline') {
-    if (!only(['timeline']) || !input.timeline || typeof input.timeline !== 'object' || Array.isArray(input.timeline))
+    if (!onlyKeys(input, ['timeline']) || !input.timeline || typeof input.timeline !== 'object' || Array.isArray(input.timeline))
       throw new Error('Give the timeline as TimelineJS JSON with an events list.');
     if (JSON.stringify(input.timeline).length > 3_500_000) throw new Error('The timeline is too large (3.5 MB).');
     return { op: 'set-timeline', timeline: input.timeline };
   }
   if (name === 'upsert_events') {
-    if (!only(['events']) || !Array.isArray(input.events) || !input.events.length || input.events.length > 500)
+    if (!onlyKeys(input, ['events']) || !Array.isArray(input.events) || !input.events.length || input.events.length > 500)
       throw new Error('Give 1 to 500 events.');
     if (input.events.some((e) => !e || typeof e !== 'object' || Array.isArray(e)))
       throw new Error('Each event is an object with start_date and text.');
@@ -148,7 +148,7 @@ export function timelineCommand(name: string, input: Record<string, unknown>) {
   }
   if (name === 'remove_events') {
     if (
-      !only(['ids']) ||
+      !onlyKeys(input, ['ids']) ||
       !Array.isArray(input.ids) ||
       !input.ids.length ||
       input.ids.length > 500 ||

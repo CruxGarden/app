@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { togglePanel, panelPressed, expectPanelBarReady, openPanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -43,9 +45,14 @@ async function deleteFromCard(page: Page, title: string) {
   await card.hover();
   await card.getByRole('button', { name: 'Crux actions' }).click();
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Delete Crux' })).toBeVisible();
-  await expect(page.getByText(/moves to Recently deleted/)).toBeVisible();
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  // Nothing to decide for an unpublished Crux: it goes at once, and a note offers Undo.
+  // The newest note: a second delete of a same-titled Crux stacks its own.
+  const note = page
+    .getByTestId('toast')
+    .filter({ hasText: `Moved ${title} to Recently deleted` })
+    .last();
+  await expect(note).toBeVisible();
+  await expect(note.getByRole('button', { name: 'Undo', exact: true })).toBeVisible();
 }
 
 test.describe('trash: recently deleted cruxes', () => {
@@ -56,7 +63,7 @@ test.describe('trash: recently deleted cruxes', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await newBlankCrux(page, '<h1>Keep me</h1>');
       await closeWorkspace(page, 'My Crux');
 
@@ -81,12 +88,14 @@ test.describe('trash: recently deleted cruxes', () => {
       await expect(trash).toHaveCount(0, { timeout: 15_000 });
       await expect(page.getByRole('button', { name: 'Open My Crux' })).toHaveCount(2);
       await page.getByRole('button', { name: 'Open My Crux' }).last().click(); // oldest = restored
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
-        timeout: 30_000,
-      });
+      await expectPanelBarReady(page);
+      // Ask the toggle, not the animation: polling the tree's visibility while
+      // the pane is opening reads false, clicks, and shuts it again.
+      const artifacts = page.getByRole('button', { name: 'Toggle artifacts' });
+      await openPanel(page, 'artifacts', 'Toggle artifacts');
+      await expect(artifacts).toHaveAttribute('aria-pressed', 'true');
       const tree = page.getByRole('tree');
-      if (!(await tree.isVisible().catch(() => false)))
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+      await expect(tree).toBeVisible({ timeout: 30_000 });
       await tree.getByText('index.html').click();
       await expect(page.locator('.monaco-editor').first()).toContainText('Keep me', {
         timeout: 30_000,

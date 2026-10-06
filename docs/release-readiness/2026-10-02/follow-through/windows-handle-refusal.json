@@ -1,0 +1,17 @@
+{
+  "run": 37095617962,
+  "annotations": [
+    {
+      "path": "electron\\e2e\\project-recovery.unit.spec.ts",
+      "blob_href": "https://github.com/CruxGarden/app/blob/a371d21123f259933b3c4a6dea30f088996f92fc/electron\\e2e\\project-recovery.unit.spec.ts",
+      "start_line": 89,
+      "start_column": 15,
+      "end_line": 89,
+      "end_column": 15,
+      "annotation_level": "failure",
+      "title": "[unit] \u203a e2e\\project-recovery.unit.spec.ts:72:5 \u203a an external editor invalidates consent",
+      "message": "  1) [unit] \u203a e2e\\project-recovery.unit.spec.ts:72:5 \u203a an external editor invalidates consent, including a write while OS Trash is pending \n    Error: expect(received).rejects.toThrow(expected)\n\n    Expected pattern: /changed/\n    Received message: \"EPERM: operation not permitted, rename 'C:\\\\Users\\\\RUNNER~1\\\\AppData\\\\Local\\\\Temp\\\\crux-maintenance-5pF7Ac\\\\project\\\\.crux-recovery\\\\write\\\\761aa5b0-2150-410d-adea-6601cd44ff1b\\\\move-7WfoHA' -> 'C:\\\\Users\\\\RUNNER~1\\\\AppData\\\\Local\\\\Temp\\\\crux-maintenance-5pF7Ac\\\\trash\\\\move-7WfoHA'\"\n\n          41 |   const apply = () =>\n          42 |     projectFileOperation(folder, target, intent, true, Buffer.from('Replacement'));\n        > 43 |   const move = async (file: string) => fs.renameSync(file, join(trash, basename(file)));\n             |                                           ^\n          44 |   return { root, folder, target, intent, stage, recovery, apply, move, trash };\n          45 | }\n          46 |\n\n          at Object.move (e2e/project-recovery.unit.spec.ts:43:43)\n          at trashItem (e2e/project-recovery.unit.spec.ts:85:17)\n          at ProjectRecovery.trash (src/project-recovery.ts:192:13)\n          at e2e/project-recovery.unit.spec.ts:84:18\n          at node_modules/playwright/lib/worker/workerProcessEntry.js:1644:9\n          at node_modules/playwright/lib/worker/workerProcessEntry.js:1133:11\n          at TimeoutManager.withRunnable (node_modules/playwright/lib/worker/workerProcessEntry.js:403:14)\n          at TestInfoImpl._runWithTimeout (node_modules/playwright/lib/worker/workerProcessEntry.js:1131:7)\n          at node_modules/playwright/lib/worker/workerProcessEntry.js:1642:7\n          at WorkerMain._runTest (node_modules/playwright/lib/worker/workerProcessEntry.js:1615:5)\n          at WorkerMain.runTestGroup (node_modules/playwright/lib/worker/workerProcessEntry.js:1510:9)\n          at process.<anonymous> (node_modules/playwright/lib/common/index.js:1997:25)\n\n      87 |         fs.writeSync(fd, 'New external bytes', 0);\n      88 |       }),\n    > 89 |     ).rejects.toThrow(/changed/);\n         |               ^\n      90 |     expect(moves).toBe(1);\n      91 |     expect(fs.readFileSync(join(f.stage, 'original'), 'utf8')).toBe('New external bytes');\n      92 |     expect(fs.readFileSync(f.target, 'utf8')).toBe('Replacement');\n        at D:\\a\\app\\app\\electron\\e2e\\project-recovery.unit.spec.ts:89:15",
+      "raw_details": ""
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+---
+const enabled = process.env.CRUX_DOCS_APP_LINKS === '1';
+---
+{enabled && <nav data-public-links aria-label="Crux Garden links"><a href="/explore">Explore creations</a><a href="/docs/start/get-started/">Get started</a></nav>}
+<script is:inline>
+  if (window.self !== window.top) document.querySelectorAll('[data-public-links]').forEach(node => node.hidden = true);
+</script>
+<style>[data-public-links] { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .85rem; margin-block: 1rem; } [data-public-links][hidden] { display: none; }</style>

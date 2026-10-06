@@ -44,6 +44,8 @@ const defaultMetadata = (): WorkspaceMetadata => ({
   bookmarksExpanded: true,
   expandedFolders: {},
   welcomeNoteAdded: false,
+  // Embedded notebooks share their width with the Garden's other panels.
+  appearance: { navigationStyle: 'single-pane' },
 });
 const isNotePath = (path: string) =>
   /\.md$/i.test(path) && !path.split('/').some((part) => part.startsWith('.'));
@@ -127,7 +129,11 @@ export function createGardenNotebookStorage(): NotebookStorage {
   async function remove(path: string): Promise<void> {
     garden.mutating(1);
     try {
-      await garden.call({ op: 'delete', path, expected: known.get(path) ?? files.get(path) ?? null });
+      await garden.call({
+        op: 'delete',
+        path,
+        expected: known.get(path) ?? files.get(path) ?? null,
+      });
       files.delete(path);
       known.delete(path);
       contents.delete(path);
@@ -197,10 +203,12 @@ export function createGardenNotebookStorage(): NotebookStorage {
         content: string;
         fingerprint: string;
       };
+      const saved = JSON.parse(result.content) as Partial<WorkspaceMetadata>;
       metadata = {
         value: {
           ...defaultMetadata(),
-          ...(JSON.parse(result.content) as Partial<WorkspaceMetadata>),
+          ...saved,
+          appearance: { navigationStyle: 'single-pane', ...saved.appearance },
         },
         fingerprint: result.fingerprint,
       };
@@ -397,9 +405,14 @@ export function createGardenNotebookStorage(): NotebookStorage {
     },
     async writeWorkspaceMetadata(_workspace, next): Promise<WorkspaceMetadataWriteResult> {
       // The note the app has open is the position it touched last (opening a note updates it).
-      const latest = Object.values(next.notePositions ?? {}).reduce<{ path: string; lastOpenedAt: number } | null>(
+      const latest = Object.values(next.notePositions ?? {}).reduce<{
+        path: string;
+        lastOpenedAt: number;
+      } | null>(
         (best, position) =>
-          position && typeof position.lastOpenedAt === 'number' && (!best || position.lastOpenedAt > best.lastOpenedAt)
+          position &&
+          typeof position.lastOpenedAt === 'number' &&
+          (!best || position.lastOpenedAt > best.lastOpenedAt)
             ? { path: position.path, lastOpenedAt: position.lastOpenedAt }
             : best,
         null,
@@ -410,8 +423,11 @@ export function createGardenNotebookStorage(): NotebookStorage {
       // Note positions (last opened, scroll) change on every open. Written to disk they would
       // give a Crux a checkpoint per visit and every Task a metadata conflict with Main, so they
       // stay in memory until something structural (order, pins, icons, bookmarks) is written.
-      const structural = ({ notePositions: _positions, revision: _revision, ...rest }: WorkspaceMetadata) =>
-        JSON.stringify(rest);
+      const structural = ({
+        notePositions: _positions,
+        revision: _revision,
+        ...rest
+      }: WorkspaceMetadata) => JSON.stringify(rest);
       if (structural(next) === structural(current)) {
         const value = { ...next, revision: current.revision };
         metadata = { value, fingerprint: metadata?.fingerprint ?? null };
@@ -486,7 +502,9 @@ export function createGardenNotebookStorage(): NotebookStorage {
     await write(path, dataUrl);
     return path;
   }
-  garden.notesProvider(async () => (await storage.listNotes("")).map((note) => ({ path: note.path, title: note.title })));
+  garden.notesProvider(async () =>
+    (await storage.listNotes('')).map((note) => ({ path: note.path, title: note.title })),
+  );
   // A note's image path is notebook-relative in Tigrana; a folder imported whole keeps its own
   // .assets beside its notes, so the same path is found deeper when the root has no such file.
   garden.imageResolver((src) => {

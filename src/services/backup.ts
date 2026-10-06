@@ -14,6 +14,22 @@ import { useAppStore } from '@/stores/appStore';
 import { exportCrux } from '@/services/crux-io';
 import * as syncApi from '@/api/sync';
 import type { Crux } from '@/api/types';
+import { assertAuthCurrent, captureAuth, type AuthContext } from '@/api/session';
+import { exportGarden } from './garden-io';
+
+/** Bind the entire local export and upload to the connection that started it. */
+export async function backupGarden(
+  onProgress?: (msg: string) => void,
+  context: AuthContext = captureAuth(),
+): Promise<syncApi.GardenStatus> {
+  assertAuthCurrent(context);
+  const result = await exportGarden({ onProgress });
+  assertAuthCurrent(context);
+  onProgress?.('Uploading to cloud...');
+  const entry = await syncApi.pushGarden(result.blob, context);
+  assertAuthCurrent(context);
+  return entry;
+}
 
 /** What the local crux remembers about its last backup (crux meta `backup`). */
 export interface BackupRecord {
@@ -21,6 +37,15 @@ export interface BackupRecord {
   /** growthCount when the backup was taken — the "behind" arithmetic */
   growthCount: number;
   size: number;
+  /** The file content revision it captured (desktop): later edits are not in it. */
+  contentRevision?: number;
+}
+
+/** The Crux's current file content revision, where the API keeps one. */
+export async function contentRevision(cruxId: string): Promise<number | undefined> {
+  const { getSqliteClient } = await import('./sqlite/client');
+  const head = await getSqliteClient().fileContent?.head(cruxId);
+  return head ? (head as { revision: number }).revision : undefined;
 }
 
 export function backupOf(crux: Crux | null | undefined): BackupRecord | null {
@@ -44,17 +69,21 @@ export function snapshotsBehind(crux: Crux | null | undefined, growthCount: numb
 export async function backupCrux(
   data: StoreApi<CruxState>,
   onProgress?: (msg: string) => void,
+  context: AuthContext = captureAuth(),
 ): Promise<BackupRecord> {
+  assertAuthCurrent(context);
   const s = data.getState();
   const crux = s.crux;
   if (!crux) throw new Error('No crux is open');
   const copy = copyIdentity(crux);
   if (copy) {
     const { openWorkspace } = await import('@/stores/workspaceRegistry');
-    return backupCrux((await openWorkspace(copy.cruxId)).data, onProgress);
+    return backupCrux((await openWorkspace(copy.cruxId)).data, onProgress, context);
   }
   const author = useAppStore.getState().author;
   const messages = s.messages.slice(s.messageSegmentStart);
+  // Captured before exporting: an edit made meanwhile is newer than this backup.
+  const revision = await contentRevision(crux.id);
   onProgress?.('Exporting crux...');
   const result = await exportCrux({
     cruxId: crux.id,
@@ -64,14 +93,22 @@ export async function backupCrux(
     onProgress,
   });
   onProgress?.('Uploading to crux.garden...');
-  const entry = await syncApi.pushCrux(crux.id, result.blob, {
-    slug: crux.slug || crux.id,
-    title: crux.title || 'Untitled',
-  });
+  assertAuthCurrent(context);
+  const entry = await syncApi.pushCrux(
+    crux.id,
+    result.blob,
+    {
+      slug: crux.slug || crux.id,
+      title: crux.title || 'Untitled',
+    },
+    context,
+  );
+  assertAuthCurrent(context);
   const record: BackupRecord = {
     at: entry.updatedAt,
-    growthCount: data.getState().growthCount,
+    growthCount: s.growthCount,
     size: entry.size,
+    ...(revision !== undefined ? { contentRevision: revision } : {}),
   };
   await data.getState().updateCrux({ meta: { backup: record } });
   onProgress?.('Backed up');

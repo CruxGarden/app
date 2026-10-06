@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { loadTemplate } from './index';
+import { toolManifest } from '@/services/crux-tools/registry';
+const mode = process.env.CRUX_BUNDLE_TOOLS || 'bundled';
 for (const [id, root] of [
   ['gephi-app', 'gephi-crux'],
   ['ketcher-app', 'ketcher-crux'],
@@ -24,13 +26,17 @@ for (const [id, root] of [
   ['openmosh-app', 'openmosh-crux'],
   ['minipaint-app', 'minipaint-crux'],
 ]) {
-  it(`${id} preserves CSS bytes and relative font/icon URLs in portable Cruxes`, async () => {
-    const t = (await loadTemplate(id!))!;
-    const styles = t.files.filter((f) => f.path.endsWith('.css'));
-    expect(styles.length).toBeGreaterThan(0);
-    for (const f of styles) {
-      expect(f.encoding).not.toBe('asset-url');
-      expect(f.content, f.path).toBe(readFileSync(resolve(root!, f.path), 'utf8'));
-    }
-  }, 30000);
+  it.runIf(mode === 'all' || (mode === 'bundled' && toolManifest(id!)?.bundled))(
+    `${id} preserves CSS bytes and relative font/icon URLs in portable Cruxes`,
+    async () => {
+      const t = (await loadTemplate(id!))!;
+      const styles = t.files.filter((f) => f.path.endsWith('.css'));
+      expect(styles.length).toBeGreaterThan(0);
+      for (const f of styles) {
+        expect(f.encoding).not.toBe('asset-url');
+        expect(f.content, f.path).toBe(readFileSync(resolve(root!, f.path), 'utf8'));
+      }
+    },
+    30000,
+  );
 }

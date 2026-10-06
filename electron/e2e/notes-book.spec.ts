@@ -1,9 +1,11 @@
+import { revealOptionsFor } from './panel-helpers';
+import { togglePanel, panelPressed } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
@@ -67,12 +69,13 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
           'base64',
         ),
       );
-      await page.getByRole('button', { name: 'Toggle metadata', exact: true }).click();
+      await togglePanel(page, 'Toggle details');
       const format = page.getByLabel('Book edition', { exact: true });
+      await revealOptionsFor(format);
       await expect(format).toHaveValue('web');
       await format.selectOption('epub');
       await expect.poll(() => publication().format).toBe('epub');
-      await page.getByRole('button', { name: 'Toggle metadata', exact: true }).click();
+      await togglePanel(page, 'Toggle details');
       await frameOf(page).getByRole('button', { name: 'Public edition…' }).click();
       const box = (path: string) =>
         frameOf(page).locator(`#garden-publication input[data-note="${path}"]`);
@@ -91,6 +94,9 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
       expect(publication().format).toBe('epub');
       expect(publication().pages).toEqual(['Start.md', 'Second.md']);
       const alert = frameOf(page).locator('#garden-project [role=alert]');
+      await revealOptionsFor(
+        frameOf(page).getByRole('button', { includeHidden: true, name: 'Save book (EPUB)' }),
+      );
       await frameOf(page).getByRole('button', { name: 'Save book (EPUB)' }).click();
       await expect(status(page)).toHaveText('Building the book…');
       // The first build installs the edition's renderer into the folder (minutes); the
@@ -115,8 +121,8 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
     });
 
     await test.step('the scripted collaborator builds the book with save_notebook_book', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Make the book [notes:book]');
       await box.press('Enter');
@@ -127,12 +133,12 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
       ).toBeVisible({ timeout: 6 * 60_000 });
       await expect.poll(() => outputs(folder).length).toBe(2);
       expect(outputs(folder).every((o) => o.mimeType === 'application/epub+zip')).toBe(true);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'notes-book-agent.png') });
     });
 
     await test.step('Share publishes the site with the book beside it', async () => {
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
       const share = page.getByTestId('pane-body-publish');
       await share.getByRole('button', { name: 'Share selected content', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
@@ -156,7 +162,7 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
       expect(index).toContain('Download the book (EPUB)');
       expect(index).not.toContain('PRIVATE_NOTE_BODY');
       await page.screenshot({ path: join(evidence, 'notes-book-published.png') });
-      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await togglePanel(page, 'Toggle share');
     });
   } finally {
     await first.app.close();
@@ -167,12 +173,12 @@ test('Notes book: Settings → Save book (EPUB) → collaborator → Share → r
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1050 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the choice and both books are still there', async () => {
       await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
-      await page.getByRole('button', { name: 'Toggle metadata', exact: true }).click();
+      await togglePanel(page, 'Toggle details');
       await expect(page.getByLabel('Book edition', { exact: true })).toHaveValue('epub');
-      await page.getByRole('button', { name: 'Toggle metadata', exact: true }).click();
+      await togglePanel(page, 'Toggle details');
       expect(outputs(folder).length).toBe(2);
       await exportNativeCrux(page, archive, second.app);
     });

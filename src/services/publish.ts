@@ -1,12 +1,17 @@
-import {
-  isEmbeddedApp,
-  isMoqira,
-  isLocalCreationTool,
-  nativeAppType,
-  samplerType,
-} from './embedded-app';
-import { portableMeta } from './task-archive';
+import { isEmbeddedApp, isMoqira } from './embedded-app';
+import { publicationPlan, publishableArtifacts } from './publication-plan';
+export { isInternalArtifactPath, publishableArtifacts } from './publication-plan';
+import { portableMeta } from './portable-metadata';
+import { downloadPublicationBlob } from './publication-files';
+import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
+import { manifestFor } from './crux-tools/registry';
+import { parseManifest } from './crux-tools/manifest';
 import { assertCopyWritable } from './working-copies';
+import {
+  sharedConversationFingerprint,
+  conversationShared,
+  sharedConversation,
+} from './shared-conversation';
 /**
  * Publish module — the whole publish/unpublish pipeline behind one interface.
  *
@@ -20,9 +25,9 @@ import { assertCopyWritable } from './working-copies';
  */
 
 import type { Crux, Artifact, ChatMessage } from '@/api/types';
+import { captureAuth, assertAuthCurrent, type AuthContext } from '@/api/session';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { PUBLIC_COVER_PATH } from '@/lib/public-cover';
-import { isGeneratedGuidePath } from './agents-md';
 
 export interface PublishFile {
   blob: Blob;
@@ -41,9 +46,8 @@ export interface PublishDeps {
      *
      * MUST resolve false only for a genuine "not found", and MUST throw on any
      * other failure (network, 5xx, auth). Publishing takes the create path when
-     * this is false, and the API's create hard-deletes any record with the same
-     * author+slug — so answering false on a transient error destroys the live
-     * published crux.
+     * this is false. Create refuses an occupied identity or author slug, so
+     * availability failures must not be misreported as missing content.
      */
     exists(cruxId: string): Promise<boolean>;
     create(input: Record<string, unknown>): Promise<Crux>;
@@ -54,10 +58,12 @@ export interface PublishDeps {
   };
   local: {
     updateCruxMeta(cruxId: string, meta: Record<string, unknown>): Promise<unknown>;
-    downloadBlob(artifactId: string): Promise<Blob>;
+    downloadBlob(artifact: Artifact): Promise<Blob>;
   };
   site: {
     isSiteCrux(artifacts: Artifact[]): boolean;
+    /** Install prerequisites and capture source files before building. */
+    preparePublishSources?(cruxId: string): Promise<Artifact[]>;
     buildForPublish(cruxId: string): Promise<PublishFile[]>;
   };
 }
@@ -68,19 +74,19 @@ function isNotFound(err: unknown): boolean {
   return status === 404;
 }
 
-async function defaultDeps(): Promise<PublishDeps> {
+async function defaultDeps(context: AuthContext): Promise<PublishDeps> {
   const [{ cruxes }, { getServices }, site] = await Promise.all([
     import('@/api'),
     import('./index'),
     import('./site'),
   ]);
-  const { artifact, crux: cruxService } = getServices();
+  const { crux: cruxService } = getServices();
   return {
     api: {
       exists: async (id) => {
         let found: Crux | undefined;
         try {
-          found = await cruxes.get(id);
+          found = await cruxes.get(id, context);
         } catch (err) {
           if (isNotFound(err)) return false;
           throw err; // transient/auth failure — never assume "not published"
@@ -92,18 +98,21 @@ async function defaultDeps(): Promise<PublishDeps> {
         }
         return true;
       },
-      create: (input) => cruxes.create(input as unknown as Parameters<typeof cruxes.create>[0]),
-      update: (id, input) => cruxes.update(id, input as Parameters<typeof cruxes.update>[1]),
-      publish: (id, files) => cruxes.publish(id, files),
-      unpublish: (id) => cruxes.unpublish(id),
-      syncTags: (id, tags) => cruxes.syncTags(id, tags),
+      create: (input) =>
+        cruxes.create(input as unknown as Parameters<typeof cruxes.create>[0], context),
+      update: (id, input) =>
+        cruxes.update(id, input as Parameters<typeof cruxes.update>[1], context),
+      publish: (id, files) => cruxes.publish(id, files, context),
+      unpublish: (id) => cruxes.unpublish(id, context),
+      syncTags: (id, tags) => cruxes.syncTags(id, tags, context),
     },
     local: {
       updateCruxMeta: (id, meta) => cruxService.update(id, { meta }),
-      downloadBlob: (id) => artifact.downloadBlob(id),
+      downloadBlob: downloadPublicationBlob,
     },
     site: {
       isSiteCrux: site.isSiteCrux,
+      preparePublishSources: site.preparePublishSources,
       buildForPublish: site.buildForPublish,
     },
   };
@@ -122,40 +131,38 @@ async function defaultDeps(): Promise<PublishDeps> {
  * - `AGENTS.md` / `CLAUDE.md` — the generated agent guide (B1): documentation
  *   for whoever works in the folder, not part of the site.
  */
-export function isInternalArtifactPath(path: string): boolean {
-  const p = path.toLowerCase();
-  return (
-    isWorkspaceThumbnail(p) ||
-    p === '.keep' ||
-    p.endsWith('/.keep') ||
-    isGeneratedGuidePath(path) ||
-    p.startsWith('cruxspace-assets/') ||
-    (p.startsWith('exports/') && p.endsWith('.asset.json'))
-  );
-}
-
-/** The artifacts a publish actually ships (working files, minus internals). */
-export function publishableArtifacts(artifacts: Artifact[]): Artifact[] {
-  return artifacts.filter((a) => a.type === 'artifact' && !isInternalArtifactPath(pathOf(a)));
-}
-
 /** Build a fingerprint snapshot from artifacts: { path: fingerprint } */
-export function buildFingerprintMap(artifacts: Artifact[]): Record<string, string> {
+export function buildFingerprintMap(artifacts: Artifact[], crux?: Crux): Record<string, string> {
   const map: Record<string, string> = {};
-  for (const a of publishableArtifacts(artifacts)) {
-    if (!a.fingerprint) continue;
-    map[pathOf(a)] = a.fingerprint;
+  const plan = crux ? publicationPlan(crux, artifacts) : null;
+  const files =
+    plan?.kind === 'static'
+      ? plan.files
+      : publishableArtifacts(artifacts).map((file) => ({ file, path: pathOf(file) }));
+  for (const { file, path } of files) {
+    if (!file.fingerprint) continue;
+    map[path] = file.fingerprint;
   }
   return map;
+}
+
+/** What the conversation part of a publication looks like (embedded apps never share one). */
+export function publishedConversationFingerprint(
+  crux: Crux,
+  messages: ChatMessage[] | undefined,
+): string {
+  return isEmbeddedApp(crux) ? 'private' : sharedConversationFingerprint(crux, messages);
 }
 
 /** Check if current artifacts differ from the published fingerprint snapshot */
 export function hasContentChanged(
   artifacts: Artifact[],
   publishedFingerprints: Record<string, string> | undefined,
+  crux?: Crux,
 ): boolean {
   if (!publishedFingerprints) return true; // never published
-  const current = buildFingerprintMap(artifacts);
+  if (crux && publicationPlan(crux, artifacts).kind === 'unavailable') return true;
+  const current = buildFingerprintMap(artifacts, crux);
   const currentKeys = Object.keys(current).sort();
   const publishedKeys = Object.keys(publishedFingerprints).sort();
   if (currentKeys.length !== publishedKeys.length) return true;
@@ -219,7 +226,48 @@ export function describePublishFailure(err: unknown): PublishFailure {
 
 // ── The pipeline ────────────────────────────────────────────────────────────
 
+// ── Publish warnings (soft limits) ──────────────────────────────────────────
+
+export interface PublishWarning {
+  kind: 'storage_soft_limit' | 'bandwidth_soft_limit' | string;
+  message: string;
+  usedBytes?: number;
+  limitBytes?: number;
+}
+
+/** The soft-limit warnings an upsert or publish response carries (deduplicated by kind). */
+export function publishWarningsOf(...responses: unknown[]): PublishWarning[] {
+  const found = new Map<string, PublishWarning>();
+  for (const response of responses) {
+    const list = (response as { warnings?: unknown } | null | undefined)?.warnings;
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const warning = item as Partial<PublishWarning> | null;
+      if (!warning || typeof warning.kind !== 'string' || typeof warning.message !== 'string')
+        continue;
+      found.set(warning.kind, {
+        kind: warning.kind,
+        message: warning.message,
+        ...(typeof warning.usedBytes === 'number' ? { usedBytes: warning.usedBytes } : {}),
+        ...(typeof warning.limitBytes === 'number' ? { limitBytes: warning.limitBytes } : {}),
+      });
+    }
+  }
+  return [...found.values()];
+}
+
 export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<string, unknown> {
+  const publicMeta = portableMeta(crux.meta);
+  // Garden Collaboration is private workspace state, never a public making-of transcript.
+  delete publicMeta.gardenCollaboration;
+  delete publicMeta.gardenSchedules;
+  // The conversation is private unless the creator chose to share it (CR06):
+  // no transcript leaves this machine, and the per-message choices stay here.
+  const stored = Array.isArray(publicMeta.messages) ? (publicMeta.messages as ChatMessage[]) : [];
+  delete publicMeta.messages;
+  delete publicMeta.conversationExclusions;
+  delete publicMeta.publishedConversationFingerprint;
+  const shared = isEmbeddedApp(crux) ? null : sharedConversation(crux, messages ?? stored);
   return {
     title: crux.title,
     slug: crux.slug,
@@ -229,9 +277,34 @@ export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<s
     kind: crux.kind,
     discoverable: crux.discoverable,
     meta: isEmbeddedApp(crux)
-      ? { messages: [] }
-      : { ...portableMeta(crux.meta), ...(messages ? { messages } : {}) },
+      ? { conversationPublished: false }
+      : {
+          ...publicMeta,
+          conversationPublished: conversationShared(crux),
+          ...(shared ? { messages: shared } : {}),
+        },
   };
+}
+
+/** The public-note selection is identical for preview and publication. */
+export async function validateNotebookPublication(
+  artifacts: Artifact[],
+  read: (artifact: Artifact) => Promise<Blob>,
+): Promise<void> {
+  const manifest = artifacts.find((a) => pathOf(a) === 'notebook/publish.json');
+  if (!manifest) throw new Error('The notebook publication settings are missing.');
+  const selected = JSON.parse(await (await read(manifest)).text());
+  if (!Array.isArray(selected.pages) || !selected.pages.length)
+    throw new Error('Select at least one note using “Choose notes to share”, then try again.');
+  if (
+    selected.pages.some(
+      (path: unknown) =>
+        typeof path !== 'string' ||
+        !/\.md$/i.test(path) ||
+        !artifacts.some((a) => pathOf(a) === 'notebook/' + path),
+    )
+  )
+    throw new Error('A selected public note is missing. Update the notebook publication settings.');
 }
 
 /**
@@ -245,41 +318,44 @@ export async function publishPipeline(
     onProgress?: (phase: PublishPhase) => void;
     deps?: PublishDeps;
     messages?: ChatMessage[];
+    /** Captured before workspace preparation; direct callers capture at pipeline entry. */
+    authContext?: AuthContext;
+    /** Soft-limit warnings the API returned for this publish (empty when none). */
+    onWarnings?: (warnings: PublishWarning[]) => void;
   },
 ): Promise<Crux> {
-  if (isLocalCreationTool(crux))
-    throw new Error('Website sharing is not available for this local creation tool yet.');
+  const context = opts?.authContext ?? captureAuth();
+  assertAuthCurrent(context);
+  artifacts = structuredClone(artifacts);
+  let plan = publicationPlan(crux, artifacts, opts?.deps?.site.isSiteCrux(artifacts));
+  if (plan.kind === 'unavailable') throw new Error(plan.explanation);
+  if (plan.kind === 'garden-package')
+    throw new Error(
+      'Share this workspace with Export Garden or Export this Crux. Its editable archive is not a public website.',
+    );
   if (crux.type === 'working-copy' || crux.meta?.workingCopy)
     throw new Error('Publish from Main after merging this task.');
   if (!opts?.deps) await assertCopyWritable(crux.id);
-  const deps = opts?.deps ?? (await defaultDeps());
+  const deps = opts?.deps ?? (await defaultDeps(context));
   const progress = opts?.onProgress ?? (() => {});
-  if (crux.kind === 'notes') {
-    const manifest = artifacts.find((a) => pathOf(a) === 'notebook/publish.json');
-    if (!manifest) throw new Error('The notebook publication settings are missing.');
-    const selected = JSON.parse(await (await deps.local.downloadBlob(manifest.id)).text());
-    if (!Array.isArray(selected.pages) || !selected.pages.length)
-      throw new Error(
-        'Select at least one note with “Include in public edition” before publishing.',
-      );
-    if (
-      selected.pages.some(
-        (path: unknown) =>
-          typeof path !== 'string' ||
-          !/\.md$/i.test(path) ||
-          !artifacts.some((a) => pathOf(a) === 'notebook/' + path),
-      )
-    )
-      throw new Error(
-        'A selected public note is missing. Update the notebook publication settings.',
-      );
+  if (plan.kind === 'build' && deps.site.preparePublishSources) {
+    progress('build');
+    // First installation may create a lockfile. Include it in the pre-build
+    // baseline, but never absorb edits made during the build/upload afterward.
+    artifacts = structuredClone(await deps.site.preparePublishSources(crux.id));
+    assertAuthCurrent(context);
+    plan = publicationPlan(crux, artifacts, deps.site.isSiteCrux(artifacts));
+    if (plan.kind !== 'build')
+      throw new Error('The project changed while preparing to publish. Review it and try again.');
   }
+  if (crux.kind === 'notes' && plan.kind === 'build')
+    await validateNotebookPublication(artifacts, deps.local.downloadBlob);
 
-  if (isMoqira(crux)) {
+  if (plan.kind === 'build' && isMoqira(crux)) {
     const readJson = async (path: string) => {
       const artifact = artifacts.find((a) => pathOf(a) === path);
       if (!artifact) throw new Error('Moqira publication files are missing.');
-      return JSON.parse(await (await deps.local.downloadBlob(artifact.id)).text());
+      return JSON.parse(await (await deps.local.downloadBlob(artifact)).text());
     };
     const selected = await readJson('mockups/publish.json');
     const project = await readJson('mockups/project.json');
@@ -295,44 +371,39 @@ export async function publishPipeline(
       throw new Error('A selected public wireframe is missing. Update the publication settings.');
   }
 
-  // 1. Upsert crux to API (create if not exists, update if it does).
-  // A transient failure here aborts the publish: `exists` throwing is the
-  // guard that stops us taking the destructive create path (see PublishDeps).
-  progress('sync');
-  const cruxExistsOnApi = await deps.api.exists(crux.id);
-  if (cruxExistsOnApi) {
-    await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
-  } else {
-    // The API handles slug conflicts by hard-deleting stale records
-    await deps.api.create({
-      id: crux.id,
-      ...cruxUpsertFields(crux, opts?.messages),
-      data: isEmbeddedApp(crux) ? '' : crux.data || '',
-    });
+  // A creator-owned manifest takes precedence over the build's catalogue.
+  // Resolve before any remote mutation so invalid authoring fails locally.
+  let publishedToolManifest = crux.kind === 'tool' ? manifestFor(crux) : null;
+  if (crux.kind === 'tool') {
+    const definition = artifacts.find((a) => pathOf(a) === 'crux-tool.json');
+    if (definition)
+      publishedToolManifest = parseManifest(
+        JSON.parse(await (await deps.local.downloadBlob(definition)).text()),
+      );
+    if (!publishedToolManifest)
+      throw new Error('Add a valid crux-tool.json before sharing a Tool template.');
+    crux = {
+      ...crux,
+      meta: {
+        ...crux.meta,
+        template: publishedToolManifest.id,
+        toolManifest: publishedToolManifest,
+      },
+    };
   }
 
-  // 2. Collect the files to publish.
+  // 1. Collect immutable publication bytes before any remote request.
+  // Watcher ingestion may advance the selected manifest during network I/O;
+  // reading afterward would reject even an unrelated internal-file update.
   // Site Cruxes (ADR 0005): build in-app and ship dist/ — sources stay in
   // history, visitors get the built output. A failed build fails the
   // publish; nothing half-deploys.
   let filesToPublish: PublishFile[];
   // Moqira and Notes publish their own public edition builds (ADR 0029, 0028) without an Astro config.
   // form-js Cruxes publish the viewer edition their own script renders (formjs-crux/scripts/edition.mjs).
-  const builds =
-    deps.site.isSiteCrux(artifacts) ||
-    isMoqira(crux) ||
-    crux.kind === 'notes' ||
-    nativeAppType(crux) === 'formjs' ||
-    nativeAppType(crux) === 'maps';
-  // A sketch or shader Crux publishes its page as it is: no build, the files are the site.
-  const publishesAsIs =
-    ['p5', 'glsl', 'abc', 'jscad', 'timeline'].includes(nativeAppType(crux) ?? '') ||
-    samplerType(crux) === 'excalidraw';
-  if (isEmbeddedApp(crux) && !builds && !publishesAsIs)
-    throw new Error(
-      'This notebook is missing its site configuration. Restore it before publishing.',
-    );
-  if (builds) {
+  // Tool templates distribute their complete editor/runtime package, even when
+  // projects made with the tool have a separate public-edition build.
+  if (plan.kind === 'build') {
     progress('build');
     filesToPublish = await deps.site.buildForPublish(crux.id);
   } else {
@@ -341,10 +412,10 @@ export async function publishPipeline(
     // Every publishable artifact must load. Skipping a failed blob would ship
     // an incomplete site while `publishedFingerprints` recorded it as shipped,
     // so the missing file would never be retried.
-    for (const art of publishableArtifacts(artifacts)) {
+    for (const { file: art, path } of plan.files) {
       let blob: Blob;
       try {
-        blob = await deps.local.downloadBlob(art.id);
+        blob = await deps.local.downloadBlob(art);
       } catch (err) {
         throw new Error(
           `Could not read "${pathOf(art) || art.id}" from the blob store — nothing was published.`,
@@ -353,7 +424,7 @@ export async function publishPipeline(
       }
       filesToPublish.push({
         blob,
-        path: pathOf(art) || 'file',
+        path,
         type: art.type,
         kind: art.kind || undefined,
         mimeType: art.mimeType,
@@ -361,7 +432,7 @@ export async function publishPipeline(
     }
   }
 
-  // 2b. The cover: ship the workspace thumbnail as _crux/cover.jpg so Explore
+  // 1b. The cover: ship the workspace thumbnail as _crux/cover.jpg so Explore
   // and public pages can show it. Best-effort — a missing or unreadable
   // preview never blocks a publish. A file the user (or the site build) put at
   // that path wins; we never overwrite their bytes with ours.
@@ -374,7 +445,7 @@ export async function publishPipeline(
   }
   if (thumb && !coverTaken) {
     try {
-      const blob = await deps.local.downloadBlob(thumb.id);
+      const blob = await deps.local.downloadBlob(thumb);
       if (blob.size > 0)
         filesToPublish.push({
           blob,
@@ -387,22 +458,82 @@ export async function publishPipeline(
     }
   }
 
+  // Tools are one portable version entity; their internal files are not API Artifacts.
+  if (crux.kind === 'tool') {
+    const manifest = publishedToolManifest!;
+    const existing = filesToPublish.find((file) => file.path === TOOL_PACKAGE_PATH);
+    let blob: Blob;
+    if (existing) {
+      if (filesToPublish.length !== 1)
+        throw new Error('An installed tool package cannot be mixed with loose files.');
+      await openToolPackage(existing.blob, manifest.id);
+      blob = existing.blob;
+    } else {
+      blob = await packTool(manifest, filesToPublish);
+    }
+    filesToPublish = [
+      {
+        path: TOOL_PACKAGE_PATH,
+        blob,
+        mimeType: 'application/zip',
+        type: 'artifact',
+        kind: 'tool-package',
+      },
+    ];
+  }
+
+  // 2. Upsert crux to API (create if not exists, update if it does).
+  // A transient failure here aborts the publish: `exists` throwing is the
+  // guard that stops us taking the destructive create path (see PublishDeps).
+  progress('sync');
+  assertAuthCurrent(context);
+  const cruxExistsOnApi = await deps.api.exists(crux.id);
+  assertAuthCurrent(context);
+  let upserted: unknown;
+  if (cruxExistsOnApi) {
+    upserted = await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
+  } else {
+    // The API handles slug conflicts by hard-deleting stale records
+    upserted = await deps.api.create({
+      id: crux.id,
+      ...cruxUpsertFields(crux, opts?.messages),
+      data: isEmbeddedApp(crux) ? '' : crux.data || '',
+    });
+  }
+
   // 3. Publish — all files in one multipart request
   progress('upload');
-  const updated = await deps.api.publish(crux.id, filesToPublish);
+  assertAuthCurrent(context);
+  const response = await deps.api.publish(crux.id, filesToPublish);
+  assertAuthCurrent(context);
+  opts?.onWarnings?.(publishWarningsOf(upserted, response));
+  const { warnings: _warnings, ...updated } = response as Crux & { warnings?: unknown };
 
   // 4. Merge API publish metadata into the local crux (preserving local-only
   // meta) and snapshot fingerprints for change detection; persist locally.
   progress('finalize');
-  const publishedFingerprints = buildFingerprintMap(artifacts);
-  const mergedMeta = {
+  const publishedFingerprints =
+    plan.kind === 'static'
+      ? Object.fromEntries(
+          plan.files
+            .filter(({ file }) => !!file.fingerprint)
+            .map(({ file, path }) => [path, file.fingerprint]),
+        )
+      : buildFingerprintMap(artifacts);
+  const mergedMeta: Record<string, unknown> = {
     ...(crux.meta as Record<string, unknown>),
     ...(updated.meta as Record<string, unknown>),
     publishedFingerprints,
     messages: crux.meta?.messages,
     settings: crux.meta?.settings,
   };
+  // Fingerprint the conversation as the merged Crux will judge it afterwards.
+  mergedMeta.publishedConversationFingerprint = publishedConversationFingerprint(
+    { ...crux, meta: mergedMeta as Crux['meta'] },
+    opts?.messages ?? (crux.meta?.messages as ChatMessage[] | undefined),
+  );
   await deps.local.updateCruxMeta(crux.id, mergedMeta);
+  assertAuthCurrent(context);
   const mergedCrux: Crux = { ...crux, ...updated, meta: mergedMeta as Crux['meta'] };
 
   // 5. Sync discoverable state and tags (best-effort — publish itself succeeded)
@@ -414,6 +545,7 @@ export async function publishPipeline(
     // best-effort
   }
 
+  assertAuthCurrent(context);
   return mergedCrux;
 }
 
@@ -422,18 +554,27 @@ export async function publishPipeline(
  * publish metadata locally (persisted — not just in-memory), returns the
  * updated crux.
  */
-export async function unpublishPipeline(crux: Crux, opts?: { deps?: PublishDeps }): Promise<Crux> {
+export async function unpublishPipeline(
+  crux: Crux,
+  opts?: { deps?: PublishDeps; authContext?: AuthContext },
+): Promise<Crux> {
+  const context = opts?.authContext ?? captureAuth();
+  assertAuthCurrent(context);
   if (crux.type === 'working-copy' || crux.meta?.workingCopy) throw new Error('Publish from Main.');
   if (!opts?.deps) await assertCopyWritable(crux.id);
-  const deps = opts?.deps ?? (await defaultDeps());
+  const deps = opts?.deps ?? (await defaultDeps(context));
 
+  assertAuthCurrent(context);
   await deps.api.unpublish(crux.id);
+  assertAuthCurrent(context);
 
   const meta = { ...(crux.meta as Record<string, unknown>) };
   delete meta.publishedAt;
   delete meta.publishedVersion;
   delete meta.publishedFingerprints;
+  delete meta.publishedConversationFingerprint;
   await deps.local.updateCruxMeta(crux.id, meta);
+  assertAuthCurrent(context);
 
   return { ...crux, meta: meta as Crux['meta'], visibility: 'private' };
 }

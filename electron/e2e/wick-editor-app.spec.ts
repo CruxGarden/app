@@ -1,8 +1,9 @@
+import { expectPanelBarReady, panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -76,6 +77,13 @@ test('Wick Editor: a drawn rectangle saves the .wick file, agent tools, restart 
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Wick Editor/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      // Creating copies the editor's 2,400 files into the Project Folder (about
+      // two minutes on a laptop). The Tasks pane opens with every app Crux
+      // now; the tool wants the width.
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 300_000 });
+      await expectPanelBarReady(page);
+      if ((await panelPressed(page, 'Toggle tasks')) === 'true')
+        await togglePanel(page, 'Toggle tasks');
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder;
@@ -105,8 +113,8 @@ test('Wick Editor: a drawn rectangle saves the .wick file, agent tools, restart 
     });
 
     await test.step('the scripted collaborator names the project and sets the frame rate', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Name the project and set the frame rate [wick:edit]');
       await box.press('Enter');
@@ -118,7 +126,7 @@ test('Wick Editor: a drawn rectangle saves the .wick file, agent tools, restart 
       await ready(page);
       expect(doc().project).toMatchObject({ name: 'Garden anim', framerate: 24 });
       expect(await projectOf(page)).toMatchObject({ name: 'Garden anim', framerate: 24 });
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'wick-agent.png') });
     });
     expect(errors).toEqual([]);
@@ -132,7 +140,7 @@ test('Wick Editor: a drawn rectangle saves the .wick file, agent tools, restart 
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1800, height: 1100 });
     await test.step('restart: the project reopens from its .wick file with the drawing, name and frame rate', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       await expect
         .poll(() => projectOf(page))

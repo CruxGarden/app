@@ -1,9 +1,14 @@
+import TaskProgress from './TaskProgress';
+import { progressDisplay } from '@/services/task-progress';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { copyIdentity, TASKS_CHANGED } from '@/services/working-copies';
 import { motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import { cn } from '@/lib/cn';
+import { buttonClass, linkClass } from '@/components/ui/button-class';
 import { useCruxStore } from '@/stores/cruxStore';
-import { confirmDialog } from '@/stores/dialogStore';
+import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
 import {
   describeCheck,
@@ -76,7 +81,7 @@ function StepMark({ status }: { status: PlanStep['status'] }) {
       );
     default:
       return (
-        <span className={cn(base, 'text-text-muted/60')} aria-label="pending">
+        <span className={cn(base, 'text-subtle')} aria-label="pending">
           ·
         </span>
       );
@@ -153,13 +158,19 @@ function SubagentRows({ runs, now }: { runs: SubagentRun[]; now: number }) {
           data-status={run.status}
           className={cn(
             'flex items-center gap-1.5',
-            run.status === 'pending' && 'text-text-muted/70',
-            run.status === 'failed' && 'text-error/90',
+            run.status === 'pending' && 'text-subtle',
+            run.status === 'failed' && 'text-error/(--tint-near-solid)',
           )}
           title={run.error ?? run.reply ?? undefined}
         >
           <StepMark status={subagentMark(run.status)} />
-          <span className="truncate flex-1">{run.title}</span>
+          <div className="min-w-0 flex-1">
+            <span className="truncate">{run.title}</span>
+            <TaskProgress
+              progress={progressDisplay(run.status, run.progress)}
+              label={`${run.title} progress`}
+            />
+          </div>
           <span className="shrink-0 font-mono text-2xs text-text-muted">
             {subagentStatusWord(run.status)} · {run.files.length} file
             {run.files.length === 1 ? '' : 's'} ·{' '}
@@ -181,14 +192,26 @@ function MergePanel({
   runs: SubagentRun[];
   busy: boolean;
 }) {
-  const { chooseConflict, mergeNow } = useDelegate();
+  const { chooseConflict, mergeNow, refreshResult } = useDelegate();
+  const crux = useCruxStore((s) => s.crux);
+  const closing = useCruxStore((s) => s.closing);
+  useEffect(() => {
+    if (!refreshResult || closing || busy) return;
+    const refresh = () => {
+      void refreshResult().catch(console.error);
+    };
+    refresh();
+    window.addEventListener(TASKS_CHANGED, refresh);
+    return () => window.removeEventListener(TASKS_CHANGED, refresh);
+  }, [refreshResult, closing, busy, crux, merge.status]);
+  const cruxId = copyIdentity(crux)?.cruxId ?? crux?.id;
   const [merging, setMerging] = useState(false);
   const titleOf = (branch: number) => runs[branch]?.title ?? `Worker ${branch + 1}`;
   const decided = conflictsDecided(merge.conflicts);
   const pending = merge.status === 'pending';
   const selectCls = cn(
     'text-xxs font-mono rounded-[var(--radius-sm)] border border-border bg-transparent px-1 py-0.5',
-    'text-text hover:border-accent/50 cursor-pointer',
+    'text-text hover:border-accent/(--tint-balanced) cursor-pointer',
   );
 
   return (
@@ -199,7 +222,7 @@ function MergePanel({
           <span className="text-text-muted">
             {' '}
             · {merge.applied.length} file{merge.applied.length === 1 ? '' : 's'}
-            {pending ? ' merged so far' : ''}
+            {pending ? (merge.resultCopyId ? ' prepared' : ' merged so far') : ''}
           </span>
         )}
       </div>
@@ -266,16 +289,22 @@ function MergePanel({
               }
             }}
             disabled={!decided || busy || merging}
-            className={cn(
-              'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)] border transition-colors cursor-pointer',
-              'text-accent border-accent/40 hover:border-accent',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
+            className={buttonClass('primary', 'xs')}
             title={decided ? undefined : 'Choose a version for every file first'}
           >
             {merging ? 'Merging…' : 'Merge'}
           </button>
         </div>
+      )}
+      {merge.error && (
+        <p role="alert" className="text-xs text-error">
+          {merge.error}
+        </p>
+      )}
+      {pending && merge.resultCopyId && merge.error && cruxId && (
+        <Link className={linkClass('text-xs')} to={`/c/${cruxId}?task=${merge.resultCopyId}`}>
+          Open result Task
+        </Link>
       )}
     </div>
   );
@@ -293,7 +322,7 @@ function CheckShot({ fingerprint, ok }: { fingerprint: string; ok: boolean }) {
       data-ok={ok ? 'true' : 'false'}
       className={cn(
         'h-14 w-auto rounded-[var(--radius-sm)] border object-cover object-top',
-        ok ? 'border-accent/40' : 'border-error/40',
+        ok ? 'border-accent/(--tint-muted)' : 'border-error/(--tint-muted)',
       )}
     />
   );
@@ -306,7 +335,12 @@ function CheckShot({ fingerprint, ok }: { fingerprint: string; ok: boolean }) {
  */
 export default function TurnJobCard() {
   const toast = useMotionRole('toast');
-  const { checkNow, dismissJob, removeQueued, runNextQueued, stopTurn } = useTurns();
+  const { canRetry, checkNow, dismissJob, removeQueued, retryTurn, runNextQueued, stopTurn } =
+    useTurns();
+  // "Try again" (EF05): the same request, once more, only while nothing else runs.
+  const retryable = useCruxStore((s) => s.turnJob?.status === 'failed' && canRetry());
+  const retryBlocked = useCruxStore((s) => s.closing || s.isStreaming || s.turnSettling);
+  const [retrying, setRetrying] = useState(false);
   const job = useCruxStore((s) => s.turnJob);
   const queue = useCruxStore((s) => s.turnQueue);
   const growths = useCruxStore((s) => s.growths);
@@ -329,7 +363,8 @@ export default function TurnJobCard() {
   const reveal =
     !!job &&
     ((job.status !== 'done' &&
-      (job.plan.explicit ||
+      (job.progress ||
+        job.plan.explicit ||
         job.status === 'interrupted' ||
         job.status === 'failed' ||
         job.status === 'checking' ||
@@ -358,6 +393,11 @@ export default function TurnJobCard() {
     try {
       await revertToSnapshot(lastSnapshotId);
       await dismissJob();
+    } catch (error) {
+      await alertDialog(
+        error instanceof Error ? error.message : 'Could not restore this snapshot. Try again.',
+        'Restore failed',
+      );
     } finally {
       setRestoring(false);
     }
@@ -366,11 +406,7 @@ export default function TurnJobCard() {
   const currentStep = job?.plan.steps[job.currentStep];
   const doneCount = job?.plan.steps.filter((s) => s.status === 'done').length ?? 0;
 
-  const btn = cn(
-    'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)] border transition-colors cursor-pointer',
-    'text-text-muted hover:text-text border-border hover:border-accent/50',
-    'disabled:opacity-50 disabled:cursor-not-allowed',
-  );
+  const btn = buttonClass('secondary', 'xs');
 
   return (
     <motion.div
@@ -402,6 +438,7 @@ export default function TurnJobCard() {
             </div>
           </div>
 
+          <TaskProgress progress={progressDisplay(job.status, job.progress)} />
           {job.plan.explicit && (
             <ol className="space-y-0.5" aria-label="Plan">
               {job.plan.steps.map((step, i) => (
@@ -411,13 +448,13 @@ export default function TurnJobCard() {
                   data-status={step.status}
                   className={cn(
                     'flex items-center gap-1.5',
-                    step.status === 'pending' && 'text-text-muted/70',
+                    step.status === 'pending' && 'text-subtle',
                     step.status === 'running' && 'text-text',
                   )}
                 >
                   <StepMark status={step.status} />
                   <span className="truncate">
-                    <span className="font-mono text-text-muted/70 mr-1">{i + 1}.</span>
+                    <span className="font-mono text-subtle mr-1">{i + 1}.</span>
                     {step.title}
                   </span>
                 </li>
@@ -433,11 +470,25 @@ export default function TurnJobCard() {
           )}
 
           {job.error && job.stopReason !== 'closed' && (
-            <div className="text-2xs text-error/80 break-words">{job.error}</div>
+            <div
+              className="text-2xs text-error/(--tint-dense) break-words"
+              data-testid="turn-error"
+            >
+              {job.error}
+            </div>
+          )}
+          {job.errorDetail && job.stopReason !== 'closed' && (
+            <details className="text-2xs text-text-muted" data-testid="turn-error-detail">
+              <summary className={linkClass('text-text-muted')}>Details</summary>
+              <div className="mt-0.5 font-mono break-words">{job.errorDetail}</div>
+            </details>
           )}
 
           {job.check && job.check.problems.length > 0 && (
-            <ul className="space-y-0.5 text-2xs text-error/90" data-testid="check-problems">
+            <ul
+              className="space-y-0.5 text-2xs text-error/(--tint-near-solid)"
+              data-testid="check-problems"
+            >
               {job.check.problems.map((p, i) => (
                 <li key={i} className="whitespace-pre-wrap break-words">
                   {p}
@@ -457,15 +508,12 @@ export default function TurnJobCard() {
             </div>
           )}
           {job.check?.note && job.status !== 'checking' && (
-            <div className="text-2xs text-text-muted/80">{job.check.note}</div>
+            <div className="text-2xs text-subtle">{job.check.note}</div>
           )}
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {active ? (
-              <button
-                onClick={() => stopTurn('stopped')}
-                className={cn(btn, 'text-error/80 hover:text-error border-error/30')}
-              >
+              <button onClick={() => stopTurn('stopped')} className={buttonClass('danger', 'xs')}>
                 Stop
               </button>
             ) : (
@@ -474,10 +522,32 @@ export default function TurnJobCard() {
                   <button
                     onClick={handleRestore}
                     disabled={restoring}
-                    className={cn(btn, 'text-accent border-accent/40')}
+                    className={buttonClass('primary', 'xs')}
                     title={lastSnapshotLabel ?? undefined}
                   >
                     Restore last snapshot
+                  </button>
+                )}
+                {retryable && (
+                  <button
+                    onClick={async () => {
+                      setRetrying(true);
+                      try {
+                        await retryTurn();
+                      } catch (error) {
+                        await alertDialog(
+                          error instanceof Error ? error.message : 'Could not try again.',
+                          'Could not try again',
+                        );
+                      } finally {
+                        setRetrying(false);
+                      }
+                    }}
+                    disabled={retryBlocked || retrying || restoring}
+                    className={lastSnapshotId ? btn : buttonClass('primary', 'xs')}
+                    title="Send the same request again"
+                  >
+                    Try again
                   </button>
                 )}
                 {job.check && (
@@ -521,7 +591,11 @@ export default function TurnJobCard() {
                 </span>
                 <button
                   onClick={() => void removeQueued(i)}
-                  className="text-2xs font-mono text-text-muted hover:text-error cursor-pointer"
+                  className={buttonClass(
+                    'ghost',
+                    'xs',
+                    'h-6 px-2 text-text-muted hover:text-error',
+                  )}
                   aria-label={`Remove queued message ${i + 1}`}
                 >
                   Remove

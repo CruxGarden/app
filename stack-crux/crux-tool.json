@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "releaseVersion": "1.0.0",
+  "id": "stack-app",
+  "name": "Stack",
+  "description": "Developer · run services with Docker Compose and hand over the setup as an editable Garden package",
+  "kind": "webapp",
+  "defaultTitle": "My stack",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 44,
+  "bundled": true,
+  "app": "stack",
+  "entryFile": "index.html",
+  "layout": "workshop",
+  "share": true,
+  "toolInfo": {
+    "name": "Docker Compose",
+    "upstream": "https://docs.docker.com/compose/",
+    "relationship": "Crux Garden uses your installed Compose CLI to resolve an admitted image-based stack, then runs a validated private snapshot. The bench, YAML checks and project lifecycle controls are Crux Garden’s. Docker Compose is not bundled. Podman provider compatibility remains unverified. See UPSTREAM.md.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "greeting": "A stack you can edit and share. compose.yaml describes the services; the bench shows their configuration and running state. The bundled nursery includes Postgres, Redis and the Crux Garden API in development mode, bound to loopback. Add a random JWT_SECRET of at least 32 characters to this Crux’s secrets before starting. Settings in .env are literal values. Port and environment edits accumulate in compose.override.yaml. Optional services use profiles. The configuration panel shows private values as [secret]; Start receives their actual values. Ask me to add a service or explain how it works.",
+  "context": "A Stack Crux carries compose.yaml in its Project Folder. The desktop admits image-based services with project-owned volumes/networks and contained ordinary bind paths. Builds, providers, file loaders, privileged mode, extra capabilities, shared namespaces and external mounts are refused. Do not work around refusals. Compose merges and interpolates checked source using scoped data variables, then execution uses a validated private snapshot. .env and .crux/local.env contain literal values; variable references belong in YAML. Crux secrets are supplied at execution and may exist in the private temporary snapshot, which is cleaned up afterward; never put them in shared files. The panel resolves with private inputs and redacts secret values. Secret-bearing service metadata is refused rather than exposed or copied to an override. Logs can reveal values printed by services. Controls include up/down/ps/logs/pull/config/stop/start/run/exec with bounded arguments. Start/exec/run verify existing-container configuration; up applies changed configuration. Stop/status/logs/down still work when source files are invalid. The project namespace stays stable to preserve existing volumes. Named volumes survive down. Docker Compose is required; Podman providers must support the same checked behavior and remain unverified. The nursery uses loopback/development defaults and requires a random JWT_SECRET; do not supply a shared default. See README.md for the contract.",
+  "publication": {
+    "type": "garden-package"
+  }
+}

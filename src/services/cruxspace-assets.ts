@@ -1,12 +1,13 @@
 import { parseFigmaReference } from '../../electron/src/figma-reference';
+import { announceExternalChange } from './ingestion';
 import { getServices } from './index';
-import { getCruxspace } from './cruxspaces';
+import { getCruxspace, cruxspaceMembers } from './cruxspaces';
 import { hashContent } from './sqlite/helpers';
 import { pathOf } from '@/lib/artifact-path';
 import { assertCopyWritable, findWorkingCopy, serializeCopy } from './working-copies';
 import { flushIngestion } from './ingestion';
 import { folderForCrux } from './project-folder';
-import { growthHostFor } from './growth';
+import { captureEditCheckpoint } from './edit-history';
 import { guessMimeType } from './sqlite/helpers';
 
 /** The remote source of an imported export; it is not a remote-document backup. */
@@ -151,11 +152,11 @@ function validPath(path: string) {
     /^[\w /.-]+$/.test(path)
   );
 }
-async function checkpoint(owner: string, label: string) {
+async function checkpoint(owner: string) {
   await flushIngestion();
   if (typeof window !== 'undefined')
-    window.dispatchEvent(new CustomEvent('crux:external-change', { detail: { cruxId: owner } }));
-  await (await growthHostFor(owner)).snapshot({ label, requestedBy: 'person' });
+    announceExternalChange(owner);
+  await captureEditCheckpoint(owner);
 }
 
 /** A finished output and its descriptor are ordinary files; Growth and archives retain both. */
@@ -166,9 +167,8 @@ export async function saveCruxOutput(
   externalSource?: ExternalOutputSource,
 ): Promise<CruxOutput> {
   const source = externalSource ? cleanExternalSource(externalSource) : undefined;
-  // The checkpoint runs after the copy's serialization lock is released: the
-  // snapshot path itself updates the Working Copy under that lock, so taking
-  // it inside would wait on itself forever when a turn snapshot is queued.
+  // Settle ingestion and capture recovery after releasing the copy's lock;
+  // ingestion can itself need that lock. Saving an output does not mark a version.
   const output = await serializeCopy(owner, async () => {
     await assertCopyWritable(owner);
     await getServices().crux.findById(owner);
@@ -206,15 +206,14 @@ export async function saveCruxOutput(
     });
     return output;
   });
-  await checkpoint(owner, `Output: ${output.label}`);
+  await checkpoint(owner);
   return output;
 }
 
 export async function listCruxspaceAssets(spaceId: string): Promise<CruxspaceAsset[]> {
   await flushIngestion();
-  const space = await getCruxspace(spaceId);
-  const { crux, artifact } = getServices();
-  const live = new Map((await crux.listAll()).map((c) => [c.id, c]));
+  const { space, live } = await cruxspaceMembers(spaceId);
+  const { artifact } = getServices();
   const assets: CruxspaceAsset[] = [];
   for (const id of space.cruxIds) {
     const source = live.get(id);
@@ -226,7 +225,7 @@ export async function listCruxspaceAssets(spaceId: string): Promise<CruxspaceAss
       if ((descriptor.size ?? 0) > 16000) continue;
       let output: CruxOutput;
       try {
-        output = JSON.parse(await artifact.readContent(descriptor.id));
+        output = JSON.parse(await artifact.readContent(descriptor));
         if (output.externalSource)
           output.externalSource = cleanExternalSource(output.externalSource);
       } catch {
@@ -286,7 +285,7 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
     if (!live.some((c) => c.id === (copy?.cruxId ?? input.targetCruxId)))
       throw new Error('The receiving Crux is no longer available.');
     if (!space.cruxIds.includes(copy?.cruxId ?? input.targetCruxId))
-      throw new Error('The receiving Crux must belong to this Cruxspace.');
+      throw new Error('The receiving Crux must belong to this Garden.');
     await assertCopyWritable(input.targetCruxId);
     const asset = (await listCruxspaceAssets(input.spaceId)).find(
       (a) =>
@@ -330,7 +329,7 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
       (f) => pathOf(f) === asset.path,
     );
     if (!source) throw new Error('This output is no longer available.');
-    const blob = await artifact.downloadBlob(source.id);
+    const blob = await artifact.downloadBlob(source);
     if ((await hashContent(new Uint8Array(await blob.arrayBuffer()))) !== input.fingerprint)
       throw new Error('The selected output changed. Refresh the assets.');
     // A bundle is expanded into ordinary files under the chosen folder; the
@@ -418,6 +417,6 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
     };
   });
   // See saveCruxOutput: checkpoint only after releasing the copy's lock.
-  await checkpoint(input.targetCruxId, result.label);
+  await checkpoint(input.targetCruxId);
   return result;
 }

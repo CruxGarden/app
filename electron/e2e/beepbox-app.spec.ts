@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 /**
@@ -104,8 +105,8 @@ test('BeepBox: notes on the real grid, saved song, agent tools, restart and clea
     });
 
     await test.step('the scripted collaborator sets the tempo and the key', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('Set the tempo and name the song [beepbox:edit]');
       await box.press('Enter');
@@ -115,7 +116,7 @@ test('BeepBox: notes on the real grid, saved song, agent tools, restart and clea
       await ready(page);
       await expect.poll(() => songOf(page)).toMatchObject({ tempo: 140, key: 'D' });
       expect(doc().project.song).not.toBe(songAfterNote);
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
       await page.screenshot({ path: join(evidence, 'beepbox-agent.png') });
     });
     expect(errors).toEqual([]);
@@ -129,7 +130,7 @@ test('BeepBox: notes on the real grid, saved song, agent tools, restart and clea
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
     await test.step('restart: the song reopens at 140 BPM in D', async () => {
-      await page.getByRole('button', { name: /enter/i }).click();
+      await reenterWorkspace(page);
       await ready(page);
       expect(await songOf(page)).toMatchObject({ tempo: 140, key: 'D' });
       await page.screenshot({ path: join(evidence, 'beepbox-reopened.png') });

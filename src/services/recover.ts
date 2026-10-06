@@ -1,3 +1,4 @@
+import { captureGardenId } from '@/stores/gardenContext';
 /**
  * Recover — cruxes the account has that this machine does not (RESILIENCE-PLAN
  * §2c): after a restore, on a new device, after a local delete. Two kinds:
@@ -7,6 +8,10 @@
  *   built output, and it says so).
  * Reads go through the API modules; writes through the local services.
  */
+import { captureAuth, assertAuthCurrent } from '@/api/session';
+import { getSqliteClient } from './sqlite/client';
+import { getLocalIdentity } from './sqlite/identity';
+import { putBlob } from './blobs';
 import * as cruxesApi from '@/api/cruxes';
 import * as syncApi from '@/api/sync';
 import * as publicApi from '@/api/public';
@@ -27,12 +32,10 @@ export interface CloudOnlyCrux {
 
 /** Everything the account holds that the garden does not, newest first. */
 export async function listCloudOnlyCruxes(localIds: Set<string>): Promise<CloudOnlyCrux[]> {
+  const context = captureAuth();
   const [synced, mine] = await Promise.all([
-    syncApi.listSyncedCruxes().catch(() => []),
-    cruxesApi.list({ limit: 200 }).then(
-      (r) => r.data,
-      () => [] as Crux[],
-    ),
+    syncApi.listSyncedCruxes(context),
+    cruxesApi.listAll(context),
   ]);
   const byId = new Map<string, CloudOnlyCrux>();
   for (const s of synced) {
@@ -75,10 +78,16 @@ export async function restoreSyncedCrux(
   row: Pick<CloudOnlyCrux, 'id' | 'published'>,
   onProgress?: (msg: string) => void,
 ): Promise<{ cruxId: string; title: string }> {
+  const context = captureAuth();
   onProgress?.('Downloading…');
-  const blob = await syncApi.pullCrux(row.id);
+  const blob = await syncApi.pullCrux(row.id, context);
   onProgress?.('Importing…');
-  const result = await importCrux({ data: blob, mode: 'restore' });
+  const result = await importCrux({
+    data: blob,
+    mode: 'restore',
+    beforeCommit: () => assertAuthCurrent(context),
+  });
+  assertAuthCurrent(context);
   const meta = row.published?.meta as Record<string, unknown> | undefined;
   if (meta?.publishedAt) {
     const { crux: cruxService } = getServices();
@@ -89,6 +98,7 @@ export async function restoreSyncedCrux(
         publishLayout: meta.publishLayout,
       },
     });
+    assertAuthCurrent(context);
   }
   return { cruxId: result.cruxId, title: result.title };
 }
@@ -100,15 +110,46 @@ export async function restoreSyncedCrux(
  */
 export async function recoverPublishedCrux(
   remote: Crux,
-  username: string,
   onProgress?: (msg: string) => void,
 ): Promise<{ cruxId: string; title: string; files: number }> {
-  const { crux: cruxService, artifact } = getServices();
+  const db = getSqliteClient();
+  if (!db.createCrux || !db.fileContent)
+    throw new Error('Atomic recovery is unavailable. Restart Garden and retry.');
+  const gardenId = captureGardenId();
+  const context = captureAuth();
+  const identity = await getLocalIdentity();
   onProgress?.('Reading the published site…');
-  const arts = await publicApi.getArtifacts(username, remote.slug);
+  assertAuthCurrent(context);
+  const arts = await publicApi.getArtifacts(remote.authorId, remote.slug);
+  const initialFiles = [];
+  // Stage immutable bytes first. A refused download/write leaves no partial Crux;
+  // unreferenced blobs can be reused on retry without changing existing work.
+  for (const a of arts) {
+    assertAuthCurrent(context);
+    const path = (a.meta?.path as string | undefined) || a.filename || a.id;
+    onProgress?.(`Recovering ${path}…`);
+    const blob = await publicApi.downloadArtifact(remote.authorId, remote.slug, a.id);
+    const fingerprint = await putBlob(blob);
+    initialFiles.push({
+      put: {
+        id: crypto.randomUUID(),
+        path,
+        fingerprint,
+        size: blob.size,
+        mimeType: a.mimeType || guessMimeType(path),
+        encoding: 'binary',
+        mode: 0o644,
+        attributes: {},
+      },
+    });
+  }
+  assertAuthCurrent(context);
   const meta = (remote.meta ?? {}) as Record<string, unknown>;
   const isSite = remote.kind === 'site' || meta.template === 'astro' || !!meta.site;
-  const created = await cruxService.create({
+  const cruxId = await db.createCrux({
+    ...identity,
+    initialFiles,
+    ...(gardenId ? { gardenId } : {}),
     id: remote.id,
     slug: remote.slug,
     title: remote.title || 'Recovered crux',
@@ -132,19 +173,14 @@ export async function recoverPublishedCrux(
       },
     },
   });
-  let files = 0;
-  for (const a of arts) {
-    const path = (a.meta?.path as string | undefined) || a.filename || a.id;
-    onProgress?.(`Recovering ${path}…`);
-    const blob = await publicApi.downloadArtifact(username, remote.slug, a.id);
-    await artifact.upload({
-      resourceId: created.id,
-      resourceType: 'crux',
-      blob,
-      mimeType: a.mimeType || guessMimeType(path),
-      meta: { path },
-    });
-    files += 1;
+  // The complete content is committed. Finish its journaled disk projection;
+  // a refused folder write keeps that content and the restartable journal.
+  try {
+    await db.fileContent.finishProjection(cruxId);
+  } catch {
+    throw new Error(
+      'Your recovered files are saved in Garden, but the Project Folder could not be written. Check folder access and restart Garden to finish recovery.',
+    );
   }
-  return { cruxId: created.id, title: created.title || 'Recovered crux', files };
+  return { cruxId, title: remote.title || 'Recovered crux', files: initialFiles.length };
 }

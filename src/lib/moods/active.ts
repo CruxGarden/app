@@ -1,7 +1,7 @@
 /**
  * The active Mood's palette = the chosen preset for the current mode, with the
  * user's custom theme tokens layered on top. This is the one place that
- * composition lives; themeStore, the boot path, and the Mood Builder all call
+ * composition lives; themeStore, the boot path, and the Mood pane all call
  * applyActiveMood() instead of applying presets by hand.
  */
 import { applyMoodPalette, GARDEN_DARK, type MoodPalette } from './index';
@@ -107,7 +107,14 @@ export function onThemePreviewChange(fn: () => void): () => void {
 
 /** Preset + saved overrides + preview layer, ready for applyMoodPalette. */
 export function composeMoodPalette(section: MoodSection = resolvedSection()): Partial<MoodPalette> {
-  return { ...(activePreset(section)?.overrides ?? {}), ...getThemeOverrides(section), ...preview };
+  return {
+    ...(activePreset(section)?.overrides ?? {}),
+    // Older saved Moods also open panels immediately; a saved theme token
+    // can still opt into the material's entrance animation.
+    plasmaFormIn: 'off',
+    ...getThemeOverrides(section),
+    ...preview,
+  };
 }
 
 /** Apply the active Mood for a mode to the document (no-op without a DOM). */

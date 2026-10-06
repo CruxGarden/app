@@ -1,9 +1,10 @@
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { launchApp } from './launch';
-import { enterGarden, createCrux, storedCrux } from './multi-crux-helpers';
+import { enterGarden, createCrux, storedCrux, storedFingerprint } from './multi-crux-helpers';
 
 test('an external edit immediately after an app write enters history instead of being suppressed as an echo', async () => {
   const { app, page } = await launchApp();
@@ -22,36 +23,27 @@ test('an external edit immediately after an app write enters history instead of 
     }, folder);
     writeFileSync(join(folder, 'note.txt'), 'External version');
     const fingerprint = createHash('sha256').update('External version').digest('hex');
+    // Files are a manifest projection: the store's content head names the fingerprint.
     await expect
-      .poll(async () => {
-        const row = (await page.evaluate(
-          async (id) =>
-            window.electronAPI!.sqlite.get(
-              "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = 'note.txt'",
-              [id],
-            ),
-          id,
-        )) as { fingerprint: string } | undefined;
-        return row?.fingerprint;
-      })
+      .poll(() => storedFingerprint(page, id, 'note.txt'), { timeout: 60_000 })
       .toBe(fingerprint);
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle growth');
     const history = page.getByTestId('pane-body-history');
-    await history.getByRole('button', { name: 'Take snapshot', exact: true }).click();
+    await history.getByRole('button', { name: 'Mark version', exact: true }).click();
     await history.getByPlaceholder('Label (optional)').fill('External edit preserved');
     await history.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(history.getByText('External edit preserved', { exact: true })).toBeVisible();
-    const saved = (await page.evaluate(
+    // The marked version is a Growth snapshot with its own content head.
+    const snapshot = (await page.evaluate(
       async (id) =>
         window.electronAPI!.sqlite.get(
-          `SELECT a.fingerprint FROM dimensions d JOIN artifacts a ON a.resource_id = d.target_id
-       WHERE d.source_id = ? AND d.type = 'growth' AND a.path = 'note.txt'
-       ORDER BY d.weight DESC LIMIT 1`,
+          `SELECT target_id FROM dimensions WHERE source_id = ? AND type = 'growth' AND deleted IS NULL
+       ORDER BY weight DESC LIMIT 1`,
           [id],
         ),
       id,
-    )) as { fingerprint: string };
-    expect(saved.fingerprint).toBe(fingerprint);
+    )) as { target_id: string };
+    expect(await storedFingerprint(page, snapshot.target_id, 'note.txt')).toBe(fingerprint);
   } finally {
     await app.close();
   }

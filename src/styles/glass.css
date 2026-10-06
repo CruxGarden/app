@@ -34,14 +34,11 @@ html[data-surface-style='glass']
   ) {
   position: relative;
   isolation: isolate;
-  border-color: color-mix(in srgb, var(--glass-highlight) 60%, transparent);
-  box-shadow:
-    inset 0 1px 0 var(--glass-highlight),
-    0 24px 60px -28px rgb(0 0 0 / 0.55),
-    0 2px 6px -2px rgb(0 0 0 / 0.25);
+  border-color: var(--glass-frame-border);
+  box-shadow: var(--glass-frame-shadow);
 }
 html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window {
-  background: color-mix(in srgb, var(--glass-highlight) 55%, transparent);
+  background: var(--glass-frame-fill);
   overflow: hidden;
 }
 
@@ -75,7 +72,7 @@ html[data-surface-style='glass']
   border-color: transparent;
 }
 html[data-surface-style='glass'] :is(.bg-toolbar, .bg-mood-bar) {
-  border-color: color-mix(in srgb, var(--glass-highlight) 60%, transparent);
+  border-color: var(--glass-frame-border);
 }
 /* each chrome surface tints the frost with its own Mood token */
 html[data-surface-style='glass'] .bg-toolbar {
@@ -105,16 +102,11 @@ html[data-surface-style='glass']
   z-index: -1;
   pointer-events: none;
   border-radius: inherit;
-  background: linear-gradient(
-    115deg,
-    transparent 38%,
-    color-mix(in srgb, var(--glass-highlight) 70%, transparent) 50%,
-    transparent 62%
-  );
+  background: var(--glass-sheen);
   background-size: 320% 100%;
   background-position: 100% 0;
   mix-blend-mode: screen;
-  animation: glass-sheen 60s ease-in-out infinite;
+  animation: glass-sheen var(--glass-sheen-duration) var(--glass-sheen-ease) infinite;
 }
 @keyframes glass-sheen {
   0% {
@@ -148,7 +140,7 @@ html[data-surface-style='glass']
     .bg-input,
     .divide-border > :not([hidden]) ~ :not([hidden])
   ) {
-  border-color: transparent;
+  border-color: var(--glass-inner-border);
 }
 /* opacity variants (bg-surface/50 …) are the same shade, opaque */
 html[data-surface-style='glass']
@@ -164,7 +156,7 @@ html[data-surface-style='glass']
 html[data-surface-style='glass']
   :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-garden-card)
   .bg-input:is(:focus-within, :focus) {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  border-color: var(--glass-focus-border);
 }
 /* a Panel nested inside a primary surface (Settings sections, wizard steps) is
    an inner shade, not a second pane: opaque, one step lighter, no frame */
@@ -184,6 +176,26 @@ html[data-surface-style='glass']
 }
 html[data-surface-style='glass'] .modal-scrim {
   backdrop-filter: blur(calc(var(--glass-blur) / 3));
+}
+
+/* ── Overlays stay glass at the edge and opaque where the words are ─────────
+   A menu or a dialog keeps the frame and the specular edge, but its plate is
+   its own tint laid over the Mood's ground (interaction.css): what sits behind
+   never shows through what it says (Daniel, 2026-09-27: "modal and menu
+   opacity, for the most part they should be opaque"). */
+/* Painted as images, which the frost above never sets: the tint over the
+   ground is opaque whatever frosted colour the surface keeps underneath. */
+html[data-surface-style='glass']
+  :is(
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-tooltip,
+    [data-modal-open] > [data-motion-role='dialog'] > .bg-panel,
+    .overlay-plate
+  ) {
+  background-image:
+    linear-gradient(var(--_overlay-tint), var(--_overlay-tint)),
+    linear-gradient(var(--bg), var(--bg));
 }
 
 /* ── Discrete surfaces inside a glass-surface: the library paints the glass; the
@@ -208,9 +220,9 @@ html[data-surface-style='glass'] .glass-surface {
   width: 55vmax;
   height: 55vmax;
   border-radius: 50%;
-  filter: blur(70px);
+  filter: blur(var(--glass-light-blur));
   mix-blend-mode: screen;
-  opacity: 0.5;
+  opacity: var(--glass-light-opacity);
   will-change: transform;
 }
 .liquid-orb-1 {
@@ -263,12 +275,10 @@ html[data-motion-intensity='subtle'] .liquid-orb {
    only on the primary action ── */
 html[data-surface-style='glass']
   :is(.bg-action-button, .bg-snapshot-banner-button, .bg-profile-button, .bg-mood-bar-button) {
-  background: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
+  background: var(--glass-button);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-  border-color: color-mix(in srgb, var(--glass-highlight) 90%, transparent);
-  box-shadow:
-    inset 0 1px 0 var(--glass-highlight),
-    0 1px 2px rgb(0 0 0 / 0.22);
+  border-color: var(--glass-button-border);
+  box-shadow: var(--glass-button-shadow);
 }
 html[data-surface-style='glass']
   :is(
@@ -277,31 +287,17 @@ html[data-surface-style='glass']
     .bg-profile-button,
     .bg-mood-bar-button
   ):hover:not(:disabled) {
-  background: color-mix(
-    in srgb,
-    var(--text) 8%,
-    color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
-  );
-  border-color: var(--glass-highlight);
+  background: var(--glass-button-hover);
+  border-color: var(--glass-button-border-hover);
 }
-html[data-surface-style='glass'] :is(.bg-primary-button, .bg-chat-send-button, .bg-gateway-button) {
-  color: var(--text);
-  background: color-mix(
-    in srgb,
-    var(--accent) 16%,
-    color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
-  );
-  border-color: color-mix(in srgb, var(--accent) 22%, var(--glass-highlight));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, var(--glass-highlight)),
-    0 1px 2px rgb(0 0 0 / 0.22);
+html[data-surface-style='glass'] :is(.bg-primary-button, .bg-chat-send-button) {
+  color: var(--glass-primary-button-text);
+  background: var(--glass-primary-button);
+  border-color: var(--glass-primary-button-border);
+  box-shadow: var(--glass-primary-button-shadow);
 }
 html[data-surface-style='glass']
-  :is(.bg-primary-button, .bg-chat-send-button, .bg-gateway-button):hover:not(:disabled) {
-  background: color-mix(
-    in srgb,
-    var(--accent) 26%,
-    color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
-  );
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--glass-highlight));
+  :is(.bg-primary-button, .bg-chat-send-button):hover:not(:disabled) {
+  background: var(--glass-primary-button-hover);
+  border-color: var(--glass-primary-button-border-hover);
 }

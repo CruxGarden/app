@@ -1,3 +1,5 @@
+import { finishSetupAtHome, openFullThemeBuilder } from './multi-crux-helpers';
+import { showPane, hidePane } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { launchApp } from './launch';
@@ -20,16 +22,15 @@ test.describe('mood assets', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await finishSetupAtHome(page);
+      const moodPane = await showPane(page, 'Mood');
       // Files live at the foot of the Theme section, under the tokens
-      await page.getByRole('button', { name: 'Theme', exact: true }).click();
+      await openFullThemeBuilder(page);
 
       await page
         .locator('input[type="file"][aria-label="Add asset files"]')
         .setInputFiles(join(__dirname, 'fixtures', 'backdrop.png'));
-      await expect(page.getByRole('status')).toContainText('Added 1 file');
+      await expect(page.getByRole('status').filter({ hasText: 'Added 1 file' })).toBeVisible();
       const card = page.locator('[data-testid^="asset-"]').filter({ hasText: 'backdrop.png' });
       await expect(card).toContainText('backdrop.png');
 
@@ -58,23 +59,35 @@ test.describe('mood assets', () => {
 
       // Cover → the saved Mood shows the image
       await card.getByRole('button', { name: 'Cover', exact: true }).click();
+      // Changes are kept only while you stay unless kept for the Garden; a
+      // new Crux workspace starts from the Garden's Mood.
+      await moodPane.getByRole('button', { name: /^Keep for /, exact: false }).click();
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
       await page.getByRole('button', { name: 'Save current as Mood' }).click();
       await page.getByRole('textbox', { name: 'Mood name' }).fill('Textured');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
-      const mood = page.getByTestId('mood-mood-textured');
+      // Saved Moods are Cruxes: their card is found by name, not a portable package ID.
+      const mood = page
+        .locator('[data-testid^="mood-"]')
+        .filter({ has: page.getByRole('button', { name: 'Apply Textured', exact: true }) });
       await expect(mood).toBeVisible();
       await expect(mood.locator('img')).toHaveAttribute('src', /blob:/);
       await page.screenshot({ path: 'e2e/.results/assets-2-browser.png' });
 
       // Back in the workspace the Workshop pane wears the texture
-      await page.getByRole('button', { name: 'Done' }).click();
+      await hidePane(page, 'Mood');
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       const body = page.locator('.mosaic-window.pane-workshop .mosaic-window-body').first();
       await expect(body).toBeVisible({ timeout: 30_000 });
-      await expect(body).toHaveCSS('background-image', /blob:/);
+      // The token reaches the pane: its texture resolves to the asset's blob URL.
+      // Whether it paints is the surface theme's call (ADR 0043): Plasma and
+      // Glass draw their own plates over pane textures (styles/plasma.css,
+      // styles/glass.css); a solid Mood paints it as its background image.
+      await expect
+        .poll(() => body.evaluate((el) => getComputedStyle(el).getPropertyValue('--pane-texture')))
+        .toMatch(/blob:/);
       await page.screenshot({ path: 'e2e/.results/assets-3-workspace.png' });
     } finally {
       await app.close();

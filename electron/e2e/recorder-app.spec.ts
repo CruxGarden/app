@@ -1,19 +1,33 @@
-import { test, expect, type Page } from '@playwright/test';
+import { panelPressed, togglePanel } from './panel-helpers';
+import { test, expect, type Page, type ElectronApplication } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, reenterWorkspace, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
 /**
- * The actual Record inside a Crux: a camera-only recording made with the
- * app's own controls (the Garden stands in for the Document Picture-in-Picture
- * window the app needs, and Chromium's fake camera stands in for a real one),
- * saved from the app's own Download (WebM) into the Crux as a video output,
+ * Requires the full-catalogue dev profile (CRUX_DEV_SERVER) or a build with
+ * CRUX_BUNDLE_TOOLS=all. The production starter build does not bundle Record.
+ *
+ * The actual Record inside a Crux: camera-only controls use Chromium's fake
+ * camera and the Garden's Document Picture-in-Picture stand-in. A canvas
+ * MediaRecorder supplies a WebM to the app's download bridge as a video output,
  * listed in data/project.json; the collaborator names the Crux; the recording
  * survives a restart and a complete-Crux import into a clean Garden.
  */
+// These instances use Chromium's fake devices; consent never touches real hardware.
+async function consentToFakeCamera(app: ElectronApplication) {
+  await app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = (async (_window: unknown, options: { message: string }) => {
+      if (!/wants access to your (camera|microphone)/.test(options.message))
+        throw new Error(`Unexpected dialog in fake-camera journey: ${options.message}`);
+      return { response: 1, checkboxChecked: false };
+    }) as typeof dialog.showMessageBox;
+  });
+}
+
 const frameOf = (page: Page) => page.frameLocator('iframe[data-crux-id]');
 const status = (page: Page) => frameOf(page).locator('#garden-project [role=status]');
 async function ready(page: Page) {
@@ -24,7 +38,8 @@ async function ready(page: Page) {
 test('Record: a camera recording saved into the Crux, agent naming, restart and clean import', async () => {
   test.setTimeout(12 * 60_000);
   const first = await launchApp({ env: { CRUX_AI_MOCK: '1', CRUX_FAKE_MEDIA: '1' } });
-  const evidence = resolve(__dirname, '../../docs/recorder');
+  await consentToFakeCamera(first.app);
+  const evidence = test.info().outputDir;
   mkdirSync(evidence, { recursive: true });
   const archive = join(first.dir, 'recordings.crux');
   let folder = '';
@@ -58,9 +73,8 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
       const panel = frameOf(page).frameLocator('#garden-pip iframe');
       await expect(panel.locator('button').first()).toBeVisible({ timeout: 30000 });
       await page.screenshot({ path: join(evidence, 'recorder-pip.png') });
-      // A camera or screen needs the OS's permission dialogs, which no test can answer; the recording
-      // itself is made the way Record makes it (MediaRecorder on a stream, a WebM blob) from a drawn
-      // canvas, and saved the way Record saves it (a download link the bridge keeps in the Crux).
+      // Exercise the download-to-output bridge with a deterministic canvas recording.
+      // This verifies persistence; it does not verify hardware recording or OS dialogs.
       await frameOf(page)
         .locator('body')
         .evaluate(async () => {
@@ -112,8 +126,8 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
     });
 
     await test.step('the scripted collaborator lists the recordings and names the Crux', async () => {
-      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
-      if ((await collab.getAttribute('aria-pressed')) !== 'true') await collab.click();
+      if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+        await togglePanel(page, 'Toggle collaboration');
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('What do we have here? [recorder:name]');
       await box.press('Enter');
@@ -124,7 +138,7 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
       ).toBeVisible({ timeout: 150000 });
       await expect.poll(() => doc().project.name).toBe('Walkthrough takes');
       await expect(frameOf(page).locator('#recorder-name')).toHaveValue('Walkthrough takes');
-      await collab.click();
+      await togglePanel(page, 'Toggle collaboration');
     });
     expect(errors.filter((e) => !/microphone did not answer/.test(e))).toEqual([]);
   } finally {
@@ -132,11 +146,12 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
   }
 
   const second = await launchApp({ dir: first.dir, env: { CRUX_FAKE_MEDIA: '1' } });
+  await consentToFakeCamera(second.app);
   try {
     const { page } = second;
     page.setDefaultTimeout(60000);
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await test.step('restart: the recording and the name come back', async () => {
       await ready(page);
       await expect(frameOf(page).locator('#recorder-name')).toHaveValue('Walkthrough takes');
@@ -150,6 +165,7 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
   }
 
   const third = await launchApp({ env: { CRUX_FAKE_MEDIA: '1' } });
+  await consentToFakeCamera(third.app);
   try {
     const { page } = third;
     page.setDefaultTimeout(60000);

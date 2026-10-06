@@ -7,22 +7,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --mode edition",
-    "build:garden": "OUT_DIR=runtime vite build",
+    "build:garden": "vite build --outDir runtime",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "tauri": "tauri",
-    "install:app": "npm run tauri -- build --bundles app && rm -rf \"/Applications/Moqira.app\" && ditto \"src-tauri/target/release/bundle/macos/Moqira.app\" \"/Applications/Moqira.app\" && echo \"\u2713 Installed to /Applications\""
+    "install:app": "npm run tauri -- build --bundles app && rm -rf \"/Applications/Moqira.app\" && ditto \"src-tauri/target/release/bundle/macos/Moqira.app\" \"/Applications/Moqira.app\" && echo \"✓ Installed to /Applications\""
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "uuid": "^10.0.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
@@ -35,7 +34,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "typescript": "^5.5.3",
-    "vite": "^5.3.3",
-    "vitest": "^4.1.9"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11"
   }
 }

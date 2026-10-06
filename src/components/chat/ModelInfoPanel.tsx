@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { SectionLabel } from '@/components/ui';
 import { getModelInfo, PROVIDERS, getProviderForModel } from '@/ai/providers';
 import { defaultToolDefinitions } from '@/ai/tools';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
+import { linkClass } from '@/components/ui/button-class';
+import { openSettings } from '@/components/layout/app-commands';
 
 interface ModelInfoPanelProps {
   model: string;
@@ -54,10 +57,11 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
       <div ref={rowRef} className="flex items-center gap-2">
         {children}
 
-        {/* Always-visible usage bar — hidden when pane is narrow */}
-        {info && hasUsage && showBar && (
+        {/* The context meter appears when it starts to matter (past 60 %), and
+            only where there is room for it — a gauge at 3 % is noise. */}
+        {info && hasUsage && showBar && usagePercent >= 60 && (
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <div className="flex-1 h-1.5 bg-border/30 rounded-full overflow-hidden min-w-8">
+            <div className="flex-1 h-1.5 bg-border/(--tint-quiet) rounded-full overflow-hidden min-w-8">
               <div
                 className={cn('h-full rounded-full transition-[width]', barColor)}
                 style={{ width: `${Math.max(usagePercent, 2)}%` }}
@@ -76,7 +80,8 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-text-muted/60 hover:text-text transition-colors cursor-pointer text-xxs whitespace-nowrap"
+          aria-expanded={expanded}
+          className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] text-subtle hover:text-text hover:bg-action-button-hover transition-colors cursor-pointer text-xxs whitespace-nowrap"
         >
           <svg
             width="6"
@@ -95,10 +100,10 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
       {/* Expanded info table */}
       {expanded && info && provider && (
-        <div className="mt-3 border-t border-border/50 pt-3 pb-1 space-y-4">
+        <div className="mt-3 border-t border-border/(--tint-balanced) pt-3 pb-1 space-y-4 motion-enter-dropdown">
           {/* Model stats */}
-          <div className="rounded overflow-hidden border border-border/30">
-            <div className="flex justify-between items-center px-3 h-8 bg-surface/50">
+          <div className="rounded overflow-hidden border border-border/(--tint-quiet)">
+            <div className="flex justify-between items-center px-3 h-8 bg-surface/(--tint-balanced)">
               <span className="text-text-muted">Context</span>
               <span className="text-text">
                 {provider.agent ? 'Managed by agent' : `${formatTokens(info.contextWindow)} tokens`}
@@ -110,7 +115,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                 {provider.agent ? 'Managed by agent' : `${formatTokens(info.maxOutput)} tokens`}
               </span>
             </div>
-            <div className="flex justify-between items-center px-3 h-8 bg-surface/50">
+            <div className="flex justify-between items-center px-3 h-8 bg-surface/(--tint-balanced)">
               <span className="text-text-muted">Messages</span>
               <span className="text-text">{messageCount}</span>
             </div>
@@ -132,7 +137,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                     </span>
                   </div>
                 )}
-                <div className="px-3 py-2 bg-surface/50">
+                <div className="px-3 py-2 bg-surface/(--tint-balanced)">
                   <div className="flex justify-between items-center mb-1.5">
                     <span
                       className="text-text-muted"
@@ -144,13 +149,13 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                       {usagePercent.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-2 bg-border/30 rounded-full overflow-hidden">
+                  <div className="h-2 bg-border/(--tint-quiet) rounded-full overflow-hidden">
                     <div
                       className={cn('h-full rounded-full transition-[width]', barColor)}
                       style={{ width: `${Math.max(usagePercent, 1)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between mt-1 text-2xs text-text-muted/60">
+                  <div className="flex justify-between mt-1 text-2xs text-subtle">
                     <span>0</span>
                     <span>{formatTokens(info.contextWindow)}</span>
                   </div>
@@ -161,7 +166,9 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Capabilities */}
           <div className="space-y-1.5">
-            <div className="text-text-muted text-2xs uppercase tracking-wider">Capabilities</div>
+            <SectionLabel as="div" tone="muted">
+              Capabilities
+            </SectionLabel>
             <div className="flex gap-1.5 flex-wrap">
               {provider.capabilities.map((cap) => (
                 <span key={cap} className="px-2 py-0.5 bg-accent-muted rounded text-text text-xxs">
@@ -173,9 +180,9 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Tools grid */}
           <div className="space-y-1.5">
-            <div className="text-text-muted text-2xs uppercase tracking-wider">
+            <SectionLabel as="div" tone="muted">
               Tools ({defaultToolDefinitions().length})
-            </div>
+            </SectionLabel>
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
               {defaultToolDefinitions()
                 .filter(
@@ -194,7 +201,15 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
           <div>
             {providerId === 'included' ? (
               <span className="text-text-muted text-xxs">
-                Included allowance is in Settings → Usage.
+                Included allowance is in{' '}
+                <button
+                  type="button"
+                  className={linkClass()}
+                  onClick={() => openSettings({ section: 'usage' })}
+                >
+                  Settings → Usage
+                </button>
+                .
               </span>
             ) : (
               <a

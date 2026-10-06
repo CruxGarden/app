@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, switchCrux, storedCrux } from './multi-crux-helpers';
 
-test('concurrent turns write and snapshot only their own Crux; hidden approval stays scoped', async () => {
+test('concurrent turns write and retain edit recovery only for their own Crux; hidden approval stays scoped', async () => {
   const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   try {
     await enterGarden(page);
@@ -46,7 +46,7 @@ test('concurrent turns write and snapshot only their own Crux; hidden approval s
         .poll(async () =>
           page.evaluate(async (id) => {
             const rows = await window.electronAPI!.sqlite.all(
-              "SELECT id FROM dimensions WHERE source_id = ? AND type = 'growth'",
+              'SELECT crux_id FROM edit_history WHERE crux_id = ? AND json_array_length(checkpoints) > 0',
               [id],
             );
             return rows.length;
@@ -54,6 +54,11 @@ test('concurrent turns write and snapshot only their own Crux; hidden approval s
         )
         .toBeGreaterThan(0);
     }
+    expect(
+      await page.evaluate(() =>
+        window.electronAPI!.sqlite.all("SELECT id FROM dimensions WHERE type='growth'"),
+      ),
+    ).toEqual([]);
     await switchCrux(page, 'Alpha');
     await expect(page.getByText('Completed workspace Alpha.', { exact: true })).toBeVisible();
     await expect(page.getByText('Completed workspace Beta.', { exact: true })).toHaveCount(0);

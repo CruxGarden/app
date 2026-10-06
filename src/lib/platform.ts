@@ -12,13 +12,18 @@
  * below — there is exactly one declaration of what Desktop Mode provides.
  */
 
+export { MAX_TRANSCODE_BYTES } from '../../electron/src/bridge';
+
 import type { ElectronBridge } from '../../electron/src/bridge';
 
 export type {
   ElectronBridge,
   SqliteBridge,
+  LocalGraphChange,
   DesktopBridge,
   ProjectBridge,
+  RecoveryOperation,
+  RecoveryOverview,
   PreviewBridge,
   ToolchainBridge,
   DevServerBridge,
@@ -37,6 +42,10 @@ export type {
   AgentHostRequest,
   AgentHostResponse,
   AgentToolDefinition,
+  DeepLink,
+  DeepLinkKind,
+  DeepLinksBridge,
+  DiskUsageSummary,
 } from '../../electron/src/bridge';
 
 declare global {
@@ -46,6 +55,7 @@ declare global {
 }
 
 export enum Capability {
+  WebBrowser = 'webBrowser',
   FigmaWindowArrangement = 'figmaWindowArrangement',
   BlenderWindowArrangement = 'blenderWindowArrangement',
   /** Real Project Folder per crux on the local filesystem (ADR 0001). */
@@ -56,6 +66,7 @@ export enum Capability {
   Build = 'build',
   /** Local preview webserver serving from disk (ADR 0003). */
   PreviewServer = 'previewServer',
+  LocalStaging = 'localStaging',
   /** OS-keychain-backed secret storage (safeStorage). */
   SecureSecrets = 'secureSecrets',
   /** ffmpeg media transcoding in the main process. */
@@ -68,6 +79,25 @@ export enum Capability {
   Updates = 'updates',
   /** Hosts an MCP server per crux for external agents (ADR 0013). Desktop Mode only. */
   AgentHost = 'agentHost',
+  /** Bundled binaries (ffmpeg) run inside a crux folder (MAKING-THE-AD-PARITY gap 13). */
+  NativeTools = 'nativeTools',
+  /**
+   * The shell can run a Crux's stack with Docker Compose. Present when the
+   * bridge is there; whether Docker itself is installed is a separate question
+   * the Stack bench asks at the moment it matters.
+   */
+  Containers = 'containers',
+  /**
+   * The shell can run a project that lives outside the Crux — a checkout you
+   * are working on — as a long-lived process it owns.
+   */
+  ProjectRunner = 'projectRunner',
+  /** The v2 features — gardens with people (GARDEN-MEMBERS-PLAN) — shown; a v1 release never has it. */
+  V2 = 'v2',
+  /** `crux-garden://` links reach the app (ADR 0085); subscribe via services/deep-links. */
+  DeepLinks = 'deepLinks',
+  /** Local disk-use summary and regenerable-cache clearing (ADR 0085). */
+  DiskUsage = 'diskUsage',
 }
 
 function bridge(): Partial<ElectronBridge> | null {
@@ -85,6 +115,8 @@ export function can(capability: Capability): boolean {
   const api = bridge();
   if (!api) return false;
   switch (capability) {
+    case Capability.WebBrowser:
+      return !!api.browser;
     case Capability.BlenderWindowArrangement:
       return !!api.blenderDesktop;
     case Capability.FigmaWindowArrangement:
@@ -94,6 +126,8 @@ export function can(capability: Capability): boolean {
       return !!api.project;
     case Capability.SecureSecrets:
       return !!api.secrets;
+    case Capability.LocalStaging:
+      return !!api.staging;
     case Capability.PreviewServer:
       return !!api.preview;
     case Capability.Build:
@@ -106,8 +140,20 @@ export function can(capability: Capability): boolean {
       return !!api.localai;
     case Capability.Updates:
       return !!api.updates;
+    case Capability.V2:
+      return !!api.config?.v2 || import.meta.env.VITE_V2 === '1';
     case Capability.AgentHost:
       return !!api.agentHost;
+    case Capability.NativeTools:
+      return !!api.native;
+    case Capability.Containers:
+      return !!api.containers;
+    case Capability.ProjectRunner:
+      return !!api.projectRunner;
+    case Capability.DeepLinks:
+      return !!api.deepLinks;
+    case Capability.DiskUsage:
+      return !!api.diskUsage && !!api.clearCaches;
   }
 }
 
@@ -116,9 +162,20 @@ export function isAiMock(): boolean {
   return !!bridge()?.test?.aiMock;
 }
 
+/** e2e only: CRUX_AI=on|off — the AI switch a fresh garden starts with (a saved choice wins). */
+export function aiStartKnob(): 'on' | 'off' | null {
+  const v = bridge()?.test?.ai;
+  return v === 'on' || v === 'off' ? v : null;
+}
+
 /** e2e only: CRUX_SILENT=1 — never start the soundscape or play cues (Daniel: test audio is distracting). */
 export function isSilent(): boolean {
   return !!bridge()?.test?.silent;
+}
+
+/** e2e only: CRUX_PLAIN_TITLES=1 keeps native `title=` tooltips (see TitleTooltips). */
+export function plainTitles(): boolean {
+  return !!bridge()?.test?.plainTitles;
 }
 
 /** e2e only: CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window. */

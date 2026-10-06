@@ -1,3 +1,12 @@
+import PaneOptions from './PaneOptions';
+import SetupProjectGuide from './SetupProjectGuide';
+import type { SetupNeed } from '@/components/setup/setup-plan';
+import FirstProjectGuide from './FirstProjectGuide';
+import type { ContentModel } from '@/templates';
+import { requiresLivePreview, settingsPathOf } from '@/lib/preview-decision';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { isSiteCrux } from '@/services/site';
+import { documentIdentity } from '@/services/workspace-documents';
 import FigmaPane from './FigmaPane';
 import BlenderPane from './BlenderPane';
 import { isEmbeddedApp } from '@/services/embedded-app';
@@ -6,10 +15,12 @@ import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import EditorTabBar from './EditorTabBar';
 import EditorToolbar from './EditorToolbar';
+import { useAdvancedMode } from '@/hooks/useAdvancedMode';
 import EditorContent from './EditorContent';
 import BuilderView from './BuilderView';
 import { onCaptureSettled } from '@/lib/thumbnail-capture';
 import { cn } from '@/lib/cn';
+import { buttonClass, segmentClass, segmentGroupClass } from '@/components/ui/button-class';
 import { useShallow } from 'zustand/react/shallow';
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
@@ -36,6 +47,7 @@ class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey:
 }
 
 function AdvancedEditor() {
+  const historical = useCruxStore((s) => s.viewingSnapshotId !== null);
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
   const { editor, setActiveTab, closeTab, setTabViewMode } = useUIStore(
@@ -64,9 +76,12 @@ function AdvancedEditor() {
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
   const activeArtifact = activeTab ? (artifacts.find((a) => a.id === activeTab.id) ?? null) : null;
+  const sourceOnly =
+    !!activeTab && historical && requiresLivePreview(activeTab.path, isSiteCrux(artifacts));
 
   // Check if the crux has a form schema (set during template creation)
   const hasFormSchema = !!(crux?.meta as Record<string, unknown> | undefined)?.formSchema;
+  const settingsPath = settingsPathOf(crux?.meta as Record<string, unknown> | undefined);
   // Content-model cruxes get the Builder as the Workshop's home view
   const hasBuilder = !!(crux?.meta as Record<string, unknown> | undefined)?.contentModel;
   const showBuilder = hasBuilder && !activeTab;
@@ -116,20 +131,26 @@ function AdvancedEditor() {
       {activeTab && activeArtifact && crux && (
         <>
           <EditorToolbar
-            tab={activeTab}
+            tab={sourceOnly ? { ...activeTab, viewMode: 'source' } : activeTab}
+            previewAvailable={!sourceOnly}
             hasContent={true}
-            hasFormSchema={hasFormSchema}
+            hasFormSchema={hasFormSchema && !sourceOnly}
+            settingsPath={settingsPath}
             onViewModeChange={(mode) => setTabViewMode(activeTab.id, mode)}
             onSave={() => saveRef.current?.()}
-            onCapture={() => {
-              setIsCapturing(true);
-              captureRef.current?.();
-            }}
+            onCapture={
+              historical
+                ? undefined
+                : () => {
+                    setIsCapturing(true);
+                    captureRef.current?.();
+                  }
+            }
             isCapturing={isCapturing}
           />
           <EditorErrorBoundary>
             <EditorContent
-              key={activeTab.id}
+              key={documentIdentity(activeArtifact)}
               tab={activeTab}
               artifact={activeArtifact}
               cruxId={crux.id}
@@ -145,7 +166,12 @@ function AdvancedEditor() {
 
 /** Clean preview owns no editor tabs: changing views preserves their buffers and selection. */
 export default function EditorPane() {
+  const advancedMode = useAdvancedMode();
   const crux = useCruxStore((s) => s.crux);
+  const setupGuide = crux?.meta?.setupGuide as
+    | { need: SetupNeed; dismissed?: boolean; step?: unknown }
+    | undefined;
+  const viewingHistory = useCruxStore((s) => !!s.viewingSnapshotId);
   const historicalNotebook = useCruxStore((s) => isEmbeddedApp(s.crux) && !!s.viewingSnapshotId);
   const exitSnapshot = useCruxStore((s) => s.exitSnapshotView);
   const artifacts = useCruxStore((s) => s.artifacts);
@@ -155,67 +181,125 @@ export default function EditorPane() {
   const hasTabs = useUIStore((s) => s.editor.tabs.length > 0);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
   const setPane = useUIStore((s) => s.setPaneVisible);
+  // Offered only while it is not already beside the Workshop.
+  const collaborationOpen = useUIStore((s) => !!s.paneVisibility.collaboration);
   const setMobilePane = useUIStore((s) => s.setMobileActivePane);
   const entryFile = useCruxStore((s) =>
     s.viewingSnapshotId ? s.snapshotEntryFile : s.crux?.meta?.settings?.entryFile,
   );
   const entry = workshopEntry(crux, artifacts, entryFile);
   const hasBuilder = !!crux?.meta?.contentModel;
-  const button =
-    'px-3 py-1.5 text-xs rounded-[var(--radius-sm)] hover:bg-accent-muted cursor-pointer';
+  const [editingHome, setEditingHome] = useState<string | null>(() =>
+    !advancedMode && (crux?.meta?.contentModel as ContentModel | undefined)?.guide
+      ? crux!.id
+      : null,
+  );
+  const homeSettings = artifacts.find((file) => pathOf(file) === settingsPathOf(crux?.meta));
+  const showHomeForm =
+    view === 'clean' && !viewingHistory && editingHome === crux?.id && !!homeSettings;
+  const previewHome = () => {
+    setEditingHome(null);
+    setView('clean');
+  };
+  const aiEnabled = useAiEnabled();
+  const button = buttonClass('ghost', 'xs', 'text-text-muted hover:text-text');
   const settings = () => {
     setPane('details', true);
     setMobilePane('details');
   };
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="workshop-view" data-view={view}>
-      <div className="flex items-center gap-1 p-1 border-b border-border shrink-0 flex-wrap">
-        <div role="group" aria-label="Workshop view" className="flex items-center">
-          {(['clean', 'advanced'] as const).map((mode) => (
+      {!viewingHistory &&
+        setupGuide &&
+        !(crux?.meta?.contentModel as ContentModel | undefined)?.guide && (
+          <SetupProjectGuide
+            key={crux!.id}
+            need={setupGuide.need}
+            dismissed={setupGuide.dismissed}
+            savedStep={setupGuide.step}
+          />
+        )}
+      {!viewingHistory && (crux?.meta?.contentModel as ContentModel | undefined)?.guide && (
+        <FirstProjectGuide
+          key={crux!.id}
+          model={crux!.meta!.contentModel as ContentModel}
+          onEdit={() => {
+            setEditingHome(crux!.id);
+            setView('clean');
+          }}
+          onPreview={previewHome}
+        />
+      )}
+      <div className="flex items-center gap-1 px-1.5 py-1.5 border-b border-border shrink-0 flex-wrap">
+        <div role="group" aria-label="Workshop view" className={segmentGroupClass()}>
+          {(['clean', 'advanced'] as const)
+            .filter((mode) => mode === 'clean' || advancedMode || view === 'advanced')
+            .map((mode) => (
+              <button
+                key={mode}
+                aria-pressed={view === mode}
+                className={segmentClass(view === mode)}
+                onClick={() => {
+                  if (mode === 'advanced' && !hasTabs && entry.artifact && !hasBuilder) {
+                    openFile(entry.artifact.id, pathOf(entry.artifact));
+                  } else {
+                    setEditingHome(null);
+                    setView(mode);
+                  }
+                }}
+              >
+                {mode === 'clean' ? (isEmbeddedApp(crux) ? 'Use app' : 'Clean') : 'Advanced'}
+              </button>
+            ))}
+        </div>
+        <PaneOptions pane="workshop" label="More workspace options">
+          <EmbeddedAppActions />
+          <div className="flex-1" />
+          {view === 'advanced' && (
             <button
-              key={mode}
-              aria-pressed={view === mode}
-              className={cn(button, view === mode && 'bg-accent-muted text-accent')}
+              className={button}
               onClick={() => {
-                if (mode === 'advanced' && !hasTabs && entry.artifact && !hasBuilder) {
-                  openFile(entry.artifact.id, pathOf(entry.artifact));
-                } else setView(mode);
+                setPane('artifacts', true);
+                setMobilePane('artifacts');
               }}
             >
-              {mode === 'clean' ? (isEmbeddedApp(crux) ? 'Use app' : 'Clean') : 'Advanced'}
+              Browse Artifacts
             </button>
-          ))}
-        </div>
-        <EmbeddedAppActions />
-        <div className="flex-1" />
-        {view === 'advanced' && (
-          <button
-            className={button}
-            onClick={() => {
-              setPane('artifacts', true);
-              setMobilePane('artifacts');
-            }}
-          >
-            Browse Artifacts
+          )}
+          {hasBuilder && (
+            <button
+              className={button}
+              onClick={() => {
+                setActiveTab(null);
+                setView('advanced');
+              }}
+            >
+              Edit content
+            </button>
+          )}
+          <button className={button} onClick={settings}>
+            Details
           </button>
-        )}
-        {hasBuilder && (
-          <button
-            className={button}
-            onClick={() => {
-              setActiveTab(null);
-              setView('advanced');
-            }}
-          >
-            Edit content
-          </button>
-        )}
-        <button className={button} onClick={settings}>
-          Crux settings
-        </button>
-        <CruxspaceAssetsButton />
+          <CruxspaceAssetsButton />
+        </PaneOptions>
       </div>
-      {view === 'clean' && crux?.meta?.template === 'figma' ? (
+      {showHomeForm && crux && homeSettings ? (
+        <div className="flex flex-col flex-1 min-h-0">
+          <EditorContent
+            key={documentIdentity(homeSettings)}
+            cruxId={crux.id}
+            artifact={homeSettings}
+            tab={{
+              id: homeSettings.id,
+              path: pathOf(homeSettings),
+              name: 'Your home page',
+              viewMode: 'form',
+              dirty: false,
+              scrollTop: 0,
+            }}
+          />
+        </div>
+      ) : view === 'clean' && crux?.meta?.template === 'figma' ? (
         <FigmaPane key={crux.id} />
       ) : view === 'clean' && crux?.meta?.template === 'blender' ? (
         <BlenderPane key={crux.id} />
@@ -229,7 +313,7 @@ export default function EditorPane() {
             Read the saved Artifacts in Advanced view. Return to the current app to write.
           </p>
           <button
-            className={button}
+            className={buttonClass('primary', 'sm')}
             onClick={() => {
               const note = artifacts.find(
                 (a) =>
@@ -243,7 +327,7 @@ export default function EditorPane() {
           >
             Read saved Artifacts
           </button>
-          <button className={button} onClick={() => void exitSnapshot()}>
+          <button className={buttonClass('secondary', 'sm')} onClick={() => void exitSnapshot()}>
             Return to current app
           </button>
         </div>
@@ -254,7 +338,7 @@ export default function EditorPane() {
       ) : entry.artifact && crux ? (
         <EditorErrorBoundary>
           <EditorContent
-            key={entry.artifact.id}
+            key={documentIdentity(entry.artifact)}
             cruxId={crux.id}
             artifact={entry.artifact}
             clean
@@ -275,21 +359,28 @@ export default function EditorPane() {
           </h2>
           <p className="text-sm text-text-muted max-w-sm">
             {entry.missing
-              ? `${entry.missing} is missing or cannot be previewed. Select another Artifact in Crux settings, or restore it from Growth.`
-              : 'Describe what you want to make in Collaboration. As your files arrive, the preview opens here.'}
+              ? `${entry.missing} is missing or cannot be previewed. Select another Artifact in Details, or restore it from Growth.`
+              : aiEnabled
+                ? 'Describe what you want to make in Collaboration. As your files arrive, the preview opens here.'
+                : 'Add files or make one in Artifacts. As your files arrive, the preview opens here.'}
           </p>
           <div className="flex gap-2 flex-wrap justify-center">
+            {aiEnabled && !collaborationOpen && (
+              <button
+                className={buttonClass('primary', 'sm')}
+                onClick={() => {
+                  setPane('collaboration', true);
+                  setMobilePane('collaboration');
+                }}
+              >
+                Open Collaboration
+              </button>
+            )}
             <button
-              className={cn(button, 'bg-accent-muted text-accent')}
-              onClick={() => {
-                setPane('collaboration', true);
-                setMobilePane('collaboration');
-              }}
-            >
-              Open Collaboration
-            </button>
-            <button
-              className={button}
+              className={buttonClass(
+                aiEnabled && !collaborationOpen ? 'secondary' : 'primary',
+                'sm',
+              )}
               onClick={() => {
                 setPane('artifacts', true);
                 setMobilePane('artifacts');
@@ -299,7 +390,7 @@ export default function EditorPane() {
               Add files
             </button>
             {!entry.missing && artifacts.length > 0 && (
-              <button className={button} onClick={settings}>
+              <button className={buttonClass('secondary', 'sm')} onClick={settings}>
                 Choose entry file
               </button>
             )}

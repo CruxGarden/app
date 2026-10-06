@@ -67,16 +67,20 @@ describe('reactive signals — pure parts', () => {
 
   it('SignalState: a keystroke spikes typing and it settles back to 0', () => {
     const s = new SignalState();
+    s.configureFlow({ enabled: true, sensitivity: 0.5 }, 0);
     expect(s.settled).toBe(true);
     s.keystroke(1000);
-    expect(s.tick(1000)).toEqual({ typing: 1 });
+    // A keystroke moves typing and activity; typing is the one that spikes.
+    expect(s.tick(1000).typing).toBe(1);
     expect(s.settled).toBe(false);
     s.tick(1000 + TYPING_DECAY_MS / 3);
     expect(s.values.typing).toBeGreaterThan(0);
-    expect(s.tick(1000 + TYPING_DECAY_MS)).toEqual({ typing: 0 });
+    expect(s.tick(1000 + TYPING_DECAY_MS).typing).toBe(0);
+    // Activity outlives it by minutes, so settle the long way round.
+    s.tick(1000 + 1000000);
     expect(s.settled).toBe(true);
     // Nothing changed → no writes
-    expect(s.tick(5000)).toEqual({});
+    expect(s.tick(1000 + 2000000)).toEqual({});
   });
 
   it('SignalState: agent and audio approach their targets and report only what changed', () => {

@@ -1,0 +1,115 @@
+{
+  "status": "Accepted locally and in fresh Mac package; exact-source remote CI pending",
+  "scope": "Narrow v1 private Functions + Store example and failure recovery; general AB03\u2013AB12 remain post-v1",
+  "api": "f01eac3eb46b62a29f078945085067dac3e2bae2",
+  "red": {
+    "storeIdentity": "/tmp/crux-private-identity-red.log",
+    "localOwnerDelete": "/tmp/crux-private-delete-red.log",
+    "publishedValidationMessage": "/tmp/crux-private-hosted-second.log",
+    "pendingSignout": "/tmp/crux-private-signout-red.log",
+    "repeatedParentHandshake": "/tmp/crux-private-handshake-red.log"
+  },
+  "tests": {
+    "app": "1830 passed / 292 files +18 skips; full verify/build; /tmp/crux-private-app-verify.log",
+    "electron": "99 passed /1 platform skip; /tmp/crux-private-electron-final.log",
+    "api": "1190 unit +5 skips, 411 integration, build/local runtime; /tmp/crux-private-api-handshake-final.log",
+    "actualDesktop": "8 passed in1.8m; /tmp/crux-private-final-desktop.log",
+    "manualGame": "129 stories /1275 criteria /72 choices /zero unmapped; /tmp/crux-private-guide.log",
+    "packagedMac": "5 passed47.3s; startup/SQLite/CLI +Private Requests +Order Desk3; /tmp/crux-private-packaged.log",
+    "latestSdkBrowser": "1 passed14.9s; /tmp/crux-private-handshake-browser.log"
+  },
+  "acceptance": [
+    "Create actual template in Electron; native protected Store, duplicate submit, restart, cancel/confirm delete of another visitor row",
+    "Actual template bytes through publish injection; real Nest HTTP/auth, PostgreSQL schema, Function isolate and Store; fixture email/Redis/object storage and DNS/TLS transport",
+    "Distinct Alice/Bob scoped sign-ins; private records, forged JSON/visitor identity refused; creator email on visitor page does not become platform owner",
+    "Real server rejection preserves draft and helpful message; content-free error diagnostics",
+    "Save commits but acknowledgement is lost: text retained and retry converges to one record",
+    "Sign-out during pending save immediately removes private fields; old acknowledgement cannot re-expose data",
+    "Repeated same-visitor Garden handshake updates metadata without authchange; actual different visitor/sign-out still notify. Published SDK regression red/green plus actual browser replay."
+  ],
+  "boundaries": [
+    "One customer-editable request; no immutable workflow, transaction or exactly-once guarantee",
+    "Owner online administration uses trusted Share Functions controls; no broad owner session in published page",
+    "Deploy companion API and republish to receive the updated injected SDK before hosted manual acceptance",
+    "Local test Garden remains static-only; no full backend staging",
+    "No live AI, production publishing/deploy or merge; manual profile remains empty"
+  ],
+  "priorCI": {
+    "run": "37212906802",
+    "windows": "29 passed, native96/four skips",
+    "linux": "28 passed, Order Desk refusal pointer step did not submit; native99/one skip",
+    "followThrough": "Refusal/retry now uses real keyboard submission; original pointer order journey retained; all preservation/refusal assertions unchanged. New native run still required."
+  },
+  "app": "cdc47f17375c4fb449febf8a34fa03edf5f76bdc",
+  "manualCandidate": {
+    "path": "electron/release/manual-testing-private-oct4/mac-arm64/Crux Garden.app",
+    "launcher": "electron/release/manual-testing-current/Launch Manual Testing.command",
+    "asarSha256": "5554ae6d502c314bdc1c9b1f1fe05bbb1f6c1b6f25baad7ae1f2397ce4096610",
+    "rendererTreeSha256": "21afbd8c10a1118f2317fa044276eae689828371066d0efd4a060416d7c9cf9b",
+    "rendererFiles": 1169,
+    "rendererMatchesSource": true,
+    "signature": "ad-hoc; codesign --verify --deep --strict passed; not notarized",
+    "manualProfileEntries": 0,
+    "manualProfileOpened": false
+  },
+  "ci": {
+    "native": 37215995764,
+    "fullApiBrowser": 37216931262,
+    "status": "superseded by eventPrivacy.ci",
+    "fullApiBrowserInitial": {
+      "run": 37215995841,
+      "status": "success",
+      "api": "9bdb0f2"
+    },
+    "linux": {
+      "status": "success",
+      "journeys": 30,
+      "native": 99,
+      "skipped": 1,
+      "duration": "7.6m journeys"
+    },
+    "windows": {
+      "status": "failure",
+      "note": "functions-local missed click on a replaced preview frame (run 37215995764); addressed in 9537eac6d"
+    }
+  },
+  "apiImplementation": "9bdb0f2fcf1bc20035b528ce2c770eb491351048",
+  "visual": "customer.png and owner.png reviewed: clear privacy/runtime identity, readable fields, owner confirmation and real customer rows.",
+  "eventPrivacy": {
+    "defect": "direct protected Store writes, and refused public-mode overwrites of protected values, broadcast value/before on the public event stream and to preview crux.on listeners",
+    "api": ["df83aca", "6d5be61"],
+    "app": "9537eac6d",
+    "ciApiPin": "91dff632b",
+    "red": {
+      "hosted": "/tmp/crux-private-events-red.log",
+      "local": "/tmp/crux-private-events-local-red.log"
+    },
+    "green": "/tmp/crux-private-events-green.log (2/2, 27.4s)",
+    "gates": {
+      "app": "1830 passed, 18 skipped, 292 files, build",
+      "electron": "99 passed, 1 skipped",
+      "api": "1193 unit, 5 skipped; 411 integration; build; runtime"
+    },
+    "package": {
+      "path": "electron/release/manual-testing-private-events-oct4/mac-arm64/Crux Garden.app",
+      "checks": "5/5",
+      "log": "/tmp/crux-private-events-packaged.log",
+      "note": "functions-local.spec.ts does not run against packages (also fails on the previous package); local event regression accepted on the development build"
+    },
+    "ci": {
+      "native": {
+        "run": 37224626497,
+        "status": "success",
+        "linux": "30 journeys, 99 native, 1 skipped",
+        "windows": "30 journeys, 96 native, 4 skipped"
+      },
+      "fullApiBrowser": {
+        "run": 37224640423,
+        "status": "success",
+        "app": "91dff632b",
+        "api": "6d5be61"
+      }
+    },
+    "boundaries": "no hosted deployment, republishing, live AI or merge"
+  }
+}

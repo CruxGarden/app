@@ -6,6 +6,7 @@ import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.
 
 import { MemoryAsyncVFS } from 'wa-sqlite/src/examples/MemoryAsyncVFS.js';
 import SCHEMA from './schema.sql?raw';
+import { recoveryContentSql, recoveryFingerprints } from './recovery-content';
 
 export type WorkerRequest =
   | { id: string; method: 'init' }
@@ -14,6 +15,7 @@ export type WorkerRequest =
   | { id: string; method: 'all'; sql: string; params?: unknown[] }
   | { id: string; method: 'export' }
   | { id: string; method: 'import'; data: ArrayBuffer }
+  | { id: string; method: 'inspect-import'; data: ArrayBuffer }
   | { id: string; method: 'close' }
   | { id: string; method: 'blob-write'; fingerprint: string; data: Uint8Array }
   | { id: string; method: 'blob-read'; fingerprint: string }
@@ -32,6 +34,9 @@ let sqlite3: any;
 let dbHandle: number;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let memoryVfs: any;
+// Independent of export/import scratch files; never attach inspection to the working DB.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let inspectionVfs: any;
 
 // ── OPFS blob storage ──────────────────────────────────
 
@@ -114,6 +119,9 @@ async function init() {
   memoryVfs = new MemoryAsyncVFS();
   memoryVfs.name = 'crux-mem';
   sqlite3.vfs_register(memoryVfs, false);
+  inspectionVfs = new MemoryAsyncVFS();
+  inspectionVfs.name = 'crux-inspection';
+  sqlite3.vfs_register(inspectionVfs, false);
 
   // OPFS VFS — may fail if the browser hasn't released handles from a previous page load
   for (let attempt = 0; attempt < MAX_INIT_RETRIES; attempt++) {
@@ -370,6 +378,49 @@ async function exportDb(): Promise<ArrayBuffer> {
   return result;
 }
 
+async function inspectImport(data: ArrayBuffer): Promise<string[]> {
+  // Ask the VFS for its resolved filename, then reopen copied bytes read-only.
+  const uri = 'file:incoming.db?vfs=crux-inspection';
+  const empty = await sqlite3.open_v2(
+    uri,
+    SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE | SQLite.SQLITE_OPEN_URI,
+  );
+  await sqlite3.close(empty);
+  const name = [...inspectionVfs.mapNameToFile.keys()][0];
+  const bytes = new Uint8Array(data.slice(0));
+  // A serialized WAL image contains its committed pages; deserialize a private
+  // rollback-journal copy, as the API's native recovery inspector does.
+  if (bytes[18] === 2 && bytes[19] === 2) bytes[18] = bytes[19] = 1;
+  inspectionVfs.mapNameToFile.set(name, {
+    name,
+    flags: 0,
+    size: bytes.byteLength,
+    data: bytes.buffer,
+  });
+  let candidate: number | undefined;
+  try {
+    candidate = await sqlite3.open_v2(uri, SQLite.SQLITE_OPEN_READONLY | SQLite.SQLITE_OPEN_URI);
+    const tables = new Set<string>();
+    for await (const stmt of sqlite3.statements(
+      candidate,
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    )) {
+      const columns = getColumnNames(stmt);
+      while ((await sqlite3.step(stmt)) === SQLite.SQLITE_ROW)
+        tables.add(String(getRow(stmt, columns).name));
+    }
+    const rows: Record<string, unknown>[] = [];
+    for await (const stmt of sqlite3.statements(candidate, recoveryContentSql(tables))) {
+      const columns = getColumnNames(stmt);
+      while ((await sqlite3.step(stmt)) === SQLite.SQLITE_ROW) rows.push(getRow(stmt, columns));
+    }
+    return recoveryFingerprints(rows);
+  } finally {
+    if (candidate !== undefined) await sqlite3.close(candidate);
+    inspectionVfs.mapNameToFile.clear();
+  }
+}
+
 async function importDb(data: ArrayBuffer): Promise<void> {
   // We need to know the VFS key SQLite uses. If we've exported before, use that.
   // Otherwise, do a dummy export to discover the resolved name.
@@ -474,6 +525,9 @@ async function handleMessage(e: MessageEvent<WorkerRequest>) {
           result as ArrayBuffer,
         ]);
         return; // already posted with transfer
+      case 'inspect-import':
+        result = await inspectImport(msg.data);
+        break;
       case 'import':
         await importDb(msg.data);
         result = undefined;

@@ -71,6 +71,11 @@ export function scopeViolation(
   scope: WriteScope | undefined,
 ): string | null {
   if (!scope) return null;
+  if (
+    ['restore', 'branch'].includes(toolName) ||
+    (toolName === 'edit_history' && input.action === 'restore')
+  )
+    return 'Restoring the entire workspace is outside this task’s file scope.';
   const keys = WRITE_PATH_INPUTS[toolName];
   if (!keys) return null;
   for (const key of keys) {

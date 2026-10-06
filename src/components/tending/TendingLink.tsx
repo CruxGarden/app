@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom';
+import { useUIStore } from '@/stores/uiStore';
 import { useTendingRows } from '@/stores/tendingStore';
 import { attentionCount } from '@/services/tending-state';
+import { buttonClass } from '@/components/ui/button-class';
 
 export default function TendingLink({ cruxId }: { cruxId?: string }) {
   const rows = useTendingRows();
@@ -8,9 +9,16 @@ export default function TendingLink({ cruxId }: { cruxId?: string }) {
   const count = attentionCount(states);
   if (cruxId && !count) return null;
   return (
-    <Link
-      to="/tending"
-      className="text-xs text-accent hover:underline px-2 py-1"
+    <button
+      type="button"
+      onClick={() => useUIStore.getState().openTending()}
+      className={buttonClass(
+        'ghost',
+        'xs',
+        cruxId
+          ? 'text-accent'
+          : 'px-2 text-sm font-display text-toolbar-text hover:text-toolbar-text',
+      )}
       aria-label={
         cruxId ? `${count} need tending` : `Tending${count ? `, ${count} need tending` : ''}`
       }
@@ -21,12 +29,15 @@ export default function TendingLink({ cruxId }: { cruxId?: string }) {
         <>
           Tending
           {count > 0 && (
-            <span className="ml-1 rounded bg-accent-muted px-1.5" title="Needs tending">
+            <span
+              className="ml-0.5 min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-muted text-accent text-3xs font-mono"
+              title="Needs tending"
+            >
               {count}
             </span>
           )}
         </>
       )}
-    </Link>
+    </button>
   );
 }

@@ -1,7 +1,9 @@
+import { enableAdvancedMode, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
+import { indexedFiles } from './content-helpers';
 import { enterGarden, storedCrux, createCrux, switchCrux } from './multi-crux-helpers';
 
 test('idea → clean preview → entry choice → advanced edits → restart', async () => {
@@ -13,9 +15,10 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     let page = instance.page;
     await page.setViewportSize({ width: 1440, height: 1000 });
     await enterGarden(page);
+    await enableAdvancedMode(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page
-      .getByLabel('Your idea (optional)')
+      .getByLabel('What do you want to make?')
       .fill('Make a tiny reading list with a warm green background.');
     await page.getByLabel('Name', { exact: true }).fill('Reading room');
     await page.screenshot({ path: '/private/tmp/clean-workshop/01-create.png' });
@@ -27,7 +30,9 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     );
     await expect(page.getByText('Your creation will appear here', { exact: true })).toBeVisible();
     await expect(page.getByTestId('pane-body-artifacts')).not.toBeVisible();
-    await expect(page.getByRole('banner').getByRole('link', { name: /^Tending/ })).toBeVisible();
+    await expect(
+      page.getByRole('banner').getByRole('button', { name: 'Search or run a command' }),
+    ).toBeVisible();
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const { projectFolder: folder } = await storedCrux(page, id);
     expect(
@@ -47,15 +52,8 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     writeFileSync(join(folder, 'notes.md'), '# Notes\nKeep this draft.');
     await expect
       .poll(async () => {
-        const row = (await page.evaluate(
-          async (id) =>
-            window.electronAPI!.sqlite.get(
-              "SELECT COUNT(*) AS count FROM artifacts WHERE resource_id = ? AND path IN ('index.html', 'reading.html', 'notes.md')",
-              [id],
-            ),
-          id,
-        )) as { count: number };
-        return row.count;
+        const files = await indexedFiles(page, id);
+        return ['index.html', 'reading.html', 'notes.md'].filter((path) => files[path]).length;
       })
       .toBe(3);
 
@@ -67,15 +65,16 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
     await workshop().getByRole('button', { name: 'Home', exact: true }).click();
     await expect(frame().getByRole('heading', { name: 'The reading room' })).toBeVisible();
-    await workshop().getByRole('button', { name: 'Crux settings' }).click();
+    await workshop().getByRole('button', { name: 'Details', exact: true }).click();
     await page.getByLabel('Entry file', { exact: true }).selectOption('reading.html');
     await expect
       .poll(async () => (await storedCrux(page, id)).settings?.entryFile)
       .toBe('reading.html');
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
-    // Frame-local actionability does not wait for the outer pane's entrance animation.
+    // Frame-local actionability does not wait for the outer panes' entrance animations
+    // (Details has just opened beside the Workshop and moved the preview).
     await workshop().evaluate(async (element) => {
-      const pane = element.closest('.mosaic-window') ?? element;
+      const pane = element.closest('.mosaic') ?? element.closest('.mosaic-window') ?? element;
       await Promise.all(
         pane
           .getAnimations({ subtree: true })
@@ -95,7 +94,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await expect(frame().getByRole('heading', { name: 'Updated reading list' })).toBeVisible();
     writeFileSync(join(folder, 'reading.html'), reading);
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
-    await page.getByRole('button', { name: 'Toggle metadata' }).click();
+    await togglePanel(page, 'Toggle details');
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
     await page.screenshot({ path: '/private/tmp/clean-workshop/03-clean.png' });
 
@@ -103,7 +102,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await expect(page.locator('.monaco-editor').first()).toContainText('Your reading list');
     await workshop().getByRole('button', { name: 'Clean', exact: true }).click();
     await expect(frame().getByRole('heading', { name: 'Your reading list' })).toBeVisible();
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
     await page.getByRole('tree').getByText('notes.md', { exact: true }).click();
     await expect(workshop()).toHaveAttribute('data-view', 'advanced');
     await expect(page.locator('.monaco-editor').first()).toContainText('Keep this draft.');
@@ -118,7 +117,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     await page.locator('.monaco-editor').first().click();
     await page.keyboard.press('ControlOrMeta+s');
     await workshop().getByRole('button', { name: 'Clean', exact: true }).click();
-    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+    await togglePanel(page, 'Toggle artifacts');
 
     // A saved choice disappearing never silently opens another page.
     unlinkSync(join(folder, 'reading.html'));
@@ -140,6 +139,7 @@ test('idea → clean preview → entry choice → advanced edits → restart', a
     instance = await launchApp({ dir });
     page = instance.page;
     await page.getByRole('button', { name: /enter/i }).click();
+    await page.getByRole('button', { name: 'Open Reading room', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', id);
     await expect(page.getByTestId('workshop-view')).toHaveAttribute('data-view', 'clean');
     await expect(

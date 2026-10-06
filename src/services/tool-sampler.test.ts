@@ -1,4 +1,7 @@
-import { beforeEach, expect, it } from 'vitest';
+import { localApiFixture } from '@/test/local-api-fixture';
+import { beforeEach, expect, it, vi } from 'vitest';
+import { cruxes } from '@/api';
+import { captureAuth } from '@/api/session';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
@@ -11,7 +14,8 @@ import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 import { registerAppTools } from './embedded-app-tool-registry';
 import { createToolExecutor, defaultToolDefinitions, didMutate } from '@/ai/tools';
 import { starter, applyCommand } from '../../tool-cruxes/shared/model.js';
-beforeEach(() => initServices('local'));
+localApiFixture();
+beforeEach(() => initServices());
 it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
   'preserves %s documents through scoped commands, conflicts, Growth and archive roundtrip',
   async (type) => {
@@ -33,6 +37,8 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
       content: JSON.stringify(document),
       expected: null,
     })) as { fingerprint: string };
+    expect(store.getState().growths).toHaveLength(0);
+    await store.getState().createSnapshot({ label: 'Chosen version' });
     expect(store.getState().growths.length).toBe(1);
     const initialSnapshot = store.getState().growths[0]!.targetId;
     const adapter = embeddedAppToolAdapter(crux)!;
@@ -91,13 +97,19 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
     const imported = await importCrux({ data: archive.blob, mode: 'clone' });
     const files = await services.artifact.findByResource('crux', imported.cruxId);
     const file = files.find((f) => f.meta?.path === 'data/project.json')!;
-    expect(JSON.parse(await services.artifact.readContent(file.id))).toEqual(document);
+    expect(JSON.parse(await services.artifact.readContent(file))).toEqual(document);
     // The Whiteboard shares its drawing as a view-mode page; the other samplers stay local
-    if (type === 'excalidraw')
-      await expect(publishPipeline(crux, artifacts)).rejects.not.toThrow(
-        'Website sharing is not available',
-      );
-    else
+    if (type === 'excalidraw') {
+      // Reach the publish-state check without contacting a real service.
+      const probe = vi.spyOn(cruxes, 'get').mockRejectedValue(new Error('Publish probe offline'));
+      const context = captureAuth();
+      try {
+        await expect(publishPipeline(crux, artifacts)).rejects.toThrow('Publish probe offline');
+        expect(probe).toHaveBeenCalledWith(crux.id, context);
+      } finally {
+        probe.mockRestore();
+      }
+    } else
       await expect(publishPipeline(crux, artifacts)).rejects.toThrow(
         'Website sharing is not available',
       );
@@ -105,7 +117,7 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
     const restored = (await services.artifact.findByResource('crux', crux.id)).find(
       (f) => f.meta?.path === 'data/project.json',
     )!;
-    expect(JSON.parse(await services.artifact.readContent(restored.id))).toEqual(initialDocument);
+    expect(JSON.parse(await services.artifact.readContent(restored))).toEqual(initialDocument);
     store.setState({ viewingSnapshotId: 'past' });
     await expect(call({ op: 'read', path: 'project.json' })).rejects.toThrow('current app');
   },
@@ -160,12 +172,12 @@ it.each(['openmosh', 'excalidraw'])(
     const files = await services.artifact.findByResource('crux', imported.cruxId);
     const image = files.find((f) => f.meta?.path === 'data/' + path)!;
     expect(
-      new Uint8Array(await (await services.artifact.downloadBlob(image.id)).arrayBuffer()),
+      new Uint8Array(await (await services.artifact.downloadBlob(image)).arrayBuffer()),
     ).toEqual(bytes);
   },
 );
 
-it('acknowledges the bytes written, even when an external edit arrives during snapshot creation', async () => {
+it('acknowledges the bytes written, even when an external edit arrives during the post-save refresh', async () => {
   const services = getServices();
   const crux = await services.crux.create({
     title: 'Race',
@@ -186,7 +198,7 @@ it('acknowledges the bytes written, even when an external edit arrives during sn
   const mine = JSON.stringify({ ...starter('tables'), title: 'My import' });
   const theirs = JSON.stringify({ ...starter('tables'), title: 'External edit' });
   store.setState({
-    createSnapshot: async () => {
+    refreshArtifacts: async () => {
       await services.artifact.create({
         resourceId: crux.id,
         content: theirs,
@@ -207,5 +219,5 @@ it('acknowledges the bytes written, even when an external edit arrives during sn
   const file = (await services.artifact.findByResource('crux', crux.id)).find(
     (f) => f.meta?.path === 'data/project.json',
   )!;
-  expect(await services.artifact.readContent(file.id)).toBe(theirs);
+  expect(await services.artifact.readContent(file)).toBe(theirs);
 });

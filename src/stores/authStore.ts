@@ -1,6 +1,14 @@
+import { apiBaseUrl } from '@/api/client';
 import { create } from 'zustand';
 import * as authApi from '@/api/auth';
-import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
+import {
+  getStoredTokens,
+  storeTokens,
+  clearTokens,
+  captureAuth,
+  beginAuthentication,
+  assertAuthCurrent,
+} from '@/api/session';
 import type { Profile, Author } from '@/api/types';
 import { SettingsKey } from '@/lib/constants';
 
@@ -16,6 +24,14 @@ async function reconcileAuthorId(
   try {
     const db = (await import('@/services/sqlite/client')).getSqliteClient();
     const newId = apiAuthor.id;
+
+    // Desktop: every reference and the installation's record change together.
+    if (db.installation) {
+      await db.installation.rekeyLocalAuthor({ oldId, newId, accountId });
+      (await import('@/services/settings')).setSetting(SettingsKey.LocalAuthorId, newId);
+      const { getServices: gs } = await import('@/services');
+      return gs().author.findById(newId);
+    }
 
     await db.run('UPDATE cruxes SET author_id = ? WHERE author_id = ?', [newId, oldId]);
     await db.run('UPDATE artifacts SET author_id = ? WHERE author_id = ?', [newId, oldId]);
@@ -70,8 +86,7 @@ export function resolveAvatarUrl(
   if (url.startsWith('data:') || url.startsWith('http')) return url;
 
   // API-relative path (for public pages viewing other authors)
-  const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  return `${base}${url}?v=${author?.updated || ''}`;
+  return `${apiBaseUrl()}${url}?v=${author?.updated || ''}`;
 }
 
 /**
@@ -108,6 +123,7 @@ interface AuthState {
   account: Profile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  connectionError: string | null;
 
   /** Check stored tokens and restore auth state. Called by appStore.init().
    *  Pass { lightweight: true } on public pages to skip author reconciliation. */
@@ -120,7 +136,6 @@ interface AuthState {
   login: (email: string, code: string) => Promise<Profile>;
 
   /** Logout and clear tokens */
-  logout: () => Promise<void>;
 
   /** Connect local device to a crux.garden account (stays local-first) */
   connectAccount: (email: string, code: string) => Promise<Profile>;
@@ -129,15 +144,43 @@ interface AuthState {
   disconnectAccount: () => Promise<void>;
 }
 
+async function signIn(email: string, code: string) {
+  const context = beginAuthentication();
+  const creds = await authApi.login(email, code, context);
+  try {
+    await storeTokens(creds.accessToken, creds.refreshToken, context);
+  } catch {
+    assertAuthCurrent(context);
+    throw new Error(
+      'Could not save the account connection. Unlock your system keychain, check storage, and retry.',
+    );
+  }
+  const profile = await authApi.getProfile(context);
+  return { context, profile };
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   account: null,
   isAuthenticated: false,
   isLoading: true,
+  connectionError: null,
 
   checkAuth: async (opts) => {
-    const { accessToken, refreshToken } = getStoredTokens();
+    const context = captureAuth();
+    let tokens;
+    try {
+      tokens = await getStoredTokens(context);
+    } catch {
+      set({
+        isLoading: false,
+        connectionError:
+          'Could not read the saved connection. Unlock your system keychain or repair credential storage, then retry.',
+      });
+      return;
+    }
+    const { accessToken, refreshToken } = tokens;
     if (!accessToken || !refreshToken) {
-      set({ isLoading: false });
+      set({ account: null, isAuthenticated: false, isLoading: false, connectionError: null });
       return;
     }
 
@@ -147,6 +190,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const localAuthor = useAppStore.getState().author;
 
     const finalize = async (profile: Profile) => {
+      assertAuthCurrent(context);
       // Re-read: the profile fetch is slow enough that the Gateway may have
       // created the local author meanwhile. Writing the value captured before
       // the await nulled it and left the app anonymous until reload.
@@ -155,7 +199,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (!opts?.lightweight && author && profile.author && author.id !== profile.author.id) {
         author = await reconcileAuthorId(author.id, profile.author, profile.id);
       }
+      assertAuthCurrent(context);
       set({
+        connectionError: null,
         account: profile,
         isAuthenticated: true,
         isLoading: false,
@@ -167,28 +213,29 @@ export const useAuthStore = create<AuthState>((set) => ({
     };
 
     try {
-      const profile = await authApi.getProfile();
+      // The request owner performs one deduplicated refresh on a rejected JWT.
+      const profile = await authApi.getProfile(context);
       await finalize(profile);
     } catch {
-      // Access token may be expired — try refresh
       try {
-        const creds = await authApi.refreshToken(refreshToken);
-        storeTokens(creds.accessToken, creds.refreshToken);
-        const profile = await authApi.getProfile();
-        await finalize(profile);
+        assertAuthCurrent(context);
       } catch {
-        // Tokens invalid — silently clear and stay disconnected
-        clearTokens();
-        set({ account: null, isAuthenticated: false, isLoading: false });
+        return;
       }
+      set({
+        account: null,
+        isAuthenticated: false,
+        isLoading: false,
+        connectionError:
+          'Could not restore the account connection. Check your connection and retry.',
+      });
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   connectAccount: async (email: string, code: string) => {
-    const creds = await authApi.login(email, code);
-    storeTokens(creds.accessToken, creds.refreshToken);
-
-    const profile = await authApi.getProfile();
+    const { context, profile } = await signIn(email, code);
 
     // Lazy import to avoid circular dependency at module load time
     const { useAppStore } = await import('./appStore');
@@ -233,12 +280,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         ],
       });
       if (r.choice !== 'switch') {
-        clearTokens();
+        await clearTokens(context);
         set({ account: null, isAuthenticated: false });
         throw new Error('Not connected — this garden belongs to a different account.');
       }
     }
 
+    assertAuthCurrent(context);
     if (profile.author && localAuthor) {
       if (localAuthor.id !== profile.author.id) {
         author = await reconcileAuthorId(localAuthor.id, profile.author, profile.id);
@@ -261,8 +309,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     }
 
+    assertAuthCurrent(context);
     setSetting(Keys.ConnectedAccountId, profile.id);
     set({
+      connectionError: null,
       account: profile,
       isAuthenticated: true,
     });
@@ -273,14 +323,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   disconnectAccount: async () => {
+    const context = captureAuth();
+    // Revocation is best effort; acknowledged local removal is required.
+    await authApi.logout(context).catch(() => undefined);
     try {
-      await authApi.logout();
+      await clearTokens(context);
+      set({ account: null, isAuthenticated: false, connectionError: null });
     } catch {
-      // Ignore — clear local state regardless
+      set({
+        connectionError:
+          'Could not remove the saved connection. Restore credential storage and retry.',
+      });
+      throw new Error(
+        'Could not remove the saved connection. Restore credential storage and retry.',
+      );
     }
-    clearTokens();
-    set({ account: null, isAuthenticated: false });
-    // Keep author as-is — preserves username/displayName from API
   },
 
   requestCode: async (email: string) => {
@@ -288,34 +345,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email: string, code: string) => {
-    const creds = await authApi.login(email, code);
-    storeTokens(creds.accessToken, creds.refreshToken);
-
-    const profile = await authApi.getProfile();
+    const { context, profile } = await signIn(email, code);
 
     // Lazy import to avoid circular dependency at module load time
     const { useAppStore } = await import('./appStore');
 
+    assertAuthCurrent(context);
     set({
+      connectionError: null,
       account: profile,
       isAuthenticated: true,
     });
     useAppStore.setState({ author: profile.author ?? null });
     return profile;
-  },
-
-  logout: async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Ignore — clear local state regardless
-    }
-    clearTokens();
-
-    // Lazy import to avoid circular dependency at module load time
-    const { useAppStore } = await import('./appStore');
-
-    set({ account: null, isAuthenticated: false });
-    useAppStore.setState({ author: null });
   },
 }));

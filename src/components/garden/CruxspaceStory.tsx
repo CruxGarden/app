@@ -1,11 +1,13 @@
-import { createPortal } from 'react-dom';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buttonClass } from '@/components/ui/button-class';
+import { useGrowthGraphView } from '@/components/growth/useGrowthGraphView';
+import { useElementSize, useReducedMotion } from '@/hooks/useElementSize';
 import { useNavigate } from 'react-router-dom';
-import { Modal } from '@/components/ui';
+import { Modal, SectionLabel } from '@/components/ui';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import GrowthInspector from '@/components/growth/GrowthInspector';
 import { laneColor } from '@/components/growth/graph-style';
-import { compactGrowthGraph, growthAncestry } from '@/services/growth-graph';
+import { useGraphAppearance } from '@/components/growth/useGraphAppearance';
 import {
   loadCruxspaceHistory,
   type CruxspaceHistory,
@@ -20,11 +22,10 @@ import { planCruxspaceRevert, revertCruxspaceTo } from '@/stores/cruxspaceRevert
 import { confirmDialog } from '@/stores/dialogStore';
 
 const Canvas2D = lazy(() => import('@/components/growth/GrowthGraphCanvas'));
-const action =
-  'rounded px-3 py-1.5 text-xs border border-border hover:border-accent cursor-pointer disabled:opacity-50';
+const action = buttonClass('secondary', 'xs');
 
 /**
- * The story of a Cruxspace (G10): what it is for, who its members are, every
+ * The story of a Garden (G10): what it is for, who its members are, every
  * milestone across them in one list and one graph, and a walkthrough that
  * puts every member at a chosen moment.
  */
@@ -36,6 +37,7 @@ export default function CruxspaceStory({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const appearance = useGraphAppearance();
   const [history, setHistory] = useState<CruxspaceHistory | null>(null);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -43,13 +45,13 @@ export default function CruxspaceStory({
   const [fit, setFit] = useState(0);
   const [query, setQuery] = useState('');
   const [everything, setEverything] = useState(false);
-  const [size, setSize] = useState({ width: 0, height: 0 });
   const [moment, setMoment] = useState(getCruxspaceMoment);
   const [notice, setNotice] = useState('');
   const [reverting, setReverting] = useState(false);
   const [reload, setReload] = useState(0);
-  const [reducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const reducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLDivElement>(null);
+  const size = useElementSize(canvasRef, [history]);
   const dialogRef = useRef<HTMLElement>(null);
   const select = useCallback((id: string) => setSelectedId(id || null), []);
 
@@ -77,39 +79,11 @@ export default function CruxspaceStory({
     return () => window.removeEventListener(CRUXSPACE_MOMENT_CHANGED, update);
   }, []);
   useEffect(() => {
-    const element = canvasRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry)
-        setSize({
-          width: Math.floor(entry.contentRect.width),
-          height: Math.floor(entry.contentRect.height),
-        });
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [history]);
-  useEffect(() => {
     dialogRef.current?.focus();
   }, [history]);
 
   const graph = history?.graph ?? null;
-  const display = useMemo(
-    () =>
-      graph
-        ? compactGrowthGraph(
-            graph,
-            new Set(expanded ? graph.lanes.map((l) => l.id) : []),
-            selectedId,
-          )
-        : null,
-    [graph, expanded, selectedId],
-  );
-  const ancestry = useMemo(
-    () => (graph && selectedId ? growthAncestry(graph, selectedId) : new Set<string>()),
-    [graph, selectedId],
-  );
-  const selected = graph?.nodes.find((n) => n.id === selectedId) ?? null;
+  const { display, ancestry, selected } = useGrowthGraphView(graph, expanded, selectedId);
   const milestones = useMemo(() => {
     const all = (everything ? history?.checkpoints : history?.milestones) ?? [];
     const q = query.trim().toLowerCase();
@@ -170,7 +144,9 @@ export default function CruxspaceStory({
           `Every member of ${walking.spaceName} goes back to its last checkpoint before “${walking.title}”, files on disk included. Each gets a “Before revert” checkpoint first, so Growth can bring the current state back.`,
           ...going.map((m) => `• ${m.title} → ${m.label}`),
           ...(staying.length
-            ? [`Left as they are (they did not exist yet): ${staying.map((m) => m.title).join(', ')}.`]
+            ? [
+                `Left as they are (they did not exist yet): ${staying.map((m) => m.title).join(', ')}.`,
+              ]
             : []),
         ].join('\n'),
         confirmLabel: 'Revert every member',
@@ -194,22 +170,19 @@ export default function CruxspaceStory({
   };
   const when = (iso: string) => (iso ? new Date(iso).toLocaleString() : '');
 
-  return createPortal(
-    <Modal open onClose={onClose} size="full" flush>
+  return (
+    <Modal open onClose={onClose} size="full" flush aria-label="Garden history">
       <section
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Cruxspace history"
         tabIndex={-1}
         className="flex flex-col h-full min-h-0 outline-none"
         data-testid="cruxspace-story"
       >
         <header className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
           <div>
-            <p className="text-xs uppercase tracking-widest font-mono text-accent">
-              Cruxspace · history
-            </p>
+            <SectionLabel as="p" tone="accent">
+              Garden · history
+            </SectionLabel>
             <h2 className="font-display text-xl">{history?.space.name ?? 'Loading…'}</h2>
             <p className="text-xs text-text-muted mt-1">
               {history
@@ -234,7 +207,11 @@ export default function CruxspaceStory({
             <button className={action} onClick={() => setFit((n) => n + 1)}>
               Fit graph
             </button>
-            <button className={action} onClick={onClose} aria-label="Close Cruxspace history">
+            <button
+              className={buttonClass('ghost', 'xs')}
+              onClick={onClose}
+              aria-label="Close Garden history"
+            >
               Close
             </button>
           </div>
@@ -274,7 +251,7 @@ export default function CruxspaceStory({
                 Back to now
               </button>
               <button
-                className={`${action} border-error/60 text-error`}
+                className={buttonClass('danger', 'xs')}
                 disabled={reverting}
                 onClick={() => void revertAll()}
               >
@@ -284,34 +261,36 @@ export default function CruxspaceStory({
           </div>
         )}
         {notice && (
-          <p role="status" aria-label="Revert result" className="px-4 py-2 text-sm border-b border-border">
+          <p
+            role="status"
+            aria-label="Revert result"
+            className="px-4 py-2 text-sm border-b border-border"
+          >
             {notice}
           </p>
         )}
         <div className="flex flex-1 min-h-0">
           <aside
-            aria-label="Cruxspace story"
+            aria-label="Garden story"
             className="w-[26rem] shrink-0 border-r border-border overflow-y-auto p-4 space-y-5 text-sm"
           >
-            <section aria-label="About this Cruxspace">
-              <h3 className="text-xs uppercase tracking-widest font-mono text-text-muted mb-1">
-                What this Cruxspace is for
-              </h3>
-              <p className="whitespace-pre-wrap">
-                {history?.space.brief || 'No brief yet. Edit the Cruxspace to add one.'}
-              </p>
+            <section aria-label="About this Garden">
+              <SectionLabel as="h3" tone="muted" className="mb-1">
+                What this Garden is for
+              </SectionLabel>
+              <p className="whitespace-pre-wrap">{history?.space.brief || 'No brief yet.'}</p>
             </section>
             <section aria-label="Members">
-              <h3 className="text-xs uppercase tracking-widest font-mono text-text-muted mb-1">
+              <SectionLabel as="h3" tone="muted" className="mb-1">
                 Members and their part
-              </h3>
+              </SectionLabel>
               <ul className="space-y-1">
                 {history?.members.map((m, i) => (
                   <li key={m.id} className="flex items-start gap-2">
                     <span
                       aria-hidden
                       className="mt-1 h-3 w-3 rounded-full shrink-0"
-                      style={{ background: laneColor(laneIndex(history, m.id)) }}
+                      style={{ background: laneColor(appearance, laneIndex(history, m.id)) }}
                     />
                     <span>
                       <button
@@ -334,9 +313,9 @@ export default function CruxspaceStory({
             </section>
             <section aria-label="Milestones">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <h3 className="text-xs uppercase tracking-widest font-mono text-text-muted">
+                <SectionLabel as="h3" tone="muted">
                   Milestones, in order
-                </h3>
+                </SectionLabel>
                 {!walking && history && history.milestones.length > 0 && (
                   <button className={action} onClick={() => goTo(history.milestones[0]!)}>
                     Start walkthrough
@@ -360,12 +339,14 @@ export default function CruxspaceStory({
               />
               <ol className="space-y-1" aria-label="Milestone list">
                 {milestones.map((m) => {
-                  const index = (everything ? history!.checkpoints : history!.milestones).indexOf(m);
+                  const index = (everything ? history!.checkpoints : history!.milestones).indexOf(
+                    m,
+                  );
                   const current = walking?.milestoneId === m.id;
                   return (
                     <li
                       key={m.id}
-                      className={`rounded border p-2 ${current ? 'border-accent bg-accent-muted' : selectedId && selectedId === m.nodeId ? 'border-accent' : 'border-transparent hover:bg-surface'}`}
+                      className={`rounded-[var(--radius-sm)] border p-2 transition-colors ${current ? 'border-accent bg-accent-muted' : selectedId && selectedId === m.nodeId ? 'border-accent' : 'border-transparent hover:bg-action-button-hover'}`}
                     >
                       <button
                         className="block w-full text-left text-xs cursor-pointer"
@@ -398,18 +379,23 @@ export default function CruxspaceStory({
             </section>
           </aside>
           <div className="flex-1 min-w-0 flex flex-col">
-            <div ref={canvasRef} className="flex-1 min-h-0 relative" data-testid="cruxspace-canvas">
+            <div
+              ref={canvasRef}
+              className="growth-graph flex-1 min-h-0 relative"
+              data-testid="cruxspace-canvas"
+              style={{ backgroundColor: appearance.background, color: appearance.text }}
+            >
               {display && size.width > 0 && (
                 <ErrorBoundary
                   fallback={
-                    <p role="status" className="p-6 text-[#e1eee5]">
+                    <p role="status" className="p-6">
                       The graph could not be drawn here.
                     </p>
                   }
                 >
                   <Suspense
                     fallback={
-                      <p role="status" className="p-6 text-[#e1eee5]">
+                      <p role="status" className="p-6">
                         Drawing the graph…
                       </p>
                     }
@@ -423,6 +409,7 @@ export default function CruxspaceStory({
                       onSelect={select}
                       fit={fit}
                       reducedMotion={reducedMotion}
+                      appearance={appearance}
                     />
                   </Suspense>
                 </ErrorBoundary>
@@ -435,20 +422,21 @@ export default function CruxspaceStory({
                   {graph.lanes.map((lane, i) => (
                     <li
                       key={lane.id}
-                      className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5 text-[#e1eee5]"
+                      className="flex items-center gap-1 rounded bg-surface px-1.5 py-0.5"
                     >
                       <span
                         aria-hidden
                         className="h-2 w-2 rounded-full"
-                        style={{ background: laneColor(i) }}
+                        style={{ background: laneColor(appearance, i) }}
                       />
                       {lane.title}
                     </li>
                   ))}
-                  <li className="flex items-center gap-1 rounded bg-[#101c19]/80 px-1.5 py-0.5 text-[#e1eee5]">
+                  <li className="flex items-center gap-1 rounded bg-surface px-1.5 py-0.5">
                     <span
                       aria-hidden
-                      className="h-0 w-4 border-t-2 border-dashed border-[#df94ab]"
+                      className="h-0 w-4 border-t-2 border-dashed"
+                      style={{ borderColor: appearance.transferLink }}
                     />
                     output used by another member
                   </li>
@@ -485,8 +473,7 @@ export default function CruxspaceStory({
           </div>
         </div>
       </section>
-    </Modal>,
-    document.body,
+    </Modal>
   );
 }
 

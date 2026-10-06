@@ -1,10 +1,11 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 const FIELD_TYPES = ['textfield', 'textarea', 'number', 'checkbox', 'checklist', 'radio', 'select', 'datetime', 'taglist', 'text', 'separator'];
 export const FORMJS_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_form',
     description: 'Read the open form: its name, its fields (key, type, label, required) and the field types the builder offers.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

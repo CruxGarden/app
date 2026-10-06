@@ -4,10 +4,17 @@ import { validateCommand, replaceSource, summarizeCell } from './commands.js';
 export function notebookCommands(app, saveOutput) {
   const widgets = () =>
     [...app.shell.widgets('main')].filter((w) => w.context?.model?.sharedModel?.cells);
+  // The notebook the person is in, or — after a layout restore, when JupyterLab
+  // has no current widget yet although a notebook tab is showing — the one
+  // open notebook. Two open notebooks stay ambiguous until one is focused.
+  function focused() {
+    const open = widgets();
+    if (open.includes(app.shell.currentWidget)) return app.shell.currentWidget;
+    return open.length === 1 ? open[0] : null;
+  }
   function current() {
-    const widget = app.shell.currentWidget;
-    if (!widget?.context?.model?.sharedModel?.cells)
-      throw new Error('Open a notebook before using this operation.');
+    const widget = focused();
+    if (!widget) throw new Error('Open a notebook before using this operation.');
     return widget;
   }
   const modelOf = (widget) => widget.context.model.sharedModel;
@@ -81,8 +88,7 @@ export function notebookCommands(app, saveOutput) {
     }
   }
   return {
-    inspect: () =>
-      inspect(widgets().includes(app.shell.currentWidget) ? app.shell.currentWidget : null),
+    inspect: () => inspect(focused()),
     prepare(raw) {
       const value = validateCommand(raw);
       if (value.op === 'create-notebook')
@@ -125,12 +131,7 @@ export function notebookCommands(app, saveOutput) {
             return inspect(widget);
           },
         };
-      const widget =
-        value.op === 'inspect' && !value.cellId
-          ? widgets().includes(app.shell.currentWidget)
-            ? app.shell.currentWidget
-            : null
-          : current();
+      const widget = value.op === 'inspect' && !value.cellId ? focused() : current();
       if (value.op === 'inspect') return { mutates: false, apply: () => inspect(widget, value) };
       const model = modelOf(widget);
       const target = value.cellId ? findCell(widget, value.cellId) : null;

@@ -1,12 +1,13 @@
 import { memo } from 'react';
 import type { Crux } from '@/api/types';
+import type { SortField } from '@/stores/gardenStore';
 import CruxCard from './CruxCard';
 
 interface GardenGridProps {
   cruxes: Crux[];
   linkBuilder?: (crux: Crux) => string;
   onDelete?: (id: string) => void;
-  sortBy?: 'created' | 'updated';
+  sortBy?: SortField;
   hideMenu?: boolean;
   /** cruxId → Blob Store fingerprint of its preview.jpg (local gardens). */
   thumbnails?: Record<string, string>;
@@ -33,10 +34,11 @@ export default memo(function GardenGrid({
         gridTemplateColumns: 'repeat(auto-fill, minmax(var(--garden-card-min-width), 1fr))',
       }}
     >
-      {cruxes.map((crux) => (
+      {cruxes.map((crux, index) => (
         <CruxCard
           key={crux.id}
           crux={crux}
+          enterIndex={index}
           tendingCount={tendingCounts?.[crux.id]}
           linkTo={linkBuilder?.(crux)}
           onDelete={onDelete}

@@ -1,8 +1,13 @@
+import PaneOptions from './PaneOptions';
+import { exportCreation, creationExportLabel } from '@/services/export-creation';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import PrivateBackupDescription from '@/components/garden/PrivateBackupDescription';
+import { downloadBlob } from '@/lib/download';
 import { useState, useCallback, useMemo } from 'react';
 import { isEmbeddedApp, isCardinal, samplerType } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
-import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
+import { exportArtifactsZip } from '@/services/crux-io';
 import { formatBytes } from '@/lib/format';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
@@ -45,6 +50,7 @@ function ZipIcon() {
 }
 
 export default function ExportPane() {
+  const aiEnabled = useAiEnabled();
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
   const allMessages = useCruxStore((s) => s.messages);
@@ -68,7 +74,7 @@ export default function ExportPane() {
     setProgress('Fetching data...');
 
     try {
-      const result = await exportCrux({
+      const result = await exportCreation({
         cruxId: crux.id,
         messages,
         summary,
@@ -76,15 +82,7 @@ export default function ExportPane() {
         onProgress: setProgress,
       });
 
-      // Trigger download
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(result.blob, result.filename);
 
       if (result.failed.length > 0) {
         setProgress(
@@ -114,14 +112,7 @@ export default function ExportPane() {
         onProgress: setProgress,
       });
 
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(result.blob, result.filename);
 
       if (result.failed.length > 0) {
         setProgress(
@@ -139,6 +130,7 @@ export default function ExportPane() {
   }, [crux, artifacts]);
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
+  const installable = crux?.kind === 'tool' || crux?.kind === 'mood';
   const messageCount = messages.length;
   const hasContent = artifacts.length > 0 || messageCount > 0;
 
@@ -156,58 +148,70 @@ export default function ExportPane() {
         <PaneEmpty
           icon={<ExportIcon />}
           title="Nothing to export yet"
-          description="Once this crux has files or a conversation, you can download it as an archive."
+          description={
+            aiEnabled
+              ? 'Once this crux has files or a conversation, you can download it as an archive.'
+              : 'Once this crux has files, you can download it as an archive.'
+          }
         />
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
           {isEmbeddedApp(crux) && (
             <PaneNote tone="muted" className="text-left whitespace-normal">
               {samplerType(crux) ? (
-                'Complete editable project: includes the app, all project data and media, private Collaboration, Tasks and Growth. Anyone with this archive can open them.'
+                `Complete editable project: includes all project data and media, ${aiEnabled ? 'private Collaboration, ' : ''}Tasks and Growth. Anyone with this archive can open them.`
               ) : isCardinal(crux) ? (
-                'Complete instrument: includes its app, patch, presets, private Collaboration, Tasks and Growth. Anyone with this file can open them. Retain the included licenses and source information.'
+                `Complete instrument: includes its app, patch, presets, ${aiEnabled ? 'private Collaboration, ' : ''}Tasks and Growth. Anyone with this file and the required tools can open them. Retain the included licenses and source information.`
               ) : (
                 <>
-                  Complete editable Crux: includes app code, all content (including private notes or
-                  designs), Collaboration, Tasks and Growth. Anyone with this file can open them. To
-                  share selected content as a website, use Share.
+                  Complete editable Crux: includes your app changes, all content (including private
+                  notes or designs), {aiEnabled ? 'Collaboration, ' : ''}Tasks and Growth. Anyone
+                  with this file and the required tools can open them. To share selected content as
+                  a website, use Share.
                 </>
               )}
             </PaneNote>
           )}
-          <PaneSection label="Archive" aside={formatBytes(totalSize)}>
-            <ul className="text-xxs font-mono text-text-muted flex flex-col gap-0.5">
-              <li className="flex justify-between gap-2">
-                <span className="text-text">conversation</span>
-                <span>
-                  {messageCount} message{messageCount === 1 ? '' : 's'}
-                </span>
-              </li>
-              <li className="flex justify-between gap-2">
-                <span className="text-text">history</span>
-                <span>
-                  {growthCount} snapshot{growthCount === 1 ? '' : 's'}
-                </span>
-              </li>
-              <li className="flex justify-between gap-2">
-                <span className="text-text">files</span>
-                <span>
-                  {artifacts.length} artifact{artifacts.length === 1 ? '' : 's'}
-                </span>
-              </li>
-              {artifacts.slice(0, 6).map((a, i) => {
-                const path = (a.meta?.path as string) || a.filename || `file-${i + 1}`;
-                return (
-                  <li key={a.id} className="flex justify-between gap-2 pl-3">
-                    <span className="truncate">{path}</span>
-                    <span className="shrink-0">{formatBytes(Number(a.size) || 0)}</span>
+          <PaneOptions pane="export" label="What is in the backup">
+            <PaneSection label="Archive" aside={formatBytes(totalSize)}>
+              <ul className="text-xxs font-mono text-text-muted flex flex-col gap-0.5">
+                {!installable && (aiEnabled || messageCount > 0) && (
+                  <li className="flex justify-between gap-2">
+                    <span className="text-text">conversation</span>
+                    <span>
+                      {messageCount} message{messageCount === 1 ? '' : 's'}
+                    </span>
                   </li>
-                );
-              })}
-              {artifacts.length > 6 && <li className="pl-3">+ {artifacts.length - 6} more</li>}
-            </ul>
-          </PaneSection>
+                )}
+                {!installable && (
+                  <li className="flex justify-between gap-2">
+                    <span className="text-text">history</span>
+                    <span>
+                      {growthCount} snapshot{growthCount === 1 ? '' : 's'}
+                    </span>
+                  </li>
+                )}
+                <li className="flex justify-between gap-2">
+                  <span className="text-text">files</span>
+                  <span>
+                    {artifacts.length} artifact{artifacts.length === 1 ? '' : 's'}
+                  </span>
+                </li>
+                {artifacts.slice(0, 6).map((a, i) => {
+                  const path = (a.meta?.path as string) || a.filename || `file-${i + 1}`;
+                  return (
+                    <li key={a.id} className="flex justify-between gap-2 pl-3">
+                      <span className="truncate">{path}</span>
+                      <span className="shrink-0">{formatBytes(Number(a.size) || 0)}</span>
+                    </li>
+                  );
+                })}
+                {artifacts.length > 6 && <li className="pl-3">+ {artifacts.length - 6} more</li>}
+              </ul>
+            </PaneSection>
+          </PaneOptions>
 
+          {!installable && <PrivateBackupDescription />}
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap gap-1.5 [&>*]:flex-1 [&>*]:min-w-[132px]">
               <PaneAction
@@ -215,7 +219,7 @@ export default function ExportPane() {
                 busy={exporting && 'Exporting...'}
                 icon={<ExportIcon />}
               >
-                Export Crux
+                {creationExportLabel(crux.kind)}
               </PaneAction>
               {artifacts.length > 0 && (
                 <PaneAction
@@ -230,8 +234,9 @@ export default function ExportPane() {
               )}
             </div>
             <PaneHint align="left">
-              The .crux archive carries the files, the conversation and every snapshot; Export
-              Artifacts is a plain zip of the files.
+              {installable
+                ? 'Installable package: editor or Mood assets, without private conversation or history. Tools start with the seed declared in crux-tool.json. Review other files before sharing. Export Artifacts is a plain zip.'
+                : `The .crux archive carries the files${aiEnabled ? ', the conversation' : ''} and every snapshot; Export Artifacts is a plain zip of the files.`}
             </PaneHint>
           </div>
 

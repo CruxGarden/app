@@ -16,6 +16,14 @@ import { Capability, can, type ProjectBridge, type ChangeBatch } from '@/lib/pla
 import { getSqliteClient } from './sqlite/client';
 import { guessMimeType, hashContent } from './sqlite/helpers';
 import { getServices } from './index';
+import { selectCruxFiles, type SelectedFiles } from './file-content';
+
+/** Files under a Crux changed from outside the app (the watcher, a tool, a restore). */
+export const EXTERNAL_CHANGE = 'crux:external-change';
+export function announceExternalChange(cruxId: string): void {
+  if (typeof window !== 'undefined')
+    window.dispatchEvent(new CustomEvent(EXTERNAL_CHANGE, { detail: { cruxId } }));
+}
 
 function bridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
@@ -27,8 +35,21 @@ function bridge(): ProjectBridge | null {
 const folderToCrux = new Map<string, string>();
 
 async function cruxIdForFolder(folder: string): Promise<string | null> {
-  if (folderToCrux.has(folder)) return folderToCrux.get(folder)!;
   const db = getSqliteClient();
+  const cached = folderToCrux.get(folder);
+  if (cached) {
+    // Import can replace a Crux under the same id in a new Project Folder.
+    // A delayed event from its old folder must never rewrite the replacement.
+    const current = await db.get<{ meta: string | null }>('SELECT meta FROM cruxes WHERE id = ?', [
+      cached,
+    ]);
+    try {
+      if (JSON.parse(current?.meta || '{}').projectFolder === folder) return cached;
+    } catch {
+      /* Invalid or removed metadata cannot authorize a folder. */
+    }
+    folderToCrux.delete(folder);
+  }
   const copy = await db.get<{ id: string }>(
     "SELECT id FROM working_copies WHERE project_folder = ? AND phase IN ('preparing', 'ready')",
     [folder],
@@ -112,8 +133,19 @@ function takeExpectation(folder: string, relPath: string): string | null {
 let queueTail: Promise<void> = Promise.resolve();
 let unsubscribe: (() => void) | null = null;
 
+/** Serialize explicit disk-index operations with watcher batches. Callers receive
+ * failures; later ingestion must remain usable. Operations must not await this queue. */
+export function serializeIngestion<T>(operation: () => Promise<T>): Promise<T> {
+  const result = queueTail.then(operation);
+  queueTail = result.then(
+    () => {},
+    () => {},
+  );
+  return result;
+}
+
 function enqueue(fn: () => Promise<void>): void {
-  queueTail = queueTail.then(fn).catch((err) => {
+  void serializeIngestion(fn).catch((err) => {
     console.error('[ingestion] batch failed:', err);
   });
 }
@@ -131,12 +163,32 @@ export function flushIngestion(): Promise<void> {
  */
 export async function settleIngestion(folder?: string): Promise<void> {
   const api = bridge();
-  if (api?.flush) {
+  if (!api?.flush) {
+    await flushIngestion();
+    return;
+  }
+  // One drain is not enough. The OS watcher holds a save for its own
+  // stability window before it will admit to it, so a file written a moment
+  // ago is invisible to a flush and arrives just after — which is how a
+  // restore used to lose to an edit made a second earlier. So: drain, wait
+  // out that window, drain again, and stop once a drain comes back empty.
+  for (let round = 0; round < SETTLE_ROUNDS; round++) {
     const batches = await api.flush(folder).catch(() => [] as ChangeBatch[]);
     for (const batch of batches) enqueue(() => processBatch(batch));
+    await flushIngestion();
+    if (!batches.length && round > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_WAIT_MS));
   }
   await flushIngestion();
 }
+
+/**
+ * Long enough for the watcher to have let go of a save it was still holding
+ * (its stability window plus its poll interval, with room to spare), and
+ * short enough that settling stays imperceptible.
+ */
+const SETTLE_WAIT_MS = 320;
+const SETTLE_ROUNDS = 3;
 
 /** Reconcile a referenced file whose OS watcher notification may still be pending. */
 export async function reconcileProjectFile(folder: string, relPath: string): Promise<void> {
@@ -146,7 +198,7 @@ export async function reconcileProjectFile(folder: string, relPath: string): Pro
 
 /** Notify interested UI (Artifacts panel, workshop) that a crux's files changed. */
 function announceChange(cruxId: string): void {
-  window.dispatchEvent(new CustomEvent('crux:external-change', { detail: { cruxId } }));
+  announceExternalChange(cruxId);
 }
 
 /** Notify that a Project Folder disappeared (never cascades to deletion). */
@@ -157,7 +209,7 @@ function announceFolderMissing(folder: string, cruxId: string | null): void {
 
 // ── Batch processing ────────────────────────────────────────────────────────
 
-async function processBatch(batch: ChangeBatch): Promise<void> {
+async function processBatch(batch: ChangeBatch, strict = false): Promise<void> {
   const api = bridge();
   if (!api) return;
 
@@ -170,6 +222,13 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
   if (!cruxId) return; // folder not registered to any crux — nothing to record
 
   const db = getSqliteClient();
+  const selected = await selectCruxFiles(cruxId);
+  if (db.fileContent) {
+    // A new empty Crux has no head yet. It still belongs to the manifest API;
+    // falling through would create one manifest (and history entry) per file.
+    await ingestSelectedFiles(cruxId, selected ?? { head: null, entries: [] }, batch, api, strict);
+    return;
+  }
   const { artifact } = getServices();
   let changed = false;
 
@@ -241,7 +300,8 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       let bytes: Uint8Array;
       try {
         bytes = await api.readFile(batch.folder, event.relPath);
-      } catch {
+      } catch (error) {
+        if (strict) throw error;
         continue; // deleted again before we read it — the delete event follows
       }
 
@@ -271,11 +331,82 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       }
       changed = true;
     } catch (err) {
+      if (strict) throw err;
       console.error(`[ingestion] failed to ingest ${event.relPath}:`, err);
     }
   }
 
   if (changed) announceChange(cruxId);
+}
+
+/** One version-bound commit for an external change batch; never writes Artifact rows. */
+async function ingestSelectedFiles(
+  cruxId: string,
+  selected: { head: SelectedFiles['head'] | null; entries: SelectedFiles['entries'] },
+  batch: ChangeBatch,
+  api: ProjectBridge,
+  strict: boolean,
+): Promise<void> {
+  const content = getSqliteClient().fileContent!;
+  const files = new Map(selected.entries.map((entry) => [entry.path, entry]));
+  const changes = new Map<string, Parameters<typeof content.edit>[0]['changes'][number]>();
+  const keeps: string[] = [];
+  for (const event of batch.events) {
+    let path = event.relPath;
+    let bytes: Uint8Array;
+    if (event.type === 'delete' || event.type === 'rmdir') {
+      if (event.type === 'rmdir') path += '/.keep';
+      if (hasExpectation(batch.folder, path)) continue;
+      if (files.delete(path)) changes.set(path, { remove: path });
+      continue;
+    }
+    if (event.type === 'mkdir') {
+      const prefix = path + '/';
+      if (
+        hasExpectedUnder(batch.folder, prefix) ||
+        [...files.keys()].some((p) => p.startsWith(prefix)) ||
+        batch.events.some((e) => e.type === 'write' && e.relPath.startsWith(prefix))
+      )
+        continue;
+      path += '/.keep';
+      bytes = new Uint8Array();
+      keeps.push(path);
+    } else {
+      if (takeExpectation(batch.folder, path) && event.own !== false) continue;
+      try {
+        bytes = await api.readFile(batch.folder, path);
+      } catch (error) {
+        if (strict) throw error;
+        else continue;
+      }
+    }
+    const fingerprint = await hashContent(bytes);
+    const before = files.get(path);
+    if (before?.fingerprint === fingerprint) continue;
+    const mime = guessMimeType(path);
+    const text = isProbablyText(bytes, mime);
+    const entry = {
+      id: before?.id ?? crypto.randomUUID(),
+      path,
+      fingerprint,
+      size: bytes.length,
+      mimeType: text && mime === 'application/octet-stream' ? 'text/plain' : mime,
+      encoding: text ? 'utf-8' : 'binary',
+      mode: before?.mode ?? 0o644,
+      attributes: before?.attributes ?? {},
+    };
+    files.set(path, entry);
+    changes.set(path, { put: entry, bytes });
+  }
+  if (!changes.size) return;
+  if ((await cruxIdForFolder(batch.folder)) !== cruxId)
+    throw new Error('Project Folder ownership changed during ingestion');
+  await content.edit({ cruxId, expected: selected.head, changes: [...changes.values()] });
+  // Preserve the app's empty-folder convention; ordinary external writes are
+  // never projected back onto disk by ingestion.
+  for (const path of keeps)
+    if (files.has(path)) await api.writeFile(batch.folder, path, new Uint8Array());
+  announceChange(cruxId);
 }
 
 // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -286,6 +417,59 @@ export function initIngestion(): void {
   const api = bridge();
   if (!api?.onChanged) return;
   unsubscribe = api.onChanged((batch) => enqueue(() => processBatch(batch)));
+}
+
+/** Reconcile offline/crash-time edits before consumers read the persisted index. */
+export async function recoverProjectFolders(owners?: readonly string[]): Promise<void> {
+  const api = bridge();
+  if (!api?.reconcile) return;
+  const db = getSqliteClient();
+  const folders = new Map<string, string>();
+  // An admitted merge owns recovery for its whole Crux. Leave disk changes
+  // untouched until Resume validates them against the retained journal; an
+  // ordinary startup scan must neither ingest them nor prevent opening the UI.
+  const protectedCruxes = new Set(
+    (
+      await db.all<{ crux_id: string }>("SELECT crux_id FROM task_merges WHERE phase = 'applying'")
+    ).map((row) => row.crux_id),
+  );
+  const cruxes = await db.all<{ id: string; meta: string | null }>(
+    "SELECT id, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL AND (kind IS NULL OR kind <> 'snapshot')",
+  );
+  for (const crux of cruxes) {
+    if (protectedCruxes.has(crux.id)) continue;
+    const meta = JSON.parse(crux.meta || '{}');
+    if (typeof meta.projectFolder === 'string') folders.set(crux.id, meta.projectFolder);
+  }
+  const copies = await db.all<{ id: string; crux_id: string; project_folder: string | null }>(
+    "SELECT id, crux_id, project_folder FROM working_copies WHERE phase = 'ready'",
+  );
+  for (const copy of copies) {
+    if (protectedCruxes.has(copy.crux_id)) continue;
+    if (copy.project_folder) folders.set(copy.id, copy.project_folder);
+  }
+  for (const [id, folder] of folders) {
+    if (owners && !owners.includes(id)) continue;
+    // Keep scan + ingestion in the same queue as watcher batches. All consumers
+    // await service initialization, and Growth also waits for this queue.
+    let failure: unknown;
+    enqueue(async () => {
+      try {
+        const selected = await selectCruxFiles(id);
+        const indexed = selected
+          ? selected.entries
+          : await db.all<{ path: string; fingerprint: string | null }>(
+              "SELECT COALESCE(path, filename) AS path, fingerprint FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+              [id],
+            );
+        await processBatch(await api.reconcile!(folder, indexed), true);
+      } catch (error) {
+        failure = error;
+      }
+    });
+    await flushIngestion();
+    if (failure) throw new Error(`Could not recover Project Folder ${folder}`, { cause: failure });
+  }
 }
 
 /** Stop listening (tests / teardown). */

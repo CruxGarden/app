@@ -104,7 +104,9 @@ export async function readNativeAsset(owner: string, path: unknown) {
   if (!existing || existing.fingerprint !== full.slice(12, -4))
     throw new Error('The saved media is missing or has changed.');
   await verifyOriginal(owner, full, existing.fingerprint);
-  const blob = await service.downloadBlob(existing.id);
+  // The Artifact itself, not its id: files are manifest projections, read by
+  // the file reference they were listed with.
+  const blob = await service.downloadBlob(existing);
   return {
     bytes: await blob.arrayBuffer(),
     mimeType: blob.type,
@@ -114,44 +116,7 @@ export async function readNativeAsset(owner: string, path: unknown) {
 export async function validateNativeDocument(
   owner: string,
   content: string,
-  app:
-    | 'kan'
-    | 'web-synth'
-    | 'beepbox'
-    | 'hextris'
-    | 'pptist'
-    | 'wick-editor'
-    | 'bentopdf'
-    | 'am-1'
-    | 'eventcalendar'
-    | 'formjs'
-    | 'pdfme'
-    | 'maps'
-    | 'p5'
-    | 'glsl'
-    | 'glyphr'
-    | 'fmg'
-    | 'abc'
-    | 'signal'
-    | 'jscad'
-    | 'timeline'
-    | 'recorder'
-    | 'opencut'
-    | 'playcanvas-editor'
-    | 'openmosh'
-    | 'minipaint'
-    | 'audiomass'
-    | 'bitsy'
-    | 'mermaid'
-    | 'piskel'
-    | 'rawgraphs'
-    | 'gephi'
-    | 'ketcher'
-    | 'blockbench'
-    | 'gdevelop'
-    | 'svgedit'
-    | 'twine'
-    | 'jupyterlite' = 'openmosh',
+  app: string = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
@@ -191,7 +156,16 @@ export async function validateNativeDocument(
   else if (app === 'bitsy') validateBitsy(doc);
   else if (app === 'audiomass') validateAudioMass(doc);
   else if (app === 'minipaint') validateMiniPaint(doc);
-  else {
+  else if (app !== 'openmosh') {
+    if (
+      !doc ||
+      typeof doc !== 'object' ||
+      Array.isArray(doc) ||
+      doc.version !== 1 ||
+      doc.app !== app
+    )
+      throw new Error('Choose a version 1 document for this tool.');
+  } else {
     if (
       !doc ||
       doc.version !== 1 ||

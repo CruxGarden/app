@@ -1,13 +1,34 @@
+/* Shared entry typography; the workspace keeps its own interface fonts. */
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Regular.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* crux.garden teaser: Plasma UI's aurora field and one glass panel over it.
    The panel is tinted and frosted in the component itself rather than wrapping
    a solid card, so the whole thing reads as a single surface. */
 .teaser {
+  --accent: #9ff3e4;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
   position: fixed;
   inset: 0;
   overflow: hidden;
   /* The field paints over this; it only shows for the first frame and behind
      the shader if WebGL is unavailable. */
   background: #04111c;
+}
+
+.gateway {
+  --font-body: 'Inter', sans-serif;
+  font-family: var(--font-body);
+}
+
+.gateway .teaser-line {
+  color: #b8b8b8;
 }
 
 .teaser-stage {
@@ -51,12 +72,12 @@
 
 .teaser-line {
   margin: 0;
-  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-family: var(--font-display, 'Outfit', system-ui, sans-serif);
   font-size: clamp(0.9rem, 2vw, 1.15rem);
   letter-spacing: 0.34em;
   text-indent: 0.34em; /* letter-spacing pads the right edge; this recentres it */
   text-transform: lowercase;
-  color: #9ff3e4;
+  color: var(--accent);
 }
 
 /* Signup: the field and its button are one control — a single rounded rect
@@ -264,4 +285,41 @@
 .teaser-volume:focus-visible {
   outline: 2px solid #9ff3e4;
   outline-offset: 3px;
+}
+
+/* Keep the same type and colors on devices without accelerated graphics. */
+.teaser:has(.teaser-panel-fallback) {
+  background: radial-gradient(ellipse at 30% 20%, #0f5e46, #04111c 70%);
+}
+.teaser-panel-fallback,
+.teaser:has(.teaser-panel-fallback) .teaser-track {
+  border: 1px solid rgb(159 243 228 / 0.35);
+  border-radius: 24px;
+  background: rgb(6 16 22 / 0.9);
+  box-shadow: 0 12px 48px rgb(0 0 0 / 0.3);
+}
+
+/* Terms, Privacy, Contact: one quiet line at the foot of the field, outside the
+   stage's flow so it never changes the distance between the two surfaces. */
+.teaser-legal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+.teaser-legal a {
+  color: #9fb6c0;
+  text-decoration: none;
+  text-shadow: 0 1px 2px #04111c;
+}
+.teaser-legal a:hover,
+.teaser-legal a:focus-visible {
+  color: #fff;
+  text-decoration: underline;
 }

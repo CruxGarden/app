@@ -1,9 +1,10 @@
+import { NO_INPUT } from './app-tool-schema';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const BEEPBOX_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_beepbox',
     description: 'Inspect the open BeepBox song: key, tempo, beats per bar, bar count and channels.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    input_schema: NO_INPUT,
     writes: [],
   },
   {

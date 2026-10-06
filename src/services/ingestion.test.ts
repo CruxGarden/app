@@ -1,6 +1,7 @@
+import { getSqliteClient } from './sqlite/client';
 import { readNativeAsset } from './native-app-document';
 import { hashContent } from './sqlite/helpers';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initServices, getServices } from './index';
 import { initIngestion, stopIngestion, flushIngestion, expectProjectWrites } from './ingestion';
 import { folderForCrux } from './project-folder';
@@ -69,7 +70,7 @@ describe('Ingestion (external edits → history)', () => {
       addEventListener: () => {},
       removeEventListener: () => {},
     };
-    await initServices('local');
+    await initServices();
     initIngestion();
   });
 
@@ -90,6 +91,134 @@ describe('Ingestion (external edits → history)', () => {
     const { artifact } = getServices();
     return artifact.findByResource('crux', cruxId);
   }
+
+  it('admits the first external batch as one manifest, including a previously empty Crux', async () => {
+    const { crux, folder } = await makeCrux('Initially empty');
+    const db = getSqliteClient();
+    const edit = vi.fn(async () => ({
+      cruxId: crux.id,
+      root: 'a'.repeat(64),
+      revision: 1,
+      formatVersion: 1,
+    }));
+    Object.defineProperty(db, 'fileContent', {
+      configurable: true,
+      value: { head: async () => null, edit },
+    });
+    const individual = vi
+      .spyOn(getServices().artifact, 'create')
+      .mockRejectedValue(new Error('Must not commit files individually'));
+    try {
+      bridge.externalWrite(folder, 'one.txt', 'One');
+      bridge.externalWrite(folder, 'two.txt', 'Two');
+      bridge.emit({
+        folder,
+        events: [
+          { type: 'write', relPath: 'one.txt' },
+          { type: 'write', relPath: 'two.txt' },
+        ],
+      });
+      await flushIngestion();
+      expect(individual).not.toHaveBeenCalled();
+      expect(edit).toHaveBeenCalledTimes(1);
+      expect(edit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cruxId: crux.id,
+          expected: null,
+          changes: [
+            expect.objectContaining({ put: expect.objectContaining({ path: 'one.txt' }) }),
+            expect.objectContaining({ put: expect.objectContaining({ path: 'two.txt' }) }),
+          ],
+        }),
+      );
+      expect(bridge.writeLog).toEqual([]);
+    } finally {
+      individual.mockRestore();
+      delete (db as { fileContent?: unknown }).fileContent;
+    }
+  });
+
+  it.each([false, true])(
+    'commits external manifest edits without Artifact rows or write-back (refused first: %s)',
+    async (refuseFirst) => {
+      const { crux, folder } = await makeCrux('Manifest files');
+      const db = getSqliteClient();
+      const head = { cruxId: crux.id, root: 'f'.repeat(64), revision: 1, formatVersion: 1 };
+      const original = {
+        id: 'stable',
+        path: 'keep.txt',
+        fingerprint: await hashContent(new TextEncoder().encode('Old')),
+        size: 3,
+        mimeType: 'text/plain',
+        encoding: 'utf-8',
+        mode: 0o640,
+        attributes: { custom: 'preserved' },
+      };
+      const edit = vi.fn(async (_input: unknown) => ({ ...head, revision: 2 }));
+      if (refuseFirst) edit.mockRejectedValueOnce(new Error('Refused content commit'));
+      Object.defineProperty(db, 'fileContent', {
+        configurable: true,
+        value: {
+          head: async () => head,
+          list: async () => ({
+            head,
+            entries: [original, { ...original, id: 'removed', path: 'remove.txt' }],
+          }),
+          edit,
+        },
+      });
+      try {
+        bridge.externalWrite(folder, 'keep.txt', 'New\0bytes');
+        bridge.externalWrite(folder, 'new.txt', 'New file');
+        const batch: Batch = {
+          folder,
+          events: [
+            { type: 'write', relPath: 'keep.txt' },
+            { type: 'write', relPath: 'new.txt' },
+            { type: 'delete', relPath: 'remove.txt' },
+          ],
+        };
+        bridge.emit(batch);
+        await flushIngestion();
+        if (refuseFirst) {
+          expect(await artifactsOf(crux.id)).toEqual([]);
+          expect(bridge.writeLog).toEqual([]);
+          bridge.emit(batch);
+          await flushIngestion();
+        }
+        expect(edit).toHaveBeenCalledTimes(refuseFirst ? 2 : 1);
+        expect(edit.mock.calls[0]![0]).toMatchObject({
+          cruxId: crux.id,
+          expected: head,
+          changes: [
+            {
+              put: { id: 'stable', path: 'keep.txt', mode: 0o640, attributes: original.attributes },
+              bytes: new TextEncoder().encode('New\0bytes'),
+            },
+            { put: { path: 'new.txt' } },
+            { remove: 'remove.txt' },
+          ],
+        });
+        expect(await artifactsOf(crux.id)).toEqual([]);
+        expect(bridge.writeLog).toEqual([]);
+      } finally {
+        delete (db as { fileContent?: unknown }).fileContent;
+      }
+    },
+  );
+
+  it('ignores late events from a folder that no longer belongs to the Crux', async () => {
+    const { crux, folder } = await makeCrux('Replaced');
+    bridge.externalWrite(folder, 'study.txt', 'Before replacement');
+    bridge.emit({ folder, events: [{ type: 'write', relPath: 'study.txt' }] });
+    await flushIngestion();
+    const before = (await artifactsOf(crux.id))[0]!;
+    await getServices().crux.update(crux.id, { meta: { projectFolder: '/garden/replaced-2' } });
+    bridge.externalWrite(folder, 'study.txt', 'Late old-folder write');
+    bridge.emit({ folder, events: [{ type: 'write', relPath: 'study.txt' }] });
+    await flushIngestion();
+    expect((await artifactsOf(crux.id))[0]!.fingerprint).toBe(before.fingerprint);
+  });
 
   it('reads a new fingerprinted native asset before its watcher event without writing disk', async () => {
     const { crux, folder } = await makeCrux('Network');
@@ -296,7 +425,11 @@ describe('Ingestion (external edits → history)', () => {
   it('reads a declared write when the main process saw a later modification after it', async () => {
     const { crux, folder } = await makeCrux('Task copy');
     const { artifact } = getServices();
-    await artifact.create({ resourceId: crux.id, content: '<h1>Start</h1>', meta: { path: 'index.html' } });
+    await artifact.create({
+      resourceId: crux.id,
+      content: '<h1>Start</h1>',
+      meta: { path: 'index.html' },
+    });
     const own = await hashContent('<h1>Start</h1>');
     // The echo of the app's own write: nothing to read.
     expectProjectWrites(folder, [{ relPath: 'index.html', fingerprint: own }]);

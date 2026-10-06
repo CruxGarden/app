@@ -29,6 +29,28 @@ jupyterlite-crux/.cache/
 # JupyterLite incremental build bookkeeping
 jupyterlite-crux/.jupyterlite.doit.db*
 
+# Staged native binaries (built by electron/scripts/stage-binaries.mjs, never committed)
+electron/resources/bin/
+
+# Isolated browser boundary test output
+electron/e2e-browser/.results/
+electron/.web-build/
+
+# Reviewed native source cache and per-target build output
+electron/.native-tools/
+electron/scripts/__pycache__/
+
+# Browser SQLite worker fixture output
+electron/e2e-web/.storage-results/
+
+# Documentation publication, built from the source Crux
+documentation-crux/.astro/
+documentation-crux/dist/
+public/docs/
+public/blog/
+public/_astro/
+public/mark.svg
+
 # Playwright output from the embedded apps' own suites
 test-results/
 *-crux/test-results/

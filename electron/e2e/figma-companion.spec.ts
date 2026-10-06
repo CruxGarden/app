@@ -7,7 +7,8 @@ import { enterGarden, storedCrux } from './multi-crux-helpers';
 // This tests Garden's companion with a fixture export. It is deliberately
 // separate from the real MCP creative trial and never contacts Figma.
 test('Figma companion saves its reference and imports an attributed asset', async () => {
-  const instance = await launchApp();
+  test.setTimeout(90_000);
+  let instance = await launchApp();
   const { page } = instance;
   const evidence = resolve(__dirname, '../../docs/figma-companion');
   mkdirSync(evidence, { recursive: true });
@@ -18,6 +19,7 @@ test('Figma companion saves its reference and imports an attributed asset', asyn
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
     await page.getByRole('button', { name: /Figma/ }).click();
+    await page.getByPlaceholder('My Figma design').fill('Figma recovery');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
@@ -51,7 +53,7 @@ test('Figma companion saves its reference and imports an attributed asset', asyn
       ),
     });
     await expect(companion.getByRole('status')).toHaveText(
-      'Imported Fixture artwork. It is available in Cruxspace assets.',
+      'Imported Fixture artwork. It is available in Garden outputs.',
     );
     const output = readdirSync(join(folder, 'exports')).find((name) =>
       name.endsWith('.asset.json'),
@@ -64,6 +66,21 @@ test('Figma companion saves its reference and imports an attributed asset', asyn
       nodeId: '1:2',
       method: 'file-import',
     });
+    const growth = () =>
+      page.evaluate(
+        (id) =>
+          window.electronAPI!.sqlite.all(
+            "SELECT id FROM dimensions WHERE source_id=? AND type='growth'",
+            [id],
+          ),
+        id,
+      );
+    expect(await growth()).toHaveLength(0);
+    const retained = await page.evaluate(
+      (id) => window.electronAPI!.sqlite.fileContent!.history(id),
+      id,
+    );
+    expect(retained.checkpoints.length).toBeGreaterThan(0);
     await page.screenshot({ path: join(evidence, 'companion.png'), fullPage: true });
     await page.setViewportSize({ width: 420, height: 900 });
     await page.getByRole('button', { name: 'Workshop', exact: true }).click();
@@ -72,6 +89,31 @@ test('Figma companion saves its reference and imports an attributed asset', asyn
     expect(linkBounds!.x + linkBounds!.width).toBeLessThanOrEqual(420);
     await page.screenshot({ path: join(evidence, 'companion-narrow.png'), fullPage: true });
     expect(errors).toEqual([]);
+    const { dir } = instance;
+    await instance.app.close();
+    instance = await launchApp({ dir });
+    await instance.page.getByRole('button', { name: 'Enter', exact: true }).click();
+    await instance.page.getByRole('button', { name: 'Open Figma recovery', exact: true }).click();
+    await expect(instance.page.getByLabel('Figma file or frame link')).toHaveValue(canonical);
+    expect(project().documentUrl).toBe(canonical);
+    expect(readFileSync(join(folder, descriptor.path), 'utf8')).toContain('fill="#575ec7"');
+    const afterRestart = await instance.page.evaluate(
+      (id) => window.electronAPI!.sqlite.fileContent!.history(id),
+      id,
+    );
+    expect(afterRestart.checkpoints.map((p) => p.id)).toEqual(
+      retained.checkpoints.map((p) => p.id),
+    );
+    expect(
+      await instance.page.evaluate(
+        (id) =>
+          window.electronAPI!.sqlite.all(
+            "SELECT id FROM dimensions WHERE source_id=? AND type='growth'",
+            [id],
+          ),
+        id,
+      ),
+    ).toHaveLength(0);
   } finally {
     await instance.app.close();
   }

@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-02",
+  "stage": "AR06 native Garden package and community installation consumers",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "verification": {
+    "focused": {
+      "passed": 45,
+      "suites": 7,
+      "log": "/tmp/package-community-focused-final.log"
+    },
+    "app": {
+      "passed": 1721,
+      "skipped": 18,
+      "files": 272,
+      "build": true,
+      "log": "/tmp/package-community-app-accepted.log"
+    },
+    "electron": {
+      "passed": 77,
+      "skipped": 1,
+      "hostSourceUnchanged": true,
+      "log": "/tmp/package-community-electron.log"
+    },
+    "desktop": {
+      "status": "passed",
+      "log": "/tmp/package-community-desktop.log",
+      "command": "CRUX_UNDERTAKINGS=home-page npm run test:e2e -- e2e/undertakings.spec.ts e2e/community-tool.spec.ts e2e/cruxspace.spec.ts --project=desktop",
+      "passed": 3,
+      "duration": "1.5m"
+    }
+  },
+  "changes": [
+    "Garden package and community tool suites use actual SqliteApi/native SQLite; all twelve existing cases remain, with eight native refusal/ownership cases added.",
+    "Package entry points require the native archive/content/membership commands; retired settings import, runtime hydration and cache substitution are removed.",
+    "Conflict lookups only classify NotFoundError as absence and include occupied trashed/root identities.",
+    "The actual API validates all incoming member bytes and matching single root identities before Garden or member admission.",
+    "Restore preserves the Garden UUID and member UUIDs in a clean installation. Copy provenance is saved in Garden metadata and survives actual API restart.",
+    "Native content is deduplicated once across member archives, including history and copied outputs; reconstruction restores native content paths. Existing shipped self-contained archive3 undertaking packages remain supported.",
+    "Chooser values, destination and caller ArrayBuffer bytes are captured before asynchronous intake.",
+    "Community tests read the full file reference returned by the edit and use actual publication UUIDs.",
+    "The displaced chosen-identity settings insertion has no callers and is deleted; tracked renderer SQL mutation sites drop from60 to59."
+  ],
+  "baselines": [
+    "Native community baseline: one obsolete ID-only read failed and four cases passed; mutation returns the correct new reference.",
+    "Initial package native baseline: three failed/two passed. Conflict inspection swallowed actual table-read refusal; a mismatched declared member UUID imported with false lineage. The import-read case surfaced a later generic error rather than the expected owner read refusal.",
+    "The original missing-content cleanup case passed; the stronger final case adds a one-shot trusted folder-preparation refusal to prove invalid bytes refuse before host intake.",
+    "Ownership baseline: one failure/seven passes. Caller mutation changed the imported name from Captured name to Changed later; the final case verifies captured name and actual original parent.",
+    "Full gate caught three TypeScript issues in the new fixture/union/row typing, then a stale persistence inventory after deletion. Types and the reviewed inventory are corrected before acceptance."
+  ],
+  "limits": [
+    "Garden wrapper members still admit sequentially with compensating cleanup, not one atomic selected-Garden transaction. Cleanup refusal and operation-wide capture need the coordinated follow-through.",
+    "Generic Crux IO still holds format1/2 serializers. Generic format/installation tests, required command interfaces and Task/Garden/worker/schema retirement remain.",
+    "AR06 and AR07\u2013AR09 are unfinished. This stage does not claim v1 release completion.",
+    "No API/runtime, live hosted publication, deployment, merge, real Garden or manual-candidate changes. New-head native CI remains separate."
+  ]
+}

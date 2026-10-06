@@ -10,6 +10,9 @@ import {
   type PublishPhase,
 } from './publish';
 import type { Crux, Artifact } from '@/api/types';
+import { starterManifest } from '@/templates/tool-starter';
+import { toolManifest } from './crux-tools/registry';
+import { packTool, openToolPackage, TOOL_PACKAGE_PATH } from './crux-tools/package';
 
 it('publishes the selected image without exposing private Cruxspace origin records', async () => {
   const { deps, state } = makeDeps({ exists: true });
@@ -125,7 +128,8 @@ function makeDeps(opts: {
         state.localMetaWrites.push(meta);
         return {};
       },
-      downloadBlob: async (artifactId) => {
+      downloadBlob: async (file) => {
+        const artifactId = file.id;
         if (opts.failBlob && artifactId === opts.failBlob) {
           throw new Error('blob missing from store');
         }
@@ -152,6 +156,83 @@ function makeDeps(opts: {
 }
 
 describe('publishPipeline', () => {
+  it('publishes a creator manifest absent from the compiled catalogue', async () => {
+    const { deps, state } = makeDeps({});
+    const download = deps.local.downloadBlob;
+    deps.local.downloadBlob = async (file) =>
+      file.meta?.path === 'crux-tool.json'
+        ? new Blob([JSON.stringify(starterManifest)])
+        : download(file);
+    await publishPipeline(
+      makeCrux({ kind: 'tool' }),
+      [makeArtifact('crux-tool.json', 'manifest'), makeArtifact('index.html', 'entry')],
+      { deps },
+    );
+    const pkg = await openToolPackage(state.publishedFiles![0]!.blob);
+    expect(pkg.manifest.id).toBe('pocket-notes');
+    expect(pkg.files.map((f) => f.path)).toContain('index.html');
+    expect(toolManifest(pkg.manifest.id)).toBeNull();
+  });
+
+  it.each([
+    ['maps-app', false],
+    ['formjs-app', false],
+    ['p5-app', false],
+    ['maps-app', true],
+  ])(
+    'publishes the complete %s tool package without a visitor-edition build',
+    async (template, isSite) => {
+      const { deps, state } = makeDeps({ isSite });
+      const paths = [
+        toolManifest(template)!.entryFile,
+        'src/editor.ts',
+        'LICENSE',
+        'UPSTREAM.md',
+        'data/project.json',
+      ];
+      await publishPipeline(
+        makeCrux({ kind: 'tool', meta: { template } }),
+        paths.map((path) => makeArtifact(path, path)),
+        { deps },
+      );
+      expect(state.built).toBe(false);
+      expect(state.publishedFiles?.map((file) => file.path)).toEqual([TOOL_PACKAGE_PATH]);
+      const packageVersion = await openToolPackage(state.publishedFiles![0]!.blob, template);
+      expect(packageVersion.files.map((file) => file.path).sort()).toEqual([...paths].sort());
+      const source = packageVersion.files.find((file) => file.path === 'src/editor.ts')!;
+      expect(new TextDecoder().decode(await source.read())).toBe('content-of-art-src/editor.ts');
+    },
+  );
+  it('republishes an installed archive without nesting or changing its version bytes', async () => {
+    const { deps, state } = makeDeps({ exists: true });
+    const manifest = toolManifest('p5-app')!;
+    const blob = await packTool(manifest, [
+      { path: manifest.entryFile, blob: new Blob(['<html>Editor</html>']), mimeType: 'text/html' },
+    ]);
+    deps.local.downloadBlob = async () => blob;
+    await publishPipeline(
+      makeCrux({ kind: 'tool', meta: { template: manifest.id } }),
+      [makeArtifact(TOOL_PACKAGE_PATH, 'package-fingerprint')],
+      { deps },
+    );
+    expect(state.publishedFiles).toHaveLength(1);
+    expect(state.publishedFiles![0]!.blob).toBe(blob);
+  });
+
+  it.each(['maps-app', 'formjs-app'])(
+    'still builds the public edition of an ordinary %s project',
+    async (template) => {
+      const { deps, state } = makeDeps({});
+      await publishPipeline(
+        makeCrux({ kind: 'webapp', meta: { template } }),
+        [makeArtifact('data/project.json', 'data')],
+        { deps },
+      );
+      expect(state.built).toBe(true);
+      expect(state.publishedFiles?.map((file) => file.path)).toEqual(['index.html']);
+    },
+  );
+
   it('creates the crux on the API when it does not exist yet', async () => {
     const { deps, state } = makeDeps({ exists: false });
     await publishPipeline(makeCrux(), [makeArtifact('index.html', 'fp1')], { deps });
@@ -179,12 +260,31 @@ describe('publishPipeline', () => {
     expect(state.publishedFiles).toBeNull();
   });
 
+  it('owns publication bytes before remote I/O can invalidate the selected manifest', async () => {
+    const { deps, state } = makeDeps({});
+    let headAdvanced = false;
+    const read = deps.local.downloadBlob;
+    deps.local.downloadBlob = async (file) => {
+      if (headAdvanced) throw new Error('File content changed; reload before reading');
+      return read(file);
+    };
+    deps.api.exists = async () => {
+      headAdvanced = true;
+      return false;
+    };
+    await publishPipeline(makeCrux(), [makeArtifact('LICENSE', 'fp1')], { deps });
+    expect(headAdvanced).toBe(true);
+    expect(await state.publishedFiles![0]!.blob.text()).toBe('content-of-art-LICENSE');
+  });
+
   it('fails the publish when an artifact blob cannot be read', async () => {
     const artifacts = [makeArtifact('index.html', 'fp1'), makeArtifact('app.js', 'fp2')];
     const { deps, state } = makeDeps({ exists: true, failBlob: 'art-app.js' });
     await expect(publishPipeline(makeCrux(), artifacts, { deps })).rejects.toThrow(
       /nothing was published/,
     );
+    expect(state.created).toHaveLength(0);
+    expect(state.updated).toHaveLength(0);
     // Nothing uploaded, and no fingerprints recorded for a site that never shipped
     expect(state.publishedFiles).toBeNull();
     expect(state.localMetaWrites).toHaveLength(0);
@@ -242,6 +342,38 @@ describe('publishPipeline', () => {
     await publishPipeline(makeCrux(), [makeArtifact('astro.config.mjs', 'fp1')], { deps });
     expect(state.built).toBe(true);
     expect(state.publishedFiles!.map((f) => f.path)).toEqual(['index.html']);
+  });
+
+  it('includes installation files in the baseline without hiding edits made during the build', async () => {
+    const { deps } = makeDeps({ exists: true, isSite: true });
+    const sources = [
+      makeArtifact('astro.config.mjs', 'config'),
+      makeArtifact('pnpm-lock.yaml', 'installed'),
+    ];
+    deps.site.preparePublishSources = vi.fn().mockResolvedValue(sources);
+    const build = deps.site.buildForPublish;
+    deps.site.buildForPublish = async (id) => {
+      sources[1]!.fingerprint = 'edited-during-build';
+      return build(id);
+    };
+    const result = await publishPipeline(makeCrux(), [sources[0]!], { deps });
+    expect(deps.site.preparePublishSources).toHaveBeenCalledWith('crux-1');
+    const snapshot = result.meta!.publishedFingerprints as Record<string, string>;
+    expect(snapshot['pnpm-lock.yaml']).toBe('installed');
+    expect(
+      hasContentChanged([sources[0]!, makeArtifact('pnpm-lock.yaml', 'installed')], snapshot),
+    ).toBe(false);
+    expect(hasContentChanged(sources, snapshot)).toBe(true);
+  });
+
+  it('does not publish anything when installation or source capture fails', async () => {
+    const { deps, state } = makeDeps({ isSite: true });
+    deps.site.preparePublishSources = vi.fn().mockRejectedValue(new Error('Install failed'));
+    await expect(publishPipeline(makeCrux(), [], { deps })).rejects.toThrow('Install failed');
+    expect(state.built).toBe(false);
+    expect(state.created).toEqual([]);
+    expect(state.publishedFiles).toBeNull();
+    expect(state.localMetaWrites).toEqual([]);
   });
 
   it('merges API publish meta over local meta, keeps local-only fields, snapshots fingerprints, and persists', async () => {
@@ -307,7 +439,7 @@ describe('publishPipeline', () => {
     const { deps } = makeDeps({ exists: true, isSite: true });
     const phases: PublishPhase[] = [];
     await publishPipeline(makeCrux(), [], { deps, onProgress: (p) => phases.push(p) });
-    expect(phases).toEqual(['sync', 'build', 'upload', 'finalize', 'tags']);
+    expect(phases).toEqual(['build', 'sync', 'upload', 'finalize', 'tags']);
   });
 
   it('fails the whole publish when the build fails (nothing half-deploys)', async () => {
@@ -429,7 +561,7 @@ it('publishes only the built Notes edition and strips private metadata and thumb
   expect(state.built).toBe(true);
   const sent = state.created[0]!;
   expect(sent.data).toBe('');
-  expect(sent.meta).toEqual({ messages: [] });
+  expect(sent.meta).toEqual({ conversationPublished: false });
   expect(
     state.publishedFiles?.some(
       (f) => f.path === '_crux/cover.jpg' || f.path.startsWith('notebook/'),
@@ -452,7 +584,7 @@ it('refuses a Notes publication with no selected pages before calling the API', 
 
 it('publishes only Moqira build output and strips private Collaboration and covers', async () => {
   const { deps, state } = makeDeps({ isSite: true });
-  deps.local.downloadBlob = async (id) =>
+  deps.local.downloadBlob = async ({ id }) =>
     new Blob([
       JSON.stringify(
         id.includes('publish.json')
@@ -475,7 +607,7 @@ it('publishes only Moqira build output and strips private Collaboration and cove
     { deps },
   );
   expect(state.created[0]?.data).toBe('');
-  expect(state.created[0]?.meta).toEqual({ messages: [] });
+  expect(state.created[0]?.meta).toEqual({ conversationPublished: false });
   expect(state.built).toBe(true);
   expect(
     state.publishedFiles?.some(

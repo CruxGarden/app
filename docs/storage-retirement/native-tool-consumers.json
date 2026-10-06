@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-02",
+  "stage": "AR06 native tool archive consumers",
+  "completeSlice": true,
+  "completeAR06": false,
+  "runtime": "r33691b02cad8.h81c501e2",
+  "scope": {
+    "suites": 22,
+    "tests": 70,
+    "files": [
+      "src/services/audiomass-app.test.ts",
+      "src/services/bitsy-app.test.ts",
+      "src/services/blender.test.ts",
+      "src/services/blockbench-app.test.ts",
+      "src/services/cardinal.test.ts",
+      "src/services/embedded-app.test.ts",
+      "src/services/figma.test.ts",
+      "src/services/gdevelop-app.test.ts",
+      "src/services/gephi-app.test.ts",
+      "src/services/jupyterlite-app.test.ts",
+      "src/services/kan-app.test.ts",
+      "src/services/ketcher-app.test.ts",
+      "src/services/mermaid-app.test.ts",
+      "src/services/minipaint-app.test.ts",
+      "src/services/opencut-app.test.ts",
+      "src/services/openmosh-app.test.ts",
+      "src/services/piskel-app.test.ts",
+      "src/services/playcanvas-editor-app.test.ts",
+      "src/services/rawgraphs-app.test.ts",
+      "src/services/svgedit-app.test.ts",
+      "src/services/tool-sampler.test.ts",
+      "src/services/twine-app.test.ts"
+    ]
+  },
+  "verification": {
+    "app": {
+      "passed": 1699,
+      "skipped": 18,
+      "files": 269,
+      "build": true
+    },
+    "focused": {
+      "passed": 70,
+      "suites": 22
+    }
+  },
+  "baseline": {
+    "failed": 27,
+    "passed": 43,
+    "reason": "Legacy test reads used a logical file ID without its Crux owner; native references deliberately require explicit ownership."
+  },
+  "changes": [
+    "22 tool suites adopt the actual native API fixture.",
+    "Test file reads/downloads use complete Artifact references, including Crux owner and retained content selection.",
+    "Existing native document/component bytes, stale write/ownership guards, marked Growth and private clone assertions remain."
+  ],
+  "logs": [
+    "/tmp/native-tool-archives-baseline.log",
+    "/tmp/native-tool-archives-focused.log",
+    "/tmp/native-tool-archives-scoped-final.log",
+    "/tmp/native-tool-archives-verify.log"
+  ],
+  "limits": [
+    "Shipping implementation/runtime unchanged; prior actual desktop archive/community4/1.6m and unchanged Electron gate remain applicable.",
+    "The service fixture does not launch all upstream editor interfaces; their existing desktop/manual acceptance remains separate.",
+    "Generic archive/collection consumers and optional command/fallback/worker retirement remain."
+  ],
+  "nativeCI": {
+    "commit": "c61e986e9",
+    "run": 36962833146,
+    "windows": "success",
+    "linux": "success"
+  }
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Garden</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="crux.js"></script>
+</head>
+<body>
+  <header>
+    <h1 id="garden-name">A garden</h1>
+    <p id="garden-description" class="muted"></p>
+    <p id="me" class="muted"></p>
+    <form id="setup-form" hidden class="inline">
+      <input id="setup-name" placeholder="name this garden" maxlength="80" required />
+      <input id="setup-description" placeholder="what it is for" maxlength="500" />
+      <button type="submit" class="small">Name it</button>
+    </form>
+  </header>
+
+  <main>
+    <section class="card" id="people">
+      <h2>People <span id="people-count" class="muted"></span></h2>
+      <ul id="members"></ul>
+      <form id="invite-form" hidden>
+        <input id="invite-q" placeholder="find someone — @name" autocomplete="off" />
+        <ul id="invite-suggestions" class="suggest"></ul>
+        <select id="invite-role"><option value="member">member</option><option value="editor">editor</option></select>
+        <button type="submit" disabled id="invite-button">Invite</button>
+      </form>
+      <p id="invite-note" class="muted"></p>
+      <button id="accept" hidden>Accept the invitation</button>
+    </section>
+
+    <section class="card" id="shelf">
+      <h2>Shared here <span id="shelf-count" class="muted"></span></h2>
+      <ul id="cruxes"></ul>
+      <p id="shelf-empty" class="muted">Nothing shared yet. Members share their published cruxes from the Share pane, or here.</p>
+      <form id="share-form" hidden>
+        <input id="share-title" placeholder="title" required />
+        <input id="share-url" placeholder="https://… (its address)" required />
+        <input id="share-id" placeholder="crux id" required />
+        <button type="submit">Share it here</button>
+      </form>
+    </section>
+
+    <section class="card" id="threads">
+      <h2>Notes to each other</h2>
+      <ol id="posts"></ol>
+      <form id="post-form" hidden>
+        <input id="post-text" placeholder="say something to the garden" maxlength="500" required />
+        <button type="submit">Post</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="muted">
+    The people, the shelf and the notes live in this crux's Store; its functions are the only way they change — see <code>functions/</code>.
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

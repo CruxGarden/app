@@ -1,12 +1,13 @@
 /**
  * Secret storage (BYOK API keys) — platform-aware.
  *
- * Desktop: Electron safeStorage via IPC (Keychain-backed encryption, main
- * process only). Web: localStorage. Secrets NEVER enter the SQLite settings
+ * Desktop: Electron safeStorage via IPC (OS-backed encryption, main
+ * process only). No plaintext fallback. Secrets NEVER enter the SQLite settings
  * table — see isSecretSettingKey() in lib/constants and the settings service.
- * Existing localStorage values are migrated into safeStorage on first read.
+ * Existing plaintext values are removed only after encrypted persistence succeeds.
  */
 
+import { createKeyedQueue } from '@/lib/keyed-queue';
 import type { SecretsBridge } from '@/lib/platform';
 
 function electronSecrets(): SecretsBridge | null {
@@ -14,40 +15,23 @@ function electronSecrets(): SecretsBridge | null {
   return window.electronAPI?.secrets ?? null;
 }
 
-let availabilityCheck: Promise<SecretsBridge | null> | null = null;
-
-/** The safeStorage-backed API, or null when unavailable (web, or no keychain). */
-function backend(): Promise<SecretsBridge | null> {
-  if (!availabilityCheck) {
-    availabilityCheck = (async () => {
-      const api = electronSecrets();
-      if (!api) return null;
-      try {
-        return (await api.available()) ? api : null;
-      } catch {
-        return null;
-      }
-    })();
-  }
-  return availabilityCheck;
-}
-
-/** Reset the memoized backend probe (tests only). */
-export function __resetSecretsBackendForTests(): void {
-  availabilityCheck = null;
-}
-
-export async function getSecret(key: string): Promise<string | null> {
-  const api = await backend();
+async function readSecret(key: string): Promise<string | null> {
+  // Native get checks the local entry before touching safeStorage. Probing
+  // availability first can open a blocking macOS Keychain prompt even when
+  // this installation has never saved a key.
+  const api = electronSecrets();
   const local = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
 
-  if (!api) return local;
+  if (!api) {
+    if (local !== null) throw new Error('Secure credential storage requires the desktop app.');
+    return null;
+  }
 
   const stored = await api.get(key);
-  if (stored) return stored;
+  if (stored !== null) return stored;
 
-  // One-time migration: lift a pre-safeStorage localStorage value
-  if (local) {
+  // Preserve a value written by the plaintext fallback until encryption succeeds.
+  if (local !== null) {
     await api.set(key, local);
     localStorage.removeItem(key);
     return local;
@@ -55,19 +39,31 @@ export async function getSecret(key: string): Promise<string | null> {
   return null;
 }
 
-export async function setSecret(key: string, value: string): Promise<void> {
-  const api = await backend();
-  if (api) {
-    await api.set(key, value);
-    // Clear any stale plaintext copy
-    if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
-    return;
-  }
-  if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+async function writeSecret(key: string, value: string): Promise<void> {
+  const api = electronSecrets();
+  if (!api) throw new Error('Secure credential storage requires the desktop app.');
+  // The native owner checks encryption on each operation. Never turn a failed
+  // availability probe or IPC call into permission to write plaintext.
+  await api.set(key, value);
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
 }
 
-export async function deleteSecret(key: string): Promise<void> {
-  const api = await backend();
+async function removeSecret(key: string): Promise<void> {
+  // Removing ciphertext from disk does not need encryption or decryption.
+  const api = electronSecrets();
   if (api) await api.delete(key);
   if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+}
+
+// A delayed transfer of existing plaintext must not undo a later replacement
+// or removal. Keep reads (which may transfer), writes and deletes in one queue.
+const serialize = createKeyedQueue();
+export function getSecret(key: string): Promise<string | null> {
+  return serialize(key, () => readSecret(key));
+}
+export function setSecret(key: string, value: string): Promise<void> {
+  return serialize(key, () => writeSecret(key, value));
+}
+export function deleteSecret(key: string): Promise<void> {
+  return serialize(key, () => removeSecret(key));
 }

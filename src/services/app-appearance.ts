@@ -23,6 +23,7 @@ export const APPEARANCE_TOKENS = {
   fontBody: '--font-body',
   fontDisplay: '--font-display',
   fontMono: '--font-mono',
+  fontReading: '--font-reading',
   weight: '--font-weight-body',
   displayWeight: '--font-weight-display',
   motion: '--motion-scale',
@@ -39,11 +40,12 @@ export async function setAppearanceChoice(id: string, value: unknown) {
 }
 const fontCache = new Map<string, Promise<ArrayBuffer>>();
 const bundled = [
-  ['Outfit', '/fonts/Outfit-Regular.woff2'],
+  ['Inter', '/fonts/Inter-Latin.woff2'],
   ['JetBrains Mono', '/fonts/JetBrainsMono-Regular.woff2'],
   ['Cormorant Garamond', '/fonts/CormorantGaramond-Latin.woff2'],
 ];
-export async function appAppearanceSnapshot(id: string) {
+/** Cheap identity of the appearance, before loading or copying any font bytes. */
+export function appAppearanceState(id: string) {
   const css = getComputedStyle(document.documentElement);
   const tokens = Object.fromEntries(
     Object.entries(APPEARANCE_TOKENS).map(([name, variable]) => [
@@ -55,13 +57,29 @@ export async function appAppearanceSnapshot(id: string) {
     ['fontBody', '--font-face-body'],
     ['fontDisplay', '--font-face-display'],
     ['fontMono', '--font-face-mono'],
+    ['fontReading', '--font-face-reading'],
   ]) {
     const face = css.getPropertyValue(cssName!).trim();
     if (face && face !== 'none') tokens[role!] = face;
   }
-  const fonts: { family: string; data: ArrayBuffer }[] = [];
-  const families = [tokens.fontBody, tokens.fontDisplay, tokens.fontMono].join(',');
   const palette = composeMoodPalette() as Record<string, string>;
+  const fontAssets = Object.fromEntries(
+    Object.keys(FONT_FACE_FAMILIES).map((key) => [key, palette[key] ?? '']),
+  );
+  return {
+    choice: appearanceChoice(id),
+    mode: document.documentElement.classList.contains('light') ? 'light' : 'dark',
+    tokens,
+    fontAssets,
+  };
+}
+
+export async function appAppearanceSnapshot(id: string, state = appAppearanceState(id)) {
+  const { fontAssets, ...appearance } = state;
+  const fonts: { family: string; data: ArrayBuffer }[] = [];
+  const families = [state.tokens.fontBody, state.tokens.fontDisplay, state.tokens.fontMono].join(
+    ',',
+  );
   for (const [family, url] of bundled) {
     if (!families.includes(family!)) continue;
     if (!fontCache.has(url!))
@@ -79,7 +97,7 @@ export async function appAppearanceSnapshot(id: string) {
     }
   }
   for (const [key, family] of Object.entries(FONT_FACE_FAMILIES)) {
-    const ref = palette[key];
+    const ref = fontAssets[key];
     if (!ref || !isAssetRef(ref) || !families.includes(family)) continue;
     const fingerprint = refFingerprint(ref);
     if (!getAssets().some((a) => a.fingerprint === fingerprint && a.kind === 'font')) continue;
@@ -89,10 +107,5 @@ export async function appAppearanceSnapshot(id: string) {
       /* system fallback */
     }
   }
-  return {
-    choice: appearanceChoice(id),
-    mode: document.documentElement.classList.contains('light') ? 'light' : 'dark',
-    tokens,
-    fonts,
-  };
+  return { ...appearance, fonts };
 }

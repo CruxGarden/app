@@ -7,7 +7,7 @@
  * correctness, not fun.
  *
  *   npm run 5ws:harness -- --mock --entries 3           # CI: the scripted mock model
- *   FIVE_WS_MODEL=claude-sonnet-5 ANTHROPIC_API_KEY=… \
+ *   FIVE_WS_MODEL=claude-sonnet-5-5 ANTHROPIC_API_KEY=… \
  *     npm run 5ws:harness -- --entries 20               # live, any configured provider
  *
  * Flags
@@ -18,12 +18,12 @@
  *                         starter shelf; src/templates/shelves/things.json is the other;
  *                         falls back to the built-in mock shelf when the default is missing)
  *   --leak-probe          make the mock voice say its name — proves the checker fires (exits 1)
- *   --provider-defaults   send no temperature (for reasoning models that reject it)
+ *   --provider-defaults   send no temperature (automatic in live mode)
  *   --verbose             print every question and answer as they arrive
  *   --json PATH           also write the full report as JSON
  *
  * Environment (live mode)
- *   FIVE_WS_MODEL               model id, as in the app's model picker (default claude-sonnet-5)
+ *   FIVE_WS_MODEL               model id, as in the app's model picker (default: the app catalogue default)
  *   ANTHROPIC_API_KEY             Anthropic
  *   OPENAI_API_KEY                OpenAI
  *   GOOGLE_GENERATIVE_AI_API_KEY  Google
@@ -42,6 +42,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { LanguageModel } from 'ai';
 import { getProviderForModel, resolveModel } from '../src/ai/providers';
+import { localModelName } from '../src/ai/local';
 import { getMockLanguageModel } from '../src/ai/mock-model';
 import { parseShelf, type Shelf } from '../src/game/shelf';
 import {
@@ -66,7 +67,7 @@ const entries = opt('--entries') ? Number(opt('--entries')) : undefined;
 const seed = opt('--seed');
 const verbose = flag('--verbose');
 const leakProbe = flag('--leak-probe');
-const providerDefaults = flag('--provider-defaults');
+const providerDefaults = !mock || flag('--provider-defaults');
 const jsonOut = opt('--json');
 const shelfPath = opt('--shelf') ?? 'src/templates/shelves/history.json';
 
@@ -114,7 +115,7 @@ function liveModel(): { model: LanguageModel; name: string } {
       const baseURL =
         process.env[provider === 'ollama' ? 'OLLAMA_BASE_URL' : 'LMSTUDIO_BASE_URL'] ??
         (provider === 'ollama' ? 'http://127.0.0.1:11434/v1' : 'http://127.0.0.1:1234/v1');
-      const modelName = id.replace(/^(ollama|lmstudio):/, '');
+      const modelName = localModelName(id);
       return {
         model: createOpenAICompatible({ name: provider, baseURL })(modelName),
         name: id,

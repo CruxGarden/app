@@ -1,0 +1,12 @@
+/* The graph engines create their tooltip DOM; it wears the same Mood as the graph. */
+.growth-graph .float-tooltip-kap {
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-body);
+  font-size: var(--graph-label-size);
+  letter-spacing: var(--letter-spacing-body);
+  line-height: var(--line-height-body);
+  color: var(--tooltip-text);
+  background: var(--tooltip);
+  border-radius: var(--tooltip-radius);
+  box-shadow: var(--elevation-tooltip);
+}

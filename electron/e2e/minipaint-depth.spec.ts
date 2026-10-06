@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { copyFileSync, readFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace, storedFingerprint } from './multi-crux-helpers';
 import { outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -24,8 +25,9 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
   ) => {
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const previous = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     const box = page.getByPlaceholder('Send a message...');
     await box.fill(message);
     await box.press('Enter');
@@ -71,8 +73,8 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
     await ready();
   };
   const hideChat = async () => {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
   };
   const history = async (action: 'Undo' | 'Redo') => {
     await frame().getByText('Edit', { exact: true }).first().click();
@@ -169,7 +171,8 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^miniPaint/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(page.locator('[data-workspace-id]')).toBeVisible();
+    // Copying miniPaint's runtime into the Project Folder takes a while under load.
+    await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 90_000 });
     folder = (
       await storedCrux(
         page,
@@ -184,11 +187,11 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
     );
     // Let the external Project Folder write finish ingestion before starting a turn.
     await expect
-      .poll(() =>
-        page.evaluate(async () =>
-          window.electronAPI!.sqlite.get(
-            "SELECT id FROM artifacts WHERE path = 'assets/seed.png' LIMIT 1",
-          ),
+      .poll(async () =>
+        storedFingerprint(
+          page,
+          (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!,
+          'assets/seed.png',
         ),
       )
       .toBeTruthy();
@@ -342,7 +345,7 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
 
     instance = await launchApp({ dir });
     page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     check();
     await exportNativeCrux(page, archive, instance.app);

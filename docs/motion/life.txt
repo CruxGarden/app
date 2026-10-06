@@ -1,0 +1,2 @@
+quiet saturate=0.6 brightness=0.9
+busy  saturate=1 brightness=1

@@ -1,3 +1,4 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
@@ -12,13 +13,14 @@ test.describe('icon set', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
       await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
         timeout: 30_000,
       });
 
       const html = page.locator('html');
-      const explore = page.getByRole('button', { name: 'Explore' }).locator('svg');
+      // The command bar's search glyph (Explore used to have its own button).
+      const explore = page.getByRole('button', { name: 'Search or run a command' }).locator('svg');
       await expect(html).toHaveAttribute('data-icon-set', 'line');
       await expect(explore).toHaveAttribute('data-set', 'line');
       await expect(explore).toHaveAttribute('data-icon', 'search');

@@ -1,8 +1,9 @@
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync, renameSync, writeFileSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
-import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { enterGarden, storedCrux, reenterWorkspace, storedFingerprint } from './multi-crux-helpers';
 import { outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
@@ -37,12 +38,15 @@ test('miniPaint raster: native selection, original pixels, manual Delete/filter 
     await ready();
   };
   const hideChat = async () => {
-    const toggle = instance.page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) === 'true') await toggle.click();
+    if ((await panelPressed(instance.page, 'Toggle collaboration')) === 'true')
+      await togglePanel(instance.page, 'Toggle collaboration');
   };
   const history = async (name: 'Undo' | 'Redo') => {
     await frame().getByText('Edit', { exact: true }).first().click();
-    await frame().getByText(name, { exact: true }).first().click();
+    await frame()
+      .getByRole('menuitem', { name: new RegExp(`^${name}\\b`) })
+      .first()
+      .click();
     await save();
   };
   const samples = async (bytes = raster()) =>
@@ -85,8 +89,9 @@ test('miniPaint raster: native selection, original pixels, manual Delete/filter 
     const page = instance.page;
     const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const previous = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
-    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
-    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+
+    if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+      await togglePanel(page, 'Toggle collaboration');
     await page.getByPlaceholder('Send a message...').fill(message);
     await page.getByPlaceholder('Send a message...').press('Enter');
     await expect
@@ -137,11 +142,11 @@ test('miniPaint raster: native selection, original pixels, manual Delete/filter 
     mkdirSync(join(folder, 'assets'), { recursive: true });
     writeFileSync(join(folder, 'assets/regions.png'), Buffer.from(fixture, 'base64'));
     await expect
-      .poll(() =>
-        page.evaluate(async () =>
-          window.electronAPI!.sqlite.get(
-            "SELECT id FROM artifacts WHERE path = 'assets/regions.png' LIMIT 1",
-          ),
+      .poll(async () =>
+        storedFingerprint(
+          page,
+          (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!,
+          'assets/regions.png',
         ),
       )
       .toBeTruthy();
@@ -213,7 +218,7 @@ test('miniPaint raster: native selection, original pixels, manual Delete/filter 
     instance = await launchApp({ dir });
     page = instance.page;
     watch(page);
-    await page.getByRole('button', { name: /enter/i }).click();
+    await reenterWorkspace(page);
     await ready();
     expect(raster()).toEqual(afterDelete);
     expect(layer().filters.map((f: any) => f.params.value)).toEqual([25, 10]);

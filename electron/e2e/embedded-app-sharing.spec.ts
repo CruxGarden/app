@@ -96,7 +96,10 @@ test('Notes Share uploads only selected saved content; failed updates retain the
       .poll(() => JSON.parse(readFileSync(note('publish.json'), 'utf8')).pages)
       .toEqual(['Welcome.md']);
     await frame.getByRole('button', { name: 'Public edition…' }).click();
-    await frame.getByRole('button', { name: 'Welcome', exact: true }).first().click();
+    const welcome = frame.getByRole('button', { name: 'Welcome', exact: true });
+    if (!(await welcome.isVisible()))
+      await frame.getByRole('button', { name: 'Show left sidebar', exact: true }).click();
+    await welcome.click();
     await expect(editor).toBeVisible();
     await editor.click();
     await page.keyboard.press('Control+End');
@@ -113,7 +116,8 @@ test('Notes Share uploads only selected saved content; failed updates retain the
         (file) => /^(notebook|src)\//.test(file.path) || file.path === 'preview.jpg',
       ),
     ).toBe(false);
-    expect(api.state.cruxes[id]!.meta).toMatchObject({ messages: [] });
+    expect(api.state.cruxes[id]!.meta).toMatchObject({ conversationPublished: false });
+    expect(api.state.cruxes[id]!.meta).not.toHaveProperty('messages');
     const first = uploaded();
     const firstVersion = api.state.publishedVersion;
 
@@ -127,7 +131,9 @@ test('Notes Share uploads only selected saved content; failed updates retain the
       .toContain('lantern in the woods');
     await share.getByRole('button', { name: 'Update shared content', exact: true }).click();
     await shareWithoutBackup(page);
-    await expect(share.getByRole('alert')).toContainText('Simulated outage', { timeout: 60000 });
+    await expect(share.getByRole('alert')).toContainText('The server rejected the publish (500).', {
+      timeout: 60000,
+    });
     expect(uploaded()).toBe(first);
     expect(api.state.publishedVersion).toBe(firstVersion);
     await expect(editor).toContainText('lantern in the woods');
@@ -144,7 +150,12 @@ test('Notes Share uploads only selected saved content; failed updates retain the
     expect(uploaded()).not.toContain('PRIVATE_RESEARCH_NOT_FOR_VISITORS');
     await expect(share.getByRole('alert')).toHaveCount(0);
     // Local private content remains available after every Share attempt.
-    await frame.getByRole('button', { name: 'Private research', exact: true }).first().click();
+    const privateNote = frame
+      .getByRole('button', { name: 'Private research', exact: true })
+      .first();
+    if (!(await privateNote.isVisible()))
+      await frame.getByRole('button', { name: 'Show left sidebar', exact: true }).click();
+    await privateNote.click();
     await expect(editor).toContainText('PRIVATE_RESEARCH_NOT_FOR_VISITORS');
   } finally {
     await app.close();
@@ -235,7 +246,8 @@ test('Moqira Share replaces the public selection while retaining excluded frames
         (file) => /^(mockups|src)\//.test(file.path) || file.path === 'preview.jpg',
       ),
     ).toBe(false);
-    expect(api.state.cruxes[id]!.meta).toMatchObject({ messages: [] });
+    expect(api.state.cruxes[id]!.meta).toMatchObject({ conversationPublished: false });
+    expect(api.state.cruxes[id]!.meta).not.toHaveProperty('messages');
     const firstVersion = api.state.publishedVersion;
 
     // Swap the selection: the edition follows, the excluded wireframe stays in the Crux.

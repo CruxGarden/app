@@ -1,3 +1,5 @@
+import { revealOptionsFor } from './panel-helpers';
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -17,9 +19,9 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await enterGarden(page);
     await createCrux(page, 'Codex Garden');
     const chat = page.getByTestId('pane-body-collaboration');
-    if (!(await chat.isVisible()))
-      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
-    await chat.getByRole('button', { name: /Claude Sonnet 5/ }).click();
+    if (!(await chat.isVisible())) await togglePanel(page, 'Toggle collaboration');
+    await revealOptionsFor(chat.getByTestId('model-selector'));
+    await chat.getByTestId('model-selector').click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     const composer = page.getByPlaceholder('Send a message...');
     await composer.fill('Leave a note using Garden tools');
@@ -45,7 +47,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await expect(chat.getByText(/Resuming Codex/)).toBeVisible();
     await expect.poll(readNote).toContain('run a command');
     // A provider switch must not pass the Codex session id to Claude or vice versa.
-    await chat.getByRole('button', { name: 'Codex Codex', exact: true }).click();
+    await chat.getByRole('button', { name: 'Codex', exact: true }).click();
     await page
       .getByTestId('model-group-claude-code')
       .getByRole('button', { name: 'Claude Code' })
@@ -54,7 +56,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await composer.press('Enter');
     await expect(chat.getByText(/Starting fresh/)).toBeVisible({ timeout: 30_000 });
     await expect(chat.getByText(/Done — the note is in agent-note.md/)).toBeVisible();
-    await chat.getByRole('button', { name: 'Claude Code Claude Code', exact: true }).click();
+    await chat.getByRole('button', { name: 'Claude Code', exact: true }).click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     await composer.fill('run again');
     await composer.press('Enter');
@@ -68,7 +70,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await chat.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(approvals).toHaveCount(0);
     await expect(chat.getByText(/Saved codex-note.md using Garden tools/)).toHaveCount(3);
-    await page.getByRole('button', { name: 'Toggle history' }).click();
+    await togglePanel(page, 'Toggle growth');
     await expect(page.getByTestId('pane-body-history')).toBeVisible();
     await expect(page.getByTestId('pane-body-history').getByText('No snapshots yet')).toHaveCount(
       0,

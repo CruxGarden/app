@@ -1,7 +1,7 @@
 import { getServices } from './index';
 import { pathOf } from '@/lib/artifact-path';
 import { assertCopyWritable, serializeCopy } from './working-copies';
-import { growthHostFor } from './growth';
+import { captureEditCheckpoint } from './edit-history';
 import { flushIngestion } from './ingestion';
 import { saveCruxOutput } from './cruxspace-assets';
 import { parseFigmaReference } from '../../electron/src/figma-reference';
@@ -15,9 +15,11 @@ export async function readFigmaProject(owner: string) {
     (f) => pathOf(f) === FIGMA_PROJECT_PATH,
   );
   if (!file)
-    throw new Error('The Figma reference file is missing. Restore figma/project.json from Growth.');
+    throw new Error(
+      'The Figma reference file is missing. Recover figma/project.json from Edit history or a marked version.',
+    );
   if (!file.fingerprint) throw new Error('The Figma reference has no saved content.');
-  const data = JSON.parse(await artifact.readContent(file.id));
+  const data = JSON.parse(await artifact.readContent(file));
   if (
     data.version !== 1 ||
     data.app !== 'figma' ||
@@ -44,9 +46,7 @@ export async function saveFigmaReference(owner: string, url: string, expected: s
       meta: { path: FIGMA_PROJECT_PATH },
     });
   });
-  await (
-    await growthHostFor(owner)
-  ).snapshot({ label: 'Linked Figma document', requestedBy: 'person' });
+  await captureEditCheckpoint(owner);
   return readFigmaProject(owner);
 }
 

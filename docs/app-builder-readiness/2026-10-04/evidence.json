@@ -1,0 +1,54 @@
+{
+  "status": "Accepted locally and in fresh Mac package; Windows accepted, Linux refusal-step follow-through recorded in private-requests/evidence.json",
+  "scope": "AB01 public example/current SDK and pending/refused submission; AB02 static environment disclosure",
+  "baseline": {
+    "app": "877bf388b",
+    "api": "fa632ef"
+  },
+  "red": {
+    "pending_submit": "/tmp/crux-ab01-order-red.log",
+    "static_disclosure": "/tmp/crux-ab02-staging-red.log"
+  },
+  "tests": {
+    "pending_submit_green": "1 passed8.2s; /tmp/crux-ab01-order-green.log",
+    "app_verify": "1,830 passed/292 files+18 existing skips; typecheck/lint/runtime/tool checks and production build; /tmp/crux-ab01-app-accepted.log",
+    "electron_verify": "99 passed/one platform skip11.5s; /tmp/crux-ab01-electron-final.log",
+    "actual_desktop": "6 passed1.5m; real local Functions/Store hooks, existing static staging2 and Order Desk3; /tmp/crux-ab01-desktop.log",
+    "skills": "12 passed; /tmp/crux-ab01-skills.log",
+    "manual_game": "128 stories/1,269 criteria, all346 baseline checks and71 choices mapped; offline acceptance passed /tmp/crux-ab01-guide.log",
+    "packaged_mac": "4 passed36.4s: startup/SQLite/CLI and Order Desk3; /tmp/crux-ab01-packaged.log"
+  },
+  "visual": "backend-environment.png reviewed: public demo notice, Function-specific static warning, save status and actions are readable in actual1600x1000 desktop window",
+  "ci": {
+    "run": "37212906802",
+    "url": "https://github.com/CruxGarden/app/actions/runs/37212906802",
+    "source": "34e9f1dfd3ef494aa3ed551367e204407608dbeb",
+    "status": "completed",
+    "coverage": "Order Desk3 and local Functions1 added to regular gate and both native portable jobs",
+    "conclusion": "failure",
+    "detail": "Windows29 passed; Linux28 passed/one Order Desk pointer refusal-step failure. See private-requests/evidence.json for follow-through."
+  },
+  "correction": "First app verify failed after Prettier inserted blank lines before Use when in two skill headers. Restored required line2 metadata; focused skills and full gate passed. No test assertions removed.",
+  "boundaries": [
+    "No server idempotency/multi-key transaction added",
+    "No private customer-record starter or new hosted two-visitor acceptance yet",
+    "No full backend local staging",
+    "No new dependency; library shortlist in root ROADMAP",
+    "No API/runtime changes, live AI, production publishing/deployment or merge",
+    "Manual profile remains empty and unopened"
+  ],
+  "implementation": "34e9f1dfd3ef494aa3ed551367e204407608dbeb",
+  "manual_candidate": {
+    "path": "electron/release/manual-testing-backend-oct4/mac-arm64/Crux Garden.app",
+    "launcher": "electron/release/manual-testing-current/Launch Manual Testing.command",
+    "source": "34e9f1dfd3ef494aa3ed551367e204407608dbeb",
+    "signature": "ad-hoc; codesign --verify --deep --strict passed; not notarized",
+    "asar_sha256": "5554ae6d502c314bdc1c9b1f1fe05bbb1f6c1b6f25baad7ae1f2397ce4096610",
+    "renderer_tree_sha256": "b3ee73ce06b0bb62bce659b0e1fba5f32c0d89710a17604bb0d21146115e6cac",
+    "renderer_tree_algorithm": "SHA256 over sorted relative UTF-8 paths, each followed by NUL and binary SHA256(file);1167 files, source dist matches packaged Resources/app",
+    "note": "Renderer is an extraResource outside app.asar; unchanged ASAR is expected for this renderer/template-only change",
+    "manual_profile": "/Users/daniel/CruxGarden-ManualTesting",
+    "manual_profile_entries": 0,
+    "manual_profile_opened": false
+  }
+}

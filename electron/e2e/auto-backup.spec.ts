@@ -1,3 +1,5 @@
+import { finishSetupAtHome } from './multi-crux-helpers';
+import { togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
@@ -19,7 +21,7 @@ test.describe('automatic backup (mocked API, mock AI)', () => {
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
+      await finishSetupAtHome(page);
 
       // Connect, then switch automatic backup on (Settings → Account, then Sync)
       await page.getByRole('button', { name: 'Account menu' }).click();
@@ -54,7 +56,7 @@ test.describe('automatic backup (mocked API, mock AI)', () => {
       expect(cruxId).toBeTruthy();
 
       // The Sync pane says so
-      await page.getByRole('button', { name: 'Toggle sync' }).click();
+      await togglePanel(page, 'Toggle sync');
       await expect(page.getByTestId('sync-auto-note')).toContainText('Automatic backup is on');
 
       // Over the plan: the next quiet backup is refused with a 402 → paused, with the reason.
@@ -66,7 +68,7 @@ test.describe('automatic backup (mocked API, mock AI)', () => {
           .isVisible()
           .catch(() => false))
       )
-        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+        await togglePanel(page, 'Toggle artifacts');
       await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });
       const nameInput = page.getByRole('tree').getByRole('textbox');
       await nameInput.fill('more.md');
@@ -76,11 +78,8 @@ test.describe('automatic backup (mocked API, mock AI)', () => {
       await monaco.click();
       await page.keyboard.type('more');
       await page.keyboard.press('ControlOrMeta+s');
-      await page.getByRole('button', { name: 'Toggle history' }).click();
-      await page
-        .getByRole('button', { name: /snapshot/i })
-        .first()
-        .click();
+      await togglePanel(page, 'Toggle growth');
+      await page.getByRole('button', { name: 'Mark version', exact: true }).first().click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('over');
       await label.press('Enter');

@@ -1,3 +1,6 @@
+import { useModalFocus } from '@/hooks/useModalFocus';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { tendingPath } from '@/services/tending-actions';
 import { copyIdentity } from '@/services/working-copies';
 import { documentsFor } from '@/services/workspace-documents';
 import { getWorkspace } from '@/stores/workspaceRegistry';
@@ -5,10 +8,21 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useWorkspaceRegistry, openWorkspace, closeWorkspace } from '@/stores/workspaceRegistry';
-import { useUIStore } from '@/stores/uiStore';
 import { useDialogStore } from '@/stores/dialogStore';
 import { getServices } from '@/services';
+import { ChevronDownIcon, CloseIcon, FolderIcon } from '@/components/ui/icons';
+import {
+  Button,
+  Input,
+  buttonClass,
+  fieldClass,
+  iconButtonClass,
+  menuItemClass,
+} from '@/components/ui';
+import { cn } from '@/lib/cn';
 import { recentOrder, nextRecent } from '@/lib/workspace-switching';
+import { useGardenContext } from '@/stores/gardenContext';
+import { gardenMembers, opensAsWorkspace } from '@/services/garden-navigation';
 
 const focusByCrux = new Map<string, { selector: string; start?: number; end?: number }>();
 function rememberFocus(id: string | null, target = document.activeElement) {
@@ -31,10 +45,15 @@ function rememberFocus(id: string | null, target = document.activeElement) {
 let focusGeneration = 0;
 function restoreFocus(id: string) {
   const generation = ++focusGeneration;
+  const initialFocus = document.activeElement;
   const saved = focusByCrux.get(id);
   let frames = 0;
   const restore = () => {
     if (generation !== focusGeneration) return;
+    // Navigation may leave focus on body while the destination mounts. A new
+    // focused control means the person has moved on; do not steal it back.
+    const currentFocus = document.activeElement;
+    if (currentFocus && currentFocus !== document.body && currentFocus !== initialFocus) return;
     if (useWorkspaceRegistry.getState().activeId !== id) {
       if (++frames < 120) requestAnimationFrame(restore);
       return;
@@ -51,14 +70,18 @@ function restoreFocus(id: string) {
       return;
     }
     const root = document.querySelector(`[data-workspace-id="${id}"]`);
-    const el =
-      root?.querySelector<HTMLElement>(
-        saved?.selector ?? 'textarea[placeholder="Send a message..."]',
-      ) ?? root?.querySelector<HTMLElement>('[data-workspace-heading]');
-    if (!el) {
-      if (++frames < 120) requestAnimationFrame(restore);
+    // Under Plasma a pane's contents mount after its surface forms, so the
+    // composer can be a few hundred milliseconds away: keep looking for what
+    // was wanted before settling for the workspace heading.
+    const wanted = root?.querySelector<HTMLElement>(
+      saved?.selector ?? 'textarea[placeholder="Send a message..."]',
+    );
+    if (!wanted && ++frames < 240) {
+      requestAnimationFrame(restore);
       return;
     }
+    const el = wanted ?? root?.querySelector<HTMLElement>('[data-workspace-heading]');
+    if (!el) return;
     el.focus();
     if (
       saved?.start !== undefined &&
@@ -72,10 +95,17 @@ function restoreFocus(id: string) {
 export default function WorkspaceSwitcher() {
   const { entries, activeId } = useWorkspaceRegistry();
   const navigate = useMoodNavigate();
+  const aiEnabled = useAiEnabled();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [picker, setPicker] = useState(false);
   const [available, setAvailable] = useState<{ id: string; title: string; slug: string }[]>([]);
+  // Display the active Garden only; other workspaces keep running in the registry.
+  const garden = useGardenContext((s) => s.garden);
+  const gardenId = garden?.id;
+  const revision = useGardenContext((s) => s.revision);
+  const space = garden ? { name: garden.title } : null;
+  const [members, setMembers] = useState<{ id: string; title: string; slug: string }[]>([]);
   const [index, setIndex] = useState(0);
   const [recent, setRecent] = useState<{ ids: string[]; index: number } | null>(null);
   const recentRef = useRef(recent);
@@ -89,9 +119,37 @@ export default function WorkspaceSwitcher() {
   const search = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   const invoking = useRef<HTMLElement | null>(null);
+  const scopedEntries = garden
+    ? entries.filter((entry) => members.some((member) => member.id === (entry.cruxId ?? entry.id)))
+    : entries;
   const active = entries.find((e) => e.id === activeId);
+  useEffect(() => {
+    let cancelled = false;
+    setMembers([]);
+    if (gardenId)
+      void gardenMembers(gardenId)
+        .then((rows) => {
+          if (!cancelled)
+            setMembers(
+              rows
+                .filter((row) => row.kind !== 'garden' && opensAsWorkspace(row))
+                .map((row) => ({ id: row.id, slug: row.slug, title: row.title || 'Untitled' })),
+            );
+        })
+        .catch((err) => {
+          if (!cancelled) setError((err as Error).message);
+        });
+    return () => {
+      cancelled = true;
+    };
+  }, [gardenId, revision]);
   const modal = open || !!closing || !!renaming;
-  const rows = (picker ? available : entries).filter((e) =>
+  useModalFocus(dialog, modal, 100);
+  const rows = (
+    picker
+      ? available
+      : [...scopedEntries, ...members.filter((m) => !scopedEntries.some((e) => e.id === m.id))]
+  ).filter((e) =>
     `${e.title} ${'slug' in e ? e.slug : ''}`.toLowerCase().includes(query.toLowerCase()),
   );
   useEffect(() => {
@@ -114,7 +172,8 @@ export default function WorkspaceSwitcher() {
   }, [busy]);
   const choose = useCallback(
     (id: string) => {
-      if (!entries.some((e) => e.id === id) && !picker) {
+      const entry = entries.find((e) => e.id === id);
+      if (!entry && !members.some((m) => m.id === id) && !picker) {
         cancel();
         return;
       }
@@ -122,12 +181,14 @@ export default function WorkspaceSwitcher() {
       setOpen(false);
       setRecent(null);
       recentRef.current = null;
-      navigate(`/c/${id}`);
+      navigate(tendingPath({ cruxId: entry?.cruxId ?? id, copyId: id }));
       restoreFocus(id);
     },
-    [entries, navigate, picker, cancel],
+    [entries, members, navigate, picker, cancel],
   );
   const beginSearch = useCallback(() => {
+    // A restore still waiting on the last switch must not take focus from the search.
+    focusGeneration++;
     invoking.current = document.activeElement as HTMLElement;
     rememberFocus(useWorkspaceRegistry.getState().activeId);
     setPicker(false);
@@ -142,17 +203,12 @@ export default function WorkspaceSwitcher() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.isComposing || e.getModifierState('AltGraph')) return;
-      const global = useUIStore.getState();
       const otherModal =
-        global.settingsOpen ||
-        global.moodPanelOpen ||
-        global.exploreOpen ||
-        global.consoleOpen ||
         useDialogStore.getState().queue.length > 0 ||
         !!document.querySelector('[aria-label="Close Crux Garden"], [data-modal-open="true"]');
       if (otherModal || closing || renaming) {
         // Reserve these chords even while another dialog owns input; otherwise
-        // Shell's broader Cmd/Ctrl+K handler opens Explore behind that dialog.
+        // Keep Shell's Navigator shortcut from acting behind this dialog.
         if (
           ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === 'k') ||
           (e.ctrlKey && e.key === 'Tab')
@@ -176,7 +232,7 @@ export default function WorkspaceSwitcher() {
         const ids =
           current?.ids ??
           recentOrder(
-            state.entries.map((x) => x.id),
+            scopedEntries.map((x) => x.id),
             state.mru,
           );
         if (!ids.length) return;
@@ -216,6 +272,7 @@ export default function WorkspaceSwitcher() {
       if (recentRef.current && !document.hasFocus()) cancel();
     };
     const offCommand = window.electronAPI?.desktop.onWorkspaceCommand?.((command) => {
+      if (command === 'navigate') return;
       const event =
         command === 'search'
           ? new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, altKey: true })
@@ -240,7 +297,7 @@ export default function WorkspaceSwitcher() {
       window.removeEventListener('keyup', up, true);
       window.removeEventListener('blur', blur);
     };
-  }, [beginSearch, cancel, choose, closing, renaming, open]);
+  }, [beginSearch, cancel, choose, closing, renaming, open, scopedEntries]);
   const close = async (documents: 'save' | 'discard') => {
     if (!closing || busy) return;
     setBusy(true);
@@ -249,8 +306,9 @@ export default function WorkspaceSwitcher() {
       await closeWorkspace(closing, { stop: true, documents });
       const state = useWorkspaceRegistry.getState();
       if (closing === activeId) {
-        const next = state.mru[0];
-        navigate(next ? `/c/${next}` : '/home');
+        const next = state.mru.find((id) => scopedEntries.some((entry) => entry.id === id));
+        const entry = state.entries.find((e) => e.id === next);
+        navigate(next ? tendingPath({ cruxId: entry?.cruxId ?? next, copyId: next }) : '/home');
         if (next) restoreFocus(next);
       }
       setClosing(null);
@@ -275,34 +333,49 @@ export default function WorkspaceSwitcher() {
         aria-keyshortcuts="Control+Alt+K Meta+Alt+K Control+Tab"
         aria-expanded={open}
         title="Switch Crux · Cmd/Ctrl+Alt+K · Ctrl+Tab for recent Cruxes"
-        className="text-xs font-display text-toolbar-text truncate max-w-64 cursor-pointer focus-visible:outline-2 focus-visible:outline-accent"
+        className={buttonClass(
+          'ghost',
+          'xs',
+          'max-w-64 min-w-0 gap-1 px-2 text-sm font-display text-toolbar-text hover:text-toolbar-text',
+        )}
         onClick={beginSearch}
       >
-        <span style={active ? { viewTransitionName: `crux-${active.id}` } : undefined}>
-          {active?.title ?? 'Open Cruxes'}
-        </span>{' '}
-        ▾ {entries.length > 1 || !active ? `(${entries.length})` : ''}
-        {entries.some((e) => e.id !== activeId && /approval|merge|Failed|Done/.test(e.status))
-          ? ' •'
-          : ''}
+        <span
+          className="truncate"
+          style={active ? { viewTransitionName: `crux-${active.id}` } : undefined}
+        >
+          {active?.title ?? <FolderIcon />}
+        </span>
+        {active ? <ChevronDownIcon /> : null}
+        {scopedEntries.some(
+          (e) => e.id !== activeId && /approval|merge|Failed|Done/.test(e.status),
+        ) ? (
+          <span
+            aria-label="Another Crux needs you"
+            className="w-1.5 h-1.5 rounded-full bg-accent motion-attention"
+          />
+        ) : null}
       </button>
       {recent &&
         createPortal(
           <div
             role="status"
             aria-label="Recent Cruxes"
-            className="fixed z-[100] top-20 left-1/2 -translate-x-1/2 rounded bg-surface-solid border border-border p-4 shadow-modal"
+            className="overlay-plate fixed z-[100] top-20 left-1/2 -translate-x-1/2 min-w-64 rounded-dropdown border border-dropdown-border p-2 shadow-modal motion-enter-dropdown"
           >
             {recent.ids.map((id, i) => (
               <div
                 key={id}
                 aria-current={i === recent.index ? 'true' : undefined}
-                className={i === recent.index ? 'text-accent' : 'text-text-muted'}
+                className={cn(
+                  'px-2.5 py-1.5 rounded-[var(--radius-sm)] text-sm transition-colors',
+                  i === recent.index ? 'bg-accent-muted text-text' : 'text-text-muted',
+                )}
               >
                 {entries.find((e) => e.id === id)?.title ?? 'Closed Crux'}
               </div>
             ))}
-            <p className="text-xs text-text-muted mt-2">
+            <p className="text-xs text-text-muted mt-1.5 px-2.5">
               Release Control to switch · Escape to cancel
             </p>
           </div>,
@@ -311,13 +384,14 @@ export default function WorkspaceSwitcher() {
       {modal &&
         createPortal(
           <div
-            className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/40"
+            className="fixed inset-0 z-[100] flex items-start justify-center pt-20 modal-scrim"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) cancel();
             }}
           >
             <div
               ref={dialog}
+              tabIndex={-1}
               role="dialog"
               aria-modal="true"
               aria-label={
@@ -329,44 +403,43 @@ export default function WorkspaceSwitcher() {
                       : 'Rename Crux'
                     : 'Switch Crux workspace'
               }
-              className="bg-surface-solid text-text border border-border rounded p-4 w-[min(30rem,calc(100vw-2rem))] shadow-modal"
+              className="overlay-plate text-text border border-dropdown-border rounded-dropdown p-2 w-[min(30rem,calc(100vw-2rem))] shadow-modal motion-enter-dropdown"
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   e.preventDefault();
                   e.stopPropagation();
                   cancel();
                 }
-                if (e.key === 'Tab') {
-                  const all = [
-                    ...dialog.current!.querySelectorAll<HTMLElement>(
-                      'button:not(:disabled), input:not(:disabled)',
-                    ),
-                  ];
-                  const i = all.indexOf(document.activeElement as HTMLElement);
-                  if ((e.shiftKey && i <= 0) || (!e.shiftKey && i === all.length - 1)) {
-                    e.preventDefault();
-                    all[e.shiftKey ? all.length - 1 : 0]?.focus();
-                  }
-                }
               }}
             >
               {closing ? (
                 <>
-                  <h2>Close {entries.find((e) => e.id === closing)?.title}?</h2>
-                  <p className="text-xs my-3">
-                    Running work will stop. Queued prompts and Growth remain available when you
-                    reopen. Save or discard unsaved Artifact edits before closing.
+                  <h2
+                    className="px-2 pt-1 text-sm font-medium text-text"
+                    style={{ fontFamily: 'var(--dialog-title-font)' }}
+                  >
+                    Close {entries.find((e) => e.id === closing)?.title}?
+                  </h2>
+                  <p className="px-2 text-xs text-text-muted my-3">
+                    Running work will stop.{' '}
+                    {aiEnabled ? 'Queued prompts and Growth remain' : 'Growth remains'} available
+                    when you reopen. Save or discard unsaved Artifact edits before closing.
                   </p>
-                  <div className="flex gap-3">
-                    <button disabled={busy} onClick={cancel}>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button variant="ghost" size="sm" disabled={busy} onClick={cancel}>
                       Cancel
-                    </button>
-                    <button disabled={busy} onClick={() => void close('discard')}>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void close('discard')}
+                    >
                       Discard edits and close
-                    </button>
-                    <button disabled={busy} onClick={() => void close('save')}>
+                    </Button>
+                    <Button size="sm" disabled={busy} onClick={() => void close('save')}>
                       Save and close
-                    </button>
+                    </Button>
                   </div>
                 </>
               ) : renaming ? (
@@ -385,11 +458,12 @@ export default function WorkspaceSwitcher() {
                     }
                   }}
                 >
-                  <label>
+                  <label className="flex flex-col gap-1 p-1 text-xs text-text-muted">
                     {copyIdentity(getWorkspace(renaming)?.data.getState().crux)
                       ? 'Task name'
                       : 'Crux title'}
-                    <input
+                    <Input
+                      autoFocus
                       aria-label={
                         copyIdentity(getWorkspace(renaming)?.data.getState().crux)
                           ? 'Task name'
@@ -397,28 +471,41 @@ export default function WorkspaceSwitcher() {
                       }
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="block border p-2 w-full"
                     />
                   </label>
-                  <button type="button" onClick={cancel}>
-                    Cancel
-                  </button>
-                  <button disabled={busy} type="submit">
-                    Rename
-                  </button>
+                  <div className="flex justify-end gap-2 mt-3">
+                    <Button type="button" variant="ghost" size="sm" onClick={cancel}>
+                      Cancel
+                    </Button>
+                    <Button disabled={busy} type="submit" size="sm">
+                      Rename
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <>
                   <input
                     ref={search}
-                    aria-label={picker ? 'Find a Crux in your garden' : 'Find an open Crux'}
-                    placeholder={picker ? 'Find a Crux in your garden…' : 'Find an open Crux…'}
+                    aria-label={
+                      picker
+                        ? 'Find a Crux in your garden'
+                        : space
+                          ? `Find a Crux in ${space.name}`
+                          : 'Find an open Crux'
+                    }
+                    placeholder={
+                      picker
+                        ? 'Find a Crux in your garden…'
+                        : space
+                          ? `Find a Crux in ${space.name}…`
+                          : 'Find an open Crux…'
+                    }
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
                       setIndex(0);
                     }}
-                    className="w-full border border-border rounded p-2 bg-bg mb-3"
+                    className={fieldClass(undefined, 'mb-1.5')}
                     onKeyDown={(e) => {
                       if (e.nativeEvent.isComposing) return;
                       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -438,19 +525,26 @@ export default function WorkspaceSwitcher() {
                     {rows.map((row, i) => (
                       <div
                         key={row.id}
-                        className={`flex items-center gap-2 rounded px-2 ${i === index ? 'bg-accent-muted' : ''}`}
+                        className={cn(
+                          'group flex items-center gap-1 pr-1 rounded-[var(--radius-sm)] transition-colors',
+                          i === index ? 'bg-accent-muted' : 'hover:bg-action-button-hover',
+                        )}
                       >
                         <button
-                          className="flex-1 text-left py-2 min-w-0 focus-visible:outline-2 focus-visible:outline-accent"
+                          className="flex-1 text-left px-2.5 py-1.5 min-w-0 rounded-[var(--radius-sm)] cursor-pointer"
                           aria-current={row.id === activeId ? 'page' : undefined}
                           onClick={() => choose(row.id)}
                         >
-                          <span className="block truncate">
-                            {row.id === activeId ? '✓ ' : ''}
+                          <span className="block truncate text-sm">
+                            {row.id === activeId ? <span className="text-accent">✓ </span> : ''}
                             {row.title}
                           </span>
                           <span className="text-xs text-text-muted">
-                            {'status' in row ? row.status : row.slug}
+                            {'status' in row
+                              ? row.status
+                              : !picker && space
+                                ? `In ${space.name} · not open`
+                                : row.slug}
                             {'dirty' in row && row.dirty ? ' · Unsaved edits' : ''}
                             {rows.filter((r) => r.title === row.title).length > 1
                               ? ` · ${row.id.slice(0, 8)}`
@@ -460,31 +554,43 @@ export default function WorkspaceSwitcher() {
                         {entries.some((e) => e.id === row.id) && (
                           <button
                             aria-label={`Close ${row.title} workspace`}
-                            className="p-2"
+                            className={iconButtonClass(
+                              'sm',
+                              false,
+                              i !== index && 'reveal-on-hover',
+                            )}
                             onClick={() => {
                               setClosing(row.id);
                               setError('');
                             }}
                           >
-                            ×
+                            <CloseIcon size={14} />
                           </button>
                         )}
                       </div>
                     ))}
                   </div>
                   {!rows.length && (
-                    <p role="status" className="py-4 text-sm">
+                    <p role="status" className="px-2.5 py-4 text-sm text-text-muted">
                       No matching Cruxes.
                     </p>
                   )}
-                  <div className="border-t border-border mt-2 pt-2 flex flex-col items-start gap-2 text-sm">
+                  <div className="border-t border-dropdown-border mt-1.5 pt-1.5 flex flex-col">
                     <button
+                      className={menuItemClass()}
                       onClick={async () => {
                         try {
-                          const cruxes = await getServices().crux.listAll();
+                          const cruxes = garden
+                            ? await gardenMembers(garden.id)
+                            : await getServices().crux.listAll();
                           setAvailable(
                             cruxes
-                              .filter((c) => c.kind !== 'snapshot')
+                              .filter(
+                                (c) =>
+                                  c.kind !== 'snapshot' &&
+                                  c.kind !== 'garden' &&
+                                  opensAsWorkspace(c),
+                              )
                               .map((c) => ({
                                 id: c.id,
                                 title: c.title || 'Untitled',
@@ -505,6 +611,7 @@ export default function WorkspaceSwitcher() {
                     {active && (
                       <>
                         <button
+                          className={menuItemClass()}
                           onClick={() => {
                             setRenaming(active.id);
                             setTitle(
@@ -515,20 +622,25 @@ export default function WorkspaceSwitcher() {
                         >
                           Rename current Crux…
                         </button>
-                        <button onClick={() => setClosing(active.id)}>
+                        <button className={menuItemClass()} onClick={() => setClosing(active.id)}>
                           Close current workspace
                         </button>
                       </>
                     )}
-                    <button onClick={cancel}>Cancel</button>
-                    <span className="text-xs text-text-muted">
+                    <button
+                      className={menuItemClass('default', 'text-text-muted')}
+                      onClick={cancel}
+                    >
+                      Cancel
+                    </button>
+                    <span className="px-2.5 pt-1.5 pb-0.5 text-xs text-text-muted">
                       Ctrl+Tab: recent Cruxes · ↑↓: select · Enter: open
                     </span>
                   </div>
                 </>
               )}
               {error && (
-                <p role="alert" className="text-error text-xs mt-3">
+                <p role="alert" className="px-2 text-error text-xs mt-3">
                   {error}
                 </p>
               )}

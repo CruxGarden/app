@@ -53,4 +53,14 @@ export default tseslint.config(
       'no-empty': 'off',
     },
   },
+  {
+    files: ['electron/src/**/*.ts'],
+    ignores: ['electron/src/garden-ipc.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', {
+        selector: "MemberExpression[object.name='ipcMain']",
+        message: 'Register desktop IPC through gardenIpc so every request checks its sender.',
+      }],
+    },
+  },
 );

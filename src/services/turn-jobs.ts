@@ -1,5 +1,8 @@
+import { PROGRESS_PROMPT, progressFromCall, type ReportedProgress } from './task-progress';
+import { reportFlowActivity } from '@/lib/moods/flow';
 import type { ChatMessage, ToolCall, TurnCheckSummary, TurnJobSummary } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
+import type { TurnMeter } from './agent-metrics';
 import { didMutate } from '@/ai/tools';
 import { isSubagentActive, type MergeState, type SubagentRun } from './subagents';
 
@@ -8,15 +11,14 @@ import { isSubagentActive, type MergeState, type SubagentRun } from './subagents
  *
  * A collaborator turn is a JOB the store tracks, not a promise a hook awaits:
  * it has a plan (the model emits it first), step progress, an interrupt, and
- * a Growth snapshot per step. This module is the pure half — the job model,
+ * a file recovery point per step. This module is the pure half — the job model,
  * plan parsing, and the event loop that turns engine events into job state.
  * It knows nothing about React or the store; `services/turns.ts` wires it to
  * both and owns queue/steer/stop.
  *
- * Step boundaries are honest, not clever: a step is DONE when a snapshot
- * lands after a file-mutating model round (or when the model calls the
- * `snapshot` tool). Steps are display and interrupt granularity, not control
- * flow — the model is never blocked on them.
+ * A mutating tool round completes a displayed step. Recovery is independent
+ * of deliberate Growth. Steps describe progress and interruption; they do not
+ * require the model to mark a creative version.
  */
 
 export type TurnJobStatus =
@@ -83,12 +85,15 @@ export interface TurnJob {
   model?: string;
   cruxId: string;
   status: TurnJobStatus;
+  progress?: ReportedProgress;
   plan: TurnPlan;
   /** Index into plan.steps of the step in progress (or last touched). */
   currentStep: number;
   startedAt: string;
   endedAt?: string;
   error?: string;
+  /** The provider's own wording behind `error`, shown as a secondary detail. */
+  errorDetail?: string;
   /** Why the job ended early, when it did. */
   stopReason?: TurnStopReason;
   /** Snapshot crux ids this job took, in order (the last one is what Restore offers). */
@@ -110,7 +115,8 @@ export type { TurnJobSummary };
  * before acting. The fence is the whole convention — no tool, no schema.
  */
 export const PLAN_PROMPT_LINE =
-  'For any task that takes more than one file change, begin your reply with a short plan in a ```plan fenced block — one numbered line per step, no prose inside the fence — then carry it out. Skip the plan for one-line answers and single edits.';
+  'For any task that takes more than one file change, begin your reply with a short plan in a ```plan fenced block — one numbered line per step, no prose inside the fence — then carry it out. Skip the plan for one-line answers and single edits. ' +
+  PROGRESS_PROMPT;
 
 export const MAX_PLAN_STEPS = 12;
 const PROMPT_PREVIEW_LENGTH = 72;
@@ -221,10 +227,10 @@ export function describeCheck(status: TurnCheckStatus): string {
 /** The transcript line under a finished job's reply: "Ran 3 steps · 2 snapshots". */
 export function describeJobSummary(s: TurnJobSummary): string {
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-  const snaps = plural(s.snapshots, 'snapshot');
-  if (s.status === 'done') return `Ran ${plural(s.steps, 'step')} · ${snaps}`;
+  const snaps = s.snapshots ? ` · ${plural(s.snapshots, 'marked version')}` : '';
+  if (s.status === 'done') return `Ran ${plural(s.steps, 'step')}${snaps}`;
   const head = s.status === 'failed' ? 'Failed' : 'Stopped';
-  return `${head} after ${s.completedSteps} of ${plural(s.steps, 'step')} · ${snaps}`;
+  return `${head} after ${s.completedSteps} of ${plural(s.steps, 'step')}${snaps}`;
 }
 
 /**
@@ -369,7 +375,13 @@ export function finishCheck(job: TurnJob, verdict: CheckVerdictRecord): TurnJob 
  */
 export function continueJobForFix(job: TurnJob, problems: string[]): TurnJob {
   const title = `Fix: ${promptPreview(problems.join('; '))}`;
-  const { endedAt: _endedAt, stopReason: _stopReason, error: _error, ...rest } = job;
+  const {
+    endedAt: _endedAt,
+    stopReason: _stopReason,
+    error: _error,
+    errorDetail: _errorDetail,
+    ...rest
+  } = job;
   return {
     ...rest,
     status: 'running',
@@ -381,12 +393,6 @@ export function continueJobForFix(job: TurnJob, problems: string[]): TurnJob {
       problems,
     },
   };
-}
-
-/** Attach the verdict to the Growth snapshot it was recorded on. */
-export function withCheckSnapshot(job: TurnJob, snapshotId: string): TurnJob {
-  if (!job.check) return job;
-  return { ...job, check: { ...job.check, snapshotId } };
 }
 
 /** The Growth dimension meta entry a verified snapshot carries. */
@@ -422,13 +428,15 @@ export interface TurnRunnerDeps {
   /** A tool changed files (the wiring refreshes the Artifacts tree). */
   onMutation?: () => void;
   onToolDone?: () => void;
-  onUsage?: (inputTokens: number, outputTokens: number, cachedInputTokens: number) => void;
   /**
-   * Take a Growth snapshot labelled for the step; resolves to the snapshot
-   * crux id. Absent when the snapshot policy is not per-turn (timed / manual)
-   * — then the end-of-turn policy handles it exactly as before.
+   * The turn's tool calls as they happen, so the Collaboration pane can show
+   * the work folded under the reply while it is still being done, the way the
+   * console already does. The array is a copy: the runner keeps mutating its own.
    */
-  snapshot?: (label: string) => Promise<string | null>;
+  onToolCalls?: (calls: ToolCall[]) => void;
+  onUsage?: (inputTokens: number, outputTokens: number, cachedInputTokens: number) => void;
+  /** Retain files at a completed step without creating a Growth version. */
+  checkpoint?: () => Promise<void>;
   /**
    * Latest snapshot id in the workspace — read before/after a `snapshot` tool
    * call so a model-taken snapshot completes the step without a second one.
@@ -437,6 +445,8 @@ export interface TurnRunnerDeps {
   /** Consulted after the loop: did the user stop the job (and why)? */
   stopReason?: () => TurnStopReason | null;
   aborted?: () => boolean;
+  /** Meter for this turn's speed and tool accuracy (`services/agent-metrics.ts`). */
+  metrics?: TurnMeter;
 }
 
 export interface TurnRunResult {
@@ -456,6 +466,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
   const toolCalls: ToolCall[] = [];
   let planParsed = false;
   let mutatedSinceSnapshot = false;
+  let mutatedThisStep = false;
   let sawError = false;
   let snapshotIdBeforeTool: string | null = null;
 
@@ -486,8 +497,10 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
 
   try {
     for await (const event of deps.run()) {
+      deps.metrics?.observe(event);
       switch (event.type) {
         case 'text': {
+          if (event.content.trim()) reportFlowActivity('collaboration');
           content += event.content;
           deps.onText?.(event.content);
           if (!planParsed && !hasOpenPlanFence(content)) {
@@ -513,6 +526,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
 
         case 'tool_start': {
           toolCalls.push({ name: event.name, id: event.id, input: event.input, result: undefined });
+          deps.onToolCalls?.(toolCalls.map((t) => ({ ...t })));
           if (event.name === SNAPSHOT_TOOL) {
             snapshotIdBeforeTool = deps.latestSnapshotId?.() ?? null;
           }
@@ -526,10 +540,17 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
 
         case 'tool_result': {
           const tc = toolCalls.find((t) => t.id === event.id);
-          if (tc) tc.result = event.result;
+          if (tc) {
+            tc.result = event.result;
+            if (event.error !== undefined) tc.error = event.error;
+          }
+          const progress = progressFromCall(tc);
+          if (progress) await publish({ ...job, progress });
+          deps.onToolCalls?.(toolCalls.map((t) => ({ ...t })));
           deps.onToolDone?.();
           if (didMutate(event.name, event.result)) {
             mutatedSinceSnapshot = true;
+            mutatedThisStep = true;
             deps.onMutation?.();
           }
           if (event.name === SNAPSHOT_TOOL && !event.result.startsWith('Error')) {
@@ -537,22 +558,26 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
             const after = deps.latestSnapshotId?.() ?? null;
             const taken = after && after !== snapshotIdBeforeTool ? after : null;
             mutatedSinceSnapshot = false;
+            mutatedThisStep = false;
             await publish(completeStep(taken));
           }
           break;
         }
 
         case 'step_end': {
-          if (mutatedSinceSnapshot && deps.snapshot && job.plan.explicit) {
-            const label = stepLabel(job, job.currentStep);
-            let id: string | null = null;
+          if (mutatedThisStep && job.plan.explicit) {
+            let captured = false;
             try {
-              id = await deps.snapshot(label);
+              if (deps.checkpoint) {
+                await deps.checkpoint();
+                captured = true;
+              }
             } catch (err) {
-              console.warn('Step snapshot failed:', err);
+              console.warn('Step recovery failed:', err);
             }
-            mutatedSinceSnapshot = false;
-            await publish(completeStep(id));
+            mutatedSinceSnapshot = !captured;
+            mutatedThisStep = false;
+            await publish(completeStep(null));
           }
           break;
         }
@@ -570,7 +595,11 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
           sawError = true;
           content += `\n\n*Error: ${event.message}*`;
           deps.onText?.(`\n\n*Error: ${event.message}*`);
-          await publish({ ...job, error: event.message });
+          await publish({
+            ...job,
+            error: event.message,
+            ...(event.detail ? { errorDetail: event.detail } : {}),
+          });
           break;
 
         case 'done':
@@ -589,6 +618,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
   const stopReason = deps.stopReason?.() ?? null;
   const wasAborted = !!stopReason || !!deps.aborted?.();
   const finalStatus: TurnJobStatus = wasAborted ? 'interrupted' : sawError ? 'failed' : 'done';
+  deps.metrics?.finish(finalStatus);
   await publish(finishJob(job, finalStatus, { stopReason: stopReason ?? undefined }));
 
   return {
@@ -597,7 +627,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
     toolCalls,
     uncapturedMutation:
       mutatedSinceSnapshot ||
-      (!deps.snapshot && toolCalls.some((tc) => didMutate(tc.name, tc.result ?? ''))),
+      (!deps.checkpoint && toolCalls.some((tc) => didMutate(tc.name, tc.result ?? ''))),
   };
 }
 

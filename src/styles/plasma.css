@@ -1,0 +1,458 @@
+/* ── Plasma ─────────────────────────────────────────────────────────────────
+   <html data-surface-style="plasma"> hands every primary surface to one
+   shared WebGL material (@cruxgarden/plasma-ui, mounted by PlasmaStage and
+   attached by PlasmaSurfaces). The material draws the panel — its fill, its
+   rim, its shadow, and the way it fuses with a neighbour — so the CSS here
+   mostly gets out of the way: the surface goes transparent and keeps only
+   what the shader cannot know about, which is where the text sits.
+
+   Everything laid *inside* one of these is opaque and flat, exactly as under
+   glass: there are no plasma panes inside plasma panes.
+   Nothing here applies while data-surface-style is solid or glass. ── */
+
+html[data-surface-style='plasma'] {
+  /* --plasma-inner, --plasma-frame and --plasma-plate are Mood tokens (see garden-dark.ts):
+     a pane is a frame of material with a plate inside it, the way the
+     plasma-ui workspace example builds one, and how much of each is the
+     person's call. They are never absent — the Mood pipeline writes every
+     token onto <html> — so they carry no fallback here, which is also what
+     the token-coverage test looks for. */
+
+  /* paneGap is the Mood's to set — the Plasma Mood carries 12px, and the
+     palette writes it onto <html>, which beats anything declared here. It is
+     recorded because it is half of one setting: surfaces fuse when they are
+     closer than blend/2, so a gap under 10px at PlasmaStage's blend of 20
+     would melt every pane into one permanent sheet. A Mood that wants Plasma
+     needs paneGap above that, or a blend to match. */
+  --workspace-padding: 8px;
+}
+
+html[data-surface-style='plasma'] body {
+  background: transparent;
+}
+
+/* Contents arrive after the material. A surface forms in over about half a
+   second (the renderer's critically damped spring), and its element carries
+   data-plasma-forming for exactly that long; the children wait, then fade
+   in over the Mood's fast beat. Never under reduced motion (the attribute
+   is not set) and never with Motion off (the person asked for no motion). */
+html[data-surface-style='plasma']:not([data-motion-intensity='off']) [data-plasma-forming] > * {
+  opacity: 0;
+  /* Hidden at once; the transition is for arriving, not for leaving. */
+  transition: none;
+}
+html[data-surface-style='plasma']:not([data-motion-intensity='off'])
+  :is(
+    :where(.mosaic.crux-mosaic-theme) .mosaic-window,
+    .bg-panel,
+    .bg-garden-card,
+    .bg-toolbar,
+    .bg-public-top-bar,
+    .bg-mood-bar
+  )
+  > * {
+  transition: opacity var(--motion-ms-fast) ease-out;
+}
+
+/* A pane on its way out (components/plasma/leave.ts): the contents go first,
+   quickly, while the element still stands; the material collapses after. */
+html[data-surface-style='plasma'] [data-plasma-leaving] > * {
+  opacity: 0 !important;
+  transition: opacity 100ms ease-in !important;
+}
+
+/* The primary surfaces: drawn by the material, so no fill, no border, no
+   shadow of their own. The radius stays — PlasmaSurfaces reads it back to
+   tell the shader what shape to cut. */
+/* :where() keeps this rule at the specificity of a single class under the
+   attribute, so the overlay rule below can take a dialog back without a
+   specificity contest against `.mosaic.crux-mosaic-theme .mosaic-window`. */
+html[data-surface-style='plasma']
+  :is(
+    :where(.mosaic.crux-mosaic-theme) .mosaic-window,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card,
+    .bg-toolbar,
+    .bg-public-top-bar,
+    .bg-mood-bar
+  ):where(:not(input, select, textarea)) {
+  /* A control that borrows a panel class (Tending's search box is `bg-panel`)
+     keeps its paint: PlasmaSurfaces never registers it, so with no fill of
+     its own it would simply vanish. */
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* A pane is three opaque layers deep: the window paints the border ring, the
+   toolbar and body paint --panel over it, and the header paints its own token
+   on top. All four have to give way or the material is simply behind a solid
+   panel and never seen. */
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window {
+  /* The window paints its border colour as its whole background under the
+     other themes (the ring technique, globals.css) with a specificity the
+     transparent rule above — deliberately kept low with :where() — cannot
+     beat. Said again here at full weight, or the material and its rim never
+     show through a pane at all. */
+  background: transparent;
+  box-shadow: none;
+  /* Was the border ring's width; now it is how much material shows around the
+     plate. The ring itself has nothing left to paint. */
+  padding: var(--plasma-frame);
+  /* The plate is rounded like the material around it, not inset-concentric.
+     Geometry says the inner corner should be the outer minus the frame; the
+     eye says a plate inside a liquid panel should look like the same shape
+     again, and the eye is the one looking. */
+  --pane-inner-radius: var(--pane-radius);
+}
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  :is(.mosaic-window-toolbar, .mosaic-window-body) {
+  background: var(--plasma-plate);
+  background-blend-mode: normal;
+  backdrop-filter: none;
+  box-shadow: none;
+  border-color: transparent;
+}
+/* The header and body are one plate, so only the outer corners round. */
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
+  border-radius: var(--pane-inner-radius) var(--pane-inner-radius) 0 0;
+}
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {
+  border-radius: 0 0 var(--pane-inner-radius) var(--pane-inner-radius);
+}
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  .mosaic-window-toolbar
+  > .pane-toolbar {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* The top bar and the task strip as standalone docks. Under the other themes
+   they are strips welded to the top of the window, with a bottom border doing
+   the work of separating them from the content. Here they are surfaces like
+   any other — inset, their own corners, floating on the material — which is
+   the bar in the plasma-ui workspace example.
+
+   The inset is the mosaic's own padding plus a tile's margin, because that is
+   where the first pane's left edge lands: a dock that stops short of the panes
+   below it reads as a mistake, and one that runs past them reads as chrome. */
+html[data-surface-style='plasma'] {
+  --plasma-dock-inset: calc(var(--workspace-padding) + var(--pane-gap));
+  /* Clearance for the macOS traffic lights, which the main process parks at
+     (12, 12): twelve above them, fourteen for the buttons, twelve below. The
+     dock sits under them rather than around them, so the window's own controls
+     keep a clear strip and the dock keeps its corners. */
+  --plasma-titlebar-strip: 38px;
+}
+html[data-surface-style='plasma'] :is(header.bg-toolbar, header.bg-public-top-bar, .bg-mood-bar) {
+  margin: var(--plasma-dock-inset);
+  margin-bottom: 0;
+  border-radius: var(--pane-radius);
+  border-bottom: none;
+  border-color: transparent;
+}
+/* The public pages' bar is a thin strip elsewhere; as a dock it takes the
+   TopBar's height so the two read as the same chrome. */
+html[data-surface-style='plasma'] header.bg-public-top-bar {
+  height: var(--toolbar-height);
+}
+
+/* Frameless window: drop the dock below the traffic lights, and give back the
+   96px of left padding the bar was carrying to clear them — nothing overlaps
+   it any more. The strip they sit in stays draggable, or a window with its
+   title bar hidden has nothing left to drag it by. */
+html[data-surface-style='plasma'][data-desktop-chrome='true'] header.bg-toolbar {
+  margin-top: var(--plasma-titlebar-strip);
+  padding-left: 0.75rem;
+}
+html[data-surface-style='plasma'][data-desktop-chrome='true'] header.bg-toolbar:first-child,
+html[data-surface-style='plasma'][data-desktop-chrome='true'] .plasma-drag-strip {
+  -webkit-app-region: drag;
+}
+
+/* Overlays: a dialog sits above the scrim and a menu above the pane it
+   opened from, and the material is one canvas behind everything, so it can
+   never reach either — the dialog would be drawn under the scrim and the
+   menu under the pane's plate. They paint their own plate instead, and
+   PlasmaSurfaces leaves them unregistered so they stop cutting notches into
+   the surfaces beneath them. */
+html[data-surface-style='plasma'] {
+  /* Lifted a step above the panel colour: the scrim darkens the field to
+     nearly the panel's own value, and a plate the same shade as what it sits
+     on is a plate nobody can see. */
+  --plasma-overlay: color-mix(in srgb, var(--panel) 91%, var(--text) 9%);
+  --plasma-overlay-border: color-mix(in srgb, var(--border) 55%, var(--text) 45%);
+}
+html[data-surface-style='plasma']
+  :is([data-modal-open] .bg-panel, .bg-dropdown, .bg-model-selector-dropdown, .overlay-plate) {
+  background: var(--plasma-overlay);
+  border-color: var(--plasma-overlay-border);
+  box-shadow: var(--shadow-modal);
+  text-shadow: none;
+}
+/* A menu grown out of the top bar (UserMenu + PlasmaOverlay): the bar is a
+   stacking context above the page so the overlay's canvas — fixed, z -1
+   inside it — sits above the panes and below the bar's own text; the menu's
+   plate steps aside while the overlay is up. */
+html[data-surface-style='plasma'] header.bg-toolbar {
+  position: relative;
+  z-index: 30;
+}
+/* The menu's container must not be a stacking context of its own here: the
+   overlay canvas inside it (fixed, z -1) has to paint in the bar's context,
+   under the bar's text and the menu's, and the bar's z-index already lifts
+   the menu above the page. */
+html[data-surface-style='plasma'] header.bg-toolbar [data-plasma-host] {
+  z-index: auto;
+  /* No gap below the bar to bridge: the menu is the bar, continued. */
+  padding-top: 0;
+}
+/* Flush with the bar's right edge, not with the padded content inside it
+   (Daniel: "see how it's indented"): the bar's material continues straight
+   down into the menu. The bar pads its content by 0.75rem. */
+html[data-surface-style='plasma'] header.bg-toolbar [data-plasma-host='right'] {
+  right: -0.75rem;
+}
+/* A menu on the left keeps its own edge: the Cruxspace crumb sits after
+   the Garden name, so its menu hangs from the crumb, not the bar's corner. */
+html[data-surface-style='plasma'] header.bg-toolbar [data-plasma-host] .bg-dropdown {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+/* A menu raised on a pane or a card draws on a fixed canvas beside it, one
+   step below the menu in the same stacking order. Two things would pin that
+   canvas to its ancestor instead of the viewport, drawn squashed in the wrong
+   place: a transform (the card's hover lift) and layout containment (the pane
+   body's). Under plasma the card keeps still and the pane body keeps only
+   style containment. */
+html[data-surface-style='plasma'] .bg-garden-card,
+html[data-surface-style='plasma'] .bg-garden-card:hover {
+  transform: none;
+}
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window-body {
+  contain: style;
+}
+/* Every menu the overlay is drawing — grown out of a bar, or raised on the
+   pane it opened from — drops its painted plate; the material is the menu. */
+html[data-surface-style='plasma']
+  :is(
+    [data-plasma-host][data-plasma-overlay] :is(.bg-dropdown, .bg-model-selector-dropdown),
+    [data-plasma-host][data-plasma-overlay].bg-dropdown
+  ) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+/* A dialog the overlay canvas is drawing (PlasmaOverlay sets the attribute
+   once its material is live): the plate steps aside and the material is the
+   panel — its rim is the edge, its elevation is the shadow. */
+html[data-surface-style='plasma'] [data-modal-open][data-plasma-overlay] > * > .bg-panel {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+/* Inside a dialog the material is the only surface (Daniel, 2026-09-19: the
+   landing page's one clean card). The content well is not a recess and the
+   sections (Settings' Panels) are not boxes: both go flat, and a hairline of
+   the Mood's text keeps neighbouring sections apart. */
+html[data-surface-style='plasma'] [data-modal-open] .bg-panel > .bg-bg\/50 {
+  background: transparent;
+  border-color: transparent;
+}
+html[data-surface-style='plasma'] [data-modal-open] .bg-panel .bg-panel {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+html[data-surface-style='plasma'] [data-modal-open] .bg-panel .bg-panel + .bg-panel {
+  border-top-color: color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+/* Inner surfaces: flat shades, no translucency, no second material. Mirrors
+   the glass contract so a Mood reads the same way under either theme. */
+html[data-surface-style='plasma']
+  :is(
+    .mosaic.crux-mosaic-theme .mosaic-window,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card
+  )
+  :is(.bg-surface, .bg-surface-solid, .bg-input, .bg-panel) {
+  background: var(--plasma-inner);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* A Crux card inside a pane (Home is a pane now) is an inner plate like the
+   rest: the material draws the pane, never a card in it (PlasmaSurfaces
+   skips nested surfaces), so the card paints its own shade — without one its
+   title and dates sat straight on the field. It answers the pointer: a lift
+   of light, an accent edge, a shadow. */
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window .bg-garden-card,
+html[data-surface-style='plasma'] .bg-panel .bg-garden-card {
+  background: var(--plasma-inner);
+  border-color: color-mix(in srgb, var(--text) 9%, transparent);
+  box-shadow: none;
+}
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  .bg-garden-card:is(:hover, :focus-within),
+html[data-surface-style='plasma'] .bg-panel .bg-garden-card:is(:hover, :focus-within) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--plasma-inner));
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.55);
+}
+
+/* A crux card is one surface, not a black rectangle sitting on one. The
+   thumbnail paints an opaque plate so a card with no image reads as a card;
+   here the material is already doing that, and the plate only cuts the card in
+   half. An actual thumbnail still covers it, because the image is above. */
+html[data-surface-style='plasma'] .bg-garden-card-thumbnail {
+  background: transparent;
+  border-bottom-color: transparent;
+}
+
+/* Dividers and outlines inside a pane give way to the shade above. */
+html[data-surface-style='plasma']
+  :is(
+    .mosaic.crux-mosaic-theme .mosaic-window,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card
+  )
+  :is(.border-border, [class*='border-border/'], .border-input-border, .divide-border) {
+  border-color: transparent;
+}
+
+/* The Mood's own texture layers would sit between the material and the
+   content; under Plasma the field is the texture. */
+/* The Mood's own background and texture layers would sit between the material
+   and the content; under Plasma the field is the background. */
+html[data-surface-style='plasma']
+  :is(.mood-texture, .mood-grain, .liquid-light, .mood-bg-image, .mood-bg-dim) {
+  display: none;
+}
+
+/* Text keeps its contrast over a moving field — the Mood's plasmaTextShadow
+   token; a still, light Mood (Office) sets it to none. */
+html[data-surface-style='plasma']
+  :is(.mosaic.crux-mosaic-theme .mosaic-window, .bg-panel, .bg-garden-card) {
+  text-shadow: var(--plasma-text-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-surface-style='plasma']
+    :is(.mosaic.crux-mosaic-theme .mosaic-window, .bg-panel, .bg-garden-card) {
+    text-shadow: none;
+  }
+}
+
+/* ── Flat chrome (plasmaChrome: flat) ───────────────────────────────
+   Daniel, 2026-09-19: "keep the plasma to the main garden — modals and menus
+   should follow the look and feel of that top bar, flat, translucent …
+   pull back on the plasma styling, it was starting to be overwhelming."
+   The material is the garden's panels and the panes. Everything above them —
+   the top bar, every menu, every dialog — is the same flat translucent
+   plate: the toolbar colour over a blur, a hairline edge, no rim. */
+/* The plate's colour and frost are the Mood's (plasmaChromePlate,
+   plasmaChromeDialog, plasmaChromeFrost); the edge is a hairline of light. */
+html[data-surface-style='plasma'][data-plasma-chrome='flat'] {
+  --plasma-chrome-edge: rgb(238 244 246 / 0.12);
+  --plasma-overlay: var(--plasma-chrome-plate);
+  --plasma-overlay-border: var(--plasma-chrome-edge);
+}
+/* The bar keeps the toolbar's own dark (Daniel: "I didn't mean change the
+   top bar darkness, I liked that — just the modals and menus"). */
+html[data-surface-style='plasma'][data-plasma-chrome='flat']
+  :is(header.bg-toolbar, header.bg-public-top-bar, .bg-mood-bar) {
+  margin: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--toolbar) 86%, transparent);
+  /* The chrome's frost is the Mood's (plasmaChromeFrost); menus and dialogs are opaque now, the bar keeps it. */
+  backdrop-filter: blur(var(--plasma-chrome-frost)) saturate(130%);
+  border-bottom: 1px solid var(--plasma-chrome-edge);
+  box-shadow: none;
+}
+html[data-surface-style='plasma'][data-plasma-chrome='flat'][data-desktop-chrome='true']
+  header.bg-toolbar {
+  margin-top: 0;
+  padding-left: 6rem;
+}
+/* Opaque (Daniel, 2026-09-27: "modal and menu opacity, for the most part they
+   should be opaque"): the plate's tint is laid over the Mood's ground, so it
+   keeps its colour and nothing behind it reaches the words. */
+html[data-surface-style='plasma'][data-plasma-chrome='flat']
+  :is([data-modal-open] .bg-panel, .bg-dropdown, .bg-model-selector-dropdown, .overlay-plate) {
+  background: linear-gradient(var(--plasma-chrome-plate), var(--plasma-chrome-plate)), var(--bg);
+  backdrop-filter: none;
+  border: 1px solid var(--plasma-chrome-edge);
+  box-shadow: var(--shadow-modal);
+}
+html[data-surface-style='plasma'][data-plasma-chrome='flat'] [data-modal-open] .bg-panel {
+  background: linear-gradient(var(--plasma-chrome-dialog), var(--plasma-chrome-dialog)), var(--bg);
+}
+/* A `filter` on an ancestor — even blur(0px), which the dialog's motion
+   wrapper keeps after its enter — makes that ancestor the backdrop root, and
+   a backdrop-filter inside it then frosts nothing but its own box. The
+   wrapper stays filterless so the plate frosts the page. */
+html[data-surface-style='plasma'][data-plasma-chrome='flat']
+  [data-modal-open]
+  [data-motion-role='dialog'] {
+  filter: none !important;
+}
+html[data-surface-style='plasma'][data-plasma-chrome='flat'] header.bg-toolbar [data-plasma-host] {
+  padding-top: 0.5rem;
+}
+html[data-surface-style='plasma'][data-plasma-chrome='flat']
+  header.bg-toolbar
+  [data-plasma-host]
+  .bg-dropdown {
+  border-radius: var(--radius-dropdown, var(--radius));
+}
+html[data-surface-style='plasma'][data-plasma-chrome='flat']
+  header.bg-toolbar
+  [data-plasma-host='right'] {
+  right: 0;
+}
+
+/* The plasma button while its own canvas draws it (PlasmaOverlay marks it):
+   the material is the plate and the rim, so the button's own give way; the
+   swirl still rides over the material on hover, a little quieter. */
+html[data-surface-style='plasma'] .plasma-button[data-plasma-overlay] {
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+html[data-surface-style='plasma'] .plasma-button[data-plasma-overlay]::after {
+  opacity: 0;
+}
+html[data-surface-style='plasma'] .plasma-button[data-plasma-overlay]:hover:not(:disabled) {
+  box-shadow: 0 0 32px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+html[data-surface-style='plasma']
+  .plasma-button[data-plasma-overlay]:hover:not(:disabled)
+  .plasma-button-swirl {
+  opacity: 0.35;
+}
+
+/* ── The garden warming up (lib/moods/signals.ts) ─────────────────────────
+   --signal-activity rises with what you do and falls over minutes; --life
+   turns it into how much colour the material has, by up to the Mood's
+   reactBackgroundActivity. The ground canvas carries the panes as well as the
+   background, so the whole material warms together; the text above it is DOM
+   and is untouched. */
+canvas.plasma-ground {
+  filter: saturate(var(--life, 1)) brightness(var(--life-dim, 1));
+}

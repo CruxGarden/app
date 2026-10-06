@@ -1,10 +1,12 @@
+import { revealOptionsFor } from './panel-helpers';
+import { panelPressed, togglePanel } from './panel-helpers';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, goHome } from './multi-crux-helpers';
 import { member, exportCruxspacePackage } from './game-cruxspace-helpers';
 import type { AgentPermissionRequest } from '../src/bridge';
 
@@ -32,7 +34,7 @@ test('author the persistent Psychedelic Garden through its real tools', async ()
     const create = page.getByRole('button', { name: 'Create Cruxspace', exact: true });
     for (let attempt = 0; attempt < 4; attempt++) {
       if (await create.isVisible()) return;
-      await page.locator('header').getByRole('button').first().click();
+      await goHome(page);
       if (
         await create.waitFor({ state: 'visible', timeout: 5000 }).then(
           () => true,
@@ -145,19 +147,19 @@ test('author the persistent Psychedelic Garden through its real tools', async ()
             entry.id,
           );
           if (['notes', 'plan', 'mosh', 'music', 'recordings', 'world'].includes(request.member)) {
-            const toggle = page.getByRole('button', { name: 'Toggle workshop' });
-            if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+            if ((await panelPressed(page, 'Toggle workshop')) !== 'true')
+              await togglePanel(page, 'Toggle workshop');
             await expect(
               page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]'),
             ).toHaveText(/Saved/, { timeout: 180000 });
           }
           if (request.action === 'agent-turn') {
-            const chatToggle = page.getByRole('button', { name: 'Toggle collaboration' });
-            if ((await chatToggle.getAttribute('aria-pressed')) !== 'true')
-              await chatToggle.click();
+            if ((await panelPressed(page, 'Toggle collaboration')) !== 'true')
+              await togglePanel(page, 'Toggle collaboration');
             const chat = page.getByTestId('pane-body-collaboration');
             if (!(await chat.getByRole('button', { name: 'Claude Code', exact: true }).count())) {
-              await chat.getByRole('button', { name: /Claude Sonnet/ }).click();
+              await revealOptionsFor(chat.getByTestId('model-selector'));
+              await chat.getByTestId('model-selector').click();
               await page
                 .getByTestId('model-group-claude-code')
                 .getByRole('button', { name: 'Claude Code', exact: true })
@@ -348,8 +350,8 @@ test('author the persistent Psychedelic Garden through its real tools', async ()
             continue;
           }
           if (!activated.has(request.member)) {
-            const toggle = page.getByRole('button', { name: 'Toggle workshop' });
-            if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+            if ((await panelPressed(page, 'Toggle workshop')) !== 'true')
+              await togglePanel(page, 'Toggle workshop');
             activated.add(request.member);
           }
           let client = clients.get(request.member);
