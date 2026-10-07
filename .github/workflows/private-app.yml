@@ -20,16 +20,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: app
       # Pin the companion API so this test never silently uses an incompatible backend.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: CruxGarden/api
           ref: bf1796da619373b97a152769b30315cdce970b40
           path: api
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: api/.nvmrc
           cache: npm
@@ -38,7 +38,7 @@ jobs:
         working-directory: api
       - name: Keep the API's Node runtime
         run: echo "CRUX_TEST_API_NODE=$(command -v node)" >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: app/electron/.nvmrc
           cache: npm
@@ -59,7 +59,7 @@ jobs:
         env:
           CRUX_PRIVATE_ACCEPTANCE: '1'
           CRUX_TEST_API_ROOT: ${{ github.workspace }}/api
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: private-app-results
