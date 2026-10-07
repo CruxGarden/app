@@ -1,0 +1,134 @@
+{
+  "coreStories": 11,
+  "coreCriteria": 97,
+  "baselineChecks": 346,
+  "baselineMapped": 346,
+  "creationChoices": 72,
+  "creationMapped": 72,
+  "panels": 20,
+  "settings": 14,
+  "undertakings": 6,
+  "models": 20,
+  "commands": 20,
+  "stories": 134,
+  "criteria": 1310,
+  "unmapped": 0,
+  "panelMap": [
+    {
+      "id": "navigator",
+      "label": "Navigator",
+      "story": "GARDENS"
+    },
+    {
+      "id": "home",
+      "label": "Garden Home",
+      "story": "HOME"
+    },
+    {
+      "id": "tasks",
+      "label": "Tasks",
+      "story": "TASKS"
+    },
+    {
+      "id": "collaboration",
+      "label": "Collaboration",
+      "story": "CHAT"
+    },
+    {
+      "id": "console",
+      "label": "Garden Collaboration",
+      "story": "KEEPER"
+    },
+    {
+      "id": "artifacts",
+      "label": "Artifacts",
+      "story": "FILES"
+    },
+    {
+      "id": "workshop",
+      "label": "Workshop",
+      "story": "WORKSHOP"
+    },
+    {
+      "id": "details",
+      "label": "Details",
+      "story": "DETAILS"
+    },
+    {
+      "id": "history",
+      "label": "Growth",
+      "story": "VERSIONS"
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "story": "EXPORT"
+    },
+    {
+      "id": "sync",
+      "label": "Sync",
+      "story": "SYNC"
+    },
+    {
+      "id": "publish",
+      "label": "Share",
+      "story": "SHARE"
+    },
+    {
+      "id": "store",
+      "label": "Store",
+      "story": "STORE"
+    },
+    {
+      "id": "media",
+      "label": "Find media",
+      "story": "MEDIA"
+    },
+    {
+      "id": "mood",
+      "label": "Mood",
+      "story": "MOODS"
+    },
+    {
+      "id": "synth",
+      "label": "Crux Synth",
+      "story": "SOUND"
+    },
+    {
+      "id": "browser",
+      "label": "WWW",
+      "story": "BROWSER"
+    },
+    {
+      "id": "settings",
+      "label": "Settings",
+      "story": "AISET"
+    },
+    {
+      "id": "explore",
+      "label": "Explore",
+      "story": "EXPLORE"
+    },
+    {
+      "id": "tending",
+      "label": "Tending",
+      "story": "ATTENTION"
+    }
+  ],
+  "settingsMap": {
+    "AppearanceSettings": "MOODS",
+    "StartSettings": "COMFORT",
+    "LibrarySettings": "COMFORT",
+    "AccountSettings": "ACCOUNT",
+    "PlanSettings": "BILLING",
+    "UsageSettings": "BILLING",
+    "AiSettings": "AISET",
+    "MemorySettings": "AISET",
+    "AgentsSettings": "AGENTS",
+    "DesktopSettings": "UPDATE",
+    "DataSettings": "DATA",
+    "SyncSettings": "SYNC",
+    "NamesSettings": "PANELS",
+    "WorkspaceLayoutsSettings": "PANELS"
+  }
+}
