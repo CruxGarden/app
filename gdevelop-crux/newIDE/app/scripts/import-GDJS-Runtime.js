@@ -31,7 +31,7 @@ destinationPaths.forEach(destinationPath => {
     cwd: path.join(gdevelopRootPath, 'GDJS'),
   });
   if (output.code !== 0) {
-    shell.exit(0);
+    shell.exit(output.code);
   }
 });
 

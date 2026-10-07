@@ -1,22 +1,11 @@
-# Native platform acceptance, including distribution packages; never publishes.
+# Native platform acceptance on PRs, weekly, or on demand; never on a main push.
+# Builds distribution packages but never publishes.
 name: Portable desktop
 on:
   workflow_dispatch:
   pull_request:
-  push:
-    branches: [main, 'codex/**']
-    paths:
-      - '.gitattributes'
-      - 'licenses/**'
-      - '.github/workflows/**'
-      - '.github/actions/native-media/**'
-      - 'electron/**'
-      - 'src/**'
-      - 'public/**'
-      - 'index.html'
-      - 'vite*.ts'
-      - 'scripts/**'
-      - 'package*.json'
+  schedule:
+    - cron: '0 6 * * 0'
 permissions:
   contents: read
 concurrency:

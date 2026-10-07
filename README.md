@@ -60,6 +60,12 @@ npm run verify                # typecheck + lint + unit tests + build
 cd electron && nvm use && npm run verify && npm run test:e2e -- --project=gate   # Playwright against the real app
 ```
 
+Routine `main` CI runs core verification and public-site browser checks; a successful
+run enables website deployment. **Full desktop checks** builds the optional tool
+catalog and runs the broad desktop journeys weekly or through **Run workflow**.
+**Portable desktop** runs on pull requests, weekly, or manually, without repeating
+the package matrix after a merge to `main`.
+
 ## Field guide and first project
 
 New Gardens offer an AI-free home page walkthrough: add a name and photo, preview,

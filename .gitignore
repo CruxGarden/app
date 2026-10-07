@@ -1,5 +1,10 @@
 node_modules
 dist
+# These are vendored GDevelop inputs, not generated Garden build output.
+!gdevelop-crux/Extensions/BBText/pixi-multistyle-text/dist/
+!gdevelop-crux/Extensions/DialogueTree/bondage.js/dist/
+!gdevelop-crux/Extensions/TileMap/pako/dist/
+!gdevelop-crux/Extensions/TileMap/pixi-tilemap/dist/
 release
 .env
 .env.local

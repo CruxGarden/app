@@ -1,3 +1,5 @@
+# Routine pushes verify the host, bundled tools and public website.
+# Full optional-tool builds and desktop journeys live in desktop-full.yml.
 name: CI
 
 on:
@@ -5,10 +7,6 @@ on:
   push:
     branches: [main, codex/api-app-unification]
   workflow_dispatch:
-  schedule:
-    # The full Crux Tool catalog, weekly (ADR 0050): PR gates build only the
-    # starter set; every tool's build and suite still run, here, on Sundays.
-    - cron: '0 6 * * 0'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,7 +15,6 @@ concurrency:
 jobs:
   verify:
     name: verify (web + electron)
-    if: github.event_name != 'schedule' # the weekly run is the catalog job below
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,138 +50,3 @@ jobs:
       - name: Verify the production public site and landing-page contract
         run: npx playwright test -c playwright.web.config.ts
         working-directory: electron
-
-  e2e:
-    name: e2e (real desktop app, macOS)
-    runs-on: macos-latest
-    needs: verify
-    env:
-      CRUX_BUNDLE_TOOLS: all # the journeys open every tool (ADR 0050)
-    # macOS minutes bill at 10x: only on main and manual runs, not on every PR push
-    if: github.event_name != 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            electron/package-lock.json
-      - run: npm ci
-      - run: npm ci
-        working-directory: electron
-      - uses: ./.github/actions/native-media
-      - run: npm run build:all
-        working-directory: electron
-      - run: npx playwright install chromium
-        working-directory: electron
-      - run: npx playwright test
-        working-directory: electron
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: e2e-results
-          path: electron/e2e/.results
-          if-no-files-found: ignore
-
-  e2e-linux:
-    name: e2e (real desktop app, Linux — advisory)
-    runs-on: ubuntu-latest
-    needs: verify
-    continue-on-error: true # ADR 0007 amendment: build-only until this is green
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            electron/package-lock.json
-      - run: npm ci
-      - run: npm ci
-        working-directory: electron
-      - uses: ./.github/actions/native-media
-      - run: npm run build:all
-        working-directory: electron
-      - run: npx playwright install --with-deps chromium
-        working-directory: electron
-      # Ubuntu 24.04 AppArmor blocks Electron's user-namespace sandbox; allow it for this run
-      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - run: xvfb-run -a npx playwright test --project=gate
-        working-directory: electron
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: e2e-results-linux
-          path: electron/e2e/.results
-          if-no-files-found: ignore
-
-  workspace-pr:
-    name: multi-Crux workspaces (macOS PR gate)
-    if: github.event_name == 'pull_request'
-    runs-on: macos-latest
-    needs: verify
-    env:
-      CRUX_BUNDLE_TOOLS: all # test:e2e:apps opens every tool (ADR 0050)
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            electron/package-lock.json
-      - run: npm ci
-      - run: npm ci
-        working-directory: electron
-      - uses: ./.github/actions/native-media
-      - run: npm run build:all
-        working-directory: electron
-      - run: npx playwright test --project=gate
-        working-directory: electron
-      - run: npm run test:e2e:apps
-        working-directory: electron
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: workspace-pr-results
-          path: electron/e2e/.results
-          if-no-files-found: ignore
-
-  catalog:
-    name: full Crux Tool catalog (weekly)
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-    env:
-      CRUX_BUNDLE_TOOLS: all
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            electron/package-lock.json
-      - run: df -h /
-      - run: npm ci
-        working-directory: electron
-      - run: npm ci
-      - run: npm run verify
-      - run: du -sh dist && df -h /
