@@ -1,0 +1,1567 @@
+[
+  {
+    "id": "INSTALL",
+    "chapter": "1 · Arrive and make something",
+    "title": "I can install an app I trust",
+    "goal": "As a new user, I want to get Crux Garden onto my computer and understand where my work lives before I invest time in it.",
+    "needs": "Released installer; clean OS account or spare machine; repeat on macOS, Windows and Linux where shipped.",
+    "steps": [
+      "Start at the real download link and choose the correct OS/architecture. Record the version and source of the installer.",
+      "Install normally, open the app, inspect the publisher/signature and reach the first Garden without developer tools or an account.",
+      "Close and reopen; locate the app, its version and the place that will hold your work."
+    ],
+    "proof": [
+      "No bypass of an OS security warning is required for a claimed signed release.",
+      "No terminal, Docker or separate Node installation is required for ordinary desktop use.",
+      "The first action and the difference between local work and online services are understandable."
+    ],
+    "twist": "Try a machine without development tools. A missing signed installer is Blocked, not a pass based on a local development launch.",
+    "prefix": "",
+    "route": "start"
+  },
+  {
+    "id": "FIRST",
+    "chapter": "1 · Arrive and make something",
+    "title": "I understand what a Garden is",
+    "goal": "I have an idea but no knowledge of Crux Garden. I want a useful first step without making an account or buying AI.",
+    "needs": "Disposable Garden; no account or API key.",
+    "steps": [
+      "Enter from the Gateway and give your Garden a recognizable name.",
+      "Read the first-use choices, make a small local project, return Home and reopen it.",
+      "Quit and relaunch; explain in your own words what a Garden, Crux, Artifacts and Growth are."
+    ],
+    "proof": [
+      "My project is still there and onboarding did not plant a duplicate.",
+      "The plus-circle identity, text and controls remain readable in a short window.",
+      "The app distinguishes optional online/AI setup from making something locally."
+    ],
+    "twist": "Cancel creation once, and try the first steps using only the keyboard.",
+    "prefix": "START",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "HELLO",
+    "chapter": "1 · Arrive and make something",
+    "title": "I make my first home page without AI",
+    "goal": "I want a small home page with my name, picture and introduction, without learning code or talking to a model.",
+    "needs": "Hello, world starter; a small test photo. First Astro setup may need an internet connection.",
+    "steps": [
+      "Choose Add Crux → Hello, world. Use its guide and form to set a name, introduction, photo and available links.",
+      "Preview the entire page, change the photo and correct a typo. Visit every visible link.",
+      "Close/reopen and return to editing. Stop before Share if online services are not ready."
+    ],
+    "proof": [
+      "The page is genuinely mine, not a collection of untouched sample posts and projects.",
+      "Form edits and the saved result agree; no AI key or AI turn was needed.",
+      "The preview has no unexplained developer toolbar and the next step toward Share is clear."
+    ],
+    "twist": "Try a large or unsupported photo and an empty name. A refused change must not erase the last usable page.",
+    "prefix": "",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "HELP",
+    "chapter": "1 · Arrive and make something",
+    "title": "I can get unstuck without leaving my work",
+    "goal": "I forget what a control means. I want useful help that gets me back to the same project.",
+    "needs": "Bundled field guide; one project with a draft.",
+    "steps": [
+      "Use the command search for help and open the field guide.",
+      "Find first-project, Tasks, Growth and Share instructions; follow a relevant link and search for a term.",
+      "Disconnect after opening the bundled guide, read another page, then return to your draft."
+    ],
+    "proof": [
+      "The local guide works without an account and remains readable offline.",
+      "Instructions match the visible controls and explain what happens next.",
+      "My draft, project and task remain intact after using help."
+    ],
+    "twist": "Follow a deep docs link in a fresh browser separately. Hosted docs failing while local docs work is a separate blocked/failing result.",
+    "prefix": "",
+    "route": "start"
+  },
+  {
+    "id": "CREATE",
+    "chapter": "1 · Arrive and make something",
+    "title": "I choose a useful starting point",
+    "goal": "I want to turn an idea or an existing file into the right editable project without knowing tool names.",
+    "needs": "A text file, image, CSV, PDF, audio clip and a small archive; only use test files.",
+    "steps": [
+      "Describe your intended result to yourself, then search and browse Add Crux categories.",
+      "Create an Empty Crux and one relevant starter; also try the supported import/drop path for an existing file.",
+      "Cancel one creation and retry an unavailable optional tool after recording its installation requirement."
+    ],
+    "proof": [
+      "The picker explains what I can make and which choices need a download, desktop capability or service.",
+      "Files open with the intended tool and belong to the intended Crux.",
+      "Cancel/failure leaves no misleading half-created success and preserves the original file."
+    ],
+    "twist": "Try an unsupported file and a duplicate project title; record the explanation and how you recover.",
+    "prefix": "CREATE",
+    "route": "start"
+  },
+  {
+    "id": "UND",
+    "chapter": "1 · Arrive and make something",
+    "title": "I finish a guided real-world project",
+    "goal": "I want a worked example and a plan for something bigger than a single file.",
+    "needs": "Each of the six Undertakings; local dependencies; real AI only for its optional collaboration portion.",
+    "steps": [
+      "For each Undertaking below, create one with its example beside your work and another using the example as a starting point.",
+      "Make the first personal change, complete one coherent deliverable and follow its walkthrough.",
+      "Export the Garden, import it in a separate test installation, and continue editing."
+    ],
+    "proof": [
+      "Home page, small game, short book, small business, research question and family history each have a usable finish line.",
+      "Examples and my work are distinguishable; editing mine does not change an example unexpectedly.",
+      "Members, links, outputs and walkthrough state travel together."
+    ],
+    "twist": "Cancel at setup and try a missing tool/download. A failure must not strand a partial Undertaking.",
+    "prefix": "UND",
+    "route": "full"
+  },
+  {
+    "id": "HOME",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "I can find and organize my work",
+    "goal": "I have several unrelated projects. I want to return to the right one without remembering IDs.",
+    "needs": "At least three named Cruxes, including similar names.",
+    "steps": [
+      "Create projects for a home page, notebook and drawing; rename them and give them useful descriptions/tags.",
+      "Search, sort and open them from Home, Navigator and the command palette.",
+      "Leave an unsaved draft in one, switch twice, then return and relaunch."
+    ],
+    "proof": [
+      "Names, previews, membership and destinations agree.",
+      "No project receives another project’s draft, photo or settings.",
+      "Empty searches and long/Unicode names stay understandable."
+    ],
+    "twist": "Remove a project from a Garden versus deleting it; understand which operation changes membership and which affects the project.",
+    "prefix": "HOME",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "GARDENS",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "I keep separate areas for separate work",
+    "goal": "I want a personal Garden and a project Garden with their own context, while keeping related outputs connected.",
+    "needs": "Parent and child Gardens; several test Cruxes.",
+    "steps": [
+      "Create a child Garden, add or move a Crux using the offered controls, and inspect Tree, Neighborhood and Graph views.",
+      "Navigate by ancestry and return to the same project; save a supported output into the Garden and reopen it.",
+      "Export/import the Garden and inspect membership, walkthrough and output links."
+    ],
+    "proof": [
+      "I can always tell which Garden and Crux own my current action.",
+      "Private Garden structure is not presented as a public account page.",
+      "Garden-scoped changes and restores stay within their stated scope."
+    ],
+    "twist": "Use two similarly named Gardens and a nested project. Note ambiguity instead of accepting a silently chosen target.",
+    "prefix": "SPACE",
+    "route": "full"
+  },
+  {
+    "id": "PANELS",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "I arrange a comfortable workspace",
+    "goal": "I want the information and tools I need beside each other, and want that arrangement to survive.",
+    "needs": "A short laptop window and a larger window; two Cruxes.",
+    "steps": [
+      "Open every panel in the inventory; resize, move, hide and pin panels.",
+      "Save a named workspace layout, apply it elsewhere and delete only that saved layout.",
+      "Switch Cruxes, return Home, restart and use keyboard navigation and command search."
+    ],
+    "proof": [
+      "Contents remain visible and reachable at narrow widths and high zoom.",
+      "Pinned controls, pane names and active colors are consistent; headers have comfortable spacing and rounded hover states.",
+      "Layouts and focus behave predictably without discarding work."
+    ],
+    "twist": "Close a panel containing a draft and reopen it; test with multiple hidden drafts.",
+    "prefix": "SHELL",
+    "route": "start"
+  },
+  {
+    "id": "FILES",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "My files remain my files",
+    "goal": "I want to edit real files, bring assets in and use another editor when that is faster.",
+    "needs": "Disposable Project Folder and an external text editor.",
+    "steps": [
+      "Create, rename and organize a text file and binary asset through Artifacts.",
+      "Open the Project Folder in another editor, change a file and watch Garden ingest it; make a later Garden edit.",
+      "Inspect file contents, history and preview after restarting."
+    ],
+    "proof": [
+      "The same bytes are visible in both editors and the correct Crux is updated.",
+      "Folders, renames, hidden files and selected entry files behave as documented.",
+      "Binary files remain usable rather than being treated as text."
+    ],
+    "twist": "Try an invalid/reserved filename and an unavailable folder; edits elsewhere must remain safe.",
+    "prefix": "ART",
+    "route": "full",
+    "core": true
+  },
+  {
+    "id": "WORKSHOP",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "I see the result while I work",
+    "goal": "I want to edit content visually or in source and trust that the preview reflects the saved project.",
+    "needs": "One static page, one Astro project and one native editor.",
+    "steps": [
+      "Move between Builder, source, native editor and preview where offered; change a visible detail from each supported route.",
+      "Set the intended entry file, open a clean preview and capture the result where offered.",
+      "Introduce a small syntax error in the disposable Astro project, read the failure, then fix it."
+    ],
+    "proof": [
+      "Saved content, native document and preview agree.",
+      "Loading, build errors, retry and stale previews are distinguishable.",
+      "A screenshot or export is not mistaken for editable source."
+    ],
+    "twist": "Disconnect during first dependency setup, retry and verify the previous files survive.",
+    "prefix": "WORK",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "DETAILS",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "I describe my project clearly",
+    "goal": "I want a title, purpose, tags and entry point that help both me and a visitor understand my creation.",
+    "needs": "Two Cruxes with different kinds of content.",
+    "steps": [
+      "Edit the title, description, tags and available details fields.",
+      "Change the entry point only where supported and inspect Home, preview, export and Share summaries.",
+      "Cancel a change, then save and reopen."
+    ],
+    "proof": [
+      "Changes belong to the selected Crux and persist.",
+      "Empty, long and unusual text is validated without losing the rest of the form.",
+      "Implementation labels do not overwhelm the useful project description."
+    ],
+    "twist": "Choose a missing entry file and record the visible recovery path.",
+    "prefix": "META",
+    "route": "full"
+  },
+  {
+    "id": "BROWSER",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "I research beside my project",
+    "goal": "I want a reference website beside my work without confusing that website with Garden’s own files or permissions.",
+    "needs": "WWW panel; test website and two Cruxes.",
+    "steps": [
+      "Open a reference URL in WWW, navigate back/forward and reload.",
+      "Switch projects, then return; inspect the address associated with each.",
+      "Try an unavailable URL and close/reopen the panel."
+    ],
+    "proof": [
+      "Address, page and navigation agree; an error has a useful way back.",
+      "External page content does not acquire Garden file/agent controls.",
+      "Closing the panel does not destroy my project."
+    ],
+    "twist": "Open an ordinary sign-in page only with a disposable account; check that external-site state is distinct from Garden’s account.",
+    "prefix": "",
+    "route": "full"
+  },
+  {
+    "id": "CHAT",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "A collaborator improves my work with me",
+    "goal": "I want to make something by hand, ask for a focused improvement, and continue editing the actual result myself.",
+    "needs": "A real configured provider; disposable project; record provider/model and usage.",
+    "steps": [
+      "Write a paragraph or build a simple page manually. Ask: “Improve this one part; preserve my wording elsewhere; explain what you changed.”",
+      "Inspect the actual files and preview, then make a manual revision the collaborator must respect in its next turn.",
+      "Try attachments, a long pasted brief, multiple conversations, stop and a follow-up."
+    ],
+    "proof": [
+      "The artifact actually changes as requested; a verbal claim alone is insufficient.",
+      "My manual contribution remains, conversation ownership is clear and stop prevents further unrequested work.",
+      "Failures, token/usage information and progress are understandable."
+    ],
+    "twist": "Use a refused key, interrupt the connection or stop mid-turn. Recover without losing the human draft or claiming the failed turn succeeded.",
+    "prefix": "CHAT",
+    "route": "ai",
+    "extraChecks": [
+      [
+        "Attach several reference files while keeping an unsent message. Cancel one replacement, then retry a batch while another editor changes an existing file.",
+        "Completion names the outcome; the draft and outside edit survive refusal; successfully added files remain and a reviewed retry works."
+      ],
+      [
+        "During a long reply in Collaboration and the Garden conversation, scroll upward to read earlier text; then choose Latest reply.",
+        "New text does not pull you away from what you are reading. Latest reply returns to the end with useful keyboard focus."
+      ],
+      [
+        "Compose text using an IME in both conversation inputs, commit a candidate with Enter, then send normally.",
+        "Committing a candidate does not send or clear the draft; the subsequent normal send works."
+      ]
+    ]
+  },
+  {
+    "id": "PROVIDERS",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "I can choose how AI is supplied",
+    "goal": "I want to use my own key, my subscription, a local model or an external agent and understand the difference.",
+    "needs": "Test credentials with spending limits; eligible subscription; local model/server; external agents installed as needed.",
+    "steps": [
+      "Repeat a small read → edit → reply → stop story for every provider/model route you intend to advertise.",
+      "Switch routes in the same disposable project, inspect the selected model, remove a BYOK key and retry.",
+      "For a local model, disconnect the network and repeat with the model already installed."
+    ],
+    "proof": [
+      "The route shown is the route used and the app explains missing credentials or service availability.",
+      "Built-in allowance, BYOK provider billing, local inference and external-agent authentication are not conflated.",
+      "Removing a key disables its use without deleting local work."
+    ],
+    "twist": "A configured model missing from the provider must produce a useful error, not a silent route change.",
+    "prefix": "",
+    "route": "ai"
+  },
+  {
+    "id": "AISET",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "AI is optional and understandable",
+    "goal": "I want to turn AI off, choose defaults and control what it remembers about me.",
+    "needs": "Settings → AI and agents; a saved project.",
+    "steps": [
+      "Disable AI Tools and complete a manual edit/export; enable it again when ready.",
+      "Choose a default/model, inspect metrics and adjust or forget one Memory entry.",
+      "Use two Gardens and inspect what is installation-wide versus Garden-owned."
+    ],
+    "proof": [
+      "Manual creation remains usable without AI.",
+      "Defaults and memory match their stated scope and survive restart appropriately.",
+      "A forgotten memory no longer influences new context."
+    ],
+    "twist": "Remove credentials and reopen the app. Do not let cached success disguise an unavailable provider.",
+    "prefix": "SETAI",
+    "route": "ai",
+    "extraChecks": [
+      [
+        "Save a Memory note, edit memory.md in another editor while an unsaved Settings draft exists, and try saving. Cancel Reload, then review the outside version, reload and save a combined note; restart.",
+        "Conflict feedback preserves both the outside file and unsaved draft. Reload asks first; the reviewed save and restart agree with the real file. Clear removes the notes from the file and future prompts."
+      ]
+    ]
+  },
+  {
+    "id": "TASKS",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "I try changes without risking Main",
+    "goal": "I want to let two collaborators work on separate ideas, review both and choose what becomes my real project.",
+    "needs": "Real providers; a Crux with a marked baseline; two Tasks.",
+    "steps": [
+      "Create one Task, ask for a small change and inspect its files separately from Main.",
+      "Create a second Task with a different change; continue working in Main while both run.",
+      "Review changes, run offered checks and merge only the candidate you accept; archive/reopen the other."
+    ],
+    "proof": [
+      "Task files, conversations, previews, approvals and progress stay separate.",
+      "Main remains unchanged until an explicit accepted merge; a failed or stale check cannot masquerade as current approval.",
+      "The merged result survives restart and remains editable."
+    ],
+    "twist": "Make competing edits to the same file, change Main during review, and stop one Task. Understand the conflict/recheck path.",
+    "prefix": "TASK",
+    "route": "ai"
+  },
+  {
+    "id": "ATTENTION",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "I know when work needs me",
+    "goal": "I want to work elsewhere while agents run and return only when I need to decide or review.",
+    "needs": "Two Cruxes/Tasks; real provider; one action requiring approval.",
+    "steps": [
+      "Start work in one Task, switch away, then inspect Tending and the top-bar feedback.",
+      "Trigger a permission question while its panel is hidden; follow the notification and accept or decline deliberately.",
+      "Return after completion and review the actual result; inspect progress estimates and unknown-progress states."
+    ],
+    "proof": [
+      "Activity, percentage/estimate and completion agree with actual work.",
+      "The notification opens the exact request; denying it leaves the protected content intact.",
+      "An old notification cannot answer a newer request; OS notification refusal does not remove in-app feedback."
+    ],
+    "twist": "Quit or sleep during a turn. An interrupted run must not appear completed or silently rerun after restart.",
+    "prefix": "TEND",
+    "route": "ai"
+  },
+  {
+    "id": "ZEN",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "I learn multitasking by playing",
+    "goal": "I want Zen of Vibecoding to teach me the system through small real achievements and make that process enjoyable.",
+    "needs": "Fresh Zen tutorial Crux; a real model; keep the existing personal game untouched.",
+    "steps": [
+      "Play from the first seed through a single Task and its review/merge.",
+      "Continue to concurrent Tasks, attention requests, a cross-tool handoff and the multi-Crux finale.",
+      "Use the journal to record one confusing moment, one satisfying moment and your expectations before a notification."
+    ],
+    "proof": [
+      "Milestones depend on actual artifacts and explicitly reported observations; the game does not invent work.",
+      "Each mission teaches enough to act without reading source or this test guide.",
+      "Replay/checkpoints and export work; the experience feels like learning through making."
+    ],
+    "twist": "Stop an agent mid-mission or answer a request from another Crux. The game must recover without pretending the mission passed.",
+    "prefix": "",
+    "route": "ai"
+  },
+  {
+    "id": "KEEPER",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "I can ask for work across my Garden",
+    "goal": "I want a collaborator to find projects, organize work and hand off a task while I keep my place.",
+    "needs": "Real provider; two Gardens and similarly named Cruxes.",
+    "steps": [
+      "Ask the Garden Collaboration what is open, then ask it to find a particular artifact and show it.",
+      "Ask it to create a small project and hand a bounded task to the appropriate collaborator.",
+      "Request a supported layout/Mood change, version or export, then inspect the result directly."
+    ],
+    "proof": [
+      "Navigation, target selection and ownership agree with my request.",
+      "Garden conversations and project conversations stay distinct.",
+      "An ambiguous target prompts clarification or a clear refusal rather than editing arbitrary work."
+    ],
+    "twist": "Switch Gardens while a request is running and confirm its captured owner does not change.",
+    "prefix": "KEEP",
+    "route": "ai"
+  },
+  {
+    "id": "AGENTS",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "An outside agent works through Garden’s controls",
+    "goal": "I want my preferred external agent to inspect and edit a project with visible, revocable access.",
+    "needs": "Settings → Agents; a disposable MCP client/account; record the agent used.",
+    "steps": [
+      "Enable the offered agent access, copy the appropriate configuration and connect the client.",
+      "Have it inspect a file, make a harmless edit and request an action that needs approval.",
+      "Decline once, inspect the result, then disable access and retry."
+    ],
+    "proof": [
+      "The real file and Garden UI agree; actions are attributed to the right workspace.",
+      "Declined actions are reported as refused and do not modify the file.",
+      "Revocation is effective and copied access details do not leak into published content."
+    ],
+    "twist": "Open a similarly named second Crux and verify the agent cannot silently act on the wrong target.",
+    "prefix": "MCP",
+    "route": "ai"
+  },
+  {
+    "id": "CLI",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "I can automate from a terminal",
+    "goal": "I want a useful command-line companion for myself and other agents without maintaining a second app database.",
+    "needs": "Running app; Settings → Agents; disposable project and installed companion launcher.",
+    "steps": [
+      "Install the optional launcher and run crux help, status and list; open the intended Crux.",
+      "List tool schemas, make a harmless tool call and repeat with --json and JSON supplied over stdin.",
+      "Test a refused action, invalid input, timeout, disabled access and the app being closed."
+    ],
+    "proof": [
+      "Human output is understandable and JSON success/error records are parseable.",
+      "Changes go through the running app and normal approvals; the bundled CLI needs no separate Node/Docker installation.",
+      "An unrelated existing command is not overwritten, and moving the app has clear launcher-repair instructions."
+    ],
+    "twist": "Do not retry a timed-out write blindly; inspect whether it happened. Nursery is a separate Docker tool, not this desktop companion.",
+    "prefix": "",
+    "route": "ai",
+    "extraChecks": [
+      [
+        "Select two disposable targets using --folder, --profile and --config; repeat selection through CRUX_CLI_CONFIG and the installed launcher.",
+        "Every read/write reaches only the explicitly selected scope. --profile denotes userData, not the containing test-profile root. Do not paste tokens into notes."
+      ],
+      [
+        "Run help/--help with and without --json; call status, list, open, tools and call using valid and invalid arguments.",
+        "Commands match current help, produce useful human or machine output and return documented exit codes 0, 1 or 2. Whole-Garden list/open refuse insufficient scope."
+      ],
+      [
+        "Pass a tool object as a quoted argument and through stdin with call NAME -; try malformed JSON, an array and an unknown tool.",
+        "Only valid objects are accepted; invalid input does not mutate content or print credential material."
+      ],
+      [
+        "Set a short --timeout while an approval is pending; deny another request and stop the app before a third.",
+        "Timeout/refusal/offline failures differ. A timeout warns that work may still complete; inspect actual content before retrying a write."
+      ],
+      [
+        "Install, locate and remove the companion command through Settings; try an existing unrelated command at the destination.",
+        "Paths with spaces work; uninstall removes only the Garden-owned launcher, unrelated commands remain. Repeat on each supported OS."
+      ],
+      [
+        "Compare scoped tools to tools/schema discovery from a whole-Garden agent. Revoke access and repeat an earlier successful request.",
+        "Discoverability matches granted scope and revocation prevents future operations without losing local files."
+      ],
+      [
+        "If distributing the separate developer CLI, run crux nursery help, start, status/logs, stop and the other commands listed in its help against disposable containers; test missing Docker.",
+        "Its commands and configured ports work and errors are actionable. It remains distinguishable from the bundled desktop companion; do not stop unrelated containers."
+      ]
+    ]
+  },
+  {
+    "id": "VERSIONS",
+    "chapter": "4 · Trust my work",
+    "title": "I can experiment and go back",
+    "goal": "I want to remember important milestones and recover mistakes without confusing every save with a release version.",
+    "needs": "Disposable project with text and an image.",
+    "steps": [
+      "Save a change and inspect Edit history. Deliberately Mark version as “First usable page.”",
+      "Make a contrasting revision, mark another version and compare/restore or branch using the offered controls.",
+      "Recover one file and separately try restoring the workspace context; restart afterward."
+    ],
+    "proof": [
+      "Growth contains deliberate milestones; ordinary edits have recovery history.",
+      "The selected content and conversation recovery scope are explicit.",
+      "Restoration preserves a recovery route for work I am replacing; files and preview match the chosen version."
+    ],
+    "twist": "Include an unmarked edit before restoring and confirm it is recoverable rather than silently lost.",
+    "prefix": "GROW",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "EXPORT",
+    "chapter": "4 · Trust my work",
+    "title": "I can take my work elsewhere",
+    "goal": "I want an editable backup and useful output files, not a picture of something trapped in the app.",
+    "needs": "Profile B or separate test installation; external viewers.",
+    "steps": [
+      "Export a complete .crux including runtimes, then import it into the other installation and edit it.",
+      "Try runtime-by-reference export separately; test missing tool installation and recovery.",
+      "Export a supported native/rendered format and open it in another application."
+    ],
+    "proof": [
+      "Editable document, files and promised history travel with the archive.",
+      "Missing dependencies are named before a reference archive is called usable.",
+      "Native output, complete archive and public website are clearly different choices."
+    ],
+    "twist": "Attempt a truncated/corrupt archive and cancel an import; existing work must survive.",
+    "prefix": "EXPORT",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "SYNC",
+    "chapter": "4 · Trust my work",
+    "title": "I can move to another computer",
+    "goal": "I want to restore the projects I actually backed up or synced, while retaining work already on the destination.",
+    "needs": "Two isolated installations; test account; matching API service; explicit backups.",
+    "steps": [
+      "Sync or back up a project with nested files, media and a Task.",
+      "In installation B, sign in/recover through the offered flow and inspect every recovered project, author and file.",
+      "Edit locally, interrupt a transfer, retry and restart."
+    ],
+    "proof": [
+      "Recovery includes all expected pages of projects and correct ownership.",
+      "The UI distinguishes local-only files from uploaded/synced work; no automatic multi-device merge is promised.",
+      "Interrupted transfer does not replace complete work with a partial copy."
+    ],
+    "twist": "Keep an unrelated draft in B during recovery. Verify it survives and inspect conflict/replace choices before confirming.",
+    "prefix": "SYNC",
+    "route": "full"
+  },
+  {
+    "id": "RECOVERY",
+    "chapter": "4 · Trust my work",
+    "title": "A mistake or failure does not end my project",
+    "goal": "I want to undo accidental deletion and recover from an interrupted save or import with a clear explanation.",
+    "needs": "Disposable Garden only; an exported known-good baseline.",
+    "steps": [
+      "Delete and restore a test Crux/file through Recently deleted and available recovery controls.",
+      "Interrupt a disposable import or close a project with unsaved edits; reopen and compare with the baseline.",
+      "Repeat the failed operation after fixing its cause."
+    ],
+    "proof": [
+      "The app tells me which work was saved, interrupted or unavailable.",
+      "Restoration returns usable content and correct membership without harming other projects.",
+      "A refused save retains the draft and a failed recovery never reports success."
+    ],
+    "twist": "Try invalid Notes titles and a long paste while switching projects. Preserve evidence immediately if anything is lost.",
+    "prefix": "RECOVER",
+    "route": "full",
+    "extraChecks": [
+      [
+        "In Settings → Garden and backups → Garden, review Recovery storage after saving and replacing a file in a disposable Crux. Show the safety files, copy needed content elsewhere, cancel cleanup, then close external editors and move one completed operation to Trash.",
+        "Hardlinks are counted once and the number is not advertised as reclaimable space. Cancel preserves everything; cleanup keeps current Artifacts, Growth and completion receipts. Restart and edit the Crux. Do not empty Trash until you have verified your copies."
+      ],
+      [
+        "Review an unfinished recovery operation or a failed cleanup in a disposable test profile; also try Create Garden after a storage refusal.",
+        "Unfinished recovery cannot be cleaned. Failed cleanup explains that some files may already be in Trash and requires a refreshed review. Errors give a useful next step with technical details available; retry does not duplicate or lose work."
+      ]
+    ]
+  },
+  {
+    "id": "DATA",
+    "chapter": "4 · Trust my work",
+    "title": "I control the location and backup of my Garden",
+    "goal": "I want to move storage, keep backups and understand destructive settings before using them.",
+    "needs": "Settings → Garden and backups; two empty test locations; a verified backup.",
+    "steps": [
+      "Inspect the current Garden location and automatic-backup controls; create and reopen a backup.",
+      "Use the offered location change and verify files, permissions, restart and old-project access.",
+      "Exercise cancel/refusal paths for reset/deletion; only test confirmed destruction in an expendable installation."
+    ],
+    "proof": [
+      "Backup status identifies the actual destination and success/failure.",
+      "Changing location neither loses old work nor grants unrestricted sibling-folder access.",
+      "Reset and deletion clearly state their scope; cancellation preserves everything."
+    ],
+    "twist": "Choose a non-writable or unavailable destination, then restore a valid one and retry.",
+    "prefix": "SETDATA",
+    "route": "full"
+  },
+  {
+    "id": "ACCOUNT",
+    "chapter": "5 · Share responsibly",
+    "title": "I can sign in without abandoning local work",
+    "goal": "I want an account when I need online features, with a clear boundary between my account and my local Garden.",
+    "needs": "Test email account and deployed/configured auth service.",
+    "steps": [
+      "Request a sign-in code, receive it in real email, sign in and inspect profile/name/avatar controls.",
+      "Try an expired or incorrect code, sign out, then sign in as a second test account.",
+      "Continue editing a local project after signing out."
+    ],
+    "proof": [
+      "Real email delivery is distinguished from a mock-mail log.",
+      "Account state and errors are clear; private data from one account does not appear under another.",
+      "Signing out does not delete local work or leave unrestricted online authority behind."
+    ],
+    "twist": "Use an unavailable API address, then restore the intended address via Advanced connection settings.",
+    "prefix": "SETAC",
+    "route": "online"
+  },
+  {
+    "id": "BILLING",
+    "chapter": "5 · Share responsibly",
+    "title": "I understand what I pay for",
+    "goal": "I want the plan, allowance and usage shown in the app to match what online services actually enforce.",
+    "needs": "Stripe test environment first; eligible account and configured included inference.",
+    "steps": [
+      "Compare the offered plans and included allowance; complete a test checkout and return to the app.",
+      "Make one small included request, inspect usage and use the customer portal to change/cancel the test plan.",
+      "Try a declined checkout, expired entitlement or unavailable usage service.",
+      "Close checkout without paying, wait for confirmation to time out, then use Check again; repeat with a temporary connection failure.",
+      "Change only the billing interval in the portal, then return. Check payment grace before and after its deadline; switch accounts while a response is delayed.",
+      "Restart with an unpaid checkout pending; resume the same session, cancel it, and repeat with a test payment completing just before cancellation.",
+      "As an operator in an isolated deployment, open Billing health; interrupt provider verification or email delivery, inspect the recorded failure, restore service and retry. Ordinary accounts should not see operator controls."
+    ],
+    "proof": [
+      "Price, interval, plan and effective entitlement agree across checkout and the app.",
+      "BYOK charges remain separate; login is not charged as a Store/Function call.",
+      "Usage refusal/recovery is clear, with no silent fallback billed to another route.",
+      "An unavailable paid price is labeled Unavailable, never Free or a different interval; its checkout is disabled.",
+      "A billing return URL alone never claims payment succeeded. Confirmation timeout, retry and payment recovery give an explicit next action.",
+      "An interval-only change stops waiting; returning to the app refreshes plan and usage. Responses from a previous account never appear or open a checkout link.",
+      "The grace deadline matches server enforcement; expired grace says paid benefits are paused. Successful publishing and unpublishing refresh account usage.",
+      "Pending checkout survives restart. Resume reuses the session; cancellation is confirmed by the provider. A payment completing during cancellation appears as completed, with no duplicate purchase.",
+      "Account closure prevents a new checkout throughout cleanup and after a failed cleanup; retrying closure remains possible.",
+      "Billing health distinguishes unchecked/stale/failed accounts, missing prices, log-only email, failed webhooks and ambiguous checkout. Database failure displays Unavailable rather than zero failures.",
+      "Missed webhooks reconcile, notifications retry across restart, and trial reminders are not repeated or sent after the trial ends. Operator recovery verifies the exact account/attempt or records a provider-confirmed absence review."
+    ],
+    "twist": "Test both paid tiers separately. Never count a fixture checkout as a live billing pass.",
+    "prefix": "",
+    "route": "online"
+  },
+  {
+    "id": "SHARE",
+    "chapter": "5 · Share responsibly",
+    "title": "Someone else can see what I made",
+    "goal": "I want to publish my home page, understand exactly what becomes public and send a link that works without my app.",
+    "needs": "Configured publication service/account; disposable page from HELLO.",
+    "steps": [
+      "Review Share’s public/private scope, title and content; publish deliberately.",
+      "Open the actual public URL in a signed-out browser and on a phone, including nested routes and reloads.",
+      "Change one detail locally, publish the update, then cancel and finally confirm Unshare."
+    ],
+    "proof": [
+      "The visitor sees the intended current page, assets and links, without needing my app to run.",
+      "Local drafts, keys and private conversations are not published unexpectedly.",
+      "Failed publication preserves the previously usable edition; Unshare truthfully removes access when completed."
+    ],
+    "twist": "Cause a build/upload failure and retry. A success toast alone does not prove the public URL works.",
+    "prefix": "SHARE",
+    "route": "online",
+    "extraChecks": [
+      [
+        "Change Discoverable while the online service is unavailable; reopen Share, restore the connection and retry.",
+        "The saved local preference is distinguished from the unconfirmed online listing. Reopening and retry reconcile the actual online state."
+      ],
+      [
+        "Try Unshare when custom-domain or visitor-data review cannot load, then restore access and review again.",
+        "The app reports the read failure and does not unshare with an incomplete impact review. Cancel preserves the publication."
+      ]
+    ]
+  },
+  {
+    "id": "AUDIENCE",
+    "chapter": "5 · Share responsibly",
+    "title": "I choose what my audience receives",
+    "goal": "I want to share a reading edition, drawing or playable result while retaining private working material.",
+    "needs": "A Notes notebook and another tool with a supported public view.",
+    "steps": [
+      "Select public content while leaving a clearly named private item unselected.",
+      "Open the published edition signed out; follow every navigation link and inspect the offered process view.",
+      "Publish a revised selection and compare with the previous one."
+    ],
+    "proof": [
+      "Only deliberately shared content and process material is exposed.",
+      "The published page is a useful visitor edition, not an empty editor or broken local preview.",
+      "If a tool cannot publish a website, the app offers its supported export instead of implying it can."
+    ],
+    "twist": "Search the visitor edition for the private marker and try an old/deep link. Record unexpected exposure immediately.",
+    "prefix": "",
+    "route": "online"
+  },
+  {
+    "id": "VISITORS",
+    "chapter": "5 · Share responsibly",
+    "title": "Visitors can interact without controlling my account",
+    "goal": "I want a guestbook or form on my site, with login that is safe and understandable to a visitor.",
+    "needs": "Published disposable Crux; two visitor accounts; hosted and standalone/custom-domain modes as available.",
+    "steps": [
+      "Add the optional guestbook or supported form; sign in as visitor A, submit and inspect the result as owner.",
+      "Repeat as visitor B, reload, sign out and test expiry; compare inherited hosted identity with standalone login.",
+      "Inspect local versus Live Store and remove only a test entry through the owner controls."
+    ],
+    "proof": [
+      "Visitor identity and data belong to this published Crux; visitor B cannot edit A’s protected data.",
+      "Visitors cannot use the site’s credentials for account administration or another Crux.",
+      "Authentication is unmetered; data/function use is attributed to the publisher’s applicable allowance."
+    ],
+    "twist": "Unshare/remove the domain and verify old sessions no longer authorize it. An unavailable hosted service is Blocked, not proof of a local failure.",
+    "prefix": "",
+    "route": "online"
+  },
+  {
+    "id": "DOMAINS",
+    "chapter": "5 · Share responsibly",
+    "title": "My creation can live at my own address",
+    "goal": "I want to publish on a custom domain and understand the setup, verification and cost.",
+    "needs": "Disposable domain/DNS access; eligible plan; deployed domain service.",
+    "steps": [
+      "Add a test domain, follow the exact DNS instructions and inspect pending/verified/active states.",
+      "Open HTTPS at that address, including reload and deep routes, from another browser/device.",
+      "Test removal, reassignment refusal and republishing while activation is delayed."
+    ],
+    "proof": [
+      "The UI does not claim live HTTPS while verification or certificates are pending.",
+      "Links and published visitor login work at the approved origin.",
+      "A failed activation retains a usable publication and supports retry."
+    ],
+    "twist": "Use an incorrect DNS record and later correct it; do not change a real business domain for this test.",
+    "prefix": "DOMAIN",
+    "route": "online"
+  },
+  {
+    "id": "PUBLIC",
+    "chapter": "5 · Share responsibly",
+    "title": "The public site helps me discover and start",
+    "goal": "As a visitor, I want to understand the product, find a creation and learn how to make my own.",
+    "needs": "Deployed public site and published test creations; desktop and phone browser.",
+    "steps": [
+      "Visit the root teaser, then directly load Explore, docs, blog, a creator page and a creation URL.",
+      "Navigate, search and reload deep links; inspect attribution, process availability and getting-started links.",
+      "Return using browser history and try a missing/unavailable page."
+    ],
+    "proof": [
+      "The teaser retains its intended identity/player; direct links reach their actual destinations.",
+      "Docs and journal are readable/searchable; creation links show useful content and the right author.",
+      "Missing content differs from service failure and has a useful route back."
+    ],
+    "twist": "Try signed-out, slow/offline and phone views; do not count local fixture pages as deployed-site acceptance.",
+    "prefix": "PUBLIC",
+    "route": "online"
+  },
+  {
+    "id": "EXPLORE",
+    "chapter": "6 · Discover and extend",
+    "title": "I find something worth opening",
+    "goal": "I want visually inviting discovery that helps me find relevant creations, tools and Moods quickly.",
+    "needs": "Explore with a populated catalog; a test account where needed.",
+    "steps": [
+      "Open Explore and look for a relevant creation before scrolling; inspect thumbnails and author identity.",
+      "Search, sort, combine tags, change pages and clear filters; open a creator and return.",
+      "Install a tool/Mood through its offered route and create something with it."
+    ],
+    "proof": [
+      "Thumbnails are useful and creators are identifiable, including missing-avatar fallbacks.",
+      "Filters and results agree; empty/error/loading states do not erase a usable search.",
+      "Installation explains what is missing and leads to a working tool, not a dead card."
+    ],
+    "twist": "Interrupt a download, retry, and reopen offline after a successful install. Do not expect unimplemented follows/likes/social feeds.",
+    "prefix": "EXPLORE",
+    "route": "full"
+  },
+  {
+    "chapter": "6 · Discover and extend",
+    "prefix": "",
+    "route": "full",
+    "id": "SAMPLER-SPRITE",
+    "title": "Seed exchange: give a tiny creature its first dance",
+    "goal": "Download Piskel and draw a two-frame garden creature. This short side quest uses two tools, not the whole catalog, and needs no AI.",
+    "needs": "Desktop starter-only build; a disposable Garden; a reachable Explore catalog containing Piskel, or a trusted Piskel tool .cruxtool package.",
+    "steps": [
+      "Open Explore → Tools. Find Piskel, read its author, upstream credit and download size, then install it. If absent, use Import a .cruxtool with a trusted tool package; record which route you used. A missing catalog/package is Blocked, never a completed download. If using the fallback, mark the Explore installation criterion Blocked and keep the creative criteria separate.",
+      "Return to Add Crux, create a Piskel project named Pocket Creature, and draw a 16 × 16 sprout or friendly bug. Duplicate the frame and move a leaf or eye; play the animation using the native controls.",
+      "Save, close the project, reopen it and adjust one pixel. Export a GIF and open it outside Garden. Record the project name and output path; then continue to the next mission."
+    ],
+    "proof": [
+      "Explore → Tools shows the intended tool and its author. Install visibly downloads it, finishes with Installed, and makes it usable from Add Crux. Record catalog URL/environment, tool name/version if shown and install feedback. A .crux import or preinstalled tool does not pass this Explore criterion.",
+      "My two-frame creature plays in Piskel and the exported GIF; the editable frames survive reopening.",
+      "I made the creature with AI off. My notes identify the installation route, project and output."
+    ],
+    "twist": "An unavailable catalog is a useful bug report, not a reason to download an untrusted runtime. The guide records your actions; it does not install tools itself.",
+    "extraChecks": [
+      [
+        "In an isolated profile, interrupt the Explore tool download by disconnecting. Reconnect, retry, then revisit the same tool card and try its offered action again.",
+        "The app explains the failure and recovers without a broken installed entry, duplicate installation or lost projects. Installed state remains accurate after navigation/restart."
+      ]
+    ]
+  },
+  {
+    "chapter": "6 · Discover and extend",
+    "prefix": "",
+    "route": "full",
+    "id": "SAMPLER-SONG",
+    "title": "Seed exchange: compose your creature’s theme tune",
+    "goal": "Install one more tool, BeepBox, and give the creature a short musical greeting. Stop at these two tools for this sampler.",
+    "needs": "BeepBox in the configured Explore catalog or a trusted tool .cruxtool; headphones/speakers at a comfortable volume; Pocket Creature from the previous mission.",
+    "steps": [
+      "Find and install BeepBox through Explore → Tools, or the trusted .crux route if the catalog is unavailable. Watch the download/error feedback and record the source. Do not count an already bundled tool as a tested download. A fallback import leaves Explore installation Blocked; it is not equivalent acceptance.",
+      "Create a BeepBox Crux named Pocket Theme. Add a four-note melody and a second instrument or drum part. Play it, change the tempo, then use the native controls to make one revision you like.",
+      "Save the editable song, export a supported audio format and listen in a separate player. Keep the sprite GIF and song output together in a test folder called Pocket Creature Kit; this mission does not assume the two editors integrate automatically."
+    ],
+    "proof": [
+      "Explore → Tools shows the intended tool and its author. Install visibly downloads it, finishes with Installed, and makes it usable from Add Crux. Record catalog URL/environment, tool name/version if shown and install feedback. A .crux import or preinstalled tool does not pass this Explore criterion.",
+      "Both musical parts and my tempo change can be heard; the exported audio plays independently. A screenshot alone is not audio evidence.",
+      "The kit contains my GIF and audio, and the original Piskel and BeepBox Cruxes remain editable."
+    ],
+    "twist": "If sound is silent, check playback and output-device/volume controls and record the result. Do not mark unheard audio as passing.",
+    "extraChecks": [
+      [
+        "In an isolated profile, interrupt the Explore tool download by disconnecting. Reconnect, retry, then revisit the same tool card and try its offered action again.",
+        "The app explains the failure and recovers without a broken installed entry, duplicate installation or lost projects. Installed state remains accurate after navigation/restart."
+      ]
+    ]
+  },
+  {
+    "id": "SAMPLER-MOOD",
+    "chapter": "6 · Discover and extend",
+    "prefix": "",
+    "route": "full",
+    "title": "Seed exchange: find a new atmosphere",
+    "goal": "Download one Mood Crux through Explore and dress the creature’s Garden. This is the second kind of installable creation, not another creative tool.",
+    "needs": "Explore catalog with at least one downloadable Mood; disposable Garden plus a second Garden with an explicitly kept, different Mood; record the catalog environment.",
+    "steps": [
+      "Open Explore → Moods. Search for a Mood you like; inspect its author and preview. Choose Install and watch downloading, success and Installed feedback. If none are available, record Blocked; switching to a bundled Mood does not test this workflow.",
+      "Open the installed Mood in the Mood panel. Preview it, then leave without keeping it and check that your previous Garden selection is preserved. Preview it again and choose Keep for Garden. Open Pocket Creature and Pocket Theme and inspect text, controls, background and any included sound at a comfortable volume.",
+      "Visit the second Garden with its own kept Mood, then return. Restart and revisit the downloaded Mood card and your Garden. Confirm the Mood is still installed, the intended Garden wears it, and the second Garden retains its own choice."
+    ],
+    "proof": [
+      "Explore → Moods downloads a real Mood Crux and reports Installed; the installed Mood can actually be selected. Notes identify catalog environment, author, Mood and observed feedback.",
+      "Previewing does not silently replace the kept selection. Keep for Garden persists the chosen Mood with usable assets and readable controls.",
+      "Installation and kept appearance survive restart; the separately configured Garden remains unchanged. A local catalog result is not recorded as proof of production availability."
+    ],
+    "twist": "Before the successful installation, interrupt its download in an isolated profile, reconnect and retry. Do not remove a Mood from your real Garden for this test.",
+    "extraChecks": [
+      [
+        "Interrupt an Explore Mood installation, reconnect and retry; revisit its card after success and inspect its offered action.",
+        "Failure is explained, retry recovers, Installed state is accurate and repeated actions do not create confusing duplicates or overwrite another kept Mood."
+      ]
+    ]
+  },
+  {
+    "chapter": "6 · Discover and extend",
+    "prefix": "",
+    "route": "full",
+    "id": "SAMPLER-RETURN",
+    "title": "Seed exchange: pack your kit and come back tomorrow",
+    "goal": "Keep the two creations and prove the downloaded tools remain useful after a break. Finish this sampler without testing every other tool.",
+    "needs": "The two sampler Cruxes; both tool installations complete; a second isolated Garden/profile for the archive check; no real Garden changes.",
+    "steps": [
+      "Save both projects and the Mood you kept in the previous mission; save this game’s checkpoint and export game results as JSON. Quit and reopen Garden. With downloads complete, disconnect the network, confirm your kept Mood, and reopen each project, change one pixel and one note, and save.",
+      "Reconnect only when needed. Export each complete Crux with its runtime included. Import those archives into a separate isolated installation and edit both originals again. Record any missing dependencies; do not replace this check with same-profile reopening.",
+      "Return to this guide, record the four missions and their criteria, and collect the Seed exchange scout badge. Keep the kit as your souvenir. The Wild meadow has optional deeper tool recipes; you do not need them to finish this sampler."
+    ],
+    "proof": [
+      "Both installed tools reopen and save real edits offline after restart; failure or a dependency requirement is recorded explicitly.",
+      "Both complete archives restore editable work in the second installation, including required assets/runtime.",
+      "My game checkpoint, notes and score survive reopening. The sampler badge reflects recorded investigation; failures/blockers remain visible and other tools remain Untested."
+    ],
+    "twist": "Pause between missions if you like. Export results before moving this guide to another browser or location; browser-local saves do not sync automatically."
+  },
+  {
+    "id": "MEDIA",
+    "chapter": "6 · Discover and extend",
+    "title": "I can use the right media in my work",
+    "goal": "I want to find an image, sound or video and keep a usable copy with its provenance.",
+    "needs": "Find media services; disposable asset choices.",
+    "steps": [
+      "Search each media category, preview candidates and inspect supplied attribution/license information.",
+      "Bring one result into the intended Crux; open the actual saved asset and use it in the result.",
+      "Export/import that Crux and reopen the kept media offline."
+    ],
+    "proof": [
+      "A full usable asset—not only a search thumbnail—is kept where expected.",
+      "Preview sound/video stops when dismissed and imports do not cross Crux boundaries.",
+      "Provenance travels where provided; service availability is represented honestly."
+    ],
+    "twist": "Fail or cancel a download, then retry with the same filename in another Crux.",
+    "prefix": "MEDIA",
+    "route": "full"
+  },
+  {
+    "id": "IMAGES",
+    "chapter": "6 · Discover and extend",
+    "title": "I can create and revise an image with a collaborator",
+    "goal": "I want a generated image that becomes an ordinary editable project asset I can keep or replace.",
+    "needs": "Configured image provider, explicit small test budget and a disposable prompt/reference.",
+    "steps": [
+      "Ask for one image with a specific size/purpose; inspect the actual result and provider used.",
+      "Use the image in a page or editor, revise through supported image tools, and compare the resulting files.",
+      "Export/import and use the kept image with the network disconnected."
+    ],
+    "proof": [
+      "Actual image bytes are saved in the intended Crux and can be opened independently.",
+      "A failed/refused generation has no fake placeholder presented as success.",
+      "Billing route and required key are clear; text-model availability does not imply image access."
+    ],
+    "twist": "Try a missing image-provider key. Record quality and prompt fidelity separately from successful file creation.",
+    "prefix": "",
+    "route": "ai"
+  },
+  {
+    "id": "STORE",
+    "chapter": "7 · Make useful interactive things",
+    "title": "My project can remember data",
+    "goal": "I want a small app or form to retain records without building my own database service.",
+    "needs": "Disposable project with Store; hosted service for Live mode.",
+    "steps": [
+      "Create, inspect, edit and delete test JSON/string records through the offered Store controls.",
+      "Use a small UI or Function to read/write the same records; switch projects and Local/Live views deliberately.",
+      "Restart and inspect the stored values again."
+    ],
+    "proof": [
+      "The same named data is visible to the intended project and runtime.",
+      "Local and Live data are visibly distinct; invalid JSON/refused writes preserve the last valid record.",
+      "Pagination, empty results and refresh do not conceal data."
+    ],
+    "twist": "Use similarly named keys in two Cruxes; deleting one must not affect the other.",
+    "prefix": "STORE",
+    "route": "full"
+  },
+  {
+    "id": "FUNCTIONS",
+    "chapter": "7 · Make useful interactive things",
+    "title": "My published project can do useful work",
+    "goal": "I want an order form or similar small workflow to validate a request, save a record and return a useful result.",
+    "needs": "Order Desk or disposable Function project; full API for published checks; harmless dummy secrets.",
+    "steps": [
+      "Start from the worked example or rule builder; send a valid request and inspect the returned result and Store record.",
+      "Try rejected input, a handler error, event chaining and the supported secret/egress settings.",
+      "Publish to a test API and repeat as a visitor outside the desktop app."
+    ],
+    "proof": [
+      "Accepted input creates exactly the intended record; refused input is visibly refused.",
+      "Secrets are usable by allowed handlers without appearing in ordinary source, logs or export.",
+      "Local preview and published execution boundaries are stated honestly, including unsupported operations.",
+      "Order Desk explicitly labels names and notes as public demo data; use fictional details. Published visitor sign-in does not grant platform-owner controls.",
+      "Repeated submission while an order is pending creates only one order. Refused input remains in the form so it can be corrected and submitted successfully.",
+      "An Order Desk local test copy is explicitly static-only: saved files load, Functions are not served, and no claim is made that Store operations or visitor accounts were tested. The workspace Functions runner still works."
+    ],
+    "twist": "Test a denied network target and a failing handler. Do not infer server behavior from the desktop preview alone.",
+    "prefix": "FUNC",
+    "route": "full"
+  },
+  {
+    "id": "SERVER-TIME",
+    "chapter": "7 · Make useful interactive things",
+    "title": "Published work can run while my desktop is closed",
+    "goal": "I want a published Function schedule to update its Store on the server without leaving Garden open.",
+    "needs": "Running full hosted/self-hosted API, configured scheduler and disposable published Function.",
+    "steps": [
+      "Publish a simple scheduled counter or timestamp writer and inspect the admitted schedule.",
+      "Close the desktop app and verify a due server run changes the published Store.",
+      "Change the schedule, republish, then remove it and verify the old schedule stops."
+    ],
+    "proof": [
+      "Execution happens on the full API and its Store; it is not merely a desktop timer.",
+      "Unchanged schedules retain their expected next run; changes/removals affect the intended Crux.",
+      "Failures and actual run times are inspectable."
+    ],
+    "twist": "Desktop preview does not offer server cron parity. Missed intervals need not replay; this is not guaranteed exactly-once job delivery.",
+    "prefix": "",
+    "route": "online"
+  },
+  {
+    "id": "SCHEDULES",
+    "chapter": "7 · Make useful interactive things",
+    "title": "My Garden can help me keep a rhythm",
+    "goal": "I want a work timer, reminder or local routine that acts in the right Garden and remains under my control.",
+    "needs": "Tending → Schedules; disposable short timers; model/tool/weather services only when used.",
+    "steps": [
+      "Create and test one-time, interval, cron and phased-timer schedules; pause, resume, disable and remove them.",
+      "Try the offered triggers/actions: Garden events, untouched projects, alerts, cues, Mood, collaborator, Functions and tools.",
+      "Check timezone/place/sun events and your own weather endpoint; switch Gardens, sleep and restart."
+    ],
+    "proof": [
+      "Next/last run, phases, destination and enabled state match actual behavior.",
+      "Garden-owned and Mood-inherited schedules are distinguishable and respect opt-in.",
+      "An invalid time/cron, unavailable endpoint or disabled action is explained."
+    ],
+    "twist": "Record what happens while the owner Garden is not in front and while the app is quit. Do not assume local schedules run on a server.",
+    "prefix": "SCHED",
+    "route": "full"
+  },
+  {
+    "id": "MOODS",
+    "chapter": "8 · Make the space my own",
+    "title": "My Garden can feel like my space",
+    "goal": "I want a visual identity I can change, save and share without confusing a temporary experiment with a kept Mood.",
+    "needs": "Mood panel; parent/child Gardens; local and installed Moods.",
+    "steps": [
+      "Try built-in Moods, light/dark themes and the supported color/font/layout controls.",
+      "Keep a custom Mood for one Garden, inherit or override it in a child, then revisit the parent.",
+      "Save/export/import a Mood and inspect its available assets, names and persona settings."
+    ],
+    "proof": [
+      "The visible look and saved ownership match what I chose.",
+      "Changing one Garden does not silently repaint a separately configured one.",
+      "Fonts, accents, borders and panel labels remain legible across views."
+    ],
+    "twist": "Change a look without keeping it, switch Gardens and return; the difference between previewing and keeping must be clear.",
+    "prefix": "MOOD",
+    "route": "full",
+    "extraChecks": [
+      [
+        "Share a disposable Mood, cancel Unshare once, then unshare it. Retry a failed removal. Re-share it, then inspect Delete locally before confirming.",
+        "Unshare removes visitor access after propagation while retaining the local Mood; a failed request retains public status. Local deletion clearly says it does not unshare."
+      ]
+    ]
+  },
+  {
+    "id": "FLOW",
+    "chapter": "8 · Make the space my own",
+    "title": "Motion adds atmosphere without getting in my way",
+    "goal": "I want responsive visual atmosphere that I can tune or turn off when concentrating.",
+    "needs": "Mood → Flow; ordinary editing and optional agent activity.",
+    "steps": [
+      "Enable Flow, vary sensitivity and do real work to trigger it.",
+      "Switch between Plasma and another Mood, adjust motion controls and use reduced-motion preferences.",
+      "Turn Flow off, switch projects and restart."
+    ],
+    "proof": [
+      "Flow responds as described without obscuring controls or causing uncomfortable motion.",
+      "Off/reduced-motion choices remain effective; no runaway animation persists after stopping.",
+      "The current Mood’s behavior is distinguishable from background task progress."
+    ],
+    "twist": "Leave the workspace open while editing for a while. Record lag, heat or fan behavior separately from visual preference.",
+    "prefix": "FLOW",
+    "route": "full"
+  },
+  {
+    "id": "BACKGROUND",
+    "chapter": "8 · Make the space my own",
+    "title": "I can customize the backdrop and voice of a Garden",
+    "goal": "I want a background and persona that suit this project and travel with its saved Mood.",
+    "needs": "A test image/video and Mood controls; real model for persona behavior.",
+    "steps": [
+      "Choose an included background, import a supported asset and adjust framing/effects.",
+      "Set available persona text/appearance, keep the Mood, then switch to a differently styled Garden.",
+      "Export/import and restart; inspect missing-asset and reset behavior."
+    ],
+    "proof": [
+      "The correct asset and persona belong to the intended Garden/Mood.",
+      "Changing a decorative asset does not modify project files unexpectedly.",
+      "Missing assets have a usable fallback and text remains readable."
+    ],
+    "twist": "Try a moved/deleted source file after the asset was kept; retained media should not depend on that original file.",
+    "prefix": "BG",
+    "route": "full"
+  },
+  {
+    "id": "SOUND",
+    "chapter": "8 · Make the space my own",
+    "title": "I can shape ambient music and cues",
+    "goal": "I want a calm soundtrack with enough control to suit my work and a reliable way to silence it.",
+    "needs": "Crux Synth and Mood sound controls; headphones/speakers at a comfortable level.",
+    "steps": [
+      "Explore all four Synth tracks, the available voices, volume, brightness, movement, mute and root-note controls.",
+      "Adjust notification cues and master volume; keep the patch with a Mood, switch Gardens and reopen.",
+      "Listen while switching workspaces, pausing and resuming."
+    ],
+    "proof": [
+      "Audible changes correspond to the controls and the saved patch returns.",
+      "Mute/stop is immediate; no duplicate/stuck sound starts later.",
+      "Ambient Synth is clearly separate from music-making tools such as web-synth or AM-1."
+    ],
+    "twist": "Deny audio permission where applicable, suspend/resume the system and close the app; record actual sound, not just screenshots.",
+    "prefix": "SOUND",
+    "route": "full",
+    "extraChecks": [
+      [
+        "Listen to each built-in Synth preset, then mute three tracks and audition Warm pad, Deep bass, Soft bells and Drifting air one at a time.",
+        "All four voices are audible and distinct at a comfortable volume; there are exactly four independently controlled tracks. A screenshot is not audio evidence."
+      ],
+      [
+        "Change root note, major/minor/dorian harmony, tempo and Space while playing; revisit their boundary values.",
+        "The sound follows the selected notes/harmony/tempo/space without invalid values, crashes or a stuck prior patch."
+      ],
+      [
+        "On each track change Volume, Brightness and Movement from low to high; mute/unmute, then use master zero, pause and Sound off.",
+        "Per-track and master controls affect the intended signal. Brightness/movement can unfold with new notes; stop/mute cannot leave delayed sound behind."
+      ],
+      [
+        "Name, save, load and delete a Synth preset in this Mood; try empty and duplicate names. Keep the Mood, restart, export/import and select the preset again.",
+        "The patch and saved presets travel with the intended Mood and remain editable; validation or overwrite behavior is explicit."
+      ],
+      [
+        "Ask a real collaborator to inspect and modify the Synth through supported tools, then change it manually.",
+        "The actual audible patch and controls agree, manual edits persist, and no nonexistent DAW feature or export format is claimed."
+      ],
+      [
+        "Listen while switching Garden/Mood, starting soundtrack playback, playing a native-tool preview and triggering sound cues. Close and reopen the Synth panel.",
+        "Ownership, mute and mixing are understandable; no duplicate engine or unexpected audio persists. Record what really happens after sleep/resume and output-device change."
+      ]
+    ]
+  },
+  {
+    "id": "ACCESS",
+    "chapter": "9 · Use it for real",
+    "title": "I can work in the way my body and setup require",
+    "goal": "I want readable controls, keyboard access, predictable focus and manageable motion on my device.",
+    "needs": "Keyboard, zoom, screen reader where used; short/narrow and large windows; light/dark themes.",
+    "steps": [
+      "Complete the first-home story without a mouse; repeat key paths with high zoom and reduced motion.",
+      "Navigate dialogs, menus, all panels, task approvals and errors using focus and labels.",
+      "Check text contrast, hover colors, thumbnails and targets with your usual accessibility tools."
+    ],
+    "proof": [
+      "Primary actions, errors and required explanations remain available without hover alone.",
+      "Focus is visible, returns sensibly and is not trapped behind a panel.",
+      "Color alone is not the only indication of progress, error or selected state."
+    ],
+    "twist": "Use a long title, long message and an empty/error state. Record the exact inaccessible step and device/setup.",
+    "prefix": "FEEL",
+    "route": "full"
+  },
+  {
+    "id": "LONGDAY",
+    "chapter": "9 · Use it for real",
+    "title": "The app remains pleasant through a working day",
+    "goal": "I want to keep several projects open, use audio and return after breaks without accumulating lag or losing context.",
+    "needs": "Representative projects and one larger media/file project; ordinary production settings.",
+    "steps": [
+      "Work naturally across three Cruxes with Synth/Flow as you prefer for at least an hour.",
+      "Open/close editors, previews and panels; copy media, save versions, take a break and resume.",
+      "Close the workspaces and compare responsiveness and system resource use with the start."
+    ],
+    "proof": [
+      "Typing, navigation, playback and saves remain usable; long operations show meaningful progress.",
+      "Closing work releases the expected work rather than leaving hidden playback/processes indefinitely.",
+      "Large projects are accurately described as slow when they are slow; no success is claimed before completion."
+    ],
+    "twist": "Record machine specs, project size, elapsed time and perceived delays. Earlier automated benchmarks do not pass this human session.",
+    "prefix": "",
+    "route": "full"
+  },
+  {
+    "id": "UPDATE",
+    "chapter": "9 · Use it for real",
+    "title": "I can update without sacrificing my work",
+    "goal": "I want a new version without losing projects, settings or confidence in where it came from.",
+    "needs": "Two actual release versions, signed/notarized packages as claimed; backup and spare OS account.",
+    "steps": [
+      "Install the earlier release, create/edit/version a project and keep a backup.",
+      "Use the offered update path, verify version/signature and reopen the same project.",
+      "Try a canceled/unavailable update and the supported uninstall/reinstall procedure on disposable data."
+    ],
+    "proof": [
+      "An update preserves the promised work/settings and has truthful progress/failure states.",
+      "The new app opens the correct data rather than an empty-looking alternate profile.",
+      "Uninstall behavior and any irreversible compatibility limits are clearly stated."
+    ],
+    "twist": "An ad-hoc local package is not evidence of production signing, installation or updater acceptance.",
+    "prefix": "",
+    "route": "full"
+  },
+  {
+    "id": "LEAVE",
+    "chapter": "9 · Use it for real",
+    "title": "I can leave with my work",
+    "goal": "I want usable copies of my creations even if I stop paying for hosted services or stop using Garden.",
+    "needs": "Disposable paid test account; archives and external viewers; billing changes in test mode.",
+    "steps": [
+      "Export complete editable archives plus supported ordinary file formats.",
+      "Sign out or cancel the test subscription, then open local projects and exported outputs.",
+      "Move a complete archive to another test installation and inspect what still needs an optional tool/service."
+    ],
+    "proof": [
+      "Local work and kept files remain mine and usable within their documented formats.",
+      "Ending online access does not imply deleting local projects.",
+      "The distinction between retained local work and hosted publication/allowances is clear."
+    ],
+    "twist": "Verify originals and exported files before removing a disposable app/profile; never use your only copy for this story.",
+    "prefix": "",
+    "route": "full"
+  },
+  {
+    "id": "SIGNOFF",
+    "chapter": "9 · Use it for real",
+    "title": "I can honestly recommend this release",
+    "goal": "I want to decide whether a stranger can achieve the advertised outcomes, not merely whether buttons respond.",
+    "needs": "Completed story sessions, exported result log and preferably a first-time tester.",
+    "steps": [
+      "Give a new tester an outcome rather than click instructions and watch where they hesitate.",
+      "Revisit failures after fixes; link each retest to its original observation and exact build.",
+      "Review the feature/criteria ledger and unresolved gaps before deciding what the release can claim."
+    ],
+    "proof": [
+      "No failed, blocked, skipped or unknown promised feature is silently counted as a pass.",
+      "User outcomes, discoverability and confidence are judged separately from automated coverage.",
+      "Every excluded capability has an explicit release-scope reason and every blocker has an owner."
+    ],
+    "twist": "Ask the tester what they expected to happen, what surprised them and whether they want to keep using the app.",
+    "prefix": "SIGNOFF",
+    "route": "full"
+  },
+  {
+    "id": "COMMUNITY-TOOL",
+    "chapter": "6 · Discover and extend",
+    "title": "Seed exchange: invent a tool nobody has seen",
+    "goal": "Make a tiny tool, share it and use it in a second Garden with AI off.",
+    "needs": "Desktop; two isolated test profiles. A reachable test publishing API for online steps.",
+    "steps": [
+      "Choose Add Crux → Make a tool. Read README.md, customize the title and interface in Artifacts, and give crux-tool.json a new id, name and releaseVersion. Save a test note and restart.",
+      "Set Details → Kind → Tool template. Export a .cruxtool file. In a fresh recipient profile use Add Crux → Import; create your own project from the installed tool, save a different note and restart.",
+      "Back in the creator profile, Share with Discoverable enabled. Find it in Explore → Tools and the author’s public Garden. Install it in another clean recipient profile and make a project.",
+      "Publish a revised editor with the same publication identity; install the offered update. Remove the installed tool from Add Crux and reopen your earlier projects."
+    ],
+    "proof": [
+      "A new tool requires no app update or built-in registration. The tool’s editor, source and credits travel together.",
+      "Recipient projects start from the declared seed, save independently, and survive restart and .crux backup/import.",
+      "Public Garden filters distinguish Creations, Tools and Moods and expose the same actions as Explore.",
+      "Updating/removing an installation does not change or delete existing projects. A same-named tool from another creator remains separate."
+    ],
+    "twist": "Try a damaged .cruxtool and an interrupted download. Neither may replace the working installation.",
+    "prefix": "",
+    "route": "full",
+    "extraChecks": [
+      [
+        "Export a saved Mood as .cruxmood. Import through Add Crux and through a Home file drop in separate test profiles. Then select it in Mood.",
+        "The Mood installs without silently changing the worn Mood. Applying it is explicit and persists after restart."
+      ],
+      [
+        "Export an ordinary project as .crux, including one made with the installed tool. Import it and continue editing.",
+        "It remains a project; it is not silently registered as an installable tool."
+      ],
+      [
+        "Start a large Explore tool download, observe received bytes, cancel partway, then retry. Repeat when an older release is already installed.",
+        "Progress changes while bytes arrive. Cancel leaves no partial installation and preserves the old release and existing projects; retry installs successfully."
+      ]
+    ]
+  },
+  {
+    "id": "COPY-FILES",
+    "chapter": "4 · Keep and recover my work",
+    "title": "Pass a creation from one plot to another",
+    "goal": "Reuse my files in another Crux without asking an AI or exporting through the operating system.",
+    "needs": "Desktop; AI disabled; two Cruxes in the same disposable Garden.",
+    "steps": [
+      "Create a Website Crux and a Sketches Crux. In Sketches make a caption and import a small image. Select the file or its folder in Artifacts.",
+      "Choose Copy selected to another Crux, or right-click → Copy to another Crux. Pick Website and choose a receiving folder such as public/shared. Read the path preview and copy.",
+      "Open Website and use the copied files. Change an original in Sketches; verify Website keeps its independent copy. Restart and inspect both projects."
+    ],
+    "proof": [
+      "Text drafts are saved before copying, and binary bytes are preserved.",
+      "Both source and destination keep their files. A folder selection retains its internal paths.",
+      "The receiving Crux refreshes without a reload. No AI, network or export/import detour is required."
+    ],
+    "twist": "Try copying again to the same destination, then cancel and retry into a new folder. Existing files must remain untouched.",
+    "prefix": "",
+    "route": "full",
+    "extraChecks": [
+      [
+        "Start with only one Crux; then try a missing, trashed or out-of-Garden destination.",
+        "The UI gives a useful next step or refusal. No files go to an unintended Crux."
+      ],
+      [
+        "Change the source text immediately before copying; attempt with an unresolved editor conflict.",
+        "Latest saved bytes arrive; a failed save stops the copy and preserves the draft."
+      ]
+    ]
+  },
+  {
+    "id": "CLOSE-ACCOUNT",
+    "chapter": "5 · Share responsibly",
+    "title": "Close the online gate, keep my Garden",
+    "goal": "I can leave hosted services deliberately while keeping the work on my computer.",
+    "needs": "Disposable hosted TEST account and test publications/backups; Stripe test mode for paid plans. Never use a personal or production account for this mission.",
+    "steps": [
+      "Export hosted Store data to keep; note a local project, public site, shared Mood/tool, custom domain, backup and test subscription.",
+      "In Settings → Account open Close hosted account, review server and consequences, type the confirmation phrase and cancel the final dialog once.",
+      "Confirm closure on the disposable test account. Inspect the visitor links and billing test dashboard, restart the app and reopen the local project."
+    ],
+    "proof": [
+      "Cancellation changes nothing. Closure stops the test subscription and removes public routes and hosted backups after propagation.",
+      "Old account and visitor credentials no longer authorize requests. The UI shows a disconnected account after restart.",
+      "Local files, history and installed tools remain usable; other people’s downloaded copies are not claimed to be erased."
+    ],
+    "twist": "Use an unsupported server and an injected cleanup failure in a test deployment. Closure must refuse unsupported cleanup and offer retry after partial failure.",
+    "prefix": "",
+    "route": "online"
+  },
+  {
+    "id": "OPEN-PACKAGES",
+    "chapter": "6 · Discover and extend",
+    "title": "Open a seed packet from my desktop",
+    "goal": "I can open downloaded projects, tools and Moods without searching for an import command.",
+    "needs": "Installed desktop candidate; trusted .crux, .cruxtool and .cruxmood fixtures; repeat on each shipped operating system.",
+    "steps": [
+      "Quit Crux Garden. Open a .crux from the file manager, select a Garden and inspect the filename and destination before importing.",
+      "With the app running, open .cruxtool and .cruxmood files. Confirm each import; create a project with the tool and preview the installed Mood.",
+      "Open the same file twice while its prompt is pending, cancel it, then open a damaged package. Restart and inspect the successful imports."
+    ],
+    "proof": [
+      "The OS opens the right app. Each pending file requires review and duplicate requests produce one prompt.",
+      "Projects stay projects, tools appear in Add Crux, and Moods enter the library without automatically applying.",
+      "Cancel and invalid packages leave existing work intact and give understandable feedback. Successful imports survive restart."
+    ],
+    "twist": "Try a path with spaces and non-ASCII characters. If the OS association is unavailable, record that failure separately and verify Add Crux → Import as a fallback.",
+    "prefix": "",
+    "route": "full"
+  },
+  {
+    "id": "COMFORT",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "My Garden feels welcoming when I return",
+    "goal": "A little homecoming quest: find my tools, make room to think, and return tomorrow without wondering where my work went.",
+    "needs": "A disposable Garden with AI off; one project and one installed tool/Mood. The final share-card checkpoint needs a connected account and a deliberate test publication.",
+    "steps": [
+      "Read the one-project and collection choices. Make a small Crux, open Home and use Continue working to return to it.",
+      "In Settings → Getting started, enable Resume my last workspace on startup. Quit and reopen. Turn it off and confirm the welcome page returns. Enable it again, close the last workspace using Save and close, and restart to Home.",
+      "Open Settings → Tools and Moods. Find an installed tool, inspect its source/update controls and open the Mood library; make sure these work with AI off.",
+      "Edit a text file. Expand the work-status line, save editor changes, and distinguish local files, unsaved edits, published content and backups in your own words.",
+      "Focus a panel, use Restore, and compare the exact original arrangement. Try Make and Review in Appearance and panels. Repeat using the keyboard in a short window; check that your file and draft survive.",
+      "On a fresh test Garden, choose whether to celebrate the first publication. Deliberately publish a test Crux, copy its link, save its share card and inspect the PNG. Publish again and restart: the first-time acknowledgement should not repeat."
+    ],
+    "proof": [
+      "Resume is opt-in, returns to the right project and safely falls back to Home; switching it off preserves the welcome page.",
+      "I can locate installed tools and Moods without searching a collapsed backup section or turning AI on.",
+      "The creation choices explain one project versus a collection without requiring prior vocabulary.",
+      "An unsaved file is not called saved; saving writes the actual file. Publication is clearly separate from local storage and backups.",
+      "Focus/Restore preserves panel sizes, keyboard access and drafts; Make/Review layouts remain useful in my window size.",
+      "The optional acknowledgement happens at most once, respects opt-out, and the downloaded 1200×630 share card uses my current Mood, title, author and working public URL. No private conversation or files appear.",
+      "Appearance and panels offers direct Mood/Customizer/sound controls. Optional Custom panel names expand without hiding the Garden title, and renamed panels still keep their identity after reopening.",
+      "In an empty Garden with Settings beside Home in a short window, both starting choices are fully visible without scrolling. After creating a project, search and sort appear; a search with no results can be cleared without losing work. With many panels open, narrow headers keep both Focus and Close reachable; Focus/Restore returns the arrangement."
+    ],
+    "twist": "Close the last workspace before relaunching; try a long project title on the card. Mark real publication Blocked if hosted services are unavailable instead of inferring it from local tests.",
+    "prefix": "",
+    "route": "full"
+  },
+  {
+    "id": "SUBSCRIBER",
+    "chapter": "1 · Arrive and make something",
+    "title": "My subscription makes AI ready to use",
+    "goal": "As a subscriber without provider keys, I can sign in, make a creation and edit an image without learning about models or API setup.",
+    "needs": "Fresh disposable desktop Garden, paid test account, configured included chat and image service; Daniel performs live AI acceptance.",
+    "steps": [
+      "Sign in during setup without adding any provider keys. Create one project from a short idea and send the focused draft once.",
+      "Ask for a small banner, then ask to make its background lighter. Inspect the actual image file and preview, quit and reopen the creation.",
+      "Check the included allowance, temporarily disconnect the usage service, retry, and inspect the reached-limit state in an isolated test environment.",
+      "Explicitly turn AI off, refresh/sign in/restart and confirm it stays off. Separately select your own provider or local model and confirm the subscription does not replace that choice."
+    ],
+    "proof": [
+      "Included AI becomes ready after verified sign-in without a personal key, including a new Garden conversation.",
+      "The initial idea remains visible and focused with a clear Send instruction. Creating the project alone does not submit an AI request.",
+      "Included image generation and reference-image editing use the plan, preserve the result after restart and never silently bill a saved personal key.",
+      "The composer identifies the current Crux or Garden. Usage-check failure has Retry, retains the included route and never displays invented zero usage.",
+      "An allowance refusal explains the next action and preserves all existing work. A partial local image save retains a recoverable generated Artifact; total storage failure is stated honestly.",
+      "Explicit AI-off and personal/local provider choices survive refresh and restart. Manual creation remains available.",
+      "Live image quality, real latency and actual provider billing are recorded as human evidence, separately from scripted desktop/API checks."
+    ],
+    "twist": "Interrupt an image request after dispatch; do not assume it was free or automatically retry. A duplicate request ID must not create another provider job. Record any uncertain allowance and local-save refusal honestly.",
+    "prefix": "",
+    "route": "start"
+  },
+  {
+    "id": "WEBSITE-STAGING",
+    "chapter": "1 · Arrive and make something",
+    "title": "I can go from download to my own website",
+    "goal": "As a newcomer, I can make a home page quickly, optionally test a saved local visitor edition, and publish online without confusing the destinations.",
+    "needs": "Public release installer for installation checks; disposable profile and website; account for hosted publication. Real AI quality remains a human check.",
+    "steps": [
+      "Follow Get the desktop app, choose the correct installer, and complete setup with Make my home page. Record time and any assistance.",
+      "Personalize your name, introduction and photo, preview the result, then open Share without needing a Growth version or provider setup.",
+      "Publish to local test Garden without signing in. Open the saved visitor copy and Garden index. Edit your project; confirm the test copy stays unchanged.",
+      "Restart, reopen the saved test copy, then update it. Publish online through Share and inspect the crux.garden link.",
+      "Make another local edit, update or remove the test copy, and check that the live website remains at its last deliberate publication."
+    ],
+    "proof": [
+      "The download is an actual public installer; a missing release is Blocked rather than a guessed working download.",
+      "The home page opens directly after setup; Growth and local staging are optional.",
+      "Preview, local test copy and internet publication have understandable and distinct states.",
+      "The test site renders the saved built output after restart; edits do not silently update it.",
+      "Local testing does not require sign-in, upload content, change hosted metadata or overwrite the live website.",
+      "The UI explains computer-only availability and that hosted accounts, Functions and submissions are not tested locally.",
+      "A failed test update retains the previous test copy; removing it retains project files and the live publication."
+    ],
+    "twist": "Disconnect during publishing or refuse a test-copy write. Keep the prior usable edition, preserve work and retry. Observe a non-technical person without coaching; record hesitations rather than claiming speed from automated tests.",
+    "prefix": "",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "PRIVATE-REQUESTS",
+    "chapter": "7 · Make useful interactive things",
+    "title": "I can collect a private request from each customer",
+    "goal": "I want a working Functions + Store example whose private customer records and owner actions are enforced by the backend.",
+    "needs": "Desktop for local preview; matching full API update and a disposable publication for online checks; three test email identities. No paid AI required.",
+    "steps": [
+      "Create Private Requests from Add Crux. Read README.md and save a request in Workshop.",
+      "Restart, inspect the local owner inbox, cancel deletion once, then confirm it. Local preview data is separate from online customer data.",
+      "On a disposable publication, use two separate visitor browser profiles and sign in by email code. Save different requests, refresh and edit each one.",
+      "In the creator app, use Share → Optional enhancements → Functions → requests with {\"action\":\"list\"}, then {\"action\":\"remove\",\"visitorId\":\"ID_FROM_INBOX\"}. Verify the intended online row is deleted.",
+      "Refuse an invalid save, interrupt a response and retry; sign out and ensure private text leaves the page."
+    ],
+    "proof": [
+      "Each customer sees only their own protected record. A forged visitorId or isOwner field cannot impersonate another customer.",
+      "The owner can inspect and delete valid records through the trusted app. Signing into the visitor page with the creator email does not grant owner rights.",
+      "A refused or unacknowledged save preserves text, displays a useful error and retries into one record.",
+      "Restart preserves local records; cancel keeps the record, and confirmed deletion handles the selected customer only.",
+      "README explains editable customer-owned data, last-write-wins behavior, separate local/online data and the absence of booking, payment or general roles guarantees."
+    ],
+    "twist": "Use only fictional private details. Try signing out while a save is pending and opening a second visitor identity. Never use a static Local test Garden as proof of backend or auth behavior.",
+    "prefix": "",
+    "route": "full"
+  },
+  {
+    "id": "DESKTOP-BASICS",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "The app behaves like a desktop app I already know",
+    "goal": "I want the window, menus, shortcuts and help to work the way every other desktop app has taught me to expect.",
+    "needs": "Desktop app, local only. A second display helps for the window check. No account or AI required.",
+    "steps": [
+      "Resize and move the window, quit, and reopen. Repeat maximized. If you have a second display, leave the window there, disconnect it and reopen.",
+      "Walk the application menu: every item in the app, File, Edit, View, Window and Help menus. Use undo, redo, copy, paste and select all inside a text field from the Edit menu.",
+      "Open Keyboard shortcuts from the Help menu and from the command palette. Try each listed shortcut once, including New Crux.",
+      "Open About from Settings and from the menu. Read the version, follow each link and open the open-source notices.",
+      "Open Report a problem. Read what it says it will share, copy the details, show logs, then open the issue link and check what was prefilled.",
+      "If an update is offered, find its notice in the top bar, choose Later, then find the same update again in Settings."
+    ],
+    "proof": [
+      "The window comes back at the size and place I left it, and is fully on a connected display after a monitor is removed.",
+      "Every menu item does what its name says once, and Edit menu commands work in text fields. No developer-only items appear in the packaged app.",
+      "The shortcuts list matches what the keys actually do; no shortcut fires twice.",
+      "About shows the real version and working links, and the notices are readable.",
+      "Report a problem shares only the app version and platform unless I add more; no log, file or conversation text is sent or attached for me.",
+      "An update notice is visible outside Settings, stays dismissed for that version after Later, and never blocks my work."
+    ],
+    "twist": "Force-quit the app from the operating system while a project is open, then reopen it. You should be offered Report a problem once, quietly, and never again for that exit.",
+    "prefix": "",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "FIND-AND-COMPARE",
+    "chapter": "2 · Keep control of my workspace",
+    "title": "I can find my work and see what changed",
+    "goal": "I want to name, find and sort my projects from Home, search inside a project, and see exactly what differs from an earlier version.",
+    "needs": "Desktop app, local only; three small projects with tags, one with several text files and an image. Works with AI Tools off.",
+    "steps": [
+      "From a Home card menu, rename a project. Open it, check the name everywhere, and return Home. If it is shared, check its public address did not change.",
+      "Give two projects tags in Details. Search Home for a tag as a plain word and as #tag, then for a word that is only in a title.",
+      "Sort Home by Name, Created and Updated with mixed-case and numbered names.",
+      "In Artifacts, use Find in files for a word that appears in several files; toggle match case; open a result.",
+      "Mark a Growth version, then change one file, add one and delete one. Use Compare with current on the version and on an Edits recovery point.",
+      "Repeat Compare inside a Task, and with an image and a very large file."
+    ],
+    "proof": [
+      "Rename from the card changes the name everywhere and leaves the slug and public address alone.",
+      "Tag search finds the tagged projects; #tag matches tags only; clearing the search restores the full list.",
+      "Name sort is A–Z regardless of case, with numbers in natural order.",
+      "Find in files lists matches grouped by file, opens the file at the matching line with the match selected, and says when results were capped.",
+      "Compare lists changed, added and removed files correctly and shows old and new text side by side; images show before and after; oversized or binary files say so plainly.",
+      "Compare never creates a version or changes my files, and find in files works with AI Tools off."
+    ],
+    "twist": "Search for text inside a file you have open with unsaved edits, and compare a version while the collaborator or another editor is changing the same file. Note anything stale or surprising.",
+    "prefix": "",
+    "route": "start",
+    "core": true
+  },
+  {
+    "id": "MESSAGE-ACTIONS",
+    "chapter": "3 · Collaborate without surrendering control",
+    "title": "I can copy, retry and bring pictures into a conversation",
+    "goal": "I want the everyday chat conveniences: copy a message, try again after a failure, paste a screenshot, and understand what went wrong with my key.",
+    "needs": "Desktop app; a real provider key you can also deliberately break, or included access; a screenshot on the clipboard and a few files to drag.",
+    "steps": [
+      "Hover and tab to the copy control on your own message and on a reply; paste the result somewhere else.",
+      "Enter a wrong provider key in Settings and watch the check. Send a message, read the failure, fix the key and choose Try again.",
+      "Start a second message while a turn is running and look at whether Try again is offered on an earlier failure.",
+      "Paste a screenshot into the composer, then drag two files and a folder onto it. Paste ordinary text and a very long text.",
+      "Go offline and send a message; pick a model your key cannot use; read each message and its Details.",
+      "Repeat copy and paste in a Task and in the Garden-level console."
+    ],
+    "proof": [
+      "Copy puts the full message text on the clipboard and confirms it; it is reachable by keyboard.",
+      "A refused key is reported when saved without blocking the save, and a key that cannot be checked is still saved with a clear note.",
+      "Try again answers the original request without adding a second copy of my message, and is not offered while something else is running.",
+      "A pasted image and dropped files appear in Artifacts with sensible names and are referenced in the message; pasted text stays text; the long-paste behavior is unchanged.",
+      "Failures name the next step (fix the key, choose another model, check the connection) with the provider's own wording available under Details.",
+      "With AI Tools off none of these controls suggest AI is available."
+    ],
+    "twist": "Paste the same screenshot twice quickly, and drop a file on the composer while the Artifacts panel is also showing a drop target. Nothing should be added twice or lost.",
+    "prefix": "",
+    "route": "ai",
+    "core": true
+  },
+  {
+    "id": "LEGAL-AND-REPORT",
+    "chapter": "5 · Share responsibly",
+    "title": "Visitors can read the terms and report a creation",
+    "goal": "As a visitor or customer, I want to know the terms and privacy practices, reach a person, and flag a published creation that should not be there.",
+    "needs": "The public website (deployed, or the local public candidate with the matching API) and a disposable published creation. A phone-width browser for one pass.",
+    "steps": [
+      "Read Terms, Privacy and Contact in full. Check every statement against what you know the product does, and that no company name, address or email is wrong or invented.",
+      "Find the links from the teaser, Explore, a creator page, Plans, the billing return pages, account sign-in in the app, and Settings → Account.",
+      "On a published creation, a Tool page and a Mood page, open Report. Submit each reason once, with and without details and email.",
+      "Submit reports quickly until you are asked to wait; lose the connection mid-submit.",
+      "Try to register the usernames terms, privacy, contact and explore.",
+      "Open robots.txt and the sitemap, and share a creation link into a chat app to see its preview."
+    ],
+    "proof": [
+      "The legal pages are readable on a phone, dated, and accurate; Contact reaches a real destination.",
+      "Terms and Privacy are one click from every place money or an account is involved.",
+      "A report is accepted with a clear confirmation; a refusal or failure keeps what I wrote and says what to do.",
+      "The operator receives or can list the report with its reason, details and creation.",
+      "Reserved names are refused in the app and by the API with a plain reason.",
+      "robots.txt and the sitemap resolve and list only listed creations. Record what the chat-app preview shows: a per-creation preview is a known gap."
+    ],
+    "twist": "Report a creation, then have its creator unshare it. The report should still exist for the operator.",
+    "prefix": "",
+    "route": "online"
+  },
+  {
+    "id": "MODERATION",
+    "chapter": "5 · Share responsibly",
+    "title": "The operator can remove a creation and sign-in resists abuse",
+    "goal": "As the operator, I want to act on a report by taking a creation down, keep it down, and know that sign-in codes cannot be spammed.",
+    "needs": "Full API on a test deployment with an operator account, the reports/takedowns migration applied and TRUST_PROXY set; two test creator accounts; an HTTP client for the admin routes (there is no operator screen yet).",
+    "steps": [
+      "List open reports, then take down a reported creation with a reason. Visit its public address and Explore.",
+      "As the creator, try to share the same creation again from the app, and read the message.",
+      "Resolve and dismiss reports; lift the takedown and share again.",
+      "Request sign-in codes for one email repeatedly, then from two networks; enter wrong codes until refused; request a new code and sign in.",
+      "Request a code for an email with no account and compare the answer and timing with a real one.",
+      "Confirm two people on different networks are limited independently (this is what TRUST_PROXY provides)."
+    ],
+    "proof": [
+      "A takedown removes the public creation and its Explore entry, and resolves its open reports.",
+      "The creator cannot republish while the takedown is active and is told why in plain words; local work is untouched.",
+      "Lifting the takedown allows sharing again.",
+      "Code requests and wrong attempts are limited per email and per network with a plain message, and a fresh code recovers.",
+      "Answers do not reveal whether an email has an account.",
+      "One person's limit never locks out another network."
+    ],
+    "twist": "Take down a creation that has a custom domain and visitor data, then close the creator's account. Note what remains and whether anything is left serving.",
+    "prefix": "",
+    "route": "online"
+  }
+]

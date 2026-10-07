@@ -139,6 +139,19 @@ The default build bundles eight manifest Crux Tools; additional tool source fold
 are not a promise of availability in the public catalog. Built-in editors and website
 starters are separate. See [catalog scope](CONTRIBUTING.md#catalog-test-scope).
 
+## Manual review
+
+On macOS, run `npm run review` to open a fresh, isolated test Garden and the
+[Release Expedition](docs/manual-testing/v1-user-stories.html), an offline review
+game with missions and a results ledger. Existing Gardens are preserved. Each
+new Garden gets a `Resume Review.command` shortcut for continuing later.
+
+The launcher defaults to the local October 6 review package. Packaged apps are
+build output, not committed files. To select another build, set
+`CRUX_REVIEW_APP` to its absolute `.app` path. See the
+[review instructions](docs/manual-testing/README.md) for packaging, restarting,
+and maintaining the game.
+
 ## Contributing
 
 See `CONTRIBUTING.md`. Security reports: keeper@crux.garden (`SECURITY.md`).

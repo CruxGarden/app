@@ -1,0 +1,2883 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Crux Garden — The Release Expedition</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f5ef;
+        --paper: #fffef9;
+        --ink: #18342e;
+        --muted: #526b61;
+        --line: #cdd8ca;
+        --accent: #236a53;
+        --wash: #e8f0e5;
+        --red: #9f3936;
+        --amber: #815913;
+        --shadow: 0 12px 36px #18342e09;
+      }
+      * {
+        box-sizing: border-box;
+        min-width: 0;
+      }
+      body {
+        overflow-wrap: anywhere;
+      }
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 22px;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.65 system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
+      }
+      a {
+        color: var(--accent);
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button,
+      select,
+      input,
+      textarea {
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--paper);
+        color: var(--ink);
+        padding: 9px 12px;
+        max-width: 100%;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--wash);
+      }
+      :focus-visible {
+        outline: 3px solid #b15b37;
+        outline-offset: 3px;
+      }
+      button.primary {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+      textarea {
+        width: 100%;
+        resize: vertical;
+        min-height: 70px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 650;
+        color: var(--muted);
+      }
+      input,
+      select {
+        width: 100%;
+      }
+      p {
+        margin: 0 0 14px;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.16;
+        font-weight: 500;
+      }
+      h1 {
+        font-family: Georgia, serif;
+        font-size: clamp(39px, 5.5vw, 74px);
+        letter-spacing: -2px;
+        margin: 18px 0 24px;
+        max-width: 780px;
+      }
+      h2 {
+        font-family: Georgia, serif;
+        font-size: 32px;
+        margin: 0 0 18px;
+      }
+      h3 {
+        font-size: 23px;
+        margin: 10px 0 14px;
+        letter-spacing: -0.4px;
+      }
+      small,
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 750;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: Georgia, serif;
+        font-size: 23px;
+      }
+      .mark {
+        display: inline-grid;
+        place-items: center;
+        border: 1.5px solid var(--accent);
+        color: var(--accent);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        font: 24px/1 system-ui;
+      }
+      .mast {
+        max-width: 1380px;
+        margin: auto;
+        padding: 35px 36px 0;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.45fr 1fr;
+        gap: 50px;
+        padding: 36px 0 40px;
+        border-bottom: 1px solid var(--line);
+      }
+      .lede {
+        font-size: 19px;
+        max-width: 720px;
+      }
+      .quick {
+        background: var(--wash);
+        border-radius: 18px;
+        padding: 26px;
+        align-self: center;
+      }
+      .quick ol {
+        padding-left: 22px;
+      }
+      .quick li {
+        margin: 10px 0;
+      }
+      .quick strong {
+        font-weight: 650;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        font-size: 12px;
+        border: 1px solid var(--line);
+        padding: 3px 10px;
+        border-radius: 30px;
+        color: var(--muted);
+      }
+      .toplinks {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+      .toplinks a {
+        font-size: 13px;
+      }
+      .layout {
+        max-width: 1380px;
+        margin: auto;
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 38px;
+        padding: 30px 36px 70px;
+      }
+      .sidebar {
+        align-self: start;
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow: auto;
+        padding: 0 8px 10px 0;
+      }
+      .sidebar a {
+        display: block;
+        padding: 7px 0;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 14px;
+      }
+      .sidebar a:hover {
+        color: var(--ink);
+        text-decoration: underline;
+      }
+      .side-title {
+        margin: 18px 0 10px;
+      }
+      .sidebar button {
+        margin: 5px 0;
+        width: 100%;
+        text-align: left;
+        font-size: 13px;
+      }
+      .sidebar .score {
+        font-size: 32px;
+        color: var(--ink);
+        line-height: 1.2;
+        margin: 12px 0 0;
+      }
+      .progress {
+        height: 6px;
+        background: var(--line);
+        border-radius: 8px;
+        margin: 12px 0;
+        overflow: hidden;
+      }
+      .progress i {
+        display: block;
+        background: var(--accent);
+        height: 100%;
+        width: 0;
+      }
+      .intro-box,
+      details.brief {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--paper);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .brief summary {
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .brief > div {
+        margin-top: 18px;
+      }
+      .brief li {
+        margin-bottom: 8px;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .fields label input {
+        margin-top: 5px;
+      }
+      .filters {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 1fr;
+        gap: 12px;
+        padding: 12px 0 22px;
+      }
+      .filters label > * {
+        margin-top: 5px;
+      }
+      .chapter {
+        margin-bottom: 38px;
+      }
+      .chapter-title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 18px 0;
+      }
+      .chapter-title h2 {
+        font-size: 26px;
+        margin: 0;
+      }
+      .story {
+        border: 1px solid var(--line);
+        background: var(--paper);
+        border-radius: 15px;
+        padding: 24px;
+        margin: 14px 0;
+        box-shadow: var(--shadow);
+      }
+      .story[data-status="fail"] {
+        border-left: 5px solid var(--red);
+      }
+      .story[data-status="pass"] {
+        border-left: 5px solid var(--accent);
+      }
+      .story[data-status="blocked"] {
+        border-left: 5px solid var(--amber);
+      }
+      .story-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+      }
+      .story-id {
+        font:
+          12px ui-monospace,
+          monospace;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+      .story-head select {
+        width: 155px;
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .goal {
+        font-size: 17px;
+      }
+      .needs {
+        font-size: 13px;
+        color: var(--muted);
+        border-left: 3px solid var(--line);
+        padding-left: 12px;
+        margin: 16px 0;
+      }
+      .journey {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 24px;
+      }
+      .journey h4,
+      .story h4 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 16px 0 8px;
+      }
+      .journey ol,
+      .journey ul {
+        padding-left: 21px;
+        margin: 0;
+      }
+      .journey li {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+      .twist {
+        background: var(--wash);
+        padding: 12px 15px;
+        border-radius: 9px;
+        font-size: 14px;
+        margin-top: 18px;
+      }
+      .record {
+        display: grid;
+        grid-template-columns: 1fr 180px;
+        gap: 14px;
+        margin-top: 18px;
+      }
+      .record label > * {
+        margin-top: 5px;
+      }
+      .record .feel {
+        height: 44px;
+      }
+      .story details {
+        border-top: 1px solid var(--line);
+        margin-top: 18px;
+        padding-top: 13px;
+      }
+      .story summary {
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .criteria {
+        margin-top: 15px;
+      }
+      .criterion {
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .criterion:last-child {
+        border-bottom: 0;
+      }
+      .criterion-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        justify-content: space-between;
+      }
+      .criterion-top select {
+        font-size: 12px;
+        width: 148px;
+      }
+      .criterion p {
+        font-size: 14px;
+        margin: 9px 0;
+      }
+      .criterion textarea {
+        font-size: 13px;
+        min-height: 45px;
+      }
+      .criterion .expect {
+        color: var(--muted);
+      }
+      .criterion[data-status="fail"] {
+        border-left: 3px solid var(--red);
+        padding-left: 12px;
+      }
+      .criterion[data-status="blocked"] {
+        border-left: 3px solid var(--amber);
+        padding-left: 12px;
+      }
+      .scope {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      #message {
+        position: fixed;
+        bottom: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 8;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        background: var(--ink);
+        color: white;
+        max-width: calc(100% - 24px);
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-size: 14px;
+      }
+      #message:empty {
+        display: none;
+      }
+      .notice {
+        border: 1px solid #bc792e;
+        border-radius: 9px;
+        padding: 12px;
+        background: #fff2dc;
+        color: #604310;
+        margin: 12px 0;
+      }
+      .coverage-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 14px 0;
+      }
+      .coverage-grid div {
+        background: var(--wash);
+        padding: 14px;
+        border-radius: 9px;
+        font-size: 13px;
+      }
+      .coverage-grid strong {
+        font-size: 24px;
+        display: block;
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 13px;
+      }
+      td,
+      th {
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        padding: 8px;
+        vertical-align: top;
+      }
+      .gap {
+        border-left: 3px solid var(--red);
+        padding: 10px 15px;
+        margin: 12px 0;
+        background: var(--paper);
+      }
+      .gap p {
+        overflow-wrap: anywhere;
+      }
+      footer {
+        font-size: 13px;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+      }
+      #empty {
+        padding: 40px 0;
+        font-size: 18px;
+      }
+      .print-meta {
+        display: none;
+      }
+      @media (max-width: 940px) {
+        .layout {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 20px;
+        }
+        .sidebar {
+          position: static;
+          max-height: none;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+        }
+        .sidebar nav,
+        .sidebar .side-title {
+          grid-column: 1/-1;
+        }
+        .sidebar nav {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .sidebar .meter {
+          grid-column: 1/-1;
+        }
+        .hero {
+          gap: 25px;
+        }
+        .sidebar .side-title {
+          margin: 5px 0;
+        }
+        .sidebar button {
+          font-size: 12px;
+        }
+        .toplinks {
+          gap: 10px;
+        }
+      }
+      @media (max-width: 620px) {
+        .mast {
+          padding: 22px 18px 0;
+        }
+        .hero {
+          grid-template-columns: 1fr;
+          padding: 28px 0;
+          gap: 12px;
+        }
+        h1 {
+          letter-spacing: -1px;
+        }
+        .layout {
+          padding: 20px 18px 45px;
+        }
+        .quick {
+          padding: 18px;
+        }
+        .story {
+          padding: 18px;
+        }
+        .journey,
+        .record,
+        .fields {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .filters {
+          grid-template-columns: 1fr;
+        }
+        .coverage-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .story-head select {
+          width: 128px;
+        }
+        .criterion-top {
+          align-items: start;
+        }
+        .story-head {
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .criterion-top {
+          flex-wrap: wrap;
+        }
+        .sidebar {
+          grid-template-columns: 1fr 1fr;
+        }
+        .chapter-title h2 {
+          font-size: 23px;
+        }
+        .toplinks .muted {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      @media print {
+        body {
+          background: white;
+          color: black;
+          font-size: 10pt;
+        }
+        .mast,
+        .layout {
+          display: block;
+          padding: 0;
+          max-width: none;
+        }
+        .hero {
+          display: block;
+          padding: 10px 0;
+        }
+        .quick,
+        .sidebar,
+        .filters,
+        .toplinks a,
+        .no-print,
+        #message,
+        #setup,
+        #coverage {
+          display: none !important;
+        }
+        h1 {
+          font-size: 30pt;
+          margin: 10px 0;
+        }
+        .print-meta {
+          display: block;
+        }
+        .story {
+          content-visibility: visible;
+          box-shadow: none;
+          border: 1px solid #bbb;
+          border-radius: 0;
+          padding: 12px;
+          break-before: auto;
+          break-inside: auto;
+        }
+        .story-head,
+        h3,
+        .criterion-top {
+          break-after: avoid;
+        }
+        .journey {
+          display: block;
+        }
+        .criterion {
+          break-inside: avoid;
+        }
+        .record {
+          display: block;
+        }
+        .story select {
+          appearance: none;
+          border: none;
+          padding: 0;
+        }
+        .story textarea {
+          border: 0;
+          min-height: 0;
+          height: auto;
+        }
+        details > summary {
+          display: block;
+        }
+        details {
+          display: block;
+        }
+        .chapter {
+          break-before: page;
+        }
+        .chapter:first-child {
+          break-before: auto;
+        }
+        a {
+          color: inherit;
+        }
+        footer {
+          margin-top: 15px;
+        }
+        .story details.scope-details {
+          display: none;
+        }
+        #gap-entry {
+          display: none;
+        }
+        .criterion textarea:placeholder-shown,
+        .record textarea:placeholder-shown {
+          display: none;
+        }
+      }
+
+      .hero {
+        background: radial-gradient(ellipse at 0 0, #e1ead9, transparent 65%);
+      }
+      .expedition-card {
+        background: #e4eddd;
+        border: 1px solid #bfceb5;
+        transform: rotate(1deg);
+      }
+      .garden-drawing {
+        width: 100%;
+        height: 125px;
+        margin: 10px 0;
+      }
+      .passport-score {
+        font:
+          28px/1.2 Georgia,
+          serif;
+      }
+      .expedition-card button {
+        width: 100%;
+        margin: 5px 0 12px;
+      }
+      .expedition {
+        padding-top: 28px;
+      }
+      .map-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .map-heading h2 {
+        margin: 8px 0 18px;
+      }
+      .garden-map {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .garden-plot {
+        text-align: left;
+        position: relative;
+        padding: 16px;
+        background: var(--paper);
+        border-radius: 16px;
+        min-height: 166px;
+        transition:
+          background 0.2s,
+          transform 0.2s;
+      }
+      .garden-plot:hover {
+        transform: translateY(-3px);
+        background: #e3ecdf;
+      }
+      .garden-plot[aria-pressed="true"] {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .garden-plot strong {
+        display: block;
+        font:
+          20px Georgia,
+          serif;
+        margin: 6px 0;
+      }
+      .garden-plot small {
+        display: block;
+        font-size: 11px;
+      }
+      .garden-plot .plant {
+        display: block;
+        width: 45px;
+        height: 45px;
+        color: #a4b499;
+      }
+      .garden-plot[data-growth="leaf"] .plant {
+        color: #56836a;
+      }
+      .garden-plot[data-growth="bloom"] {
+        background: #e0ecd9;
+      }
+      .garden-plot[data-growth="bloom"] .plant {
+        color: #9e5949;
+      }
+      .plot-meter {
+        display: block;
+        height: 4px;
+        background: #e1e7dc;
+        margin-top: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      .plot-meter i {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+      }
+      .passport-stamps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0 12px;
+      }
+      .stamp {
+        border: 1px dashed #94a48b;
+        border-radius: 50px;
+        padding: 7px 14px;
+        color: #64715f;
+        font-size: 12px;
+      }
+      .stamp[data-earned="true"] {
+        background: #f1e0b7;
+        border: 1px solid #b69356;
+        color: #58421b;
+      }
+      .mission-desk {
+        border: 1px solid #bfd0b7;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 22px;
+        background: linear-gradient(130deg, #e3ecdc, #fffdf6);
+      }
+      .mission-desk h2 {
+        font-size: 28px;
+        margin: 12px 0;
+      }
+      .mission-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 18px 0;
+      }
+      .mission-actions button {
+        font-size: 13px;
+      }
+      .mission-note {
+        border-left: 3px solid #b9915b;
+        padding: 10px 14px;
+        background: #f6f0df;
+        margin: 15px 0;
+        font-size: 14px;
+      }
+      .focus-button {
+        font-size: 12px;
+        margin: 8px 0;
+      }
+      .mission-celebration {
+        animation: stamp-in 0.5s ease-out;
+      }
+      @keyframes stamp-in {
+        from {
+          transform: scale(0.94);
+          opacity: 0.4;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      @media (max-width: 940px) {
+        .garden-map {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 620px) {
+        .garden-map {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+        .garden-plot {
+          padding: 12px;
+          min-height: 160px;
+        }
+        .map-heading {
+          display: block;
+        }
+        .map-heading button {
+          margin-bottom: 15px;
+        }
+        .expedition-card {
+          transform: none;
+        }
+        .mission-desk {
+          padding: 18px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .garden-plot {
+          transition: none;
+        }
+        .garden-plot:hover {
+          transform: none;
+        }
+        .mission-celebration {
+          animation: none;
+        }
+      }
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+      }
+
+      progress {
+        width: 100%;
+        height: 9px;
+        border: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        accent-color: var(--accent);
+        background: var(--line);
+      }
+      progress::-webkit-progress-bar {
+        background: var(--line);
+      }
+      progress::-webkit-progress-value {
+        background: var(--accent);
+      }
+      progress::-moz-progress-bar {
+        background: var(--accent);
+      }
+      #xp-score {
+        font-size: 40px;
+        margin-bottom: 6px;
+      }
+      #xp-level {
+        font-size: 13px;
+      }
+      #expedition-progress {
+        margin-top: 10px;
+      }
+      .score-rules {
+        font-size: 13px;
+        margin: 12px 0;
+      }
+      .score-rules summary {
+        cursor: pointer;
+      }
+      .score-rules p {
+        margin: 10px 0;
+      }
+      .stage-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+      }
+      .stage-header h2 {
+        margin-bottom: 8px;
+      }
+      .stage-header .stamp {
+        max-width: 190px;
+      }
+      #stage-status {
+        font-size: 13px;
+      }
+      #stage-log {
+        border-bottom: 1px solid var(--line);
+        padding: 4px 0 18px;
+        margin-bottom: 18px;
+      }
+      #stage-log summary {
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      #stage-missions {
+        display: grid;
+        gap: 6px;
+        margin-top: 12px;
+      }
+      #stage-missions button {
+        text-align: left;
+        font-size: 13px;
+      }
+      #stage-missions button[aria-current="step"] {
+        border: 2px solid var(--accent);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      @media (max-width: 620px) {
+        .stage-header {
+          display: block;
+        }
+        .stage-header .stamp {
+          display: inline-block;
+          margin-bottom: 12px;
+        }
+      }
+
+      /* Construction-paper theme. All decoration stays out of the evidence and print model. */
+      @media screen {
+        :root {
+          --bg: #fff6dd;
+          --paper: #fffdf5;
+          --ink: #282b4c;
+          --muted: #535475;
+          --line: #b4a9bd;
+          --accent: #3731a6;
+          --wash: #e5e0f9;
+          --red: #a72e48;
+          --amber: #88610d;
+          --shadow: 5px 6px 0 #282b4c25;
+        }
+        body {
+          font-family: "Trebuchet MS", Verdana, system-ui, sans-serif;
+          background-color: var(--bg);
+          background-image: radial-gradient(#eeba5755 1px, transparent 1px);
+          background-size: 11px 11px;
+        }
+        h1,
+        h2,
+        h3,
+        .brand,
+        .passport-score,
+        .garden-plot strong {
+          font-family: "Trebuchet MS", Verdana, system-ui, sans-serif;
+          font-weight: 900;
+        }
+        h1 {
+          letter-spacing: -3px;
+          line-height: 1.04;
+          font-size: clamp(42px, 5.7vw, 78px);
+          text-shadow: 3px 3px 0 #fff8d8;
+        }
+        h2 {
+          letter-spacing: -0.8px;
+        }
+        .brand {
+          letter-spacing: -1px;
+        }
+        .mark {
+          background: #ffcc3e;
+          color: #282b4c;
+          border: 2px solid #282b4c;
+          box-shadow: 2px 2px 0 #282b4c;
+        }
+        .mast {
+          padding-top: 28px;
+        }
+        .hero {
+          margin-top: 24px;
+          position: relative;
+          padding: 30px;
+          background: #b8e6f1;
+          border: 2px solid #282b4c;
+          border-radius: 3px 12px 3px 9px;
+          box-shadow: 7px 8px 0 #282b4c2b;
+          gap: 30px;
+        }
+        .hero:before,
+        .expedition-card:after,
+        .mission-desk:before {
+          content: "";
+          position: absolute;
+          width: 88px;
+          height: 24px;
+          background: #ffde6999;
+          transform: rotate(-9deg);
+          top: -13px;
+          left: 32px;
+          pointer-events: none;
+          box-shadow: 0 1px 0 #282b4c1c;
+        }
+        .hero .eyebrow {
+          color: #41416e;
+        }
+        .hero .lede {
+          font-size: 18px;
+        }
+        .chips {
+          gap: 7px;
+        }
+        .chip {
+          background: #fff8ea;
+          border: 1px solid #282b4c;
+          border-radius: 3px;
+          box-shadow: 2px 2px 0 #282b4c22;
+          color: #34374f;
+          transform: rotate(-1deg);
+        }
+        .chip:nth-child(even) {
+          transform: rotate(1deg);
+        }
+        .expedition-card {
+          position: relative;
+          background: #ffda56;
+          border: 2px solid #282b4c;
+          border-radius: 4px 12px 5px 3px;
+          box-shadow: 5px 6px 0 #282b4c40;
+          transform: rotate(2deg);
+          padding: 23px;
+        }
+        .expedition-card:after {
+          left: auto;
+          right: 30px;
+          transform: rotate(13deg);
+          background: #fff4c6bb;
+        }
+        .garden-drawing {
+          background: #88d0e2;
+          border: 2px solid #282b4c;
+          border-radius: 50% 45% 4px 3px;
+          height: 130px;
+        }
+        #xp-score {
+          font-size: 45px;
+          letter-spacing: -2px;
+          margin-top: 7px;
+        }
+        #xp-level {
+          font-weight: 700;
+          color: #3d3d5b;
+        }
+        .expedition-card .muted {
+          color: #45445c;
+        }
+        button {
+          border: 2px solid #514d6a;
+          border-radius: 6px 3px 7px 4px;
+          box-shadow: 2px 3px 0 #282b4c29;
+          font-weight: 700;
+          transition:
+            transform 0.12s,
+            box-shadow 0.12s;
+        }
+        button:hover {
+          background: #efe6ff;
+          transform: translateY(-2px);
+          box-shadow: 3px 5px 0 #282b4c30;
+        }
+        button:active {
+          transform: translate(1px, 1px);
+          box-shadow: 1px 1px 0 #282b4c30;
+        }
+        button:disabled {
+          transform: none;
+          box-shadow: none;
+        }
+        button.primary {
+          background: #3931a6;
+          border-color: #282b4c;
+          color: #fff;
+          box-shadow: 3px 4px 0 #282b4c55;
+        }
+        button.primary:hover {
+          background: #4d40b8;
+        }
+        input,
+        select,
+        textarea {
+          background: #fffef8;
+          border-color: #8c829b;
+          border-radius: 4px;
+          box-shadow: inset 1px 2px 0 #282b4c0c;
+        }
+        .map-heading h2 {
+          font-size: 32px;
+        }
+        .garden-map {
+          gap: 16px;
+        }
+        .garden-plot {
+          border: 2px solid #343149;
+          border-radius: 3px 10px 3px 8px;
+          background: #ffc1ad;
+          box-shadow: 4px 5px 0 #282b4c40;
+          min-height: 180px;
+          transform: rotate(-1deg);
+        }
+        .garden-plot:nth-child(5n + 2) {
+          background: #b8a3eb;
+          transform: rotate(1deg);
+        }
+        .garden-plot:nth-child(5n + 3) {
+          background: #a2dce8;
+        }
+        .garden-plot:nth-child(5n + 4) {
+          background: #ffdc64;
+          transform: rotate(1deg);
+        }
+        .garden-plot:nth-child(5n) {
+          background: #afd784;
+        }
+        .garden-plot:hover {
+          background: #fff3cb;
+          transform: translateY(-5px) rotate(0deg);
+        }
+        .garden-plot[data-growth="bloom"] {
+          background: #e5f5c6;
+        }
+        .garden-plot strong {
+          font-size: 20px;
+          letter-spacing: -0.5px;
+        }
+        .garden-plot small {
+          color: #36394d;
+          line-height: 1.5;
+        }
+        .garden-plot .plant {
+          color: #30354d;
+          width: 40px;
+          height: 40px;
+        }
+        .plant svg circle {
+          fill: #ffef8d;
+        }
+        .garden-plot[data-growth="leaf"] .plant svg circle {
+          fill: #ef76a3;
+        }
+        .garden-plot[data-growth="bloom"] .plant svg circle {
+          fill: #f04784;
+        }
+        .plot-meter {
+          background: #fffaf080;
+          border: 1px solid #282b4c44;
+          height: 6px;
+        }
+        .plot-meter i {
+          background: #3e399c;
+        }
+        .garden-plot[aria-pressed="true"] {
+          outline: 3px solid #3931a6;
+          outline-offset: 5px;
+        }
+        .stamp {
+          border: 2px dashed #9a8ea8;
+          background: #fff9e9;
+          border-radius: 6px 14px 5px 12px;
+          box-shadow: 2px 3px 0 #282b4c1c;
+          color: #51496a;
+          padding: 9px 12px;
+        }
+        .stamp[data-earned="true"] {
+          background: #ffd457;
+          border: 2px solid #544166;
+          color: #302d48;
+          box-shadow: 3px 4px 0 #c37f56;
+          transform: rotate(-2deg);
+        }
+        .mission-desk {
+          position: relative;
+          background: #e2d6ff;
+          border: 2px solid #494160;
+          border-radius: 4px 13px 5px 10px;
+          box-shadow: 5px 6px 0 #282b4c2b;
+        }
+        .mission-desk:before {
+          background: #ffa7adbb;
+          left: auto;
+          right: 35px;
+          transform: rotate(9deg);
+        }
+        .stage-header h2 {
+          font-size: 30px;
+        }
+        .stage-header .stamp {
+          font-size: 11px;
+        }
+        .stage-header .eyebrow {
+          color: #4d396d;
+        }
+        .mission-desk .mission-actions button:not(.primary) {
+          background: #fff8e4;
+        }
+        .story {
+          background: #fffdf5;
+          border: 2px solid #766587;
+          border-radius: 3px 12px 4px 9px;
+          box-shadow: 4px 5px 0 #282b4c24;
+        }
+        .story-head .story-id {
+          background: #ffdc6a;
+          padding: 5px 9px;
+          color: #39344d;
+          font-weight: 700;
+          transform: rotate(-2deg);
+        }
+        .story h3 {
+          color: #38306f;
+        }
+        .mission-note {
+          background: #d8efd1;
+          border-left: 4px solid #529854;
+        }
+        .twist {
+          background: #ffe2ad;
+          border: 1px dashed #c38345;
+          border-radius: 3px;
+        }
+        details.brief {
+          background: #fffdf5;
+          border: 2px solid #b2a2b9;
+          border-radius: 4px 9px 3px 8px;
+          box-shadow: 3px 4px 0 #282b4c15;
+        }
+        .coverage-grid div {
+          background: #e8e1ff;
+          border-radius: 3px;
+        }
+        .sidebar {
+          background: transparent;
+        }
+        .sidebar .score {
+          font-weight: 900;
+          color: #37316e;
+        }
+        .sidebar .eyebrow {
+          color: #50426d;
+        }
+        .sidebar a {
+          color: #50456c;
+        }
+        .progress {
+          background: #d5cbe7;
+        }
+        .progress i {
+          background: #6241b7;
+        }
+        #message {
+          background: #39315d;
+          border: 2px solid #ffdc64;
+          border-radius: 4px 10px 3px 8px;
+          box-shadow: 4px 5px 0 #282b4c45;
+          color: white;
+        }
+        footer {
+          border-top: 2px dashed #b7a5be;
+        }
+      }
+      @media screen and (max-width: 620px) {
+        .hero {
+          padding: 20px 16px;
+          gap: 25px;
+          margin-top: 22px;
+        }
+        .expedition-card {
+          transform: none;
+        }
+        .garden-map {
+          gap: 12px;
+        }
+        .garden-plot {
+          padding: 11px;
+          min-height: 190px;
+        }
+        .garden-plot strong {
+          font-size: 18px;
+        }
+        .mission-desk {
+          padding: 17px;
+        }
+        .stage-header h2 {
+          font-size: 25px;
+        }
+        .stamp {
+          font-size: 11px;
+        }
+        h1 {
+          letter-spacing: -2px;
+        }
+        .mast {
+          padding-top: 22px;
+        }
+      }
+      @media screen and (prefers-reduced-motion: reduce) {
+        button,
+        .garden-plot {
+          transition: none;
+        }
+        .mission-celebration {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mast">
+      <div class="toplinks">
+        <div class="brand">
+          <span class="mark" aria-hidden="true">+</span> Crux Garden
+        </div>
+        <div>
+          <a href="v1-checklist.html">Original page-by-page checklist</a>
+          <span class="muted"> · Independent story results</span>
+        </div>
+      </div>
+      <div class="hero">
+        <div>
+          <div class="eyebrow">V1 · The Release Expedition</div>
+          <h1>Big ideas.<br />Small adventures.</h1>
+          <p class="lede">
+            You’ve arrived at Mosslight Studio. It needs a home page, a few good
+            ideas and someone willing to push the curious buttons. Build it,
+            explore it, break a few things safely—and help this Garden grow.
+          </p>
+          <div class="chips">
+            <span class="chip">Works offline</span
+            ><span class="chip">Saves your notes</span
+            ><span class="chip">No AI needed to use this guide</span
+            ><span class="chip">Every result starts untested</span>
+          </div>
+        </div>
+        <div class="quick expedition-card">
+          <div class="eyebrow">Your adventure passport</div>
+          <svg class="garden-drawing" viewBox="0 0 350 120" aria-hidden="true">
+            <circle cx="283" cy="30" r="22" fill="#ffcc32" />
+            <path d="M0 105Q85 40 170 95T350 76V120H0Z" fill="#80c756" />
+            <path d="M0 117Q120 69 225 112T350 98V120H0Z" fill="#25835c" />
+            <path
+              d="M180 120Q230 102 190 95T225 74"
+              fill="none"
+              stroke="#fff2ab"
+              stroke-width="5"
+            />
+            <g fill="none" stroke="#254d3d" stroke-width="3">
+              <path d="M75 105V45M122 101V62M294 107V68" />
+            </g>
+            <g fill="#254d3d">
+              <ellipse
+                cx="65"
+                cy="66"
+                rx="15"
+                ry="7"
+                transform="rotate(35 65 66)"
+              />
+              <ellipse
+                cx="85"
+                cy="81"
+                rx="15"
+                ry="7"
+                transform="rotate(-35 85 81)"
+              />
+              <ellipse
+                cx="112"
+                cy="84"
+                rx="14"
+                ry="6"
+                transform="rotate(35 112 84)"
+              />
+              <ellipse
+                cx="304"
+                cy="89"
+                rx="14"
+                ry="6"
+                transform="rotate(-35 304 89)"
+              />
+            </g>
+            <g fill="#ef5685">
+              <circle cx="75" cy="43" r="12" />
+              <circle cx="122" cy="60" r="9" />
+              <circle cx="294" cy="65" r="10" />
+            </g>
+            <g fill="#ffdc41">
+              <circle cx="75" cy="43" r="4" />
+              <circle cx="122" cy="60" r="3" />
+              <circle cx="294" cy="65" r="3" />
+            </g>
+          </svg>
+          <p id="xp-score" class="passport-score"></p>
+          <p id="xp-level"></p>
+          <progress
+            id="xp-meter"
+            max="250"
+            value="0"
+            aria-label="Experience toward the next level"
+          ></progress>
+          <p id="expedition-progress" class="muted"></p>
+          <details class="score-rules">
+            <summary>How to earn points</summary>
+            <p>
+              5 XP for each criterion with a result and evidence. 15 bonus XP
+              for a fully recorded mission. 100 bonus XP and a badge for
+              charting every mission in a stage. Pass, fail, blocked and
+              justified exclusions earn the same investigation points.
+            </p>
+            <p>
+              Editing or repeating a result never farms points.
+              Correcting/removing evidence recalculates the score. Levels come
+              every 250 XP. XP measures investigation, not release readiness.
+            </p>
+          </details>
+          <p>
+            Every honest field note grows the map. Finding a bug is useful work,
+            too.
+          </p>
+          <button class="primary" id="begin-expedition">
+            Pick up my next mission →
+          </button>
+          <p><button id="start-tool-sampler">Try the Explore side quest →</button></p>
+          <p class="muted">Install Piskel, BeepBox and one Mood from Explore. Make a tiny creature, its theme tune and a home for both. Four saved missions; no AI required.</p>
+          <p class="muted">
+            No timer. No streak to lose. Bring tea. Your notes will wait.
+          </p>
+        </div>
+      </div>
+      <p class="print-meta" id="print-meta"></p>
+    </div>
+    <section class="expedition mast no-print" aria-labelledby="map-title">
+      <div class="map-heading">
+        <div>
+          <div class="eyebrow">Ten places to wander</div>
+          <h2 id="map-title">Your ten-stage campaign</h2>
+        </div>
+        <button id="show-all">See the whole expedition</button>
+      </div>
+      <div id="garden-map" class="garden-map"></div>
+      <div
+        id="passport-stamps"
+        class="passport-stamps"
+        aria-label="Explorer stamps"
+      ></div>
+      <p class="muted">
+        Plants grow from criteria with a recorded result and evidence, including
+        failures and blockers. Stamps celebrate investigation; the release
+        ledger still shows what passed, failed or needs work.
+      </p>
+    </section>
+    <div class="layout">
+      <aside class="sidebar" aria-label="Guide navigation">
+        <div class="meter">
+          <div class="eyebrow">Your evidence</div>
+          <div class="score" id="story-score"></div>
+          <div class="muted" id="criteria-score"></div>
+          <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+          <div class="muted" id="results-score"></div>
+          <div class="muted" id="saved">No results recorded yet.</div>
+        </div>
+        <div class="side-title eyebrow">Chapters</div>
+        <nav id="chapters"></nav>
+        <div class="side-title eyebrow">Take your results with you</div>
+        <button id="export-json">Export results · JSON</button
+        ><button id="export-md">Export readable report</button
+        ><button id="import">Import results</button
+        ><input
+          id="import-file"
+          type="file"
+          accept="application/json,.json"
+          hidden
+          aria-label="Choose results file"
+        />
+        <button id="print">Print current view</button
+        ><button id="new-run">Start a new run</button>
+      </aside>
+      <main id="main">
+        <section
+          id="mission-desk"
+          class="mission-desk no-print"
+          aria-labelledby="mission-title"
+        >
+          <div class="stage-header">
+            <div>
+              <div class="eyebrow" id="stage-number"></div>
+              <h2 id="stage-title"></h2>
+            </div>
+            <span id="stage-badge" class="stamp"></span>
+          </div>
+          <p id="stage-status"></p>
+          <progress
+            id="stage-meter"
+            max="1"
+            value="0"
+            aria-label="Missions investigated in this stage"
+          ></progress>
+          <div class="mission-actions">
+            <button id="previous-stage">← Previous stage</button
+            ><button id="continue-stage">Continue this stage</button
+            ><button id="next-stage">Visit next stage →</button
+            ><button id="pause-campaign">Save & take a break</button>
+          </div>
+          <details id="stage-log">
+            <summary>Stage mission log</summary>
+            <div id="stage-missions"></div>
+          </details>
+          <div class="eyebrow">Your current mission</div>
+          <h2 id="mission-title">Where shall we start?</h2>
+          <p id="mission-brief">
+            Pick up a mission, or choose a place on the map. Nothing is
+            locked—you can follow your curiosity.
+          </p>
+          <div class="mission-actions">
+            <button id="focus-mission" class="primary">Open this mission</button
+            ><button id="next-mission">Next on the path →</button
+            ><button id="surprise-mission">Surprise me</button
+            ><button id="browse-missions">All missions</button>
+          </div>
+          <p id="mission-kit" class="muted"></p>
+        </section>
+        <details class="brief" id="setup" open>
+          <summary>Your rehearsal setup and the rules for a pass</summary>
+          <div>
+            <p>
+              Use one continuing example if that helps:
+              <strong>Mosslight Studio</strong>, with a personal home page, a
+              notebook, a drawing and a small interactive order form. Substitute
+              your own interest. The point is to achieve the outcome, not
+              reproduce someone else’s files.
+            </p>
+            <div class="fields" id="metadata"></div>
+            <div class="notice" id="storage-warning" hidden></div>
+            <ul>
+              <li>
+                <strong>Protect your real work.</strong> Use disposable test
+                data and a second isolated installation for import/recovery.
+                Test installation and updates on a clean OS account or spare
+                device. The provided manual-testing launcher opens the existing
+                testing Garden; it is not a fresh-install test. Do not wipe it
+                to start this guide.
+              </li>
+              <li>
+                <strong>Bring a small kit:</strong> photo, Markdown text, CSV,
+                PDF, short audio/video, two test identities, an external editor
+                and a directory for exports. Add provider keys, catalog access,
+                signing artifacts or a test domain only for the stories that
+                need them.
+              </li>
+              <li>
+                <strong>Try the goal before the hints.</strong> If you need
+                hidden knowledge to continue, record that as a usability issue
+                even if the feature technically works.
+              </li>
+              <li>
+                <strong>Pass means a demonstrated outcome.</strong> Open the
+                saved file, editable native project or real public URL. “The
+                agent said done,” a success toast and an old automated result
+                are not substitutes.
+              </li>
+              <li>
+                <strong>Blocked</strong> means a missing prerequisite.
+                <strong>Not applicable</strong> requires a release-scope reason.
+                A promised feature that is unavailable is blocked or failed, not
+                silently excluded.
+              </li>
+              <li>
+                Mark both the story and its detailed criteria. A passed story
+                with untested criteria remains incomplete in the ledger. Record
+                build, OS, provider and hosted/local target; do not reuse one
+                OS/provider result for another.
+              </li>
+              <li>
+                Results stay in this browser under this guide’s own storage key;
+                they do not modify Garden or the older checklist. Export before
+                clearing browser data, changing machines or starting a new run.
+                Do not put keys or private account data in notes.
+              </li>
+            </ul>
+          </div>
+        </details>
+        <details class="brief" id="coverage">
+          <summary id="coverage-title">Scope and coverage ledger</summary>
+          <div id="coverage-body"></div>
+        </details>
+        <details class="brief" id="gaps">
+          <summary>
+            Found a capability or branch missing from this guide?
+          </summary>
+          <div>
+            <p>
+              Record it here instead of letting it disappear. An open coverage
+              gap prevents a complete sign-off. Include the exact menu, control
+              or advertised promise, what you wanted to accomplish and what
+              outcome would prove it.
+            </p>
+            <div class="fields" id="gap-entry">
+              <label
+                >Missing story / capability<input
+                  id="gap-title"
+                  placeholder="e.g. a new export format or tool control" /></label
+              ><label
+                >Where and expected outcome<input
+                  id="gap-note"
+                  placeholder="Menu path, preconditions and proof"
+              /></label>
+            </div>
+            <button id="add-gap" class="no-print">Record coverage gap</button>
+            <div id="gap-list"></div>
+          </div>
+        </details>
+        <div class="filters">
+          <label
+            >Find a story, control or criterion<input
+              type="search"
+              id="search"
+              placeholder="Try “photo”, “permissions”, “SCHED-03”…" /></label
+          ><label
+            >Session route<select id="route">
+              <option value="all">All stories · complete inventory</option>
+              <option value="core">Core pass · the essentials in one sitting</option>
+              <option value="start">First sitting · local core loop</option>
+              <option value="ai">AI & agents</option>
+              <option value="online">Online services</option>
+              <option value="tools">Every creative tool</option>
+            </select></label
+          ><label
+            >Results to show<select id="filter-status">
+              <option value="all">All results</option>
+              <option value="unfinished">Anything unfinished</option>
+              <option value="fail">Failed stories or criteria</option>
+              <option value="blocked">Blocked stories or criteria</option>
+              <option value="pass">Passed stories</option>
+              <option value="na">Not applicable stories</option>
+            </select></label
+          >
+        </div>
+        <p class="muted" id="visible-count"></p>
+        <div id="stories"></div>
+        <p id="empty" hidden>
+          No matching stories. Clear a filter or try a control name.
+        </p>
+        <footer>
+          <p>
+            This guide is an acceptance specification, not a claim that the app
+            passed it. It covers the current inventory and carries every earlier
+            detailed check forward, with explicit runtime-boundary corrections.
+            Native-editor menus can evolve: the depth criteria require each
+            visible command/format to be exercised or named as excluded, and any
+            omission must enter the gap log. Future v2 collaboration/SSO,
+            browser authoring, automatic multi-device merging and not-yet-built
+            social feeds are not silently presented as v1 promises.
+          </p>
+          <p>
+            Guide source: app <code>122e2a735</code>, API <code>0b27882</code> ·
+            30 September 2026. The result metadata above identifies the build
+            you actually test.
+          </p>
+        </footer>
+      </main>
+    </div>
+    <div role="status" aria-live="polite" id="message"></div>
+    <script id="guide-data" type="application/json">
+      /*__DATA__*/
+    </script>
+    <script>
+      "use strict";
+      const DATA = JSON.parse(
+          document.getElementById("guide-data").textContent,
+        ),
+        KEY = "crux-garden-v1-story-results-v1";
+      const statuses = {
+        untested: "Untested",
+        pass: "Pass",
+        fail: "Fail",
+        blocked: "Blocked",
+        na: "Not applicable",
+      };
+      const allowed = new Set(
+        DATA.stories.flatMap((s) => [
+          "story:" + s.id,
+          ...s.checks.map((c) => "check:" + c.id),
+        ]),
+      );
+      const metaLabels = {
+        run: "Run name",
+        tester: "Tester",
+        build: "Build / app version under test",
+        os: "OS, version and device",
+        target: "Hosted / local service target",
+        provider: "Real providers / agents used",
+      };
+      const fresh = () => ({
+        schema: 1,
+        guideEdition: DATA.edition,
+        meta: {},
+        records: {},
+        gaps: [],
+        campaign: { missionId: DATA.stories[0].id },
+      });
+      let state = fresh(),
+        storageOK = true,
+        persistedRaw = null,
+        messageTimer,
+        printState = [];
+      const $ = (id) => document.getElementById(id);
+      function el(tag, text, cls) {
+        const x = document.createElement(tag);
+        if (text !== undefined) x.textContent = text;
+        if (cls) x.className = cls;
+        return x;
+      }
+      function say(text) {
+        $("message").textContent = text;
+        clearTimeout(messageTimer);
+        messageTimer = setTimeout(() => ($("message").textContent = ""), 6500);
+      }
+      function validate(x) {
+        if (
+          !x ||
+          x.schema !== 1 ||
+          !x.records ||
+          typeof x.records !== "object" ||
+          Array.isArray(x.records) ||
+          !x.meta ||
+          typeof x.meta !== "object" ||
+          Array.isArray(x.meta) ||
+          !Array.isArray(x.gaps)
+        )
+          throw Error("This is not a supported story-guide results file.");
+        const y = fresh();
+        y.guideEdition = String(x.guideEdition || DATA.edition);
+        for (const k of Object.keys(metaLabels)) {
+          if (x.meta[k] !== undefined && (typeof x.meta[k] !== "string" || x.meta[k].length > 3000))
+            throw Error("Invalid run metadata.");
+          y.meta[k] = (x.meta[k] || "").slice(0, 3000);
+        }
+        for (const [id, r] of Object.entries(x.records)) {
+          if (!allowed.has(id))
+            throw Error(
+              "This file contains criteria from another guide edition. Use its matching guide; no results were changed.",
+            );
+          if (
+            !r ||
+            !Object.hasOwn(statuses, r.status) ||
+            typeof r.notes !== "string" ||
+            r.notes.length > 50000 ||
+            !["", "clear", "friction", "lost"].includes(r.feel ?? "")
+          )
+            throw Error("Invalid result record.");
+          y.records[id] = {
+            status: r.status,
+            notes: r.notes,
+            feel: r.feel || "",
+          };
+        }
+        if (x.gaps.length > 500) throw Error("Too many gap records.");
+        y.gaps = x.gaps.map((g) => {
+          if (
+            !g ||
+            typeof g.title !== "string" ||
+            typeof g.notes !== "string" ||
+            g.title.length > 3000 || g.notes.length > 50000 ||
+            !["open", "resolved"].includes(g.status)
+          )
+            throw Error("Invalid coverage gap.");
+          return {
+            title: g.title.slice(0, 3000),
+            notes: g.notes.slice(0, 50000),
+            status: g.status,
+          };
+        });
+        if (x.campaign !== undefined) {
+          if (
+            !x.campaign ||
+            !DATA.stories.some((s) => s.id === x.campaign.missionId)
+          )
+            throw Error(
+              "Unknown campaign checkpoint. No results were changed.",
+            );
+          y.campaign = { missionId: x.campaign.missionId };
+        }
+        return y;
+      }
+      try {
+        const raw = localStorage.getItem(KEY);
+        persistedRaw = raw;
+        if (raw) {
+          state = validate(JSON.parse(raw));
+          $("saved").textContent = "Loaded saved results from this browser.";
+        }
+      } catch (e) {
+        storageOK = false;
+        $("storage-warning").hidden = false;
+        $("storage-warning").textContent =
+          "Saved results could not be loaded. Export any current work; this page will not overwrite the stored copy automatically. " +
+          e.message;
+      }
+      function storageConflict() {
+        storageOK = false;
+        $("storage-warning").hidden = false;
+        $("storage-warning").textContent = "Results changed in another tab. This tab keeps your edits without overwriting that saved copy. Export this tab’s JSON before reloading, then choose which run to continue.";
+        $("saved").textContent = "Results kept in this tab · Export JSON before closing.";
+      }
+      window.addEventListener("storage", (event) => {
+        if (storageOK && (event.key === KEY || event.key === null) && event.newValue !== persistedRaw) {
+          storageConflict();
+          updateStats();
+        }
+      });
+      function save() {
+        if (storageOK)
+          try {
+            if (localStorage.getItem(KEY) !== persistedRaw) {
+              storageConflict();
+            } else {
+              const serialized = JSON.stringify(state);
+              localStorage.setItem(KEY, serialized);
+              persistedRaw = serialized;
+            }
+            if (storageOK) $("saved").textContent =
+              "Saved in this browser · " + new Date().toLocaleTimeString();
+          } catch (e) {
+            storageOK = false;
+            $("storage-warning").hidden = false;
+            $("storage-warning").textContent =
+              "Browser saving is unavailable. Your current results remain on this page; export JSON before closing it.";
+            $("saved").textContent = "Results kept in this tab · Export JSON before closing.";
+          }
+        updateStats();
+      }
+      function rec(id) {
+        return state.records[id] || { status: "untested", notes: "", feel: "" };
+      }
+      function edit(id, patch) {
+        state.records[id] = { ...rec(id), ...patch };
+        save();
+      }
+      function counts(ids) {
+        const n = { untested: 0, pass: 0, fail: 0, blocked: 0, na: 0 };
+        for (const id of ids) n[rec(id).status]++;
+        return n;
+      }
+      let focusedMission = null;
+      let missionId = state.campaign.missionId;
+      const places = [
+        [
+          "The arrival path",
+          "Plant your first idea.",
+          "Bring an empty test Garden. Leave with something that is yours.",
+        ],
+        [
+          "The potting shed",
+          "Make room to make.",
+          "Find a place for everything, then see if it stays there.",
+        ],
+        [
+          "The glasshouse",
+          "Grow ideas together.",
+          "Invite a collaborator. Keep a hand on the tools and an eye on the feedback.",
+        ],
+        [
+          "The root cellar",
+          "Keep the good stuff.",
+          "Try a brave edit. Find out whether your work can safely find its way home.",
+        ],
+        [
+          "The garden gate",
+          "Let someone visit.",
+          "Be both maker and visitor. What travels outside, and what stays private?",
+        ],
+        [
+          "The seed exchange",
+          "Follow a spark.",
+          "Find something that makes you want to create, then make it your own.",
+        ],
+        [
+          "The waterworks",
+          "Make useful things happen.",
+          "Follow one piece of data from an action to a real, visible result.",
+        ],
+        [
+          "The moon garden",
+          "Set the atmosphere.",
+          "Give your space a look, a rhythm and a sound you want to return to.",
+        ],
+        [
+          "The long walk",
+          "See how it really feels.",
+          "Use the Garden for real. Notice the moments that delight you—or slow you down.",
+        ],
+        [
+          "The wild meadow",
+          "Try all the curious tools.",
+          "Make a tiny thing in every medium. Keep the editable originals as souvenirs.",
+        ],
+      ];
+      const observed = (id) =>
+        rec(id).status !== "untested" && !!rec(id).notes.trim();
+      const investigated = (story) =>
+        observed("story:" + story.id) &&
+        story.checks.every((c) => observed("check:" + c.id));
+      function missionPlace(story) {
+        return places[Number(story.chapter.split(" ")[0]) - 1];
+      }
+      function campaignProgress() {
+        const stages = places.map((place, i) => {
+          const missions = DATA.stories.filter(
+            (s) => Number(s.chapter.split(" ")[0]) === i + 1,
+          );
+          const complete = missions.filter(investigated).length;
+          const ids = missions.flatMap((s) =>
+            s.checks.map((c) => "check:" + c.id),
+          );
+          return {
+            place,
+            missions,
+            complete,
+            charted: complete === missions.length,
+            noted: ids.filter(observed).length,
+            total: ids.length,
+          };
+        });
+        const noted = stages.reduce((n, s) => n + s.noted, 0),
+          missions = stages.reduce((n, s) => n + s.complete, 0),
+          charted = stages.filter((s) => s.charted).length;
+        return {
+          stages,
+          noted,
+          missions,
+          charted,
+          xp: 5 * noted + 15 * missions + 100 * charted,
+        };
+      }
+      function stageIndex() {
+        return (
+          Number(
+            DATA.stories.find((s) => s.id === missionId).chapter.split(" ")[0],
+          ) - 1
+        );
+      }
+      function visitStage(i) {
+        const stage = campaignProgress().stages[i];
+        openMission(
+          (stage.missions.find((s) => !investigated(s)) || stage.missions[0])
+            .id,
+        );
+      }
+      function updateCampaign() {
+        const progress = campaignProgress(),
+          index = stageIndex(),
+          stage = progress.stages[index];
+        $("xp-score").textContent = progress.xp.toLocaleString() + " XP";
+        const finished = progress.charted === places.length;
+        $("xp-level").textContent =
+          "Level " +
+          (1 + Math.floor(progress.xp / 250)) +
+          " explorer · " +
+          (finished
+            ? "Expedition fully charted! Review the release ledger."
+            : 250 - (progress.xp % 250) + " XP to your next level");
+        $("xp-meter").value = finished ? 250 : progress.xp % 250;
+        $("stage-number").textContent =
+          "Stage " +
+          (index + 1) +
+          " of " +
+          places.length +
+          " · Mission " +
+          (stage.missions.findIndex((s) => s.id === missionId) + 1) +
+          " of " +
+          stage.missions.length;
+        $("stage-title").textContent = stage.place[0];
+        $("stage-status").textContent =
+          stage.complete +
+          "/" +
+          stage.missions.length +
+          " missions investigated · " +
+          stage.noted +
+          "/" +
+          stage.total +
+          " field marks. " +
+          (stage.charted
+            ? "Stage charted! Your 100 XP bonus is included. Review outstanding failures and blockers in the release ledger."
+            : "Finish each mission’s result and evidence to earn this stage’s badge. You may visit another stage whenever you want.");
+        $("stage-meter").max = stage.missions.length;
+        $("stage-meter").value = stage.complete;
+        $("stage-badge").textContent = stage.charted
+          ? "✓ Stage badge earned"
+          : "○ Stage badge to discover";
+        $("stage-badge").dataset.earned = String(stage.charted);
+        $("previous-stage").disabled = index === 0;
+        $("next-stage").disabled = index === places.length - 1;
+        $("next-stage").textContent = stage.charted
+          ? "Continue to next stage →"
+          : "Visit next stage →";
+        $("continue-stage").textContent = stage.charted
+          ? "Revisit this stage"
+          : "Continue this stage";
+        const log = $("stage-missions");
+        if (log.dataset.stage !== String(index)) {
+          log.replaceChildren();
+          log.dataset.stage = index;
+          for (const mission of stage.missions) {
+            const button = el("button");
+            button.type = "button";
+            button.dataset.mission = mission.id;
+            button.onclick = () => openMission(mission.id);
+            log.append(button);
+          }
+        }
+        for (const button of log.children) {
+          const mission = stage.missions.find(
+            (s) => s.id === button.dataset.mission,
+          );
+          const n = mission.checks.filter((c) =>
+            observed("check:" + c.id),
+          ).length;
+          button.textContent =
+            (investigated(mission) ? "✓ " : "○ ") +
+            mission.title +
+            " · " +
+            n +
+            "/" +
+            mission.checks.length +
+            " field marks";
+          button.setAttribute(
+            "aria-current",
+            mission.id === missionId ? "step" : "false",
+          );
+        }
+        $("begin-expedition").textContent =
+          "Resume stage " + (index + 1) + " →";
+      }
+      $("previous-stage").onclick = () =>
+        visitStage(Math.max(0, stageIndex() - 1));
+      $("next-stage").onclick = () =>
+        visitStage(Math.min(places.length - 1, stageIndex() + 1));
+      $("continue-stage").onclick = () => visitStage(stageIndex());
+      $("pause-campaign").onclick = () => {
+        state.campaign.missionId = missionId;
+        save();
+        say(
+          storageOK
+            ? "Checkpoint saved. Your stage, mission, XP and badges will be here when you return."
+            : "Browser saving is unavailable. Export JSON to keep your checkpoint before closing.",
+        );
+      };
+      function updateExpedition() {
+        updateCampaign();
+        const all = DATA.stories.flatMap((s) =>
+          s.checks.map((c) => "check:" + c.id),
+        );
+        const noted = all.filter(observed).length;
+        $("expedition-progress").textContent =
+          noted + " / " + all.length + " field marks";
+        const map = $("garden-map");
+        if (!map.childElementCount)
+          for (const [i, place] of places.entries()) {
+            const button = el("button", undefined, "garden-plot");
+            button.type = "button";
+            button.dataset.place = i;
+            const plant = el("span", undefined, "plant");
+            plant.setAttribute("aria-hidden", "true");
+            plant.innerHTML =
+              '<svg viewBox="0 0 50 50" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M25 46V17M25 34C9 34 8 22 8 22C20 22 25 27 25 34ZM25 27C40 27 42 15 42 15C30 15 25 21 25 27Z"/><circle cx="25" cy="11" r="7"/><path d="M14 46H36"/></svg>';
+            button.append(
+              plant,
+              el("small", "Stage " + (i + 1), "eyebrow"),
+              el("strong", place[0]),
+              el("small", place[1]),
+            );
+            button.append(el("small", undefined, "plot-status"));
+            const meter = el("span", undefined, "plot-meter");
+            meter.append(el("i"));
+            button.append(meter);
+            button.onclick = () => {
+              const options = DATA.stories.filter(
+                (s) => Number(s.chapter.split(" ")[0]) === i + 1,
+              );
+              openMission(
+                (options.find((s) => !investigated(s)) || options[0]).id,
+              );
+            };
+            map.append(button);
+          }
+        for (const [i, button] of [...map.children].entries()) {
+          const group = DATA.stories.filter(
+              (s) => Number(s.chapter.split(" ")[0]) === i + 1,
+            ),
+            ids = group.flatMap((s) => s.checks.map((c) => "check:" + c.id));
+          const n = ids.filter(observed).length,
+            issues = ids.filter((id) =>
+              ["fail", "blocked"].includes(rec(id).status),
+            ).length;
+          button.dataset.growth =
+            n === ids.length ? "bloom" : n ? "leaf" : "seed";
+          button.setAttribute(
+            "aria-pressed",
+            String(
+              !!focusedMission && group.some((s) => s.id === focusedMission),
+            ),
+          );
+          button.querySelector(".plot-status").textContent =
+            n +
+            "/" +
+            ids.length +
+            " explored" +
+            (issues ? " · " + issues + " need care" : "");
+          button.querySelector("i").style.width = (100 * n) / ids.length + "%";
+        }
+        const milestones = [
+          [
+            "First field note",
+            Object.keys(state.records).some(observed),
+            "Record a result and evidence.",
+          ],
+          [
+            "Bug spotter",
+            Object.keys(state.records).some(
+              (id) => observed(id) && rec(id).status === "fail",
+            ),
+            "Document something that failed.",
+          ],
+          [
+            "Trail keeper",
+            state.gaps.length > 0,
+            "Record a missing capability or test branch.",
+          ],
+          [
+            "Deep explorer",
+            DATA.stories.some(investigated),
+            "Record a story and every one of its criteria.",
+          ],
+          [
+            "Across the Garden",
+            places.every((_, i) =>
+              DATA.stories.some(
+                (s) =>
+                  Number(s.chapter.split(" ")[0]) === i + 1 &&
+                  s.checks.some((c) => observed("check:" + c.id)),
+              ),
+            ),
+            "Leave criterion evidence in all ten places.",
+          ],
+        ];
+        milestones.push(
+          ...campaignProgress().stages.map((stage, i) => [
+            "Stage " + (i + 1) + " · " + stage.place[0],
+            stage.charted,
+            "Record every mission and criterion in this stage. Charted does not mean all passed.",
+          ]),
+        );
+        milestones.push([
+          "Seed exchange scout",
+          ["SAMPLER-SPRITE", "SAMPLER-SONG", "SAMPLER-MOOD", "SAMPLER-RETURN"].every((id) =>
+            investigated(DATA.stories.find((s) => s.id === id)),
+          ),
+          "Investigate the four Explore sampler missions. No other tools required; blockers remain blockers.",
+        ]);
+        milestones.push([
+          "Garden explorer",
+          campaignProgress().charted === places.length,
+          "Chart all ten stages. Review all failures and blockers before release.",
+        ]);
+        const stamps = $("passport-stamps");
+        if (!stamps.childElementCount)
+          for (const [name, , hint] of milestones) {
+            const badge = el("span", name, "stamp");
+            badge.title = hint;
+            stamps.append(badge);
+          }
+        milestones.forEach(([name, earned, hint], i) => {
+          const badge = stamps.children[i];
+          const changed = badge.dataset.earned === "false" && earned;
+          badge.dataset.earned = String(earned);
+          badge.textContent = (earned ? "✓ " : "○ ") + name;
+          badge.setAttribute(
+            "aria-label",
+            name + ": " + (earned ? "earned. " : "not yet. ") + hint,
+          );
+          if (changed) {
+            badge.classList.remove("mission-celebration");
+            void badge.offsetWidth;
+            badge.classList.add("mission-celebration");
+            say("Passport stamp: " + name + ". " + hint);
+          }
+        });
+        const mission = DATA.stories.find((s) => s.id === missionId);
+        $("mission-title").textContent = mission.title;
+        $("mission-brief").textContent =
+          missionPlace(mission)[2] + " " + mission.goal;
+        $("mission-kit").textContent =
+          "Pack for this mission: " + mission.needs;
+      }
+      function openMission(id) {
+        missionId = id;
+        focusedMission = id;
+        state.campaign.missionId = id;
+        save();
+        $("setup").open = false;
+        $("route").value = "all";
+        $("filter-status").value = "all";
+        $("search").value = "";
+        render();
+        $("mission-title").tabIndex = -1;
+        $("mission-title").focus({ preventScroll: true });
+        $("mission-desk").scrollIntoView({ block: "start" });
+      }
+      function leaveMission() {
+        focusedMission = null;
+        render();
+      }
+      $("begin-expedition").onclick = () =>
+        openMission(state.campaign.missionId);
+      $("start-tool-sampler").onclick = () => {
+        const sampler = ["SAMPLER-SPRITE", "SAMPLER-SONG", "SAMPLER-MOOD", "SAMPLER-RETURN"];
+        openMission(sampler.find((id) =>
+          !investigated(DATA.stories.find((s) => s.id === id)),
+        ) || sampler[0]);
+      };
+      $("focus-mission").onclick = () => openMission(missionId);
+      $("next-mission").onclick = () => {
+        const stage = campaignProgress().stages[stageIndex()];
+        const index = stage.missions.findIndex((s) => s.id === missionId);
+        if (index + 1 < stage.missions.length)
+          openMission(stage.missions[index + 1].id);
+        else {
+          say(
+            "End of this stage’s path. Check the mission log, or visit the next stage. Unfinished results remain in your ledger.",
+          );
+          $("continue-stage").focus();
+        }
+      };
+      $("surprise-mission").onclick = () => {
+        const candidates = DATA.stories.filter(
+          (s) => s.id !== missionId && !investigated(s),
+        );
+        const pool = candidates.length
+          ? candidates
+          : DATA.stories.filter((s) => s.id !== missionId);
+        openMission(pool[Math.floor(Math.random() * pool.length)].id);
+      };
+      $("browse-missions").onclick = () => $("show-all").click();
+      $("show-all").onclick = () => {
+        focusedMission = null;
+        $("route").value = "all";
+        $("filter-status").value = "all";
+        $("search").value = "";
+        render();
+        $("main").scrollIntoView({ block: "start" });
+      };
+      function updateStats() {
+        updateExpedition();
+        const a = counts(DATA.stories.map((s) => "story:" + s.id)),
+          b = counts(
+            DATA.stories.flatMap((s) => s.checks.map((c) => "check:" + c.id)),
+          );
+        $("story-score").textContent =
+          a.pass + " / " + DATA.stories.length + " stories passed";
+        $("criteria-score").textContent =
+          b.pass +
+          " / " +
+          DATA.ledger.criteria +
+          " criteria passed · " +
+          b.untested +
+          " untested";
+        const gaps = state.gaps.filter((g) => g.status === "open").length,
+          reasons = Object.values(state.records).filter(
+            (r) =>
+              ["na", "blocked", "fail"].includes(r.status) && !r.notes.trim(),
+          ).length;
+        $("results-score").textContent =
+          a.fail +
+          b.fail +
+          " failed · " +
+          (a.blocked + b.blocked) +
+          " blocked · " +
+          (a.na + b.na) +
+          " excluded · " +
+          gaps +
+          " open coverage gaps" +
+          (reasons ? " · " + reasons + " results need a reason" : "");
+        $("bar").style.width = (100 * b.pass) / DATA.ledger.criteria + "%";
+        $("print-meta").textContent = Object.entries(metaLabels)
+          .map(([k, v]) => v + ": " + (state.meta[k] || "Not recorded"))
+          .join(" · ");
+      }
+      function selectStatus(id, onChange) {
+        const q = el("select");
+        q.setAttribute(
+          "aria-label",
+          "Result for " + id.replace(/^(story|check):/, ""),
+        );
+        for (const [v, t] of Object.entries(statuses)) {
+          const o = el("option", t);
+          o.value = v;
+          q.append(o);
+        }
+        q.value = rec(id).status;
+        q.addEventListener("change", () => {
+          edit(id, { status: q.value });
+          onChange?.(q.value);
+        });
+        return q;
+      }
+      function notesField(
+        id,
+        labelText = "Evidence, issues and reason for any exclusion",
+      ) {
+        const l = el("label", labelText),
+          t = el("textarea");
+        t.value = rec(id).notes;
+        t.maxLength = 50000;
+        t.placeholder =
+          "What happened? File/URL/screenshot, expected vs actual, clarity and next action. No secrets.";
+        t.setAttribute(
+          "aria-label",
+          "Notes for " + id.replace(/^(story|check):/, ""),
+        );
+        t.addEventListener("input", () => {
+          if (t.value.length > 50000) { say("Keep each evidence note under 50,000 characters; link larger logs instead."); t.value = rec(id).notes; return; }
+          edit(id, { notes: t.value });
+        });
+        l.append(t);
+        return l;
+      }
+      function detailSummary(s) {
+        const n = counts(s.checks.map((c) => "check:" + c.id));
+        return (
+          "Detailed criteria · " +
+          s.checks.length +
+          " checks · " +
+          n.pass +
+          " passed / " +
+          n.untested +
+          " untested"
+        );
+      }
+      function renderCriteria(s, box, summary) {
+        if (box.childElementCount) return;
+        for (const c of s.checks) {
+          const id = "check:" + c.id,
+            row = el("div", undefined, "criterion");
+          row.dataset.status = rec(id).status;
+          const top = el("div", undefined, "criterion-top");
+          top.append(
+            el("span", c.id, "story-id"),
+            selectStatus(id, (v) => {
+              row.dataset.status = v;
+              summary.textContent = detailSummary(s);
+            }),
+          );
+          row.append(
+            top,
+            el("p", c.action),
+            el("p", "Proof: " + c.expected, "expect"),
+            el("p", "Needs: " + c.needs + " · " + c.origin, "muted"),
+            notesField(id, "Criterion evidence / reason"),
+          );
+          box.append(row);
+        }
+      }
+      function hasStatus(s, status) {
+        return (
+          rec("story:" + s.id).status === status ||
+          s.checks.some((c) => rec("check:" + c.id).status === status)
+        );
+      }
+      function matches(s) {
+        if (focusedMission && s.id !== focusedMission) return false;
+        const query = $("search").value.toLowerCase().trim(),
+          route = $("route").value,
+          filter = $("filter-status").value;
+        const searchable = JSON.stringify(s).toLowerCase();
+        if (query && !searchable.includes(query)) return false;
+        if (
+          route !== "all" &&
+          !(route === "tools"
+            ? !!s.toolId
+            : route === "core"
+              ? !!s.core
+              : s.route === route)
+        )
+          return false;
+        if (filter === "all") return true;
+        if (filter === "unfinished")
+          return (
+            hasStatus(s, "untested") ||
+            hasStatus(s, "fail") ||
+            hasStatus(s, "blocked")
+          );
+        if (["fail", "blocked"].includes(filter)) return hasStatus(s, filter);
+        return rec("story:" + s.id).status === filter;
+      }
+      function render() {
+        const root = $("stories");
+        // Put the selected story beside its mission controls; keep the full ledger in its usual place.
+        if (focusedMission) $("mission-desk").after(root);
+        else $("empty").before(root);
+        root.replaceChildren();
+        const chosen = DATA.stories.filter(matches);
+        $("visible-count").textContent =
+          chosen.length +
+          " of " +
+          DATA.stories.length +
+          " stories shown. The full ledger and exported results include all stories.";
+        $("empty").hidden = chosen.length > 0;
+        for (const chapter of [...new Set(chosen.map((s) => s.chapter))]) {
+          const section = el("section", undefined, "chapter");
+          section.id = "chapter-" + chapter.split(" ")[0];
+          const head = el("div", undefined, "chapter-title");
+          head.append(el("h2", chapter));
+          section.append(head);
+          for (const s of chosen.filter((s) => s.chapter === chapter)) {
+            const id = "story:" + s.id,
+              card = el("article", undefined, "story");
+            card.id = "story-" + s.id;
+            card.dataset.status = rec(id).status;
+            const heading = el("div", undefined, "story-head");
+            heading.append(
+              el("span", s.id, "story-id"),
+              selectStatus(id, (v) => (card.dataset.status = v)),
+            );
+            card.append(
+              heading,
+              el("h3", s.title),
+              el("p", s.goal, "goal"),
+              el("p", "Before you begin · " + s.needs, "needs"),
+            );
+            const invitation = el(
+              "p",
+              missionPlace(s)[1] +
+                " Your souvenir: an actual result, plus a note about how it felt.",
+              "mission-note",
+            );
+            card.append(invitation);
+            if (!focusedMission) {
+              const focus = el(
+                "button",
+                "Make this my mission →",
+                "focus-button no-print",
+              );
+              focus.onclick = () => openMission(s.id);
+              card.append(focus);
+            }
+            const journey = el("div", undefined, "journey"),
+              path = el("div"),
+              proof = el("div");
+            path.append(el("h4", "Your mission"));
+            const ol = el("ol");
+            s.steps.forEach((t) => ol.append(el("li", t)));
+            path.append(ol);
+            proof.append(el("h4", "The finish line"));
+            const ul = el("ul");
+            s.proof.forEach((t) => ul.append(el("li", t)));
+            proof.append(ul);
+            journey.append(path, proof);
+            card.append(journey, el("div", "Plot twist · " + s.twist, "twist"));
+            const record = el("div", undefined, "record");
+            record.append(notesField(id));
+            const feelLabel = el("label", "How did it feel?"),
+              feel = el("select");
+            feel.className = "feel";
+            feel.setAttribute("aria-label", "Experience for " + s.id);
+            for (const [v, t] of [
+              ["", "Not recorded"],
+              ["clear", "Clear and satisfying"],
+              ["friction", "Worked with friction"],
+              ["lost", "Confusing / got stuck"],
+            ]) {
+              const o = el("option", t);
+              o.value = v;
+              feel.append(o);
+            }
+            feel.value = rec(id).feel;
+            feel.onchange = () => edit(id, { feel: feel.value });
+            feelLabel.append(feel);
+            record.append(feelLabel);
+            card.append(record);
+            const details = el("details"),
+              summary = el("summary", detailSummary(s)),
+              box = el("div", undefined, "criteria");
+            details.append(summary, box);
+            details.addEventListener("toggle", () => {
+              if (details.open) renderCriteria(s, box, summary);
+            });
+            details.dataset.criteria = s.id;
+            card.append(details);
+            const sources = el("details", undefined, "scope-details"),
+              sum = el("summary", "Scope and source trace");
+            sources.append(sum);
+            if (s.promise)
+              sources.append(
+                el(
+                  "p",
+                  "The tool introduces itself this way: " + s.promise,
+                  "scope",
+                ),
+              );
+            if (s.shareRule) sources.append(el("p", s.shareRule, "scope"));
+            if (s.declaredScope)
+              sources.append(
+                el(
+                  "p",
+                  "Declared capabilities and limits (source inventory, not a test result):\n" +
+                    s.declaredScope,
+                  "scope",
+                ),
+              );
+            sources.append(el("p", s.sources.join("\n"), "scope"));
+            card.append(sources);
+            section.append(card);
+          }
+          root.append(section);
+        }
+        updateStats();
+      }
+      function renderMeta() {
+        const box = $("metadata");
+        box.replaceChildren();
+        for (const [id, title] of Object.entries(metaLabels)) {
+          const l = el("label", title),
+            i = el("input");
+          i.value = state.meta[id] || "";
+          i.maxLength = 3000;
+          i.id = "meta-" + id;
+          i.placeholder =
+            id === "build" ? "Record the actual version / commit" : title;
+          i.addEventListener("input", () => {
+            state.meta[id] = i.value;
+            save();
+          });
+          l.append(i);
+          box.append(l);
+        }
+      }
+      function renderGaps() {
+        const box = $("gap-list");
+        box.replaceChildren();
+        state.gaps.forEach((g, i) => {
+          const item = el("div", undefined, "gap");
+          item.append(el("strong", g.title), el("p", g.notes));
+          const b = el(
+            "button",
+            g.status === "open" ? "Mark resolved" : "Reopen gap",
+          );
+          b.onclick = () => {
+            g.status = g.status === "open" ? "resolved" : "open";
+            save();
+            renderGaps();
+          };
+          item.append(el("small", g.status + " · "), b);
+          box.append(item);
+        });
+      }
+      function download(name, text, type) {
+        const blob = new Blob([text], { type }),
+          a = el("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      }
+      function report() {
+        const lines = [
+          "# Crux Garden — user-story acceptance report",
+          "",
+          ...Object.entries(metaLabels).map(
+            ([k, v]) => v + ": " + (state.meta[k] || "Not recorded"),
+          ),
+          "",
+          "Guide edition: " + DATA.edition,
+          "Investigation score: " +
+            campaignProgress().xp +
+            " XP · Level " +
+            (1 + Math.floor(campaignProgress().xp / 250)),
+          "Checkpoint: stage " + (stageIndex() + 1) + " · " + missionId,
+          "Stages charted: " +
+            campaignProgress().charted +
+            "/" +
+            places.length +
+            " (not release passes)",
+          "",
+          "Status is tester-recorded; no automatic product passes.",
+          "",
+        ];
+        for (const s of DATA.stories) {
+          const r = rec("story:" + s.id);
+          lines.push(
+            "## " + s.id + " · " + s.title,
+            "",
+            statuses[r.status] + " · Experience: " + (r.feel || "Not recorded"),
+            "",
+            r.notes || "No story evidence recorded.",
+            "",
+          );
+          for (const c of s.checks) {
+            const x = rec("check:" + c.id);
+            lines.push(
+              "- " + c.id + " [" + statuses[x.status] + "] " + c.action,
+              "  Expected: " + c.expected,
+              "  Notes: " + (x.notes || "Not recorded"),
+            );
+          }
+          lines.push("");
+        }
+        lines.push("## Coverage gaps", "");
+        for (const g of state.gaps)
+          lines.push("- [" + g.status + "] " + g.title + ": " + g.notes);
+        return lines.join("\n");
+      }
+      $("export-json").onclick = () =>
+        download(
+          "crux-story-results.json",
+          JSON.stringify(state, null, 2),
+          "application/json",
+        );
+      $("export-md").onclick = () =>
+        download("crux-story-report.md", report(), "text/markdown");
+      $("import").onclick = () => $("import-file").click();
+      $("import-file").onchange = async () => {
+        const file = $("import-file").files[0];
+        if (!file) return;
+        try {
+          // A valid full run can exceed 5 MB. Bound parsing by the maximum
+          // admitted records and per-field limits, rather than rejecting our own exports.
+          const maxBytes = (allowed.size * 51000 + 500 * 54000 + 30000) * 6;
+          if (file.size > maxBytes) throw Error("Results file exceeds this guide’s maximum record size.");
+          const candidate = validate(JSON.parse(await file.text()));
+          if (
+            !confirm(
+              "Replace this guide’s current run with " +
+                Object.keys(candidate.records).length +
+                " imported records? Export the current run first if you want to keep both. This does not change Garden.",
+            )
+          )
+            return;
+          state = candidate;
+          missionId = state.campaign.missionId;
+          focusedMission = null;
+          storageOK = true;
+          try { persistedRaw = localStorage.getItem(KEY); } catch { /* save reports storage refusal */ }
+          $("storage-warning").hidden = true;
+          save();
+          renderMeta();
+          renderGaps();
+          render();
+          say("Results imported.");
+        } catch (e) {
+          say("Import refused: " + e.message);
+        } finally {
+          $("import-file").value = "";
+        }
+      };
+      $("new-run").onclick = () => {
+        if (
+          !confirm(
+            "Start a new run? This clears only this guide’s current results. Export them first to keep them. Your Garden and the original checklist are unchanged.",
+          )
+        )
+          return;
+        state = fresh();
+        missionId = state.campaign.missionId;
+        focusedMission = null;
+        storageOK = true;
+        try { persistedRaw = localStorage.getItem(KEY); } catch { /* save reports storage refusal */ }
+        $("storage-warning").hidden = true;
+        save();
+        renderMeta();
+        renderGaps();
+        render();
+        say("New run started; every result is untested.");
+      };
+      $("gap-title").maxLength = 3000;
+      $("gap-note").maxLength = 50000;
+      $("add-gap").onclick = () => {
+        const title = $("gap-title").value.trim(),
+          notes = $("gap-note").value.trim();
+        if (!title || !notes) {
+          say("Add the capability and its expected outcome first.");
+          return;
+        }
+        if (state.gaps.length >= 500) { say("This run has reached 500 coverage gaps. Export it before starting another run."); return; }
+        state.gaps.push({ title, notes, status: "open" });
+        $("gap-title").value = "";
+        $("gap-note").value = "";
+        save();
+        renderGaps();
+        say("Coverage gap recorded.");
+      };
+      $("search").addEventListener("input", leaveMission);
+      $("route").onchange = leaveMission;
+      $("filter-status").onchange = leaveMission;
+      window.addEventListener("beforeprint", () => {
+        printState = [[$("gaps"), $("gaps").open]];
+        $("gaps").open = true;
+        for (const d of document.querySelectorAll(
+          "#stories details[data-criteria]",
+        )) {
+          printState.push([d, d.open]);
+          const s = DATA.stories.find((x) => x.id === d.dataset.criteria);
+          renderCriteria(
+            s,
+            d.querySelector(".criteria"),
+            d.querySelector("summary"),
+          );
+          d.open = true;
+        }
+        document.querySelectorAll("#stories textarea").forEach((t) => {
+          t.style.height = "auto";
+          t.style.height = t.scrollHeight + "px";
+        });
+      });
+      window.addEventListener("afterprint", () => {
+        for (const [d, was] of printState) d.open = was;
+      });
+      $("print").onclick = () => window.print();
+      const chapters = [...new Set(DATA.stories.map((s) => s.chapter))];
+      for (const c of chapters) {
+        const a = el("a", c);
+        a.href = "#chapter-" + c.split(" ")[0];
+        a.onclick = () => {
+          focusedMission = null;
+          $("route").value = "all";
+          $("filter-status").value = "all";
+          $("search").value = "";
+          render();
+        };
+        $("chapters").append(a);
+      }
+      const ledger = DATA.ledger;
+      $("coverage-title").textContent =
+        "Coverage ledger · " +
+        ledger.stories +
+        " stories · " +
+        ledger.criteria +
+        " criteria · " +
+        ledger.creationChoices +
+        " creation choices";
+      const cov = $("coverage-body");
+      cov.append(
+        el(
+          "p",
+          "Inventory coverage is not tested coverage. Every baseline criterion is mapped once; every current v1 creation choice, panel, Settings component and Undertaking has a story. All results still start untested.",
+        ),
+      );
+      const grid = el("div", undefined, "coverage-grid");
+      for (const [n, t] of [
+        [ledger.baselineMapped, "earlier checks carried forward"],
+        [ledger.creationMapped, "current creation choices mapped"],
+        [ledger.panels, "workspace panels"],
+        [ledger.settings, "Settings components"],
+        [ledger.undertakings, "Undertakings"],
+        [ledger.models, "model / agent routes"],
+        [ledger.commands, "command-palette routes"],
+      ]) {
+        const d = el("div");
+        d.append(el("strong", String(n)), el("span", t));
+        grid.append(d);
+      }
+      cov.append(
+        grid,
+        el(
+          "p",
+          "Known mapping gaps at generation: " +
+            ledger.unmapped +
+            ". The build fails when a creation choice, panel, Settings component or old checklist row has no mapping. A new control inside an existing tool still requires the depth walk and a gap record if absent.",
+          "muted",
+        ),
+      );
+      const wrap = el("div", undefined, "table-wrap"),
+        table = el("table"),
+        thead = el("thead"),
+        tr = el("tr");
+      ["Current panel", "Purpose story"].forEach((t) => tr.append(el("th", t)));
+      thead.append(tr);
+      table.append(thead);
+      const tbody = el("tbody");
+      for (const p of ledger.panelMap) {
+        const r = el("tr");
+        r.append(el("td", p.label), el("td", p.story));
+        tbody.append(r);
+      }
+      table.append(tbody);
+      wrap.append(table);
+      cov.append(
+        wrap,
+        el(
+          "p",
+          "Testing limits: an unavailable catalog, actual provider, domain, payment service, installer or device stays Blocked. Every tool’s native controls/output formats must be exercised and named in depth notes; mapping a tool does not prove its full upstream editor works. Sources and runtime boundaries are available under each story.",
+          "muted",
+        ),
+      );
+      renderMeta();
+      renderGaps();
+      render();
+    </script>
+  </body>
+</html>
