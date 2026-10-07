@@ -1,16 +1,20 @@
-# Stage 1: Build
-FROM node:22-alpine AS builder
-RUN apk add --no-cache python3 py3-pip
+# Static output is architecture-independent: build once on the native builder.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY package*.json .npmrc ./
 COPY patches/ ./patches/
-RUN npm ci --legacy-peer-deps
+COPY electron/vendor/ ./electron/vendor/
+# The public site needs JS tooling and patches, not desktop native install hooks.
+RUN npm ci --ignore-scripts --no-audit --no-fund && npm run postinstall
 COPY . .
 ARG VITE_API_URL=http://localhost:3000
 ARG VITE_PUBLISH_ORIGIN_TEMPLATE=
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_PUBLISH_ORIGIN_TEMPLATE=$VITE_PUBLISH_ORIGIN_TEMPLATE
-RUN npm run build
+ENV VITE_PUBLIC_SITE=1
+ENV CRUX_BUNDLE_TOOLS=none
+ENV NODE_OPTIONS=--max-old-space-size=8192
+RUN npm run build:public
 
 # Stage 2: Serve
 FROM nginx:alpine

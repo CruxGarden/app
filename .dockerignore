@@ -30,7 +30,12 @@ docker/docker-compose.yml
 README.md
 CLAUDE.md
 
-scripts/
+# Keep scripts/: build:public generates the guide and journal through them.
+docs/
+electron/release/
+**/dist/
+**/runtime/
+**/*.tsbuildinfo
 poc/
 **/.build-venv
 **/.cache
